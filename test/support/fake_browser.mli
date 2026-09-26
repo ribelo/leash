@@ -12,6 +12,9 @@
     - Target.attachToTarget: {sessionId:"session-1"} (flatten mode)
     - Target.setDiscoverTargets / Target.setAutoAttach: {}
     - Target.getTargets: {targetInfos:[]}
+    - Target.getTargetInfo: {targetInfo:{targetId:"target-1",type:"page",title:"",url:"about:blank",…}}
+      (the fixture page; override for the document title a load reports, see
+      docs/cdp-shapes.md)
     - Target.closeTarget: {success:true}
     - Page.enable: {}; Page.navigate: {frameId:"frame-1",loaderId:"loader-1"}
     - Runtime.evaluate: {result:{type:"undefined"}}

@@ -31,9 +31,7 @@ let dispatch tabs (request : P.request) =
     | Error error -> failure error
   in
   match request.command with
-  | P.New args ->
-      lift P.yojson_of_tab_info
-        (Tabs.new_tab tabs ~owner ~url:(Option.value ~default:"about:blank" args.url))
+  | P.New args -> lift P.yojson_of_tab_info (Tabs.new_tab tabs ~owner ~url:args.url)
   | P.Nav args ->
       lift P.yojson_of_action_result (Tabs.navigate tabs ~owner args.tab args.url)
   | P.Close args -> lift P.yojson_of_closed_result (Tabs.close tabs ~owner args.tab)
@@ -58,6 +56,11 @@ let handle tabs line =
 
 type t = { path : string }
 
+(* The registry bounds a url load at 30 seconds (chrome-1yn9 on [nav], chrome-qnul on
+   [new]); the handler budget must outlast it plus the CDP calls around it, or a slow
+   page's reply never reaches the client and its connection simply closes. *)
+let load_budget = Eta.Duration.seconds 35
+
 let budget (request : (P.request, string) result) =
   let seconds n = Eta.Duration.seconds n in
   match request with
@@ -70,6 +73,8 @@ let budget (request : (P.request, string) result) =
       Some (seconds (max 1 (Option.value ~default:900 args.timeout_s)))
   | Ok { command = P.Drive args; _ } ->
       Some (seconds (max 1 (Option.value ~default:30 args.deadline_s)))
+  | Ok { command = P.Nav _; _ } -> Some load_budget
+  | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
   | Ok _ -> Some (seconds 1)
 
 let create ~sw ~runtime_dir deps =

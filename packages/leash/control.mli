@@ -16,6 +16,11 @@ val create :
   ('clock, 'net) deps ->
   (t, Eta_ipc.Listener.error) result
 
+val budget : (Protocol.request, string) result -> Eta.Duration.t option
+(** The handler budget per decoded command. [new] with a url and [nav] outlast the
+    registry's 30-second load wait (chrome-qnul, chrome-1yn9); everything else stays at
+    one second. *)
+
 val status : t -> Eta_app.Status.t
 val dispatch : Tabs.t -> Protocol.request -> Protocol.reply
 val decode : string -> (Protocol.request, string) result

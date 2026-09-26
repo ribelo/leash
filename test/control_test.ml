@@ -1,5 +1,6 @@
 (* L3: chrome-qnul chrome-1yn9 chrome-akz4 chrome-2n8n chrome-hjw9
-   chrome-fuao chrome-38a4 chrome-d4mz chrome-2z2z chrome-6lfk. *)
+   chrome-fuao chrome-38a4 chrome-d4mz chrome-2z2z chrome-6lfk; L5: chrome-qnul (a [new]
+   with a url waits for the load exactly as [nav] does, one without a url replies at once). *)
 module P = Leash.Protocol
 module Fake = Leash_test_support.Fake_browser
 module Chrome = Leash.Chrome
@@ -75,8 +76,53 @@ let rig f =
       let fake () = match !current with Some x -> x | None -> Alcotest.fail "no fake" in
       f env sw chrome tabs fake)
 
+(* The Target.getTargetInfo reply the registry reads once a load is done: the document's
+   title and committed URL, which real Chrome's pushed targetInfoChanged does not carry. *)
+let document ~title ~url =
+  obj
+    [
+      ( "targetInfo",
+        obj
+          [
+            ("targetId", str "target-1");
+            ("type", str "page");
+            ("title", str title);
+            ("url", str url);
+          ] );
+    ]
+
+(* chrome-qnul: [new] with a url waits for the load event, so every test that creates such
+   a tab has to answer it. The pushed title is Chrome's tab-strip title — the formatted
+   URL ("example.com" for https://example.com/), see docs/cdp-shapes.md — and the document
+   title only comes from the query above, made once the load is done. *)
+let loads ?title fake =
+  Fake.on_method fake "Page.enable" (fun request ->
+      let session =
+        match get "sessionId" request with `String s -> s | _ -> assert false
+      in
+      Option.iter
+        (fun title ->
+          Fake.emit ~session fake ~method_:"Target.targetInfoChanged"
+            ~params:
+              (obj
+                 [
+                   ( "targetInfo",
+                     obj
+                       [
+                         ("targetId", str "target-1");
+                         ("type", str "page");
+                         ("title", str title);
+                         ("url", str "https://example.com");
+                       ] );
+                 ]))
+        title;
+      Fake.emit ~session fake ~method_:"Page.loadEventFired"
+        ~params:(Fake.event "Page.loadEventFired");
+      obj [])
+
 let lifecycle () =
   rig (fun _ _ _ tabs fake ->
+      loads (fake ());
       let info =
         result (request tabs "alice" (P.New { url = Some "https://example.com" }))
       in
@@ -136,13 +182,129 @@ let nav () =
           Fake.emit ~session (fake ()) ~method_:"Page.domContentEventFired"
             ~params:(Fake.event "Page.domContentEventFired");
           obj [ ("frameId", str "frame-1"); ("loaderId", str "loader-2") ]);
+      Fake.on_method (fake ()) "Target.getTargetInfo" (fun _ ->
+          document ~title:"Example Domain" ~url:"https://example.com/next");
       let reply =
         result
           (request tabs "alice" (P.Nav { tab = h; url = "https://example.com/next" }))
       in
       Alcotest.(check bool)
         "chrome-1yn9 complete" true
-        (get "url" reply = str "https://example.com/next"))
+        (get "url" reply = str "https://example.com/next");
+      Alcotest.(check bool)
+        "chrome-1yn9 title after load" true
+        (get "title" reply = str "Example Domain"))
+
+(* A request that waits for a load event nobody will send never settles. The suite bounds
+   the wait with yields so a missing immediate reply fails rather than hangs: the mock
+   clock never advances by itself, so no timeout can rescue a wait that should not exist. *)
+let settle ~sw what f =
+  let cell = ref None in
+  Eio.Fiber.fork ~sw (fun () -> cell := Some (f ()));
+  let rec loop n =
+    match !cell with
+    | Some value -> value
+    | None ->
+        if n = 0 then Alcotest.fail (what ^ " did not reply without a load event")
+        else (
+          Eio.Fiber.yield ();
+          loop (n - 1))
+  in
+  loop 10_000
+
+(* chrome-qnul: the title is only known once the document has loaded, so [new] waits for
+   the load event exactly as [nav] does before it replies. *)
+let new_waits () =
+  rig (fun _ _ _ tabs fake ->
+      loads ~title:"example.com" (fake ());
+      Fake.on_method (fake ()) "Target.getTargetInfo" (fun _ ->
+          document ~title:"Example Domain" ~url:"https://example.com/");
+      let info =
+        result (request tabs "alice" (P.New { url = Some "https://example.com" }))
+      in
+      Alcotest.(check bool)
+        "chrome-qnul committed url" true
+        (get "url" info = str "https://example.com/");
+      Alcotest.(check bool)
+        "chrome-qnul title after load" true
+        (get "title" info = str "Example Domain"))
+
+(* chrome-qnul: without a url there is nothing to await, so the reply must not wait for a
+   load event — none is emitted here, and the mocked clock never moves. *)
+let new_without_url () =
+  rig (fun _ sw _ tabs _ ->
+      let info =
+        settle ~sw "chrome-qnul new without a url" (fun () ->
+            request tabs "alice" (P.New { url = None }))
+        |> result
+      in
+      Alcotest.(check bool)
+        "chrome-qnul about:blank" true
+        (get "url" info = str "about:blank");
+      Alcotest.(check bool) "chrome-qnul empty title" true (get "title" info = str ""))
+
+(* chrome-qnul, chrome-1yn9: one load event that never comes, one 30-second bound and one
+   [timeout] for both commands. *)
+let load_timeout () =
+  rig (fun env sw _ tabs _ ->
+      (* One second at a time: the CDP calls around a load answer within a step or two,
+         so only the registry's own 30-second bound is still running when it expires. *)
+      let after_deadline what f =
+        let cell = ref None in
+        Eio.Fiber.fork ~sw (fun () -> cell := Some (f ()));
+        let rec await n =
+          match !cell with
+          | Some reply -> reply
+          | None ->
+              if n = 0 then Alcotest.fail (what ^ " did not time out")
+              else (
+                Eta_test.advance env#clock (Eta.Duration.seconds 1);
+                await (n - 1))
+        in
+        await 60
+      in
+      let described = function
+        | P.Failure error -> P.Error_code.to_string error.code ^ ": " ^ error.message
+        | P.Success _ -> "ok"
+      in
+      let handle = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let nav =
+        after_deadline "chrome-1yn9 nav" (fun () ->
+            request tabs "alice"
+              (P.Nav { tab = handle; url = "https://example.com/slow" }))
+      in
+      let created =
+        after_deadline "chrome-qnul new" (fun () ->
+            request tabs "alice" (P.New { url = Some "https://example.com/slow" }))
+      in
+      Alcotest.(check string)
+        "chrome-1yn9 nav timeout" "timeout: navigation did not load within 30 seconds"
+        (described nav);
+      Alcotest.(check string)
+        "chrome-qnul the same timeout as nav" (described nav) (described created))
+
+(* chrome-qnul, chrome-1yn9: the listener must outlast the registry's bounded load wait, or
+   a slow page's reply never reaches the client and its connection just closes. *)
+let budget () =
+  let handle =
+    match P.Handle.of_string "t_budget" with Ok h -> h | Error why -> Alcotest.fail why
+  in
+  let ms command =
+    match Leash.Control.budget (Ok P.{ owner = owner "alice"; command }) with
+    | Some duration -> Eta.Duration.to_ms duration
+    | None -> Alcotest.fail "no budget"
+  in
+  Alcotest.(check bool)
+    "chrome-qnul new with a url outlasts the load wait" true
+    (ms (P.New { url = Some "https://example.com" }) > 30_000);
+  Alcotest.(check int) "chrome-qnul new without a url" 1_000 (ms (P.New { url = None }));
+  Alcotest.(check int)
+    "chrome-qnul new about:blank" 1_000
+    (ms (P.New { url = Some "about:blank" }));
+  Alcotest.(check bool)
+    "chrome-1yn9 nav outlasts the load wait" true
+    (ms (P.Nav { tab = handle; url = "https://example.com" }) > 30_000);
+  Alcotest.(check int) "other commands keep one second" 1_000 (ms P.Status)
 
 let malformed () =
   rig (fun _ _ _ tabs _ ->
@@ -342,6 +504,10 @@ let () =
           Alcotest.test_case "chrome-qnul hjw9 fuao 2n8n" `Quick lifecycle;
           Alcotest.test_case "chrome-akz4 d4mz" `Quick safety;
           Alcotest.test_case "chrome-1yn9" `Quick nav;
+          Alcotest.test_case "chrome-qnul new waits" `Quick new_waits;
+          Alcotest.test_case "chrome-qnul new without url" `Quick new_without_url;
+          Alcotest.test_case "chrome-qnul 1yn9 load timeout" `Quick load_timeout;
+          Alcotest.test_case "chrome-qnul 1yn9 handler budget" `Quick budget;
           Alcotest.test_case "chrome-38a4" `Quick malformed;
           Alcotest.test_case "chrome-2z2z 6lfk" `Quick lost;
           Alcotest.test_case "chrome-fwnu socket" `Quick socket;

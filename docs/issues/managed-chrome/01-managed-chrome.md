@@ -85,6 +85,20 @@ Chrome: gone; live acceptance passed (headless)
 
 The gate verified the browser process was running before close and absent after SIGTERM. It does not verify workspace placement: chrome-2y3t remains best-effort/operator configured, **not delivered** by this headless gate.
 
+L5 (`new` with a url waits for the load, chrome-qnul) re-ran the same gate afterwards:
+
+```text
+new: {"tab":"t_c6bd5ad17b8d041a835633804ec21602","url":"https://example.com/","title":"Example Domain","origin":"agent","state":"owned","owner":"live","generation":1,"expires":null}
+list: {"tabs":[{"tab":"t_c6bd5ad17b8d041a835633804ec21602","url":"https://example.com/","title":"Example Domain","origin":"agent","state":"owned","owner":"live","generation":1,"expires":null}]}
+close: {"closed":true}
+SIGTERM: Leash exited 0
+Chrome: gone; live acceptance passed (headless)
+```
+
+Chrome's *pushed* `Target.targetInfoChanged` title is the tab strip's (`"example.com"`);
+the document title comes from the `Target.getTargetInfo` query the registry makes once
+the load is done (recorded in `docs/cdp-shapes.md`).
+
 ## Out of Scope
 
 Observation and actions beyond `nav` (milestone 2), ownership beyond "the creator owns it" (milestone 3), handoff, drive, the systemd unit and packaging (milestone 6).

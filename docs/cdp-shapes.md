@@ -15,6 +15,7 @@ with custom parameters. The reply echoes the request's numeric `id` and optional
 | `Target.setDiscoverTargets` | `{}` | Request uses `discover:true`. |
 | `Target.setAutoAttach` | `{}` | Request uses `autoAttach:true,waitForDebuggerOnStart:false,flatten:true`. |
 | `Target.getTargets` | `{"targetInfos":[]}` | Tests can override this with page target infos. |
+| `Target.getTargetInfo` | `{"targetInfo":{"targetId":"target-1","type":"page","title":"","url":"about:blank",…}}` | The fixture page; override to report the loaded document. |
 | `Target.closeTarget` | `{"success":true}` | Target id in request. |
 | `Page.enable` | `{}` | Send within the flat session. |
 | `Page.navigate` | `{"frameId":"frame-1","loaderId":"loader-1"}` | Navigation may instead return `errorText`; override for errors. |
@@ -61,6 +62,20 @@ was recorded from that run, not from documentation.
   `targetId`, and the newly created `page` subsequently appears in `getTargets`.
 - The pipe launch does not request a debugging port; the private profile has no
   `DevToolsActivePort` file. SIGTERM process retirement belongs to the live L3 gate.
+- A page created with `Target.createTarget {"url":"https://example.com/"}` emits
+  `Target.targetCreated` and `Target.targetInfoChanged` with the requested URL and an
+  empty title, commits, then emits `Page.frameNavigated`, `Target.targetInfoChanged`,
+  `Page.domContentEventFired` and `Page.loadEventFired` in that order (measured in a
+  fresh profile at 156 ms, 598 ms, 600 ms, 601 ms and 605 ms). The load wait in `Tabs`
+  keys on the last two.
+- **The pushed title is the tab strip's, not the document's.** That `targetInfoChanged`
+  reported `"title":"example.com"` — the formatted URL — and no later event carried the
+  document title, while `Target.getTargetInfo {"targetId":…}` asked right after
+  `Page.loadEventFired` reported `"title":"Example Domain"` with
+  `"url":"https://example.com/"`. `Page.getNavigationHistory` and
+  `Runtime.evaluate {"expression":"document.title","returnByValue":true}` agreed with the
+  query. `Tabs` therefore refreshes a tab from `Target.getTargetInfo` once the load is
+  done (chrome-qnul), so the reply and `list` report the page rather than the tab strip.
 
 Why pipes rather than `Eio_mock.Flow` pairs: the installed mock supports scripted
 `on_read` but only traces sink writes; it has no write-to-peer-read routing or

@@ -66,6 +66,7 @@ let defaults replies =
       ("Target.setDiscoverTargets", obj []);
       ("Target.setAutoAttach", obj []);
       ("Target.getTargets", obj [ ("targetInfos", `List []) ]);
+      ("Target.getTargetInfo", obj [ ("targetInfo", target_info) ]);
       ("Target.closeTarget", obj [ ("success", `Bool true) ]);
       ("Page.enable", obj []);
       ("Page.navigate", obj [ ("frameId", str "frame-1"); ("loaderId", str "loader-1") ]);

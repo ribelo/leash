@@ -47,6 +47,12 @@ let valid_url url =
         && (not (String.contains (String.sub url start (last - start)) '@'))
         && not (String.exists (fun c -> Char.code c <= 32 || Char.code c = 127) url)
 
+(* chrome-qnul: [new] waits for a load exactly when it was asked for a document with one
+   to come. [about:blank] is already the loaded document when the target exists, so there
+   is no event left to await; [Control.budget] asks this same question, so the handler's
+   budget and the registry's wait cannot drift apart. *)
+let waits_for_load = function Some url -> url <> "about:blank" | None -> false
+
 let handle () =
   let bytes =
     In_channel.with_open_bin "/dev/urandom" (fun ch -> really_input_string ch 16)
@@ -195,8 +201,49 @@ let flush_humans t =
       t.pending_humans;
     Hashtbl.clear t.pending_humans)
 
+(* chrome-qnul: Chrome pushes the *tab-strip* title in Target.targetInfoChanged — the
+   formatted URL, "example.com" for example.com — and does not push the document title
+   that the load brings. A query right after the load carries the document title and the
+   committed URL, so the reply and [list] report the page rather than the tab strip. Best
+   effort: a tab that vanished during the load is reported by the caller's own lookup, not
+   by this call. *)
+let refresh_from_target cdp tab =
+  match cdp_call cdp "Target.getTargetInfo" (obj [ ("targetId", str tab.id) ]) with
+  | Error _ -> ()
+  | Ok result -> (
+      match member "targetInfo" result with
+      | None -> ()
+      | Some info ->
+          Option.iter (fun url -> tab.url <- url) (text "url" info);
+          Option.iter (fun title -> tab.title <- title) (text "title" info))
+
+(* chrome-1yn9, chrome-qnul: a url is loaded when the load event fires, or when the
+   document's main frame navigated and its DOM content is in — never when the network is
+   idle. [start] issues whatever begins the load; the waiter is armed before it runs, so
+   no event it provokes can be missed. Bounded to 30 seconds. The caller holds the tab's
+   lock. *)
+let with_load_wait t cdp tab start =
+  let promise, waiter = Eio.Promise.create () in
+  tab.loading <- true;
+  tab.navigated <- false;
+  tab.completed <- false;
+  tab.load_waiter <- Some waiter;
+  Fun.protect
+    ~finally:(fun () ->
+      tab.loading <- false;
+      tab.load_waiter <- None)
+    (fun () ->
+      let* () = start () in
+      match t.await_load promise with
+      | Error `Timeout ->
+          Error (error "timeout" "navigation did not load within 30 seconds")
+      | Ok () ->
+          refresh_from_target cdp tab;
+          Ok ())
+
 let new_tab t ~owner ~url =
-  if not (valid_url url) then Error (refusal ())
+  let target = Option.value ~default:"about:blank" url in
+  if not (valid_url target) then Error (refusal ())
   else if Hashtbl.length t.tabs >= t.cap then Error (error "tab-cap" "tab cap reached")
   else
     let* cdp = ready t in
@@ -206,7 +253,7 @@ let new_tab t ~owner ~url =
         t.creating <- t.creating - 1;
         flush_humans t)
       (fun () ->
-        let* created = cdp_call cdp "Target.createTarget" (obj [ ("url", str url) ]) in
+        let* created = cdp_call cdp "Target.createTarget" (obj [ ("url", str target) ]) in
         match text "targetId" created with
         | None -> Error (error "internal" "browser omitted targetId")
         | Some id -> (
@@ -220,9 +267,20 @@ let new_tab t ~owner ~url =
                 let tab =
                   register t ~id ~session
                     ~origin:(enum P.Origin.of_string "agent")
-                    ~owner:(Some owner) ~url ~title:""
+                    ~owner:(Some owner) ~url:target ~title:""
                 in
-                let* _ = cdp_call ~session cdp "Page.enable" (obj []) in
+                (* chrome-qnul: a tab created with a url is only titled once its document
+                   has loaded, so the reply waits exactly as [nav] does. Without a url (or
+                   for [about:blank]) there is nothing to await and the reply is immediate. *)
+                let* () =
+                  if waits_for_load url then
+                    with_load_wait t cdp tab (fun () ->
+                        let* _ = cdp_call ~session cdp "Page.enable" (obj []) in
+                        Ok ())
+                  else
+                    let* _ = cdp_call ~session cdp "Page.enable" (obj []) in
+                    Ok ()
+                in
                 Ok (info tab)))
 
 let navigate t ~owner handle url =
@@ -232,39 +290,29 @@ let navigate t ~owner handle url =
     Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
         let* tab = lookup t ~owner handle in
         let* cdp = ready t in
-        let promise, waiter = Eio.Promise.create () in
-        tab.loading <- true;
-        tab.navigated <- false;
-        tab.completed <- false;
-        tab.load_waiter <- Some waiter;
-        Fun.protect
-          ~finally:(fun () ->
-            tab.loading <- false;
-            tab.load_waiter <- None)
-          (fun () ->
-            let* reply =
-              cdp_call ~session:tab.session cdp "Page.navigate" (obj [ ("url", str url) ])
-            in
-            match text "errorText" reply with
-            | Some _ -> Error (error "internal" "browser navigation failed")
-            | None -> (
-                match t.await_load promise with
-                | Error `Timeout ->
-                    Error (error "timeout" "navigation did not load within 30 seconds")
-                | Ok () ->
-                    let* _ = lookup t ~owner handle in
-                    let* _ = ready t in
-                    tab.url <- url;
-                    Ok
-                      P.
-                        {
-                          tab = handle;
-                          url = tab.url;
-                          title = tab.title;
-                          snapshot = None;
-                          dialog = None;
-                          popups = [];
-                        })))
+        let* () =
+          with_load_wait t cdp tab (fun () ->
+              let* reply =
+                cdp_call ~session:tab.session cdp "Page.navigate"
+                  (obj [ ("url", str url) ])
+              in
+              match text "errorText" reply with
+              | Some _ -> Error (error "internal" "browser navigation failed")
+              | None -> Ok ())
+        in
+        let* _ = lookup t ~owner handle in
+        let* _ = ready t in
+        tab.url <- url;
+        Ok
+          P.
+            {
+              tab = handle;
+              url = tab.url;
+              title = tab.title;
+              snapshot = None;
+              dialog = None;
+              popups = [];
+            })
 
 let close t ~owner handle =
   let k = key handle in

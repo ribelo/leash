@@ -11,8 +11,18 @@ val create : sw:Eio.Switch.t -> cap:int -> tombstone_s:int -> 'clock deps -> t
 val status : t -> Eta_app.Status.t
 val report : t -> Protocol.status_result
 
+val waits_for_load : string option -> bool
+(** The rule [new] applies (chrome-qnul): a url other than [about:blank] is waited for
+    until it has loaded, exactly as {!navigate} does; [None] and [about:blank] reply at
+    once. The control listener's handler budget asks the same question. *)
+
 val new_tab :
-  t -> owner:Protocol.Owner.t -> url:string -> (Protocol.tab_info, Protocol.error) result
+  t ->
+  owner:Protocol.Owner.t ->
+  url:string option ->
+  (Protocol.tab_info, Protocol.error) result
+(** With a url, the tab's document is loaded before the reply (chrome-qnul), so [title] is
+    populated; a load that does not complete within 30 seconds is [`timeout], as [nav]. *)
 
 val navigate :
   t ->
