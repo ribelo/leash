@@ -79,3 +79,15 @@ Why pipes rather than `Eio_mock.Flow` pairs: the installed mock supports scripte
 peer close. Two switch-owned Eio pipes give full-duplex bytes and observable EOF
 without using Chrome, any socket path, or the network. They are scoped to
 `Eta_test.run` in tests.
+
+## L4 snapshot-source spike (Chrome/152.0.7977.64, headless pipe)
+
+The three measured approaches in [snapshot-source](../.scratch/research/snapshot-source/README.md) use these additional page-session requests/replies; the CDP envelope above still applies. Fixture navigation uses browser-session `Target.createTarget {"url":"about:blank"}`, `Target.attachToTarget {"targetId":"…","flatten":true}`, then page-session `Page.navigate {"url":"data:text/html;charset=utf-8,…"}`. Those setup calls are excluded from the per-snapshot count.
+
+| Source | Request params | Relevant `result` shape |
+| --- | --- | --- |
+| A DOM | `Runtime.evaluate {"expression":"(() => { … })()","returnByValue":true,"awaitPromise":true}` | `{"result":{"type":"object","value":[{"role":"button","name":"Send message","id":"send"},…]}}`; browser backend ids are **absent**. |
+| B AX / first call of C | `Accessibility.getFullAXTree {}` | `{"nodes":[{"nodeId":"…","parentId":"…","childIds":["…"],"ignored":false,"role":{"type":"role","value":"button"},"name":{"type":"computedString","value":"Send message"},"backendDOMNodeId":123},…]}`; the returned nodes have no viewport rectangles. |
+| Second call of C | `DOMSnapshot.captureSnapshot {"computedStyles":["display","visibility"],"includeDOMRects":true}` | `{"documents":[{"nodes":{"backendNodeId":[…]},"layout":{"nodeIndex":[…],"bounds":[[x,y,width,height],…],"styles":[…],"clientRects":[…]}}],"strings":[…]}`. Join `nodes.backendNodeId[layout.nodeIndex[i]]` to AX `backendDOMNodeId`; rectangle coordinates are CSS pixels. |
+
+C uses two CDP requests, not an atomic CDP operation. A `Runtime.evaluate` setup/read around the pair can install and read a `MutationObserver` counter for same-document DOM mutations; navigation additionally requires a loader-id guard. Neither guard guarantees layout stayed fixed through scrolling/animation, and the guard calls were not included in the measured 2-call count. Action-time visibility/occlusion must be checked separately.

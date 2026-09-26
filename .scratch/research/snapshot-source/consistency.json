@@ -1,0 +1,7 @@
+{
+  "page": "state",
+  "mutation_counter_before": 0,
+  "mutation_counter_after": 1,
+  "detected": true,
+  "probe_cdp_calls": 5
+}

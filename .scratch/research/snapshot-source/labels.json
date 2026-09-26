@@ -1,0 +1,116 @@
+{
+  "form": [
+    [
+      "heading",
+      "Contact us"
+    ],
+    [
+      "paragraph",
+      "Required fields are marked."
+    ],
+    [
+      "textbox",
+      "Email address"
+    ],
+    [
+      "textbox",
+      "Message"
+    ],
+    [
+      "button",
+      "Send message"
+    ]
+  ],
+  "aria": [
+    [
+      "heading",
+      "Account controls"
+    ],
+    [
+      "paragraph",
+      "Pick your plan."
+    ],
+    [
+      "button",
+      "Save changes"
+    ],
+    [
+      "textbox",
+      "Find account"
+    ],
+    [
+      "checkbox",
+      "Monthly billing"
+    ]
+  ],
+  "navigation": [
+    [
+      "heading",
+      "Documentation"
+    ],
+    [
+      "link",
+      "Getting started"
+    ],
+    [
+      "link",
+      "API reference"
+    ],
+    [
+      "paragraph",
+      "Browse the guide."
+    ]
+  ],
+  "select": [
+    [
+      "heading",
+      "Travel booking"
+    ],
+    [
+      "paragraph",
+      "Select your destination."
+    ],
+    [
+      "combobox",
+      "Destination"
+    ],
+    [
+      "radio",
+      "Economy"
+    ],
+    [
+      "radio",
+      "Business"
+    ],
+    [
+      "button",
+      "Book now"
+    ]
+  ],
+  "state": [
+    [
+      "heading",
+      "Preferences"
+    ],
+    [
+      "paragraph",
+      "Choose notifications."
+    ],
+    [
+      "checkbox",
+      "Notifications"
+    ],
+    [
+      "button",
+      "Apply changes"
+    ],
+    [
+      "button",
+      "Continue setup"
+    ],
+    [
+      "button",
+      "Advanced settings"
+    ]
+  ]
+}

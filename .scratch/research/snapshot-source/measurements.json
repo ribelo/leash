@@ -1,0 +1,5267 @@
+[
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 1,
+    "latency_ms": 2.290010452270508,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 1,
+    "latency_ms": 4.01616096496582,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 1,
+    "latency_ms": 3.0319690704345703,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 2,
+    "latency_ms": 1.0998249053955078,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 2,
+    "latency_ms": 0.5998611450195312,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 2,
+    "latency_ms": 0.3440380096435547,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 3,
+    "latency_ms": 0.23412704467773438,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 3,
+    "latency_ms": 0.5350112915039062,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 3,
+    "latency_ms": 0.8270740509033203,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 4,
+    "latency_ms": 3.2889842987060547,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 4,
+    "latency_ms": 1.1088848114013672,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 4,
+    "latency_ms": 0.26106834411621094,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 5,
+    "latency_ms": 0.16880035400390625,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 5,
+    "latency_ms": 0.4780292510986328,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 5,
+    "latency_ms": 3.2761096954345703,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 6,
+    "latency_ms": 3.665924072265625,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 6,
+    "latency_ms": 1.0609626770019531,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 6,
+    "latency_ms": 0.3650188446044922,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 7,
+    "latency_ms": 0.29087066650390625,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 7,
+    "latency_ms": 0.5898475646972656,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 7,
+    "latency_ms": 1.077890396118164,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 8,
+    "latency_ms": 1.0650157928466797,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 8,
+    "latency_ms": 0.7770061492919922,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 8,
+    "latency_ms": 0.3027915954589844,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 9,
+    "latency_ms": 0.3418922424316406,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 9,
+    "latency_ms": 0.5688667297363281,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 9,
+    "latency_ms": 1.0149478912353516,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 10,
+    "latency_ms": 3.0770301818847656,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 10,
+    "latency_ms": 0.8080005645751953,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 10,
+    "latency_ms": 0.3910064697265625,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 11,
+    "latency_ms": 0.2779960632324219,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 11,
+    "latency_ms": 0.6060600280761719,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 11,
+    "latency_ms": 0.7421970367431641,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 12,
+    "latency_ms": 0.8180141448974609,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 12,
+    "latency_ms": 0.5321502685546875,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 12,
+    "latency_ms": 0.2300739288330078,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 13,
+    "latency_ms": 0.2009868621826172,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 13,
+    "latency_ms": 0.579833984375,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 13,
+    "latency_ms": 0.7319450378417969,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 14,
+    "latency_ms": 0.6039142608642578,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 14,
+    "latency_ms": 1.2121200561523438,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 14,
+    "latency_ms": 0.3299713134765625,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "dom",
+    "iteration": 15,
+    "latency_ms": 0.15616416931152344,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "id": "" },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "id": ""
+      },
+      { "role": "textbox", "name": "Email address", "id": "email" },
+      { "role": "textbox", "name": "Message", "id": "message" },
+      { "role": "button", "name": "Send message", "id": "send" }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax",
+    "iteration": 15,
+    "latency_ms": 0.43201446533203125,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "form",
+    "source": "ax+snapshot",
+    "iteration": 15,
+    "latency_ms": 2.274036407470703,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Contact us", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Required fields are marked.",
+        "backendDOMNodeId": 11
+      },
+      { "role": "textbox", "name": "Email address", "backendDOMNodeId": 3 },
+      { "role": "textbox", "name": "Message ", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Send message", "backendDOMNodeId": 17 }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 1,
+    "latency_ms": 1.1730194091796875,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 1,
+    "latency_ms": 0.8969306945800781,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 1,
+    "latency_ms": 0.7030963897705078,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 2,
+    "latency_ms": 0.6110668182373047,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 2,
+    "latency_ms": 0.3790855407714844,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 2,
+    "latency_ms": 0.18715858459472656,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 3,
+    "latency_ms": 0.1571178436279297,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 3,
+    "latency_ms": 0.3819465637207031,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 3,
+    "latency_ms": 0.6110668182373047,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 4,
+    "latency_ms": 0.5888938903808594,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 4,
+    "latency_ms": 0.3268718719482422,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 4,
+    "latency_ms": 0.1518726348876953,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 5,
+    "latency_ms": 0.12493133544921875,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 5,
+    "latency_ms": 0.35119056701660156,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 5,
+    "latency_ms": 0.4849433898925781,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 6,
+    "latency_ms": 2.6540756225585938,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 6,
+    "latency_ms": 0.4680156707763672,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 6,
+    "latency_ms": 0.18596649169921875,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 7,
+    "latency_ms": 0.11992454528808594,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 7,
+    "latency_ms": 0.36787986755371094,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 7,
+    "latency_ms": 0.6339550018310547,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 8,
+    "latency_ms": 0.6840229034423828,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 8,
+    "latency_ms": 0.4379749298095703,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 8,
+    "latency_ms": 0.1800060272216797,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 9,
+    "latency_ms": 0.1571178436279297,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 9,
+    "latency_ms": 0.3750324249267578,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 9,
+    "latency_ms": 0.5650520324707031,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 10,
+    "latency_ms": 0.7100105285644531,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 10,
+    "latency_ms": 0.3921985626220703,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 10,
+    "latency_ms": 0.14710426330566406,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 11,
+    "latency_ms": 0.09989738464355469,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 11,
+    "latency_ms": 0.3039836883544922,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 11,
+    "latency_ms": 0.55694580078125,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 12,
+    "latency_ms": 0.5910396575927734,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 12,
+    "latency_ms": 0.4038810729980469,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 12,
+    "latency_ms": 0.17595291137695312,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 13,
+    "latency_ms": 0.17404556274414062,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 13,
+    "latency_ms": 0.39315223693847656,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 13,
+    "latency_ms": 1.2180805206298828,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 14,
+    "latency_ms": 0.6198883056640625,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 14,
+    "latency_ms": 0.370025634765625,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 14,
+    "latency_ms": 0.16498565673828125,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "dom",
+    "iteration": 15,
+    "latency_ms": 0.12993812561035156,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      { "role": "heading", "name": "Account controls", "id": "" },
+      { "role": "paragraph", "name": "Pick your plan.", "id": "" },
+      { "role": "button", "name": "Save changes", "id": "save" },
+      { "role": "textbox", "name": "Find account", "id": "search" },
+      { "role": "checkbox", "name": "Monthly billing", "id": "toggle" }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax",
+    "iteration": 15,
+    "latency_ms": 0.33211708068847656,
+    "cdp_calls": 1,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "aria",
+    "source": "ax+snapshot",
+    "iteration": 15,
+    "latency_ms": 0.5040168762207031,
+    "cdp_calls": 2,
+    "row_count": 5,
+    "correct_names": 5,
+    "missing_names": 0,
+    "expected_count": 5,
+    "rows": [
+      {
+        "role": "heading",
+        "name": "Account controls",
+        "backendDOMNodeId": 8
+      },
+      {
+        "role": "paragraph",
+        "name": "Pick your plan.",
+        "backendDOMNodeId": 9
+      },
+      { "role": "button", "name": "Save changes", "backendDOMNodeId": 10 },
+      { "role": "textbox", "name": "Find account", "backendDOMNodeId": 2 },
+      {
+        "role": "checkbox",
+        "name": "Monthly billing",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 1,
+    "latency_ms": 3.5181045532226562,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 1,
+    "latency_ms": 0.8070468902587891,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 1,
+    "latency_ms": 0.6530284881591797,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 2,
+    "latency_ms": 0.5850791931152344,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 2,
+    "latency_ms": 0.3490447998046875,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 2,
+    "latency_ms": 0.20503997802734375,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 3,
+    "latency_ms": 0.20313262939453125,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 3,
+    "latency_ms": 0.42700767517089844,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 3,
+    "latency_ms": 0.7188320159912109,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 4,
+    "latency_ms": 0.6139278411865234,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 4,
+    "latency_ms": 0.4010200500488281,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 4,
+    "latency_ms": 0.202178955078125,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 5,
+    "latency_ms": 0.1289844512939453,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 5,
+    "latency_ms": 0.4889965057373047,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 5,
+    "latency_ms": 0.6840229034423828,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 6,
+    "latency_ms": 0.6568431854248047,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 6,
+    "latency_ms": 0.4010200500488281,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 6,
+    "latency_ms": 0.18715858459472656,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 7,
+    "latency_ms": 0.16498565673828125,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 7,
+    "latency_ms": 0.4191398620605469,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 7,
+    "latency_ms": 0.6690025329589844,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 8,
+    "latency_ms": 0.6580352783203125,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 8,
+    "latency_ms": 0.4100799560546875,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 8,
+    "latency_ms": 0.15497207641601562,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 9,
+    "latency_ms": 0.16117095947265625,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 9,
+    "latency_ms": 0.4010200500488281,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 9,
+    "latency_ms": 0.6449222564697266,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 10,
+    "latency_ms": 0.6210803985595703,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 10,
+    "latency_ms": 0.4031658172607422,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 10,
+    "latency_ms": 0.15783309936523438,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 11,
+    "latency_ms": 0.15592575073242188,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 11,
+    "latency_ms": 0.3960132598876953,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 11,
+    "latency_ms": 0.7331371307373047,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 12,
+    "latency_ms": 0.6849765777587891,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 12,
+    "latency_ms": 0.43010711669921875,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 12,
+    "latency_ms": 1.4162063598632812,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 13,
+    "latency_ms": 0.1888275146484375,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 13,
+    "latency_ms": 0.42510032653808594,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 13,
+    "latency_ms": 0.5991458892822266,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 14,
+    "latency_ms": 0.6449222564697266,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 14,
+    "latency_ms": 0.3559589385986328,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 14,
+    "latency_ms": 0.1571178436279297,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "dom",
+    "iteration": 15,
+    "latency_ms": 0.1659393310546875,
+    "cdp_calls": 1,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "id": "" },
+      { "role": "link", "name": "Getting started", "id": "start" },
+      { "role": "link", "name": "API reference", "id": "api" },
+      { "role": "paragraph", "name": "Browse the guide.", "id": "" }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax",
+    "iteration": 15,
+    "latency_ms": 0.4100799560546875,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      },
+      {
+        "role": "link",
+        "name": "Offscreen appendix",
+        "backendDOMNodeId": 12
+      },
+      {
+        "role": "paragraph",
+        "name": "Offscreen footer",
+        "backendDOMNodeId": 14
+      }
+    ]
+  },
+  {
+    "page": "navigation",
+    "source": "ax+snapshot",
+    "iteration": 15,
+    "latency_ms": 0.6880760192871094,
+    "cdp_calls": 2,
+    "row_count": 4,
+    "correct_names": 4,
+    "missing_names": 0,
+    "expected_count": 4,
+    "rows": [
+      { "role": "heading", "name": "Documentation", "backendDOMNodeId": 7 },
+      { "role": "link", "name": "Getting started", "backendDOMNodeId": 9 },
+      { "role": "link", "name": "API reference", "backendDOMNodeId": 10 },
+      {
+        "role": "paragraph",
+        "name": "Browse the guide.",
+        "backendDOMNodeId": 11
+      }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 1,
+    "latency_ms": 1.2900829315185547,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 1,
+    "latency_ms": 1.0759830474853516,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 1,
+    "latency_ms": 0.9560585021972656,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 2,
+    "latency_ms": 1.0249614715576172,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 2,
+    "latency_ms": 0.5409717559814453,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 2,
+    "latency_ms": 0.2410411834716797,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 3,
+    "latency_ms": 0.19502639770507812,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 3,
+    "latency_ms": 0.5269050598144531,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 3,
+    "latency_ms": 0.8218288421630859,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 4,
+    "latency_ms": 0.7829666137695312,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 4,
+    "latency_ms": 0.5018711090087891,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 4,
+    "latency_ms": 0.20003318786621094,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 5,
+    "latency_ms": 0.1800060272216797,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 5,
+    "latency_ms": 0.5140304565429688,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 5,
+    "latency_ms": 0.7829666137695312,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 6,
+    "latency_ms": 0.7879734039306641,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 6,
+    "latency_ms": 0.49996376037597656,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 6,
+    "latency_ms": 0.1900196075439453,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 7,
+    "latency_ms": 0.1800060272216797,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 7,
+    "latency_ms": 0.5209445953369141,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 7,
+    "latency_ms": 3.016948699951172,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 8,
+    "latency_ms": 0.9219646453857422,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 8,
+    "latency_ms": 0.5731582641601562,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 8,
+    "latency_ms": 0.1990795135498047,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 9,
+    "latency_ms": 0.17690658569335938,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 9,
+    "latency_ms": 0.5629062652587891,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 9,
+    "latency_ms": 0.8330345153808594,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 10,
+    "latency_ms": 0.8699893951416016,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 10,
+    "latency_ms": 0.5331039428710938,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 10,
+    "latency_ms": 0.19502639770507812,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 11,
+    "latency_ms": 0.2028942108154297,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 11,
+    "latency_ms": 0.5419254302978516,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 11,
+    "latency_ms": 0.8459091186523438,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 12,
+    "latency_ms": 0.7429122924804688,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 12,
+    "latency_ms": 0.49185752868652344,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 12,
+    "latency_ms": 0.1518726348876953,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 13,
+    "latency_ms": 0.10704994201660156,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 13,
+    "latency_ms": 0.4558563232421875,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 13,
+    "latency_ms": 0.9081363677978516,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 14,
+    "latency_ms": 0.7669925689697266,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 14,
+    "latency_ms": 0.5059242248535156,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 14,
+    "latency_ms": 0.1780986785888672,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "dom",
+    "iteration": 15,
+    "latency_ms": 0.10800361633300781,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "id": "" },
+      { "role": "paragraph", "name": "Select your destination.", "id": "" },
+      { "role": "combobox", "name": "Destination", "id": "destination" },
+      { "role": "radio", "name": "Economy", "id": "economy" },
+      { "role": "radio", "name": "Business", "id": "business" },
+      { "role": "button", "name": "Book now", "id": "book" }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax",
+    "iteration": 15,
+    "latency_ms": 0.4680156707763672,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "select",
+    "source": "ax+snapshot",
+    "iteration": 15,
+    "latency_ms": 0.7598400115966797,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Travel booking", "backendDOMNodeId": 11 },
+      {
+        "role": "paragraph",
+        "name": "Select your destination.",
+        "backendDOMNodeId": 12
+      },
+      { "role": "combobox", "name": "Destination", "backendDOMNodeId": 2 },
+      { "role": "radio", "name": "Economy", "backendDOMNodeId": 3 },
+      { "role": "radio", "name": "Business", "backendDOMNodeId": 4 },
+      { "role": "button", "name": "Book now", "backendDOMNodeId": 30 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 1,
+    "latency_ms": 1.180887222290039,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 1,
+    "latency_ms": 0.8318424224853516,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 1,
+    "latency_ms": 2.4759769439697266,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 2,
+    "latency_ms": 0.5881786346435547,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 2,
+    "latency_ms": 0.33402442932128906,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 2,
+    "latency_ms": 0.1811981201171875,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 3,
+    "latency_ms": 0.13899803161621094,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 3,
+    "latency_ms": 0.36406517028808594,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 3,
+    "latency_ms": 0.6310939788818359,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 4,
+    "latency_ms": 0.6229877471923828,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 4,
+    "latency_ms": 0.3440380096435547,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 4,
+    "latency_ms": 0.15020370483398438,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 5,
+    "latency_ms": 0.12111663818359375,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 5,
+    "latency_ms": 0.36597251892089844,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 5,
+    "latency_ms": 0.6079673767089844,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 6,
+    "latency_ms": 0.5900859832763672,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 6,
+    "latency_ms": 0.34308433532714844,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 6,
+    "latency_ms": 0.15497207641601562,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 7,
+    "latency_ms": 0.11515617370605469,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 7,
+    "latency_ms": 0.3561973571777344,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 7,
+    "latency_ms": 0.5540847778320312,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 8,
+    "latency_ms": 0.5509853363037109,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 8,
+    "latency_ms": 0.3387928009033203,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 8,
+    "latency_ms": 0.12993812561035156,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 9,
+    "latency_ms": 0.09989738464355469,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 9,
+    "latency_ms": 0.3390312194824219,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 9,
+    "latency_ms": 0.5500316619873047,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 10,
+    "latency_ms": 0.5519390106201172,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 10,
+    "latency_ms": 0.36215782165527344,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 10,
+    "latency_ms": 0.13589859008789062,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 11,
+    "latency_ms": 0.09703636169433594,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 11,
+    "latency_ms": 0.30803680419921875,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 11,
+    "latency_ms": 0.6389617919921875,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 12,
+    "latency_ms": 0.5159378051757812,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 12,
+    "latency_ms": 0.31113624572753906,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 12,
+    "latency_ms": 0.11301040649414062,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 13,
+    "latency_ms": 0.10919570922851562,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 13,
+    "latency_ms": 0.31495094299316406,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 13,
+    "latency_ms": 0.5371570587158203,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 14,
+    "latency_ms": 0.5321502685546875,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 14,
+    "latency_ms": 0.3249645233154297,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 14,
+    "latency_ms": 0.1201629638671875,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "dom",
+    "iteration": 15,
+    "latency_ms": 0.11110305786132812,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "id": "" },
+      { "role": "paragraph", "name": "Choose notifications.", "id": "" },
+      { "role": "checkbox", "name": "Notifications", "id": "notify" },
+      { "role": "button", "name": "Apply changes", "id": "disabled" },
+      { "role": "button", "name": "Advanced settings", "id": "advanced" },
+      { "role": "button", "name": "Continue setup", "id": "continue" }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax",
+    "iteration": 15,
+    "latency_ms": 1.6338825225830078,
+    "cdp_calls": 1,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  },
+  {
+    "page": "state",
+    "source": "ax+snapshot",
+    "iteration": 15,
+    "latency_ms": 0.5879402160644531,
+    "cdp_calls": 2,
+    "row_count": 6,
+    "correct_names": 6,
+    "missing_names": 0,
+    "expected_count": 6,
+    "rows": [
+      { "role": "heading", "name": "Preferences", "backendDOMNodeId": 7 },
+      {
+        "role": "paragraph",
+        "name": "Choose notifications.",
+        "backendDOMNodeId": 8
+      },
+      { "role": "checkbox", "name": "Notifications", "backendDOMNodeId": 10 },
+      { "role": "button", "name": "Apply changes", "backendDOMNodeId": 11 },
+      {
+        "role": "button",
+        "name": "Advanced settings",
+        "backendDOMNodeId": 17
+      },
+      { "role": "button", "name": "Continue setup", "backendDOMNodeId": 19 }
+    ]
+  }
+]

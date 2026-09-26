@@ -1,0 +1,5 @@
+{
+  "chrome": "Chrome/152.0.7977.64",
+  "headless": true,
+  "iterations_per_page_source": 15
+}

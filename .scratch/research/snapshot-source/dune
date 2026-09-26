@@ -1,0 +1,9 @@
+(executable
+ (name spike)
+ (libraries leash eta eta_observability eio eio_main eio.unix unix yojson)
+ (flags
+  (:standard
+   -I
+   /home/ribelo/projects/ribelo/leash/_build/default/packages/leash/.leash.objs/byte
+   -I
+   /home/ribelo/projects/ribelo/leash/_build/default/packages/leash/.leash.objs/native)))
