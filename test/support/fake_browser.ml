@@ -23,6 +23,8 @@ let target_info =
       ("title", str "");
       ("url", str "about:blank");
       ("attached", `Bool false);
+      ("canAccessOpener", `Bool false);
+      ("browserContextId", str "browser-context-1");
     ]
 
 let event = function

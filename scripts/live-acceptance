@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
-# Live-acceptance gate against real Chrome. Filled in by milestone 6 (svc-xafg).
+# Live-acceptance gate for the managed-Chrome row (chrome-p2n4, chrome-9ex7,
+# chrome-b288): launches real Chrome through Leash's Chrome service on a temporary
+# profile, speaks CDP over the debugging pipe, asserts that no DevTools port is open,
+# and stops Chrome with SIGTERM and a grace period. A headed window appears while it
+# runs; that is expected.
+#
+# Usage: scripts/live-acceptance [--binary google-chrome-stable] [--profile DIR] [--keep]
 set -euo pipefail
-echo "live-acceptance: not implemented yet (milestone 6)" >&2
-exit 2
+
+cd "$(dirname "$0")/.."
+
+build_dir="${DUNE_BUILD_DIR:-_build}"
+exec nix develop -c env DUNE_BUILD_DIR="$build_dir" \
+  dune exec test/live/live_acceptance.exe -- "$@"

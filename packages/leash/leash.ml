@@ -4,5 +4,7 @@
 
 let version = "0.0.0"
 
+module Cdp = Cdp
+module Chrome = Chrome
 module Config = Config
 module Protocol = Protocol

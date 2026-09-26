@@ -17,7 +17,9 @@
     - Runtime.evaluate: {result:{type:"undefined"}}
 
     Event shapes available through [event] are Target.targetCreated and
-    Target.targetInfoChanged ({targetInfo:{targetId,type,title,url,attached}}),
+    Target.targetInfoChanged
+    ({targetInfo:{targetId,type,title,url,attached,canAccessOpener,browserContextId}} —
+    the last two are what real Chrome sends, see docs/cdp-shapes.md),
     Target.targetDestroyed ({targetId}), Target.attachedToTarget
     ({sessionId,targetInfo,waitingForDebugger}), Target.detachedFromTarget
     ({sessionId,targetId}), Page.loadEventFired ({timestamp}),

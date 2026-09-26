@@ -26,7 +26,7 @@ when the request carried a flat-session id; otherwise it omits `sessionId`.
 
 | Event method | Default `params` | Notes |
 | --- | --- | --- |
-| `Target.targetCreated`, `Target.targetInfoChanged` | `{"targetInfo":{"targetId":"target-1","type":"page","title":"","url":"about:blank","attached":false}}` | Page `TargetInfo`; real events can include further optional fields. |
+| `Target.targetCreated`, `Target.targetInfoChanged` | `{"targetInfo":{"targetId":"target-1","type":"page","title":"","url":"about:blank","attached":false,"canAccessOpener":false,"browserContextId":"browser-context-1"}}` | Page `TargetInfo`. Real Chrome always sends `canAccessOpener` and `browserContextId`, and adds `parentId`/`parentFrameId` for child frames; tests can script any of them. |
 | `Target.targetDestroyed` | `{"targetId":"target-1"}` | Target is gone. |
 | `Target.attachedToTarget` | `{"sessionId":"session-1","targetInfo":{...},"waitingForDebugger":false}` | Flat-session attachment; `targetInfo` is as above. |
 | `Target.detachedFromTarget` | `{"sessionId":"session-1","targetId":"target-1"}` | `targetId` can be optional in real CDP. |
@@ -38,6 +38,41 @@ for page-session events when requested. Event emission is explicit; a
 `Page.navigate` reply does **not** imply a subsequent load event. This lets
 navigation tests script `loadEventFired` or
 `frameNavigated` followed by `domContentEventFired` independently.
+
+## What real Chrome does (152.0.7977.64, checked by `scripts/live-acceptance`)
+
+The live gate launches Chrome through `Leash.Chrome` on a temporary profile, headless
+(`--headless=new`, `Chrome.config.headless`), and speaks over the pipe. Everything below
+was recorded from that run, not from documentation.
+
+- **Descriptors 3 and 4 must be blocking.** Chrome reads its commands with a blocking
+  read: an `EAGAIN` there ends the connection with
+  `devtools_pipe_handler.cc: Connection terminated while reading from pipe` and Chrome
+  exits 0. `Eio_unix.pipe` marks *both* ends non-blocking, and that flag lives on the
+  open file description, so it reaches the child through `dup2`. `Chrome.launch_pipe`
+  therefore clears `O_NONBLOCK` on the child's ends before the fork; the parent's ends
+  stay non-blocking, which is what Eio's scheduler expects. The fake browser is
+  unaffected: it speaks the framing itself.
+- **The configured binary is usually a launcher script.** On NixOS
+  `google-chrome-stable` is a wrapper (`bash -e … google-chrome … chrome`), so the
+  process that eventually holds descriptors 3 and 4 appears a moment after the spawn and
+  its executable is `…/share/google/chrome/chrome`. The live gate asks Chrome itself
+  (`SystemInfo.getProcessInfo`, browser domain) for the browser pid instead of scanning
+  `/proc`.
+- **Chrome rewrites its own command line.** Flags are still all there — the gate reads
+  them as text, not as a list of arguments.
+- `Target.getTargets` answers
+  `{"id":1,"result":{"targetInfos":[{"targetId":"…32 hex…","type":"browser_ui"|"page"|"background_page"|"service_worker"|"iframe"|"other","title":"","url":"…","attached":false,"canAccessOpener":false,"browserContextId":"…32 hex…"}]}}`.
+  A fresh profile already has `browser_ui` (omnibox popups), a `page` for
+  `chrome://newtab/`, extension `background_page`s and `service_worker`s, so the empty
+  `targetInfos` default in the table above is the fixture's, not Chrome's.
+- `Target.createTarget {"url":"about:blank"}` answers
+  `{"id":2,"result":{"targetId":"…32 hex…"}}`, exactly as the fixture has it, and the new
+  target shows up in the next `Target.getTargets` as a `page` with that `targetId`.
+- No debugging port exists: no `DevToolsActivePort` file appears in the profile
+  directory, and the browser process holds no listening socket among its descriptors.
+  Stopping with SIGTERM (the supervisor's grace) ends the browser in tens of
+  milliseconds.
 
 Why pipes rather than `Eio_mock.Flow` pairs: the installed mock supports scripted
 `on_read` but only traces sink writes; it has no write-to-peer-read routing or

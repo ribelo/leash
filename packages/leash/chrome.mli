@@ -1,5 +1,115 @@
-(** Managed Chrome supervisor and browser generation; implemented in L2.
+(** Managed Chrome: one browser process under a restart schedule, and one CDP connection
+    per browser generation.
 
-    L2 Service: [create ~sw] owns [Eta_process.Supervised] and [Child] with Chrome pipe
-    fds 3/4; [status] reads live state. Deps include process manager, clock, logger. No
-    child process exists in L0. *)
+    [create] owns an {!Eta_process.Supervised} over a spawn that builds Chrome's
+    [--remote-debugging-pipe] pair, hands the child ends to descriptors 3 and 4 and speaks
+    CDP over the parents' ends. A generation ends when its process exits or its transport
+    closes; the supervisor then restarts it under the configured backoff. Losing the
+    browser is an event on {!events}, never a failure of this service: the tab registry
+    answers it by tombstoning its tabs. *)
+
+type spawn_error = Eta_process.Child.error
+(** [`Invalid_fd] or [`Duplicate_fd] from {!Eta_process.Child.spawn}. *)
+
+type reason = [ `Spawn of spawn_error | `Schedule_exhausted of Eta_process.Child.exit ]
+(** Why the supervisor gave up: a spawn that failed, or a schedule that ran out of
+    attempts after the last exit. *)
+
+type event =
+  | Started of int
+  | Lost of int
+  | Gave_up of reason Eta.Cause.t
+  | Stopped
+      (** The lifecycle a consumer such as the tab registry subscribes to. [Started g]
+          follows each successful spawn; [Lost g] says generation [g] is gone, whether its
+          process exited or its transport closed, and is delivered at most once per
+          generation; [Gave_up cause] ends the restart schedule and needs an operator;
+          [Stopped] is last, after {!stop} or switch release. *)
+
+type phase = [ `Running | `Restarting | `Gave_up | `Stopped ]
+
+type status = { generation : int; phase : phase; failure : string option }
+(** What [leash status] reports: the last generation counted by the supervisor, whether
+    Chrome is running or restarting, and, after a give-up, why. *)
+
+type backoff = {
+  initial : Eta.Duration.t;
+  cap : Eta.Duration.t;
+  factor : float;
+  attempts : int;
+}
+
+val default_backoff : backoff
+(** One second, doubling, capped at thirty seconds, ten attempts then give up. *)
+
+type config = {
+  binary : string;
+  profile_dir : string;
+  workspace : string;
+  grace : Eta.Duration.t;
+  backoff : backoff;
+  headless : bool;
+}
+
+val make :
+  binary:string ->
+  profile_dir:string ->
+  workspace:string ->
+  ?grace:Eta.Duration.t ->
+  ?backoff:backoff ->
+  ?headless:bool ->
+  unit ->
+  config
+(** [grace] defaults to five seconds and [headless] to false. The workspace is placement
+    intent: a headed Chrome is launched with [--class=leash] and the window is moved by
+    hand or by a niri rule. [headless] exists for the live-acceptance gate and for
+    operator choice; the service starts a headed browser by default. *)
+
+val argv : config -> string list
+(** The exact command line: the dedicated profile, no first-run or crash-restore prompt,
+    [--remote-debugging-pipe] with no debugging port, [--class=leash], and
+    [--headless=new] only when [headless] is true. *)
+
+type 'clock deps = {
+  clock : 'clock Eio.Time.clock;
+  mgr : Eio_unix.Process.mgr_ty Eio.Resource.t;
+  logger : Eta_observability.Logger.t;
+}
+
+type 'clock launch =
+  sw:Eio.Switch.t ->
+  clock:'clock Eio.Time.clock ->
+  mgr:Eio_unix.Process.mgr_ty Eio.Resource.t ->
+  config ->
+  (Eta_process.Child.t * Cdp.transport, spawn_error) result
+(** How one generation's process and transport are created, on the child switch that the
+    supervisor releases when the generation ends. *)
+
+val launch_pipe : 'clock launch
+(** The real one: two pipes, the child ends on descriptors 3 and 4, the parent ends as the
+    transport. The parent closes its copies of the child ends right after the spawn, so
+    the browser's exit reaches the CDP reader as end of input. *)
+
+type t
+
+val create : sw:Eio.Switch.t -> ?launch:'clock launch -> config -> 'clock deps -> t
+(** Starts the supervisor and its two owner fibers on [sw]. The first spawn is
+    asynchronous, so {!connection} answers [`Browser_unavailable] until the first
+    [Started]. Nothing synchronously fails; a spawn failure arrives as [Gave_up]. *)
+
+val generation : t -> int
+(** The supervisor's generation counter: zero before the first successful spawn. *)
+
+val connection : t -> (Cdp.t, [ `Browser_unavailable ]) result
+(** The current generation's connection, or [`Browser_unavailable] while Chrome is
+    starting, restarting, given up or stopped. Fails fast; callers retry. *)
+
+val events : t -> event Eio.Stream.t
+(** Bounded to 32 events; overflow drops the oldest, never blocks. Take until [Stopped].
+*)
+
+val status : t -> status
+
+val stop : t -> unit
+(** Idempotent and cancellation-protected: SIGTERM, the configured grace, SIGKILL if
+    needed, reap. Also runs as the releasing finalizer of [sw]. *)

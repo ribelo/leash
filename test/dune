@@ -15,3 +15,30 @@
   yojson
   alcotest)
  (deps ../packages/leash/bin/main.exe))
+
+(test
+ (name cdp_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eio
+  eio.unix
+  yojson
+  alcotest))
+
+(test
+ (name chrome_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eta_process
+  eta_observability
+  eio
+  eio.mock
+  eio.unix
+  yojson
+  alcotest))
