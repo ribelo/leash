@@ -12,17 +12,16 @@
  (depends
   (ocaml (>= 5.4.0))
   (dune (>= 3.21))
-  (eta (>= 0.1.0))
-  eta_ai
-  eta_ai_openrouter
-  eta_eio
-  eta_http
-  eta_http_eio
-  eta_observability
-  eta_otel_eio
+  eta
+  eta_app
+  eta_process
+  eta_ipc
+  eta_rpc
+  eta_json
   eta_schema
   eta_schema_yojson
-  eta_stream
+  eta_observability
+  (eta_test :with-test)
   (eio (>= 1.0))
   eio_main
   cmdliner
