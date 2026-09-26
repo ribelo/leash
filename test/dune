@@ -1,0 +1,3 @@
+(test
+ (name fake_browser_test)
+ (libraries leash leash_test_support eta_test eio eio.unix yojson alcotest))

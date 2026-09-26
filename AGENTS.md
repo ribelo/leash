@@ -46,6 +46,7 @@ Specs live at `docs/issues/<slug>/01-<slug>.md` with `status:` frontmatter. Ever
 ```sh
 nix develop -c dune build @install
 nix develop -c dune test
+nix develop -c dune build @fmt
 ```
 
 ## Safety defaults that are not up for local negotiation

@@ -3,4 +3,4 @@
 (executable
  (public_name leash)
  (name main)
- (libraries leash cmdliner))
+ (libraries leash eta_app eta_schema cmdliner))
