@@ -1,5 +1,11 @@
 # Eta delivery map for Leash
 
+> **Superseding note, 2026-09-26 afternoon.** Eta is being restarted as `eta-next` (worktree `/home/ribelo/projects/ribelo/ocaml/eta-next`, branch `eta-next`; see its `docs/why-next.md`). Leash is the first consumer of eta-next, not of v1. Consequences for this map:
+>
+> - Rows **2, 3, 4, 5, 6, 7** (`etarpc`, `etaproc`, `etaipc`, `etadoor`, `etaor`, `etaso`) were written for Leash on v1. **Stop them** if not yet started; if in progress, finish only what is pure and copyable (System One wire types and fail-closed decoding, the IPC endpoint-ownership rules, the process fd-mapping findings) and record the rest as not needed. Their *content* is re-specified against eta-next from Leash's stories when milestone 1 starts.
+> - Rows **1, 8, 9, 10** (docs truth, `eta_json`, removals) and **11, 12, 13** (`etaidle`, `etawsct`, Pie's `piegap`) stay: they keep v1 honest for Pie, inn, nema, taumel, grip and p-doom, which remain on `v1`.
+> - v1 is tagged `v1` on the Eta repository.
+
 Every ticket that came out of the Leash planning and the Eta audit, in the order to deliver them, with what each one unblocks. Hand a row to an implementing agent; the ticket says what must be true when it is done. Tick the box when its repository has the change committed and its gates green.
 
 Story-ID prefixes are stable names: "implement etarpc" means the ticket whose stories are `etarpc-*`.

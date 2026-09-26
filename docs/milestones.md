@@ -2,6 +2,8 @@
 
 The spine of the plan. Each milestone is one spec under `docs/issues/`; each spec lists the Eta tickets it depends on. We are at milestone 0.
 
+**Eta branch (ADR-0008):** Leash builds on `eta-next`, not v1. The Eta ticket names below refer to v1 tickets that are superseded for Leash; the same capabilities are pulled into eta-next from Leash's story IDs when milestone 1 starts. `docs/eta-delivery-map.md` carries the details.
+
 | # | Milestone | Spec | Depends on Eta |
 | --- | --- | --- | --- |
 | 0 | Planning: vocabulary, ADRs, specs, Eta tickets | this document | — |
