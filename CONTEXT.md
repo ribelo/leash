@@ -1,0 +1,136 @@
+# Leash
+
+Leash is a local browser service for coding agents. It owns one headed Chrome on a dedicated profile, exposes that browser's tabs to agents over a private Unix socket, and can drive a single tab toward a stated goal with the JEV decision model. Agents get a browser they share with each other and with the human; the human can step in at any moment.
+
+## Language
+
+### Processes and surfaces
+
+**Leash service**:
+The long-running process (a systemd user unit) that supervises the managed Chrome, holds all tab state, and serves the control socket.
+_Avoid_: daemon, server (unqualified)
+
+**Managed Chrome**:
+The one headed Chrome process that the Leash service launches, supervises, and talks to over CDP through a pipe. Nothing else attaches to it.
+_Avoid_: the browser (when the distinction from a user's own Chrome matters)
+
+**Browser generation**:
+A counter the Leash service increments each time it launches the managed Chrome. Every handle records the generation it was issued in; a handle from an older generation is gone with reason `Browser_lost`.
+
+**Profile**:
+The Chrome user-data directory the managed Chrome runs on. One per Leash service, shared by every agent and by the human. It is the only persistent state.
+
+**Control socket**:
+The private Unix-domain socket in the user's runtime directory through which every client, including the `leash` CLI, talks to the service. Line-delimited JSON requests and replies.
+
+**Control protocol**:
+The set of request and reply shapes accepted on the control socket. The `leash` CLI is a thin encoder for it; there is no other agent-facing API.
+
+**`leash` CLI**:
+The command-line client agents and humans use. Every command maps to exactly one control-protocol request.
+
+**Live view**:
+The managed Chrome's own window, pinned by a niri window rule to a dedicated workspace. There is no streamed viewer in this version.
+
+### Tabs and ownership
+
+**Tab**:
+One CDP page target in the managed Chrome, as Leash knows it: a handle, an origin, an owner state, and the latest snapshot.
+
+**Handle**:
+The opaque, unguessable token that names a tab in the control protocol. Bound to one browser generation. Not a bookmark: a handle never outlives the tab or the generation.
+
+**Origin**:
+Who created a tab. `Agent` for tabs created through the control protocol, `Human` for tabs opened in the Chrome UI or by a page (popups). Origin never changes and decides whether a tab may ever be auto-closed.
+
+**Owner**:
+The string that identifies the client that currently holds a tab. The CLI defaults it from the DSH session id and accepts an explicit override. Ownership is cooperative: it prevents accidents, not attacks.
+
+**Owner state**:
+`Unowned` (claimable by anyone), `Owned` (by one owner), or `With_human` (owned, but handed to the human; agent actions are refused). See the ADR on ownership.
+
+**Claim / release**:
+`claim` takes an unowned tab for an owner. `release` returns an owned tab to unowned without closing it.
+
+**Idle**:
+An owned tab on which no owner action has happened for the idle duration. Handoff pauses idleness.
+
+**Stage-1 expiry**:
+An owned tab that stays idle for the idle duration is released.
+
+**Stage-2 expiry**:
+An unowned tab of `Agent` origin that stays unclaimed for the unclaimed duration is closed. Human-origin tabs are never auto-closed.
+
+**Disposition**:
+Why a tab is gone: `Closed_by_owner`, `Closed_by_ttl`, `Closed_externally`, or `Browser_lost`. Kept as a tombstone so a later request on the handle reports the reason.
+
+**Tab cap**:
+The maximum number of open tabs in the managed Chrome. Creating a tab past the cap fails at once; nothing queues.
+
+### Observation and action
+
+**Snapshot**:
+One atomic observation of a tab: url, title, and the element table, stamped with a snapshot id. Every snapshot invalidates the previous one for that tab.
+
+**Element table**:
+The numbered list of interactive and informative elements on the page in reading order, one row each: index, role, name, value or state. The only observation model Leash has; agents and JEV consume the same table.
+
+**Row**:
+One element-table entry. The unit that actions target.
+
+**Target**:
+A row index from the current snapshot. Actions accept nothing else: no selectors, no coordinates.
+
+**Stale snapshot**:
+A snapshot whose page has since navigated or whose table no longer matches the live DOM. An action against a stale snapshot is refused with `stale-snapshot`; the client snaps again.
+
+**Action**:
+One of the operations that changes a tab: navigate, click, fill, press, select, scroll, dialog. Actions on one tab are serialized; different tabs run concurrently.
+
+**Dialog**:
+A JavaScript alert/confirm/prompt/beforeunload that blocks the page. Leash never answers one on its own; it is reported and the owner answers it with the dialog action.
+
+**Debug log**:
+A bounded per-tab ring of console messages, uncaught exceptions, and failed requests.
+
+### Human handoff
+
+**Handoff**:
+The owner's request that the human take over a tab: the live view is raised, a desktop notification carries the reason, the tab enters `With_human`, and the request blocks until resume or timeout.
+
+**Resume**:
+The human's signal (notification action or `leash resume`) that returns a handed-off tab to its owner.
+
+### Drive
+
+**Drive**:
+One request that runs the JEV loop on one tab toward one goal until `done`, `blocked`, the step cap, the deadline, or an error, and returns the trace and a final snapshot. Leash never claims the goal is achieved.
+
+**Goal**:
+The natural-language task the outer agent hands to one drive. The outer agent is the planner; Leash never interprets multi-step plans.
+
+**JEV**:
+TypeSafe's decision model, reached through OpenRouter's System One endpoint. It answers choice questions over a JSON state with probability distributions; it never produces free text.
+
+**Operation**:
+What JEV picks each step: `click`, `type_text`, `select`, `scroll_up`, `scroll_down`, `wait`, `done`, `blocked`.
+
+**Speculative target**:
+JEV's answer to a target question (which row to click, which row to type into) asked in the same request as the operation. Only the target matching the chosen operation is used.
+
+**Text helper**:
+The small OpenRouter language model that writes the text for a `type_text` step. Its output must parse as a small JSON object before it is typed.
+
+**Step**:
+One observe, decide, act, settle cycle inside a drive, recorded in the trace.
+
+**Trace**:
+The ordered record of a drive's steps: the row chosen, the operation and its probabilities, any typed text, and the page url and title after the step.
+
+### Platform
+
+**Eta**:
+The effect-oriented OCaml framework Leash is built on. Anything that is an effect-shaped resource, stream, or lifecycle concern and does not name the browser belongs in Eta, not in Leash. See the ADR on the Eta boundary.
+
+**Component context**:
+The `eta_component` lifecycle authority that activates Leash's subsystems from one desired-state tree, as in Pie.
