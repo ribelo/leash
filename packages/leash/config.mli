@@ -1,5 +1,14 @@
-(** Configuration schema and boot validation; implemented in L1.
+type chrome = { binary : string; profile_dir : string; workspace : string }
+type tabs = { cap : int }
+type expiry = { idle_s : int; unclaimed_s : int; tombstone_s : int }
+type models = { api_key : string option; jev_model : string; text_model : string }
+type t = { chrome : chrome; tabs : tabs; expiry : expiry; models : models }
 
-    L1: [schema] is an [Eta_schema] record for Chrome paths, tab cap, expiry, and model
-    keys; the Door decodes it and marks secrets/environment override. No schema exists in
-    L0. *)
+val schema : t Eta_schema.t
+(** Closed TOML configuration; the API key is redacted and may be supplied with
+    [OPENROUTER_API_KEY]. Paths are checked at service start by [validate_paths]. *)
+
+type validation_error = { pointer : string; message : string }
+
+val validate_paths : fs:_ Eio.Path.t -> t -> (unit, validation_error list) result
+(** Non-mutating filesystem validation. Errors carry JSON pointers and messages. *)
