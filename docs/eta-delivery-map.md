@@ -18,11 +18,26 @@ Story-ID prefixes are stable names: "implement etarpc" means the ticket whose st
 | 8 | `docs/issues/json-helpers-package/` → package `eta_json` | Eta | `etajson` | — | Leash milestone 1 (CDP decoding without depending on `eta_ai`) | [ ] |
 | 9 | `docs/issues/remove-component-family/` | Eta | `etacomp` | — | nothing; removes 6.2k dead lines | [ ] |
 | 10 | `docs/issues/remove-linux-input/` | Eta | `etalinput` | — | nothing; removes app code from the framework | [ ] |
-| 11 | `docs/issues/stale-eta-gap-workarounds/` | Pie | `piegap` | slice 1 none; slice 2 needs #5 | Pie stops carrying two stale workarounds | [ ] |
+| 11 | `docs/issues/openrouter-response-idle-timeout/` | Eta | `etaidle` | — | Pie slice 3 of `piegap`; Leash milestone 5 | [ ] |
+| 12 | `docs/issues/ws-connect-timeout/` | Eta | `etawsct` | — | Pie slice 4 of `piegap` | [ ] |
+| 13 | `docs/issues/stale-eta-gap-workarounds/` | Pie | `piegap` | slice 0 and 1 none; slice 2 needs #5; slice 3 needs #11; slice 4 needs #12 | Pie stops carrying stale workarounds and the dead `eta_component` declarations | [ ] |
 
-Rows 1–10 are independent of each other and can run in parallel. Leash milestone 1 needs 2, 3, 4 (and 8 for comfort); milestone 5 needs 6 and 7; milestone 6 wants 5.
+Rows 1–12 are independent of each other and can run in parallel; row 10 edits grip first, then Eta. Leash milestone 1 needs 2, 3, 4 (and 8 for comfort); milestone 5 needs 6 and 7; milestone 6 wants 5.
 
 Eta ticket paths are relative to `/home/ribelo/projects/ribelo/ocaml/Eta`; the Pie ticket to `/home/ribelo/projects/ribelo/pie`.
+
+## Rulings on the first round of conflicts (2026-09-26)
+
+1. `eta_linux_input` has a consumer, grip: move it into grip, switch grip, verify grip, then delete from Eta (ticket rewritten; stories `etalinput-fvto`, `etalinput-lmt3`).
+2. Stale `eta_component` declarations: Leash's `flake.nix` is already fixed; Pie's four files are slice 0 of `piegap` (row 13). Do them before or with `etacomp`; `etacomp` itself stays Eta-only.
+3. No new package mentions `eta_component`; lifetimes are Eta resource scopes. The "component retirement awaits the process" test becomes "closing the owning scope awaits the process". Recorded in `etaproc`; apply the same wording in `etarpc` and `etaipc` while implementing.
+4. `etaipc`: the split ingress/egress/handler-budget version (commit `9d6ca197`, story `etaipc-4t2y`) wins; delete the stale single-budget bullet.
+5. `etajson`: no alias. `Eta_ai.Json` is deleted and every caller switched (story `etajson-1vw7` replaces retired `etajson-kn62`).
+6. `etajson`: `eta_schema` was named in error; it is untouched. Only `eta_schema_yojson` is checked for a private copy.
+7. `etaproc`: the supervision helper is required, not optional.
+8. Pie work is in scope for delivery (row 13), one worker in the Pie repository, slices gated as the ticket says.
+
+Smaller points accepted as proposed: System One takes a required `Duration.t` deadline (an already-expired deadline returns `TIMEOUT`); OpenRouter `reasoning` becomes a checked constructor; tickets move to `status: completed` when done.
 
 ## Definition of done, for every row
 
