@@ -48,6 +48,19 @@ The Leash service launches one headed Chrome on its own profile with `--remote-d
 - Config is TOML: `chrome.binary`, `chrome.profile_dir`, `chrome.workspace`, `tabs.cap`, plus the expiry and model keys used by later milestones; unknown keys are an error at boot.
 - The snapshot-source spike is a tracked research bundle under `.scratch/research/snapshot-source/`: both an injected DOM script and Chrome's accessibility tree produce the element table for the same five pages; measure latency, rows, CDP calls, and name correctness against a hand-labelled list. The winner is recorded in the observation spec before milestone 2 starts.
 
+### Shape against eta-next (re-cut 2026-09-26 after rows 0–9)
+
+The service is an `Eta_app` program. Modules and the eta-next signatures they build on; each is a `SERVICE` (`create : sw:Eio.Switch.t -> config -> deps -> (t, error) result`, `status : t -> Status.t`):
+
+- **`Config`**: an `Eta_schema` record with `chrome.binary`, `chrome.profile_dir`, `chrome.workspace`, `tabs.cap`, expiry durations, model keys; secrets marked `~secret:true`, `OPENROUTER_API_KEY` declared with `~env`. Decoded by the Door; `leash config check` comes free.
+- **`Chrome`** (Service): deps = `{ clock; mgr : Eio_unix.Process.mgr; logger }`. `create` starts `Eta_process.Supervised.start ~sw ~clock ~schedule ~spawn` where `spawn ~sw` builds two pipes, calls `Eta_process.Child.spawn ~sw ~clock ~mgr ~argv ~grace ~fds:[ (3, child_read); (4, child_write) ] ()` with the Chrome flags of this spec, and wraps the parent ends as the CDP transport. `schedule` = `Schedule.exponential 1s` capped at 30 s, `recurs 10`. `generation` comes from `Supervised.generation`; the registry subscribes to `Supervised.events` (`Started g | Exited (g, exit) | Gave_up cause | Stopped`, the last after row 11) in a fiber under its own switch.
+- **`Cdp`** (module, not a Service): NUL-delimited JSON framing over the pipe flows (`read : unit -> Yojson.Safe.t option`, `write`), and `Eta_rpc.Correlator.create ~sw ~clock ~read ~write ~id ~set_id ~session ()` with `id` reading `"id"`, `session` reading `"sessionId"`. `Cdp.call ?session ?deadline method params` is `Correlator.call`; `Cdp.events` is `Correlator.notifications` (ending with ``Closed` after row 11). One correlator per browser generation; ``Transport_closed` from any call is the registry's signal to tombstone with `Browser_lost`.
+- **`Tabs`** (Service): deps = `{ chrome : Chrome.t; clock; logger }`. Owns the registry (handles, origin, owner state, snapshots, tombstones) and the expiry sweep as `Eta.Retry.repeat ~clock (Schedule.spaced 30s)` under its switch. Per-tab serialization is an `Eio.Mutex` per tab. Actions are `result`s with the protocol's error variants.
+- **`Control`** (Service): deps = `{ tabs : Tabs.t; status_query : unit -> Status.t list; fs; net; clock; logger }`. `create` calls `Eta_ipc.Listener.run ~sw ~fs ~net ~clock ~path ~decode ~encode ~budget ~handler ()` with `decode`/`encode` through the protocol schema, `budget` = per-command (1 s default; `wait` its timeout; `handoff` its timeout; `drive` its deadline), and `handler` dispatching to `Tabs`. `status_query` exists before `serve` (eta-next row 9).
+- **Program**: `Eta_app.run ~name:"leash" ~config:Config.schema ~pp_err @@ fun env config sw -> let* chrome = Chrome.create ~sw … in let* tabs = Tabs.create ~sw … in let query = Eta_app.status_query [Chrome.status chrome; Tabs.status tabs] in let* control = Control.create ~sw … { status_query = query; … } in Eta_app.serve ~sw ()`. Exit 0 on SIGTERM.
+- **Logging**: `env.logger` from the Door (`Eta_observability.Logger`, journal reporter); `Context.with_fields [("tab", h); ("owner", o); ("cmd", c)]` around each handled request; typed text and page content never logged (`Redact.t` for the API key).
+- **Tests** cross the three seams with eta-next's fakes: `Eta_test.run` with the mock clock for expiry and restart; the fake `Eio.Process.mgr` from `eta_test` for supervision; `Eio_mock.Flow` pairs scripting NUL-delimited CDP frames for the correlator; the control protocol driven in-process through `Eta_app.run_for_test`.
+
 ## Testing Decisions
 
 - A good test drives the control protocol in-process and observes replies and the fake browser's received CDP messages; it never inspects registry internals.
@@ -63,7 +76,7 @@ Observation and actions beyond `nav` (milestone 2), ownership beyond "the creato
 
 ## Further Notes
 
-- Blocked on eta-next rows 0–8 (`/home/ribelo/projects/ribelo/ocaml/eta-next/docs/issues/README.md`); the fake browser can be written against `eta_rpc`'s interface as soon as that spec is implemented.
+- Rows 0–8 of eta-next are delivered; milestone 1 starts after rows 9 and 10 (`status_query` before `serve`; the shared switch on eta-next) and should land before row 12 changes signatures only by mode annotations. Rows 11–13 improve tests and trust but do not block.
 - Window placement (chrome-2y3t) is deliberately low value: the service starts rarely, so a manual move is acceptable if the niri rule does not match.
 - Ten-failure give-up and the one-hour tombstone are first guesses; both are configurable and revisited with use.
 - Eio finding from the Eta ticket work: `Eio_unix.Process.spawn_unix` can map child fds 3 and 4, but releasing a plain Eio switch SIGKILLs the child at once. Chrome's orderly shutdown (chrome-b288) therefore depends on `etaproc`'s SIGTERM-then-grace release, not on switch teardown.
