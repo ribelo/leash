@@ -250,15 +250,39 @@ let commands =
 
 let ( let* ) = Result.bind
 
-let program _env (_config : Leash.Config.t) sw =
-  (* L3 replaces this placeholder with Chrome.create, Tabs.create, status_query,
-     Control.create, then Eta_app.serve. Keep the acquisition chain visible. *)
-  let* () = Ok () in
+let program env (config : Leash.Config.t) sw =
+  let base = env.Eta_app.Env.base in
+  let chrome =
+    Leash.Chrome.create ~sw
+      (Leash.Config.chrome_config config.chrome)
+      { Leash.Chrome.clock = base#clock; mgr = base#process_mgr; logger = env.logger }
+  in
+  let tabs =
+    Leash.Tabs.create ~sw
+      ~cap:(Leash.Config.Tab_cap.to_int config.tabs.cap)
+      ~tombstone_s:(Leash.Config.Seconds.to_int config.expiry.tombstone_s)
+      { Leash.Tabs.chrome; clock = base#clock; logger = env.logger }
+  in
+  Eio.Switch.on_release sw (fun () -> Leash.Tabs.stop tabs);
+  let status_query = Eta_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in
+  let runtime_dir = Option.value ~default:"" (Sys.getenv_opt "XDG_RUNTIME_DIR") in
+  let* _control =
+    Leash.Control.create ~sw ~runtime_dir
+      {
+        Leash.Control.tabs;
+        status_query;
+        fs = base#fs;
+        net = base#net;
+        clock = base#clock;
+        logger = env.logger;
+      }
+    |> Result.map_error (fun _ -> `Service "control socket acquisition failed")
+  in
   Eta_app.serve ~sw ()
 
 let () =
   exit
     (Eta_app.run ~name:"leash" ~config:Leash.Config.spec ~commands
        ~validate:Leash.Config.validate
-       ~pp_err:(fun fmt (`Config msg) -> Format.pp_print_string fmt msg)
+       ~pp_err:(fun fmt (`Service msg) -> Format.pp_print_string fmt msg)
        program)

@@ -321,6 +321,9 @@ val yojson_of_list_result : list_result -> Yojson.Safe.t
 
 type released_result = { released : bool }
 type closed_result = { closed : bool }
+
+val yojson_of_closed_result : closed_result -> Yojson.Safe.t
+
 type resumed_result = { resumed : bool }
 type text_result = { url : string; title : string; text : string; truncated : bool }
 

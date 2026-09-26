@@ -1,15 +1,101 @@
 #!/usr/bin/env bash
-# Live-acceptance gate for the managed-Chrome row (chrome-p2n4, chrome-9ex7,
-# chrome-b288): launches real Chrome through Leash's Chrome service on a temporary
-# profile, speaks CDP over the debugging pipe, asserts that no DevTools port is open,
-# and stops Chrome with SIGTERM and a grace period. A headed window appears while it
-# runs; that is expected.
-#
-# Usage: scripts/live-acceptance [--binary google-chrome-stable] [--profile DIR] [--keep]
+# Live L2/L3 gate: real Leash service and Chrome, always headless.
+# Usage: scripts/live-acceptance [--binary /path/to/chrome]
 set -euo pipefail
-
 cd "$(dirname "$0")/.."
-
-build_dir="${DUNE_BUILD_DIR:-_build}"
-exec nix develop -c env DUNE_BUILD_DIR="$build_dir" \
-  dune exec test/live/live_acceptance.exe -- "$@"
+if [[ "${1:-}" != "--inside-nix" ]]; then
+  exec nix develop -c bash "$0" --inside-nix "$@"
+fi
+shift
+binary="$(command -v google-chrome-stable || command -v chromium)"
+if [[ "${1:-}" == "--binary" ]]; then binary="$(realpath "$2")"; shift 2; fi
+if [[ "$#" != 0 ]]; then echo "usage: $0 [--binary PATH]" >&2; exit 2; fi
+binary="$(realpath "$binary")"
+dune build @install
+leash="$(pwd)/_build/default/packages/leash/bin/main.exe"
+root="$(mktemp -d)"
+chmod 700 "$root"
+export XDG_RUNTIME_DIR="$root/runtime"
+mkdir -m 700 "$XDG_RUNTIME_DIR"
+profile="$root/profile"
+config="$root/leash.toml"
+log="$root/service.log"
+cat > "$config" <<EOF
+[chrome]
+binary = "$binary"
+profile_dir = "$profile"
+workspace = "test"
+headless = true
+[tabs]
+cap = 8
+[expiry]
+idle_s = 3600
+unclaimed_s = 3600
+tombstone_s = 3600
+[models]
+jev_model = "not-used"
+text_model = "not-used"
+EOF
+browser_alive() {
+  python3 - "$profile" <<'PY'
+import os,sys
+profile=sys.argv[1].encode()
+for entry in os.listdir('/proc'):
+    if not entry.isdigit() or int(entry)==os.getpid(): continue
+    try:
+        argv=open('/proc/'+entry+'/cmdline','rb').read().split(b'\0')
+    except (OSError, PermissionError): continue
+    if (any(b'--user-data-dir='+profile in arg for arg in argv)
+            and any(b'--remote-debugging-pipe' in arg for arg in argv)):
+        print(entry)
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+service_pid=""
+cleanup() {
+  if [[ -n "$service_pid" ]] && kill -0 "$service_pid" 2>/dev/null; then
+    kill -TERM "$service_pid" || :
+    wait "$service_pid" || :
+  fi
+  if browser_alive >/dev/null; then
+    echo "ERROR: Chrome remains alive with temporary profile" >&2
+    echo "Profile: $profile" >&2
+    exit 1
+  fi
+  rm -rf "$root"
+}
+trap cleanup EXIT
+"$leash" run --config "$config" >"$log" 2>&1 &
+service_pid=$!
+socket="$XDG_RUNTIME_DIR/leash/control.sock"
+for _ in $(seq 1 100); do
+  if [[ -S "$socket" ]]; then break; fi
+  if ! kill -0 "$service_pid" 2>/dev/null; then
+    echo "ERROR: Leash exited before socket appeared" >&2
+    sed -n '1,100p' "$log" >&2
+    exit 1
+  fi
+  sleep 0.1
+done
+if [[ ! -S "$socket" ]]; then echo "ERROR: control socket did not appear" >&2; exit 1; fi
+for _ in $(seq 1 100); do
+  if "$leash" status --owner live >/dev/null 2>&1; then break; fi
+  sleep 0.1
+done
+printf 'new: '
+new="$("$leash" new --owner live https://example.com)"
+echo "$new"
+tab="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["tab"])' <<< "$new")"
+printf 'list: '
+listed="$("$leash" list --owner live)"
+echo "$listed"
+python3 -c 'import json,sys; assert sys.argv[1] in [x["tab"] for x in json.load(sys.stdin)["tabs"]]' "$tab" <<< "$listed"
+if ! browser_alive >/dev/null; then echo "ERROR: Chrome was never running (profile=$profile)" >&2; ps -eo pid,args | awk '/--headless=new/ && /--remote-debugging-pipe/ {print}' >&2; sed -n '1,80p' "$log" >&2; exit 1; fi
+printf 'close: '
+"$leash" close --owner live "$tab"
+kill -TERM "$service_pid"
+if wait "$service_pid"; then echo 'SIGTERM: Leash exited 0'; else echo 'ERROR: Leash exited nonzero' >&2; sed -n '1,100p' "$log" >&2; exit 1; fi
+service_pid=""
+if browser_alive >/dev/null; then echo 'ERROR: Chrome remains after Leash exited' >&2; exit 1; fi
+echo 'Chrome: gone; live acceptance passed (headless)'

@@ -20,6 +20,20 @@
   alcotest))
 
 (test
+ (name control_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eta_process
+  eta_observability
+  eio
+  eio.unix
+  yojson
+  alcotest))
+
+(test
  (name chrome_test)
  (libraries
   leash

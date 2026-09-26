@@ -46,33 +46,21 @@ The live gate launches Chrome through `Leash.Chrome` on a temporary profile, hea
 was recorded from that run, not from documentation.
 
 - **Descriptors 3 and 4 must be blocking.** Chrome reads its commands with a blocking
-  read: an `EAGAIN` there ends the connection with
-  `devtools_pipe_handler.cc: Connection terminated while reading from pipe` and Chrome
-  exits 0. `Eio_unix.pipe` marks *both* ends non-blocking, and that flag lives on the
-  open file description, so it reaches the child through `dup2`. `Chrome.launch_pipe`
-  therefore clears `O_NONBLOCK` on the child's ends before the fork; the parent's ends
-  stay non-blocking, which is what Eio's scheduler expects. The fake browser is
-  unaffected: it speaks the framing itself.
+  read: an `EAGAIN` ends the pipe connection. `Eta_process.Child.spawn` maps child
+  descriptors 3 and 4 in blocking mode while leaving the Eio parent ends non-blocking.
+  The fake browser is unaffected: it speaks the framing itself.
 - **The configured binary is usually a launcher script.** On NixOS
-  `google-chrome-stable` is a wrapper (`bash -e … google-chrome … chrome`), so the
-  process that eventually holds descriptors 3 and 4 appears a moment after the spawn and
-  its executable is `…/share/google/chrome/chrome`. The live gate asks Chrome itself
-  (`SystemInfo.getProcessInfo`, browser domain) for the browser pid instead of scanning
-  `/proc`.
-- **Chrome rewrites its own command line.** Flags are still all there — the gate reads
-  them as text, not as a list of arguments.
-- `Target.getTargets` answers
-  `{"id":1,"result":{"targetInfos":[{"targetId":"…32 hex…","type":"browser_ui"|"page"|"background_page"|"service_worker"|"iframe"|"other","title":"","url":"…","attached":false,"canAccessOpener":false,"browserContextId":"…32 hex…"}]}}`.
-  A fresh profile already has `browser_ui` (omnibox popups), a `page` for
-  `chrome://newtab/`, extension `background_page`s and `service_worker`s, so the empty
-  `targetInfos` default in the table above is the fixture's, not Chrome's.
-- `Target.createTarget {"url":"about:blank"}` answers
-  `{"id":2,"result":{"targetId":"…32 hex…"}}`, exactly as the fixture has it, and the new
-  target shows up in the next `Target.getTargets` as a `page` with that `targetId`.
-- No debugging port exists: no `DevToolsActivePort` file appears in the profile
-  directory, and the browser process holds no listening socket among its descriptors.
-  Stopping with SIGTERM (the supervisor's grace) ends the browser in tens of
-  milliseconds.
+  `google-chrome-stable` is a wrapper; the eventual Chrome executable is under
+  `share/google/chrome/chrome`. The L3 headless gate identifies the process by the
+  exact temporary `--user-data-dir` argument and `--remote-debugging-pipe` in its argv.
+- **Chrome rewrites its own command line.** Launch-time flags remain present in
+  the browser argv; descendant processes have their own arguments.
+- `Target.getTargets` answers Chrome target infos, not the fixture's empty array.
+  A fresh profile may include `browser_ui`, new-tab `page`, `background_page` and
+  `service_worker` targets. `Target.createTarget {"url":"about:blank"}` returns a
+  `targetId`, and the newly created `page` subsequently appears in `getTargets`.
+- The pipe launch does not request a debugging port; the private profile has no
+  `DevToolsActivePort` file. SIGTERM process retirement belongs to the live L3 gate.
 
 Why pipes rather than `Eio_mock.Flow` pairs: the installed mock supports scripted
 `on_read` but only traces sink writes; it has no write-to-peer-read routing or

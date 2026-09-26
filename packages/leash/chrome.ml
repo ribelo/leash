@@ -62,18 +62,9 @@ let fd flow =
   | Some fd -> fd
   | None -> invalid_arg "Chrome: pipe flow without a unix descriptor"
 
-(* Chrome reads its commands and writes its replies with blocking reads and writes on
-   descriptors 3 and 4; an [EAGAIN] there ends the connection. Eio's [pipe] marks both
-   ends non-blocking, and the flag lives on the open file description, so the child's ends
-   are cleared here before the fork. The parent's ends stay non-blocking, which is what
-   Eio's scheduler expects. *)
-let blocking_for_child fd = Eio_unix.Fd.use_exn "chrome pipe" fd Unix.clear_nonblock
-
 let launch_pipe ~sw ~clock ~mgr config =
   let child_read, parent_write = Eio_unix.pipe sw in
   let parent_read, child_write = Eio_unix.pipe sw in
-  blocking_for_child (fd child_read);
-  blocking_for_child (fd child_write);
   match
     Eta_process.Child.spawn ~sw ~clock ~mgr ~argv:(argv config) ~grace:config.grace
       ~fds:[ (3, fd child_read); (4, fd child_write) ]

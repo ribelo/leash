@@ -8,3 +8,5 @@ module Cdp = Cdp
 module Chrome = Chrome
 module Config = Config
 module Protocol = Protocol
+module Tabs = Tabs
+module Control = Control

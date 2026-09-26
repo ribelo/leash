@@ -6,3 +6,5 @@ module Cdp : module type of Cdp
 module Chrome : module type of Chrome
 module Config : module type of Config
 module Protocol : module type of Protocol
+module Tabs : module type of Tabs
+module Control : module type of Control
