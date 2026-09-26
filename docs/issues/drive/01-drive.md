@@ -63,3 +63,4 @@ Multi-step plans, auto-handoff, screenshots in the loop, any operation beyond th
 
 - The exact question texts and the state shape are copied from jev-ultrafast at a pinned commit and recorded in the repository; changes are a decision, not a refactor.
 - Whether `recent` should be 5 steps is a guess; jev-ultrafast's value is the reference.
+- Candidate shape (eta-next ADR-0006): write the loop as a computation performing `Observe`, `Decide`, `Act` with three handlers — production (snapshot, System One, browser action), scripted test (no fake HTTP server needed for the loop's own tests), and a human inspector that pauses each `Decide` like jev-ultrafast's "Choose next". The loop runs in one fiber; handlers may use Eio. Decide when milestone 5 is re-cut against eta-next.
