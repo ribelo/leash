@@ -30,7 +30,7 @@ Logins, two-factor codes, captchas, and consequential confirmations need a human
 
 ## Implementation Decisions
 
-- Handoff transitions `Owned` to `With_human` holding the reason and an `Eta.Promise` the blocked request awaits; resume completes it. Timeout is `Effect.timeout` on the await with the state restored to `Owned`.
+- Handoff transitions `Owned` to `With_human` holding the reason and an `Eta.Promise` the blocked request awaits; resume completes it. Timeout is `Effect.timeout_as` on the await (not `race`: Eta's race picks the first success, not the first exit) with the state restored to `Owned`. A client disconnect cancels the await and restores `Owned` the same way.
 - Focus: `Target.activateTarget` for the tab, then the configured desktop action (default `niri msg action focus-window` matched by the Chrome app id or title determined in milestone 1). Notification: `notify-send --action done=Done` with the reason; the CLI-less resume path is the notification's action return, consumed by the service through the same spawn.
 - Both external commands run through Eta's scoped child process with a five-second deadline; their failure is reported in the reply's `warnings` and logged.
 - `list --all` shows state `with_human` and the reason.

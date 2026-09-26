@@ -132,5 +132,5 @@ The ordered record of a drive's steps: the row chosen, the operation and its pro
 **Eta**:
 The effect-oriented OCaml framework Leash is built on. Anything that is an effect-shaped resource, stream, or lifecycle concern and does not name the browser belongs in Eta, not in Leash. See the ADR on the Eta boundary.
 
-**Component context**:
-The `eta_component` lifecycle authority that activates Leash's subsystems from one desired-state tree, as in Pie.
+**Service owner**:
+The one lexical scope in the Leash service that acquires the managed Chrome, the CDP session, the tab registry, the model clients, and the control listener in dependency order and releases them in reverse. There is no component tree (ADR-0007).

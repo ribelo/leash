@@ -30,7 +30,8 @@ A systemd user unit in the desktop session, a TOML config with fail-fast validat
 
 ## Implementation Decisions
 
-- Unit is installed by the flake or home-manager as Pie's is; `After=graphical-session.target`, `Restart=on-failure`, environment imported from the session for `WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR`.
+- Unit is installed by the flake or home-manager as Pie's is; `After=graphical-session.target`, `Restart=on-failure`, `SuccessExitStatus=130` (Eta's process door returns 130 on SIGTERM interruption, which is a clean stop), environment imported from the session for `WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR`.
+- Defects at the process door are printed only once Eta ticket `main-door-cause-diagnostics` lands; until then the service owner wraps its main effect and renders the full cause with `Eta.Cause.pp` itself, recorded as an `etagap-*` workaround, so a crash never leaves an empty journal.
 - Config schema in one module with a typed record; unknown keys are errors; defaults are documented in `docs/config.md` generated from the same record.
 - Logging through Eta observability with a journal reporter; a redaction rule set keeps `fill` text, `text` results, and userinfo out of records.
 - The chrome-cdp skill is replaced in the dotfiles skills library by a `leash` skill; the old script remains until the replacement has passed live acceptance.

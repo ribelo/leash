@@ -15,12 +15,13 @@
   (eta (>= 0.1.0))
   eta_ai
   eta_ai_openrouter
-  eta_component
   eta_eio
   eta_http
   eta_http_eio
   eta_observability
   eta_otel_eio
+  eta_schema
+  eta_schema_yojson
   eta_stream
   (eio (>= 1.0))
   eio_main
