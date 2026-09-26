@@ -1,24 +1,396 @@
-type request = { v : int; owner : string; cmd : string; args : Eta_schema.json }
-(** Version-one control-socket contract. Each command has a closed [args] schema; the
-    result schemas include later-milestone replies as well as milestone one. *)
+(** The version-one control protocol: the wire contract of [docs/protocol.md] as types.
 
-type error = { code : string; message : string; detail : Eta_schema.json option }
-type reply = { ok : bool; result : Eta_schema.json option; error : error option }
+    The envelope is dispatched by hand — a request is a ["cmd"] name with an ["args"]
+    object, a reply is [{ok, result}] or [{ok, error}] — while every per-command argument
+    record and every result record is a plain type with a derived codec. A decode failure
+    from the deriver names the offending path and value, which is what an
+    [invalid-request] reply renders. *)
 
-val request_schema : request Eta_schema.t
-val reply_schema : reply Eta_schema.t
-val error_schema : error Eta_schema.t
-val command_schemas : (string * Eta_schema.json Eta_schema.t) list
-val result_schemas : (string * Eta_schema.json Eta_schema.t) list
-val tab_info_schema : Eta_schema.json Eta_schema.t
-val snapshot_schema : Eta_schema.json Eta_schema.t
-val row_schema : Eta_schema.json Eta_schema.t
-val dialog_schema : Eta_schema.json Eta_schema.t
-val action_result_schema : Eta_schema.json Eta_schema.t
-val debug_entry_schema : Eta_schema.json Eta_schema.t
-val step_schema : Eta_schema.json Eta_schema.t
-val operation_schema : Eta_schema.json Eta_schema.t
-val decode_request : Yojson.Safe.t -> (request, Eta_schema.issue list) result
-val encode_request : request -> (Yojson.Safe.t, Eta_schema.issue list) result
-val decode_reply : Yojson.Safe.t -> (reply, Eta_schema.issue list) result
-val encode_reply : reply -> (Yojson.Safe.t, Eta_schema.issue list) result
+(** A value whose shape belongs to the page or to the caller: an [eval] argument, the
+    [drive] probabilities, an [eval] result. *)
+module Json : sig
+  type t = Yojson.Safe.t
+
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+(** A tab handle: non-empty by construction. *)
+module Handle : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+(** A snapshot id: non-empty by construction. *)
+module Snapshot_id : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+(** The requester: ["dsh:<session>"], ["human"], or an operator's choice. *)
+module Owner : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Origin : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module State : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Stage : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Dialog_kind : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Row_state : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Debug_kind : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Operation : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Direction : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Answer : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Drive_status : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Chrome_phase : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+(** The closed error-code set of [docs/protocol.md]. *)
+module Error_code : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+type expires = { stage : Stage.t; in_s : int }
+
+val expires_of_yojson : Yojson.Safe.t -> (expires, string) result
+val yojson_of_expires : expires -> Yojson.Safe.t
+
+type dialog = { kind : Dialog_kind.t; message : string }
+
+val dialog_of_yojson : Yojson.Safe.t -> (dialog, string) result
+val yojson_of_dialog : dialog -> Yojson.Safe.t
+
+type tab_info = {
+  tab : Handle.t;
+  url : string;
+  title : string;
+  origin : Origin.t;
+  state : State.t;
+  owner : Owner.t option;
+  generation : int;
+  expires : expires option;
+}
+
+val tab_info_of_yojson : Yojson.Safe.t -> (tab_info, string) result
+val yojson_of_tab_info : tab_info -> Yojson.Safe.t
+
+type row = {
+  index : int;
+  role : string;
+  name : string;
+  value : string option;
+  state : Row_state.t list option;
+}
+
+val row_of_yojson : Yojson.Safe.t -> (row, string) result
+val yojson_of_row : row -> Yojson.Safe.t
+
+type snapshot = {
+  snapshot : Snapshot_id.t;
+  tab : Handle.t;
+  url : string;
+  title : string;
+  rows : row list;
+  total : int;
+  offset : int;
+  truncated : bool;
+  dialog : dialog option;
+}
+
+val snapshot_of_yojson : Yojson.Safe.t -> (snapshot, string) result
+val yojson_of_snapshot : snapshot -> Yojson.Safe.t
+
+type action_result = {
+  tab : Handle.t;
+  url : string;
+  title : string;
+  snapshot : Snapshot_id.t option;
+  dialog : dialog option;
+  popups : tab_info list;
+}
+
+val action_result_of_yojson : Yojson.Safe.t -> (action_result, string) result
+val yojson_of_action_result : action_result -> Yojson.Safe.t
+
+type debug_entry = {
+  at : string;
+  kind : Debug_kind.t;
+  level : string option;
+  text : string;
+}
+
+val debug_entry_of_yojson : Yojson.Safe.t -> (debug_entry, string) result
+val yojson_of_debug_entry : debug_entry -> Yojson.Safe.t
+
+type after = { url : string; title : string }
+
+val after_of_yojson : Yojson.Safe.t -> (after, string) result
+val yojson_of_after : after -> Yojson.Safe.t
+
+type probabilities = { op : Json.t; target : Json.t }
+
+val probabilities_of_yojson : Yojson.Safe.t -> (probabilities, string) result
+val yojson_of_probabilities : probabilities -> Yojson.Safe.t
+
+type step = {
+  n : int;
+  snapshot : Snapshot_id.t;
+  operation : Operation.t;
+  index : int option;
+  probabilities : probabilities;
+  text : string option;
+  after : after;
+  elapsed_ms : int;
+}
+
+val step_of_yojson : Yojson.Safe.t -> (step, string) result
+val yojson_of_step : step -> Yojson.Safe.t
+
+type new_args = { url : string option }
+type list_args = { all : bool }
+type tab_args = { tab : Handle.t }
+
+type snap_args = {
+  tab : Handle.t;
+  match_ : string option;
+  limit : int option;
+  offset : int option;
+}
+
+type text_args = { tab : Handle.t; index : int option; max_chars : int option }
+type shot_args = { tab : Handle.t; path : string; full_page : bool option }
+type debug_args = { tab : Handle.t; limit : int option; clear : bool option }
+type eval_args = { tab : Handle.t; expression : string; argument : Json.t option }
+type nav_args = { tab : Handle.t; url : string }
+type click_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
+type fill_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int; text : string }
+
+type press_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int option;
+  key : string;
+}
+
+type select_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int; option : int }
+type scroll_args = { tab : Handle.t; direction : Direction.t; index : int option }
+
+type wait_until = {
+  url_prefix : string option;
+  text : string option;
+  index_gone : int option;
+  dialog : bool option;
+}
+
+type wait_args = { tab : Handle.t; until : wait_until; timeout_ms : int option }
+type dialog_args = { tab : Handle.t; answer : Answer.t; text : string option }
+type handoff_args = { tab : Handle.t; reason : string; timeout_s : int option }
+
+type drive_args = {
+  tab : Handle.t;
+  goal : string;
+  max_steps : int option;
+  deadline_s : int option;
+}
+(** The per-command argument records: each is derived, and [decode_request] refuses a key
+    its record does not name. *)
+
+type tab_counts = { open_ : int; cap : int }
+
+val tab_counts_of_yojson : Yojson.Safe.t -> (tab_counts, string) result
+val yojson_of_tab_counts : tab_counts -> Yojson.Safe.t
+
+type status_result = {
+  generation : int;
+  tabs : tab_counts;
+  chrome : Chrome_phase.t;
+  uptime_s : float;
+}
+
+val status_result_of_yojson : Yojson.Safe.t -> (status_result, string) result
+val yojson_of_status_result : status_result -> Yojson.Safe.t
+
+type list_result = { tabs : tab_info list }
+
+val list_result_of_yojson : Yojson.Safe.t -> (list_result, string) result
+val yojson_of_list_result : list_result -> Yojson.Safe.t
+
+type released_result = { released : bool }
+type closed_result = { closed : bool }
+type resumed_result = { resumed : bool }
+type text_result = { url : string; title : string; text : string; truncated : bool }
+
+val text_result_of_yojson : Yojson.Safe.t -> (text_result, string) result
+val yojson_of_text_result : text_result -> Yojson.Safe.t
+
+type shot_result = { path : string; bytes : int }
+type debug_result = { entries : debug_entry list }
+type eval_result = { value : Json.t }
+type handoff_result = { resumed : bool; url : string; title : string }
+type drive_result = { status : Drive_status.t; steps : step list; final : snapshot }
+
+val drive_result_of_yojson : Yojson.Safe.t -> (drive_result, string) result
+val yojson_of_drive_result : drive_result -> Yojson.Safe.t
+
+type error = { code : Error_code.t; message : string; detail : Json.t option }
+(** What a failed reply carries: a closed code, one sentence, and optional structured
+    context. *)
+
+val error_of_yojson : Yojson.Safe.t -> (error, string) result
+val yojson_of_error : error -> Yojson.Safe.t
+
+type reply =
+  | Success of Json.t
+  | Failure of error
+      (** One of the two wire shapes; the result is raw JSON because a client that does
+          not know the command's result type still prints it. *)
+
+val encode_reply : reply -> Yojson.Safe.t
+val decode_reply : Yojson.Safe.t -> (reply, string) result
+
+type command =
+  | New of new_args
+  | List_tabs of list_args
+  | Claim of tab_args
+  | Release of tab_args
+  | Close of tab_args
+  | Status
+  | Snap of snap_args
+  | Text of text_args
+  | Shot of shot_args
+  | Debug of debug_args
+  | Eval of eval_args
+  | Nav of nav_args
+  | Click of click_args
+  | Fill of fill_args
+  | Press of press_args
+  | Select of select_args
+  | Scroll of scroll_args
+  | Wait of wait_args
+  | Dialog of dialog_args
+  | Handoff of handoff_args
+  | Resume of tab_args
+  | Drive of drive_args
+      (** The decoded command: one constructor per row of [docs/protocol.md]'s command
+          tables, carrying that command's derived argument record. *)
+
+val command_name : command -> string
+val args_to_json : command -> Json.t
+
+val command_of_args : cmd:string -> Json.t -> (command, string) result
+(** The command table: the wire name, the derived argument decode, and the derived
+    argument encode. [Status] takes an empty object and nothing else. *)
+
+type request = { owner : Owner.t; command : command }
+
+val version : int
+val encode_request : request -> Yojson.Safe.t
+
+val decode_request : Yojson.Safe.t -> (request, string) result
+(** The envelope: ["v"] must be {!version}, ["owner"] must be non-empty, ["cmd"] must be
+    one of the commands above, and ["args"] must decode into that command's record. An
+    unknown envelope field or argument is refused by name. *)

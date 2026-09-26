@@ -3,6 +3,9 @@
 (library
  (name leash)
  (public_name leash)
+ (preprocess
+  (action
+   (run %{bin:ppx-yojson-minimal} %{input-file})))
  (libraries
   eta
   eta_app
@@ -10,8 +13,6 @@
   eta_ipc
   eta_rpc
   eta_json
-  eta_schema
-  eta_schema_yojson
   eta_observability
   eio
   eio_main

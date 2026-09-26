@@ -219,7 +219,7 @@
 
               # etabuild-e0gr: install committed Eta master for development.
               eta_path="''${ETA_PATH:-$repo_root/../ocaml/eta-next}"
-              export ETA_OPAM_PACKAGES="''${ETA_OPAM_PACKAGES:-eta eta_app eta_process eta_ipc eta_rpc eta_json eta_schema eta_schema_yojson eta_observability eta_test}"
+              export ETA_OPAM_PACKAGES="''${ETA_OPAM_PACKAGES:-eta eta_app eta_process eta_ipc eta_rpc eta_json eta_observability eta_test}"
               if command -v eta-opam-install-ox >/dev/null 2>&1; then
                 ETA_REPO_ROOT="$eta_path" eta-opam-install-ox
               elif [ -d "$eta_path" ]; then

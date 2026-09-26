@@ -1,9 +1,8 @@
 open Cmdliner
 module P = Leash.Protocol
-module J = Eta_schema.Json
 
-let obj xs = Result.get_ok (J.object_ xs)
-let str s = Result.get_ok (J.string s)
+let obj fields = `Assoc fields
+let str s = `String s
 
 let usage msg =
   prerr_endline ("leash: " ^ msg);
@@ -21,10 +20,6 @@ let send path request =
           Eio.Flow.copy_string data socket;
           let reader = Eio.Buf_read.of_flow ~max_size:1_048_576 socket in
           Eio.Buf_read.line reader))
-
-let json_value = function
-  | Some value -> Eta_schema_yojson.to_yojson value
-  | None -> `Null
 
 let field key = function
   | `Assoc fields -> ( match List.assoc_opt key fields with Some x -> x | None -> `Null)
@@ -91,7 +86,7 @@ let perform command fields owner pretty use_table positionals options =
         let encode_pos key value =
           if List.mem key [ "index"; "option" ] then
             match int_of_string_opt value with
-            | Some number -> Ok (key, J.int number)
+            | Some number -> Ok (key, `Int number)
             | None -> Error (key ^ " must be an integer")
           else Ok (key, str value)
         in
@@ -106,7 +101,6 @@ let perform command fields owner pretty use_table positionals options =
         match collect fields with
         | Error why -> usage why
         | Ok fields -> (
-            let options = List.filter_map Fun.id options in
             let options =
               try
                 Ok
@@ -114,57 +108,53 @@ let perform command fields owner pretty use_table positionals options =
                      (fun (key, value) ->
                        if List.mem key [ "argument"; "until" ] then
                          match value with
-                         | J.String text ->
-                             ( key,
-                               Result.get_ok
-                                 (Eta_schema_yojson.of_yojson
-                                    (Yojson.Safe.from_string text)) )
+                         | `String text -> (key, Yojson.Safe.from_string text)
                          | _ -> assert false
                        else (key, value))
-                     options)
+                     (List.filter_map Fun.id options))
               with Yojson.Json_error why -> Error ("invalid JSON option: " ^ why)
             in
             match options with
             | Error why -> usage why
             | Ok options -> (
                 let args = obj (fields @ options) in
-                let request = P.{ v = 1; owner; cmd = command; args } in
-                match P.encode_request request with
-                | Error issues -> usage (Eta_schema.render_issues issues)
-                | Ok request -> (
-                    let path =
-                      Filename.concat (Filename.concat runtime "leash") "control.sock"
-                    in
-                    try
-                      let raw = Yojson.Safe.from_string (send path request) in
-                      match P.decode_reply raw with
-                      | Error issues ->
-                          failure
-                            ("invalid service reply: " ^ Eta_schema.render_issues issues)
-                      | Ok reply ->
-                          let body =
-                            if reply.ok then json_value reply.result
-                            else
-                              match reply.error with
-                              | Some error -> (
-                                  match
-                                    Eta_schema_yojson.encode_result P.error_schema error
-                                  with
-                                  | Ok json -> json
-                                  | Error _ -> assert false)
-                              | None -> assert false
-                          in
-                          if use_table && reply.ok then table command body
-                          else
-                            print_endline
-                              (if pretty then Yojson.Safe.pretty_to_string body
-                               else Yojson.Safe.to_string body);
-                          if reply.ok then 0 else 1
-                    with
-                    | Unix.Unix_error (code, _, _) -> failure (Unix.error_message code)
-                    | Eio.Io _ as err -> failure (Printexc.to_string err)
-                    | Yojson.Json_error msg -> failure ("invalid JSON reply: " ^ msg)
-                    | End_of_file -> failure "service closed without a reply"))))
+                match P.command_of_args ~cmd:command args with
+                | Error why -> usage why
+                | Ok decoded -> (
+                    match P.Owner.of_string owner with
+                    | Error why -> usage why
+                    | Ok owner -> (
+                        let request = P.encode_request P.{ owner; command = decoded } in
+                        let path =
+                          Filename.concat (Filename.concat runtime "leash") "control.sock"
+                        in
+                        try
+                          let raw = Yojson.Safe.from_string (send path request) in
+                          match P.decode_reply raw with
+                          | Error why -> failure ("invalid service reply: " ^ why)
+                          | Ok reply ->
+                              let body =
+                                match reply with
+                                | P.Success result -> result
+                                | P.Failure error -> P.yojson_of_error error
+                              in
+                              let ok =
+                                match reply with
+                                | P.Success _ -> true
+                                | P.Failure _ -> false
+                              in
+                              if use_table && ok then table command body
+                              else
+                                print_endline
+                                  (if pretty then Yojson.Safe.pretty_to_string body
+                                   else Yojson.Safe.to_string body);
+                              if ok then 0 else 1
+                        with
+                        | Unix.Unix_error (code, _, _) ->
+                            failure (Unix.error_message code)
+                        | Eio.Io _ as err -> failure (Printexc.to_string err)
+                        | Yojson.Json_error msg -> failure ("invalid JSON reply: " ^ msg)
+                        | End_of_file -> failure "service closed without a reply")))))
 
 type option_kind = Str | Int | Bool | Json
 
@@ -173,13 +163,13 @@ let option_term (name, kind) =
   match kind with
   | Bool ->
       Term.(
-        const (fun b -> if b then Some (name, J.bool true) else None)
+        const (fun b -> if b then Some (name, `Bool true) else None)
         $ Arg.(
             value & flag
             & info [ String.map (fun c -> if c = '_' then '-' else c) name ] ~doc))
   | Int ->
       Term.(
-        const (Option.map (fun n -> (name, J.int n)))
+        const (Option.map (fun n -> (name, `Int n)))
         $ Arg.(
             value
             & opt (some int) None
@@ -268,12 +258,7 @@ let program _env (_config : Leash.Config.t) sw =
 
 let () =
   exit
-    (Eta_app.run ~name:"leash" ~config:Leash.Config.schema ~commands
-       ~validate:(fun env config ->
-         Leash.Config.validate_paths ~fs:env.base#fs config
-         |> Result.map_error
-              (List.map (fun (issue : Leash.Config.validation_error) ->
-                   ({ pointer = issue.pointer; message = issue.message }
-                     : Eta_app.validation_error))))
+    (Eta_app.run ~name:"leash" ~config:Leash.Config.spec ~commands
+       ~validate:Leash.Config.validate
        ~pp_err:(fun fmt (`Config msg) -> Format.pp_print_string fmt msg)
        program)

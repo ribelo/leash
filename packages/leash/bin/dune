@@ -3,13 +3,4 @@
 (executable
  (public_name leash)
  (name main)
- (libraries
-  leash
-  eta_app
-  eta_schema
-  eta_schema_yojson
-  eio
-  eio_main
-  yojson
-  unix
-  cmdliner))
+ (libraries leash eta_app eio eio_main yojson unix cmdliner))

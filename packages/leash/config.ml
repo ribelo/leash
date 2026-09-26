@@ -1,68 +1,104 @@
-open Eta_schema
+(** The service configuration: one plain record with derived codecs, secret fields typed
+    {!Eta_observability.Redact.t}, and constrained values in small modules with smart
+    constructors and their own codecs (ADR-0009). *)
 
-type chrome = { binary : string; profile_dir : string; workspace : string }
-type tabs = { cap : int }
-type expiry = { idle_s : int; unclaimed_s : int; tombstone_s : int }
-type models = { api_key : string option; jev_model : string; text_model : string }
+module Redact = Eta_observability.Redact
+
+(** The tab cap: a positive whole number of tabs. *)
+module Tab_cap = struct
+  type t = int
+
+  let of_int n =
+    if n > 0 then Ok n else Error (Printf.sprintf "expected a positive integer, got %d" n)
+
+  let to_int t = t
+
+  let t_of_yojson = function
+    | `Int n -> of_int n
+    | json ->
+        Error
+          (Printf.sprintf "expected a positive integer, got %s"
+             (Yojson.Safe.to_string json))
+
+  let yojson_of_t t = `Int t
+end
+
+(** An expiry duration in seconds, positive. *)
+module Seconds = struct
+  type t = int
+
+  let of_int n =
+    if n > 0 then Ok n
+    else Error (Printf.sprintf "expected a positive duration in seconds, got %d" n)
+
+  let to_int t = t
+
+  let t_of_yojson = function
+    | `Int n -> of_int n
+    | json ->
+        Error
+          (Printf.sprintf "expected a positive duration in seconds, got %s"
+             (Yojson.Safe.to_string json))
+
+  let yojson_of_t t = `Int t
+end
+
+(** A non-empty text value: a path, a workspace name, or a model id. *)
+module Text = struct
+  type t = string
+
+  let of_string value =
+    if String.trim value <> "" then Ok value else Error "must not be empty"
+
+  let to_string t = t
+
+  let t_of_yojson = function
+    | `String value -> of_string value
+    | json ->
+        Error (Printf.sprintf "expected a string, got %s" (Yojson.Safe.to_string json))
+
+  let yojson_of_t t = `String t
+end
+
+type chrome = {
+  binary : Text.t;
+  profile_dir : Text.t;
+  workspace : Text.t;
+  headless : bool; [@default false]
+}
+[@@deriving yojson]
+(** The browser the service owns. [headless] defaults to false: production runs a headed
+    browser on the configured workspace, and only the live-acceptance gate or an operator
+    turns it on. *)
+
+type tabs = { cap : Tab_cap.t } [@@deriving yojson]
+
+type expiry = { idle_s : Seconds.t; unclaimed_s : Seconds.t; tombstone_s : Seconds.t }
+[@@deriving yojson]
+
+type models = { api_key : Redact.t option; jev_model : Text.t; text_model : Text.t }
+[@@deriving yojson]
+
 type t = { chrome : chrome; tabs : tabs; expiry : expiry; models : models }
+[@@deriving yojson]
 
-let positive name schema =
-  refine ~name (fun n -> if n > 0 then [] else [ issue "must be positive" ]) schema
+let env ~getenv config =
+  match getenv "OPENROUTER_API_KEY" with
+  | Some key when String.trim key <> "" ->
+      { config with models = { config.models with api_key = Some (Redact.make key) } }
+  | Some _ | None -> config
 
-let nonempty name schema =
-  refine ~name
-    (fun s -> if String.trim s <> "" then [] else [ issue "must not be empty" ])
-    schema
+let spec : t Eta_app.Config.t = { of_yojson = t_of_yojson; yojson_of_t; env }
 
-let chrome_schema =
-  closed
-    (record3 ~name:"chrome"
-       (fun binary profile_dir workspace -> { binary; profile_dir; workspace })
-       (required "binary" (nonempty "binary" string) (fun x -> x.binary))
-       (required "profile_dir" (nonempty "profile_dir" string) (fun x -> x.profile_dir))
-       (required "workspace" (nonempty "workspace" string) (fun x -> x.workspace))
-       ~equal:( = ) ())
-
-let tabs_schema =
-  closed
-    (record1 ~name:"tabs"
-       (fun cap -> { cap })
-       (required "cap" (positive "cap" int) (fun x -> x.cap))
-       ~equal:( = ) ())
-
-let expiry_schema =
-  closed
-    (record3 ~name:"expiry"
-       (fun idle_s unclaimed_s tombstone_s -> { idle_s; unclaimed_s; tombstone_s })
-       (required "idle_s" (positive "idle_s" int) (fun x -> x.idle_s))
-       (required "unclaimed_s" (positive "unclaimed_s" int) (fun x -> x.unclaimed_s))
-       (required "tombstone_s" (positive "tombstone_s" int) (fun x -> x.tombstone_s))
-       ~equal:( = ) ())
-
-let models_schema =
-  closed
-    (record3 ~name:"models"
-       (fun api_key jev_model text_model -> { api_key; jev_model; text_model })
-       (optional ~secret:true ~env:"OPENROUTER_API_KEY" "api_key" string (fun x ->
-            x.api_key))
-       (required "jev_model" (nonempty "jev_model" string) (fun x -> x.jev_model))
-       (required "text_model" (nonempty "text_model" string) (fun x -> x.text_model))
-       ~equal:( = ) ())
-
-let schema =
-  closed
-    (record4 ~name:"leash-config"
-       (fun chrome tabs expiry models -> { chrome; tabs; expiry; models })
-       (required "chrome" chrome_schema (fun x -> x.chrome))
-       (required "tabs" tabs_schema (fun x -> x.tabs))
-       (required "expiry" expiry_schema (fun x -> x.expiry))
-       (required "models" models_schema (fun x -> x.models))
-       ~equal:( = ) ())
-
-type validation_error = { pointer : string; message : string }
+let chrome_config (chrome : chrome) =
+  Chrome.make
+    ~binary:(Text.to_string chrome.binary)
+    ~profile_dir:(Text.to_string chrome.profile_dir)
+    ~workspace:(Text.to_string chrome.workspace)
+    ~headless:chrome.headless ()
 
 let validate_paths ~fs config =
-  let error pointer message = Error [ { pointer; message } ] in
+  let error pointer message = Error [ { Eta_app.Config.pointer; message } ] in
   let check pointer path expected permissions =
     let path = Eio.Path.(fs / path) in
     try
@@ -74,10 +110,15 @@ let validate_paths ~fs config =
     with Eio.Io _ -> error pointer "path missing or unreadable"
   in
   let ( let* ) = Result.bind in
-  let* () = check "/chrome/binary" config.chrome.binary `Regular_file 0o100 in
-  let profile = config.chrome.profile_dir in
+  let* () =
+    check "/chrome/binary" (Text.to_string config.chrome.binary) `Regular_file 0o100
+  in
+  let profile = Text.to_string config.chrome.profile_dir in
   let parent = Filename.dirname profile in
   match Eio.Path.kind ~follow:true Eio.Path.(fs / profile) with
   | `Directory -> check "/chrome/profile_dir" profile `Directory 0o700
   | `Not_found -> check "/chrome/profile_dir" parent `Directory 0o300
   | _ -> error "/chrome/profile_dir" "not a directory"
+
+let validate (env : Eio_unix.Stdenv.base Eta_app.Env.t) config =
+  validate_paths ~fs:env.base#fs config

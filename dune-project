@@ -18,9 +18,8 @@
   eta_ipc
   eta_rpc
   eta_json
-  eta_schema
-  eta_schema_yojson
   eta_observability
+  ppx_yojson_minimal
   (eta_test :with-test)
   (eio (>= 1.0))
   eio_main
