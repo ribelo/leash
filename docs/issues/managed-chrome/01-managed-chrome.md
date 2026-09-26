@@ -62,3 +62,4 @@ Observation and actions beyond `nav` (milestone 2), ownership beyond "the creato
 - Blocked on Eta tickets `etaproc`, `etarpc`, `etaipc` landing; the fake browser can be written against the correlator's interface as soon as that ticket's interface is agreed.
 - Whether Chrome on Wayland honours `--class` or `--wayland-app-id` for the app id, or whether the rule must match the window title, is unknown until tried.
 - Ten-failure give-up and the one-hour tombstone are first guesses; both are configurable and revisited with use.
+- Eio finding from the Eta ticket work: `Eio_unix.Process.spawn_unix` can map child fds 3 and 4, but releasing a plain Eio switch SIGKILLs the child at once. Chrome's orderly shutdown (chrome-b288) therefore depends on `etaproc`'s SIGTERM-then-grace release, not on switch teardown.
