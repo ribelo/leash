@@ -13,5 +13,6 @@ The Leash service launches Chrome itself with a dedicated profile directory and 
 
 - The service is a systemd user unit that needs the session's Wayland environment; it fails to start without a display, and that is acceptable.
 - CDP focus emulation is enabled per page so background tabs keep rendering and animating (jev-ultrafast relies on this).
-- Chrome's app id or window title must be distinctive enough for the niri rule; the exact flag is verified in milestone 1.
+- Window placement on the niri workspace is best effort: one rule on app id, one on title, and if neither matches the operator moves the window by hand after a start. Not worth more.
+- Chrome must always be able to come back from a SIGKILL without a prompt; graceful shutdown is a courtesy, never a dependency.
 - The profile is the only persistent state. Leash keeps handles, ownership, and snapshots in memory only.
