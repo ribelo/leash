@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Read `CONTEXT.md` first (domain vocabulary), then `docs/milestones.md` (the plan spine and where we are), then `docs/adr/` (settled decisions), then the spec for the milestone you are working on under `docs/issues/`. Eta lives at `/home/ribelo/projects/ribelo/ocaml/Eta`; Pie at `/home/ribelo/projects/ribelo/pie` is the sibling service whose conventions Leash copies.
+Read `CONTEXT.md` first (domain vocabulary), then `docs/milestones.md` (the plan spine and where we are), then `docs/adr/` (settled decisions), then the spec for the milestone you are working on under `docs/issues/`. Leash builds on eta-next: the worktree at `/home/ribelo/projects/ribelo/ocaml/eta-next` (branch `eta-next` of the Eta repository; v1 is the `v1` tag). Pie at `/home/ribelo/projects/ribelo/pie` is the sibling service whose conventions Leash copies.
 
 ## Landing: work is done when it is committed
 
@@ -20,7 +20,7 @@ Leash has no released users. Until 1.0, prioritize maintainability over backward
 ## Stack (settled — see docs/adr)
 
 - **OCaml 5 / OxCaml, Dune, Nix flake** with Eta pinned as a flake input, exactly Pie's build shape.
-- **Eta everywhere.** Effects, streams, scopes, schedules, observability. Service composition is explicit scoped resources in one owner, not an `eta_component` tree (ADR-0007, on Pie's evidence). Leash is a dogfooding consumer: if a needed capability is an effect-shaped resource, stream, or lifecycle concern that does not name Chrome/CDP/niri, it is built in Eta first (ADR-0001). Record any workaround for a missing Eta API in `docs/missing-eta-api.md` with an `etagap-*` ID and remove it when Eta catches up.
+- **Eta everywhere.** Effects, streams, scopes, schedules, observability. Service composition is explicit scoped resources in one owner, not an `eta_component` tree (ADR-0007, on Pie's evidence). Leash is a dogfooding consumer: if a needed capability is an effect-shaped resource, stream, or lifecycle concern that does not name Chrome/CDP/niri, it is built in eta-next first (ADR-0001, ADR-0008), specified under eta-next's `docs/issues/` and pulled by a Leash story ID. Record any workaround for a missing Eta API in `docs/missing-eta-api.md` with an `etagap-*` ID and remove it when Eta catches up.
 - **Chrome over CDP through `--remote-debugging-pipe`** (ADR-0003). No debugging port is ever opened.
 - **Control socket + `leash` CLI** (Cmdliner) are the only agent-facing surface (ADR-0002). Every command is one request.
 - **Config**: TOML at `$XDG_CONFIG_HOME/leash/config.toml`, fail fast at boot. `OPENROUTER_API_KEY` in the environment overrides the file.
