@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Live-acceptance gate against real Chrome. Filled in by milestone 6 (svc-xafg).
+set -euo pipefail
+echo "live-acceptance: not implemented yet (milestone 6)" >&2
+exit 2

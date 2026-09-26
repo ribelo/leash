@@ -1,0 +1,6 @@
+(include_subdirs no)
+
+(executable
+ (public_name leash)
+ (name main)
+ (libraries leash cmdliner))
