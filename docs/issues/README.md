@@ -14,9 +14,23 @@ Each row is one worker's job. The behaviour is specified in the milestone specs 
 
 L1 and L2 are independent after L0. L3 is the milestone's acceptance: when it is green, milestone 1 is done and `leash new https://example.com && leash list && leash close` works against real Chrome through the live-acceptance script.
 
+## Milestone 2 — observation and actions (`tab-observation-and-actions/01-…md`)
+
+Snapshot source is decided (spec Further Notes): accessibility tree + `DOMSnapshot` joined on backend node id, guarded by loader id and a per-document mutation counter, `settled` flag, action-time revalidation. `docs/protocol.md` is updated.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L5 | **`new` waits for load** when given a url (title populated), same wait as `nav`; live acceptance re-run. Small; do first. | chrome-qnul (behaviour clarified in spec) | — | [ ] |
+| L6 | **Snapshot.** Mutation-counter script via `Page.addScriptToEvaluateOnNewDocument`; `Accessibility.getFullAXTree` + `DOMSnapshot.captureSnapshot` join; row shaping (index, role, name, value, states) in reading order, viewport filter; guard and retake; `settled`; snapshot ids and invalidation; `snap` with `match`/`limit`/`offset`; dialog reported in the snapshot; `--table` rendering in the CLI. Fake browser extended with AX/DOMSnapshot shapes recorded from real Chrome (extend `docs/cdp-shapes.md`). | tab-of0i, tab-tmoc, tab-1r34, tab-hyap, tab-1rx9, tab-0vh8, tab-ok2i | L5 | [ ] |
+| L7 | **Actions.** Action-time revalidation (loader id, `describeNode`, `getContentQuads`, hit-test), `click`, `fill` (focus + `Input.insertText`), `press`, `select`, `scroll`, post-action settle (200 ms for combobox suggestions, else two frames/50 ms), `ActionResult` with url/title/popups, per-tab serialization, `dialog-open` refusal, never retried, focus emulation on attach. | tab-bw4j, tab-j1z2, tab-p3x1, tab-luo5, tab-5deq, tab-8dop, tab-tm6c, tab-hxld, tab-60kn, tab-1lhx, tab-8la3 | L6 | [ ] |
+| L8 | **Reading, waiting, evaluating, diagnosing.** `wait` (ANDed conditions, bounded), `text`, `eval` (function body with argument, 64 KiB bounds), `shot` (PNG to an absolute path, 20 MiB), `debug` ring (console, exceptions, failed requests, 200 entries), `dialog accept|dismiss`, never auto-answered, `too-large`. | tab-9x5e, tab-x4v0, tab-a33o, tab-qmei, tab-5vnm, tab-un75, tab-fepr, tab-0lax | L6 | [ ] |
+| L9 | **Live acceptance for milestone 2** on three real public pages (a search form, a page with a native select, a page with an overlay covering a button): visibility filter, occlusion refusal, focus emulation with the tab in the background, one snapshot with `settled:false` on a page with a live clock. Records real AX/DOMSnapshot shapes into `docs/cdp-shapes.md`. Marks the spec completed. | tab-tmoc, tab-8la3, and occlusion in tab-bw4j | L7, L8 | [ ] |
+
+L7 and L8 are independent after L6.
+
 ## Later milestones
 
-2 `tab-observation-and-actions`, 3 `tab-ownership`, 4 `human-handoff`, 5 `drive`, 6 `service-packaging` — sliced when milestone 1 lands; their specs are complete.
+3 `tab-ownership`, 4 `human-handoff`, 5 `drive`, 6 `service-packaging` — sliced when milestone 2 lands; their specs are complete.
 
 ## Definition of done, every row
 

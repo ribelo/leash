@@ -76,7 +76,7 @@ Drive:
 ```
 TabInfo      = {tab, url, title, origin: "agent"|"human", state: "unowned"|"owned"|"with_human",
                 owner: string|null, generation: int, expires: {stage: "release"|"close", in_s: int}|null}
-Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool,
+Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
                 dialog: Dialog|null}
 Row          = {index: int, role: string, name: string, value?: string, state?: string[]}
                  state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly}
@@ -98,7 +98,8 @@ Rules:
 - `wait` conditions are ANDed; `timeout_ms` is bounded to 30 000.
 - `eval` runs the expression as a function body in the page with `argument` bound; expression, argument, and result are each bounded to 64 KiB.
 - `shot` writes a PNG to `path`, which must be an absolute path the service can write; the reply carries no image data.
-- `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful.
+- `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful. `settled` is false when the page kept mutating during the observation (retaken twice first); the snapshot is still usable and actions revalidate at dispatch.
+- `new` with a url navigates and returns when the document has loaded, exactly like `nav`, so `title` is populated; `new` without a url returns at once with `about:blank`.
 - The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Exit status 0 on `ok:true`, 1 on a protocol error, 2 on a CLI usage error.
 
 ## Error codes
