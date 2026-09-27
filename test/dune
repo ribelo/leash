@@ -51,6 +51,21 @@
   alcotest))
 
 (test
+ (name ownership_test)
+ (modules ownership_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eta_process
+  eta_observability
+  eio
+  eio.unix
+  yojson
+  alcotest))
+
+(test
  (name reading_test)
  (modules reading_test)
  (libraries

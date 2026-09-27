@@ -68,6 +68,66 @@ let handle () =
     bytes;
   enum P.Handle.of_string (Buffer.contents buf)
 
+(* ---------- Ownership (ADR-0005) ---------- *)
+
+(* own-6ndc own-jua9 own-2zs7: who a tab belongs to is a closed variant rather than a
+   nullable name, because the three states answer differently: [Unowned] is a tab nobody
+   has claimed (a human's, or one an agent released), [Owned] is the one the caller
+   created or claimed, and [With_human] is the one handed off while the human works on it
+   (milestone 4). *)
+type owner_state = Unowned | Owned of P.Owner.t | With_human of P.Owner.t
+
+let owner_of = function Unowned -> None | Owned owner | With_human owner -> Some owner
+
+let state_name = function
+  | Unowned -> "unowned"
+  | Owned _ -> "owned"
+  | With_human _ -> "with_human"
+
+(* The command classes the one authorization function distinguishes. Every tab command
+   names one: [Act] is everything that touches the page (observe, navigate, act, wait),
+   and only [Close] and [Release] can be forced. *)
+type access = Act | Dialog | Close | Release | Claim
+
+let access_name = function
+  | Act -> "act"
+  | Dialog -> "dialog"
+  | Close -> "close"
+  | Release -> "release"
+  | Claim -> "claim"
+
+let forceable = function Close | Release -> true | Act | Dialog | Claim -> false
+let not_owner () = error "not-owner" "the tab belongs to another owner"
+let unowned () = error "not-owner" "the tab is unowned; claim it first"
+let already_owned () = error "already-owned" "the tab is already owned"
+let held_by_human () = error "with-human" "the tab is with the human; resume it first"
+
+(* own-pmr7 own-0np9 own-7pzw own-0pnk hand-nisr: the one authorization function. Acting,
+   answering a dialog, releasing, and closing require that the caller owns the tab;
+   claiming requires that nobody does; and no command at all reaches a tab the human
+   holds. [force] is honoured only for [close] and [release], where it ignores ownership
+   and the human's hold entirely, because an agent that died without releasing is exactly
+   why the human needs it (ADR-0005). *)
+let authorize ?(force = false) access ~caller state : (unit, P.error) result =
+  match access with
+  | Claim -> (
+      match state with
+      | Unowned -> Ok ()
+      | Owned _ | With_human _ -> Error (already_owned ()))
+  | Act | Dialog | Close | Release -> (
+      if force && forceable access then Ok ()
+      else
+        match state with
+        | Owned owner when owner = caller -> Ok ()
+        | Owned _ -> Error (not_owner ())
+        | Unowned -> Error (unowned ())
+        | With_human _ -> Error (held_by_human ()))
+
+(* A tombstone keeps whose tab it was, so a caller still learns that a closed tab was
+   never its own (own-teh1). *)
+let held_by_other state caller =
+  match state with Unowned -> false | Owned owner | With_human owner -> owner <> caller
+
 type tab = {
   id : string;
   session : string;
@@ -75,7 +135,7 @@ type tab = {
   mutable url : string;
   mutable title : string;
   origin : P.Origin.t;
-  owner : P.Owner.t option;
+  mutable owner_state : owner_state;
   generation : int;
   lock : Eio.Mutex.t;
   mutable loading : bool;
@@ -90,7 +150,7 @@ type tab = {
   reading : Reading.t;
 }
 
-type tomb = { owner : P.Owner.t option; disposition : string; at : float }
+type tomb = { state : owner_state; disposition : string; at : float }
 
 type t = {
   chrome : Chrome.t;
@@ -118,8 +178,8 @@ let info tab : P.tab_info =
     url = tab.url;
     title = tab.title;
     origin = tab.origin;
-    state = enum P.State.of_string (if tab.owner = None then "unowned" else "owned");
-    owner = tab.owner;
+    state = enum P.State.of_string (state_name tab.owner_state);
+    owner = owner_of tab.owner_state;
     generation = tab.generation;
     expires = None;
   }
@@ -127,25 +187,47 @@ let info tab : P.tab_info =
 let disappear t tab disposition =
   Hashtbl.remove t.tabs (key tab.handle);
   Hashtbl.remove t.targets tab.id;
-  Hashtbl.replace t.tombs (key tab.handle) { owner = tab.owner; disposition; at = now t };
+  Hashtbl.replace t.tombs (key tab.handle)
+    { state = tab.owner_state; disposition; at = now t };
   match tab.load_waiter with
   | None -> ()
   | Some waiter ->
       tab.load_waiter <- None;
       Eio.Promise.resolve waiter ()
 
-let lookup t ~owner handle =
+(* own-0pnk: the one gate every tab command passes through. The decision is the pure
+   [authorize]; this is the only place that also records a forced override, with the
+   command, the caller, the tab and the state it overrode. *)
+let permitted t ~access ~force ~caller handle state =
+  if force && forceable access then
+    Eta_observability.Logger.warn t.logger
+      ~fields:
+        [
+          ("cmd", Eta_observability.Logger.String (access_name access));
+          ("owner", Eta_observability.Logger.String (P.Owner.to_string caller));
+          ("tab", Eta_observability.Logger.String (key handle));
+          ("state", Eta_observability.Logger.String (state_name state));
+        ]
+      "ownership forced";
+  authorize ~force access ~caller state
+
+(* own-pmr7 own-teh1: every command that names a tab resolves it here, and a handle with
+   no live tab is answered from its tombstone. [--force] ignores whose tab that was,
+   exactly as it ignores ownership for a live one. *)
+let locate t ~access ?(force = false) ~owner handle =
   let key = key handle in
   match Hashtbl.find_opt t.tabs key with
-  | Some tab when tab.owner = Some owner -> Ok tab
-  | Some _ -> Error (error "not-owner" "the tab belongs to another owner")
+  | Some tab ->
+      Result.map
+        (fun () -> tab)
+        (permitted t ~access ~force ~caller:owner handle tab.owner_state)
   | None -> (
       match Hashtbl.find_opt t.tombs key with
       | Some tomb when now t -. tomb.at >= float t.tombstone_s ->
           Hashtbl.remove t.tombs key;
           Error (error "unknown-tab" "unknown tab handle")
-      | Some tomb when tomb.owner <> Some owner ->
-          Error (error "not-owner" "the tab belongs to another owner")
+      | Some tomb when (not force) && held_by_other tomb.state owner ->
+          Error (not_owner ())
       | Some tomb ->
           Error
             (error
@@ -170,7 +252,7 @@ let ready t =
   | Ok cdp -> Ok cdp
   | Error _ -> Error (unavailable ())
 
-let register t ~id ~session ~origin ~owner ~url ~title ?opener () =
+let register t ~id ~session ~origin ~state ~url ~title ?opener () =
   let tab =
     {
       id;
@@ -179,7 +261,7 @@ let register t ~id ~session ~origin ~owner ~url ~title ?opener () =
       url;
       title;
       origin;
-      owner;
+      owner_state = state;
       generation = Chrome.generation t.chrome;
       lock = Eio.Mutex.create ();
       loading = false;
@@ -201,27 +283,26 @@ let ( let* ) = Result.bind
 
 (* tab-8k2g, own-ehqa: a target Chrome reports with an [openerId] belongs to whoever owns
    the tab that opened it, so a page's popup is its opener agent's tab and not another
-   agent's. A target with no opener, or one whose opener Leash does not know, is a
-   human's, as before. *)
+   agent's. Any other discovered target is a human's: origin human and nobody's to claim
+   until an agent does (own-c0cl own-jua9), which is what a tab opened in the Chrome UI is
+   before milestone 3's discovery work pushes it at us. *)
 let adoption t info =
+  let human = enum P.Origin.of_string "human" in
   match text "openerId" info with
   | Some opener -> (
       match Option.bind (Hashtbl.find_opt t.targets opener) (Hashtbl.find_opt t.tabs) with
-      | Some opener_tab -> (opener_tab.origin, opener_tab.owner, Some opener)
-      | None ->
-          ( enum P.Origin.of_string "human",
-            Some (enum P.Owner.of_string "human"),
-            Some opener ))
-  | None -> (enum P.Origin.of_string "human", Some (enum P.Owner.of_string "human"), None)
+      | Some opener_tab -> (opener_tab.origin, opener_tab.owner_state, Some opener)
+      | None -> (human, Unowned, Some opener))
+  | None -> (human, Unowned, None)
 
 let flush_humans t =
   if t.creating = 0 then (
     Hashtbl.iter
       (fun id (session, info) ->
         if not (Hashtbl.mem t.targets id) then (
-          let origin, owner, opener = adoption t info in
+          let origin, state, opener = adoption t info in
           ignore
-            (register t ~id ~session ~origin ~owner
+            (register t ~id ~session ~origin ~state
                ~url:(Option.value ~default:"about:blank" (text "url" info))
                ~title:(Option.value ~default:"" (text "title" info))
                ?opener ());
@@ -303,10 +384,12 @@ let new_tab t ~owner ~url =
             match text "sessionId" attached with
             | None -> Error (error "internal" "browser omitted sessionId")
             | Some session ->
+                (* own-6ndc: the tab an agent creates is owned by that agent from the
+                   start. *)
                 let tab =
                   register t ~id ~session
                     ~origin:(enum P.Origin.of_string "agent")
-                    ~owner:(Some owner) ~url:target ~title:"" ()
+                    ~state:(Owned owner) ~url:target ~title:"" ()
                 in
                 (* chrome-qnul: a tab created with a url is only titled once its document
                    has loaded, so the reply waits exactly as [nav] does. Without a url (or
@@ -347,9 +430,9 @@ let new_tab t ~owner ~url =
 let navigate t ~owner handle url =
   if not (valid_url url) then Error (refusal ())
   else
-    let* tab = lookup t ~owner handle in
+    let* tab = locate t ~access:Act ~owner handle in
     Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-        let* tab = lookup t ~owner handle in
+        let* tab = locate t ~access:Act ~owner handle in
         let* cdp = ready t in
         (* chrome-1yn9: the tab is navigating to [url] now, so [url] is the fallback until
            Chrome speaks; the load wait's own [Target.getTargetInfo] refresh replaces it
@@ -366,7 +449,7 @@ let navigate t ~owner handle url =
               | Some _ -> Error (error "internal" "browser navigation failed")
               | None -> Ok ())
         in
-        let* _ = lookup t ~owner handle in
+        let* _ = locate t ~access:Act ~owner handle in
         let* _ = ready t in
         Ok
           P.
@@ -379,28 +462,64 @@ let navigate t ~owner handle url =
               popups = [];
             })
 
-let close t ~owner handle =
+(* own-jua9: claiming takes a tab nobody owns for the caller, and leaves every other
+   command's authorization untouched. *)
+let claim t ~owner handle =
+  let* tab = locate t ~access:Claim ~owner handle in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = locate t ~access:Claim ~owner handle in
+      tab.owner_state <- Owned owner;
+      Ok (info tab))
+
+(* own-2zs7 own-0pnk: release drops the caller's ownership without touching the page, so
+   another agent or the human can take it; [--force] does the same to a tab the caller
+   does not own, and to one the human is holding (ADR-0005). *)
+let release t ~owner ?(force = false) handle =
+  let* tab = locate t ~access:Release ~force ~owner handle in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = locate t ~access:Release ~force ~owner handle in
+      tab.owner_state <- Unowned;
+      Ok P.{ released = true })
+
+(* own-7pzw own-0pnk: [close] is idempotent for the caller that closed the tab, and
+   [--force] closes anyone's — including the tab the human holds — because an agent that
+   died without releasing is why the flag exists. *)
+let close t ~owner ?(force = false) handle =
   let k = key handle in
   match Hashtbl.find_opt t.tombs k with
   | Some tomb
-    when tomb.owner = Some owner
-         && tomb.disposition = "closed_by_owner"
+    when tomb.disposition = "closed_by_owner"
+         && (force || owner_of tomb.state = Some owner)
          && now t -. tomb.at < float t.tombstone_s ->
       Ok P.{ closed = true }
   | _ ->
-      let* tab = lookup t ~owner handle in
+      let* tab = locate t ~access:Close ~force ~owner handle in
       Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-          let* tab = lookup t ~owner handle in
+          let* tab = locate t ~access:Close ~force ~owner handle in
           let* cdp = ready t in
           let* _ = cdp_call cdp "Target.closeTarget" (obj [ ("targetId", str tab.id) ]) in
           disappear t tab "closed_by_owner";
           Ok P.{ closed = true })
 
+(* hand-nisr own-pmr7: the state transition milestone 4's [handoff] drives. It lands in
+   the registry here because [With_human] is part of this row's owner state and the
+   [with-human] refusal has to be reachable to be tested; milestone 4 adds the reason and
+   the promise the blocked request awaits. Every command is refused while the human holds
+   the tab, including the owner's own. *)
+let hand_over t ~owner handle =
+  let* tab = locate t ~access:Act ~owner handle in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = locate t ~access:Act ~owner handle in
+      tab.owner_state <- With_human owner;
+      Ok (info tab))
+
+(* own-82jd: without [--all] a caller sees its own tabs — the ones it owns and the one the
+   human is holding for it — and nothing of another agent's. *)
 let list t ~owner ~all =
   let tabs =
     Hashtbl.fold
       (fun _ (tab : tab) acc ->
-        if all || tab.owner = Some owner then info tab :: acc else acc)
+        if all || owner_of tab.owner_state = Some owner then info tab :: acc else acc)
       t.tabs []
   in
   P.
@@ -415,9 +534,9 @@ let list t ~owner ~all =
 (* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8:
    retain the unfiltered node table for later action-time revalidation. *)
 let snap t ~owner (args : P.snap_args) =
-  let* tab = lookup t ~owner args.tab in
+  let* tab = locate t ~access:Act ~owner args.tab in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-      let* tab = lookup t ~owner args.tab in
+      let* tab = locate t ~access:Act ~owner args.tab in
       let offset = Option.value ~default:0 args.offset in
       let limit = Option.value ~default:120 args.limit in
       if offset < 0 || limit < 0 || limit > 1000 then
@@ -550,35 +669,38 @@ let reading_browser t tab cdp : Reading.browser =
               rows);
   }
 
-let with_reading t ~owner handle f =
-  let* tab = lookup t ~owner handle in
+let with_reading t ~access ~owner handle f =
+  let* tab = locate t ~access ~owner handle in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-      let* tab = lookup t ~owner handle in
+      let* tab = locate t ~access ~owner handle in
       let* cdp = ready t in
       f tab (reading_browser t tab cdp))
 
 let read_text t ~owner (args : P.text_args) =
-  with_reading t ~owner args.tab (fun _ browser -> Reading.text browser args)
+  with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.text browser args)
 
 let eval t ~owner (args : P.eval_args) =
-  with_reading t ~owner args.tab (fun _ browser -> Reading.eval browser args)
+  with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.eval browser args)
 
 let shot t ~owner (args : P.shot_args) =
-  with_reading t ~owner args.tab (fun _ browser -> Reading.shot browser args)
+  with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.shot browser args)
 
 let debug t ~owner (args : P.debug_args) =
-  let* tab = lookup t ~owner args.tab in
+  let* tab = locate t ~access:Act ~owner args.tab in
   Reading.debug tab.reading args
 
+(* own-pmr7: answering a dialog is the owner's, exactly as acting is — a dialog is the
+   page asking the tab's owner, and a stranger answering it is the "stomping" ADR-0005
+   refuses. *)
 let dialog t ~owner (args : P.dialog_args) =
   (* Do not take the tab action mutex: an in-flight action can itself be blocked
      by a JavaScript dialog, and this command is the only way to release it. *)
-  let* tab = lookup t ~owner args.tab in
+  let* tab = locate t ~access:Dialog ~owner args.tab in
   let* cdp = ready t in
   Reading.dialog (reading_browser t tab cdp) args
 
 let wait t ~owner (args : P.wait_args) =
-  let* tab = lookup t ~owner args.tab in
+  let* tab = locate t ~access:Act ~owner args.tab in
   let* cdp = ready t in
   Reading.wait (reading_browser t tab cdp) args
 
@@ -604,9 +726,9 @@ let action_view t ~owner tab cdp : Actions.tab =
   }
 
 let with_action t ~owner handle f =
-  let* tab = lookup t ~owner handle in
+  let* tab = locate t ~access:Act ~owner handle in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-      let* tab = lookup t ~owner handle in
+      let* tab = locate t ~access:Act ~owner handle in
       let* cdp = ready t in
       f cdp (action_view t ~owner tab cdp))
 

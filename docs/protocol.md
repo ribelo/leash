@@ -31,8 +31,8 @@ Tab lifecycle:
 | `new` | `{url?}` | `TabInfo` |
 | `list` | `{all?: bool}` | `{tabs: TabInfo[]}` |
 | `claim` | `{tab}` | `TabInfo` |
-| `release` | `{tab}` | `{released: true}` |
-| `close` | `{tab}` | `{closed: true}` |
+| `release` | `{tab, force?}` | `{released: true}` |
+| `close` | `{tab, force?}` | `{closed: true}` |
 | `status` | `{}` | `{generation, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s}` |
 
 Observation:
@@ -96,6 +96,19 @@ status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
 
 Rules:
 
+- Ownership is checked before every tab command (ADR-0005). The `act` commands — `nav`,
+  `snap`, `text`, `eval`, `shot`, `debug`, `wait`, `click`, `fill`, `press`, `select`,
+  `scroll` — `dialog`, `release`, and `close` require that the caller owns the tab;
+  `claim` requires that nobody does. A tab nobody owns and a tab another caller owns both
+  refuse with `not-owner`; a tab handed to the human refuses with `with-human` — its
+  owner's commands included, until `resume`.
+- `force: true` (the CLI's `--force`) is honoured on `release` and `close` only, where it
+  ignores ownership and a human's hold so a human can clean up after an agent that is
+  gone; every use is logged. A `force` key on any other command is an unknown field, so
+  the request is `invalid-request`.
+- `list` shows the caller's tabs — the ones it owns and the one the human is holding for
+  it — and `list --all` every tab with its `origin`, `state`, and `owner`; `owner` is
+  null exactly when `state` is `unowned`.
 - Every action except `nav`, `scroll`, `wait`, and `dialog` requires the `snapshot` id it targets; it is refused with `stale-snapshot` if that is not the tab's current snapshot, if the page navigated since, if the row's node no longer resolves, or if its role and name differ from the snapshot's. An indexed `scroll` carries no id and revalidates against the tab's current snapshot.
 - A row action also refuses with `row-not-actionable` when the row is disabled, has no layout box, cannot take focus, or is covered at its click point (a hit test that answers with another node than the row or one of its descendants). Clicking reads the row's geometry at that moment; scrolling and animation are never staleness.
 - `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked).
@@ -114,9 +127,9 @@ Rules:
 | code | when |
 | --- | --- |
 | `invalid-request` | malformed JSON, unknown cmd, bad args |
-| `not-owner` | the tab is owned by someone else, or unowned and the command needs ownership |
-| `already-owned` | `claim` on a tab someone owns |
-| `with-human` | the tab is handed off; the owner's actions are refused until resume |
+| `not-owner` | the tab is owned by another caller, or unowned and the command needs ownership |
+| `already-owned` | `claim` on a tab that is not unowned |
+| `with-human` | the tab is handed to the human; every command is refused until `resume` |
 | `tab-gone` | the handle names a closed tab; `detail.disposition` is `closed_by_owner`, `closed_by_ttl`, `closed_externally`, or `browser_lost` |
 | `unknown-tab` | no tab and no tombstone for the handle |
 | `stale-snapshot` | the targeted snapshot is not current |

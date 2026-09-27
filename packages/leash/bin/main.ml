@@ -36,15 +36,16 @@ let table command result =
   let tabs = match field "tabs" result with `List xs -> xs | _ -> [] in
   match command with
   | "list" ->
-      print_endline "TAB\tURL\tTITLE\tOWNER\tSTATE";
+      print_endline "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER";
       List.iter
         (fun row ->
-          Printf.printf "%s\t%s\t%s\t%s\t%s\n"
+          Printf.printf "%s\t%s\t%s\t%s\t%s\t%s\n"
             (cell (field "tab" row))
             (cell (field "url" row))
             (cell (field "title" row))
-            (cell (field "owner" row))
-            (cell (field "state" row)))
+            (cell (field "origin" row))
+            (cell (field "state" row))
+            (cell (field "owner" row)))
         tabs
   | "snap" ->
       print_endline "INDEX\tROLE\tNAME\tVALUE\tSTATE";
@@ -251,8 +252,10 @@ let commands =
     command "new" "Open an agent-owned tab." [ "url" ] [];
     command "list" "List tabs owned by this caller." [] [ ("all", Bool) ];
     command "claim" "Claim a tab." [ "tab" ] [];
-    command "release" "Release a tab." [ "tab" ] [];
-    command "close" "Close a tab." [ "tab" ] [];
+    command "release" "Release a tab (own tab; --force for any)." [ "tab" ]
+      [ ("force", Bool) ];
+    command "close" "Close a tab (own tab; --force for any)." [ "tab" ]
+      [ ("force", Bool) ];
     command "status" "Report browser health." [] [];
     command "snap" "Observe an indexed snapshot." [ "tab" ]
       [ ("match", Str); ("limit", Int); ("offset", Int) ];

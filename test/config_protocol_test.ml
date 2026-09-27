@@ -762,8 +762,8 @@ let config_check_cli () =
       Alcotest.(check bool) "unknown key exits two" true (status = Unix.WEXITED 2);
       Alcotest.(check bool) "unknown key named" true (contains "oops" error))
 
-let socket_cli_case ?(expected_lines = []) argv reply expected_status expected_command
-    expected_owner =
+let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_status
+    expected_command expected_owner =
   with_temp (fun runtime ->
       let dir = Filename.concat runtime "leash" in
       Unix.mkdir dir 0o700;
@@ -809,6 +809,7 @@ let socket_cli_case ?(expected_lines = []) argv reply expected_status expected_c
             "command" expected_command
             (P.command_name decoded.command);
           Alcotest.(check string) "owner" expected_owner (P.Owner.to_string decoded.owner);
+          (match on_command with None -> () | Some check -> check decoded.command);
           let output = Unix.out_channel_of_descr (Unix.dup peer) in
           output_string output (reply ^ "\n");
           flush output;
@@ -846,7 +847,57 @@ let socket_cli () =
       [ "INDEX\tROLE\tNAME\tVALUE\tSTATE"; "0\tbutton\tSave\t1\tdisabled,required" ]
     [ "snap"; "t_9xk"; "--table" ]
     (Yojson.Safe.to_string (assoc [ ("ok", `Bool true); ("result", snapshot_json) ]))
-    0 "snap" "dsh:test-l1"
+    0 "snap" "dsh:test-l1";
+  (* own-0pnk: the CLI's --force reaches the wire for release and close, and only there. *)
+  socket_cli_case
+    ~on_command:(function
+      | P.Release { force = Some true; _ } -> ()
+      | _ -> Alcotest.fail "release --force did not ask for force")
+    [ "release"; "t_9xk"; "--force" ]
+    "{\"ok\":true,\"result\":{\"released\":true}}" 0 "release" "dsh:test-l1";
+  socket_cli_case
+    ~on_command:(function
+      | P.Close { force = Some true; _ } -> ()
+      | _ -> Alcotest.fail "close --force did not ask for force")
+    [ "close"; "t_9xk"; "--force" ]
+    "{\"ok\":true,\"result\":{\"closed\":true}}" 0 "close" "dsh:test-l1";
+  (* own-82jd: --all is the listing flag the ownership stories use. *)
+  socket_cli_case
+    ~on_command:(function
+      | P.List_tabs { all = true } -> ()
+      | _ -> Alcotest.fail "list --all did not ask for every tab")
+    [ "list"; "--all" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list" "dsh:test-l1";
+  (* own-82jd: the table names every owner's tab by origin, state and owner. *)
+  socket_cli_case
+    ~expected_lines:
+      [
+        "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER";
+        "t_9xk\thttps://example.com/\tExample Domain\tagent\towned\tdsh:test-l1";
+      ]
+    [ "list"; "--all"; "--table" ]
+    (Yojson.Safe.to_string
+       (assoc
+          [
+            ("ok", `Bool true);
+            ( "result",
+              assoc
+                [
+                  ( "tabs",
+                    `List
+                      [
+                        assoc
+                          [
+                            ("tab", `String "t_9xk");
+                            ("url", `String "https://example.com/");
+                            ("title", `String "Example Domain");
+                            ("origin", `String "agent");
+                            ("state", `String "owned");
+                            ("owner", `String "dsh:test-l1");
+                          ];
+                      ] );
+                ] );
+          ]))
+    0 "list" "dsh:test-l1"
 
 let cli_usage () =
   let binary =

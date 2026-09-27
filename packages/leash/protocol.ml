@@ -360,6 +360,11 @@ type new_args = { url : string option } [@@deriving yojson]
 type list_args = { all : bool [@json.default false] } [@@deriving yojson]
 type tab_args = { tab : Handle.t } [@@deriving yojson]
 
+type force_args = { tab : Handle.t; force : bool option } [@@deriving yojson]
+(** The arguments of the two commands a caller may force (own-0pnk): [force] is honoured
+    only for [release] and [close], and is a [key?] field, so a request that does not ask
+    for it carries no [force] key at all. *)
+
 type snap_args = {
   tab : Handle.t;
   match_ : string option; [@json.key "match"]
@@ -524,8 +529,8 @@ type command =
   | New of new_args
   | List_tabs of list_args
   | Claim of tab_args
-  | Release of tab_args
-  | Close of tab_args
+  | Release of force_args
+  | Close of force_args
   | Status
   | Snap of snap_args
   | Text of text_args
@@ -572,8 +577,8 @@ let args_to_json = function
   | New args -> yojson_of_new_args args
   | List_tabs args -> yojson_of_list_args args
   | Claim args -> yojson_of_tab_args args
-  | Release args -> yojson_of_tab_args args
-  | Close args -> yojson_of_tab_args args
+  | Release args -> yojson_of_force_args args
+  | Close args -> yojson_of_force_args args
   | Status -> yojson_of_empty_args ()
   | Snap args -> yojson_of_snap_args args
   | Text args -> yojson_of_text_args args
@@ -598,8 +603,8 @@ let command_of_args ~cmd args =
   | "new" -> with_args new_args_of_yojson (fun args -> New args)
   | "list" -> with_args list_args_of_yojson (fun args -> List_tabs args)
   | "claim" -> with_args tab_args_of_yojson (fun args -> Claim args)
-  | "release" -> with_args tab_args_of_yojson (fun args -> Release args)
-  | "close" -> with_args tab_args_of_yojson (fun args -> Close args)
+  | "release" -> with_args force_args_of_yojson (fun args -> Release args)
+  | "close" -> with_args force_args_of_yojson (fun args -> Close args)
   | "status" -> with_args empty_args_of_yojson (fun () -> Status)
   | "snap" -> with_args snap_args_of_yojson (fun args -> Snap args)
   | "text" -> with_args text_args_of_yojson (fun args -> Text args)

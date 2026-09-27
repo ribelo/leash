@@ -150,9 +150,10 @@ let lifecycle () =
             match field "method" j with Some (`String s) -> Some s | _ -> None)
       in
       Alcotest.(check bool) "attached" true (List.mem "Target.attachToTarget" methods);
-      check_code "owner" "not-owner" (request tabs "bob" (P.Close { tab = h }));
-      ignore (result (request tabs "alice" (P.Close { tab = h })));
-      ignore (result (request tabs "alice" (P.Close { tab = h })));
+      check_code "owner" "not-owner"
+        (request tabs "bob" (P.Close { tab = h; force = None }));
+      ignore (result (request tabs "alice" (P.Close { tab = h; force = None })));
+      ignore (result (request tabs "alice" (P.Close { tab = h; force = None })));
       Alcotest.(check bool)
         "chrome-2n8n closed" true
         (get "open" (get "tabs" (result (request tabs "alice" P.Status))) = `Int 0))
@@ -379,7 +380,7 @@ let lost () =
       let rec gone n =
         if n = 0 then Alcotest.fail "no tombstone"
         else
-          match request tabs "alice" (P.Close { tab = h }) with
+          match request tabs "alice" (P.Close { tab = h; force = None }) with
           | P.Failure e when P.Error_code.to_string e.code = "tab-gone" ->
               Alcotest.(check bool)
                 "chrome-2z2z browser_lost" true
@@ -557,6 +558,9 @@ let human () =
                         ] );
                   ] );
             ]);
+      (* own-jua9: a tab discovered from outside Leash appears unowned, so a client —
+         the "human" owner here — claims it before it may observe it. *)
+      ignore (result (request tabs "human" (P.Claim { tab = human_tab })));
       ignore
         (result
            (request tabs "human"

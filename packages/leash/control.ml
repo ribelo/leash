@@ -22,7 +22,7 @@ let decode line =
   try P.decode_request (Yojson.Safe.from_string line)
   with Yojson.Json_error why -> Error ("/: " ^ why)
 
-let unsupported = err "invalid-request" "this command is not available in milestone 1"
+let unsupported = err "invalid-request" "this command is not available yet"
 
 let dispatch tabs (request : P.request) =
   let owner = request.owner in
@@ -46,7 +46,12 @@ let dispatch tabs (request : P.request) =
   | P.Scroll args -> lift P.yojson_of_action_result (Tabs.scroll tabs ~owner args)
   | P.Nav args ->
       lift P.yojson_of_action_result (Tabs.navigate tabs ~owner args.tab args.url)
-  | P.Close args -> lift P.yojson_of_closed_result (Tabs.close tabs ~owner args.tab)
+  | P.Claim args -> lift P.yojson_of_tab_info (Tabs.claim tabs ~owner args.tab)
+  | P.Release args ->
+      lift P.yojson_of_released_result
+        (Tabs.release tabs ~owner ?force:args.force args.tab)
+  | P.Close args ->
+      lift P.yojson_of_closed_result (Tabs.close tabs ~owner ?force:args.force args.tab)
   | P.List_tabs args ->
       success (P.yojson_of_list_result (Tabs.list tabs ~owner ~all:args.all))
   | P.Status -> success (P.yojson_of_status_result (Tabs.report tabs))

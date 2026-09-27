@@ -263,6 +263,14 @@ type new_args = { url : string option }
 type list_args = { all : bool }
 type tab_args = { tab : Handle.t }
 
+type force_args = { tab : Handle.t; force : bool option }
+(** The arguments of the two commands a caller may force (own-0pnk): [force] is honoured
+    only for [release] and [close], and is a [key?] field — omitted when the caller does
+    not ask for it. *)
+
+val force_args_of_yojson : Yojson.Safe.t -> (force_args, string) result
+val yojson_of_force_args : force_args -> Yojson.Safe.t
+
 type snap_args = {
   tab : Handle.t;
   match_ : string option;
@@ -331,6 +339,7 @@ val yojson_of_list_result : list_result -> Yojson.Safe.t
 type released_result = { released : bool }
 type closed_result = { closed : bool }
 
+val yojson_of_released_result : released_result -> Yojson.Safe.t
 val yojson_of_closed_result : closed_result -> Yojson.Safe.t
 
 type resumed_result = { resumed : bool }
@@ -373,8 +382,8 @@ type command =
   | New of new_args
   | List_tabs of list_args
   | Claim of tab_args
-  | Release of tab_args
-  | Close of tab_args
+  | Release of force_args
+  | Close of force_args
   | Status
   | Snap of snap_args
   | Text of text_args
