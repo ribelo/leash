@@ -7,54 +7,48 @@
 let step_timeout = Eta.Duration.seconds 5
 let retirement_grace = Eta.Duration.seconds 5
 
-type runner = {
-  run :
-    sw:Eio.Switch.t ->
-    argv:string list ->
-    on_line:(string -> unit) ->
-    (unit, string) result;
-}
-
-let process_runner ~clock ~mgr =
-  let run ~sw ~argv ~on_line =
-    try
-      match
-        Eta_process.Child.spawn ~sw ~clock ~mgr ~argv ~grace:retirement_grace
-          ~stdout:Eta_process.Child.Pipe ~fds:[] ()
-      with
-      | Error (`Invalid_fd descriptor) ->
-          Error (Printf.sprintf "invalid descriptor %d" descriptor)
-      | Error (`Duplicate_fd descriptor) ->
-          Error (Printf.sprintf "duplicate descriptor %d" descriptor)
-      | Ok child -> (
-          (match Eta_process.Child.stdout child with
-          | None -> ()
-          | Some source -> (
-              let lines = Eio.Buf_read.of_flow ~max_size:(64 * 1024) source in
-              try
-                let rec read () =
-                  on_line (Eio.Buf_read.line lines);
-                  read ()
-                in
-                read ()
-              with End_of_file -> ()));
-          match Eta_process.Child.await child with
-          | Exited 0 -> Ok ()
-          | Exited status -> Error (Printf.sprintf "exited %d" status)
-          | Signaled signal -> Error (Printf.sprintf "killed by signal %d" signal))
+(* hand-phof hand-rg9h: one command's whole life, as a real child. It is spawned on the
+   switch the caller gives — the handoff's own switch for a notification — with a
+   five-second retirement grace and its stdout read as lines, and answers [Ok] for a zero
+   exit and [Error reason] for anything else. A command stopped because that switch was
+   released is cancelled, not reported. *)
+let run_command ~clock ~mgr ~sw ~argv ~on_line =
+  try
+    match
+      Eta_process.Child.spawn ~sw ~clock ~mgr ~argv ~grace:retirement_grace
+        ~stdout:Eta_process.Child.Pipe ~fds:[] ()
     with
-    | Eio.Cancel.Cancelled _ as cancelled -> raise cancelled
-    (* hand-rg9h: Eio resolves the executable — the argv head, through PATH — before the
-       process manager is asked to spawn it, so a command that is not installed fails
-       here, with the name the config gave. *)
-    | Eio.Io (Eio.Process.E (Eio.Process.Executable_not_found name), _) ->
-        Error (Printf.sprintf "%s: executable not found" name)
-    | Unix.Unix_error (code, _, argument) ->
-        if argument = "" then Error (Unix.error_message code)
-        else Error (Printf.sprintf "%s: %s" argument (Unix.error_message code))
-    | ex -> Error (Printexc.to_string ex)
-  in
-  { run }
+    | Error (`Invalid_fd descriptor) ->
+        Error (Printf.sprintf "invalid descriptor %d" descriptor)
+    | Error (`Duplicate_fd descriptor) ->
+        Error (Printf.sprintf "duplicate descriptor %d" descriptor)
+    | Ok child -> (
+        (match Eta_process.Child.stdout child with
+        | None -> ()
+        | Some source -> (
+            let lines = Eio.Buf_read.of_flow ~max_size:(64 * 1024) source in
+            try
+              let rec read () =
+                on_line (Eio.Buf_read.line lines);
+                read ()
+              in
+              read ()
+            with End_of_file -> ()));
+        match Eta_process.Child.await child with
+        | Exited 0 -> Ok ()
+        | Exited status -> Error (Printf.sprintf "exited %d" status)
+        | Signaled signal -> Error (Printf.sprintf "killed by signal %d" signal))
+  with
+  | Eio.Cancel.Cancelled _ as cancelled -> raise cancelled
+  (* hand-rg9h: Eio resolves the executable — the argv head, through PATH — before the
+     process manager is asked to spawn it, so a command that is not installed fails
+     here, with the name the config gave. *)
+  | Eio.Io (Eio.Process.E (Eio.Process.Executable_not_found name), _) ->
+      Error (Printf.sprintf "%s: executable not found" name)
+  | Unix.Unix_error (code, _, argument) ->
+      if argument = "" then Error (Unix.error_message code)
+      else Error (Printf.sprintf "%s: %s" argument (Unix.error_message code))
+  | ex -> Error (Printexc.to_string ex)
 
 type commands = { focus_command : string list; notify_command : string list }
 type context = { tab : Protocol.Handle.t; reason : string; url : string; title : string }
@@ -147,11 +141,11 @@ let chrome_window = function
       match by_app with Some window -> id window | None -> Option.bind by_title id)
   | _ -> None
 
-let create ~clock ~runner commands =
+let create ~clock ~mgr commands =
   let run_bounded argv ~on_line =
     match
       Eta.Timeout.timeout ~clock step_timeout (fun () ->
-          Eio.Switch.run (fun sw -> runner.run ~sw ~argv ~on_line)
+          Eio.Switch.run (fun sw -> run_command ~clock ~mgr ~sw ~argv ~on_line)
           |> Result.map_error (fun message -> `Failed message))
     with
     | Ok () -> Ok ()
@@ -193,7 +187,7 @@ let create ~clock ~runner commands =
     match commands.notify_command with
     | [] -> Ok ()
     | command ->
-        runner.run ~sw
+        run_command ~clock ~mgr ~sw
           ~argv:(List.map (render (values context)) command)
           ~on_line:(fun line ->
             if String.lowercase_ascii (String.trim line) = "done" then on_done ())

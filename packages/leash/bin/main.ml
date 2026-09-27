@@ -321,8 +321,7 @@ let program env (config : Leash.Config.t) sw =
   (* hand-04rb hand-phof hand-rg9h: the two human-facing commands a handoff runs go through
      Eta's child process, and the registry turns whatever they report into warnings. *)
   let desktop =
-    Leash.Desktop.create ~clock:base#clock
-      ~runner:(Leash.Desktop.process_runner ~clock:base#clock ~mgr:base#process_mgr)
+    Leash.Desktop.create ~clock:base#clock ~mgr:base#process_mgr
       {
         Leash.Desktop.focus_command = config.handoff.focus_command;
         notify_command = config.handoff.notify_command;

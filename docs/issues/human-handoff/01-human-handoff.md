@@ -39,7 +39,7 @@ Logins, two-factor codes, captchas, and consequential confirmations need a human
 
 ## Testing Decisions
 
-- Protocol seam with two clients (agent and human), the fake browser, a test clock, and a fake command runner recording spawned commands: hand-lz3p, hand-0sja, hand-nisr, hand-lmd5, hand-len8, hand-r4t1, hand-beip, hand-szz7, hand-rg9h.
+- Protocol seam with two clients (agent and human), the fake browser, a test clock, and the real desktop runner over eta_test's fake process manager, which records the commands it was asked for and scripts what their children print: hand-lz3p, hand-0sja, hand-nisr, hand-lmd5, hand-len8, hand-r4t1, hand-beip, hand-szz7, hand-rg9h.
 - Fake browser drops the pipe mid-handoff: hand-yytf.
 - Live-acceptance: hand-04rb, hand-phof.
 

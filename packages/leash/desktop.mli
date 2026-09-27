@@ -17,24 +17,6 @@
     the action the human took on its stdout, and a line [done] resumes the tab — which is
     what [notify-send --action done=Done] prints when Done is clicked. *)
 
-type runner = {
-  run :
-    sw:Eio.Switch.t ->
-    argv:string list ->
-    on_line:(string -> unit) ->
-    (unit, string) result;
-}
-(** One command's whole life: spawn it on [sw], hand its stdout lines to [on_line], and
-    answer [Ok] for a zero exit or [Error reason] for anything else. A command stopped
-    because [sw] was released — the handoff it belonged to ended — is cancelled, not
-    reported: {!notify} runs on its caller's switch for exactly that reason. *)
-
-val process_runner :
-  clock:'clock Eio.Time.clock -> mgr:'mgr Eio_unix.Process.mgr -> runner
-(** The real one, over {!Eta_process.Child} with a five-second retirement grace and its
-    stdout read as lines. A command that cannot be started at all — a missing binary, an
-    exec that fails — is an [Error], not a defect: the caller turns it into a warning. *)
-
 type commands = { focus_command : string list; notify_command : string list }
 
 type context = { tab : Protocol.Handle.t; reason : string; url : string; title : string }
@@ -43,11 +25,18 @@ type context = { tab : Protocol.Handle.t; reason : string; url : string; title :
 
 type t
 
-val create : clock:'clock Eio.Time.clock -> runner:runner -> commands -> t
+val create : clock:'clock Eio.Time.clock -> mgr:'mgr Eio_unix.Process.mgr -> commands -> t
+(** One command's whole life, over {!Eta_process.Child} with a five-second retirement
+    grace: spawned on [sw], its stdout lines handed to the step that asked for it, [Ok]
+    for a zero exit and [Error reason] for anything else. A command stopped because [sw]
+    was released — the handoff it belonged to ended — is cancelled, not reported:
+    {!notify} runs on its caller's switch for exactly that reason. A command that cannot
+    be started at all — a missing binary, an exec that fails — is an [Error], not a
+    defect: the caller turns it into a warning. *)
 
 val disabled : t
-(** Neither step is configured, so nothing is ever run and no clock or runner is needed. A
-    registry whose tests do not exercise the human-facing side uses it. *)
+(** Neither step is configured, so nothing is ever run and no clock or process manager is
+    needed. A registry whose tests do not exercise the human-facing side uses it. *)
 
 val focus : t -> context -> (unit, string) result
 (** hand-04rb: raise the managed Chrome's window on the tab (or skip when the command asks
