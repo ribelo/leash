@@ -41,8 +41,8 @@ type t = {
   closed_u : Eta_rpc.Correlator.close_reason Eio.Promise.u;
 }
 
-let create ~sw ~clock ?max_size ?max_notifications transport =
-  let frame = Frame.of_flows ?max_size ~read:transport.read ~write:transport.write () in
+let create ~sw ~clock ?(max_size = 28_000_000) ?max_notifications transport =
+  let frame = Frame.of_flows ~max_size ~read:transport.read ~write:transport.write () in
   let closed, closed_u = Eio.Promise.create () in
   let settle reason = ignore (Eio.Promise.try_resolve closed_u reason) in
   let read () =

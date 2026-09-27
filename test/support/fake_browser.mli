@@ -22,6 +22,10 @@
     - Accessibility.getFullAXTree: {nodes:[]}; DOMSnapshot.captureSnapshot:
       {documents:[],strings:[]}; Runtime.evaluate: {result:{type:"undefined"}}
       Tests override AX, DOMSnapshot and guard with fixtures captured from real Chrome.
+    - DOM.enable, DOM.focus, DOM.scrollIntoViewIfNeeded, Input.dispatchMouseEvent,
+      Input.insertText, Input.dispatchKeyEvent, Emulation.setFocusEmulationEnabled: {};
+      Page.getLayoutMetrics: an 800x600 css layout viewport (the measured shape is in
+      docs/cdp-shapes.md).
 
     Event shapes available through [event] are Target.targetCreated and
     Target.targetInfoChanged
@@ -42,6 +46,13 @@ type client = {
 
 val create : sw:Eio.Switch.t -> unit -> t * client
 val on_method : t -> string -> (Yojson.Safe.t -> Yojson.Safe.t) -> unit
+
+val on_failure : t -> string -> (Yojson.Safe.t -> (int * string) option) -> unit
+(** [on_failure t name builder] lets [name] answer with a CDP error instead of its
+    response: [Some (code, message)] becomes [{"error":{"code":code,"message":message}}]
+    and [None] answers as usual. It is how a test fails one request of a sequence, which
+    is what "never retried" is asserted on. *)
+
 val received : t -> Yojson.Safe.t list
 val emit : ?session:string -> t -> method_:string -> params:Yojson.Safe.t -> unit
 

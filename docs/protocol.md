@@ -95,9 +95,11 @@ status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
 
 Rules:
 
-- Every action except `nav`, `scroll` without index, `wait`, and `dialog` requires the `snapshot` id it targets; it is refused with `stale-snapshot` if that is not the tab's current snapshot or the page moved since.
-- `press` with `index` focuses the row first; without it, sends the key to the page.
-- `select` targets a native `<select>` row; `option` is the observed option index carried in the row's value.
+- Every action except `nav`, `scroll`, `wait`, and `dialog` requires the `snapshot` id it targets; it is refused with `stale-snapshot` if that is not the tab's current snapshot, if the page navigated since, if the row's node no longer resolves, or if its role and name differ from the snapshot's. An indexed `scroll` carries no id and revalidates against the tab's current snapshot.
+- A row action also refuses with `row-not-actionable` when the row is disabled, has no layout box, cannot take focus, or is covered at its click point (a hit test that answers with another node than the row or one of its descendants). Clicking reads the row's geometry at that moment; scrolling and animation are never staleness.
+- `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked).
+- `select` targets a native `<select>` row (role `combobox` or `listbox`); `option` is its index in the select's observed option order, and an index the select does not have is `invalid-request`. A row that is not a native select is `row-not-actionable`.
+- `ActionResult.snapshot` is null unless a snapshot was taken as part of settling; actions do not observe the page again on their own, so a caller that wants a fresh table asks for one.
 - `wait` conditions are ANDed; `timeout_ms` is bounded to 30 000.
 - `eval` runs the expression as a function body in the page with `argument` bound; expression, argument, and result are each bounded to 64 KiB.
 - `shot` writes a PNG to `path`, which must be an absolute path the service can write; the reply carries no image data.

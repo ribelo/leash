@@ -117,6 +117,25 @@ let perform command fields owner pretty use_table positionals options =
             match options with
             | Error why -> usage why
             | Ok options -> (
+                let options =
+                  if command <> "wait" then options
+                  else
+                    let condition_names = [ "url_prefix"; "text"; "index_gone"; "dialog" ] in
+                    let conditions, rest =
+                      List.partition (fun (key, _) -> List.mem key condition_names) options
+                    in
+                    let previous = match List.assoc_opt "until" rest with
+                      | Some (`Assoc fields) ->
+                          List.filter (fun (key, _) -> not (List.mem_assoc key conditions)) fields
+                      | _ -> [] in
+                    let rest = List.remove_assoc "until" rest in
+                    let timeout = match List.assoc_opt "timeout" rest with
+                      | Some value when not (List.mem_assoc "timeout_ms" rest) ->
+                          [ ("timeout_ms", value) ]
+                      | _ -> [] in
+                    let rest = List.remove_assoc "timeout" rest in
+                    ("until", obj (conditions @ previous)) :: timeout @ rest
+                in
                 let args = obj (fields @ options) in
                 match P.command_of_args ~cmd:command args with
                 | Error why -> usage why
@@ -239,7 +258,8 @@ let commands =
     command "select" "Choose a select option." [ "tab"; "snapshot"; "index"; "option" ] [];
     command "scroll" "Scroll a page or row." [ "tab"; "direction" ] [ ("index", Int) ];
     command "wait" "Wait for page conditions." [ "tab" ]
-      [ ("until", Json); ("timeout_ms", Int) ];
+      [ ("until", Json); ("url_prefix", Str); ("text", Str);
+        ("index_gone", Int); ("dialog", Bool); ("timeout", Int); ("timeout_ms", Int) ];
     command "dialog" "Answer a page dialog." [ "tab"; "answer" ] [ ("text", Str) ];
     command "handoff" "Hand a tab to the human." [ "tab"; "reason" ]
       [ ("timeout_s", Int) ];

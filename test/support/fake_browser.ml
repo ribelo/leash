@@ -9,6 +9,7 @@ type t = {
   replies : (string, Yojson.Safe.t -> Yojson.Safe.t) Hashtbl.t;
   mutable messages : Yojson.Safe.t list;
   mutable dropped : bool;
+  failures : (string, Yojson.Safe.t -> (int * string) option) Hashtbl.t;
   writes : Eio.Mutex.t;
 }
 
@@ -69,6 +70,35 @@ let defaults replies =
       ("Target.getTargetInfo", obj [ ("targetInfo", target_info) ]);
       ("Target.closeTarget", obj [ ("success", `Bool true) ]);
       ("Page.enable", obj []);
+      ("Runtime.enable", obj []);
+      ("Network.enable", obj []);
+      ("DOM.enable", obj []);
+      ("Emulation.setFocusEmulationEnabled", obj []);
+      ("DOM.focus", obj []);
+      ("DOM.scrollIntoViewIfNeeded", obj []);
+      ("Input.dispatchMouseEvent", obj []);
+      ("Input.insertText", obj []);
+      ("Input.dispatchKeyEvent", obj []);
+      ( "Page.getLayoutMetrics",
+        obj
+          [
+            ( "cssLayoutViewport",
+              obj
+                [
+                  ("clientWidth", `Int 800);
+                  ("clientHeight", `Int 600);
+                  ("pageX", `Int 0);
+                  ("pageY", `Int 0);
+                ] );
+            ( "layoutViewport",
+              obj
+                [
+                  ("clientWidth", `Int 800);
+                  ("clientHeight", `Int 600);
+                  ("pageX", `Int 0);
+                  ("pageY", `Int 0);
+                ] );
+          ] );
       ("Page.addScriptToEvaluateOnNewDocument", obj [ ("identifier", str "1") ]);
       ( "Page.getFrameTree",
         obj
@@ -110,13 +140,22 @@ let respond t request =
     match request with `Assoc fields -> List.assoc_opt name fields | _ -> None
   in
   let method_ = match member "method" with Some (`String m) -> m | _ -> "" in
-  let result =
+  let answer () =
     match Hashtbl.find_opt t.replies method_ with
     | Some builder -> [ ("result", builder request) ]
     | None ->
         [
           ("error", obj [ ("code", `Int (-32601)); ("message", str "Method not found") ]);
         ]
+  in
+  let result =
+    match Hashtbl.find_opt t.failures method_ with
+    | Some builder -> (
+        match builder request with
+        | Some (code, message) ->
+            [ ("error", obj [ ("code", `Int code); ("message", str message) ]) ]
+        | None -> answer ())
+    | None -> answer ()
   in
   let envelope =
     List.filter_map
@@ -130,11 +169,13 @@ let create ~sw () =
   let client_read, peer_write = Eio_unix.pipe sw in
   let replies = Hashtbl.create 12 in
   defaults replies;
+  let failures = Hashtbl.create 4 in
   let t =
     {
       peer_read;
       peer_write;
       replies;
+      failures;
       messages = [];
       dropped = false;
       writes = Eio.Mutex.create ();
@@ -154,6 +195,7 @@ let create ~sw () =
   (t, { read = client_read; write = client_write })
 
 let on_method t name builder = Hashtbl.replace t.replies name builder
+let on_failure t name builder = Hashtbl.replace t.failures name builder
 let received t = List.rev t.messages
 
 let emit ?session t ~method_ ~params =

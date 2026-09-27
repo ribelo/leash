@@ -33,6 +33,17 @@ let dispatch tabs (request : P.request) =
   match request.command with
   | P.New args -> lift P.yojson_of_tab_info (Tabs.new_tab tabs ~owner ~url:args.url)
   | P.Snap args -> lift P.yojson_of_snapshot (Tabs.snap tabs ~owner args)
+  | P.Text args -> lift P.yojson_of_text_result (Tabs.text tabs ~owner args)
+  | P.Eval args -> lift P.yojson_of_eval_result (Tabs.eval tabs ~owner args)
+  | P.Shot args -> lift P.yojson_of_shot_result (Tabs.shot tabs ~owner args)
+  | P.Debug args -> lift P.yojson_of_debug_result (Tabs.debug tabs ~owner args)
+  | P.Wait args -> lift P.yojson_of_action_result (Tabs.wait tabs ~owner args)
+  | P.Dialog args -> lift P.yojson_of_action_result (Tabs.dialog tabs ~owner args)
+  | P.Click args -> lift P.yojson_of_action_result (Tabs.click tabs ~owner args)
+  | P.Fill args -> lift P.yojson_of_action_result (Tabs.fill tabs ~owner args)
+  | P.Press args -> lift P.yojson_of_action_result (Tabs.press tabs ~owner args)
+  | P.Select args -> lift P.yojson_of_action_result (Tabs.select tabs ~owner args)
+  | P.Scroll args -> lift P.yojson_of_action_result (Tabs.scroll tabs ~owner args)
   | P.Nav args ->
       lift P.yojson_of_action_result (Tabs.navigate tabs ~owner args.tab args.url)
   | P.Close args -> lift P.yojson_of_closed_result (Tabs.close tabs ~owner args.tab)
@@ -69,13 +80,17 @@ let budget (request : (P.request, string) result) =
   | Ok { command = P.Wait args; _ } ->
       Some
         (Eta.Duration.ms
-           (min 30000 (max 1 (Option.value ~default:30000 args.timeout_ms))))
+           (min 30000 (max 1 (Option.value ~default:30000 args.timeout_ms)) + 1000))
   | Ok { command = P.Handoff args; _ } ->
       Some (seconds (max 1 (Option.value ~default:900 args.timeout_s)))
   | Ok { command = P.Drive args; _ } ->
       Some (seconds (max 1 (Option.value ~default:30 args.deadline_s)))
+  | Ok { command = (P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _); _ } ->
+      Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
+  | Ok { command = P.Click _ | P.Fill _ | P.Press _ | P.Select _ | P.Scroll _; _ } ->
+      Some (seconds 10)
   | Ok _ -> Some (seconds 1)
 
 let create ~sw ~runtime_dir deps =

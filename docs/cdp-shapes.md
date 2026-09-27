@@ -105,3 +105,53 @@ The three measured approaches in [snapshot-source](../.scratch/research/snapshot
 | Second call of C | `DOMSnapshot.captureSnapshot {"computedStyles":["display","visibility"],"includeDOMRects":true}` | `{"documents":[{"nodes":{"backendNodeId":[…]},"layout":{"nodeIndex":[…],"bounds":[[x,y,width,height],…],"styles":[…],"clientRects":[…]}}],"strings":[…]}`. Join `nodes.backendNodeId[layout.nodeIndex[i]]` to AX `backendDOMNodeId`; rectangle coordinates are CSS pixels. |
 
 C uses two CDP requests, not an atomic CDP operation. A `Runtime.evaluate` setup/read around the pair can install and read a `MutationObserver` counter for same-document DOM mutations; navigation additionally requires a loader-id guard. Neither guard guarantees layout stayed fixed through scrolling/animation, and the guard calls were not included in the measured 2-call count. Action-time visibility/occlusion must be checked separately.
+
+## L8 reading/diagnostics (Chrome/152.0.7977.64, headless pipe)
+
+Captured with `--headless=new --remote-debugging-pipe`, attached page session (`Target.createTarget` then `Target.attachToTarget` with `flatten:true`). These are actual response/event members inside the ordinary CDP `{id,result,sessionId}` envelope:
+
+| Operation | Captured result or event |
+| --- | --- |
+| `Runtime.evaluate {"expression":"document.body.innerText=…; ({ok:true})","returnByValue":true}` | `{"result":{"type":"object","value":{"ok":true}}}`. Evaluating `globalThis` without `returnByValue` supplies `result.objectId` for subsequent calls. |
+| `Runtime.callFunctionOn {"objectId":"…","functionDeclaration":"function(argument) { return {echo:argument}; }","arguments":[{"value":{"n":42}}],"returnByValue":true,"awaitPromise":true}` | `{"result":{"type":"object","value":{"echo":{"n":42}}}}`. The service passes the argument as a CDP value, not interpolation into JavaScript. |
+| `Page.captureScreenshot {"format":"png","captureBeyondViewport":true}` | `{"data":"iVBORw0KGgoAAAAN…"}` (3956 base64 characters for blank page). Its PNG bytes live only on CDP; control replies include path and byte count. |
+| `Runtime.consoleAPICalled` | `{"type":"warning","args":[{"type":"string","value":"reading-console"}],"timestamp":1790497397382.821,…}`. |
+| `Runtime.exceptionThrown` | `{"exceptionDetails":{"text":"Uncaught","exception":{"description":"Error: reading-uncaught\n    at <anonymous>:1:59",…},…}}`. Description carries the useful error message; `text` alone does not. |
+| `Network.loadingFailed` | `{"type":"Fetch","errorText":"net::ERR_UNSAFE_PORT","canceled":false,"requestId":"…",…}` from a failed localhost fetch. |
+| `Page.javascriptDialogOpening` / `Page.javascriptDialogClosed` | Opening `{"type":"alert","message":"reading-dialog","hasBrowserHandler":true,"defaultPrompt":"",…}`; after explicit `Page.handleJavaScriptDialog {"accept":false}`, closed `{"result":false,"userInput":"",…}` and command result `{}`. No dialog answer was sent until explicit action. |
+
+
+## L7 actions (Chrome/152.0.7977.64, headless pipe)
+
+Probe: `--headless=new`, `--remote-debugging-pipe`, one attached page session, a
+`data:text/html` page with a button wrapping a `<span>`, a text input, a native `<select>`
+and a 2000 px filler. The raw replies are in
+[probe-results.json](../.scratch/actions/probe-results.json). These are the calls one action
+makes, in the order a click makes them.
+
+| Operation | Captured result |
+| --- | --- |
+| `Page.getFrameTree {}` | `{"frameTree":{"frame":{"id":"7E37…","loaderId":"005A…","url":"data:text/html;charset=utf-8,…"}}}` — the loader id a snapshot and an action compare. |
+| `DOM.getContentQuads {"backendNodeId":10}` | `{"quads":[[0,68.9375,200,68.9375,200,108.9375,0,108.9375]]}` — eight numbers per quad (x1,y1,x2,y2,x3,y3,x4,y4), CSS pixels in the viewport, integers and floats mixed. |
+| `DOM.getNodeForLocation {"x":100,"y":88.9375,"includeUserAgentShadowDOM":false}` | `{"backendNodeId":31,"frameId":"7E37…","nodeId":115}` — the **deepest** node at the point, so a button with a label span answers with the span's backend id, not the button's. Answered the same before and after `DOM.enable`, so the hit test does not depend on the DOM agent being enabled. |
+| `DOM.describeNode {"nodeId":115}` and `{"backendNodeId":31}` | `{"node":{"nodeId":115,"backendNodeId":30,"nodeType":1,"nodeName":"SPAN",…}}` — **no `parentId`** for the described node, and children of a subtree describe carry `"parentId":0`. There is no parent chain to walk: descendanthood is decided by `DOM.describeNode {"backendNodeId":row,"depth":-1}` and matching the hit's `backendNodeId` in that subtree (3 nodes for the probe's button). |
+| `DOM.focus {"backendNodeId":3}` | `{}`. |
+| `Input.dispatchKeyEvent {"type":"keyDown","modifiers":2,"key":"a","code":"KeyA","windowsVirtualKeyCode":65,"nativeVirtualKeyCode":65}`, then the `keyUp` | `{}`; the page's own `keydown` listener saw `["keydown","a","KeyA",65]`, so the modifier reaches the page. |
+| `Input.insertText {"text":"hello"}` | `{}`; the input's value became `"hello"` (it was `"old"`), and `Runtime.evaluate "document.activeElement.blur()"` fired the page's `input` then `change` events. |
+| `Input.dispatchKeyEvent {"type":"keyDown","key":"Enter","code":"Enter","windowsVirtualKeyCode":13,"nativeVirtualKeyCode":13,"text":"\r"}` | `{}`; the page's listener saw `["keydown","Enter","Enter",13]`. |
+| `DOM.resolveNode {"backendNodeId":4}` | `{"object":{"type":"object","subtype":"node","className":"HTMLSelectElement","description":"select#sel","objectId":"-476…"}}`. |
+| `Runtime.callFunctionOn {"objectId":"…","functionDeclaration":"function (index) { … }","arguments":[{"value":2}],"returnByValue":true}` | `{"result":{"type":"string","value":"c"}}`; the select's value became `"c"`. |
+| `Page.getLayoutMetrics {}` | `{"cssLayoutViewport":{"pageX":0,"pageY":0,"clientWidth":765,"clientHeight":493},…,"cssContentSize":{"x":0,"y":0,"width":765,"height":2109}}`. The fake's fixture is 800x600 for readability; the shape is this one. |
+| `Input.dispatchMouseEvent {"type":"mouseWheel","x":400,"y":300,"deltaX":0,"deltaY":600,"pointerType":"mouse"}` | `{}`; `window.scrollY` was still `0` immediately after and `600` some 300 ms later — Chrome animates wheel scrolling, so a settle of two frames does not see the final offset. |
+| `Emulation.setFocusEmulationEnabled {"enabled":true}` | `{}`; `document.hasFocus()` was already true in this headless run. |
+| `Runtime.evaluate {"expression":"new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))))","returnByValue":true,"awaitPromise":true}` | `{"result":{"type":"string","value":"two-frames"}}` after 15–20 ms. `awaitPromise:true` on a non-promise expression returns its value instead of failing. |
+| `Runtime.evaluate` of the suggestions probe | `{"result":{"type":"boolean","value":false}}` on a page with no listbox. |
+
+Two shapes an action depends on but does not control:
+
+- The click landed: dispatching press and release at that quad centre set the button's
+  `onclick` result, `document.title = "clicked"`.
+- A native `<select>` with no label is the AX `combobox` with an **empty** name, so the
+  snapshot's non-empty-name rule leaves it out of the table. `select` therefore targets a
+  labelled select, and the L9 acceptance page should label its dropdown (or give it
+  `aria-label`).

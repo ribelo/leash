@@ -85,6 +85,7 @@ type tab = {
   mutable snapshot : (P.Snapshot_id.t * string * (P.row * int) list) option;
   mutable dialog : P.dialog option;
   mutable counter_installed : bool;
+  reading : Reading.t;
 }
 
 type tomb = { owner : P.Owner.t option; disposition : string; at : float }
@@ -92,6 +93,7 @@ type tomb = { owner : P.Owner.t option; disposition : string; at : float }
 type t = {
   chrome : Chrome.t;
   now : unit -> float;
+  sleep : float -> unit;
   await_load : unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   logger : Eta_observability.Logger.t;
   cap : int;
@@ -185,6 +187,7 @@ let register t ~id ~session ~origin ~owner ~url ~title =
       snapshot = None;
       dialog = None;
       counter_installed = false;
+      reading = Reading.create ();
     }
   in
   Hashtbl.add t.tabs (key tab.handle) tab;
@@ -198,12 +201,18 @@ let flush_humans t =
     Hashtbl.iter
       (fun id (session, info) ->
         if not (Hashtbl.mem t.targets id) then
-          ignore
-            (register t ~id ~session
-               ~origin:(enum P.Origin.of_string "human")
-               ~owner:(Some (enum P.Owner.of_string "human"))
-               ~url:(Option.value ~default:"about:blank" (text "url" info))
-               ~title:(Option.value ~default:"" (text "title" info))))
+          (ignore
+             (register t ~id ~session
+                ~origin:(enum P.Origin.of_string "human")
+                ~owner:(Some (enum P.Owner.of_string "human"))
+                ~url:(Option.value ~default:"about:blank" (text "url" info))
+                ~title:(Option.value ~default:"" (text "title" info)));
+           match ready t with
+           | Error _ -> ()
+           | Ok cdp ->
+               List.iter (fun domain ->
+                 ignore (cdp_call ~session cdp (domain ^ ".enable") (obj [])))
+                 [ "Page"; "Runtime"; "Network" ]))
       t.pending_humans;
     Hashtbl.clear t.pending_humans)
 
@@ -283,6 +292,8 @@ let new_tab t ~owner ~url =
                     (obj [ ("source", str Snapshot_source.counter_script) ])
                 in
                 tab.counter_installed <- true;
+                let* _ = cdp_call ~session cdp "Runtime.enable" (obj []) in
+                let* _ = cdp_call ~session cdp "Network.enable" (obj []) in
                 let* () =
                   if waits_for_load url then
                     with_load_wait t cdp tab (fun () ->
@@ -292,6 +303,17 @@ let new_tab t ~owner ~url =
                     let* _ = cdp_call ~session cdp "Page.enable" (obj []) in
                     Ok ()
                 in
+                (* tab-8la3: a tab Leash acts on keeps rendering and animating while it
+                   is not the visible one, so an action on a background tab settles the
+                   same way. tab-bw4j: action-time revalidation reads geometry and
+                   hit-tests through the DOM agent, so it is enabled once per tab. Both
+                   are best effort (a browser that refuses them still has [Page.enable]),
+                   and both come after the load so a load that never completes keeps its
+                   own bounded reply. *)
+                ignore
+                  (cdp_call ~session cdp "Emulation.setFocusEmulationEnabled"
+                     (obj [ ("enabled", `Bool true) ]));
+                ignore (cdp_call ~session cdp "DOM.enable" (obj []));
                 Ok (info tab)))
 
 let navigate t ~owner handle url =
@@ -480,6 +502,96 @@ let snap t ~owner (args : P.snap_args) =
               dialog = tab.dialog;
             })
 
+(* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax:
+   the registry owns identity and the page session; Reading owns browser-specific work. *)
+let reading_browser t tab cdp : Reading.browser =
+  {
+    call = (fun meth params -> cdp_call ~session:tab.session cdp meth params);
+    now = (fun () -> now t);
+    sleep = t.sleep;
+    current = (fun () -> (tab.url, tab.title));
+    dialog = (fun () -> tab.dialog);
+    row = (fun index ->
+      match tab.snapshot with
+      | None -> None
+      | Some (_, _, rows) ->
+          List.find_map (fun ((row : P.row), backend) ->
+            if row.P.index = index then Some backend else None) rows);
+  }
+
+let with_reading t ~owner handle f =
+  let* tab = lookup t ~owner handle in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+    let* tab = lookup t ~owner handle in
+    let* cdp = ready t in
+    f tab (reading_browser t tab cdp))
+
+let read_text t ~owner (args : P.text_args) =
+  with_reading t ~owner args.tab (fun _ browser -> Reading.text browser args)
+
+let eval t ~owner (args : P.eval_args) =
+  with_reading t ~owner args.tab (fun _ browser -> Reading.eval browser args)
+
+let shot t ~owner (args : P.shot_args) =
+  with_reading t ~owner args.tab (fun _ browser -> Reading.shot browser args)
+
+let debug t ~owner (args : P.debug_args) =
+  let* tab = lookup t ~owner args.tab in
+  Reading.debug tab.reading args
+
+let dialog t ~owner (args : P.dialog_args) =
+  (* Do not take the tab action mutex: an in-flight action can itself be blocked
+     by a JavaScript dialog, and this command is the only way to release it. *)
+  let* tab = lookup t ~owner args.tab in
+  let* cdp = ready t in
+  Reading.dialog (reading_browser t tab cdp) args
+
+let wait t ~owner (args : P.wait_args) =
+  let* tab = lookup t ~owner args.tab in
+  let* cdp = ready t in
+  Reading.wait (reading_browser t tab cdp) args
+
+(* L7 tab-bw4j tab-j1z2 tab-p3x1 tab-luo5 tab-5deq tab-8dop tab-tm6c tab-hxld tab-60kn
+   tab-1lhx tab-8la3: the registry owns the tab's identity, its page session, and its
+   lock; Actions owns revalidation, dispatch, and settlement. The lock is what makes one
+   tab's actions run one at a time in arrival order while another tab's proceed. *)
+let action_view t tab cdp : Actions.tab =
+  {
+    Actions.session = tab.session;
+    handle = tab.handle;
+    page = (fun () -> (tab.url, tab.title));
+    refresh = (fun () -> refresh_from_target cdp tab);
+    snapshot = (fun () -> tab.snapshot);
+    dialog = (fun () -> tab.dialog);
+    all_tabs =
+      (fun () ->
+        Hashtbl.fold (fun _ (tab : tab) acc -> info tab :: acc) t.tabs []
+        |> List.sort (fun (a : P.tab_info) (b : P.tab_info) ->
+            String.compare (key a.tab) (key b.tab)));
+  }
+
+let with_action t ~owner handle f =
+  let* tab = lookup t ~owner handle in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = lookup t ~owner handle in
+      let* cdp = ready t in
+      f cdp (action_view t tab cdp))
+
+let click t ~owner (args : P.click_args) =
+  with_action t ~owner args.tab (fun cdp view -> Actions.click ~cdp view args)
+
+let fill t ~owner (args : P.fill_args) =
+  with_action t ~owner args.tab (fun cdp view -> Actions.fill ~cdp view args)
+
+let press t ~owner (args : P.press_args) =
+  with_action t ~owner args.tab (fun cdp view -> Actions.press ~cdp view args)
+
+let select t ~owner (args : P.select_args) =
+  with_action t ~owner args.tab (fun cdp view -> Actions.select ~cdp view args)
+
+let scroll t ~owner (args : P.scroll_args) =
+  with_action t ~owner args.tab (fun cdp view -> Actions.scroll ~cdp view args)
+
 let report t : P.status_result =
   let chrome = Chrome.status t.chrome in
   {
@@ -503,6 +615,10 @@ let status t =
     "tabs" state
 
 let inspect t json =
+  (match text "sessionId" json with
+  | None -> ()
+  | Some session -> Hashtbl.iter (fun _ tab ->
+      if tab.session = session then Reading.observe tab.reading ~at:(now t) json) t.tabs);
   match (text "method" json, member "params" json) with
   | Some ("Target.targetCreated" | "Target.targetInfoChanged"), Some params -> (
       match member "targetInfo" params with
@@ -604,6 +720,7 @@ let create ~sw ~cap ~tombstone_s (deps : 'clock deps) =
     {
       chrome = deps.chrome;
       now = (fun () -> Eio.Time.now deps.clock);
+      sleep = (fun seconds -> Eio.Time.sleep deps.clock seconds);
       await_load =
         (fun promise ->
           Eta.Timeout.timeout ~clock:deps.clock (Eta.Duration.seconds 30) (fun () ->
@@ -671,3 +788,5 @@ let stop t =
               ignore
                 (cdp_call cdp "Target.closeTarget" (obj [ ("targetId", str tab.id) ])))
           (Hashtbl.copy t.tabs))
+
+let text = read_text
