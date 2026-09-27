@@ -172,3 +172,8 @@
   eio.unix
   yojson
   alcotest))
+
+(test
+ (name jev_request_test)
+ (modules jev_request_test)
+ (libraries leash yojson alcotest))

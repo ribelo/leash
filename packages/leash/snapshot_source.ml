@@ -79,39 +79,66 @@ let visible dom ~width ~height ~scroll_x ~scroll_y =
   | [] -> ());
   result
 
+(* The DOMSnapshot's document half: the string table, the nodes, and the flat parallel
+   arrays aligned with [nodes.backendNodeId[i]] — attributes as
+   [name, value, name, value, ...] indexes into [strings], and node names
+   (docs/cdp-shapes.md, Chrome 152). *)
+let dom_strings dom =
+  let strings = Array.of_list (list (get "strings" dom)) in
+  fun index ->
+    if index >= 0 && index < Array.length strings then text strings.(index) else ""
+
+let dom_nodes dom =
+  match list (get "documents" dom) with doc :: _ -> get "nodes" doc | [] -> `Null
+
+let dom_attribute dom name =
+  let table = Hashtbl.create 16 in
+  let string = dom_strings dom in
+  let nodes = dom_nodes dom in
+  let rec loop backends attributes =
+    match (backends, attributes) with
+    | backend :: backends, `List attributes :: rest ->
+        let rec field = function
+          | name_index :: value_index :: rest ->
+              if string (integer name_index) = name then
+                Hashtbl.replace table (integer backend) (string (integer value_index));
+              field rest
+          | _ -> ()
+        in
+        field attributes;
+        loop backends rest
+    | _ -> ()
+  in
+  loop (list (get "backendNodeId" nodes)) (list (get "attributes" nodes));
+  table
+
 (* tab-zc36: the placeholder is a DOM attribute, not an accessibility member. Chrome uses
    it as the accessible name when nothing else names the control, so this map matters for
    the case where an author's aria-label or title left the name empty, and the row still
-   has to say what the control is for. The DOMSnapshot carries the attributes inline:
-   [nodes.attributes[i]] is a flat [name, value, name, value, ...] array of indexes into
-   [strings], aligned with [nodes.backendNodeId[i]] (docs/cdp-shapes.md, Chrome 152). *)
+   has to say what the control is for. *)
 let placeholders dom =
   let table = Hashtbl.create 16 in
-  (match list (get "documents" dom) with
-  | doc :: _ ->
-      let strings = Array.of_list (list (get "strings" dom)) in
-      let string index =
-        if index >= 0 && index < Array.length strings then text strings.(index) else ""
-      in
-      let nodes = get "nodes" doc in
-      let rec loop backends attributes =
-        match (backends, attributes) with
-        | backend :: backends, `List attributes :: rest ->
-            let rec field = function
-              | name :: value :: rest ->
-                  (if string (integer name) = "placeholder" then
-                     let placeholder = string (integer value) in
-                     if placeholder <> "" then
-                       Hashtbl.replace table (integer backend) placeholder);
-                  field rest
-              | _ -> ()
-            in
-            field attributes;
-            loop backends rest
-        | _ -> ()
-      in
-      loop (list (get "backendNodeId" nodes)) (list (get "attributes" nodes))
-  | [] -> ());
+  Hashtbl.iter
+    (fun backend placeholder ->
+      if placeholder <> "" then Hashtbl.replace table backend placeholder)
+    (dom_attribute dom "placeholder");
+  table
+
+(* The DOM's own node names, by backend id: a native [<option>] and an ARIA
+   [role=option] node are both role [option] in the accessibility tree, and only the DOM
+   half tells them apart. *)
+let dom_node_names dom =
+  let table = Hashtbl.create 128 in
+  let string = dom_strings dom in
+  let nodes = dom_nodes dom in
+  let rec loop backends names =
+    match (backends, names) with
+    | backend :: backends, name_index :: rest ->
+        Hashtbl.replace table (integer backend) (string (integer name_index));
+        loop backends rest
+    | _ -> ()
+  in
+  loop (list (get "backendNodeId" nodes)) (list (get "nodeName" nodes));
   table
 
 (* A row whose role is only informative still needs a name, or the table fills with
@@ -156,13 +183,74 @@ let states n =
   in
   match checked @ expanded @ other with [] -> None | xs -> Some xs
 
+let true_prop key n =
+  match prop key n with
+  | Some (`Bool true) -> true
+  | Some (`String "true") -> true
+  | _ -> false
+
+(* snapshot.js:68-71, the select branch: one action per option that is not selected, not
+   disabled and not inside a disabled optgroup, its value the option's own value attribute
+   and its index the one the select action takes. Chrome exposes a closed select's options
+   under a [MenuListPopup] node (docs/cdp-shapes.md, L10) where they have no layout box, so
+   the accessibility half is where they are read, and the DOM half says which of them are
+   real [<option>] elements rather than ARIA options of a listbox. *)
+let options ~by_id ~values ~names n =
+  let rec descendants n =
+    list (get "childIds" n)
+    |> List.filter_map (fun id -> Hashtbl.find_opt by_id (text id))
+    |> List.concat_map (fun child -> child :: descendants child)
+  in
+  let native node =
+    match Hashtbl.find_opt names (integer (get "backendDOMNodeId" node)) with
+    | Some "OPTION" -> true
+    | _ -> false
+  in
+  let rec disabled node =
+    true_prop "disabled" node
+    ||
+    match Hashtbl.find_opt by_id (text (get "parentId" node)) with
+    | Some parent -> disabled parent
+    | None -> false
+  in
+  descendants n
+  |> List.filter (fun node -> role node = "option" && native node)
+  |> List.mapi (fun index node ->
+      let label = name node in
+      let value =
+        match Hashtbl.find_opt values (integer (get "backendDOMNodeId" node)) with
+        | Some value when value <> "" -> value
+        | _ -> label
+      in
+      P.
+        {
+          index;
+          label;
+          value;
+          selected = true_prop "selected" node;
+          disabled = disabled node;
+        })
+
 let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
   let visible = visible dom ~width ~height ~scroll_x ~scroll_y in
   let placeholders = placeholders dom in
+  let values = dom_attribute dom "value" in
+  let names = dom_node_names dom in
   let nodes = list (get "nodes" ax) in
   let by_id = Hashtbl.create 128 in
   List.iter (fun n -> Hashtbl.replace by_id (text (get "nodeId" n)) n) nodes;
   let parent n = Hashtbl.find_opt by_id (text (get "parentId" n)) in
+  (* snapshot.js:68 branches on the DOM tag, so a row carries options exactly when it is a
+     native [<select>]: every other combobox — an input with a datalist, an ARIA combobox —
+     carries none, and the request reads it as the text control it is. *)
+  let options_of role n =
+    let backend = integer (get "backendDOMNodeId" n) in
+    if
+      List.mem role [ "combobox"; "listbox" ]
+      && Hashtbl.find_opt names backend = Some "SELECT"
+    then Some (options ~by_id ~values ~names n)
+    else None
+  in
   let included =
     [
       "heading";
@@ -227,7 +315,14 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
             | None -> if label = "" then Hashtbl.find_opt placeholders backend else None
           in
           [
-            ( { P.index = 0; role = effective_role; name = label; value; state = states n },
+            ( {
+                P.index = 0;
+                role = effective_role;
+                name = label;
+                value;
+                state = states n;
+                options = options_of effective_role n;
+              },
               backend );
           ]
         else []

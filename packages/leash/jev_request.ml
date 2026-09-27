@@ -1,0 +1,562 @@
+(* L20 — request shaping and decision (docs/issues/drive/01-drive.md, milestone 5).
+
+   jev-ultrafast's shapes at commit Questions.commit, copied not adapted: the elements and
+   the questions come from model.py's action_space and choose over the action space
+   snapshot.js builds, and the decision is model.py's choose after the answers arrive. The
+   reference lines each shape comes from are quoted where it is built, and the test in
+   test/jev_request_test.ml quotes them again beside the expected documents. Pure: no I/O,
+   no clock, no configuration beyond the model id the caller passes. *)
+
+module P = Protocol
+module E = Eta_json
+
+(* model.py:44 — the one sentence the reference answers an invalid response with. *)
+let invalid = "Invalid TypeSafe response; no action executed."
+
+(* ---------- Recent actions (agent.py:121-148, model.py:112-114) ---------- *)
+
+type recent_action = {
+  action : string;
+  kind : string option; [@json.null]
+  text : string option; [@json.null]
+  page_changed : bool option; [@json.null]
+}
+[@@deriving yojson]
+
+(* model.py:113 — history[-10:]. *)
+let window recent =
+  let length = List.length recent in
+  if length <= 10 then recent else List.filteri (fun i _ -> i >= length - 10) recent
+
+(* ---------- The page (model.py:110) ---------- *)
+
+type page = { url : string; title : string; text : string } [@@deriving yojson]
+
+(* ---------- Elements (snapshot.js:55-80, model.py:48-78) ---------- *)
+
+type checked = Checked | Unchecked | Mixed
+type select_target = { key : string; label : string; value : string; dom : int }
+
+type element = {
+  index : string;
+  row : int;
+  label : string;
+  role : string;
+  value : string;
+  checked : checked option;
+  selected : bool option;
+  expanded : bool option;
+  operations : P.Operation.t list;
+  options : select_target list;
+}
+
+let operation name =
+  match P.Operation.of_string name with
+  | Ok operation -> operation
+  | Error _ -> assert false
+
+let states (row : P.row) =
+  match row.state with None -> [] | Some states -> List.map P.Row_state.to_string states
+
+let carries state (row : P.row) = List.mem state (states row)
+
+let checked row =
+  if carries "checked" row then Some Checked
+  else if carries "unchecked" row then Some Unchecked
+  else if carries "mixed" row then Some Mixed
+  else None
+
+(* snapshot.js:69 — the options a select offers: the ones that are not selected, not
+   disabled, and not inside a disabled optgroup. *)
+let offered (option_ : P.row_option) = (not option_.selected) && not option_.disabled
+
+(* snapshot.js:61 — a node's label is its accessible name, or its role when it has none. *)
+let label (row : P.row) = if row.name = "" then row.role else row.name
+
+(* snapshot.js:56-80 — the operations a row is offered are the actions the page offers for
+   its node. A native select offers one select action per offered option and nothing else
+   (snapshot.js:68-71), so it is an element only while it still has one to offer; an
+   editable text control offers fill and then click (snapshot.js:73-79); a read-only one
+   offers click; every other action target offers click. A disabled row, and a purely
+   informative one, are offered nothing and are not elements at all. *)
+let operations (row : P.row) =
+  if carries "disabled" row then []
+  else
+    match row.options with
+    | Some options -> if List.exists offered options then [ operation "select" ] else []
+    | None -> (
+        match row.role with
+        | "heading" | "paragraph" | "img" | "status" | "alert" -> []
+        | "textbox" | "searchbox" | "spinbutton" | "combobox" ->
+            if carries "readonly" row then [ operation "click" ]
+            else [ operation "type_text"; operation "click" ]
+        | _ -> [ operation "click" ])
+
+(* snapshot.js:70 — a select's value is the labels of its selected options joined ", ". *)
+let selected_labels (row : P.row) =
+  match row.options with
+  | None -> ""
+  | Some options ->
+      options
+      |> List.filter (fun (option_ : P.row_option) -> option_.selected)
+      |> List.map (fun (option_ : P.row_option) -> option_.label)
+      |> String.concat ", "
+
+(* model.py:74-76 — a select's targets are numbered "<element index>:<option number>" over
+   the options it offers, and each carries the option action's full label
+   "<select label> → <option label>" and the option's own value. [dom] is the index the
+   option has in the select's own order, which is what the select action takes. *)
+let select_targets index (row : P.row) =
+  match row.options with
+  | None -> []
+  | Some options ->
+      options |> List.filter offered
+      |> List.mapi (fun position (option_ : P.row_option) ->
+          {
+            key = index ^ ":" ^ string_of_int (position + 1);
+            label = label row ^ " → " ^ option_.label;
+            value = option_.value;
+            dom = option_.index;
+          })
+
+let elements (snapshot : P.snapshot) =
+  snapshot.rows
+  |> List.filter (fun (row : P.row) -> operations row <> [])
+  |> List.mapi (fun position (row : P.row) ->
+      let index = string_of_int (position + 1) in
+      let operations = operations row in
+      {
+        index;
+        row = row.index;
+        label = label row;
+        role = row.role;
+        (* model.py:64-65 — a select's value is its current value, and model.py:76-77
+              gives every other action a value too, so the key is always on the wire. *)
+        value =
+          (if List.mem (operation "select") operations then selected_labels row
+           else Option.value ~default:"" row.value);
+        checked = checked row;
+        selected = (if carries "selected" row then Some true else None);
+        expanded =
+          (if carries "expanded" row then Some true
+           else if carries "collapsed" row then Some false
+           else None);
+        operations;
+        options = select_targets index row;
+      })
+
+(* ---------- Operations, keys and labels (model.py:83-90, snapshot.js:102-104) ---------- *)
+
+let operation_key operation = String.uppercase_ascii (P.Operation.to_string operation)
+
+let click_label =
+  "Click an element, button, menu option, autocomplete suggestion, or calendar day."
+
+let type_text_label =
+  "Enter or replace text in an editable field. A small LLM will supply the value from \
+   the goal."
+
+let select_label = "Select an observed dropdown value."
+let done_label = "Every requirement is visibly satisfied."
+let blocked_label = "No supported operation can progress."
+
+(* snapshot.js:102-104, verbatim. *)
+let scroll_down_label = "Scroll down"
+let scroll_up_label = "Scroll up"
+let wait_label = "Wait for the page to update"
+
+(* snapshot.js:102-103 — a scroll is offered only while the page can still move that way:
+   [can_scroll_down] is scrollY + innerHeight < height - 2 and [can_scroll_up] is
+   scrollY > 0. Wait is always offered, and snapshot.js pushes the three in this order. *)
+let controls ~can_scroll_down ~can_scroll_up =
+  (if can_scroll_down then [ ("SCROLL_DOWN", scroll_down_label) ] else [])
+  @ (if can_scroll_up then [ ("SCROLL_UP", scroll_up_label) ] else [])
+  @ [ ("WAIT", wait_label) ]
+
+let operation_label operation =
+  match P.Operation.to_string operation with
+  | "click" -> click_label
+  | "type_text" -> type_text_label
+  | "select" -> select_label
+  | _ -> assert false
+
+(* snapshot.js:78-79 — the click an editable control also offers is the action labelled
+   "Open <label>"; the fill action keeps the node's own label. *)
+let criterion_label ~operation:op (element : element) =
+  if
+    P.Operation.to_string op = "click"
+    && List.mem (operation "type_text") element.operations
+  then "Open " ^ element.label
+  else element.label
+
+(* model.py:88-90 — one entry per operation, in the order the elements first carry it. *)
+let distinct_operations elements =
+  List.fold_left
+    (fun distinct element ->
+      List.fold_left
+        (fun distinct operation ->
+          if List.mem operation distinct then distinct else distinct @ [ operation ])
+        distinct element.operations)
+    [] elements
+
+(* ---------- The request ---------- *)
+
+type request = {
+  model : string;
+  goal : string;
+  snapshot : P.snapshot;
+  text : string;
+  recent : recent_action list;
+  can_scroll_down : bool;
+  can_scroll_up : bool;
+  elements : element list;
+}
+
+let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
+  {
+    model;
+    goal;
+    snapshot;
+    text;
+    recent;
+    can_scroll_down;
+    can_scroll_up;
+    elements = elements snapshot;
+  }
+
+let checked_json = function
+  | Checked -> E.string "true"
+  | Unchecked -> E.string "false"
+  | Mixed -> E.string "mixed"
+
+(* snapshot.js:63-67 — checked, selected and expanded are the attribute strings Chrome
+   reports ("true", "false", "mixed"), never booleans. *)
+let state_json value = E.string (if value then "true" else "false")
+
+let option_json (option_ : select_target) =
+  E.object_
+    [
+      ("index", Some (E.string option_.key));
+      ("label", Some (E.string option_.label));
+      ("value", Some (E.string option_.value));
+    ]
+
+(* model.py:58-66 — role, value, checked, selected, expanded, then index, label and
+   operations; a select's option list follows (model.py:66, 76). *)
+let element_json (element : element) =
+  E.object_
+    [
+      ("role", Some (E.string element.role));
+      ("value", Some (E.string element.value));
+      ("checked", Option.map checked_json element.checked);
+      ("selected", Option.map state_json element.selected);
+      ("expanded", Option.map state_json element.expanded);
+      ("index", Some (E.string element.index));
+      ("label", Some (E.string element.label));
+      ( "operations",
+        Some
+          (E.array_map
+             (fun operation -> E.string (operation_key operation))
+             element.operations) );
+      ( "options",
+        if List.mem (operation "select") element.operations then
+          Some (E.array_map option_json element.options)
+        else None );
+    ]
+
+(* model.py:97-103 — a criterion names the target by its key, the value it holds now
+   (empty when it holds none) and its state. *)
+let criterion_json ~key ~label ~current_value (element : element) =
+  E.object_
+    [
+      ("element", Some (E.string (Printf.sprintf "[%s] %s" key label)));
+      ("current_value", Some (E.string current_value));
+      ("role", Some (E.string element.role));
+      ("checked", Option.map checked_json element.checked);
+      ("selected", Option.map state_json element.selected);
+      ("expanded", Option.map state_json element.expanded);
+    ]
+
+(* model.py:94-106 — the criteria of one target question: a select contributes one target
+   per offered option (model.py:75-76), every other element contributes itself. *)
+let target_criteria op (element : element) =
+  if List.mem (operation "select") element.operations then
+    List.map
+      (fun option_ ->
+        ( option_.key,
+          Some
+            (criterion_json ~key:option_.key ~label:option_.label
+               ~current_value:element.value element) ))
+      element.options
+  else
+    [
+      ( element.index,
+        Some
+          (criterion_json ~key:element.index
+             ~label:(criterion_label ~operation:op element)
+             ~current_value:element.value element) );
+    ]
+
+(* The targets one element contributes: a select's offered options, each with the option
+   the drive would act on, and every other element itself with none. *)
+let target_keys_of op (element : element) =
+  if List.mem (operation "select") element.operations then
+    List.map (fun option_ -> (option_.key, Some option_)) element.options
+  else [ (element.index, None) ]
+
+let target_keys op (element : element) = List.map fst (target_keys_of op element)
+
+(* model.py:88-90 — the criteria of the operation choice: the operations that have targets,
+   in the order the elements first carry them, then the controls, then DONE and BLOCKED. The
+   same list is what decide validates the answer against. *)
+let operation_criteria request =
+  List.map
+    (fun operation -> (operation_key operation, operation_label operation))
+    (distinct_operations request.elements)
+  @ controls ~can_scroll_down:request.can_scroll_down ~can_scroll_up:request.can_scroll_up
+  @ [ ("DONE", done_label); ("BLOCKED", blocked_label) ]
+
+let operation_keys request = List.map fst (operation_criteria request)
+
+let operation_question request =
+  E.object_
+    [
+      ("type", Some (E.string "choice"));
+      ( "criteria",
+        Some
+          (E.object_
+             (List.map
+                (fun (key, label) -> (key, Some (E.string label)))
+                (operation_criteria request))) );
+      ( "instructions",
+        Some
+          (E.object_
+             [
+               ("goal", Some (E.string request.goal));
+               ("rules", Some (E.string Questions.next_action));
+             ]) );
+    ]
+
+let target_question request operation =
+  let candidates =
+    List.filter
+      (fun (element : element) -> List.mem operation element.operations)
+      request.elements
+  in
+  E.object_
+    [
+      ("type", Some (E.string "choice"));
+      ( "criteria",
+        Some
+          (E.object_
+             (List.concat_map
+                (fun element -> target_criteria operation element)
+                candidates)) );
+      ( "instructions",
+        Some
+          (E.object_
+             [
+               ("goal", Some (E.string request.goal));
+               ("operation", Some (E.string (operation_key operation)));
+               ( "rules",
+                 Some
+                   (E.array [ E.string Questions.next_action; E.string Questions.target ])
+               );
+             ]) );
+    ]
+
+let target_key operation = P.Operation.to_string operation ^ "_target"
+
+let questions request =
+  E.object_
+    (("operation", Some (operation_question request))
+    :: List.map
+         (fun operation ->
+           (target_key operation, Some (target_question request operation)))
+         (distinct_operations request.elements))
+
+let body request =
+  E.object_
+    [
+      ("model", Some (E.string request.model));
+      ( "state",
+        Some
+          (E.object_
+             [
+               ( "page",
+                 Some
+                   (yojson_of_page
+                      {
+                        url = request.snapshot.url;
+                        title = request.snapshot.title;
+                        text = request.text;
+                      }) );
+               ("elements", Some (E.array_map element_json request.elements));
+               ( "recent_actions",
+                 Some (E.array_map yojson_of_recent_action (window request.recent)) );
+             ]) );
+      ("questions", Some (questions request));
+    ]
+
+(* ---------- The decision (model.py:30-45, 81-148) ---------- *)
+
+type decision = {
+  operation : P.Operation.t;
+  index : int option;
+  option : int option;
+  confidence : float;
+  target_confidence : float option;
+  operation_probabilities : (string * float) list;
+  target_probabilities : (string * float) list;
+  targets : (string * float) list;
+}
+
+let member key = function `Assoc fields -> List.assoc_opt key fields | _ -> None
+
+let probabilities json =
+  match json with
+  | `Assoc fields ->
+      List.fold_left
+        (fun probabilities (key, value) ->
+          match (probabilities, E.Of_json.float value) with
+          | Ok probabilities, Ok number -> Ok ((key, number) :: probabilities)
+          | _ -> Error invalid)
+        (Ok []) fields
+      |> Result.map List.rev
+  | _ -> Error invalid
+
+(* model.py:30-45 — the answer names an offered key, carries exactly the offered keys,
+   holds finite numbers in [0,1] (the confidence among them), sums to one within 0.02 and
+   puts its choice at the maximum within 1e-6. *)
+let validated ~keys json =
+  match (member "choice" json, member "probabilities" json, member "confidence" json) with
+  | Some (`String choice), Some probabilities_json, Some confidence_json -> (
+      match (probabilities probabilities_json, E.Of_json.float confidence_json) with
+      | Ok probabilities, Ok confidence ->
+          let numbers = List.map snd probabilities @ [ confidence ] in
+          let total = List.fold_left ( +. ) 0. (List.map snd probabilities) in
+          let highest =
+            List.fold_left Float.max neg_infinity (List.map snd probabilities)
+          in
+          let offered keys = List.sort_uniq String.compare keys in
+          let chosen = List.assoc_opt choice probabilities in
+          if
+            List.mem choice keys
+            && offered (List.map fst probabilities) = offered keys
+            && List.for_all
+                 (fun number -> Float.is_finite number && number >= 0. && number <= 1.)
+                 numbers
+            && Float.abs (total -. 1.) < 0.02
+            &&
+            match chosen with
+            | Some number -> number >= highest -. 1e-6
+            | None -> false
+          then Ok (choice, probabilities, confidence)
+          else Error invalid
+      | _ -> Error invalid)
+  | _ -> Error invalid
+
+let operation_of_key key =
+  match P.Operation.of_string (String.lowercase_ascii key) with
+  | Ok operation -> Some operation
+  | Error _ -> None
+
+(* The target the model named, as the element and the option the drive would act on. *)
+let chosen op candidates key =
+  List.find_map
+    (fun (element : element) ->
+      List.find_map
+        (fun (candidate, option_) ->
+          if candidate = key then Some (element, option_) else None)
+        (target_keys_of op element))
+    candidates
+
+(* model.py:130 — the reference keys its distribution by the action it would execute; here
+   that is the row, and for a select option the row and the option's own index. *)
+let targets ~operation:op candidates target_probabilities =
+  List.concat_map
+    (fun (element : element) ->
+      List.filter_map
+        (fun (key, option_) ->
+          Option.map
+            (fun number ->
+              ( (match option_ with
+                | Some option_ -> Printf.sprintf "%d:%d" element.row option_.dom
+                | None -> string_of_int element.row),
+                number ))
+            (List.assoc_opt key target_probabilities))
+        (target_keys_of op element))
+    candidates
+
+let decide request ~answers =
+  let ( let* ) = Result.bind in
+  let* chosen_key, operation_probabilities, confidence =
+    match member "operation" answers with
+    | Some answer -> validated ~keys:(operation_keys request) answer
+    | None -> Error invalid
+  in
+  let* operation =
+    match operation_of_key chosen_key with
+    | Some operation -> Ok operation
+    | None -> Error invalid
+  in
+  let candidates =
+    List.filter
+      (fun (element : element) -> List.mem operation element.operations)
+      request.elements
+  in
+  if candidates = [] then
+    Ok
+      {
+        operation;
+        index = None;
+        option = None;
+        confidence;
+        target_confidence = None;
+        operation_probabilities;
+        target_probabilities = [];
+        targets = [];
+      }
+  else
+    let keys =
+      List.concat_map (fun element -> target_keys operation element) candidates
+    in
+    let* target_key, target_probabilities, target_confidence =
+      match member (target_key operation) answers with
+      | Some answer -> validated ~keys answer
+      | None -> Error invalid
+    in
+    match chosen operation candidates target_key with
+    | None -> Error invalid
+    | Some (element, option_) ->
+        Ok
+          {
+            operation;
+            index = Some element.row;
+            option = Option.map (fun option_ -> option_.dom) option_;
+            confidence;
+            target_confidence = Some target_confidence;
+            operation_probabilities;
+            target_probabilities;
+            targets = targets ~operation candidates target_probabilities;
+          }
+
+let distribution pairs =
+  E.object_ (List.map (fun (key, number) -> (key, E.float number)) pairs)
+
+let trace_probabilities decision =
+  P.
+    {
+      op = distribution decision.operation_probabilities;
+      target = distribution decision.targets;
+    }
+
+(* ---------- The stall rule (agent.py:153-157) ---------- *)
+
+let stalled recent =
+  let length = List.length recent in
+  if length < 3 then false
+  else
+    List.filteri (fun position _ -> position >= length - 3) recent
+    |> List.for_all (fun action ->
+        action.page_changed = Some false && action.kind <> Some "wait")

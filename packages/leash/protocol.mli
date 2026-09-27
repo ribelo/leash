@@ -196,14 +196,33 @@ type tab_info = {
 val tab_info_of_yojson : Yojson.Safe.t -> (tab_info, string) result
 val yojson_of_tab_info : tab_info -> Yojson.Safe.t
 
+type row_option = {
+  index : int;
+  label : string;
+  value : string;
+  selected : bool;
+  disabled : bool;
+}
+(** One option of a select row: [index] is its position in the select's own option order,
+    which is the index the [select] action takes (tab-5deq); [label] is the option's text
+    and [value] the value it carries, its label when it carries none. *)
+
+val row_option_of_yojson : Yojson.Safe.t -> (row_option, string) result
+val yojson_of_row_option : row_option -> Yojson.Safe.t
+
 type row = {
   index : int;
   role : string;
   name : string;
   value : string option;
   state : Row_state.t list option;
+  options : row_option list option;
 }
-(** [value] and [state] are [key?]: both are omitted when there is no value. *)
+(** [value], [state] and [options] are [key?]: each is omitted when the row has none.
+    [options] is the option list of a native select row — role [combobox] or [listbox],
+    read from the accessibility tree even while the select is closed — in the select's own
+    order; it is absent on every other row. A closed select's options have no layout box
+    and never become rows of their own (tab-5deq). *)
 
 val row_of_yojson : Yojson.Safe.t -> (row, string) result
 val yojson_of_row : row -> Yojson.Safe.t

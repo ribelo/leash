@@ -82,8 +82,10 @@ TabInfo      = {tab, url, title, origin: "agent"|"human", state: "unowned"|"owne
                 reason?: string}
 Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
                 dialog: Dialog|null}
-Row          = {index: int, role: string, name: string, value?: string, state?: string[]}
+Row          = {index: int, role: string, name: string, value?: string, state?: string[],
+                options?: [{index: int, label: string, value: string, selected: bool, disabled: bool}]}
                  state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly}
+                 options is the option list a select row exposes, in the select's own order, index 0 first
 Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string}
 ActionResult = {tab, url, title, snapshot: null, dialog: Dialog|null, popups: TabInfo[]}
                  snapshot is always null in this version: no snapshot is taken while an action settles; call snap
@@ -160,7 +162,7 @@ Rules:
 - An action whose handler closes its own tab (a click on `window.close()`) reports `tab-gone` with `closed_externally` when the browser no longer knows the target; if the reply wins the race the action succeeds and the next command on the handle reports `tab-gone`.
 - A trusted input or an `eval` whose handler opens a popup is settled by the popup itself: Chrome withholds the reply of the call whose handler opened it, so Leash waits — with no bound of its own beyond the CDP call's deadline — for whichever comes first: the call's reply, a target Chrome reports with this tab as its `openerId` (an action then lists it in `popups`, and `eval` answers `{value: null}`), or the destruction of this tab's own target (`tab-gone` with `closed_externally`). Nothing is ever dispatched twice.
 - `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked).
-- `select` targets a native `<select>` row (role `combobox` or `listbox`); `option` is its index in the select's observed option order, and an index the select does not have is `invalid-request`. A row that is not a native select is `row-not-actionable`.
+- `select` targets a native `<select>` row (role `combobox` or `listbox`); `option` is its index in the select's observed option order, and an index the select does not have is `invalid-request`. A row that is not a native select is `row-not-actionable`. The observed order is the row's `options`, read from the accessibility tree even while the select is closed — a closed select's options have no layout box and are never rows of their own (tab-5deq): each carries the `index` the action takes, its `label`, the `value` it holds, its label when it holds none, and whether it is `selected` or `disabled`.
 - `ActionResult.snapshot` is null unless a snapshot was taken as part of settling; actions do not observe the page again on their own, so a caller that wants a fresh table asks for one.
 - `wait` conditions are ANDed; `timeout_ms` is bounded to 30 000.
 - `eval` runs the expression as a function body in the page with `argument` bound; expression, argument, and result are each bounded to 64 KiB.

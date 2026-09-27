@@ -322,12 +322,22 @@ type tab_info = {
 }
 [@@deriving yojson]
 
+type row_option = {
+  index : int;
+  label : string;
+  value : string;
+  selected : bool;
+  disabled : bool;
+}
+[@@deriving yojson]
+
 type row = {
   index : int;
   role : string;
   name : string;
   value : string option;
   state : Row_state.t list option;
+  options : row_option list option;
 }
 [@@deriving yojson]
 

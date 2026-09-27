@@ -807,6 +807,50 @@ let chrome_fixture () =
   try load "fixtures/unlabelled-controls-chrome.json"
   with Sys_error _ -> load "test/fixtures/unlabelled-controls-chrome.json"
 
+(* tab-5deq tab-zc36: the accessibility tree exposes a closed select's options under a
+   MenuListPopup node (docs/cdp-shapes.md, L10), so the select row carries them — the index
+   the select action takes, the option's label, the value it holds, and its state. The
+   fixture is the real Chrome capture of test/fixtures/unlabelled-controls-chrome.json. *)
+let floating key json =
+  match E.Of_json.(field key float) json with
+  | Ok value -> value
+  | Error _ -> Alcotest.fail ("not a number: " ^ key)
+
+let select_options () =
+  let fixture = chrome_fixture () in
+  let guard = member "guard" fixture in
+  let rows =
+    Leash__Snapshot_source.rows ~ax:(member "ax" fixture) ~dom:(member "dom" fixture)
+      ~width:(floating "width" guard) ~height:(floating "height" guard)
+      ~scroll_x:(floating "scrollX" guard) ~scroll_y:(floating "scrollY" guard)
+  in
+  Alcotest.(check int)
+    "tab-5deq only a select row carries options" 1
+    (List.length (List.filter (fun ((row : P.row), _) -> row.options <> None) rows));
+  match List.find_opt (fun ((row : P.row), _) -> row.role = "combobox") rows with
+  | None -> Alcotest.fail "tab-5deq the fixture's select is not a row"
+  | Some (row, _) -> (
+      Alcotest.(check string) "tab-zc36 an unlabelled select keeps its row" "" row.P.name;
+      Alcotest.(check (option string))
+        "tab-zc36 with the value it holds" (Some "Alpha") row.P.value;
+      match row.P.options with
+      | None -> Alcotest.fail "tab-5deq the select row has no options"
+      | Some options ->
+          let each get = List.map get options in
+          Alcotest.(check (list (pair int string)))
+            "tab-5deq the options in the select's own order"
+            [ (0, "Alpha"); (1, "Bravo"); (2, "Charlie") ]
+            (each (fun (option_ : P.row_option) -> (option_.index, option_.label)));
+          Alcotest.(check (list string))
+            "tab-5deq the value each option holds" [ "a"; "b"; "c" ]
+            (each (fun (option_ : P.row_option) -> option_.value));
+          Alcotest.(check (list bool))
+            "tab-5deq the selected option" [ true; false; false ]
+            (each (fun (option_ : P.row_option) -> option_.selected));
+          Alcotest.(check (list bool))
+            "tab-5deq nothing is disabled" [ false; false; false ]
+            (each (fun (option_ : P.row_option) -> option_.disabled)))
+
 (* The TargetInfo of a popup as headless Chrome sends it, with this test's ids in it. *)
 let popup_target_info fixture ~target_id ~opener_id ~url ~title =
   let attached =
@@ -1351,6 +1395,8 @@ let () =
           Alcotest.test_case "tab-p3x1 0lax" `Quick fill;
           Alcotest.test_case "tab-luo5" `Quick press;
           Alcotest.test_case "tab-5deq" `Quick select;
+          Alcotest.test_case "tab-5deq tab-zc36 the observed options" `Quick
+            select_options;
           Alcotest.test_case "tab-8dop" `Quick scroll;
           Alcotest.test_case "tab-tm6c" `Quick popups;
           Alcotest.test_case "tab-8k2g" `Quick popups_exact;

@@ -433,7 +433,14 @@ let result_shapes () =
     assoc [ ("index", `Int 1); ("role", `String "textbox"); ("name", `String "Search") ]
   in
   let bare_row : P.row =
-    { index = 1; role = "textbox"; name = "Search"; value = None; state = None }
+    {
+      index = 1;
+      role = "textbox";
+      name = "Search";
+      value = None;
+      state = None;
+      options = None;
+    }
   in
   Alcotest.(check string)
     "Row key? fields are omitted when None"
@@ -444,7 +451,39 @@ let result_shapes () =
   in
   Alcotest.(check bool)
     "an absent Row key? field is None" true
-    (absent_row.value = None && absent_row.state = None);
+    (absent_row.value = None && absent_row.state = None && absent_row.options = None);
+  (* tab-5deq: a select row carries the options the accessibility tree exposes, each with
+     the index the select action takes. *)
+  let select_row_json =
+    assoc
+      [
+        ("index", `Int 2);
+        ("role", `String "combobox");
+        ("name", `String "Course:");
+        ( "options",
+          `List
+            [
+              assoc
+                [
+                  ("index", `Int 0);
+                  ("label", `String "Alpha");
+                  ("value", `String "a");
+                  ("selected", `Bool true);
+                  ("disabled", `Bool false);
+                ];
+            ] );
+      ]
+  in
+  let select_row = assert_ok "select row" (P.row_of_yojson select_row_json) in
+  Alcotest.(check string)
+    "a Row options list round-trips"
+    (Yojson.Safe.to_string select_row_json)
+    (Yojson.Safe.to_string (P.yojson_of_row select_row));
+  (match select_row.options with
+  | Some [ option_ ] ->
+      Alcotest.(check int) "the option index is the select action's" 0 option_.index;
+      Alcotest.(check bool) "the option is selected" true option_.selected
+  | _ -> Alcotest.fail "the select row lost its options");
   let action : P.action_result =
     {
       tab = tab.tab;
