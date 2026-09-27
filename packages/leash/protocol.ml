@@ -1,8 +1,8 @@
 (** The version-one control protocol: the wire contract of [docs/protocol.md] as types.
 
     A closed set of wire strings is a variant whose constructors carry their wire name as
-    [@name], so the type is the schema and the codec follows from it. A field that
-    [docs/protocol.md] shows as [T|null] is an option with [@yojson.null], which keeps the
+    [@json.name], so the type is the schema and the codec follows from it. A field that
+    [docs/protocol.md] shows as [T|null] is an option with [@json.null], which keeps the
     key on the wire as [null]; a field it shows as [key?] is a plain option, which is
     omitted when [None]. A value whose shape belongs to the page or to the caller — an
     [eval] argument or result, an error's [detail], the [drive] probabilities — is a raw
@@ -80,11 +80,12 @@ let wire_string yojson_of_t value =
 
 let wire_value t_of_yojson text = t_of_yojson (`String text)
 
-(** Every constructor carries the wire string of [docs/protocol.md] as [@name]: the
+(** Every constructor carries the wire string of [docs/protocol.md] as [@json.name]: the
     deriver otherwise speaks the constructor name verbatim, which no wire string here
     matches. *)
 
-type origin = Agent [@name "agent"] | Human [@name "human"] [@@deriving yojson]
+type origin = Agent [@json.name "agent"] | Human [@json.name "human"]
+[@@deriving yojson]
 
 module Origin = struct
   type t = origin
@@ -96,9 +97,9 @@ module Origin = struct
 end
 
 type state =
-  | Unowned [@name "unowned"]
-  | Owned [@name "owned"]
-  | With_human [@name "with_human"]
+  | Unowned [@json.name "unowned"]
+  | Owned [@json.name "owned"]
+  | With_human [@json.name "with_human"]
 [@@deriving yojson]
 
 module State = struct
@@ -110,7 +111,8 @@ module State = struct
   let yojson_of_t = yojson_of_state
 end
 
-type stage = Release [@name "release"] | Close [@name "close"] [@@deriving yojson]
+type stage = Release [@json.name "release"] | Close [@json.name "close"]
+[@@deriving yojson]
 
 module Stage = struct
   type t = stage
@@ -122,10 +124,10 @@ module Stage = struct
 end
 
 type dialog_kind =
-  | Alert [@name "alert"]
-  | Confirm [@name "confirm"]
-  | Prompt [@name "prompt"]
-  | Beforeunload [@name "beforeunload"]
+  | Alert [@json.name "alert"]
+  | Confirm [@json.name "confirm"]
+  | Prompt [@json.name "prompt"]
+  | Beforeunload [@json.name "beforeunload"]
 [@@deriving yojson]
 
 module Dialog_kind = struct
@@ -138,15 +140,15 @@ module Dialog_kind = struct
 end
 
 type row_state =
-  | Checked [@name "checked"]
-  | Unchecked [@name "unchecked"]
-  | Mixed [@name "mixed"]
-  | Selected [@name "selected"]
-  | Expanded [@name "expanded"]
-  | Collapsed [@name "collapsed"]
-  | Disabled [@name "disabled"]
-  | Required [@name "required"]
-  | Readonly [@name "readonly"]
+  | Checked [@json.name "checked"]
+  | Unchecked [@json.name "unchecked"]
+  | Mixed [@json.name "mixed"]
+  | Selected [@json.name "selected"]
+  | Expanded [@json.name "expanded"]
+  | Collapsed [@json.name "collapsed"]
+  | Disabled [@json.name "disabled"]
+  | Required [@json.name "required"]
+  | Readonly [@json.name "readonly"]
 [@@deriving yojson]
 
 module Row_state = struct
@@ -159,9 +161,9 @@ module Row_state = struct
 end
 
 type debug_kind =
-  | Console [@name "console"]
-  | Exception [@name "exception"]
-  | Request_failed [@name "request-failed"]
+  | Console [@json.name "console"]
+  | Exception [@json.name "exception"]
+  | Request_failed [@json.name "request-failed"]
 [@@deriving yojson]
 
 module Debug_kind = struct
@@ -174,14 +176,14 @@ module Debug_kind = struct
 end
 
 type operation =
-  | Click [@name "click"]
-  | Type_text [@name "type_text"]
-  | Select [@name "select"]
-  | Scroll_up [@name "scroll_up"]
-  | Scroll_down [@name "scroll_down"]
-  | Wait [@name "wait"]
-  | Done [@name "done"]
-  | Blocked [@name "blocked"]
+  | Click [@json.name "click"]
+  | Type_text [@json.name "type_text"]
+  | Select [@json.name "select"]
+  | Scroll_up [@json.name "scroll_up"]
+  | Scroll_down [@json.name "scroll_down"]
+  | Wait [@json.name "wait"]
+  | Done [@json.name "done"]
+  | Blocked [@json.name "blocked"]
 [@@deriving yojson]
 
 module Operation = struct
@@ -193,7 +195,7 @@ module Operation = struct
   let yojson_of_t = yojson_of_operation
 end
 
-type direction = Up [@name "up"] | Down [@name "down"] [@@deriving yojson]
+type direction = Up [@json.name "up"] | Down [@json.name "down"] [@@deriving yojson]
 
 module Direction = struct
   type t = direction
@@ -204,7 +206,8 @@ module Direction = struct
   let yojson_of_t = yojson_of_direction
 end
 
-type answer = Accept [@name "accept"] | Dismiss [@name "dismiss"] [@@deriving yojson]
+type answer = Accept [@json.name "accept"] | Dismiss [@json.name "dismiss"]
+[@@deriving yojson]
 
 module Answer = struct
   type t = answer
@@ -218,11 +221,11 @@ end
 (** The wire's ["error"] is [Failed] here: a constructor named [Error] would shadow
     [Result.Error] in the by-hand dispatch below. *)
 type drive_status =
-  | Done [@name "done"]
-  | Blocked [@name "blocked"]
-  | Step_cap [@name "step-cap"]
-  | Deadline [@name "deadline"]
-  | Failed [@name "error"]
+  | Done [@json.name "done"]
+  | Blocked [@json.name "blocked"]
+  | Step_cap [@json.name "step-cap"]
+  | Deadline [@json.name "deadline"]
+  | Failed [@json.name "error"]
 [@@deriving yojson]
 
 module Drive_status = struct
@@ -234,7 +237,9 @@ module Drive_status = struct
   let yojson_of_t = yojson_of_drive_status
 end
 
-type chrome_phase = Running [@name "running"] | Restarting [@name "restarting"]
+type chrome_phase =
+  | Running [@json.name "running"]
+  | Restarting [@json.name "restarting"]
 [@@deriving yojson]
 
 module Chrome_phase = struct
@@ -247,24 +252,24 @@ module Chrome_phase = struct
 end
 
 type error_code =
-  | Invalid_request [@name "invalid-request"]
-  | Not_owner [@name "not-owner"]
-  | Already_owned [@name "already-owned"]
-  | With_human [@name "with-human"]
-  | Tab_gone [@name "tab-gone"]
-  | Unknown_tab [@name "unknown-tab"]
-  | Stale_snapshot [@name "stale-snapshot"]
-  | No_such_row [@name "no-such-row"]
-  | Row_not_actionable [@name "row-not-actionable"]
-  | Dialog_open [@name "dialog-open"]
-  | No_dialog [@name "no-dialog"]
-  | Url_refused [@name "url-refused"]
-  | Tab_cap [@name "tab-cap"]
-  | Timeout [@name "timeout"]
-  | Browser_unavailable [@name "browser-unavailable"]
-  | Model_unavailable [@name "model-unavailable"]
-  | Too_large [@name "too-large"]
-  | Internal [@name "internal"]
+  | Invalid_request [@json.name "invalid-request"]
+  | Not_owner [@json.name "not-owner"]
+  | Already_owned [@json.name "already-owned"]
+  | With_human [@json.name "with-human"]
+  | Tab_gone [@json.name "tab-gone"]
+  | Unknown_tab [@json.name "unknown-tab"]
+  | Stale_snapshot [@json.name "stale-snapshot"]
+  | No_such_row [@json.name "no-such-row"]
+  | Row_not_actionable [@json.name "row-not-actionable"]
+  | Dialog_open [@json.name "dialog-open"]
+  | No_dialog [@json.name "no-dialog"]
+  | Url_refused [@json.name "url-refused"]
+  | Tab_cap [@json.name "tab-cap"]
+  | Timeout [@json.name "timeout"]
+  | Browser_unavailable [@json.name "browser-unavailable"]
+  | Model_unavailable [@json.name "model-unavailable"]
+  | Too_large [@json.name "too-large"]
+  | Internal [@json.name "internal"]
 [@@deriving yojson]
 
 module Error_code = struct
@@ -287,9 +292,9 @@ type tab_info = {
   title : string;
   origin : Origin.t;
   state : State.t;
-  owner : Owner.t option; [@yojson.null]
+  owner : Owner.t option; [@json.null]
   generation : int;
-  expires : expires option; [@yojson.null]
+  expires : expires option; [@json.null]
 }
 [@@deriving yojson]
 
@@ -312,7 +317,7 @@ type snapshot = {
   offset : int;
   truncated : bool;
   settled : bool;
-  dialog : dialog option; [@yojson.null]
+  dialog : dialog option; [@json.null]
 }
 [@@deriving yojson]
 
@@ -320,8 +325,8 @@ type action_result = {
   tab : Handle.t;
   url : string;
   title : string;
-  snapshot : Snapshot_id.t option; [@yojson.null]
-  dialog : dialog option; [@yojson.null]
+  snapshot : Snapshot_id.t option; [@json.null]
+  dialog : dialog option; [@json.null]
   popups : tab_info list;
 }
 [@@deriving yojson]
@@ -341,7 +346,7 @@ type step = {
   n : int;
   snapshot : Snapshot_id.t;
   operation : Operation.t;
-  index : int option; [@yojson.null]
+  index : int option; [@json.null]
   probabilities : probabilities;
   text : string option;
   after : after;
@@ -352,12 +357,12 @@ type step = {
 (* ---------- Per-command arguments ---------- *)
 
 type new_args = { url : string option } [@@deriving yojson]
-type list_args = { all : bool [@default false] } [@@deriving yojson]
+type list_args = { all : bool [@json.default false] } [@@deriving yojson]
 type tab_args = { tab : Handle.t } [@@deriving yojson]
 
 type snap_args = {
   tab : Handle.t;
-  match_ : string option; [@key "match"]
+  match_ : string option; [@json.key "match"]
   limit : int option;
   offset : int option;
 }
@@ -424,7 +429,7 @@ type drive_args = {
 
 (* ---------- Per-command results ---------- *)
 
-type tab_counts = { open_ : int; [@key "open"] cap : int } [@@deriving yojson]
+type tab_counts = { open_ : int; [@json.key "open"] cap : int } [@@deriving yojson]
 
 type status_result = {
   generation : int;

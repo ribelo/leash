@@ -64,7 +64,7 @@ type chrome = {
   binary : Text.t;
   profile_dir : Text.t;
   workspace : Text.t;
-  headless : bool; [@default false]
+  headless : bool; [@json.default false]
 }
 [@@deriving yojson]
 (** The browser the service owns. [headless] defaults to false: production runs a headed

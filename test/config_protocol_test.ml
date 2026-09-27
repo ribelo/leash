@@ -80,7 +80,7 @@ let request_validation () =
   in
   (match snap.command with
   | P.Snap { match_; _ } ->
-      Alcotest.(check (option string)) "[@key \"match\"]" (Some "Save") match_
+      Alcotest.(check (option string)) "[@json.key \"match\"]" (Some "Save") match_
   | _ -> Alcotest.fail "snap decoded to another command");
   let list = assert_ok "list" (P.decode_request (request_json "list" (assoc []))) in
   match list.command with
@@ -191,7 +191,7 @@ let command_round_trip () =
         (Yojson.Safe.to_string (P.encode_request again)))
     command_table
 
-(* chrome-38a4: every closed set is a derived variant whose wire names are the [@name]s of
+(* chrome-38a4: every closed set is a derived variant whose wire names are the [@json.name]s of
    [docs/protocol.md]; the string form an error or a log line prints is read back out of
    the same codec, so a name cannot exist in one and not the other. *)
 let closed_sets () =
@@ -481,7 +481,7 @@ let status_result () =
     (P.Chrome_phase.to_string result.chrome);
   Alcotest.(check (float 0.0)) "uptime" 12.5 result.uptime_s;
   Alcotest.(check string)
-    "[@key \"open\"]" (Yojson.Safe.to_string json)
+    "[@json.key \"open\"]" (Yojson.Safe.to_string json)
     (Yojson.Safe.to_string (P.yojson_of_status_result result));
   expect_error "unknown phase" [ "chrome"; "crashed" ]
     (P.status_result_of_yojson

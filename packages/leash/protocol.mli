@@ -1,12 +1,13 @@
 (** The version-one control protocol: the wire contract of [docs/protocol.md] as types.
 
     A closed set of wire strings is a derived variant whose constructors carry their wire
-    name as [@name]; [of_string] and [to_string] are that same codec read as a string, so
-    a value outside the set is refused by naming the set. A field that [docs/protocol.md]
-    shows as [T|null] stays on the wire and reads [null] when it has no value; a field it
-    shows as [key?] is omitted when it has none. A field of type [Yojson.Safe.t] is a
-    value whose shape belongs to the page or to the caller — an [eval] argument or result,
-    an error's [detail], the [drive] probabilities — and passes through unchanged.
+    name as [@json.name]; [of_string] and [to_string] are that same codec read as a
+    string, so a value outside the set is refused by naming the set. A field that
+    [docs/protocol.md] shows as [T|null] stays on the wire and reads [null] when it has no
+    value; a field it shows as [key?] is omitted when it has none. A field of type
+    [Yojson.Safe.t] is a value whose shape belongs to the page or to the caller — an
+    [eval] argument or result, an error's [detail], the [drive] probabilities — and passes
+    through unchanged.
 
     The envelope is dispatched by hand — a request is a ["cmd"] name with an ["args"]
     object, a reply is [{ok, result}] or [{ok, error}] — while every per-command argument
