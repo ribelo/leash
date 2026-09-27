@@ -197,6 +197,12 @@ let received_for fake meth key value =
       | Some params -> field key params = Some value
       | None -> false)
 
+(* The requests one page session saw: a session's own traffic, as opposed to the browser
+   session's. *)
+let received_in fake meth session =
+  received fake meth
+  |> List.filter (fun json -> field "sessionId" json = Some (str session))
+
 (* own-c0cl: a tab the human opened in the Chrome UI appears in list --all as human-origin
    and unowned, an agent claims it, and claiming is what makes it usable: the first
    command that needs the page attaches to the target and runs in the session Chrome hands
@@ -391,6 +397,78 @@ let tombstones () =
       check_disposition "own-teh1 Leash's close is not a stranger's" "closed_by_owner"
         (request tabs "alice" (P.Debug { tab = closed; limit = None; clear = None })))
 
+(* tab-a7l3: claiming a discovered tab is the moment it stops being lazy. Discovery only
+   records the session Chrome reports and enables nothing (own-c0cl), while the claim
+   enables the page's event domains in that session, so a [debug] from the claim on covers
+   console, exception and failed-request entries for the tab the agent now holds. *)
+let claimed_debug () =
+  rig (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
+      Fake.emit fake ~method_:"Target.attachedToTarget"
+        ~params:
+          (obj
+             [
+               ("sessionId", str "human-session");
+               ( "targetInfo",
+                 target_info ~url:"https://human.example/" ~title:"human" "human-target"
+               );
+               ("waitingForDebugger", `Bool false);
+             ]);
+      barrier fake tabs "0";
+      let h = handle (row_of_url tabs "https://human.example/") in
+      Alcotest.(check int)
+        "tab-a7l3 discovery enabled nothing for the tab" 0
+        (List.length (received_in fake "Runtime.enable" "human-session"));
+      ignore (result (request tabs "alice" (P.Claim { tab = h })));
+      List.iter
+        (fun method_ ->
+          Alcotest.(check int)
+            ("tab-a7l3 the claim enabled " ^ method_)
+            1
+            (List.length (received_in fake method_ "human-session")))
+        [ "Page.enable"; "Runtime.enable"; "Network.enable" ];
+      Fake.emit ~session:"human-session" fake ~method_:"Runtime.consoleAPICalled"
+        ~params:
+          (obj
+             [
+               ("type", str "log");
+               ("args", `List [ obj [ ("value", str "held by alice") ] ]);
+             ]);
+      Fake.emit ~session:"human-session" fake ~method_:"Runtime.exceptionThrown"
+        ~params:(obj [ ("exceptionDetails", obj [ ("text", str "boom") ]) ]);
+      Fake.emit ~session:"human-session" fake ~method_:"Network.loadingFailed"
+        ~params:(obj [ ("errorText", str "net::ERR_FAILED") ]);
+      barrier fake tabs "1";
+      let entries =
+        match
+          get "entries"
+            (result
+               (request tabs "alice" (P.Debug { tab = h; limit = None; clear = None })))
+        with
+        | `List entries -> entries
+        | _ -> Alcotest.fail "debug entries must be an array"
+      in
+      let texts =
+        List.filter_map
+          (fun entry -> match get "text" entry with `String s -> Some s | _ -> None)
+          entries
+      in
+      let kinds =
+        List.filter_map
+          (fun entry -> match get "kind" entry with `String s -> Some s | _ -> None)
+          entries
+      in
+      Alcotest.(check bool)
+        "tab-a7l3 the console message from the claim on" true
+        (List.mem "held by alice" texts);
+      Alcotest.(check bool) "tab-a7l3 the uncaught exception" true (List.mem "boom" texts);
+      Alcotest.(check bool)
+        "tab-a7l3 the failed request" true
+        (List.mem "net::ERR_FAILED" texts);
+      Alcotest.(check (list string))
+        "tab-a7l3 with their kinds"
+        [ "console"; "exception"; "request-failed" ]
+        (List.sort String.compare kinds))
+
 let () =
   Alcotest.run "L12 origin and discovery"
     [
@@ -401,4 +479,5 @@ let () =
           Alcotest.test_case "own-ehqa" `Quick adopted_popup;
         ] );
       ("tombstones", [ Alcotest.test_case "own-teh1" `Quick tombstones ]);
+      ("claim", [ Alcotest.test_case "tab-a7l3" `Quick claimed_debug ]);
     ]

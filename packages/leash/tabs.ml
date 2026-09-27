@@ -186,6 +186,11 @@ type tab = {
   mutable counter_installed : bool;
   mutable opener : string option;
       (** The target id of the tab that opened this one, Chrome's [openerId]. *)
+  mutable settlements : (Dispatch.outcome -> unit) list;
+      (** The dispatches currently waiting on an acknowledgement (tab-0ohq tab-gjo0): a
+          trusted input's reply or an [eval]'s may never come because its handler opened a
+          popup, so the registry wakes them when the popup's target appears or when this
+          tab's target dies. Empty between dispatches. *)
   reading : Reading.t;
 }
 
@@ -301,12 +306,7 @@ let locate t ~access ?(force = false) ~owner handle =
           Error (error "unknown-tab" "unknown tab handle")
       | Some tomb when (not force) && held_by_other tomb.state owner ->
           Error (not_owner ())
-      | Some tomb ->
-          Error
-            (error
-               ~detail:
-                 (obj [ ("disposition", P.Disposition.yojson_of_t tomb.disposition) ])
-               "tab-gone" "the tab is gone")
+      | Some tomb -> Error (P.tab_gone tomb.disposition)
       | None -> Error (error "unknown-tab" "unknown tab handle"))
 
 let cdp_call ?session cdp meth params =
@@ -351,6 +351,7 @@ let register t ~id ~session ~origin ~state ~url ~title ?opener () =
       dialog = None;
       counter_installed = false;
       opener;
+      settlements = [];
       reading = Reading.create ();
     }
   in
@@ -359,6 +360,32 @@ let register t ~id ~session ~origin ~state ~url ~title ?opener () =
   tab
 
 let ( let* ) = Result.bind
+
+(* tab-0ohq tab-gjo0 own-teh1: a dispatch Chrome may never answer -- the trusted input
+   whose handler opens a popup, or the [eval] that runs [window.open] -- is settled by the
+   registry, and this is where its waiters live. [acknowledge] registers one before the
+   input is sent; [wake] resolves every waiter of the tab a report named; and the no-op
+   release {!Dispatch.make} leaves is replaced with the closure that drops the waiter once
+   the call has settled by its own reply, so a settled dispatch leaves nothing behind. *)
+let acknowledge (tab : tab) : Dispatch.t =
+  let pending, resolve = Dispatch.make () in
+  tab.settlements <- resolve :: tab.settlements;
+  {
+    pending with
+    release =
+      (fun () ->
+        tab.settlements <- List.filter (fun waiter -> waiter != resolve) tab.settlements);
+  }
+
+let wake (tab : tab) outcome =
+  let waiters = tab.settlements in
+  tab.settlements <- [];
+  List.iter (fun resolve -> resolve outcome) waiters
+
+(* The tab a target id names, when the registry knows one: what a popup's [openerId]
+   resolves through, and which tab an acknowledgement is delivered to. *)
+let tab_of_target t id =
+  Option.bind (Hashtbl.find_opt t.targets id) (Hashtbl.find_opt t.tabs)
 
 (* tab-bw4j tab-8la3: the domains a page session needs for observation, action-time
    revalidation, focus emulation, and the debug ring. They are asked for once per session,
@@ -403,7 +430,7 @@ let page_session t cdp tab =
 let creator_of t = function
   | None -> None
   | Some opener -> (
-      match Option.bind (Hashtbl.find_opt t.targets opener) (Hashtbl.find_opt t.tabs) with
+      match tab_of_target t opener with
       | Some tab ->
           Some Discovery.{ origin = tab.origin; owner = owner_of tab.owner_state }
       | None -> None)
@@ -418,7 +445,18 @@ let adopt t ~id ~session (info : Discovery.target) =
        ~state:(match creator.owner with Some owner -> Owned owner | None -> Unowned)
        ~url:(Option.value ~default:"about:blank" info.url)
        ~title:(Option.value ~default:"" info.title)
-       ?opener:info.opener ())
+       ?opener:info.opener ());
+  (* tab-0ohq tab-gjo0: the first report Chrome makes about a target is the
+     acknowledgement of the dispatch that opened it -- [Target.targetCreated], or the
+     attachment or the info change that carries the opener first when the announcement was
+     missed -- and the tab is registered before its opener's waiters are woken, so the
+     action that settles already sees the popup in [popups] (tab-tm6c tab-8k2g). *)
+  match info.opener with
+  | Some opener -> (
+      match tab_of_target t opener with
+      | Some opener_tab -> wake opener_tab Dispatch.Popup
+      | None -> ())
+  | None -> ()
 
 (* own-c0cl own-ehqa: the one road a target Chrome reports from outside the control
    protocol takes into the registry, whether Chrome announced it, attached to it, or both
@@ -600,6 +638,15 @@ let claim t ~owner handle =
       tab.owner_state <- Owned owner;
       (* own-hslp: the unclaimed clock stops when somebody takes the tab. *)
       tab.unowned_since <- None;
+      (* tab-a7l3: a claim is the moment a discovered tab stops being lazy. Discovery
+         itself only records the session Chrome reports (own-c0cl), so the page's event
+         domains are enabled here, in the session the tab is talked to in, and a [debug]
+         from the claim on covers what the page did while the agent held it. Best effort
+         like every enable: a browser that refuses leaves the tab claimed, and the first
+         command that needs the page reports its own failure. *)
+      (match ready t with
+      | Error _ -> ()
+      | Ok cdp -> ignore (page_session t cdp tab));
       Ok (info t tab))
 
 (* own-2zs7 own-0pnk: release drops the caller's ownership without touching the page, so
@@ -861,6 +908,7 @@ let reading_browser t ~session tab cdp : Reading.browser =
     sleep = t.sleep;
     current = (fun () -> (tab.url, tab.title));
     dialog = (fun () -> tab.dialog);
+    acknowledge = (fun () -> acknowledge tab);
     row =
       (fun index ->
         match tab.snapshot with
@@ -924,6 +972,7 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
     refresh = (fun () -> refresh_from_target cdp tab);
     snapshot = (fun () -> tab.snapshot);
     dialog = (fun () -> tab.dialog);
+    acknowledge = (fun () -> acknowledge tab);
     all_tabs =
       (fun () ->
         Hashtbl.fold (fun _ (tab : tab) acc -> (info t tab, tab.opener) :: acc) t.tabs []
@@ -1002,11 +1051,13 @@ let inspect t json =
          finds no live tab to rewrite. *)
       match Discovery.destroyed params with
       | Some id -> (
-          match Hashtbl.find_opt t.targets id with
-          | Some k ->
-              Option.iter
-                (fun tab -> disappear t tab (disposition "closed_externally"))
-                (Hashtbl.find_opt t.tabs k)
+          match tab_of_target t id with
+          | Some tab ->
+              (* tab-0ohq own-teh1: a tab's death settles the dispatch whose handler closed
+                 it -- [tab-gone] with [closed_externally], the same answer the handle reads
+                 from the tombstone afterwards -- before the tab leaves the registry. *)
+              wake tab (Dispatch.Gone (P.tab_gone (disposition "closed_externally")));
+              disappear t tab (disposition "closed_externally")
           | None -> ())
       | None -> ())
   | Some "Page.javascriptDialogOpening", Some params ->

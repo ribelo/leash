@@ -126,12 +126,14 @@ Rules:
   opens from a tab an agent owns is that agent's instead: origin `agent` and state
   `owned`. Origin and owner state are decided when the tab is first seen and never
   change; a later report about the tab moves its url and title. Leash attaches to a
-  discovered tab the first time a command needs its page; `list`, `claim`, `release`,
-  and `close` need no attachment. A discovered tab that goes away without Leash closing
-  it leaves a tombstone with disposition `closed_externally`.
+  discovered tab when a command first needs its page — `claim` is such a command, and it
+  enables the tab's event domains there, so `debug` covers the tab from the claim on;
+  `list`, `release`, and `close` need no attachment. A discovered tab that goes away
+  without Leash closing it leaves a tombstone with disposition `closed_externally`.
 - Every action except `nav`, `scroll`, `wait`, and `dialog` requires the `snapshot` id it targets; it is refused with `stale-snapshot` if that is not the tab's current snapshot, if the page navigated since, if the row's node no longer resolves, or if its role and name differ from the snapshot's. An indexed `scroll` carries no id and revalidates against the tab's current snapshot.
 - A row action also refuses with `row-not-actionable` when the row is disabled, has no layout box, cannot take focus, or is covered at its click point (a hit test that answers with another node than the row or one of its descendants). Clicking reads the row's geometry at that moment; scrolling and animation are never staleness.
 - An action whose handler closes its own tab (a click on `window.close()`) reports `tab-gone` with `closed_externally` when the browser no longer knows the target; if the reply wins the race the action succeeds and the next command on the handle reports `tab-gone`.
+- A trusted input or an `eval` whose handler opens a popup is settled by the popup itself: Chrome withholds the reply of the call whose handler opened it, so Leash waits — with no bound of its own beyond the CDP call's deadline — for whichever comes first: the call's reply, a target Chrome reports with this tab as its `openerId` (an action then lists it in `popups`, and `eval` answers `{value: null}`), or the destruction of this tab's own target (`tab-gone` with `closed_externally`). Nothing is ever dispatched twice.
 - `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked).
 - `select` targets a native `<select>` row (role `combobox` or `listbox`); `option` is its index in the select's observed option order, and an index the select does not have is `invalid-request`. A row that is not a native select is `row-not-actionable`.
 - `ActionResult.snapshot` is null unless a snapshot was taken as part of settling; actions do not observe the page again on their own, so a caller that wants a fresh table asks for one.

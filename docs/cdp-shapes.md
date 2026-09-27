@@ -256,17 +256,21 @@ expiry (idle 5 s, unclaimed 12 s, sweep 1 s). Every phase ends in SIGTERM exit 0
 its Chrome gone. The live half of L12 answers the L10 open question and splits popups
 in two:
 
-- **The popup-opening dispatch hangs, and the fix answers anyway.** A click whose
-  handler calls opener-holding `window.open` got no reply at all before the fix: the
-  dispatch reply is withheld while the popup exists, past the 10 s control budget, so
-  the CLI saw "service closed without a reply". Every trusted input dispatch is now
-  awaited 2 s; when the page still answers `Page.getFrameTree` afterwards the input
-  was delivered and the action proceeds to the popup it opened, whose `openerId`
-  names the acted-on tab, so `ActionResult.popups` and adoption (own-ehqa) work.
-  The gate's adoption click answers in about 2 s with the popup agent/owned by the
-  opener's owner. Only a page that answers nothing is `browser-unavailable`
-  (`test/actions_test.ml`: own-ehqa popup dispatch unanswered, silent page
-  unavailable).
+- **The popup-opening dispatch hangs, and the popup itself is the acknowledgement.**
+  A click whose handler calls opener-holding `window.open` gets no reply at all: the
+  dispatch reply is withheld while the popup exists, past the 10 s control budget row
+  actions then had, so the CLI saw "service closed without a reply" before L14; a row
+  action now has the same 35 s headroom a load has. L14 answered it with a 2 s
+  dispatch bound plus a liveness probe; L15 removed that bound entirely (tab-0ohq): a
+  dispatch is settled by whichever comes first -- its own reply, a target Chrome
+  reports with this tab as its `openerId`, or this tab's target destroyed -- so the
+  CDP call's 30 s deadline is the only bound left, and `Page.getFrameTree` and
+  `Target.getTargetInfo` are probed only when it expires. The L15 re-run answers the
+  adoption click in 0.06 s (it was "about 2 s" under the bound) with the popup
+  agent/owned by the opener's owner, so `ActionResult.popups` and adoption (own-ehqa)
+  work. Only a page that answers nothing by the deadline is `browser-unavailable`
+  (`test/actions_test.ml`: tab-0ohq popup acknowledged, tab-1lhx slow reply, tab-0ohq
+  silent page unavailable).
 - **Opener-holding and noopener popups behave nothing alike.** The named open above
   stalls its own navigation: the popup sits at `url:""` (later reports show the
   *opener's* URL for the still-pending popup) and the opener's session is impaired
@@ -300,8 +304,12 @@ in two:
   policy force-installs an extension (ExtensionInstallForcelist) whose installed page
   opens as a second human/unowned tab about a minute in; the gate filters strays by
   URL and never asserts tab counts.
-- **Eval that opens or closes stays bounding-boxed, not fixed.** An evaluated
-  `window.open` still waits out the 30 s CDP deadline and reports `timeout` (the
-  popup is adopted meanwhile); its value *is* the withheld reply, so no dispatch
-  bound can save it, and reimplementing eval around `callFunctionOn` was rejected.
-  The gate opens popups by click, never by eval.
+- **Eval that opens or closes settles the same way (L15, tab-gjo0).** The L14 gate
+  found an evaluated `window.open` waiting out the 30 s CDP deadline and reporting
+  `timeout`, its value *is* the withheld reply, and reimplementing eval around
+  `callFunctionOn` was rejected then. L15 kept `callFunctionOn` and settles it by
+  the same three outcomes as a trusted input: a window-opening `eval` answers
+  `{value: null}` with the popup adopted, and a window-closing one reports
+  `tab-gone` with `closed_externally` (own-teh1). `test/reading_test.ml` (tab-gjo0)
+  scripts both at the control seam; the gate itself opens popups by click, never by
+  eval.

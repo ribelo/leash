@@ -53,7 +53,11 @@ type client = {
   write : Eio_unix.sink_ty Eio.Resource.t;
 }
 
-val create : sw:Eio.Switch.t -> unit -> t * client
+val create : sw:Eio.Switch.t -> ?sleep:(float -> unit) -> unit -> t * client
+(** [sleep] is what a scripted reply may wait on before it is sent, so a test drives a
+    slow reply with the clock it passes here ([Eio.Time.sleep] of the mock clock,
+    usually); a request whose script never sleeps is answered as soon as it is read. *)
+
 val on_method : t -> string -> (Yojson.Safe.t -> Yojson.Safe.t) -> unit
 
 val on_failure : t -> string -> (Yojson.Safe.t -> (int * string) option) -> unit
@@ -61,6 +65,16 @@ val on_failure : t -> string -> (Yojson.Safe.t -> (int * string) option) -> unit
     response: [Some (code, message)] becomes [{"error":{"code":code,"message":message}}]
     and [None] answers as usual. It is how a test fails one request of a sequence, which
     is what "never retried" is asserted on. *)
+
+val withhold : t -> string -> (Yojson.Safe.t -> bool) -> unit
+(** [withhold t name matches] makes every [name] request whose params satisfy [matches]
+    get no reply at all: it is recorded, and its scripted reply is not built or sent,
+    while the reader keeps serving the rest of the session. This is what Chrome does to a
+    call whose handler opens a popup (docs/cdp-shapes.md, L10; tab-0ohq). *)
+
+val sleep : t -> float -> unit
+(** Waits on the sleep function {!create} was given; a test advances its mock clock to let
+    the delay pass. [Invalid_argument] when [create] was given no sleep. *)
 
 val received : t -> Yojson.Safe.t list
 val emit : ?session:string -> t -> method_:string -> params:Yojson.Safe.t -> unit

@@ -78,6 +78,13 @@ type t = { path : string }
    page's reply never reaches the client and its connection simply closes. *)
 let load_budget = Eta.Duration.seconds 35
 
+(* tab-0ohq tab-1lhx: a trusted input is settled by its own reply or by the popup it
+   opened, so a dispatch whose reply Chrome withholds waits out the 30-second CDP deadline
+   and the probes after it before it can report [browser-unavailable]. A row action gets
+   the same headroom a load does; anything less and a wedged page's reply never reaches the
+   client at all. *)
+let cdp_budget = Eta.Duration.seconds 35
+
 let budget (request : (P.request, string) result) =
   let seconds n = Eta.Duration.seconds n in
   match request with
@@ -94,7 +101,7 @@ let budget (request : (P.request, string) result) =
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
   | Ok { command = P.Click _ | P.Fill _ | P.Press _ | P.Select _ | P.Scroll _; _ } ->
-      Some (seconds 10)
+      Some cdp_budget
   | Ok _ -> Some (seconds 1)
 
 let create ~sw ~runtime_dir deps =

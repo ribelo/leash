@@ -1,4 +1,4 @@
-(* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax *)
+(* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax tab-gjo0 *)
 module P = Leash.Protocol
 module R = Leash__Reading
 module Fake = Leash_test_support.Fake_browser
@@ -32,6 +32,9 @@ let browser ?(reply = fun _ _ -> obj []) ?(row = fun _ -> None) ?(dialog = fun (
     sleep = (fun s -> clock := !clock +. s);
     current = (fun () -> ("about:blank", "Untitled"));
     dialog;
+    (* No registry here, so this acknowledgement is never resolved and no event can end a
+       call; [eval] still races it (tab-gjo0), which is why its cases run under Eta. *)
+    acknowledge = (fun () -> fst (Leash__Dispatch.make ()));
     row;
   }
 
@@ -44,26 +47,32 @@ let stub name _ =
   | "Page.captureScreenshot" -> obj [ ("data", str "iVBORw0KGgo=") ]
   | _ -> obj []
 
+(* tab-a33o tab-gjo0: [eval] races its call against the tab's acknowledgement, so it
+   runs where Eio does. *)
 let eval_bounds () =
-  let b = browser ~reply:stub () in
-  let arg expression argument = P.{ tab = handle; expression; argument } in
-  Alcotest.(check string)
-    "expression bound" "too-large"
-    (code (R.eval b (arg (String.make 65_537 'x') None)));
-  Alcotest.(check string)
-    "argument bound" "too-large"
-    (code (R.eval b (arg "return argument" (Some (str (String.make 65_537 'x'))))));
-  let evaluated = ok (R.eval b (arg "return argument" (Some (str "hi")))) in
-  Alcotest.(check bool) "evaluated" true (evaluated.P.value = str "ok");
-  let large _ _ = obj [ ("result", obj [ ("value", str (String.make 65_537 'x')) ]) ] in
-  Alcotest.(check string)
-    "result bound" "too-large"
-    (code
-       (R.eval
-          (browser
-             ~reply:(fun n a -> if n = "Runtime.evaluate" then stub n a else large n a)
-             ())
-          (arg "return 1" None)))
+  Eta_test.run (fun _env _sw ->
+      let b = browser ~reply:stub () in
+      let arg expression argument = P.{ tab = handle; expression; argument } in
+      Alcotest.(check string)
+        "expression bound" "too-large"
+        (code (R.eval b (arg (String.make 65_537 'x') None)));
+      Alcotest.(check string)
+        "argument bound" "too-large"
+        (code (R.eval b (arg "return argument" (Some (str (String.make 65_537 'x'))))));
+      let evaluated = ok (R.eval b (arg "return argument" (Some (str "hi")))) in
+      Alcotest.(check bool) "evaluated" true (evaluated.P.value = str "ok");
+      let large _ _ =
+        obj [ ("result", obj [ ("value", str (String.make 65_537 'x')) ]) ]
+      in
+      Alcotest.(check string)
+        "result bound" "too-large"
+        (code
+           (R.eval
+              (browser
+                 ~reply:(fun n a ->
+                   if n = "Runtime.evaluate" then stub n a else large n a)
+                 ())
+              (arg "return 1" None))))
 
 let text_and_wait () =
   let clock = ref 0. in
@@ -272,12 +281,14 @@ let debug_ring () =
     (List.length
        (ok (R.debug state P.{ tab = handle; limit = None; clear = None })).P.entries)
 
-let protocol_smoke () =
+(* The control seam: the service in-process, the fake browser under it, and the commands
+   the CLI would send. [fake] is the scripted Chrome, driven directly by the tests below. *)
+let rig f =
   Eta_test.run (fun env sw ->
       let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
-        let fake, client = Fake.create ~sw () in
+        let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
         current := Some fake;
         match
           Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
@@ -312,6 +323,10 @@ let protocol_smoke () =
       let fake =
         match !current with Some f -> f | None -> Alcotest.fail "fake missing"
       in
+      f ~env ~sw ~tabs ~fake)
+
+let protocol_smoke () =
+  rig (fun ~env:_ ~sw:_ ~tabs ~fake ->
       Fake.on_method fake "Runtime.evaluate" (fun request ->
           let params = get "params" request in
           let value =
@@ -391,6 +406,149 @@ let protocol_smoke () =
       Alcotest.(check bool) "console subscribed" true (List.mem "Runtime.enable" methods);
       Alcotest.(check bool) "network subscribed" true (List.mem "Network.enable" methods))
 
+(* The popup announcement headless Chrome sends: a TargetInfo with the opener's target id,
+   [canAccessOpener] and [openerFrameId] (docs/cdp-shapes.md, L10; the shape is the one in
+   test/fixtures/unlabelled-controls-chrome.json, tab-8k2g). *)
+let announcement ~id ~opener ~url =
+  obj
+    [
+      ( "targetInfo",
+        obj
+          [
+            ("targetId", str id);
+            ("type", str "page");
+            ("title", str "Popup");
+            ("url", str url);
+            ("attached", `Bool false);
+            ("canAccessOpener", `Bool true);
+            ("openerId", str opener);
+            ("openerFrameId", str opener);
+            ("browserContextId", str "browser-context-1");
+          ] );
+    ]
+
+let tab_of json =
+  match P.Handle.t_of_yojson (get "tab" json) with
+  | Ok handle -> handle
+  | Error e -> Alcotest.fail e
+
+(* tab-gjo0: an evaluated [window.open] is answered only once the popup is gone
+   (docs/cdp-shapes.md, L10), so [eval] settles the way a trusted input does: a new target
+   with this tab as its opener ends the wait with a null value and the popup adopted, and
+   this tab's own death ends it with [tab-gone] (own-teh1). The fake withholds both
+   [Runtime.callFunctionOn] replies, so nothing but those two events can settle the calls,
+   and the test never moves its clock. *)
+let eval_settlement () =
+  rig (fun ~env:_ ~sw ~tabs ~fake ->
+      Fake.on_method fake "Runtime.evaluate" (fun _ ->
+          obj [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]);
+      Fake.withhold fake "Runtime.callFunctionOn" (fun _ -> true);
+      let owner =
+        match P.Owner.of_string "alice" with Ok x -> x | Error e -> failwith e
+      in
+      let send command =
+        let wire = P.encode_request { owner; command } |> Yojson.Safe.to_string in
+        match
+          P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire))
+        with
+        | Ok reply -> reply
+        | Error why -> Alcotest.fail why
+      in
+      let result = function
+        | P.Success json -> json
+        | P.Failure e -> Alcotest.failf "%s: %s" (P.Error_code.to_string e.code) e.message
+      in
+      let sent = ref 0 in
+      let wait_for_call () =
+        let rec loop n =
+          let seen =
+            Fake.received fake
+            |> List.filter (fun json ->
+                field "method" json = Some (str "Runtime.callFunctionOn"))
+            |> List.length
+          in
+          if seen > !sent then sent := seen
+          else if n = 0 then Alcotest.fail "tab-gjo0 the eval call was never sent"
+          else (
+            Eio.Fiber.yield ();
+            loop (n - 1))
+        in
+        loop 1000
+      in
+      let await what cell =
+        let rec loop n =
+          match !cell with
+          | Some reply -> reply
+          | None ->
+              if n = 0 then Alcotest.fail (what ^ " never replied")
+              else (
+                Eio.Fiber.yield ();
+                loop (n - 1))
+        in
+        loop 100_000
+      in
+      let tab = tab_of (result (send (P.New { url = None }))) in
+      (* window.open: the popup's own announcement settles the call. *)
+      let cell = ref None in
+      Eio.Fiber.fork ~sw (fun () ->
+          cell :=
+            Some
+              (send
+                 (P.Eval
+                    {
+                      tab;
+                      expression = "window.open('https://example.com/popup','w')";
+                      argument = None;
+                    })));
+      wait_for_call ();
+      Fake.emit fake ~method_:"Target.targetCreated"
+        ~params:
+          (announcement ~id:"popup-target" ~opener:"target-1"
+             ~url:"https://example.com/popup");
+      let opened = result (await "tab-gjo0 the window-opening eval" cell) in
+      Alcotest.(check bool)
+        "tab-gjo0 a window-opening eval ends with a null value" true
+        (get "value" opened = `Null);
+      let popup =
+        match get "tabs" (result (send (P.List_tabs { all = true }))) with
+        | `List rows ->
+            List.find_opt
+              (fun row -> get "url" row = str "https://example.com/popup")
+              rows
+        | _ -> None
+      in
+      (match popup with
+      | Some row ->
+          Alcotest.(check string)
+            "tab-gjo0 the popup is the opener's tab" "agent"
+            (match get "origin" row with `String s -> s | _ -> "");
+          Alcotest.(check string)
+            "tab-gjo0 owned by the caller" "alice"
+            (match get "owner" row with `String s -> s | _ -> "")
+      | None -> Alcotest.fail "tab-gjo0 the popup was not adopted");
+      (* window.close: the tab's own death settles it with tab-gone. *)
+      let cell = ref None in
+      Eio.Fiber.fork ~sw (fun () ->
+          cell :=
+            Some (send (P.Eval { tab; expression = "window.close()"; argument = None })));
+      wait_for_call ();
+      Fake.emit fake ~method_:"Target.targetDestroyed"
+        ~params:(obj [ ("targetId", str "target-1") ]);
+      match await "tab-gjo0 the window-closing eval" cell with
+      | P.Failure e ->
+          Alcotest.(check string)
+            "tab-gjo0 a window-closing eval ends tab-gone" "tab-gone"
+            (P.Error_code.to_string e.code);
+          Alcotest.(check (option string))
+            "tab-gjo0 with its disposition" (Some "closed_externally")
+            (match e.detail with
+            | Some detail -> (
+                match field "disposition" detail with
+                | Some (`String d) -> Some d
+                | _ -> None)
+            | None -> None)
+      | P.Success _ -> Alcotest.fail "tab-gjo0 the closing eval should report tab-gone")
+
 let () =
   Alcotest.run "reading"
     [
@@ -403,5 +561,6 @@ let () =
           Alcotest.test_case "dialog and PNG" `Quick dialog_and_shot;
           Alcotest.test_case "debug ring" `Quick debug_ring;
           Alcotest.test_case "control seam" `Quick protocol_smoke;
+          Alcotest.test_case "tab-gjo0 eval settlement" `Quick eval_settlement;
         ] );
     ]

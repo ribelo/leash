@@ -7,6 +7,7 @@ type browser = {
   sleep : float -> unit;
   current : unit -> string * string;
   dialog : unit -> Protocol.dialog option;
+  acknowledge : unit -> Dispatch.t;
   row : int -> int option;
 }
 
@@ -64,6 +65,20 @@ let call_function browser ~object_id ~body ~argument =
     | None when nested [ "result"; "type" ] D.string reply = Some "undefined" -> Ok `Null
     | None -> Error (internal "browser omitted function result")
 
+(* tab-gjo0: the call that runs the caller's own function is the one Chrome withholds
+   when the function opens a window -- an evaluated [window.open] is answered only once the
+   popup is gone (docs/cdp-shapes.md, L10) -- so it settles the way a trusted input does: a
+   new target with this tab as its opener ends the wait with a null value, and this tab's
+   own death ends it with [tab-gone] (own-teh1). Nothing is re-issued. *)
+let evaluated browser ~object_id ~body ~argument =
+  match
+    Dispatch.first (browser.acknowledge ()) (fun () ->
+        call_function browser ~object_id ~body ~argument)
+  with
+  | `Acknowledged Dispatch.Popup -> Ok `Null
+  | `Acknowledged (Dispatch.Gone error) -> Error error
+  | `Reply result -> result
+
 let cap = 65_536
 
 let eval browser (args : P.eval_args) =
@@ -74,7 +89,7 @@ let eval browser (args : P.eval_args) =
     else
       let* object_id = remote_object browser in
       let* value =
-        call_function browser ~object_id
+        evaluated browser ~object_id
           ~body:("function(argument) {\n" ^ args.expression ^ "\n}")
           ~argument
       in

@@ -5,11 +5,11 @@ through the real CLI/service/headless-Chrome. Three phases, one service each:
 ownership  two CLI owners with cross-owner refusals; the outside tab (Chrome's own
            initial chrome://newtab/ target, discovered through Target.setDiscoverTargets
            and never created by Leash); --force release and close.
-popups     an adopted window.open popup (the opening click proves the
-           bounded-dispatch fix by answering despite the withheld reply); a loaded
-           popup that closes itself, reporting closed_externally. The opener-holding
-           click can leave late, uncloseable popup debris behind, so this phase runs
-           on its own Chrome and SIGTERM reaps it.
+popups     an adopted window.open popup (the opening click is answered by the
+           popup's own targetCreated despite Chrome withholding the dispatch reply,
+           tab-0ohq); a loaded popup that closes itself, reporting closed_externally.
+           The opener-holding click can leave late, uncloseable popup debris behind, so
+           this phase runs on its own Chrome and SIGTERM reaps it.
 expiry     a short idle/unclaimed config with a 1 s sweep proving stage 1 (release)
            then stage 2 (closed_by_ttl) on a real clock, while a claimed-then-released
            human tab survives both stages.
@@ -21,7 +21,7 @@ adopted as human-origin unowned (own-c0cl). A page's window.open with 'noopener'
 was tried for that route and rejected: Chrome 152 still reports openerId, so Leash
 correctly adopts the popup. The two popup shapes split live: the opener-holding open
 stalls its navigation while Chrome withholds the dispatch reply (the L10 finding; the
-adoption click proves the bounded-dispatch fix by answering anyway), while the
+popup's own targetCreated settles the adoption click, tab-0ohq), while the
 noopener popup commits at once with healthy sessions, so the closed_externally step
 uses it (docs/cdp-shapes.md, L14). Stray tabs -- this machine's
 force-installed extension opens its installed page about a minute in -- are ignored:
@@ -172,8 +172,9 @@ def popups(local):
     def mine(tab):
         return tab['url'].startswith(local)
 
-    # The named open keeps its opener, so Chrome withholds the dispatch reply and
-    # the click proves the bounded-dispatch fix by answering anyway (about 2 s).
+    # The named open keeps its opener, so Chrome withholds the dispatch reply; the
+    # popup's own announcement settles the click (tab-0ohq), which is why it answers
+    # before the popup's navigation has gone anywhere.
     opener = cli('alice', 'new', local + '/m3')['tab']
     opened = cli('alice', 'snap', opener)
     pre_adopt = {t['tab'] for t in every_tab()}

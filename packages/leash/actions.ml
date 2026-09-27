@@ -28,6 +28,10 @@ type tab = {
   refresh : unit -> unit;
   snapshot : unit -> (P.Snapshot_id.t * string * (P.row * int) list) option;
   dialog : unit -> P.dialog option;
+  acknowledge : unit -> Dispatch.t;
+      (** One pending acknowledgement of the tab (tab-0ohq): created before a trusted
+          input is dispatched and woken by the registry when the popup that input opened
+          appears, or when the tab's own target dies. *)
   all_tabs : unit -> (P.tab_info * string option) list;
       (** Every tab in the registry, all owners, ordered by handle, paired with the target
           id of the tab that opened it when Chrome reports one ([openerId]). *)
@@ -35,7 +39,10 @@ type tab = {
 
 (* One CDP call. Only pre-dispatch observation may be repeated inside this module, and
    then only the read pair a revalidation is made of; a failure after dispatch is the
-   action's failure and is never replayed (tab-1lhx). *)
+   action's failure and is never replayed (tab-1lhx). Every call is bounded by the one
+   deadline, a dispatch included: a reply that is withheld is settled by the popup or by
+   the target's death, never by a bound of the dispatch's own (tab-0ohq). *)
+let call_deadline = Eta.Duration.seconds 30
 
 type failure = Refused of int * string | Transport of string
 
@@ -51,7 +58,7 @@ let attempt ?deadline cdp ~session method_ params =
           | None -> Error (Transport "the browser's reply carried no result")))
 
 let call cdp ~session method_ params =
-  match attempt ~deadline:(Eta.Duration.seconds 30) cdp ~session method_ params with
+  match attempt ~deadline:call_deadline cdp ~session method_ params with
   | Ok json -> Ok json
   | Error (Refused (number, message)) ->
       fail "internal"
@@ -59,18 +66,8 @@ let call cdp ~session method_ params =
   | Error (Transport why) ->
       fail "browser-unavailable" ("Chrome did not answer; try again shortly: " ^ why)
 
-(* L14 (own-ehqa): Chrome withholds the reply of the trusted input that opens a
-   popup: the dispatch whose handler calls [window.open] is never answered while the
-   popup exists (docs/cdp-shapes.md, L10), and an action that awaited it would hang
-   with it. A dispatch is therefore awaited only briefly; when the page still answers
-   afterwards the input was delivered and the action proceeds to the popup it opened.
-   A page that answers nothing is [browser-unavailable], unless the browser no longer
-   knows the target at all: then the handler closed the tab, and the action reports
-   [tab-gone] with [closed_externally] (own-teh1), the same answer any later command
-   on the handle gets. The bound keeps a
-   popup-opening click inside the control handler's budget, and nothing is ever sent
-   twice (tab-1lhx). *)
-let dispatch_timeout = Eta.Duration.seconds 2
+(* The two probes a dispatch that ran out the CDP deadline still makes: is the page
+   answering at all, and does the browser still know the target (own-ehqa own-teh1). *)
 let liveness_timeout = Eta.Duration.seconds 2
 
 let disposition name =
@@ -95,19 +92,26 @@ let target_gone cdp tab =
   | Ok reply -> Option.is_some (Cdp.error_of_reply reply)
   | Error _ -> false
 
-let tab_gone_externally () =
-  error
-    ~detail:
-      (E.object_
-         [
-           ( "disposition",
-             Some (P.Disposition.yojson_of_t (disposition "closed_externally")) );
-         ])
-    "tab-gone" "the tab is gone"
+let tab_gone_externally () = P.tab_gone (disposition "closed_externally")
 
+(* tab-0ohq tab-1lhx own-ehqa own-teh1: Chrome withholds the reply of the trusted input
+   whose handler opens a popup, sometimes for as long as the popup exists
+   (docs/cdp-shapes.md, L10). A dispatch is therefore settled by whichever comes first: its
+   own reply, the popup Chrome reports with this tab as its opener, or this tab's target
+   destroyed. There is no dispatch bound of its own; the CDP call's deadline is the only
+   one left, and the target probe stays for the handler that closes its own tab when the
+   report does not arrive first -- then the action reports [tab-gone] with
+   [closed_externally] (own-teh1), the same answer any later command on the handle gets. A
+   page that answers nothing by the deadline is [browser-unavailable]. Nothing is ever sent
+   twice: the race settles the call it was given, it never re-issues it. *)
 let dispatch cdp tab method_ params =
-  match Cdp.call cdp ~session:tab.session ~deadline:dispatch_timeout method_ params with
-  | Ok reply -> (
+  match
+    Dispatch.first (tab.acknowledge ()) (fun () ->
+        Cdp.call cdp ~session:tab.session ~deadline:call_deadline method_ params)
+  with
+  | `Acknowledged Dispatch.Popup -> Ok ()
+  | `Acknowledged (Dispatch.Gone error) -> Error error
+  | `Reply (Ok reply) -> (
       match Cdp.error_of_reply reply with
       | Some (number, message) ->
           fail "internal"
@@ -119,11 +123,12 @@ let dispatch cdp tab method_ params =
               fail "browser-unavailable"
                 "Chrome did not answer; try again shortly: the browser's reply carried \
                  no result"))
-  | Error `Timeout ->
+  | `Reply (Error `Timeout) ->
       if page_alive cdp tab then Ok ()
       else if target_gone cdp tab then Error (tab_gone_externally ())
       else fail "browser-unavailable" "Chrome did not answer; try again shortly"
-  | Error _ -> fail "browser-unavailable" "Chrome did not answer; try again shortly"
+  | `Reply (Error _) ->
+      fail "browser-unavailable" "Chrome did not answer; try again shortly"
 
 let handles tab =
   List.map (fun ((info : P.tab_info), _) -> P.Handle.to_string info.tab) (tab.all_tabs ())
@@ -176,7 +181,7 @@ let ax_pair : (string * string) list E.Of_json.t =
    resolves to another role or name, is what the spec calls a replaced row (tab-j1z2). *)
 let accessed cdp tab backend =
   match
-    attempt ~deadline:(Eta.Duration.seconds 30) cdp ~session:tab.session
+    attempt ~deadline:call_deadline cdp ~session:tab.session
       "Accessibility.getPartialAXTree"
       (E.object_
          [
@@ -188,8 +193,7 @@ let accessed cdp tab backend =
 
 let described cdp tab backend =
   match
-    attempt ~deadline:(Eta.Duration.seconds 30) cdp ~session:tab.session
-      "DOM.describeNode"
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
       (E.object_ [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
   with
   | Error _ -> None
@@ -262,8 +266,7 @@ let point cdp tab backend =
    own subtree: one call, bounded here. *)
 let subtree_contains cdp tab ~backend ~hit =
   match
-    attempt ~deadline:(Eta.Duration.seconds 30) cdp ~session:tab.session
-      "DOM.describeNode"
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
       (E.object_
          [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int (-1))) ])
   with
@@ -292,8 +295,7 @@ let subtree_contains cdp tab ~backend ~hit =
    one [scrollIntoViewIfNeeded] and a fresh aim before it is refused. *)
 let hit_test cdp tab ~backend ~x ~y =
   match
-    attempt ~deadline:(Eta.Duration.seconds 30) cdp ~session:tab.session
-      "DOM.getNodeForLocation"
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.getNodeForLocation"
       (E.object_
          [
            ("x", Some (E.int (int_of_float (floor (x +. 0.5)))));
@@ -314,7 +316,7 @@ let aim cdp tab (target : target) =
   else
     let* () =
       match
-        attempt ~deadline:(Eta.Duration.seconds 30) cdp ~session:tab.session
+        attempt ~deadline:call_deadline cdp ~session:tab.session
           "DOM.scrollIntoViewIfNeeded"
           (E.object_ [ ("backendNodeId", Some (E.int target.backend)) ])
       with
@@ -381,7 +383,7 @@ let settle cdp tab ~combobox =
 
 let focus_row cdp tab backend =
   match
-    attempt ~deadline:(Eta.Duration.seconds 30) cdp ~session:tab.session "DOM.focus"
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.focus"
       (E.object_ [ ("backendNodeId", Some (E.int backend)) ])
   with
   | Ok _ -> Ok ()

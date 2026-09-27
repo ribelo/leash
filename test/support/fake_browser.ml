@@ -10,6 +10,8 @@ type t = {
   mutable messages : Yojson.Safe.t list;
   mutable dropped : bool;
   failures : (string, Yojson.Safe.t -> (int * string) option) Hashtbl.t;
+  withheld : (string, Yojson.Safe.t -> bool) Hashtbl.t;
+  reader_sleep : float -> unit;
   writes : Eio.Mutex.t;
 }
 
@@ -134,37 +136,46 @@ let send t message =
       if not t.dropped then
         Eio.Flow.copy_string (Yojson.Safe.to_string message ^ "\000") t.peer_write)
 
+let withheld t method_ request =
+  match Hashtbl.find_opt t.withheld method_ with
+  | Some matches -> matches request
+  | None -> false
+
 let respond t request =
   t.messages <- request :: t.messages;
   let member name =
     match request with `Assoc fields -> List.assoc_opt name fields | _ -> None
   in
   let method_ = match member "method" with Some (`String m) -> m | _ -> "" in
-  let answer () =
-    match Hashtbl.find_opt t.replies method_ with
-    | Some builder -> [ ("result", builder request) ]
-    | None ->
-        [
-          ("error", obj [ ("code", `Int (-32601)); ("message", str "Method not found") ]);
-        ]
-  in
-  let result =
-    match Hashtbl.find_opt t.failures method_ with
-    | Some builder -> (
-        match builder request with
-        | Some (code, message) ->
-            [ ("error", obj [ ("code", `Int code); ("message", str message) ]) ]
-        | None -> answer ())
-    | None -> answer ()
-  in
-  let envelope =
-    List.filter_map
-      (fun name -> Option.map (fun value -> (name, value)) (member name))
-      [ "id"; "sessionId" ]
-  in
-  send t (obj (envelope @ result))
+  (* tab-0ohq: a withheld request is one Chrome never answers -- the reader stays free, so
+     the rest of the session keeps being served while the caller waits -- and its scripted
+     reply is not built at all. *)
+  if not (withheld t method_ request) then
+    let answer () =
+      match Hashtbl.find_opt t.replies method_ with
+      | Some builder -> [ ("result", builder request) ]
+      | None ->
+          [
+            ("error", obj [ ("code", `Int (-32601)); ("message", str "Method not found") ]);
+          ]
+    in
+    let result =
+      match Hashtbl.find_opt t.failures method_ with
+      | Some builder -> (
+          match builder request with
+          | Some (code, message) ->
+              [ ("error", obj [ ("code", `Int code); ("message", str message) ]) ]
+          | None -> answer ())
+      | None -> answer ()
+    in
+    let envelope =
+      List.filter_map
+        (fun name -> Option.map (fun value -> (name, value)) (member name))
+        [ "id"; "sessionId" ]
+    in
+    send t (obj (envelope @ result))
 
-let create ~sw () =
+let create ~sw ?sleep () =
   let peer_read, client_write = Eio_unix.pipe sw in
   let client_read, peer_write = Eio_unix.pipe sw in
   let replies = Hashtbl.create 12 in
@@ -176,6 +187,11 @@ let create ~sw () =
       peer_write;
       replies;
       failures;
+      withheld = Hashtbl.create 4;
+      reader_sleep =
+        (match sleep with
+        | Some sleep -> sleep
+        | None -> fun _ -> invalid_arg "Fake_browser: no clock was given to create");
       messages = [];
       dropped = false;
       writes = Eio.Mutex.create ();
@@ -196,7 +212,9 @@ let create ~sw () =
 
 let on_method t name builder = Hashtbl.replace t.replies name builder
 let on_failure t name builder = Hashtbl.replace t.failures name builder
+let withhold t name matches = Hashtbl.replace t.withheld name matches
 let received t = List.rev t.messages
+let sleep t seconds = t.reader_sleep seconds
 
 let emit ?session t ~method_ ~params =
   let envelope = [ ("method", str method_); ("params", params) ] in

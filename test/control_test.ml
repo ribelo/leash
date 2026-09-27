@@ -330,11 +330,17 @@ let load_timeout () =
       Alcotest.(check string)
         "chrome-qnul the same timeout as nav" (described nav) (described created))
 
-(* chrome-qnul, chrome-1yn9: the listener must outlast the registry's bounded load wait, or
-   a slow page's reply never reaches the client and its connection just closes. *)
+(* chrome-qnul, chrome-1yn9, tab-0ohq: the listener must outlast the registry's own bounds
+   -- a load's thirty seconds, and a trusted input's CDP deadline plus the probes after it
+   -- or a slow page's reply never reaches the client and its connection just closes. *)
 let budget () =
   let handle =
     match P.Handle.of_string "t_budget" with Ok h -> h | Error why -> Alcotest.fail why
+  in
+  let snapshot =
+    match P.Snapshot_id.of_string "s_budget" with
+    | Ok s -> s
+    | Error why -> Alcotest.fail why
   in
   let ms command =
     match Leash.Control.budget (Ok P.{ owner = owner "alice"; command }) with
@@ -351,6 +357,9 @@ let budget () =
   Alcotest.(check bool)
     "chrome-1yn9 nav outlasts the load wait" true
     (ms (P.Nav { tab = handle; url = "https://example.com" }) > 30_000);
+  Alcotest.(check bool)
+    "tab-0ohq a row action outlasts the settlement deadline" true
+    (ms (P.Click { tab = handle; snapshot; index = 1 }) > 30_000);
   Alcotest.(check int) "other commands keep one second" 1_000 (ms P.Status)
 
 let malformed () =

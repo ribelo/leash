@@ -381,6 +381,13 @@ type error = { code : Error_code.t; message : string; detail : Yojson.Safe.t opt
 val error_of_yojson : Yojson.Safe.t -> (error, string) result
 val yojson_of_error : error -> Yojson.Safe.t
 
+val tab_gone : Disposition.t -> error
+(** own-teh1: the one [tab-gone] error, carrying the disposition that closed the tab in
+    [detail.disposition] — [closed_by_owner], [closed_by_ttl], [closed_externally], or
+    [browser_lost]. Every path that reports a closed tab says it this way: a tombstone, a
+    dispatch this tab's death settled (tab-0ohq), and the browser lookup that probe makes.
+*)
+
 type reply =
   | Success of Yojson.Safe.t
   | Failure of error

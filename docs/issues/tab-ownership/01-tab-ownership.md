@@ -73,9 +73,10 @@ SIGTERM exits 0 and the managed Chrome is gone after every phase.
   reports openerId, so Leash adopts that popup.
 - own-ehqa: the adopted popup is verified on the hard path -- an opener-holding
   window.open whose navigation stalls while Chrome withholds the dispatch reply (the
-  L10 finding, confirmed: the click got no reply at all before the fix). The opening
-  click now answers in about 2 s through the bounded-dispatch fix, with the popup
-  listed agent/owned by the opener's owner.
+  L10 finding, confirmed: the click got no reply at all before the fix). L14 answered
+  the opening click through a 2 s dispatch bound; L15 replaced that bound with the
+  popup's own targetCreated (tab-0ohq), and the re-run answers it in 0.06 s, with the
+  popup listed agent/owned by the opener's owner.
 - own-teh1: a loaded (noopener) popup closes itself via a clicked window.close button
   and the handle reports tab-gone closed_externally. The self-closing click wins or
   loses the reply race nondeterministically; the loss reports tab-gone with

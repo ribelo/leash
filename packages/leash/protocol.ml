@@ -485,6 +485,16 @@ type drive_result = { status : Drive_status.t; steps : step list; final : snapsh
 type error = { code : Error_code.t; message : string; detail : Yojson.Safe.t option }
 [@@deriving yojson]
 
+(* own-teh1 tab-0ohq: the one [tab-gone], whether it comes from a tombstone, from a
+   dispatch the target's death settled (tab-0ohq), or from the browser lookup that probe
+   makes. The disposition in [detail] is what tells a client why the tab is gone. *)
+let tab_gone disposition : error =
+  {
+    code = Tab_gone;
+    message = "the tab is gone";
+    detail = Some (`Assoc [ ("disposition", yojson_of_disposition disposition) ]);
+  }
+
 (** One of the two wire shapes. The result stays raw JSON because the CLI prints it
     without knowing the command's result type; the per-command result records above are
     what the service encodes into it. *)
