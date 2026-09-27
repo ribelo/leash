@@ -79,6 +79,44 @@ let visible dom ~width ~height ~scroll_x ~scroll_y =
   | [] -> ());
   result
 
+(* tab-zc36: the placeholder is a DOM attribute, not an accessibility member. Chrome uses
+   it as the accessible name when nothing else names the control, so this map matters for
+   the case where an author's aria-label or title left the name empty, and the row still
+   has to say what the control is for. The DOMSnapshot carries the attributes inline:
+   [nodes.attributes[i]] is a flat [name, value, name, value, ...] array of indexes into
+   [strings], aligned with [nodes.backendNodeId[i]] (docs/cdp-shapes.md, Chrome 152). *)
+let placeholders dom =
+  let table = Hashtbl.create 16 in
+  (match list (get "documents" dom) with
+  | doc :: _ ->
+      let strings = Array.of_list (list (get "strings" dom)) in
+      let string index =
+        if index >= 0 && index < Array.length strings then text strings.(index) else ""
+      in
+      let nodes = get "nodes" doc in
+      let rec loop backends attributes =
+        match (backends, attributes) with
+        | backend :: backends, `List attributes :: rest ->
+            let rec field = function
+              | name :: value :: rest ->
+                  (if string (integer name) = "placeholder" then
+                     let placeholder = string (integer value) in
+                     if placeholder <> "" then
+                       Hashtbl.replace table (integer backend) placeholder);
+                  field rest
+              | _ -> ()
+            in
+            field attributes;
+            loop backends rest
+        | _ -> ()
+      in
+      loop (list (get "backendNodeId" nodes)) (list (get "attributes" nodes))
+  | [] -> ());
+  table
+
+(* A row whose role is only informative still needs a name, or the table fills with
+   unnamed decoration; a control is worth a row either way (tab-zc36). *)
+let informative = [ "heading"; "paragraph"; "img"; "status"; "alert" ]
 let role n = text (value (get "role" n))
 let name n = text (value (get "name" n))
 
@@ -120,6 +158,7 @@ let states n =
 
 let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
   let visible = visible dom ~width ~height ~scroll_x ~scroll_y in
+  let placeholders = placeholders dom in
   let nodes = list (get "nodes" ax) in
   let by_id = Hashtbl.create 128 in
   List.iter (fun n -> Hashtbl.replace by_id (text (get "nodeId" n)) n) nodes;
@@ -165,17 +204,27 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
       in
       let backend = integer (get "backendDOMNodeId" effective_node) in
       let label = name n in
+      (* tab-zc36: an empty-name control keeps its row, with the value it holds now or,
+         when it holds none, the placeholder that is the only other thing telling an agent
+         what it is. *)
       let here =
         if
           List.mem effective_role included
-          && label <> ""
+          && (label <> "" || not (List.mem effective_role informative))
           && get "ignored" n <> `Bool true
           && backend >= 0 && Hashtbl.mem visible backend
         then
           let value =
             match get "value" n with
-            | `Assoc _ as v -> ( match value v with `String s -> Some s | _ -> None)
+            | `Assoc _ as v -> (
+                match value v with `String s when s <> "" -> Some s | _ -> None)
+            | `String s when s <> "" -> Some s
             | _ -> None
+          in
+          let value =
+            match value with
+            | Some value -> Some value
+            | None -> if label = "" then Hashtbl.find_opt placeholders backend else None
           in
           [
             ( { P.index = 0; role = effective_role; name = label; value; state = states n },

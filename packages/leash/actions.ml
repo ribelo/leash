@@ -19,12 +19,18 @@ let issue why = Format.asprintf "%a" E.pp_issue why
 
 type tab = {
   session : string;
+  target : string;  (** The tab's Chrome target id: what a popup's [openerId] names. *)
   handle : P.Handle.t;
+  owner : P.Owner.t;
+      (** The caller: the acted-on tab was reached through it, so a popup it opened is the
+          caller's and no one else's (tab-8k2g). *)
   page : unit -> string * string;
   refresh : unit -> unit;
   snapshot : unit -> (P.Snapshot_id.t * string * (P.row * int) list) option;
   dialog : unit -> P.dialog option;
-  all_tabs : unit -> P.tab_info list;
+  all_tabs : unit -> (P.tab_info * string option) list;
+      (** Every tab in the registry, all owners, ordered by handle, paired with the target
+          id of the tab that opened it when Chrome reports one ([openerId]). *)
 }
 
 (* One CDP call. Only pre-dispatch observation may be repeated inside this module, and
@@ -54,7 +60,7 @@ let call cdp ~session method_ params =
       fail "browser-unavailable" ("Chrome did not answer; try again shortly: " ^ why)
 
 let handles tab =
-  List.map (fun (info : P.tab_info) -> P.Handle.to_string info.tab) (tab.all_tabs ())
+  List.map (fun ((info : P.tab_info), _) -> P.Handle.to_string info.tab) (tab.all_tabs ())
 
 let stale tab message =
   match tab.snapshot () with
@@ -480,16 +486,21 @@ let clamp ~width ~height (x, y) =
   (max 1. (min (width -. 1.) x), max 1. (min (height -. 1.) y))
 
 (* The reply reports the page as it is after the action: url and title from the tab's
-   target, any dialog that opened, and the tabs that were not in the registry when the
-   action began (tab-tm6c). Taking a fresh snapshot is not part of settling, so the
-   snapshot id is null and the caller decides when to observe again. *)
+   target, any dialog that opened, and the tabs this action opened (tab-tm6c, tab-8k2g).
+   Taking a fresh snapshot is not part of settling, so the snapshot id is always null and
+   the caller decides when to observe again. *)
 let result tab before =
   tab.refresh ();
   let url, title = tab.page () in
+  (* tab-8k2g: only a tab that was not there when the action began, that Chrome says
+     this tab opened, and that the caller owns. Another agent's concurrent tab has
+     another opener, or another owner, and is never reported as this caller's. *)
   let popups =
     tab.all_tabs ()
-    |> List.filter (fun (info : P.tab_info) ->
-        not (List.mem (P.Handle.to_string info.tab) before))
+    |> List.filter_map (fun ((info : P.tab_info), opener) ->
+        let fresh = not (List.mem (P.Handle.to_string info.tab) before) in
+        if fresh && opener = Some tab.target && info.owner = Some tab.owner then Some info
+        else None)
   in
   P.{ tab = tab.handle; url; title; snapshot = None; dialog = tab.dialog (); popups }
 

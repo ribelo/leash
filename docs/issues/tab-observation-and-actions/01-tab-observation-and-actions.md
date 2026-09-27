@@ -1,5 +1,5 @@
 ---
-status: completed-with-followups
+status: completed
 milestone: 2
 ---
 
@@ -72,7 +72,7 @@ iframes, shadow roots, canvas, file inputs, drag and drop, hover, batch steps, C
 
 ## Review after milestone 2 (2026-09-27)
 
-Accepted as delivered with two follow-up stories (27, 28) delivered as milestone 3 row L10. `ActionResult.snapshot` is always `null` and stays so: a post-action snapshot costs the same as `snap`, and the agent decides when to look. Iframes remain out of scope; the counter script's lifetime across navigations and frames is recorded in `docs/cdp-shapes.md` and is where an iframe milestone would start. Rounding the hit-test point is correct regardless of what `DOM.getNodeForLocation` accepts on a given build.
+Accepted as delivered with two follow-up stories (27, 28), delivered as milestone 3 row L10 on 2026-09-27 and covered by control-seam tests (`tab-zc36`, `tab-8k2g`) with one headless-Chrome fixture (an unlabelled select, a bare input, an icon button, and a popup's `openerId` TargetInfo: `test/fixtures/unlabelled-controls-chrome.json`). `ActionResult.snapshot` is always `null` and stays so: a post-action snapshot costs the same as `snap`, and the agent decides when to look. One live behaviour is recorded in `docs/cdp-shapes.md` and only live acceptance can cover it: the CDP call that opens a popup is not answered while the popup exists, so an action that opens one waits on the browser, and the popup reaches `popups` only from the pushed `Target.attachedToTarget` event. Iframes remain out of scope; the counter script's lifetime across navigations and frames is recorded in `docs/cdp-shapes.md` and is where an iframe milestone would start. Rounding the hit-test point is correct regardless of what `DOM.getNodeForLocation` accepts on a given build.
 
 ## Further Notes
 

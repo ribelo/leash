@@ -35,7 +35,10 @@
     ({sessionId,targetInfo,waitingForDebugger}), Target.detachedFromTarget
     ({sessionId,targetId}), Page.loadEventFired ({timestamp}),
     Page.frameNavigated ({frame:{id,loaderId,url,securityOrigin,mimeType}}), and Page.domContentEventFired
-    ({timestamp}). [emit] can also send arbitrary event names and params. *)
+    ({timestamp}). [emit] can also send arbitrary event names and params, which is how a test
+    scripts a popup: the Target.attachedToTarget targetInfo then carries the [openerId] the
+    default fixture omits, recorded from real Chrome in docs/cdp-shapes.md and
+    test/fixtures/unlabelled-controls-chrome.json (tab-8k2g). *)
 
 type t
 

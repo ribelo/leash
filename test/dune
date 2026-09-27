@@ -35,7 +35,9 @@
 (test
  (name control_test)
  (modules control_test)
- (deps fixtures/snapshot-chrome.json)
+ (deps
+  fixtures/snapshot-chrome.json
+  fixtures/unlabelled-controls-chrome.json)
  (libraries
   leash
   leash_test_support
@@ -66,6 +68,7 @@
 (test
  (name actions_test)
  (modules actions_test)
+ (deps fixtures/unlabelled-controls-chrome.json)
  (libraries
   leash
   leash_test_support

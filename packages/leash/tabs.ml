@@ -85,6 +85,8 @@ type tab = {
   mutable snapshot : (P.Snapshot_id.t * string * (P.row * int) list) option;
   mutable dialog : P.dialog option;
   mutable counter_installed : bool;
+  mutable opener : string option;
+      (** The target id of the tab that opened this one, Chrome's [openerId]. *)
   reading : Reading.t;
 }
 
@@ -168,7 +170,7 @@ let ready t =
   | Ok cdp -> Ok cdp
   | Error _ -> Error (unavailable ())
 
-let register t ~id ~session ~origin ~owner ~url ~title =
+let register t ~id ~session ~origin ~owner ~url ~title ?opener () =
   let tab =
     {
       id;
@@ -187,6 +189,7 @@ let register t ~id ~session ~origin ~owner ~url ~title =
       snapshot = None;
       dialog = None;
       counter_installed = false;
+      opener;
       reading = Reading.create ();
     }
   in
@@ -196,17 +199,32 @@ let register t ~id ~session ~origin ~owner ~url ~title =
 
 let ( let* ) = Result.bind
 
+(* tab-8k2g, own-ehqa: a target Chrome reports with an [openerId] belongs to whoever owns
+   the tab that opened it, so a page's popup is its opener agent's tab and not another
+   agent's. A target with no opener, or one whose opener Leash does not know, is a
+   human's, as before. *)
+let adoption t info =
+  match text "openerId" info with
+  | Some opener -> (
+      match Option.bind (Hashtbl.find_opt t.targets opener) (Hashtbl.find_opt t.tabs) with
+      | Some opener_tab -> (opener_tab.origin, opener_tab.owner, Some opener)
+      | None ->
+          ( enum P.Origin.of_string "human",
+            Some (enum P.Owner.of_string "human"),
+            Some opener ))
+  | None -> (enum P.Origin.of_string "human", Some (enum P.Owner.of_string "human"), None)
+
 let flush_humans t =
   if t.creating = 0 then (
     Hashtbl.iter
       (fun id (session, info) ->
         if not (Hashtbl.mem t.targets id) then (
+          let origin, owner, opener = adoption t info in
           ignore
-            (register t ~id ~session
-               ~origin:(enum P.Origin.of_string "human")
-               ~owner:(Some (enum P.Owner.of_string "human"))
+            (register t ~id ~session ~origin ~owner
                ~url:(Option.value ~default:"about:blank" (text "url" info))
-               ~title:(Option.value ~default:"" (text "title" info)));
+               ~title:(Option.value ~default:"" (text "title" info))
+               ?opener ());
           match ready t with
           | Error _ -> ()
           | Ok cdp ->
@@ -288,7 +306,7 @@ let new_tab t ~owner ~url =
                 let tab =
                   register t ~id ~session
                     ~origin:(enum P.Origin.of_string "agent")
-                    ~owner:(Some owner) ~url:target ~title:""
+                    ~owner:(Some owner) ~url:target ~title:"" ()
                 in
                 (* chrome-qnul: a tab created with a url is only titled once its document
                    has loaded, so the reply waits exactly as [nav] does. Without a url (or
@@ -568,18 +586,20 @@ let wait t ~owner (args : P.wait_args) =
    tab-1lhx tab-8la3: the registry owns the tab's identity, its page session, and its
    lock; Actions owns revalidation, dispatch, and settlement. The lock is what makes one
    tab's actions run one at a time in arrival order while another tab's proceed. *)
-let action_view t tab cdp : Actions.tab =
+let action_view t ~owner tab cdp : Actions.tab =
   {
     Actions.session = tab.session;
+    target = tab.id;
     handle = tab.handle;
+    owner;
     page = (fun () -> (tab.url, tab.title));
     refresh = (fun () -> refresh_from_target cdp tab);
     snapshot = (fun () -> tab.snapshot);
     dialog = (fun () -> tab.dialog);
     all_tabs =
       (fun () ->
-        Hashtbl.fold (fun _ (tab : tab) acc -> info tab :: acc) t.tabs []
-        |> List.sort (fun (a : P.tab_info) (b : P.tab_info) ->
+        Hashtbl.fold (fun _ (tab : tab) acc -> (info tab, tab.opener) :: acc) t.tabs []
+        |> List.sort (fun ((a : P.tab_info), _) ((b : P.tab_info), _) ->
             String.compare (key a.tab) (key b.tab)));
   }
 
@@ -588,7 +608,7 @@ let with_action t ~owner handle f =
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = lookup t ~owner handle in
       let* cdp = ready t in
-      f cdp (action_view t tab cdp))
+      f cdp (action_view t ~owner tab cdp))
 
 let click t ~owner (args : P.click_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.click ~cdp view args)
@@ -644,9 +664,14 @@ let inspect t json =
               match Hashtbl.find_opt t.targets id with
               | Some k -> (
                   match Hashtbl.find_opt t.tabs k with
-                  | Some tab ->
+                  | Some tab -> (
                       Option.iter (fun url -> tab.url <- url) (text "url" info);
-                      Option.iter (fun title -> tab.title <- title) (text "title" info)
+                      Option.iter (fun title -> tab.title <- title) (text "title" info);
+                      (* tab-8k2g: a popup's opener is pushed with its target
+                         info; a tab Leash created never carries one. *)
+                      match text "openerId" info with
+                      | Some opener -> tab.opener <- Some opener
+                      | None -> ())
                   | None -> ())
               | None ->
                   (* A creation notification can precede createTarget's reply. Delay adoption

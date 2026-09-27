@@ -414,7 +414,8 @@ let params json = member "params" json
 let session json =
   match E.string_member "sessionId" json with Some id -> id | None -> ""
 
-let new_tab tabs = tab (result (request tabs "alice" (P.New { url = None })))
+let new_tab_for tabs who = tab (result (request tabs who (P.New { url = None })))
+let new_tab tabs = new_tab_for tabs "alice"
 
 let snap tabs handle =
   result
@@ -792,11 +793,44 @@ let scroll () =
         "tab-8dop the row's geometry is read now" 1
         (List.length (calls fake "DOM.getContentQuads")))
 
-(* tab-tm6c: the reply carries the tabs the action opened. *)
+(* The popup shapes are the ones headless Chrome 152 sends: a TargetInfo with openerId,
+   canAccessOpener and openerFrameId (test/fixtures/unlabelled-controls-chrome.json, see
+   docs/cdp-shapes.md). The test supplies the ids, the fixture supplies the shape. *)
+let chrome_fixture () =
+  let load path = Yojson.Safe.from_file path in
+  try load "fixtures/unlabelled-controls-chrome.json"
+  with Sys_error _ -> load "test/fixtures/unlabelled-controls-chrome.json"
+
+let popup_params fixture ~session ~target_id ~opener_id ~url ~title =
+  let attached =
+    member "popup" fixture |> fun popup -> member "attached_to_target" popup
+  in
+  let fields =
+    match member "targetInfo" attached with
+    | `Assoc fields -> fields
+    | _ -> Alcotest.fail "the fixture has no popup targetInfo"
+  in
+  let set key value fields = (key, value) :: List.remove_assoc key fields in
+  let fields = set "targetId" (s target_id) fields in
+  let fields = set "openerId" (s opener_id) fields in
+  let fields = set "url" (s url) fields in
+  let fields = set "title" (s title) fields in
+  o
+    [
+      ("sessionId", s session); ("waitingForDebugger", b false); ("targetInfo", o fields);
+    ]
+
 let popups () =
   rig (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
+      let fixture = chrome_fixture () in
+      let created = ref 0 in
+      Fake.on_method fake "Target.createTarget" (fun _ ->
+          incr created;
+          o [ ("targetId", s (Printf.sprintf "target-%d" !created)) ]);
+      let handle = new_tab tabs in
+      let opener = Printf.sprintf "target-%d" !created in
       Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
           if
             Option.value ~default:"" (E.string_member "type" (params request))
@@ -804,24 +838,9 @@ let popups () =
           then
             Fake.emit fake ~method_:"Target.attachedToTarget"
               ~params:
-                (o
-                   [
-                     ("sessionId", s "session-2");
-                     ("waitingForDebugger", b false);
-                     ( "targetInfo",
-                       o
-                         [
-                           ("targetId", s "target-9");
-                           ("type", s "page");
-                           ("title", s "Popup");
-                           ("url", s "https://example.com/popup");
-                           ("attached", b true);
-                           ("canAccessOpener", b true);
-                           ("browserContextId", s "browser-context-1");
-                         ] );
-                   ]);
+                (popup_params fixture ~session:"session-2" ~target_id:"target-9"
+                   ~opener_id:opener ~url:"https://example.com/popup" ~title:"Popup");
           o []);
-      let handle = new_tab tabs in
       let id = snapshot_id (snap tabs handle) in
       let reply =
         result (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 }))
@@ -835,7 +854,65 @@ let popups () =
         | [] -> Alcotest.fail "no popup"
       in
       Alcotest.(check string)
-        "tab-tm6c the popup's url" "https://example.com/popup" (text "url" popup))
+        "tab-tm6c the popup's url" "https://example.com/popup" (text "url" popup);
+      Alcotest.(check string) "tab-8k2g owned by the caller" "alice" (text "owner" popup);
+      Alcotest.(check string)
+        "tab-8k2g inherits the opener's origin" "agent" (text "origin" popup))
+
+(* tab-8k2g: a tab another agent's tab opened while this action was in flight is not this
+   caller's popup, even though it appeared in the same moment. *)
+let popups_exact () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let fixture = chrome_fixture () in
+      let created = ref 0 in
+      Fake.on_method fake "Target.createTarget" (fun _ ->
+          incr created;
+          o [ ("targetId", s (Printf.sprintf "target-%d" !created)) ]);
+      let sessions = ref 0 in
+      Fake.on_method fake "Target.attachToTarget" (fun _ ->
+          incr sessions;
+          o [ ("sessionId", s (Printf.sprintf "session-%d" !sessions)) ]);
+      let alice = new_tab_for tabs "alice" in
+      let acted_on = Printf.sprintf "target-%d" !created in
+      let bob = new_tab_for tabs "bob" in
+      Alcotest.(check bool) "tab-8k2g two owners, two tabs" true (alice <> bob);
+      let id = snapshot_id (snap tabs alice) in
+      Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
+          if
+            Option.value ~default:"" (E.string_member "type" (params request))
+            = "mousePressed"
+          then (
+            Fake.emit fake ~method_:"Target.attachedToTarget"
+              ~params:
+                (popup_params fixture ~session:"session-3" ~target_id:"target-3"
+                   ~opener_id:acted_on ~url:"https://example.com/alice-popup"
+                   ~title:"Alice");
+            Fake.emit fake ~method_:"Target.attachedToTarget"
+              ~params:
+                (popup_params fixture ~session:"session-4" ~target_id:"target-4"
+                   ~opener_id:"target-2" ~url:"https://example.com/bob-popup" ~title:"Bob"));
+          o []);
+      let reply =
+        result (request tabs "alice" (P.Click { tab = alice; snapshot = id; index = 1 }))
+      in
+      let popups = list (member "popups" reply) in
+      Alcotest.(check int) "tab-8k2g only the acted tab's popup" 1 (List.length popups);
+      let popup = List.hd popups in
+      Alcotest.(check string)
+        "tab-8k2g it is the acted tab's popup" "https://example.com/alice-popup"
+        (text "url" popup);
+      Alcotest.(check string) "tab-8k2g owned by the caller" "alice" (text "owner" popup);
+      let list_of who =
+        result (request tabs who (P.List_tabs { all = false })) |> member "tabs" |> list
+      in
+      Alcotest.(check int)
+        "tab-8k2g the popup is alice's tab too" 2
+        (List.length (list_of "alice"));
+      Alcotest.(check int)
+        "tab-8k2g the peer keeps its own popup" 2
+        (List.length (list_of "bob")))
 
 (* tab-60kn: a dialog blocks the page, so every action refuses until it is answered. *)
 let dialog () =
@@ -1025,6 +1102,7 @@ let () =
           Alcotest.test_case "tab-5deq" `Quick select;
           Alcotest.test_case "tab-8dop" `Quick scroll;
           Alcotest.test_case "tab-tm6c" `Quick popups;
+          Alcotest.test_case "tab-8k2g" `Quick popups_exact;
           Alcotest.test_case "tab-60kn" `Quick dialog;
           Alcotest.test_case "tab-hxld" `Quick serialization;
           Alcotest.test_case "tab-8la3 bw4j" `Quick focus_emulation;

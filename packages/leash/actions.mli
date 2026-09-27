@@ -20,12 +20,21 @@
     into a combobox up to two hundred milliseconds of animation frames polling for visible
     suggestions, otherwise two animation frames bounded by fifty milliseconds. Each action
     replies with the tab's url and title after the action, the dialogs state, and the tabs
-    it opened (tab-tm6c). The registry runs actions under the tab's lock, so one tab's
-    actions proceed in arrival order while another tab's are unaffected (tab-hxld). *)
+    it opened (tab-tm6c). A popup is a tab that was not in the registry when the action
+    began, whose Chrome [openerId] is the acted-on tab, and that the caller owns, so
+    another agent's concurrent tab is never reported as this caller's (tab-8k2g).
+    [action_result.snapshot] is always [null] in this version: settling takes no snapshot,
+    and a caller that wants a fresh table asks for one with [snap]. The registry runs
+    actions under the tab's lock, so one tab's actions proceed in arrival order while
+    another tab's are unaffected (tab-hxld). *)
 
 type tab = {
   session : string;  (** The tab's flat page session. *)
+  target : string;
+      (** The tab's Chrome target id: the [openerId] a popup of this tab carries. *)
   handle : Protocol.Handle.t;
+  owner : Protocol.Owner.t;
+      (** The caller, which a popup must be owned by to be reported. *)
   page : unit -> string * string;
       (** The registry's current url and title for the tab. *)
   refresh : unit -> unit;
@@ -35,9 +44,10 @@ type tab = {
       (** The current snapshot: its id, the loader id it was taken under, and every row
           with the backend node id it came from. *)
   dialog : unit -> Protocol.dialog option;
-  all_tabs : unit -> Protocol.tab_info list;
-      (** Every tab in the registry, all owners, ordered by handle: the action's own
-          popups are the ones that were not there when it began. *)
+  all_tabs : unit -> (Protocol.tab_info * string option) list;
+      (** Every tab in the registry, all owners, ordered by handle, paired with the target
+          id of the tab that opened it when Chrome reports one ([openerId]): the action's
+          own popups are the fresh entries whose opener is its own target id. *)
 }
 
 val click :

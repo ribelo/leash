@@ -577,12 +577,41 @@ let human () =
       Alcotest.(check int) "agent only closed, human retained" 1 (List.length closed);
       ignore agent)
 
+(* Blank the accessible name Chrome computed from the placeholder: the shape a control
+   whose name the author suppressed has, while its DOM attribute stays. *)
+let nameless_placeholder ax =
+  let blank (node : Yojson.Safe.t) (fields : (string * Yojson.Safe.t) list) =
+    let name : Yojson.Safe.t =
+      match field "name" node with
+      | Some (`Assoc name) ->
+          `Assoc
+            (List.map (fun (k, v) -> if k = "value" then (k, str "") else (k, v)) name)
+      | _ -> `Null
+    in
+    `Assoc (("name", name) :: List.remove_assoc "name" fields)
+  in
+  match field "nodes" ax with
+  | Some (`List nodes) ->
+      let nodes =
+        List.map
+          (fun (node : Yojson.Safe.t) ->
+            match field "name" node with
+            | Some (`Assoc name)
+              when List.assoc_opt "value" name = Some (str "Search terms") -> (
+                match node with `Assoc fields -> blank node fields | _ -> node)
+            | _ -> node)
+          nodes
+      in
+      obj [ ("nodes", `List nodes) ]
+  | _ -> ax
+
 (* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8.
    AX and DOMSnapshot replies below are copied from headless Chrome 152, not invented. *)
-let snapshot_fixture () =
-  let load name = Yojson.Safe.from_file name in
-  try load "fixtures/snapshot-chrome.json"
-  with Sys_error _ -> load "test/fixtures/snapshot-chrome.json"
+let fixture name =
+  let load path = Yojson.Safe.from_file path in
+  try load ("fixtures/" ^ name) with Sys_error _ -> load ("test/fixtures/" ^ name)
+
+let snapshot_fixture () = fixture "snapshot-chrome.json"
 
 let snapshot () =
   rig (fun _ _ _ tabs fake ->
@@ -718,6 +747,63 @@ let snapshot () =
         "tab-of0i counter installed on attach" true
         (List.mem "Page.addScriptToEvaluateOnNewDocument" methods))
 
+(* tab-zc36: a control with an empty accessible name is what an agent still has to act on,
+   so it keeps its row with its role, an empty name, and its value or placeholder. The AX
+   and DOMSnapshot replies are the recorded headless Chrome 152 shapes for a page with an
+   unlabelled native select, a bare text input, an input whose only text is a placeholder,
+   and an icon button with no name (test/fixtures/unlabelled-controls-chrome.json). *)
+let empty_names () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      let fixture = fixture "unlabelled-controls-chrome.json" in
+      Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
+      Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
+      Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
+      let guard = get "guard" fixture in
+      Fake.on_method fake "Runtime.evaluate" (fun _ ->
+          obj [ ("result", obj [ ("type", str "object"); ("value", guard) ]) ]);
+      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let snapshot () =
+        result
+          (request tabs "alice"
+             (P.Snap { tab = h; match_ = None; limit = None; offset = None }))
+      in
+      let rows json = match get "rows" json with `List rows -> rows | _ -> [] in
+      let value row = match field "value" row with Some (`String v) -> v | _ -> "" in
+      let named role name json =
+        List.find_opt
+          (fun row -> get "role" row = str role && get "name" row = str name)
+          (rows json)
+      in
+      let first = snapshot () in
+      (match named "combobox" "" first with
+      | Some row ->
+          Alcotest.(check string)
+            "tab-zc36 the unlabelled select keeps its value" "Alpha" (value row)
+      | None -> Alcotest.fail "tab-zc36 the unlabelled select is missing from the table");
+      (match named "textbox" "" first with
+      | Some _ -> ()
+      | None -> Alcotest.fail "tab-zc36 the bare text input is missing from the table");
+      (match named "button" "" first with
+      | Some _ -> ()
+      | None -> Alcotest.fail "tab-zc36 the icon button is missing from the table");
+      (match named "textbox" "Search terms" first with
+      | Some _ -> ()
+      | None -> Alcotest.fail "tab-zc36 the placeholder-named input is missing");
+      Alcotest.(check bool)
+        "tab-zc36 every row has an index to act on" true
+        (List.for_all
+           (fun row -> match field "index" row with Some (`Int i) -> i > 0 | _ -> false)
+           (rows first));
+      Fake.on_method fake "Accessibility.getFullAXTree" (fun _ ->
+          nameless_placeholder (get "ax" fixture));
+      let second = snapshot () in
+      Alcotest.(check bool)
+        "tab-zc36 a nameless control shows its placeholder" true
+        (List.exists
+           (fun row -> get "name" row = str "" && value row = "Search terms")
+           (rows second)))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -735,5 +821,6 @@ let () =
           Alcotest.test_case "chrome-2z2z 6lfk" `Quick lost;
           Alcotest.test_case "chrome-fwnu socket" `Quick socket;
           Alcotest.test_case "human-origin shutdown" `Quick human;
+          Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
         ] );
     ]

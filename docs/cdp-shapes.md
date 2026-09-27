@@ -161,3 +161,60 @@ Two shapes an action depends on but does not control:
 Run `bash scripts/live-acceptance-m2` for the real-service gate. Public `https://www.wikipedia.org/` exposed a named search input; filling `Ada Lovelace` and pressing Enter navigated to `https://en.wikipedia.org/wiki/Ada_Lovelace`. Public `https://www.w3.org/WAI/tutorials/forms/grouping/` exposed `<select id="course">` as AX `combobox` named `Course:` once scrolled into view; choosing option index 2 yielded value `8.01.2`. Before scroll the select was absent from the visible table; after scroll the initial top navigation disappeared. `DOMSnapshot.layout.bounds` on that long page are document coordinates, not viewport coordinates; `scrollY` reached thousands of CSS pixels and must be added to the viewport clip.
 
 The deterministic local `/overlay` page established `DOM.getNodeForLocation` returned `{"backendNodeId":10,"frameId":"…"}` at the covered target centre `(110,106)`, distinct from its row backend id 9; `click` refused `row-not-actionable`. The uncovered dismiss button had a fractional quad centre `(314.65625,90.5)`: sending those fractions to `DOM.getNodeForLocation` returned CDP error `-32602 Invalid parameters` **in this live service run**, although the earlier L7 probe recorded a fractional request succeeding. Rounded integer `(315,91)` hit the dismiss button; dismissal then allowed the target click and changed the title to `Overlay clicked`. `Input.dispatchMouseEvent` still accepts fractional CSS coordinates. Local fixtures replace the requested public overlay/clock because their occlusion and mutation timing must be repeatable. A background-tab focus button observed `document.hasFocus() == true` and ongoing animation frames; a heavy live clock yielded a visible `settled:false` snapshot after three inconsistent guarded pairs. Service SIGTERM exited 0 and its isolated headless Chrome disappeared.
+
+## L10 empty-name controls and popup openers (Chrome/152.0.7977.64, headless pipe)
+
+Probe: `--headless=new`, `--remote-debugging-pipe`, one attached page session, browser-level
+`Target.setDiscoverTargets` and `Target.setAutoAttach` (`flatten:true`), and a
+`data:text/html` page with an unlabelled `<select>`, a bare `<input type="text">`, an
+`<input type="text" placeholder="Search terms">`, and a `<button>` whose only child is an
+`<svg>`. The raw AX tree, DOMSnapshot, guard, frame tree and popup TargetInfos are in
+[unlabelled-controls-chrome.json](../test/fixtures/unlabelled-controls-chrome.json).
+
+The measured accessibility table for those controls:
+
+| Element | AX role | AX name | AX `value` | Other members |
+| --- | --- | --- | --- | --- |
+| unlabelled `<select>` | `combobox` | `""` | `"Alpha"` (the selected option's text) | `properties` `focusable`, `hasPopup:"menu"`, `expanded:false`; one `MenuListPopup` child holding the `option` nodes |
+| bare `<input type="text">` | `textbox` | `""` | absent — the node has no `value` member | `properties` `editable:"plaintext"`, `settable:true`, `readonly:false` |
+| `<input placeholder="Search terms">` | `textbox` | `"Search terms"` | absent | the same members |
+| `<button><svg/></button>` | `button` | `""` | absent | one `image` child with an empty name |
+
+- Chrome computes a text input's accessible name from its `placeholder` when nothing else
+  names it, so a placeholder-only input is **not** nameless, and there is no placeholder
+  member anywhere in the accessibility reply. A control whose name is empty and which still
+  has a placeholder attribute is identified through the DOM half of the join:
+  `DOMSnapshot.captureSnapshot` returns `nodes.attributes[i]` as a flat
+  `[nameIndex, valueIndex, …]` array of indexes into `strings`, aligned with
+  `nodes.backendNodeId[i]`, so the attribute is read on the same backend node id the AX
+  tree uses. `Snapshot_source.rows` keeps a control with an empty name and falls back to
+  that attribute for the row's `value` (tab-zc36).
+- An unnamed icon button is a `button` whose child is an `image` node (not `img`), and the
+  unlabelled select's options hang under a `MenuListPopup` node. Neither AX-only role is in
+  the L6 role list, so neither becomes a row of its own.
+
+A popup opened from that page (`window.open('about:blank','popwin')` under a user gesture)
+appeared as a target whose every pushed TargetInfo carries the opener:
+
+```json
+{"targetId":"90FCA3FE…","type":"page","title":"","url":"","attached":true,
+ "openerId":"247E5BA9…","canAccessOpener":true,"openerFrameId":"247E5BA9…",
+ "browserContextId":"8B419239…"}
+```
+
+- `Target.getTargetInfo` answers with the same members and `Target.getTargets` lists the
+  popup with `openerId`; `Target.targetCreated`, `Target.targetInfoChanged` and
+  `Target.attachedToTarget` all carry it, with `attached` moving `false` → `true` as the
+  auto-attach session is created. A target with no opener omits `openerId` entirely and
+  reports `canAccessOpener:false`. `openerId` names the opener's **target id**; the popup's
+  `openerFrameId` is that same id for a main-frame opener. That field is what `Tabs` adopts
+  a page's popup with, and what `Actions` reports a popup by (tab-8k2g).
+- **The call that opens a popup gets no reply while the popup exists.** The
+  `Runtime.evaluate` running `window.open` was still unanswered when a five-second deadline
+  expired, while a second `Runtime.evaluate` on the same page session answered normally in
+  that window; the popup target existed, was attached, and stayed at `url:""`, `title:""`
+  because nothing had navigated it. `Input.dispatchMouseEvent` for a click whose handler
+  called `window.open` behaved the same way. An action that opens a popup therefore waits on
+  the browser, not on the action's own settle budget, and the 30-second CDP deadline is what
+  bounds it. The control-seam tests script these events, so this timing can only be caught by
+  live acceptance.
