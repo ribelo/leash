@@ -33,7 +33,9 @@ val create :
   t
 (** Starts the sweep fiber as a daemon of [sw], so it stops with the switch. [interval]
     defaults to {!interval}; [idle] and [unclaimed] are the configured durations
-    (own-vhqo), and each pass is recorded at info level with the tab it acted on. *)
+    (own-vhqo), and each pass is recorded at info level with the tab it acted on. The
+    live-acceptance gate overrides the period through LEASH_SWEEP_INTERVAL_S (test-only;
+    production always uses the 30 s contract default). *)
 
 val sweep : t -> (Protocol.Handle.t * Tabs.sweep_step) list
 (** One pass, synchronously: exactly what the fiber runs on a tick, and what a test calls

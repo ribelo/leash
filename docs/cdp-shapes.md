@@ -247,3 +247,61 @@ record above shows `attached` moving false → true with it.
 targetInfo an `openerId` that names a tab Leash created opens a popup. The live half — a
 tab opened by a second CDP client, a real `window.open` popup — belongs to L14's
 acceptance.
+
+## L14 live acceptance (Chrome/152.0.7977.64, headless pipe, scripts/live-acceptance-m3)
+
+Run `bash scripts/live-acceptance-m3` for the real-service gate: phase 0 proves the
+test-only sweep override fails fast, then one service each for ownership, popups, and
+expiry (idle 5 s, unclaimed 12 s, sweep 1 s). Every phase ends in SIGTERM exit 0 with
+its Chrome gone. The live half of L12 answers the L10 open question and splits popups
+in two:
+
+- **The popup-opening dispatch hangs, and the fix answers anyway.** A click whose
+  handler calls opener-holding `window.open` got no reply at all before the fix: the
+  dispatch reply is withheld while the popup exists, past the 10 s control budget, so
+  the CLI saw "service closed without a reply". Every trusted input dispatch is now
+  awaited 2 s; when the page still answers `Page.getFrameTree` afterwards the input
+  was delivered and the action proceeds to the popup it opened, whose `openerId`
+  names the acted-on tab, so `ActionResult.popups` and adoption (own-ehqa) work.
+  The gate's adoption click answers in about 2 s with the popup agent/owned by the
+  opener's owner. Only a page that answers nothing is `browser-unavailable`
+  (`test/actions_test.ml`: own-ehqa popup dispatch unanswered, silent page
+  unavailable).
+- **Opener-holding and noopener popups behave nothing alike.** The named open above
+  stalls its own navigation: the popup sits at `url:""` (later reports show the
+  *opener's* URL for the still-pending popup) and the opener's session is impaired
+  from then on -- `Runtime.callFunctionOn` and `awaitPromise` evaluates hang while
+  `returnByValue` evaluates, AX, DOMSnapshot, and Target calls answer, and later
+  input dispatches on that session go unanswered too. A `window.open` with
+  `'noopener'` instead commits at once with healthy sessions on both sides and is
+  repeatable on the same opener -- and Chrome still reports `openerId`, so Leash
+  adopts it (which is why noopener was rejected as the outside-tab route). The gate
+  adopts on the hard path and closes on the fast one.
+- **A click that closes its own tab reports its own death.** `window.close()` from
+  the click handler destroys the target mid-dispatch, so neither the reply nor the
+  page-liveness check can answer; Leash then asks the browser session whether the
+  target still exists, and when it does not the action reports `tab-gone` with
+  `closed_externally` (own-teh1) -- the same answer any later command on the handle
+  gets. If the reply wins the race the click succeeds and the next command reports
+  `tab-gone`; the gate accepts both. `window.close()` on a tab Leash created via
+  `Target.createTarget` is ignored (not script-opened), so only a script-opened
+  popup can exercise this live.
+- **The wedged opener-holding click can leave late, uncloseable debris.** About half
+  the named-open runs grew extra page targets a minute later -- blank or
+  opener-URLed, agent- or human-attributed (an announcement whose openerId the wedge
+  lost is human/unowned, exactly per the rule) -- whose `Target.closeTarget` Chrome
+  refuses. SIGTERM reaps them with the browser, so the popups phase runs on its own
+  Chrome and asserts no cleanup. The mechanism (a late-paired click re-firing the
+  handler is the best guess) is unverified; Leash's handling is spec-correct either
+  way.
+- **The outside tab is Chrome's initial target.** Every run lists `chrome://newtab/`
+  as human/unowned from the start, announced with no openerId and never created by
+  Leash -- that is the own-c0cl tab, and the gate claims it. This machine's managed
+  policy force-installs an extension (ExtensionInstallForcelist) whose installed page
+  opens as a second human/unowned tab about a minute in; the gate filters strays by
+  URL and never asserts tab counts.
+- **Eval that opens or closes stays bounding-boxed, not fixed.** An evaluated
+  `window.open` still waits out the 30 s CDP deadline and reports `timeout` (the
+  popup is adopted meanwhile); its value *is* the withheld reply, so no dispatch
+  bound can save it, and reimplementing eval around `callFunctionOn` was rejected.
+  The gate opens popups by click, never by eval.

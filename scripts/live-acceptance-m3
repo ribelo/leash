@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# Live L14 gate: milestone-3 ownership, claim/release, expiry and disposition through
+# the real CLI/service/headless-Chrome. Chrome is always headless (--headless=new is
+# asserted on the browser command line); never run headed on this machine.
+#
+# Three phases, one service each: ownership (long idle), popups (long idle, on its
+# own Chrome because the opener-holding click can leave late uncloseable debris),
+# then expiry (idle 5 s, unclaimed 12 s, sweep 1 s). The sweep override is the test-only route
+# LEASH_SWEEP_INTERVAL_S (production always uses the 30 s contract default); a bad
+# value fails fast before Chrome launches, proved as phase 0.
+#
+# Usage: scripts/live-acceptance-m3 [--binary /path/to/chrome]
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [[ "${1:-}" != "--inside-nix" ]]; then
+  exec nix develop -c bash "$0" --inside-nix "$@"
+fi
+shift
+binary="$(command -v google-chrome-stable || command -v chromium)"
+if [[ "${1:-}" == "--binary" ]]; then binary="$(realpath "$2")"; shift 2; fi
+if [[ "$#" != 0 ]]; then echo "usage: $0 [--binary PATH]" >&2; exit 2; fi
+binary="$(realpath "$binary")"
+dune build @install
+leash="$(pwd)/_build/default/packages/leash/bin/main.exe"
+root="$(mktemp -d)"
+chmod 700 "$root"
+export XDG_RUNTIME_DIR="$root/runtime"
+mkdir -m 700 "$XDG_RUNTIME_DIR"
+browser_alive() {
+  python3 - "$1" <<'PY'
+import os,sys
+profile=sys.argv[1].encode()
+for entry in os.listdir('/proc'):
+    if not entry.isdigit() or int(entry)==os.getpid(): continue
+    try: argv=open('/proc/'+entry+'/cmdline','rb').read().split(b'\0')
+    except (OSError, PermissionError): continue
+    if any(b'--user-data-dir='+profile in a for a in argv) and any(b'--remote-debugging-pipe' in a for a in argv):
+        if not any(b'--headless=new' in a for a in argv):
+            print('ERROR: Chrome was started without --headless=new', file=sys.stderr)
+            sys.exit(2)
+        print(entry)
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+service_pid=""
+current_profile=""
+phase_log=""
+cleanup() {
+  if [[ -n "$service_pid" ]] && kill -0 "$service_pid" 2>/dev/null; then
+    kill -TERM "$service_pid" || :
+    wait "$service_pid" || :
+  fi
+  if [[ -n "$current_profile" ]] && browser_alive "$current_profile" >/dev/null; then
+    echo "ERROR: Chrome remains alive with temporary profile $current_profile" >&2
+    exit 1
+  fi
+  rm -rf "$root"
+}
+trap cleanup EXIT
+write_config() {
+  cat > "$1" <<EOF
+[chrome]
+binary = "$binary"
+profile_dir = "$2"
+workspace = "test"
+headless = true
+[tabs]
+cap = 12
+[expiry]
+idle_s = $3
+unclaimed_s = $4
+tombstone_s = 3600
+[models]
+jev_model = "not-used"
+text_model = "not-used"
+EOF
+}
+echo "phase 0: LEASH_SWEEP_INTERVAL_S rejects a bad value before Chrome launches"
+write_config "$root/leash0.toml" "$root/profile0" 3600 3600
+LEASH_SWEEP_INTERVAL_S=bogus "$leash" run --config "$root/leash0.toml" >"$root/service0.log" 2>&1 &
+fail_pid=$!
+for _ in $(seq 1 200); do kill -0 "$fail_pid" 2>/dev/null || break; sleep 0.1; done
+if kill -0 "$fail_pid" 2>/dev/null; then
+  echo "ERROR: service with a bad sweep interval did not exit" >&2
+  kill -TERM "$fail_pid" || :; wait "$fail_pid" || :
+  exit 1
+fi
+if wait "$fail_pid"; then echo "ERROR: bad sweep interval exited 0" >&2; exit 1; fi
+grep -q "LEASH_SWEEP_INTERVAL_S" "$root/service0.log" || {
+  echo "ERROR: no fail-fast message" >&2; sed -n '1,40p' "$root/service0.log" >&2; exit 1; }
+if browser_alive "$root/profile0" >/dev/null; then
+  echo "ERROR: Chrome launched despite a bad sweep interval" >&2; exit 1; fi
+echo "phase 0: fail-fast ok"
+start_phase() {
+  current_profile="$root/profile-$1"
+  phase_log="$root/service-$1.log"
+  write_config "$root/leash-$1.toml" "$current_profile" "$2" "$3"
+  if [[ -n "$4" ]]; then export LEASH_SWEEP_INTERVAL_S="$4"; else unset LEASH_SWEEP_INTERVAL_S; fi
+  "$leash" run --config "$root/leash-$1.toml" >"$phase_log" 2>&1 &
+  service_pid=$!
+  unset LEASH_SWEEP_INTERVAL_S
+  socket="$XDG_RUNTIME_DIR/leash/control.sock"
+  rm -f "$socket"
+  for _ in $(seq 1 100); do
+    if [[ -S "$socket" ]]; then break; fi
+    if ! kill -0 "$service_pid" 2>/dev/null; then
+      echo "ERROR ($1): Leash exited before socket appeared" >&2
+      sed -n '1,100p' "$phase_log" >&2
+      exit 1
+    fi
+    sleep 0.1
+  done
+  if [[ ! -S "$socket" ]]; then echo "ERROR ($1): control socket did not appear" >&2; exit 1; fi
+  for _ in $(seq 1 100); do
+    if "$leash" status --owner live >/dev/null 2>&1; then break; fi
+    sleep 0.1
+  done
+  if ! browser_alive "$current_profile" >/dev/null; then
+    echo "ERROR ($1): no headless Chrome with the test profile" >&2; exit 1; fi
+}
+stop_phase() {
+  kill -TERM "$service_pid"
+  if wait "$service_pid"; then echo "SIGTERM ($1): Leash exited 0"; else
+    echo "ERROR ($1): Leash exited nonzero" >&2; sed -n '1,100p' "$phase_log" >&2; exit 1
+  fi
+  service_pid=""
+  if browser_alive "$current_profile" >/dev/null; then
+    echo "ERROR ($1): Chrome remains after Leash exited" >&2; exit 1; fi
+  echo "Chrome ($1): gone"
+}
+start_phase ownership 3600 3600 ""
+python3 scripts/live-acceptance-m3.py "$leash" "$root" ownership
+stop_phase ownership
+start_phase popups 3600 3600 ""
+python3 scripts/live-acceptance-m3.py "$leash" "$root" popups
+stop_phase popups
+start_phase expiry 5 12 "1"
+python3 scripts/live-acceptance-m3.py "$leash" "$root" expiry
+stop_phase expiry
+echo "milestone-3 live acceptance passed (headless)"

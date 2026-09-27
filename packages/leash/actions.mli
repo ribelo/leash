@@ -22,11 +22,17 @@
     replies with the tab's url and title after the action, the dialogs state, and the tabs
     it opened (tab-tm6c). A popup is a tab that was not in the registry when the action
     began, whose Chrome [openerId] is the acted-on tab, and that the caller owns, so
-    another agent's concurrent tab is never reported as this caller's (tab-8k2g).
-    [action_result.snapshot] is always [null] in this version: settling takes no snapshot,
-    and a caller that wants a fresh table asks for one with [snap]. The registry runs
-    actions under the tab's lock, so one tab's actions proceed in arrival order while
-    another tab's are unaffected (tab-hxld). *)
+    another agent's concurrent tab is never reported as this caller's (tab-8k2g). Chrome
+    withholds the reply of the trusted input that opens a popup (docs/cdp-shapes.md, L10),
+    so every input dispatch is awaited only briefly: when the page still answers
+    afterwards the input was delivered and the action proceeds to the popup it opened
+    (own-ehqa). A page that answers nothing is [browser-unavailable], unless the browser
+    no longer knows the target: then the handler closed the tab, and the action reports
+    [tab-gone] with [closed_externally] (own-teh1). [action_result.snapshot] is always
+    [null] in this version: settling takes no snapshot, and a caller that wants a fresh
+    table asks for one with [snap]. The registry runs actions under the tab's lock, so one
+    tab's actions proceed in arrival order while another tab's are unaffected (tab-hxld).
+*)
 
 type tab = {
   session : string;  (** The tab's flat page session. *)

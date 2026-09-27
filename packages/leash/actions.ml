@@ -59,6 +59,72 @@ let call cdp ~session method_ params =
   | Error (Transport why) ->
       fail "browser-unavailable" ("Chrome did not answer; try again shortly: " ^ why)
 
+(* L14 (own-ehqa): Chrome withholds the reply of the trusted input that opens a
+   popup: the dispatch whose handler calls [window.open] is never answered while the
+   popup exists (docs/cdp-shapes.md, L10), and an action that awaited it would hang
+   with it. A dispatch is therefore awaited only briefly; when the page still answers
+   afterwards the input was delivered and the action proceeds to the popup it opened.
+   A page that answers nothing is [browser-unavailable], unless the browser no longer
+   knows the target at all: then the handler closed the tab, and the action reports
+   [tab-gone] with [closed_externally] (own-teh1), the same answer any later command
+   on the handle gets. The bound keeps a
+   popup-opening click inside the control handler's budget, and nothing is ever sent
+   twice (tab-1lhx). *)
+let dispatch_timeout = Eta.Duration.seconds 2
+let liveness_timeout = Eta.Duration.seconds 2
+
+let disposition name =
+  match P.Disposition.of_string name with Ok d -> d | Error _ -> assert false
+
+let page_alive cdp tab =
+  match
+    attempt ~deadline:liveness_timeout cdp ~session:tab.session "Page.getFrameTree"
+      (E.object_ [])
+  with
+  | Ok _ -> true
+  | Error _ -> false
+
+(* L14 (own-teh1): a dispatch whose handler closes the tab destroys its own reply:
+   the page is silent because its target is gone, not because the browser wedged. A
+   browser session that no longer knows the target is that death. *)
+let target_gone cdp tab =
+  match
+    Cdp.call cdp ~deadline:liveness_timeout "Target.getTargetInfo"
+      (E.object_ [ ("targetId", Some (E.string tab.target)) ])
+  with
+  | Ok reply -> Option.is_some (Cdp.error_of_reply reply)
+  | Error _ -> false
+
+let tab_gone_externally () =
+  error
+    ~detail:
+      (E.object_
+         [
+           ( "disposition",
+             Some (P.Disposition.yojson_of_t (disposition "closed_externally")) );
+         ])
+    "tab-gone" "the tab is gone"
+
+let dispatch cdp tab method_ params =
+  match Cdp.call cdp ~session:tab.session ~deadline:dispatch_timeout method_ params with
+  | Ok reply -> (
+      match Cdp.error_of_reply reply with
+      | Some (number, message) ->
+          fail "internal"
+            (Printf.sprintf "the browser refused %s (%d %s)" method_ number message)
+      | None -> (
+          match Cdp.result reply with
+          | Some _ -> Ok ()
+          | None ->
+              fail "browser-unavailable"
+                "Chrome did not answer; try again shortly: the browser's reply carried \
+                 no result"))
+  | Error `Timeout ->
+      if page_alive cdp tab then Ok ()
+      else if target_gone cdp tab then Error (tab_gone_externally ())
+      else fail "browser-unavailable" "Chrome did not answer; try again shortly"
+  | Error _ -> fail "browser-unavailable" "Chrome did not answer; try again shortly"
+
 let handles tab =
   List.map (fun ((info : P.tab_info), _) -> P.Handle.to_string info.tab) (tab.all_tabs ())
 
@@ -260,19 +326,16 @@ let aim cdp tab (target : target) =
     else fail "row-not-actionable" "the row is covered at its click point"
 
 let mouse cdp tab ~type_ ~x ~y ~buttons =
-  let* _ =
-    call cdp ~session:tab.session "Input.dispatchMouseEvent"
-      (E.object_
-         [
-           ("type", Some (E.string type_));
-           ("x", E.float x);
-           ("y", E.float y);
-           ("button", Some (E.string "left"));
-           ("buttons", Some (E.int buttons));
-           ("clickCount", Some (E.int 1));
-         ])
-  in
-  Ok ()
+  dispatch cdp tab "Input.dispatchMouseEvent"
+    (E.object_
+       [
+         ("type", Some (E.string type_));
+         ("x", E.float x);
+         ("y", E.float y);
+         ("button", Some (E.string "left"));
+         ("buttons", Some (E.int buttons));
+         ("clickCount", Some (E.int 1));
+       ])
 
 let frames_expression =
   "new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => \
@@ -395,8 +458,7 @@ let key_event ?(modifiers = 0) cdp tab ~type_ spec =
         [ ("text", Some (E.string text)); ("unmodifiedText", Some (E.string text)) ]
     | None -> []
   in
-  let* _ = call cdp ~session:tab.session "Input.dispatchKeyEvent" (E.object_ fields) in
-  Ok ()
+  dispatch cdp tab "Input.dispatchKeyEvent" (E.object_ fields)
 
 let press_key cdp tab name =
   match key_spec name with
@@ -411,11 +473,7 @@ let select_content cdp tab =
   key_event ~modifiers:2 cdp tab ~type_:"keyUp" spec
 
 let insert_text cdp tab text =
-  let* _ =
-    call cdp ~session:tab.session "Input.insertText"
-      (E.object_ [ ("text", Some (E.string text)) ])
-  in
-  Ok ()
+  dispatch cdp tab "Input.insertText" (E.object_ [ ("text", Some (E.string text)) ])
 
 (* Blur is what gives a framework-controlled input its change event after
    [Input.insertText]. It is bounded and best effort: a change handler that opens a

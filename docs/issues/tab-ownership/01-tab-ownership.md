@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 3
 ---
 
@@ -57,3 +57,36 @@ Transferring ownership directly to a named owner (release then claim covers it),
 ## Further Notes
 
 - `--force` is the one place a human overrides ownership; it exists because agents die without releasing. If it gets abused by agents, gate it on `owner = human`.
+
+## Live acceptance (L14, headless Chrome 152, scripts/live-acceptance-m3)
+
+Three phases, one service each, all green: ownership (two CLI owners, cross-owner
+refusals, release/claim cycle, the outside tab, `--force`), popups (adoption, a
+self-closing popup), expiry (stage 1 then stage 2 on a real clock with a 1 s sweep via
+the test-only LEASH_SWEEP_INTERVAL_S; a bad value fails fast before Chrome launches).
+SIGTERM exits 0 and the managed Chrome is gone after every phase.
+
+- own-c0cl: the outside tab is Chrome's own initial chrome://newtab/ target, announced
+  on the target stream with no openerId and adopted as human-origin unowned; it is
+  claimable and, claimed then released, survives both expiry stages. A page's
+  window.open with 'noopener' was tried for this route and rejected: Chrome still
+  reports openerId, so Leash adopts that popup.
+- own-ehqa: the adopted popup is verified on the hard path -- an opener-holding
+  window.open whose navigation stalls while Chrome withholds the dispatch reply (the
+  L10 finding, confirmed: the click got no reply at all before the fix). The opening
+  click now answers in about 2 s through the bounded-dispatch fix, with the popup
+  listed agent/owned by the opener's owner.
+- own-teh1: a loaded (noopener) popup closes itself via a clicked window.close button
+  and the handle reports tab-gone closed_externally. The self-closing click wins or
+  loses the reply race nondeterministically; the loss reports tab-gone with
+  closed_externally from the killing command itself.
+- own-uo77, own-hslp: with idle 5 s and unclaimed 12 s, the owned tab is released but
+  still open after 9 s, and gone with closed_by_ttl after 22 s; the human tab is
+  untouched throughout. The 30 s contract default stands in production.
+- own-2zpi is the survival above; own-0pnk is proved by cross-owner --force release
+  and close (a force-close reports closed_by_owner).
+- Live-only Chrome behaviours found while gating are recorded in docs/cdp-shapes.md
+  (L14): the opener-holding/noopener split, session impairment after a withheld
+  dispatch, late uncloseable popup debris, and the force-installed extension's stray
+  tab. None changes the protocol except one clarification: an action that closes its
+  own tab reports tab-gone (docs/protocol.md).

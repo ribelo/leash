@@ -292,6 +292,19 @@ let ( let* ) = Result.bind
 
 let program env (config : Leash.Config.t) sw =
   let base = env.Eta_app.Env.base in
+  (* Test-only: the live-acceptance gate shortens the sweep period through
+     LEASH_SWEEP_INTERVAL_S so stage 1 then stage 2 are observable on a real clock in
+     seconds; production always uses the 30 s contract default. A bad value fails fast,
+     before Chrome launches, rather than silently changing the cadence. *)
+  let* sweep_interval =
+    match Sys.getenv_opt "LEASH_SWEEP_INTERVAL_S" with
+    | None | Some "" -> Ok None
+    | Some text -> (
+        match int_of_string_opt (String.trim text) with
+        | Some n when n > 0 -> Ok (Some (Eta.Duration.seconds n))
+        | Some _ | None ->
+            Error (`Service "LEASH_SWEEP_INTERVAL_S must be a positive integer"))
+  in
   let chrome =
     Leash.Chrome.create ~sw
       (Leash.Config.chrome_config config.chrome)
@@ -312,7 +325,8 @@ let program env (config : Leash.Config.t) sw =
   (* own-uo77 own-hslp: the sweep is one more service in the owner, released with the
      switch. *)
   let _expiry =
-    Leash.Expiry.create ~sw ~idle ~unclaimed ~clock:base#clock ~logger:env.logger tabs
+    Leash.Expiry.create ~sw ?interval:sweep_interval ~idle ~unclaimed ~clock:base#clock
+      ~logger:env.logger tabs
   in
   Eio.Switch.on_release sw (fun () -> Leash.Tabs.stop tabs);
   let status_query = Eta_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in

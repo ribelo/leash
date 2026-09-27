@@ -1090,6 +1090,159 @@ let focus_emulation () =
         "tab-bw4j the DOM agent is enabled for action-time geometry" true
         (List.mem "DOM.enable" (methods fake)))
 
+(* L14 (own-ehqa): the dispatch that opens a popup is never answered while the popup
+   exists (docs/cdp-shapes.md, L10); the action still replies. The fake withholds the
+   press's reply, the clock moves past the dispatch bound, and the click succeeds once
+   the page proves itself alive -- press and release each sent once (tab-1lhx). *)
+let wait_for_press fake =
+  let rec loop n =
+    let pressed =
+      List.exists
+        (fun json -> E.string_member "type" (params json) = Some "mousePressed")
+        (calls fake "Input.dispatchMouseEvent")
+    in
+    if pressed then ()
+    else if n = 0 then Alcotest.fail "own-ehqa the press was never sent"
+    else (
+      Eio.Fiber.yield ();
+      loop (n - 1))
+  in
+  loop 100_000
+
+let popup_dispatch_unanswered () =
+  rig (fun env sw _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let start = List.length (Fake.received fake) in
+      let held, hold = Eio.Promise.create () in
+      let presses = ref 0 in
+      Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
+          let pressed =
+            E.string_member "type" (member "params" request) = Some "mousePressed"
+          in
+          if pressed then incr presses;
+          if pressed && !presses = 1 then Eio.Promise.await held;
+          o []);
+      let cell = ref None in
+      Eio.Fiber.fork ~sw (fun () ->
+          cell :=
+            Some
+              (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+      wait_for_press fake;
+      Eta_test.advance env#clock (Eta.Duration.seconds 3);
+      Eio.Fiber.yield ();
+      Eio.Promise.resolve hold ();
+      let reply = result (await ~sw "own-ehqa the popup-opening click" cell) in
+      Alcotest.(check (list string))
+        "own-ehqa press then release, once each"
+        [ "mousePressed"; "mouseReleased" ]
+        (kinds (calls fake "Input.dispatchMouseEvent"));
+      let during = Fake.received fake |> List.filteri (fun index _ -> index >= start) in
+      let trees =
+        List.filter
+          (fun json -> E.string_member "method" json = Some "Page.getFrameTree")
+          during
+      in
+      Alcotest.(check bool)
+        "own-ehqa the page proved itself alive after the withheld reply" true
+        (List.length trees >= 2);
+      Alcotest.(check bool)
+        "own-ehqa the click reports its tab" true
+        (member "tab" reply <> null))
+
+(* L14 (own-ehqa): a dispatch timeout is only a withheld reply when the page still
+   answers; a page that answers nothing is browser-unavailable, as before. *)
+let silent_page_unavailable () =
+  rig (fun env sw _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let never, _ = Eio.Promise.create () in
+      let pressed = ref false in
+      Fake.on_method fake "Page.getFrameTree" (fun _ ->
+          if !pressed then Eio.Promise.await never;
+          frame_tree "loader-1");
+      Fake.on_method fake "Input.dispatchMouseEvent" (fun _ ->
+          pressed := true;
+          Eio.Promise.await never;
+          o []);
+      let cell = ref None in
+      Eio.Fiber.fork ~sw (fun () ->
+          cell :=
+            Some
+              (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+      wait_for_press fake;
+      (* One second at a time, as control_test's load timeout does: the dispatch,
+         liveness, and target-check bounds expire in turn while the fiber runs. *)
+      let rec spin n =
+        match !cell with
+        | Some _ -> ()
+        | None ->
+            if n = 0 then Alcotest.fail "own-ehqa the silent click never replied"
+            else (
+              Eta_test.advance env#clock (Eta.Duration.seconds 1);
+              Eio.Fiber.yield ();
+              spin (n - 1))
+      in
+      spin 30;
+      check_code "own-ehqa a silent page stays browser-unavailable" "browser-unavailable"
+        (await ~sw "own-ehqa the silent click" cell))
+
+(* own-teh1: a handle that names a closed tab answers tab-gone, and its detail says
+   why. *)
+let check_disposition label expected reply =
+  match reply with
+  | P.Failure e -> (
+      Alcotest.(check string)
+        (label ^ " is tab-gone") "tab-gone"
+        (P.Error_code.to_string e.code);
+      match e.detail with
+      | Some json -> Alcotest.(check string) label expected (text "disposition" json)
+      | None -> Alcotest.failf "%s: tab-gone with no disposition" label)
+  | P.Success _ -> Alcotest.failf "%s: expected tab-gone" label
+
+(* L14 (own-teh1): a dispatch whose handler closes the tab destroys its own reply;
+   the click reports tab-gone with closed_externally instead of
+   browser-unavailable. The fake withholds the press, answers the page-liveness
+   check with a CDP error, and refuses the browser target lookup: the target is
+   gone, not silent. *)
+let suicidal_click_reports_tab_gone () =
+  rig (fun env sw _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let held, hold = Eio.Promise.create () in
+      let presses = ref 0 in
+      let pressed = ref false in
+      Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
+          let is_press =
+            E.string_member "type" (member "params" request) = Some "mousePressed"
+          in
+          if is_press then incr presses;
+          if is_press && !presses = 1 then (
+            pressed := true;
+            Eio.Promise.await held);
+          o []);
+      Fake.on_failure fake "Page.getFrameTree" (fun _ ->
+          if !pressed then Some (404, "No session with given id") else None);
+      Fake.on_failure fake "Target.getTargetInfo" (fun _ ->
+          Some (404, "No target with given id"));
+      let cell = ref None in
+      Eio.Fiber.fork ~sw (fun () ->
+          cell :=
+            Some
+              (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+      wait_for_press fake;
+      Eta_test.advance env#clock (Eta.Duration.seconds 3);
+      Eio.Fiber.yield ();
+      Eio.Promise.resolve hold ();
+      check_disposition "own-teh1 the suicidal click" "closed_externally"
+        (await ~sw "own-teh1 the suicidal click" cell))
+
 let () =
   Alcotest.run "L7 actions"
     [
@@ -1106,5 +1259,11 @@ let () =
           Alcotest.test_case "tab-60kn" `Quick dialog;
           Alcotest.test_case "tab-hxld" `Quick serialization;
           Alcotest.test_case "tab-8la3 bw4j" `Quick focus_emulation;
+          Alcotest.test_case "own-ehqa popup dispatch unanswered" `Quick
+            popup_dispatch_unanswered;
+          Alcotest.test_case "own-ehqa silent page unavailable" `Quick
+            silent_page_unavailable;
+          Alcotest.test_case "own-teh1 suicidal click reports tab-gone" `Quick
+            suicidal_click_reports_tab_gone;
         ] );
     ]
