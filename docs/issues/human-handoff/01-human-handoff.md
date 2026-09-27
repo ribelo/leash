@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed-pending-headed
 milestone: 4
 ---
 
@@ -50,3 +50,17 @@ A streamed viewer; handoff inside `drive`; a GUI.
 ## Further Notes
 
 - If notify-send actions prove unreliable under the user's notification daemon, the fallback is notification without action plus `leash resume`.
+- L18 headless, 2026-09-27: `scripts/live-acceptance-m4` (+ `.py`) green on real
+  headless Chrome through the real CLI/service — agent handoff blocked, human
+  (`--owner human`) resume answered url/title, `--timeout-s 3` answered timeout
+  with the tab owned again, killing the handoff client restored ownership,
+  resume with nobody waiting answered no-handoff, the owner's snap/text were
+  refused with-human, the stand-in notifier printing `done` resumed, the
+  stand-in focus got the substituted tab/reason/url/title, failing stand-ins
+  warned without failing the handoff; SIGTERM exited 0, Chrome gone. No
+  defects found, so no code changed.
+- Headed run pending the user: `scripts/live-acceptance-m4-headed` (manual,
+  headed Chrome, real niri focus + notify-send; do NOT run it headless or from
+  an agent). It records whether the tab resumed and what niri did with
+  `--class=leash` (windows before/after) into `/tmp/leash-m4-headed-result.txt`.
+  When that result is pasted back, flip this status to `completed` and tick L18.
