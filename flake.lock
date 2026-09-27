@@ -21,11 +21,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790524213,
-        "narHash": "sha256-dWFPEOWQyzLtuaIRtlv0ZQqYwGLvnPP9r23mfLFtqRE=",
+        "lastModified": 1790531269,
+        "narHash": "sha256-CD+f08YowNc2hUhBzru9X2TrmmA0N1nQDCuYxeZ1zpc=",
         "ref": "eta-next",
-        "rev": "7ec50e52cc4600d8fe93f296f25da281c4b14f47",
-        "revCount": 3021,
+        "rev": "f51c89ffd5d30e4d89a3215ceabc6c36ec057a22",
+        "revCount": 3023,
         "type": "git",
         "url": "file:///home/ribelo/projects/ribelo/ocaml/Eta"
       },
