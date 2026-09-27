@@ -93,8 +93,9 @@ let state_name = function
 
 (* The command classes the one authorization function distinguishes. Every tab command
    names one: [Act] is everything that touches the page (observe, navigate, act, wait),
-   and only [Close] and [Release] can be forced. *)
-type access = Act | Dialog | Close | Release | Claim
+   [Resume] is the human's answer to a handoff, and only [Close] and [Release] can be
+   forced. *)
+type access = Act | Dialog | Close | Release | Claim | Resume
 
 let access_name = function
   | Act -> "act"
@@ -102,25 +103,42 @@ let access_name = function
   | Close -> "close"
   | Release -> "release"
   | Claim -> "claim"
+  | Resume -> "resume"
 
-let forceable = function Close | Release -> true | Act | Dialog | Claim -> false
+let forceable = function
+  | Close | Release -> true
+  | Act | Dialog | Claim | Resume -> false
+
 let not_owner () = error "not-owner" "the tab belongs to another owner"
 let unowned () = error "not-owner" "the tab is unowned; claim it first"
 let already_owned () = error "already-owned" "the tab is already owned"
 let held_by_human () = error "with-human" "the tab is with the human; resume it first"
+
+let nothing_waiting () =
+  error "no-handoff" "nobody is waiting on this tab; there is no handoff to resume"
 
 (* own-pmr7 own-0np9 own-7pzw own-0pnk hand-nisr: the one authorization function. Acting,
    answering a dialog, releasing, and closing require that the caller owns the tab;
    claiming requires that nobody does; and no command at all reaches a tab the human
    holds. [force] is honoured only for [close] and [release], where it ignores ownership
    and the human's hold entirely, because an agent that died without releasing is exactly
-   why the human needs it (ADR-0005). *)
+   why the human needs it (ADR-0005).
+
+   hand-0sja hand-szz7: [Resume] is the one class anybody may ask for — the human in
+   another terminal is usually not the owner, and a resume only ever gives the tab back to
+   the owner it was handed off from — and the only state that answers it is [With_human].
+   A tab nobody is waiting on is [no-handoff] rather than a refusal about ownership, so a
+   stale notification does nothing surprising. *)
 let authorize ?(force = false) access ~caller state : (unit, P.error) result =
   match access with
   | Claim -> (
       match state with
       | Unowned -> Ok ()
       | Owned _ | With_human _ -> Error (already_owned ()))
+  | Resume -> (
+      match state with
+      | With_human _ -> Ok ()
+      | Unowned | Owned _ -> Error (nothing_waiting ()))
   | Act | Dialog | Close | Release -> (
       if force && forceable access then Ok ()
       else
@@ -151,6 +169,23 @@ type idleness = {
 
 (* What one sweep may do with one tab: release it, close it, or leave it. *)
 type sweep_step = Release_idle | Close_idle | Keep_idle
+
+(* hand-lz3p hand-lmd5 hand-yytf own-0pnk: how one handoff ended. The request that handed
+   the tab over waits on [promise]; [Resumed] is the human's [resume], [Ended] is every
+   other ending the registry decides — the tab leaving it (a browser loss, a close) or a
+   forced release taking the tab away — and carries the error the waiting request answers
+   with. The deadline is not in here at all: it cancels the wait instead of waking it. *)
+type outcome = Resumed | Ended of P.error
+
+(* hand-lz3p hand-r4t1: the record one live handoff leaves on its tab — the reason the
+   human is shown, and the promise the blocked request awaits. [outcome] is written once,
+   by whichever ending got there first, before the promise is resolved. *)
+type waiting = {
+  reason : string;
+  promise : unit Eio.Promise.t;
+  resolve : unit Eio.Promise.u;
+  mutable outcome : outcome option;
+}
 
 type tab = {
   id : string;
@@ -191,6 +226,9 @@ type tab = {
           trusted input's reply or an [eval]'s may never come because its handler opened a
           popup, so the registry wakes them when the popup's target appears or when this
           tab's target dies. Empty between dispatches. *)
+  mutable handoff : waiting option;
+      (** The handoff this tab is in the middle of, [Some] exactly while it is
+          [With_human] because a [handoff] request is waiting on it (hand-lz3p). *)
   reading : Reading.t;
 }
 
@@ -201,6 +239,7 @@ type t = {
   now : unit -> float;
   sleep : float -> unit;
   await_load : unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
+  await_handoff : Eta.Duration.t -> unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   logger : Eta_observability.Logger.t;
   cap : int;
   tombstone_s : int;
@@ -245,6 +284,19 @@ let expires t (tab : tab) : P.expires option =
             P.{ stage = stage "close"; in_s = remaining (t.unclaimed -. (at -. since)) })
           tab.unowned_since
 
+(* hand-lz3p hand-lmd5: whether the tab is still in the handoff a request installed. The
+   comparison is physical on the record the request kept: an ending only cleans up after
+   itself, never after the handoff that replaced it. *)
+let waiting_is (tab : tab) (waiting : waiting) =
+  match tab.handoff with Some current -> current == waiting | None -> false
+
+(* hand-lz3p hand-lmd5 hand-yytf: the one place an outcome is written. Whichever
+   ending gets there first wins and wakes the request that waited; a [resume] that landed
+   while the tab was already dying is not overwritten by the death. *)
+let settle (tab : tab) (waiting : waiting) outcome =
+  if waiting.outcome = None then waiting.outcome <- Some outcome;
+  Eio.Promise.resolve waiting.resolve ()
+
 let info t (tab : tab) : P.tab_info =
   {
     tab = tab.handle;
@@ -255,6 +307,9 @@ let info t (tab : tab) : P.tab_info =
     owner = owner_of tab.owner_state;
     generation = tab.generation;
     expires = expires t tab;
+    (* hand-r4t1: why this tab is waiting on the human, which is what [list --all] shows
+       so a human who stepped away can catch up. *)
+    reason = Option.map (fun (waiting : waiting) -> waiting.reason) tab.handoff;
   }
 
 let disappear t tab disposition =
@@ -262,11 +317,17 @@ let disappear t tab disposition =
   Hashtbl.remove t.targets tab.id;
   Hashtbl.replace t.tombs (key tab.handle)
     { state = tab.owner_state; disposition; at = now t };
-  match tab.load_waiter with
+  (match tab.load_waiter with
   | None -> ()
   | Some waiter ->
       tab.load_waiter <- None;
-      Eio.Promise.resolve waiter ()
+      Eio.Promise.resolve waiter ());
+  (* hand-yytf: a tab that leaves the registry while a handoff is waiting on it ends the
+     handoff with the disposition that closed it — a browser loss is [tab-gone] with
+     [browser_lost] — rather than leaving the request blocked on a page that is gone. *)
+  match tab.handoff with
+  | None -> ()
+  | Some waiting -> settle tab waiting (Ended (P.tab_gone disposition))
 
 (* own-0pnk: the one gate every tab command passes through. The decision is the pure
    [authorize]; this is the only place that also records a forced override, with the
@@ -295,8 +356,10 @@ let locate t ~access ?(force = false) ~owner handle =
       | Ok () ->
           (* own-ay3s: any action its owner is allowed to take resets the tab's idle
              clock, so the tab an agent is working on stays its own. A refused command is
-             not an action and leaves the clock alone. *)
-          tab.last_activity <- now t;
+             not an action and leaves the clock alone. A [Resume] is the human's answer
+             rather than an owner action, and it moves the clock itself, once, when it
+             actually resumes (hand-0sja). *)
+          (match access with Resume -> () | _ -> tab.last_activity <- now t);
           Ok tab
       | Error _ as refusal -> refusal)
   | None -> (
@@ -352,6 +415,7 @@ let register t ~id ~session ~origin ~state ~url ~title ?opener () =
       counter_installed = false;
       opener;
       settlements = [];
+      handoff = None;
       reading = Reading.create ();
     }
   in
@@ -659,11 +723,24 @@ let release t ~owner ?(force = false) handle =
       tab.owner_state <- Unowned;
       (* own-hslp: the unclaimed clock starts when a caller lets the tab go. *)
       tab.unowned_since <- Some (now t);
+      (* own-0pnk hand-lz3p: a release that reaches a tab the human holds — only [--force]
+         can; a plain one is [with-human] — ends the handoff there and then, under this
+         lock, rather than leaving the agent to wait out its deadline for a tab it no
+         longer owns. The waiting request answers [not-owner] and the record leaves with
+         the hold: the tab is unowned, carries no reason, and a later [resume] is
+         [no-handoff]. *)
+      (match tab.handoff with
+      | None -> ()
+      | Some waiting ->
+          tab.handoff <- None;
+          settle tab waiting (Ended (unowned ())));
       Ok P.{ released = true })
 
 (* own-7pzw own-0pnk: [close] is idempotent for the caller that closed the tab, and
    [--force] closes anyone's — including the tab the human holds — because an agent that
-   died without releasing is why the flag exists. *)
+   died without releasing is why the flag exists. A close that reaches a held tab ends
+   the handoff with it: [disappear] wakes the waiting request with [tab-gone] and the
+   disposition that closed it, so nothing waits on a page that is gone (hand-lz3p). *)
 let close t ~owner ?(force = false) handle =
   let k = key handle in
   match Hashtbl.find_opt t.tombs k with
@@ -681,22 +758,100 @@ let close t ~owner ?(force = false) handle =
           disappear t tab (disposition "closed_by_owner");
           Ok P.{ closed = true })
 
-(* hand-nisr own-pmr7: the state transition milestone 4's [handoff] drives. It lands in
-   the registry here because [With_human] is part of this row's owner state and the
-   [with-human] refusal has to be reachable to be tested; milestone 4 adds the reason and
-   the promise the blocked request awaits. Every command is refused while the human holds
-   the tab, including the owner's own. *)
-let hand_over t ~owner handle =
+(* hand-lmd5: the deadline a handoff runs on — the caller's [timeout_s], fifteen minutes
+   when it names none (or names something a clock cannot use). [Control.budget] asks this
+   same question, so the handler's budget and the request's own deadline cannot drift
+   apart. *)
+let handoff_timeout = function
+  | Some seconds when seconds > 0 -> Eta.Duration.seconds seconds
+  | Some _ | None -> Eta.Duration.minutes 15
+
+(* hand-nisr own-pmr7 hand-lz3p: the state transition a handoff is. It lands in the
+   registry here because [With_human] is part of the owner state and the [with-human]
+   refusal has to be reachable to be tested: the tab moves to [With_human] holding the
+   reason the human is shown and the promise the blocked request awaits, and from that
+   moment every command is refused, the owner's own included, until [resume]. *)
+let begin_handoff t ~owner ~reason handle =
   let* tab = locate t ~access:Act ~owner handle in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access:Act ~owner handle in
       (* hand-len8: a handoff is not an owner action, so it leaves the idle clock where
          it was; [With_human] is exempt from stage 1 anyway (ADR-0005). *)
       let activity = tab.last_activity in
+      let promise, resolve = Eio.Promise.create () in
+      let waiting = { reason; promise; resolve; outcome = None } in
       tab.owner_state <- With_human owner;
       tab.unowned_since <- None;
       tab.last_activity <- activity;
-      Ok (info t tab))
+      tab.handoff <- Some waiting;
+      Ok (tab, waiting))
+
+(* hand-nisr hand-lz3p: the transition without its wait, which is what [handoff] is built
+   from and what a caller that only needs the state — the authorization matrix of
+   ADR-0005, the suspended handoff a test resumes later — drives directly. *)
+let hand_over t ~owner ~reason handle =
+  let* tab, _ = begin_handoff t ~owner ~reason handle in
+  Ok (info t tab)
+
+(* hand-lz3p hand-lmd5 hand-yytf hand-szz7: the wire path into [With_human], and the one
+   request that blocks. It hands the tab over, then waits on the promise [resume] resolves
+   while the deadline runs; whichever ending comes first decides the reply:
+
+   - [resume] (hand-lz3p hand-0sja) hands the tab back to its owner and answers with the
+     page's url and title, which is what the agent re-observes from;
+   - the deadline (hand-lmd5) cancels the wait and the tab is the owner's again;
+   - the tab's disappearance (hand-yytf) wakes the wait with the disposition that closed
+     it, [browser_lost] for a browser loss;
+   - the client going away cancels this handler, which is the same restore as the
+     deadline: a disconnected agent does not leave the tab stranded with the human.
+
+   Every path but a resume gives the tab back to the owner it was handed off from and
+   drops the record, so a later [resume] is [no-handoff] rather than a second resume. *)
+let handoff t ~owner ~reason ~timeout_s handle =
+  let* tab, waiting = begin_handoff t ~owner ~reason handle in
+  let release () =
+    (* The listener cancels this fiber when the client disconnects, so the restore runs
+       under [Eio.Cancel.protect]: it must not be cancelled halfway, and it must not wait
+       on a lock it will never get. *)
+    Eio.Cancel.protect (fun () ->
+        Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+            if waiting_is tab waiting then (
+              tab.handoff <- None;
+              match tab.owner_state with
+              | With_human owner -> tab.owner_state <- Owned owner
+              | Unowned | Owned _ -> ())))
+  in
+  let answer () =
+    match waiting.outcome with
+    | Some Resumed -> Ok P.{ resumed = true; url = tab.url; title = tab.title }
+    | Some (Ended error) -> Error error
+    | None -> Error (error "timeout" "the handoff timed out")
+  in
+  Fun.protect ~finally:release (fun () ->
+      match t.await_handoff (handoff_timeout timeout_s) waiting.promise with
+      | Ok () -> answer ()
+      | Error `Timeout -> answer ())
+
+(* hand-0sja hand-szz7: the human's answer, from any terminal — the notification action
+   and [leash resume <tab>] arrive here as the same request. Whoever asks, the tab goes
+   back to the owner it was handed off from, which is why [Resume] is the one command
+   anybody may send and why a tab nobody is waiting on is [no-handoff] rather than a
+   refusal about ownership. *)
+let resume t ~owner handle =
+  let* tab = locate t ~access:Resume ~owner handle in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = locate t ~access:Resume ~owner handle in
+      match (tab.owner_state, tab.handoff) with
+      | With_human owner, Some waiting ->
+          (* hand-0sja own-ay3s: the resume resets the tab's idle clock, so the human's
+             work does not expire the agent's tab a moment later. *)
+          tab.owner_state <- Owned owner;
+          tab.unowned_since <- None;
+          tab.last_activity <- now t;
+          tab.handoff <- None;
+          settle tab waiting Resumed;
+          Ok P.{ resumed = true }
+      | _ -> Error (nothing_waiting ()))
 
 (* own-82jd: without [--all] a caller sees its own tabs — the ones it owns and the one the
    human is holding for it — and nothing of another agent's. *)
@@ -1126,6 +1281,13 @@ let create ~sw ~cap ~tombstone_s ?(idle = Eta.Duration.minutes 30)
       await_load =
         (fun promise ->
           Eta.Timeout.timeout ~clock:deps.clock (Eta.Duration.seconds 30) (fun () ->
+              Eio.Promise.await promise;
+              Ok ()));
+      (* hand-lmd5: the handoff deadline, measured by the service clock and cancelled —
+         not raced — when it runs out, so the restore of {!handoff} still runs. *)
+      await_handoff =
+        (fun timeout promise ->
+          Eta.Timeout.timeout ~clock:deps.clock timeout (fun () ->
               Eio.Promise.await promise;
               Ok ()));
       logger = deps.logger;

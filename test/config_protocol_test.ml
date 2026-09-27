@@ -252,6 +252,7 @@ let closed_sets () =
       "row-not-actionable";
       "dialog-open";
       "no-dialog";
+      "no-handoff";
       "url-refused";
       "tab-cap";
       "timeout";
@@ -380,6 +381,32 @@ let result_shapes () =
     (match expiring.expires with
     | Some expires -> P.Stage.to_string expires.stage = "close" && expires.in_s = 30
     | None -> false);
+  (* hand-r4t1: [TabInfo.reason] is [key?] — present while a handoff waits on the tab,
+     absent from every tab nobody is waiting on, which is what [list --all] reads. *)
+  let waiting_json =
+    assoc
+      [
+        ("tab", `String "t_9xk");
+        ("url", `String "https://example.com/");
+        ("title", `String "Example");
+        ("origin", `String "agent");
+        ("state", `String "with_human");
+        ("owner", `String "dsh:test");
+        ("generation", `Int 2);
+        ("expires", `Null);
+        ("reason", `String "captcha");
+      ]
+  in
+  let waiting = assert_ok "waiting tab info" (P.tab_info_of_yojson waiting_json) in
+  Alcotest.(check (option string))
+    "the reason is read back" (Some "captcha") waiting.reason;
+  Alcotest.(check string)
+    "TabInfo with a reason names its fields"
+    (Yojson.Safe.to_string waiting_json)
+    (Yojson.Safe.to_string (P.yojson_of_tab_info waiting));
+  Alcotest.(check (option string))
+    "a tab nobody waits on carries no reason key" None
+    (assert_ok "a tab info without a reason" (P.tab_info_of_yojson tab_json)).reason;
   let snapshot = assert_ok "snapshot" (P.snapshot_of_yojson snapshot_json) in
   Alcotest.(check int) "one row" 1 (List.length snapshot.rows);
   let row = List.hd snapshot.rows in
@@ -867,12 +894,15 @@ let socket_cli () =
       | P.List_tabs { all = true } -> ()
       | _ -> Alcotest.fail "list --all did not ask for every tab")
     [ "list"; "--all" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list" "dsh:test-l1";
-  (* own-82jd: the table names every owner's tab by origin, state and owner. *)
+  (* own-82jd hand-r4t1: the table names every owner's tab by origin, state and owner,
+     and shows what the tab the human holds is waiting for. *)
   socket_cli_case
     ~expected_lines:
       [
-        "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER";
-        "t_9xk\thttps://example.com/\tExample Domain\tagent\towned\tdsh:test-l1";
+        "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER\tREASON";
+        "t_9xk\thttps://example.com/\tExample Domain\tagent\towned\tdsh:test-l1\t-";
+        "t_9xk2\thttps://example.com/login\tSign \
+         in\tagent\twith_human\tdsh:test-l1\tcaptcha";
       ]
     [ "list"; "--all"; "--table" ]
     (Yojson.Safe.to_string
@@ -893,6 +923,16 @@ let socket_cli () =
                             ("origin", `String "agent");
                             ("state", `String "owned");
                             ("owner", `String "dsh:test-l1");
+                          ];
+                        assoc
+                          [
+                            ("tab", `String "t_9xk2");
+                            ("url", `String "https://example.com/login");
+                            ("title", `String "Sign in");
+                            ("origin", `String "agent");
+                            ("state", `String "with_human");
+                            ("owner", `String "dsh:test-l1");
+                            ("reason", `String "captcha");
                           ];
                       ] );
                 ] );

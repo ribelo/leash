@@ -18,8 +18,10 @@ val create :
 
 val budget : (Protocol.request, string) result -> Eta.Duration.t option
 (** The handler budget per decoded command. [new] with a url and [nav] outlast the
-    registry's 30-second load wait (chrome-qnul, chrome-1yn9); everything else stays at
-    one second. *)
+    registry's 30-second load wait (chrome-qnul, chrome-1yn9); a [handoff] outlasts its
+    own deadline, {!Tabs.handoff_timeout}, plus a margin, so the listener never cancels
+    the handler at the instant the handoff is due to answer [timeout] (hand-lmd5);
+    everything else stays at one second. *)
 
 val status : t -> Eta_app.Status.t
 val dispatch : Tabs.t -> Protocol.request -> Protocol.reply

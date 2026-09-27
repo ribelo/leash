@@ -36,16 +36,19 @@ let table command result =
   let tabs = match field "tabs" result with `List xs -> xs | _ -> [] in
   match command with
   | "list" ->
-      print_endline "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER";
+      (* hand-r4t1: REASON is what the tab is waiting on the human for, "-" on every tab
+         nobody is waiting on, so a human who stepped away can see what is asked. *)
+      print_endline "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER\tREASON";
       List.iter
         (fun row ->
-          Printf.printf "%s\t%s\t%s\t%s\t%s\t%s\n"
+          Printf.printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
             (cell (field "tab" row))
             (cell (field "url" row))
             (cell (field "title" row))
             (cell (field "origin" row))
             (cell (field "state" row))
-            (cell (field "owner" row)))
+            (cell (field "owner" row))
+            (cell (field "reason" row)))
         tabs
   | "snap" ->
       print_endline "INDEX\tROLE\tNAME\tVALUE\tSTATE";

@@ -283,6 +283,7 @@ type error_code =
   | Row_not_actionable [@json.name "row-not-actionable"]
   | Dialog_open [@json.name "dialog-open"]
   | No_dialog [@json.name "no-dialog"]
+  | No_handoff [@json.name "no-handoff"]
   | Url_refused [@json.name "url-refused"]
   | Tab_cap [@json.name "tab-cap"]
   | Timeout [@json.name "timeout"]
@@ -315,6 +316,9 @@ type tab_info = {
   owner : Owner.t option; [@json.null]
   generation : int;
   expires : expires option; [@json.null]
+  reason : string option;
+      (** Why the human holds this tab, the reason of the live handoff (hand-r4t1); a
+          [key?] field, so it is absent from every tab nobody is waiting on. *)
 }
 [@@deriving yojson]
 

@@ -17,9 +17,9 @@ type owner_state = Unowned | Owned of Protocol.Owner.t | With_human of Protocol.
 
 (** The command classes the one authorization function distinguishes: [Act] is everything
     that touches the page ([nav], [snap], [text], [eval], [shot], [debug], [wait],
-    [click], [fill], [press], [select], [scroll]), and only [Close] and [Release] can be
-    forced. *)
-type access = Act | Dialog | Close | Release | Claim
+    [click], [fill], [press], [select], [scroll]), [Resume] is the human's answer to a
+    handoff, and only [Close] and [Release] can be forced. *)
+type access = Act | Dialog | Close | Release | Claim | Resume
 
 val authorize :
   ?force:bool ->
@@ -34,6 +34,9 @@ val authorize :
       [Owned caller] is allowed; [Owned] another's and [Unowned] are [not-owner]; and
       [With_human] is [with-human] whoever asks, the owner included.
     - [Claim] requires [Unowned]; [Owned] and [With_human] are [already-owned].
+    - [Resume] requires [With_human] and nothing else: the human usually asks from a
+      terminal that is not the owner's, and a resume only ever gives the tab back to its
+      owner (hand-0sja); a tab nobody waits on is [no-handoff] (hand-szz7).
     - [force] is honoured only for [Close] and [Release], and then allows the command
       whatever the state and whoever calls: it is the human's override for an agent that
       died without releasing, and the registry logs every use of it (own-0pnk). *)
@@ -88,13 +91,61 @@ val claim :
 val hand_over :
   t ->
   owner:Protocol.Owner.t ->
+  reason:string ->
   Protocol.Handle.t ->
   (Protocol.tab_info, Protocol.error) result
-(** hand-nisr: moves the caller's tab to [With_human], the state handoff (milestone 4)
-    puts a tab in while the human works on it, after which every command on it is refused
-    with [with-human]. Milestone 3 has no [handoff] command, so this transition is what
-    reaches the state here; milestone 4's [handoff] drives the same transition and adds
-    the reason and the promise the blocked request awaits. *)
+(** hand-nisr hand-lz3p: moves the caller's tab to [With_human] holding the reason the
+    human is shown and the promise a blocked request awaits, after which every command on
+    it is refused with [with-human] — the owner's included — until {!resume}. This is
+    {!handoff} without its wait, for a caller that only needs the state.
+
+    A tab handed over here is [With_human] with nobody awaiting it unless the caller keeps
+    the wait itself, so the {!handoff} command is the normal way in. hand-len8: the
+    transition leaves the idle clock where it was — a handoff is not an owner action — and
+    [With_human] is exempt from stage 1 anyway. *)
+
+val handoff :
+  t ->
+  owner:Protocol.Owner.t ->
+  reason:string ->
+  timeout_s:int option ->
+  Protocol.Handle.t ->
+  (Protocol.handoff_result, Protocol.error) result
+(** hand-lz3p hand-lmd5 hand-yytf: the handoff command: hands the caller's tab to the
+    human and blocks until the handoff ends.
+
+    - {!resume}, by anyone (hand-0sja), hands the tab back to its owner and answers with
+      the page's current url and title.
+    - The deadline (hand-lmd5), {!handoff_timeout} with the caller's [timeout_s], ends the
+      wait with [`timeout] and restores [Owned] by the agent that handed the tab over.
+    - The caller's own cancellation — the control listener cancels a handler whose client
+      disconnected — restores [Owned] the same way.
+    - A tab that leaves the registry while the request waits ends it with the disposition
+      that closed it: [tab-gone] with [browser_lost] for a browser loss (hand-yytf).
+    - A forced {!release} or {!close} of the tab the human holds ends it at once, not at
+      the deadline (own-0pnk): the release answers [not-owner] and leaves the tab unowned
+      with no reason, the close answers [tab-gone] with its disposition.
+    - A later [resume] finds nothing to resume: [no-handoff] (hand-szz7).
+
+    Handing over a tab the caller does not own is [not-owner], and one that is already
+    with the human is [with-human] (hand-beip). *)
+
+val handoff_timeout : int option -> Eta.Duration.t
+(** hand-lmd5: the deadline a handoff runs on: the caller's [timeout_s], or the contract's
+    fifteen minutes when it names none. [Control.budget] derives the handler's budget from
+    this same function. *)
+
+val resume :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.Handle.t ->
+  (Protocol.resumed_result, Protocol.error) result
+(** hand-0sja hand-szz7: the human's signal, from any terminal and by any caller: the tab
+    goes back to the owner it was handed off from and the request that waited on it is
+    answered with the page. The resume resets the tab's idle clock, so the work the human
+    just did does not expire the agent's tab a moment later. A tab nobody is waiting on —
+    whether it was never handed over or its handoff already ended — is [no-handoff]; a
+    tombstoned handle still answers [tab-gone] like every other command. *)
 
 val release :
   t ->
@@ -104,7 +155,10 @@ val release :
   (Protocol.released_result, Protocol.error) result
 (** own-2zs7 own-0pnk: makes the caller's tab unowned without closing it, so the page
     stays up for another agent or the human to take; another agent's tab is [not-owner],
-    and [--force] releases any — including one the human holds — and is logged. *)
+    and [--force] releases any — including one the human holds — and is logged. hand-lz3p:
+    a forced release of a tab a handoff is waiting on ends that handoff at once — the
+    waiting request answers [not-owner] and the tab is left unowned, with no reason and
+    nothing to resume — so nothing waits out a deadline for a tab it no longer owns. *)
 
 val close :
   t ->

@@ -142,3 +142,18 @@
   eio.unix
   yojson
   alcotest))
+
+(test
+ (name handoff_test)
+ (modules handoff_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eta_process
+  eta_observability
+  eio
+  eio.unix
+  yojson
+  alcotest))

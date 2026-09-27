@@ -113,9 +113,10 @@ let fresh tabs ~state =
   | `Unowned ->
       ignore (result (request tabs "alice" (P.Release { tab = handle; force = None })))
   | `With_human -> (
-      (* handoff itself is milestone 4 (hand-lz3p); this suite drives the transition it
-         will drive, so the with-human cells exist. *)
-      match Leash.Tabs.hand_over tabs ~owner:(owner "alice") handle with
+      (* The handoff command itself is milestone 4 (hand-lz3p); this suite drives the
+         transition it drives — the registry call without its wait, so the with-human
+         cells exist without a request blocked on the mock clock. *)
+      match Leash.Tabs.hand_over tabs ~owner:(owner "alice") ~reason:"captcha" handle with
       | Ok _ -> ()
       | Error e -> Alcotest.failf "hand_over: %s" (P.Error_code.to_string e.code)));
   handle

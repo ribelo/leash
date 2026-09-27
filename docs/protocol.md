@@ -78,7 +78,8 @@ A field shown as `T|null` is always present, `null` when it has no value; a fiel
 
 ```
 TabInfo      = {tab, url, title, origin: "agent"|"human", state: "unowned"|"owned"|"with_human",
-                owner: string|null, generation: int, expires: {stage: "release"|"close", in_s: int}|null}
+                owner: string|null, generation: int, expires: {stage: "release"|"close", in_s: int}|null,
+                reason?: string}
 Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
                 dialog: Dialog|null}
 Row          = {index: int, role: string, name: string, value?: string, state?: string[]}
@@ -114,6 +115,19 @@ Rules:
   agent-origin tab faces `close` after `expiry.unclaimed_s` with nobody claiming it. It is
   `null` for a human-origin tab and for one the human holds, because no timer may take
   them.
+- `handoff` hands the tab to the human and blocks while the tab is `with_human`: every
+  command on it is refused with `with-human` — its owner's included — and `reason` is on
+  every `TabInfo` the service reports for it, which is what `list --all` shows. The request
+  ends the first of: a `resume`, which is authorized for anyone because it only ever gives
+  the tab back to its owner and answers `{resumed: true, url, title}` with the page as the
+  human left it, and which restarts the tab's idle clock; the deadline, `timeout_s` or
+  fifteen minutes, which answers `timeout` and gives the tab back to its owner; the agent's
+  disconnect, which does the same; and the tab's disappearance, which answers `tab-gone`
+  with the disposition that closed it. A forced `release` or `close` of the tab the human
+  holds ends the handoff there and then rather than at the deadline: the release answers
+  `not-owner` — the agent no longer owns the tab — and leaves it unowned with no `reason`,
+  and the close answers `tab-gone` with its disposition. `resume` on a tab nobody is
+  waiting on is `no-handoff`, so a stale notification cannot do something surprising.
 - Expiry is one sweep every 30 seconds on the service clock. Stage 1 releases an owned tab
   idle for `idle_s`: it stays open, unowned, and claimable. Stage 2 closes an unowned
   agent-origin tab unclaimed for `unclaimed_s` with disposition `closed_by_ttl`. Any action

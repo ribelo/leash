@@ -156,7 +156,8 @@ module Disposition : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
-(** The closed error-code set of [docs/protocol.md]. *)
+(** The closed error-code set of [docs/protocol.md]: [no-handoff] is what [resume] answers
+    on a tab nobody is waiting on (hand-szz7). *)
 module Error_code : sig
   type t
 
@@ -185,9 +186,12 @@ type tab_info = {
   owner : Owner.t option;
   generation : int;
   expires : expires option;
+  reason : string option;
 }
 (** [owner] and [expires] are [T|null]: both keys are always on the wire and read [null]
-    when there is no value. *)
+    when there is no value. [reason] is [key?]: it is present exactly while a handoff is
+    waiting on the tab and carries the reason the human was given, so [list --all] shows
+    which tabs wait on the human and why (hand-r4t1). *)
 
 val tab_info_of_yojson : Yojson.Safe.t -> (tab_info, string) result
 val yojson_of_tab_info : tab_info -> Yojson.Safe.t
@@ -357,6 +361,10 @@ val yojson_of_closed_result : closed_result -> Yojson.Safe.t
 type resumed_result = { resumed : bool }
 type text_result = { url : string; title : string; text : string; truncated : bool }
 
+val yojson_of_resumed_result : resumed_result -> Yojson.Safe.t
+(** [resumed_result] is the reply [resume] answers with, once the human's signal has
+    handed the tab back (hand-0sja). *)
+
 val text_result_of_yojson : Yojson.Safe.t -> (text_result, string) result
 val yojson_of_text_result : text_result -> Yojson.Safe.t
 
@@ -369,6 +377,13 @@ val yojson_of_debug_result : debug_result -> Yojson.Safe.t
 val yojson_of_eval_result : eval_result -> Yojson.Safe.t
 
 type handoff_result = { resumed : bool; url : string; title : string }
+
+val yojson_of_handoff_result : handoff_result -> Yojson.Safe.t
+(** What a handoff answers when the human resumes it (hand-lz3p): the page's url and title
+    at that moment, which is what the agent re-observes from. A handoff that ends any
+    other way is an error — [timeout] for the deadline, [tab-gone] for a tab that
+    disappeared while the request waited (hand-lmd5 hand-yytf). *)
+
 type drive_result = { status : Drive_status.t; steps : step list; final : snapshot }
 
 val drive_result_of_yojson : Yojson.Safe.t -> (drive_result, string) result

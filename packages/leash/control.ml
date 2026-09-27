@@ -52,6 +52,13 @@ let dispatch tabs (request : P.request) =
         (Tabs.release tabs ~owner ?force:args.force args.tab)
   | P.Close args ->
       lift P.yojson_of_closed_result (Tabs.close tabs ~owner ?force:args.force args.tab)
+  | P.Handoff args ->
+      (* hand-lz3p: the one command that blocks in the registry. The listener cancels this
+         handler if the client disconnects, which is a handoff ending — the tab goes back
+         to its owner — not a leak. *)
+      lift P.yojson_of_handoff_result
+        (Tabs.handoff tabs ~owner ~reason:args.reason ~timeout_s:args.timeout_s args.tab)
+  | P.Resume args -> lift P.yojson_of_resumed_result (Tabs.resume tabs ~owner args.tab)
   | P.List_tabs args ->
       success (P.yojson_of_list_result (Tabs.list tabs ~owner ~all:args.all))
   | P.Status -> success (P.yojson_of_status_result (Tabs.report tabs))
@@ -85,6 +92,13 @@ let load_budget = Eta.Duration.seconds 35
    client at all. *)
 let cdp_budget = Eta.Duration.seconds 35
 
+(* hand-lmd5: a handoff's budget is its own deadline plus a margin, never less. The
+   listener's timeout cancels the handler it bounds, so a budget equal to the handoff
+   deadline would cancel the handler at the instant it is due to answer [timeout]: the
+   client would see its connection close instead of the reply. The margin is the load
+   budget's, and covers the reply's own egress as well. *)
+let handoff_margin = Eta.Duration.seconds 5
+
 let budget (request : (P.request, string) result) =
   let seconds n = Eta.Duration.seconds n in
   match request with
@@ -94,7 +108,7 @@ let budget (request : (P.request, string) result) =
         (Eta.Duration.ms
            (min 30000 (max 1 (Option.value ~default:30000 args.timeout_ms)) + 1000))
   | Ok { command = P.Handoff args; _ } ->
-      Some (seconds (max 1 (Option.value ~default:900 args.timeout_s)))
+      Some (Eta.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
   | Ok { command = P.Drive args; _ } ->
       Some (seconds (max 1 (Option.value ~default:30 args.deadline_s)))
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _; _ } -> Some (seconds 35)
