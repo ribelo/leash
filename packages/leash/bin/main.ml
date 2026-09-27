@@ -297,11 +297,22 @@ let program env (config : Leash.Config.t) sw =
       (Leash.Config.chrome_config config.chrome)
       { Leash.Chrome.clock = base#clock; mgr = base#process_mgr; logger = env.logger }
   in
+  (* own-vhqo: the two expiry durations are config. The registry counts every tab down
+     to them and the sweep applies them. *)
+  let seconds duration = Eta.Duration.seconds (Leash.Config.Seconds.to_int duration) in
+  let idle = seconds config.expiry.idle_s in
+  let unclaimed = seconds config.expiry.unclaimed_s in
   let tabs =
     Leash.Tabs.create ~sw
       ~cap:(Leash.Config.Tab_cap.to_int config.tabs.cap)
       ~tombstone_s:(Leash.Config.Seconds.to_int config.expiry.tombstone_s)
+      ~idle ~unclaimed
       { Leash.Tabs.chrome; clock = base#clock; logger = env.logger }
+  in
+  (* own-uo77 own-hslp: the sweep is one more service in the owner, released with the
+     switch. *)
+  let _expiry =
+    Leash.Expiry.create ~sw ~idle ~unclaimed ~clock:base#clock ~logger:env.logger tabs
   in
   Eio.Switch.on_release sw (fun () -> Leash.Tabs.stop tabs);
   let status_query = Eta_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in

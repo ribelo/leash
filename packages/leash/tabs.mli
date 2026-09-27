@@ -1,5 +1,14 @@
 type t
-(** Browser-generation tab registry. Handles never name a tab in a later generation. *)
+(** Browser-generation tab registry. Handles never name a tab in a later generation.
+
+    A tab enters the registry because Leash created it ({!new_tab}) or because Chrome
+    reported the target: a tab opened in the Chrome UI is human-origin and unowned, and a
+    page's popup belongs to whoever owns the tab that opened it (own-c0cl own-ehqa). What
+    its first report decided is what it stays — origin and owner state are never rewritten
+    — and a target destroyed without Leash closing it leaves a [closed_externally]
+    tombstone (own-teh1). A discovered tab is listed, claimed, released, and closed with
+    no page session at all; the first command that needs its page uses the session Chrome
+    attached it under, or asks Chrome to attach. *)
 
 (** Who a tab belongs to (ADR-0005): [Unowned] from the moment it appears unclaimed — a
     human's, or one an agent released — [Owned] by whoever created or claimed it, and
@@ -35,7 +44,18 @@ type 'clock deps = {
   logger : Eta_observability.Logger.t;
 }
 
-val create : sw:Eio.Switch.t -> cap:int -> tombstone_s:int -> 'clock deps -> t
+val create :
+  sw:Eio.Switch.t ->
+  cap:int ->
+  tombstone_s:int ->
+  ?idle:Eta.Duration.t ->
+  ?unclaimed:Eta.Duration.t ->
+  'clock deps ->
+  t
+(** [idle] and [unclaimed] are the two expiry durations (own-vhqo). They default to the
+    ADR's thirty minutes and one hour, and they are what the [expires] of every
+    {!Protocol.tab_info} this registry reports counts down to. *)
+
 val status : t -> Eta_app.Status.t
 val report : t -> Protocol.status_result
 
@@ -51,9 +71,10 @@ val new_tab :
   (Protocol.tab_info, Protocol.error) result
 (** own-6ndc: the tab an agent creates is [Owned] by that agent from the start. With a
     url, the tab's document is loaded before the reply (chrome-qnul), so [title] is
-    populated; a load that does not complete within 30 seconds is [`timeout], as [nav]. A
-    created tab also gets focus emulation (tab-8la3) and the DOM agent enabled (tab-bw4j),
-    best effort, once its document is there. *)
+    populated; a load that does not complete within 30 seconds is [`timeout], as [nav].
+    The page session Chrome hands back gets the domains reading, action-time revalidation,
+    focus emulation, and the debug ring need, best effort, before the load starts
+    (tab-bw4j tab-8la3). *)
 
 val claim :
   t ->
@@ -183,7 +204,38 @@ val navigate :
   (Protocol.action_result, Protocol.error) result
 
 val list : t -> owner:Protocol.Owner.t -> all:bool -> Protocol.list_result
-(** own-82jd: without [all], only the caller's tabs — [Owned] by it and the one the human
-    is holding for it; with [all], every tab with its origin, state, and owner. *)
+(** own-82jd own-c0cl: without [all], only the caller's tabs — [Owned] by it and the one
+    the human is holding for it; with [all], every tab with its origin, state, and owner,
+    the ones Leash discovered from Chrome's target stream included. *)
+
+type idleness = {
+  handle : Protocol.Handle.t;
+  origin : Protocol.Origin.t;
+  owner_state : owner_state;
+  idle_for_s : float;
+      (** seconds since the last action this tab's owner was allowed to take on it *)
+  unowned_for_s : float option;
+      (** seconds since it became unowned; [None] while it is owned *)
+}
+(** One tab's expiry facts (own-uo77 own-hslp own-ay3s): what the sweep policy decides on,
+    with the registry's own notion of who owns the tab. *)
+
+type sweep_step =
+  | Release_idle
+  | Close_idle
+  | Keep_idle
+      (** What one expiry sweep may do with one tab (ADR-0005): release it, close it, or
+          leave it. *)
+
+val idleness : t -> idleness list
+(** Every live tab's facts, in handle order, for the caller's policy. *)
+
+val sweep : t -> decide:(idleness -> sweep_step) -> (Protocol.Handle.t * sweep_step) list
+(** own-uo77 own-hslp own-2zpi own-nbwk: one expiry pass. Each tab's decision is taken and
+    applied with that tab's lock held, so a claim or an action that lands while the sweep
+    runs is not overrun: [Release_idle] sets an owned tab unowned without closing it and
+    starts its unclaimed clock; [Close_idle] closes an unowned tab of [Agent] origin with
+    disposition [closed_by_ttl]; and a tab the human holds, like a human's own tab, is
+    never closed. Returns the tabs it acted on, in handle order. *)
 
 val stop : t -> unit

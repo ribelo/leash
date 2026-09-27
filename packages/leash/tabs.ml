@@ -14,13 +14,20 @@ let text key json = match member key json with Some (`String s) -> Some s | _ ->
 let enum of_string value =
   match of_string value with Ok v -> v | Error _ -> assert false
 
+(* A tombstone's disposition is the protocol's closed set, not a string: the registry is
+   the one place that decides why a tab is gone, and the wire reads it back by name
+   (ADR-0005, own-teh1). *)
+let disposition name : P.Disposition.t = enum P.Disposition.of_string name
+
 let error ?detail code message : P.error =
   { code = enum P.Error_code.of_string code; message; detail }
 
 let unavailable () = error "browser-unavailable" "Chrome is restarting; try again shortly"
 
 let lost () =
-  error "tab-gone" "the tab is gone" ~detail:(obj [ ("disposition", str "browser_lost") ])
+  error "tab-gone" "the tab is gone"
+    ~detail:
+      (obj [ ("disposition", P.Disposition.yojson_of_t (disposition "browser_lost")) ])
 
 let refusal () =
   error "url-refused" "only http(s) URLs without userinfo and about:blank are allowed"
@@ -128,14 +135,46 @@ let authorize ?(force = false) access ~caller state : (unit, P.error) result =
 let held_by_other state caller =
   match state with Unowned -> false | Owned owner | With_human owner -> owner <> caller
 
+(* own-uo77 own-hslp own-ay3s: what one sweep decides on — the sweep itself is at the end
+   of this file, and the policy is [Expiry.decide]. It is declared before [tab] on
+   purpose: both records name a handle, an origin, and an owner state, and when a value's
+   type is not yet known OCaml's field disambiguation picks the most recent declaration,
+   which must stay [tab] or every lambda in this file that only says [tab.id] breaks. *)
+type idleness = {
+  handle : P.Handle.t;
+  origin : P.Origin.t;
+  owner_state : owner_state;
+  idle_for_s : float;  (** seconds since the last owner action on the tab *)
+  unowned_for_s : float option;
+      (** seconds since the tab became unowned; [None] while it is owned *)
+}
+
+(* What one sweep may do with one tab: release it, close it, or leave it. *)
+type sweep_step = Release_idle | Close_idle | Keep_idle
+
 type tab = {
   id : string;
-  session : string;
+  mutable session : string option;
+      (** The page session Leash talks to the tab in: [Some] once Chrome attached — by
+          auto-attach, or by {!page_session}'s own attach — and [None] for a target that
+          is only discovered, which the first command that needs the page attaches
+          (own-c0cl). *)
+  mutable enabled_session : string option;
+      (** The session the reading and action domains were enabled in; [None] until a
+          command needs the page. *)
   handle : P.Handle.t;
   mutable url : string;
   mutable title : string;
   origin : P.Origin.t;
   mutable owner_state : owner_state;
+  mutable last_activity : float;
+      (** The instant of the last action this tab's owner was allowed to take on it, its
+          creation included; stage 1 releases a tab this has not moved for [idle]
+          (own-ay3s). *)
+  mutable unowned_since : float option;
+      (** The instant the tab last became unowned, [None] while it is owned; stage 2
+          closes an agent-origin tab this has been unclaimed for [unclaimed] (own-hslp).
+      *)
   generation : int;
   lock : Eio.Mutex.t;
   mutable loading : bool;
@@ -150,7 +189,7 @@ type tab = {
   reading : Reading.t;
 }
 
-type tomb = { state : owner_state; disposition : string; at : float }
+type tomb = { state : owner_state; disposition : P.Disposition.t; at : float }
 
 type t = {
   chrome : Chrome.t;
@@ -160,11 +199,15 @@ type t = {
   logger : Eta_observability.Logger.t;
   cap : int;
   tombstone_s : int;
+  idle : float;
+  unclaimed : float;
   started : float;
   tabs : (string, tab) Hashtbl.t;
   targets : (string, string) Hashtbl.t;
   tombs : (string, tomb) Hashtbl.t;
-  pending_humans : (string, string * Yojson.Safe.t) Hashtbl.t;
+  pending : (string, string option * Discovery.target) Hashtbl.t;
+      (** Targets Chrome reported while Leash was creating one of its own, held until that
+          create has registered its tab (own-6ndc). *)
   mutable creating : int;
   mutable stopping : bool;
 }
@@ -172,7 +215,32 @@ type t = {
 let now t = t.now ()
 let key handle = P.Handle.to_string handle
 
-let info tab : P.tab_info =
+(* own-82jd own-uo77 own-hslp: [expires] is the next stage this tab faces and the seconds
+   left before it, so [list --all] shows what is about to happen. An owned tab faces
+   release; an unowned tab of agent origin faces close; a human's tab, and one the human
+   holds, face nothing, because no timer may take them (ADR-0005). *)
+let expires t (tab : tab) : P.expires option =
+  let at = now t in
+  let remaining seconds = max 0 (int_of_float (Float.ceil seconds)) in
+  let stage name = enum P.Stage.of_string name in
+  match tab.owner_state with
+  | Owned _ ->
+      Some
+        P.
+          {
+            stage = stage "release";
+            in_s = remaining (t.idle -. (at -. tab.last_activity));
+          }
+  | With_human _ -> None
+  | Unowned ->
+      if P.Origin.to_string tab.origin <> "agent" then None
+      else
+        Option.map
+          (fun since ->
+            P.{ stage = stage "close"; in_s = remaining (t.unclaimed -. (at -. since)) })
+          tab.unowned_since
+
+let info t (tab : tab) : P.tab_info =
   {
     tab = tab.handle;
     url = tab.url;
@@ -181,7 +249,7 @@ let info tab : P.tab_info =
     state = enum P.State.of_string (state_name tab.owner_state);
     owner = owner_of tab.owner_state;
     generation = tab.generation;
-    expires = None;
+    expires = expires t tab;
   }
 
 let disappear t tab disposition =
@@ -217,10 +285,15 @@ let permitted t ~access ~force ~caller handle state =
 let locate t ~access ?(force = false) ~owner handle =
   let key = key handle in
   match Hashtbl.find_opt t.tabs key with
-  | Some tab ->
-      Result.map
-        (fun () -> tab)
-        (permitted t ~access ~force ~caller:owner handle tab.owner_state)
+  | Some tab -> (
+      match permitted t ~access ~force ~caller:owner handle tab.owner_state with
+      | Ok () ->
+          (* own-ay3s: any action its owner is allowed to take resets the tab's idle
+             clock, so the tab an agent is working on stays its own. A refused command is
+             not an action and leaves the clock alone. *)
+          tab.last_activity <- now t;
+          Ok tab
+      | Error _ as refusal -> refusal)
   | None -> (
       match Hashtbl.find_opt t.tombs key with
       | Some tomb when now t -. tomb.at >= float t.tombstone_s ->
@@ -231,7 +304,8 @@ let locate t ~access ?(force = false) ~owner handle =
       | Some tomb ->
           Error
             (error
-               ~detail:(obj [ ("disposition", str tomb.disposition) ])
+               ~detail:
+                 (obj [ ("disposition", P.Disposition.yojson_of_t tomb.disposition) ])
                "tab-gone" "the tab is gone")
       | None -> Error (error "unknown-tab" "unknown tab handle"))
 
@@ -253,15 +327,20 @@ let ready t =
   | Error _ -> Error (unavailable ())
 
 let register t ~id ~session ~origin ~state ~url ~title ?opener () =
+  let at = now t in
   let tab =
     {
       id;
       session;
+      enabled_session = None;
       handle = handle ();
       url;
       title;
       origin;
       owner_state = state;
+      last_activity = at;
+      unowned_since =
+        (match state with Unowned -> Some at | Owned _ | With_human _ -> None);
       generation = Chrome.generation t.chrome;
       lock = Eio.Mutex.create ();
       loading = false;
@@ -281,40 +360,101 @@ let register t ~id ~session ~origin ~state ~url ~title ?opener () =
 
 let ( let* ) = Result.bind
 
-(* tab-8k2g, own-ehqa: a target Chrome reports with an [openerId] belongs to whoever owns
-   the tab that opened it, so a page's popup is its opener agent's tab and not another
-   agent's. Any other discovered target is a human's: origin human and nobody's to claim
-   until an agent does (own-c0cl own-jua9), which is what a tab opened in the Chrome UI is
-   before milestone 3's discovery work pushes it at us. *)
-let adoption t info =
-  let human = enum P.Origin.of_string "human" in
-  match text "openerId" info with
+(* tab-bw4j tab-8la3: the domains a page session needs for observation, action-time
+   revalidation, focus emulation, and the debug ring. They are asked for once per session,
+   when Leash first uses that session: the discovery path itself only records the session,
+   so a target Chrome reports is registered without waiting on the browser (own-c0cl), and
+   a tab nobody acts on costs nothing. Best effort: a domain the browser refuses is
+   ignored, and the command that needed it reports its own failure. *)
+let use_session t cdp tab session =
+  tab.session <- Some session;
+  if tab.enabled_session <> Some session then (
+    tab.enabled_session <- Some session;
+    let enable meth params = ignore (cdp_call ~session cdp meth params) in
+    enable "Page.enable" (obj []);
+    enable "Runtime.enable" (obj []);
+    enable "Network.enable" (obj []);
+    enable "DOM.enable" (obj []);
+    enable "Emulation.setFocusEmulationEnabled" (obj [ ("enabled", `Bool true) ]))
+
+(* own-c0cl: a discovered target has no page session of its own until Chrome attaches to
+   it. The first command that needs the page takes the session Chrome attached under, or
+   attaches here, flattened as [new] does; either way that is where its domains are
+   enabled, and what makes a claimed human tab usable. *)
+let page_session t cdp tab =
+  match tab.session with
+  | Some session ->
+      use_session t cdp tab session;
+      Ok session
+  | None -> (
+      let* reply =
+        cdp_call cdp "Target.attachToTarget"
+          (obj [ ("targetId", str tab.id); ("flatten", `Bool true) ])
+      in
+      match text "sessionId" reply with
+      | None -> Error (error "internal" "browser omitted sessionId")
+      | Some session ->
+          use_session t cdp tab session;
+          Ok session)
+
+(* own-ehqa: what the registry knows about the tab Chrome names in [openerId], which is
+   what a popup inherits from. An opener Leash never saw is no opener at all, and
+   [Discovery.born] decides what that means. *)
+let creator_of t = function
+  | None -> None
   | Some opener -> (
       match Option.bind (Hashtbl.find_opt t.targets opener) (Hashtbl.find_opt t.tabs) with
-      | Some opener_tab -> (opener_tab.origin, opener_tab.owner_state, Some opener)
-      | None -> (human, Unowned, Some opener))
-  | None -> (human, Unowned, None)
+      | Some tab ->
+          Some Discovery.{ origin = tab.origin; owner = owner_of tab.owner_state }
+      | None -> None)
 
-let flush_humans t =
+(* own-c0cl own-ehqa: a target Chrome reports from outside the control protocol enters the
+   registry here, with the origin and owner [Discovery.born] gives it: the tab that opened
+   it when Leash knows that tab, and a human's unowned tab otherwise. *)
+let adopt t ~id ~session (info : Discovery.target) =
+  let creator = Discovery.born (creator_of t info.opener) in
+  ignore
+    (register t ~id ~session ~origin:creator.origin
+       ~state:(match creator.owner with Some owner -> Owned owner | None -> Unowned)
+       ~url:(Option.value ~default:"about:blank" info.url)
+       ~title:(Option.value ~default:"" info.title)
+       ?opener:info.opener ())
+
+(* own-c0cl own-ehqa: the one road a target Chrome reports from outside the control
+   protocol takes into the registry, whether Chrome announced it, attached to it, or both
+   in that order. A known tab gains what a later report adds — the session it was attached
+   under, once, and the page's url and title — and never another origin or owner: those are
+   what the tab was born with, which is what "origin never changes" means. A target Leash
+   is creating is not a discovery: the pending table holds its report until createTarget's
+   reply has registered that tab, so an agent's own tab never enters as a human's
+   (own-6ndc). *)
+let discover t ~session (info : Discovery.target) =
+  let id = info.id in
+  match Hashtbl.find_opt t.targets id with
+  | Some k -> (
+      match Hashtbl.find_opt t.tabs k with
+      | Some tab ->
+          (match (tab.session, session) with
+          | None, Some session -> tab.session <- Some session
+          | _ -> ());
+          Option.iter (fun url -> tab.url <- url) info.url;
+          Option.iter (fun title -> tab.title <- title) info.title;
+          Option.iter (fun opener -> tab.opener <- Some opener) info.opener
+      | None -> ())
+  | None ->
+      if t.creating > 0 then Hashtbl.replace t.pending id (session, info)
+      else adopt t ~id ~session info
+
+(* Targets Chrome reported while Leash was creating one of its own: the tab it created —
+   which createTarget's reply has registered by now — and anything else that appeared in
+   that window, a human's tab included. *)
+let flush_pending t =
   if t.creating = 0 then (
     Hashtbl.iter
       (fun id (session, info) ->
-        if not (Hashtbl.mem t.targets id) then (
-          let origin, state, opener = adoption t info in
-          ignore
-            (register t ~id ~session ~origin ~state
-               ~url:(Option.value ~default:"about:blank" (text "url" info))
-               ~title:(Option.value ~default:"" (text "title" info))
-               ?opener ());
-          match ready t with
-          | Error _ -> ()
-          | Ok cdp ->
-              List.iter
-                (fun domain ->
-                  ignore (cdp_call ~session cdp (domain ^ ".enable") (obj [])))
-                [ "Page"; "Runtime"; "Network" ]))
-      t.pending_humans;
-    Hashtbl.clear t.pending_humans)
+        if not (Hashtbl.mem t.targets id) then adopt t ~id ~session info)
+      t.pending;
+    Hashtbl.clear t.pending)
 
 (* chrome-qnul: Chrome pushes the *tab-strip* title in Target.targetInfoChanged — the
    formatted URL, "example.com" for example.com — and does not push the document title
@@ -366,7 +506,7 @@ let new_tab t ~owner ~url =
     Fun.protect
       ~finally:(fun () ->
         t.creating <- t.creating - 1;
-        flush_humans t)
+        flush_pending t)
       (fun () ->
         let* created =
           (* Creating directly at [target] can finish a fast local load before
@@ -387,7 +527,7 @@ let new_tab t ~owner ~url =
                 (* own-6ndc: the tab an agent creates is owned by that agent from the
                    start. *)
                 let tab =
-                  register t ~id ~session
+                  register t ~id ~session:(Some session)
                     ~origin:(enum P.Origin.of_string "agent")
                     ~state:(Owned owner) ~url:target ~title:"" ()
                 in
@@ -399,9 +539,9 @@ let new_tab t ~owner ~url =
                     (obj [ ("source", str Snapshot_source.counter_script) ])
                 in
                 tab.counter_installed <- true;
-                let* _ = cdp_call ~session cdp "Runtime.enable" (obj []) in
-                let* _ = cdp_call ~session cdp "Network.enable" (obj []) in
-                let* _ = cdp_call ~session cdp "Page.enable" (obj []) in
+                (* chrome-qnul: Page.enable before the navigate, so the load waiter cannot
+                   miss the load's events; tab-bw4j tab-8la3: the domains actions need. *)
+                use_session t cdp tab session;
                 let* () =
                   if waits_for_load url then
                     with_load_wait t cdp tab (fun () ->
@@ -414,18 +554,7 @@ let new_tab t ~owner ~url =
                         | None -> Ok ())
                   else Ok ()
                 in
-                (* tab-8la3: a tab Leash acts on keeps rendering and animating while it
-                   is not the visible one, so an action on a background tab settles the
-                   same way. tab-bw4j: action-time revalidation reads geometry and
-                   hit-tests through the DOM agent, so it is enabled once per tab. Both
-                   are best effort (a browser that refuses them still has [Page.enable]),
-                   and both come after the load so a load that never completes keeps its
-                   own bounded reply. *)
-                ignore
-                  (cdp_call ~session cdp "Emulation.setFocusEmulationEnabled"
-                     (obj [ ("enabled", `Bool true) ]));
-                ignore (cdp_call ~session cdp "DOM.enable" (obj []));
-                Ok (info tab)))
+                Ok (info t tab)))
 
 let navigate t ~owner handle url =
   if not (valid_url url) then Error (refusal ())
@@ -434,6 +563,7 @@ let navigate t ~owner handle url =
     Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
         let* tab = locate t ~access:Act ~owner handle in
         let* cdp = ready t in
+        let* session = page_session t cdp tab in
         (* chrome-1yn9: the tab is navigating to [url] now, so [url] is the fallback until
            Chrome speaks; the load wait's own [Target.getTargetInfo] refresh replaces it
            with the URL Chrome committed, which is what a redirect changes. *)
@@ -442,8 +572,7 @@ let navigate t ~owner handle url =
         let* () =
           with_load_wait t cdp tab (fun () ->
               let* reply =
-                cdp_call ~session:tab.session cdp "Page.navigate"
-                  (obj [ ("url", str url) ])
+                cdp_call ~session cdp "Page.navigate" (obj [ ("url", str url) ])
               in
               match text "errorText" reply with
               | Some _ -> Error (error "internal" "browser navigation failed")
@@ -469,7 +598,9 @@ let claim t ~owner handle =
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access:Claim ~owner handle in
       tab.owner_state <- Owned owner;
-      Ok (info tab))
+      (* own-hslp: the unclaimed clock stops when somebody takes the tab. *)
+      tab.unowned_since <- None;
+      Ok (info t tab))
 
 (* own-2zs7 own-0pnk: release drops the caller's ownership without touching the page, so
    another agent or the human can take it; [--force] does the same to a tab the caller
@@ -479,6 +610,8 @@ let release t ~owner ?(force = false) handle =
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access:Release ~force ~owner handle in
       tab.owner_state <- Unowned;
+      (* own-hslp: the unclaimed clock starts when a caller lets the tab go. *)
+      tab.unowned_since <- Some (now t);
       Ok P.{ released = true })
 
 (* own-7pzw own-0pnk: [close] is idempotent for the caller that closed the tab, and
@@ -488,7 +621,7 @@ let close t ~owner ?(force = false) handle =
   let k = key handle in
   match Hashtbl.find_opt t.tombs k with
   | Some tomb
-    when tomb.disposition = "closed_by_owner"
+    when P.Disposition.to_string tomb.disposition = "closed_by_owner"
          && (force || owner_of tomb.state = Some owner)
          && now t -. tomb.at < float t.tombstone_s ->
       Ok P.{ closed = true }
@@ -498,7 +631,7 @@ let close t ~owner ?(force = false) handle =
           let* tab = locate t ~access:Close ~force ~owner handle in
           let* cdp = ready t in
           let* _ = cdp_call cdp "Target.closeTarget" (obj [ ("targetId", str tab.id) ]) in
-          disappear t tab "closed_by_owner";
+          disappear t tab (disposition "closed_by_owner");
           Ok P.{ closed = true })
 
 (* hand-nisr own-pmr7: the state transition milestone 4's [handoff] drives. It lands in
@@ -510,8 +643,13 @@ let hand_over t ~owner handle =
   let* tab = locate t ~access:Act ~owner handle in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access:Act ~owner handle in
+      (* hand-len8: a handoff is not an owner action, so it leaves the idle clock where
+         it was; [With_human] is exempt from stage 1 anyway (ADR-0005). *)
+      let activity = tab.last_activity in
       tab.owner_state <- With_human owner;
-      Ok (info tab))
+      tab.unowned_since <- None;
+      tab.last_activity <- activity;
+      Ok (info t tab))
 
 (* own-82jd: without [--all] a caller sees its own tabs — the ones it owns and the one the
    human is holding for it — and nothing of another agent's. *)
@@ -519,7 +657,7 @@ let list t ~owner ~all =
   let tabs =
     Hashtbl.fold
       (fun _ (tab : tab) acc ->
-        if all || owner_of tab.owner_state = Some owner then info tab :: acc else acc)
+        if all || owner_of tab.owner_state = Some owner then info t tab :: acc else acc)
       t.tabs []
   in
   P.
@@ -530,6 +668,70 @@ let list t ~owner ~all =
             String.compare (key a.tab) (key b.tab))
           tabs;
     }
+
+(* ---------- Expiry (ADR-0005) ---------- *)
+
+let idleness_of t (tab : tab) : idleness =
+  let at = now t in
+  {
+    handle = tab.handle;
+    origin = tab.origin;
+    owner_state = tab.owner_state;
+    idle_for_s = at -. tab.last_activity;
+    unowned_for_s = Option.map (fun since -> at -. since) tab.unowned_since;
+  }
+
+let idleness t : idleness list =
+  Hashtbl.fold (fun _ tab acc -> idleness_of t tab :: acc) t.tabs []
+  |> List.sort (fun (a : idleness) (b : idleness) ->
+      String.compare (key a.handle) (key b.handle))
+
+(* own-uo77 own-hslp own-2zpi own-nbwk: one expiry pass. Every decision is taken and
+   applied with the tab's own lock held, so a claim or an action that lands while the
+   sweep runs is not overrun: [Release_idle] only sets an owned tab unowned, and
+   [Close_idle] only closes an unowned tab of agent origin, with disposition
+   [closed_by_ttl]. The handles are collected before the first decision because closing
+   suspends, and a suspended sweep must not walk a table other fibers mutate. *)
+let sweep t ~decide =
+  let handles =
+    Hashtbl.fold (fun _ (tab : tab) acc -> tab.handle :: acc) t.tabs []
+    |> List.sort (fun a b -> String.compare (key a) (key b))
+  in
+  List.filter_map
+    (fun handle ->
+      match Hashtbl.find_opt t.tabs (key handle) with
+      | None -> None
+      | Some tab ->
+          Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+              match Hashtbl.find_opt t.tabs (key handle) with
+              | None -> None
+              | Some tab -> (
+                  let step = decide (idleness_of t tab) in
+                  match step with
+                  | Keep_idle -> None
+                  | Release_idle -> (
+                      match tab.owner_state with
+                      | Owned _ ->
+                          tab.owner_state <- Unowned;
+                          tab.unowned_since <- Some (now t);
+                          Some (handle, step)
+                      | Unowned | With_human _ -> None)
+                  | Close_idle -> (
+                      match tab.owner_state with
+                      | Unowned when P.Origin.to_string tab.origin = "agent" -> (
+                          match ready t with
+                          | Error _ -> None
+                          | Ok cdp -> (
+                              match
+                                cdp_call cdp "Target.closeTarget"
+                                  (obj [ ("targetId", str tab.id) ])
+                              with
+                              | Error _ -> None
+                              | Ok _ ->
+                                  disappear t tab (disposition "closed_by_ttl");
+                                  Some (handle, step)))
+                      | Unowned | Owned _ | With_human _ -> None))))
+    handles
 
 (* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8:
    retain the unfiltered node table for later action-time revalidation. *)
@@ -544,7 +746,8 @@ let snap t ~owner (args : P.snap_args) =
           (error "invalid-request" "snap offset must be nonnegative and limit 0..1000")
       else
         let* cdp = ready t in
-        let call meth params = cdp_call ~session:tab.session cdp meth params in
+        let* session = page_session t cdp tab in
+        let call meth params = cdp_call ~session cdp meth params in
         let* () =
           if tab.counter_installed then Ok ()
           else
@@ -651,9 +854,9 @@ let snap t ~owner (args : P.snap_args) =
 
 (* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax:
    the registry owns identity and the page session; Reading owns browser-specific work. *)
-let reading_browser t tab cdp : Reading.browser =
+let reading_browser t ~session tab cdp : Reading.browser =
   {
-    call = (fun meth params -> cdp_call ~session:tab.session cdp meth params);
+    call = (fun meth params -> cdp_call ~session cdp meth params);
     now = (fun () -> now t);
     sleep = t.sleep;
     current = (fun () -> (tab.url, tab.title));
@@ -674,7 +877,8 @@ let with_reading t ~access ~owner handle f =
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access ~owner handle in
       let* cdp = ready t in
-      f tab (reading_browser t tab cdp))
+      let* session = page_session t cdp tab in
+      f tab (reading_browser t ~session tab cdp))
 
 let read_text t ~owner (args : P.text_args) =
   with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.text browser args)
@@ -697,20 +901,22 @@ let dialog t ~owner (args : P.dialog_args) =
      by a JavaScript dialog, and this command is the only way to release it. *)
   let* tab = locate t ~access:Dialog ~owner args.tab in
   let* cdp = ready t in
-  Reading.dialog (reading_browser t tab cdp) args
+  let* session = page_session t cdp tab in
+  Reading.dialog (reading_browser t ~session tab cdp) args
 
 let wait t ~owner (args : P.wait_args) =
   let* tab = locate t ~access:Act ~owner args.tab in
   let* cdp = ready t in
-  Reading.wait (reading_browser t tab cdp) args
+  let* session = page_session t cdp tab in
+  Reading.wait (reading_browser t ~session tab cdp) args
 
 (* L7 tab-bw4j tab-j1z2 tab-p3x1 tab-luo5 tab-5deq tab-8dop tab-tm6c tab-hxld tab-60kn
    tab-1lhx tab-8la3: the registry owns the tab's identity, its page session, and its
    lock; Actions owns revalidation, dispatch, and settlement. The lock is what makes one
    tab's actions run one at a time in arrival order while another tab's proceed. *)
-let action_view t ~owner tab cdp : Actions.tab =
+let action_view t ~session ~owner tab cdp : Actions.tab =
   {
-    Actions.session = tab.session;
+    Actions.session;
     target = tab.id;
     handle = tab.handle;
     owner;
@@ -720,7 +926,7 @@ let action_view t ~owner tab cdp : Actions.tab =
     dialog = (fun () -> tab.dialog);
     all_tabs =
       (fun () ->
-        Hashtbl.fold (fun _ (tab : tab) acc -> (info tab, tab.opener) :: acc) t.tabs []
+        Hashtbl.fold (fun _ (tab : tab) acc -> (info t tab, tab.opener) :: acc) t.tabs []
         |> List.sort (fun ((a : P.tab_info), _) ((b : P.tab_info), _) ->
             String.compare (key a.tab) (key b.tab)));
   }
@@ -730,7 +936,8 @@ let with_action t ~owner handle f =
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access:Act ~owner handle in
       let* cdp = ready t in
-      f cdp (action_view t ~owner tab cdp))
+      let* session = page_session t cdp tab in
+      f cdp (action_view t ~session ~owner tab cdp))
 
 let click t ~owner (args : P.click_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.click ~cdp view args)
@@ -775,57 +982,37 @@ let inspect t json =
   | Some session ->
       Hashtbl.iter
         (fun _ tab ->
-          if tab.session = session then Reading.observe tab.reading ~at:(now t) json)
+          if tab.session = Some session then Reading.observe tab.reading ~at:(now t) json)
         t.tabs);
   match (text "method" json, member "params" json) with
   | Some ("Target.targetCreated" | "Target.targetInfoChanged"), Some params -> (
-      match member "targetInfo" params with
-      | Some info when text "type" info = Some "page" -> (
-          match text "targetId" info with
-          | Some id -> (
-              match Hashtbl.find_opt t.targets id with
-              | Some k -> (
-                  match Hashtbl.find_opt t.tabs k with
-                  | Some tab -> (
-                      Option.iter (fun url -> tab.url <- url) (text "url" info);
-                      Option.iter (fun title -> tab.title <- title) (text "title" info);
-                      (* tab-8k2g: a popup's opener is pushed with its target
-                         info; a tab Leash created never carries one. *)
-                      match text "openerId" info with
-                      | Some opener -> tab.opener <- Some opener
-                      | None -> ())
-                  | None -> ())
-              | None ->
-                  (* A creation notification can precede createTarget's reply. Delay adoption
-                  until the matching auto-attach event, which carries the session. *)
-                  ())
-          | None -> ())
-      | _ -> ())
+      (* own-c0cl: the announcement every target Chrome reports arrives as, the ones Leash
+         itself asked for included — [discover] tells them apart by the pending table. *)
+      match Discovery.announced params with
+      | Some info -> discover t ~session:None info
+      | None -> ())
   | Some "Target.attachedToTarget", Some params -> (
-      match (text "sessionId" params, member "targetInfo" params) with
-      | Some session, Some info when text "type" info = Some "page" -> (
-          match text "targetId" info with
-          | Some id when not (Hashtbl.mem t.targets id) ->
-              (* Chrome sends this for programmatically created targets as well. The
-             target is reconciled by createTarget before it becomes a human tab. *)
-              Hashtbl.replace t.pending_humans id (session, info);
-              flush_humans t
-          | _ -> ())
-      | _ -> ())
+      match Discovery.attached params with
+      | Some info -> discover t ~session:info.session info
+      | None -> ())
   | Some "Target.targetDestroyed", Some params -> (
-      match text "targetId" params with
+      (* own-teh1: a target that goes away without Leash closing it is gone externally. A
+         tab Leash closed left the registry when it issued the close, so its tombstone
+         keeps closed_by_owner (or, with the TTL sweep, closed_by_ttl) and this report
+         finds no live tab to rewrite. *)
+      match Discovery.destroyed params with
       | Some id -> (
           match Hashtbl.find_opt t.targets id with
           | Some k ->
               Option.iter
-                (fun tab -> disappear t tab "closed_externally")
+                (fun tab -> disappear t tab (disposition "closed_externally"))
                 (Hashtbl.find_opt t.tabs k)
           | None -> ())
       | None -> ())
   | Some "Page.javascriptDialogOpening", Some params ->
       Hashtbl.iter
         (fun _ tab ->
-          if Some tab.session = text "sessionId" json then
+          if tab.session = text "sessionId" json then
             match (text "type" params, text "message" params) with
             | Some kind, Some message ->
                 tab.dialog <- Some P.{ kind = enum P.Dialog_kind.of_string kind; message }
@@ -833,13 +1020,13 @@ let inspect t json =
         t.tabs
   | Some "Page.javascriptDialogClosed", _ ->
       Hashtbl.iter
-        (fun _ tab -> if Some tab.session = text "sessionId" json then tab.dialog <- None)
+        (fun _ tab -> if tab.session = text "sessionId" json then tab.dialog <- None)
         t.tabs
   | Some "Page.frameNavigated", Some params -> (
       Hashtbl.iter
         (fun _ tab ->
           if
-            Some tab.session = text "sessionId" json
+            tab.session = text "sessionId" json
             &&
             match member "frame" params with
             | Some frame -> text "parentId" frame = None
@@ -850,7 +1037,7 @@ let inspect t json =
       | Some session ->
           Hashtbl.iter
             (fun _ tab ->
-              if tab.session = session && tab.loading then tab.navigated <- true)
+              if tab.session = Some session && tab.loading then tab.navigated <- true)
             t.tabs
       | None -> ())
   | Some (("Page.loadEventFired" | "Page.domContentEventFired") as event), Some params
@@ -860,7 +1047,7 @@ let inspect t json =
       | Some session ->
           Hashtbl.iter
             (fun _ tab ->
-              if tab.session = session && tab.loading then (
+              if tab.session = Some session && tab.loading then (
                 (if event = "Page.frameNavigated" then
                    match member "frame" params with
                    | Some frame when text "parentId" frame = None -> tab.navigated <- true
@@ -878,7 +1065,8 @@ let inspect t json =
             t.tabs)
   | _ -> ()
 
-let create ~sw ~cap ~tombstone_s (deps : 'clock deps) =
+let create ~sw ~cap ~tombstone_s ?(idle = Eta.Duration.minutes 30)
+    ?(unclaimed = Eta.Duration.hours 1) (deps : 'clock deps) =
   let t =
     {
       chrome = deps.chrome;
@@ -892,11 +1080,15 @@ let create ~sw ~cap ~tombstone_s (deps : 'clock deps) =
       logger = deps.logger;
       cap;
       tombstone_s;
+      (* own-vhqo: the two expiry durations are config; the ADR's defaults stand in when a
+         caller does not name them, which is what a test registry gets. *)
+      idle = Eta.Duration.to_seconds_float idle;
+      unclaimed = Eta.Duration.to_seconds_float unclaimed;
       started = Eio.Time.now deps.clock;
       tabs = Hashtbl.create 32;
       targets = Hashtbl.create 32;
       tombs = Hashtbl.create 32;
-      pending_humans = Hashtbl.create 16;
+      pending = Hashtbl.create 16;
       creating = 0;
       stopping = false;
     }
@@ -931,7 +1123,8 @@ let create ~sw ~cap ~tombstone_s (deps : 'clock deps) =
         | Chrome.Lost generation ->
             Hashtbl.iter
               (fun _ tab ->
-                if tab.generation = generation then disappear t tab "browser_lost")
+                if tab.generation = generation then
+                  disappear t tab (disposition "browser_lost"))
               (Hashtbl.copy t.tabs)
         | Chrome.Gave_up _ | Chrome.Stopped -> ());
         lifecycle ()

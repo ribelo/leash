@@ -38,7 +38,13 @@
     ({timestamp}). [emit] can also send arbitrary event names and params, which is how a test
     scripts a popup: the Target.attachedToTarget targetInfo then carries the [openerId] the
     default fixture omits, recorded from real Chrome in docs/cdp-shapes.md and
-    test/fixtures/unlabelled-controls-chrome.json (tab-8k2g). *)
+    test/fixtures/unlabelled-controls-chrome.json (tab-8k2g).
+
+    Chrome announces a target with Target.targetCreated before it attaches to it, so a test
+    scripts a tab the human opened — or a page's popup — by emitting that announcement with
+    the [openerId] and sessionless targetInfo, and lets the attachment follow (own-c0cl
+    own-ehqa). The default event shape is the fixture page [target-1]; [emit] papers over
+    the rest. *)
 
 type t
 

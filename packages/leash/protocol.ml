@@ -251,6 +251,26 @@ module Chrome_phase = struct
   let yojson_of_t = yojson_of_chrome_phase
 end
 
+(** The wire's dispositions (ADR-0005): why a tombstone says a tab is gone.
+    [Closed_by_owner] and [Closed_by_ttl] are the two Leash issues itself, when its owner
+    closes the tab or the second expiry stage does; [Closed_externally] is anything else
+    Chrome reports; [Browser_lost] is a generation that ended. *)
+type disposition =
+  | Closed_by_owner [@json.name "closed_by_owner"]
+  | Closed_by_ttl [@json.name "closed_by_ttl"]
+  | Closed_externally [@json.name "closed_externally"]
+  | Browser_lost [@json.name "browser_lost"]
+[@@deriving yojson]
+
+module Disposition = struct
+  type t = disposition
+
+  let of_string = wire_value disposition_of_yojson
+  let to_string = wire_string yojson_of_disposition
+  let t_of_yojson = disposition_of_yojson
+  let yojson_of_t = yojson_of_disposition
+end
+
 type error_code =
   | Invalid_request [@json.name "invalid-request"]
   | Not_owner [@json.name "not-owner"]

@@ -109,6 +109,26 @@ Rules:
 - `list` shows the caller's tabs — the ones it owns and the one the human is holding for
   it — and `list --all` every tab with its `origin`, `state`, and `owner`; `owner` is
   null exactly when `state` is `unowned`.
+- `expires` is the next stage a tab faces and the whole seconds left before it: an owned
+  tab faces `release` after `expiry.idle_s` with no owner action, and an unowned
+  agent-origin tab faces `close` after `expiry.unclaimed_s` with nobody claiming it. It is
+  `null` for a human-origin tab and for one the human holds, because no timer may take
+  them.
+- Expiry is one sweep every 30 seconds on the service clock. Stage 1 releases an owned tab
+  idle for `idle_s`: it stays open, unowned, and claimable. Stage 2 closes an unowned
+  agent-origin tab unclaimed for `unclaimed_s` with disposition `closed_by_ttl`. Any action
+  its owner is allowed to take resets the idle clock, a human-origin tab is never
+  auto-closed whatever its ownership history, and a handed-off tab is exempt while the
+  human holds it.
+- Tabs Leash did not create are discovered from Chrome's target stream. A tab opened in the
+  Chrome UI, or by a page whose opener Leash does not know, appears in `list --all` with
+  origin `human` and state `unowned`, and an agent claims it to work on it. A tab a page
+  opens from a tab an agent owns is that agent's instead: origin `agent` and state
+  `owned`. Origin and owner state are decided when the tab is first seen and never
+  change; a later report about the tab moves its url and title. Leash attaches to a
+  discovered tab the first time a command needs its page; `list`, `claim`, `release`,
+  and `close` need no attachment. A discovered tab that goes away without Leash closing
+  it leaves a tombstone with disposition `closed_externally`.
 - Every action except `nav`, `scroll`, `wait`, and `dialog` requires the `snapshot` id it targets; it is refused with `stale-snapshot` if that is not the tab's current snapshot, if the page navigated since, if the row's node no longer resolves, or if its role and name differ from the snapshot's. An indexed `scroll` carries no id and revalidates against the tab's current snapshot.
 - A row action also refuses with `row-not-actionable` when the row is disabled, has no layout box, cannot take focus, or is covered at its click point (a hit test that answers with another node than the row or one of its descendants). Clicking reads the row's geometry at that moment; scrolling and animation are never staleness.
 - `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked).

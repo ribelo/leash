@@ -218,3 +218,32 @@ appeared as a target whose every pushed TargetInfo carries the opener:
   the browser, not on the action's own settle budget, and the 30-second CDP deadline is what
   bounds it. The control-seam tests script these events, so this timing can only be caught by
   live acceptance.
+
+## L12 origin and discovery (control seam)
+
+`Target.setDiscoverTargets {"discover":true}` is what makes Chrome report a page target's
+whole life, and Leash listens to it rather than deriving it from its own calls:
+`Target.targetCreated` when the target exists — the tab Leash itself asked for included,
+which is why a creation can arrive before `Target.createTarget` answers —
+`Target.targetInfoChanged` with its url, title, and `openerId`, and
+`Target.targetDestroyed` when it is gone. An announcement carries no session; the
+auto-attach session follows as `Target.attachedToTarget` for the same target, the popup
+record above shows `attached` moving false → true with it.
+
+- Origin and owner state are decided from the first report about a target and never
+  rewritten (own-c0cl own-ehqa): no `openerId`, or one naming a tab the registry does not
+  know, is human origin and unowned; an `openerId` naming a tab the registry knows inherits
+  that tab's origin and owner, which is how a page's popup becomes the opener agent's tab.
+- A discovered target is listed, claimed, released, and closed with no page session at all.
+  The first command that needs the page uses the session Chrome attached it under, or
+  attaches itself (`Target.attachToTarget`, flatten); the reading and action domains are
+  enabled in that session then, so nothing in the notification path waits on the browser.
+- `Target.targetDestroyed` is `closed_externally` unless Leash issued the close: a tab
+  Leash closed, or the TTL sweep closes, left the registry with its own disposition, so the
+  later destroy report finds nothing to rewrite (own-teh1).
+
+`test/discovery_test.ml` scripts exactly this at the control seam: emitting
+`Target.targetCreated` for an unknown target id opens a human's tab, and giving its
+targetInfo an `openerId` that names a tab Leash created opens a popup. The live half — a
+tab opened by a second CDP client, a real `window.open` popup — belongs to L14's
+acceptance.

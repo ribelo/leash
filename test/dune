@@ -66,6 +66,22 @@
   alcotest))
 
 (test
+ (name expiry_test)
+ (modules expiry_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eta_process
+  eta_observability
+  eta_app
+  eio
+  eio.unix
+  yojson
+  alcotest))
+
+(test
  (name reading_test)
  (modules reading_test)
  (libraries
@@ -108,6 +124,21 @@
   eta_observability
   eio
   eio.mock
+  eio.unix
+  yojson
+  alcotest))
+
+(test
+ (name discovery_test)
+ (modules discovery_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eta_process
+  eta_observability
+  eio
   eio.unix
   yojson
   alcotest))

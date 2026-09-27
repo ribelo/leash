@@ -144,6 +144,18 @@ module Chrome_phase : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
+(** Why a tab is gone: the tombstone's disposition (ADR-0005). It is the closed set
+    [closed_by_owner], [closed_by_ttl], [closed_externally], [browser_lost] that a
+    [tab-gone] reply carries in [detail.disposition]. *)
+module Disposition : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
 (** The closed error-code set of [docs/protocol.md]. *)
 module Error_code : sig
   type t

@@ -9,4 +9,5 @@ module Chrome = Chrome
 module Config = Config
 module Protocol = Protocol
 module Tabs = Tabs
+module Expiry = Expiry
 module Control = Control
