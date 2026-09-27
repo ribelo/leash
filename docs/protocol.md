@@ -62,7 +62,7 @@ Human handoff:
 
 | cmd | args | result |
 | --- | --- | --- |
-| `handoff` | `{tab, reason, timeout_s?}` | `{resumed: true, url, title}` |
+| `handoff` | `{tab, reason, timeout_s?}` | `{resumed: true, url, title, warnings?: string[]}` |
 | `resume` | `{tab}` | `{resumed: true}` |
 
 Drive:
@@ -158,6 +158,7 @@ Rules:
 | `row-not-actionable` | the row is not visible, is disabled, or is covered at its click point |
 | `dialog-open` | a dialog blocks the page; answer it first |
 | `no-dialog` | `dialog` with nothing to answer |
+| `no-handoff` | `resume` on a tab nobody is waiting on |
 | `url-refused` | scheme not http(s)/about:blank, or userinfo present |
 | `tab-cap` | no capacity for `new` |
 | `timeout` | `wait`, `handoff`, or a bounded operation ran out of time |

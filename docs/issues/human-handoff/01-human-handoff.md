@@ -34,6 +34,8 @@ Logins, two-factor codes, captchas, and consequential confirmations need a human
 - Focus: `Target.activateTarget` for the tab, then the configured desktop action (default `niri msg action focus-window` matched by the Chrome app id or title determined in milestone 1). Notification: `notify-send --action done=Done` with the reason; the CLI-less resume path is the notification's action return, consumed by the service through the same spawn.
 - Both external commands run through Eta's scoped child process with a five-second deadline; their failure is reported in the reply's `warnings` and logged.
 - `list --all` shows state `with_human` and the reason.
+- `resume` (by CLI or notification action) resets the tab's idle clock, so the human's work does not expire the agent's tab a moment later; milestone 3's registry `hand_over` deliberately does not, and `handoff` is the only wire path into `With_human`.
+- Focus is best effort (ADR-0003): `Target.activateTarget` first; the desktop command is configurable (`handoff.focus_command`, default `niri msg action focus-window --id` with the Chrome window found by app id or title, else skipped); `notify-send` is configurable the same way (`handoff.notify_command`). Both external commands run through `Eta_process.Child` with a five-second grace and their failure is a `warnings` entry, never a handoff failure.
 
 ## Testing Decisions
 

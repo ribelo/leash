@@ -43,6 +43,9 @@ One snapshot per observation: url, title, and a numbered element table. Every ac
 26. As an operator, I want `leash snap --table` to render the table for a human in one line per row, so that I can follow what an agent sees. ^tab-ok2i
 27. As an agent, I want a control with an empty accessible name (an unlabelled native select, a bare text input, an icon button) to appear in the table with its role and an empty name, plus its value or placeholder when it has one, so that I can still act on it by index. ^tab-zc36
 28. As an agent, I want `popups` in an action result to list only tabs whose opener is the acted-on tab (Chrome's `openerId`), so that another agent's new tab is never reported as mine. ^tab-8k2g
+29. As an agent, I want an input whose handler opens a popup acknowledged by the popup's own `Target.targetCreated` (opener = this tab) racing the withheld dispatch reply, with no fixed dispatch time limit, so that a slow page never turns a delivered click into `browser-unavailable` and a retry never lands it twice. ^tab-0ohq
+30. As an agent, I want `eval` whose expression opens or closes a window to settle the same way — a new target with this opener, or this target gone, ends the wait with `{value: null, popups|tab-gone}` — so that a window-opening evaluation does not hang for its whole timeout. ^tab-gjo0
+31. As an agent, I want `debug` on a claimed human-origin tab to include console, exception and failed-request entries from the moment I claimed it, so that a page I was handed reports what happened while I held it. ^tab-a7l3
 
 ## Implementation Decisions
 
@@ -69,6 +72,10 @@ One snapshot per observation: url, title, and a numbered element table. Every ac
 ## Out of Scope
 
 iframes, shadow roots, canvas, file inputs, drag and drop, hover, batch steps, CDP event subscriptions, network timings, typing at the current focus without a target.
+
+## Review after milestone 3 (2026-09-27)
+
+Milestone 3's live gate found that Chrome withholds the reply to a trusted input whose handler opens a popup, and fixed it with a 2-second dispatch bound plus a liveness probe. Accepted as a stopgap, replaced by stories 29–31 (row L15): the popup's `targetCreated` is the acknowledgement, so no dispatch has a fixed bound and "delivered" is never confused with "unavailable"; `eval` gets the same settlement; and claiming a human tab enables its event domains so `debug` covers the whole claim. Lazy enabling on discovery stays (a tab nobody acts on costs nothing); claim is the moment it stops being lazy.
 
 ## Review after milestone 2 (2026-09-27)
 
