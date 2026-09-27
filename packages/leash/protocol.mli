@@ -200,6 +200,7 @@ type snapshot = {
   total : int;
   offset : int;
   truncated : bool;
+  settled : bool;
   dialog : dialog option;
 }
 (** [dialog] is [T|null]. *)

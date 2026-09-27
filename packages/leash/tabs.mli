@@ -24,6 +24,12 @@ val new_tab :
 (** With a url, the tab's document is loaded before the reply (chrome-qnul), so [title] is
     populated; a load that does not complete within 30 seconds is [`timeout], as [nav]. *)
 
+val snap :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.snap_args ->
+  (Protocol.snapshot, Protocol.error) result
+
 val navigate :
   t ->
   owner:Protocol.Owner.t ->

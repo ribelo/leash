@@ -272,6 +272,7 @@ let load_timeout () =
               if n = 0 then Alcotest.fail (what ^ " did not time out")
               else (
                 Eta_test.advance env#clock (Eta.Duration.seconds 1);
+                Eio.Fiber.yield ();
                 await (n - 1))
         in
         await 60
@@ -499,6 +500,41 @@ let human () =
               await (n - 1)
       in
       await 1000;
+      let human_tab =
+        match get "tabs" (result (request tabs "alice" (P.List_tabs { all = true }))) with
+        | `List xs -> (
+            match List.find_opt (fun x -> get "origin" x = str "human") xs with
+            | Some x -> tab x
+            | None -> Alcotest.fail "human tab missing")
+        | _ -> Alcotest.fail "tabs must be an array"
+      in
+      Fake.on_method (fake ()) "Runtime.evaluate" (fun _ ->
+          obj
+            [
+              ( "result",
+                obj
+                  [
+                    ("type", str "object");
+                    ( "value",
+                      obj
+                        [
+                          ("epoch", str "human-doc");
+                          ("count", `Int 0);
+                          ("width", `Int 800);
+                          ("height", `Int 600);
+                        ] );
+                  ] );
+            ]);
+      ignore
+        (result
+           (request tabs "human"
+              (P.Snap { tab = human_tab; match_ = None; limit = None; offset = None })));
+      Alcotest.(check bool)
+        "tab-of0i adopted page installed" true
+        (Fake.received (fake ())
+        |> List.exists (fun x ->
+            field "method" x = Some (str "Page.addScriptToEvaluateOnNewDocument")
+            && field "sessionId" x = Some (str "human-session")));
       let before = Fake.received (fake ()) |> List.length in
       Leash.Tabs.stop tabs;
       let closed =
@@ -509,11 +545,139 @@ let human () =
       Alcotest.(check int) "agent only closed, human retained" 1 (List.length closed);
       ignore agent)
 
+(* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8.
+   AX and DOMSnapshot replies below are copied from headless Chrome 152, not invented. *)
+let snapshot_fixture () =
+  let load name = Yojson.Safe.from_file name in
+  try load "fixtures/snapshot-chrome.json"
+  with Sys_error _ -> load "test/fixtures/snapshot-chrome.json"
+
+let snapshot () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      let fixture = snapshot_fixture () in
+      Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
+      Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
+      Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
+      let guard_reads = ref 0 in
+      let mutating = ref false in
+      Fake.on_method fake "Runtime.evaluate" (fun _ ->
+          incr guard_reads;
+          let counter = if !mutating then !guard_reads else 1 in
+          obj
+            [
+              ( "result",
+                obj
+                  [
+                    ("type", str "object");
+                    ( "value",
+                      obj
+                        [
+                          ("epoch", str "document-1");
+                          ("count", `Int counter);
+                          ("width", `Int 800);
+                          ("height", `Int 600);
+                        ] );
+                  ] );
+            ]);
+      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let snap ?match_ ?limit ?offset () =
+        result (request tabs "alice" (P.Snap { tab = h; match_; limit; offset }))
+      in
+      let first = snap () in
+      Alcotest.(check bool) "tab-of0i settled" true (get "settled" first = `Bool true);
+      Alcotest.(check int)
+        "tab-tmoc visible rows" 2
+        (get "total" first |> function `Int n -> n | _ -> -1);
+      Alcotest.(check string)
+        "tab-of0i reading order" "fresh doc"
+        (match get "rows" first with
+        | `List (x :: _) -> ( match get "name" x with `String s -> s | _ -> "")
+        | _ -> "");
+      let calls = List.length (Fake.received fake) in
+      check_code "tab-1rx9 reject negative offset" "invalid-request"
+        (request tabs "alice"
+           (P.Snap { tab = h; match_ = None; limit = None; offset = Some (-1) }));
+      Alcotest.(check int)
+        "tab-1rx9 no CDP on invalid request" calls
+        (List.length (Fake.received fake));
+      check_code "tab-of0i owner isolation" "not-owner"
+        (request tabs "bob"
+           (P.Snap { tab = h; match_ = None; limit = None; offset = None }));
+      let filtered = snap ~match_:"GO" ~limit:0 () in
+      Alcotest.(check int)
+        "tab-hyap matched total" 1
+        (match get "total" filtered with `Int n -> n | _ -> -1);
+      Alcotest.(check bool)
+        "tab-1rx9 truncated" true
+        (get "truncated" filtered = `Bool true);
+      Alcotest.(check bool)
+        "tab-1r34 new id" true
+        (get "snapshot" first <> get "snapshot" filtered);
+      let page = snap ~offset:1 ~limit:1 () in
+      Alcotest.(check bool)
+        "tab-1rx9 last page" true
+        (get "total" page = `Int 2 && get "truncated" page = `Bool false);
+      Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogOpening"
+        ~params:
+          (obj
+             [
+               ("type", str "alert");
+               ("message", str "stay here");
+               ("url", str "http://localhost/");
+               ("hasBrowserHandler", `Bool true);
+             ]);
+      let rec wait_dialog n =
+        if n = 0 then Alcotest.fail "dialog event was not delivered"
+        else
+          match
+            Leash.Tabs.snap tabs ~owner:(owner "alice")
+              { tab = h; match_ = None; limit = None; offset = None }
+          with
+          | Ok { dialog = Some _; _ } -> ()
+          | _ ->
+              Eio.Fiber.yield ();
+              wait_dialog (n - 1)
+      in
+      wait_dialog 100;
+      let dialog = snap () in
+      Alcotest.(check bool)
+        "tab-0vh8 dialog" true
+        (get "message" (get "dialog" dialog) = str "stay here");
+      Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogClosed"
+        ~params:(obj [ ("result", `Bool false); ("userInput", str "") ]);
+      let rec wait_clear n =
+        if n = 0 then Alcotest.fail "dialog closure was not delivered"
+        else
+          let current = snap () in
+          if get "dialog" current = `Null then ()
+          else (
+            Eio.Fiber.yield ();
+            wait_clear (n - 1))
+      in
+      wait_clear 100;
+      mutating := true;
+      let before = !guard_reads in
+      let unsettled = snap () in
+      Alcotest.(check bool)
+        "tab-of0i unsettled" true
+        (get "settled" unsettled = `Bool false);
+      Alcotest.(check int) "tab-of0i at most two retakes" 6 (!guard_reads - before);
+      let methods =
+        Fake.received fake
+        |> List.filter_map (fun j ->
+            match field "method" j with Some (`String x) -> Some x | _ -> None)
+      in
+      Alcotest.(check bool)
+        "tab-of0i counter installed on attach" true
+        (List.mem "Page.addScriptToEvaluateOnNewDocument" methods))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
       ( "lifecycle",
         [
+          Alcotest.test_case "tab-of0i tmoc 1r34 hyap 1rx9 0vh8" `Quick snapshot;
           Alcotest.test_case "chrome-qnul hjw9 fuao 2n8n" `Quick lifecycle;
           Alcotest.test_case "chrome-akz4 d4mz" `Quick safety;
           Alcotest.test_case "chrome-1yn9" `Quick nav;

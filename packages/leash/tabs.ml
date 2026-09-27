@@ -82,6 +82,9 @@ type tab = {
   mutable navigated : bool;
   mutable completed : bool;
   mutable load_waiter : unit Eio.Promise.u option;
+  mutable snapshot : (P.Snapshot_id.t * string * (P.row * int) list) option;
+  mutable dialog : P.dialog option;
+  mutable counter_installed : bool;
 }
 
 type tomb = { owner : P.Owner.t option; disposition : string; at : float }
@@ -179,6 +182,9 @@ let register t ~id ~session ~origin ~owner ~url ~title =
       navigated = false;
       completed = false;
       load_waiter = None;
+      snapshot = None;
+      dialog = None;
+      counter_installed = false;
     }
   in
   Hashtbl.add t.tabs (key tab.handle) tab;
@@ -272,6 +278,11 @@ let new_tab t ~owner ~url =
                 (* chrome-qnul: a tab created with a url is only titled once its document
                    has loaded, so the reply waits exactly as [nav] does. Without a url (or
                    for [about:blank]) there is nothing to await and the reply is immediate. *)
+                let* _ =
+                  cdp_call ~session cdp "Page.addScriptToEvaluateOnNewDocument"
+                    (obj [ ("source", str Snapshot_source.counter_script) ])
+                in
+                tab.counter_installed <- true;
                 let* () =
                   if waits_for_load url then
                     with_load_wait t cdp tab (fun () ->
@@ -294,6 +305,7 @@ let navigate t ~owner handle url =
            Chrome speaks; the load wait's own [Target.getTargetInfo] refresh replaces it
            with the URL Chrome committed, which is what a redirect changes. *)
         tab.url <- url;
+        tab.snapshot <- None;
         let* () =
           with_load_wait t cdp tab (fun () ->
               let* reply =
@@ -349,6 +361,124 @@ let list t ~owner ~all =
             String.compare (key a.tab) (key b.tab))
           tabs;
     }
+
+(* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8:
+   retain the unfiltered node table for later action-time revalidation. *)
+let snap t ~owner (args : P.snap_args) =
+  let* tab = lookup t ~owner args.tab in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = lookup t ~owner args.tab in
+      let offset = Option.value ~default:0 args.offset in
+      let limit = Option.value ~default:120 args.limit in
+      if offset < 0 || limit < 0 || limit > 1000 then
+        Error
+          (error "invalid-request" "snap offset must be nonnegative and limit 0..1000")
+      else
+        let* cdp = ready t in
+        let call meth params = cdp_call ~session:tab.session cdp meth params in
+        let* () =
+          if tab.counter_installed then Ok ()
+          else
+            let* _ =
+              call "Page.addScriptToEvaluateOnNewDocument"
+                (obj [ ("source", str Snapshot_source.counter_script) ])
+            in
+            tab.counter_installed <- true;
+            Ok ()
+        in
+        let loader () =
+          let* reply = call "Page.getFrameTree" (obj []) in
+          match member "frameTree" reply with
+          | Some tree ->
+              let frame = Option.value ~default:`Null (member "frame" tree) in
+              Ok (Option.value ~default:"" (text "loaderId" frame))
+          | None -> Error (error "internal" "browser omitted frame tree")
+        in
+        let guard () =
+          let evaluate expression =
+            let* reply =
+              call "Runtime.evaluate"
+                (obj [ ("expression", str expression); ("returnByValue", `Bool true) ])
+            in
+            match member "result" reply with
+            | Some result -> Ok (Option.value ~default:`Null (member "value" result))
+            | None -> Error (error "internal" "browser omitted guard result")
+          in
+          let* current = evaluate Snapshot_source.guard_expression in
+          match Snapshot_source.guard current with
+          | Some guard -> Ok guard
+          | None -> (
+              let* _ = evaluate Snapshot_source.counter_script in
+              let* reply = evaluate Snapshot_source.guard_expression in
+              match Snapshot_source.guard reply with
+              | Some guard -> Ok guard
+              | None -> Error (error "internal" "document mutation guard unavailable"))
+        in
+        let capture () =
+          let* before_loader = loader () in
+          let* before = guard () in
+          let* ax = call "Accessibility.getFullAXTree" (obj []) in
+          let* dom =
+            call "DOMSnapshot.captureSnapshot"
+              (obj
+                 [
+                   ("computedStyles", `List [ str "display"; str "visibility" ]);
+                   ("includeDOMRects", `Bool true);
+                 ])
+          in
+          let* after = guard () in
+          let* after_loader = loader () in
+          let _, _, width, height = before in
+          let rows = Snapshot_source.rows ~ax ~dom ~width ~height in
+          Ok (rows, before = after && before_loader = after_loader, after_loader)
+        in
+        let rec attempt remaining =
+          let* rows, settled, loader_id =
+            if tab.dialog <> None then Ok ([], false, "") else capture ()
+          in
+          if (not settled) && remaining > 0 && tab.dialog = None then
+            attempt (remaining - 1)
+          else Ok (rows, settled, loader_id)
+        in
+        let* rows, settled, loader_id = attempt 2 in
+        let snapshot =
+          enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ()))
+        in
+        tab.snapshot <- Some (snapshot, loader_id, rows);
+        let matches row =
+          match args.match_ with
+          | None -> true
+          | Some pattern ->
+              let pattern = String.lowercase_ascii pattern in
+              let contains s =
+                let s = String.lowercase_ascii s in
+                let n = String.length pattern in
+                let rec scan at =
+                  at + n <= String.length s
+                  && (String.sub s at n = pattern || scan (at + 1))
+                in
+                scan 0
+              in
+              contains row.P.role || contains row.name
+              || Option.fold ~none:false ~some:contains row.value
+        in
+        let all = rows |> List.map fst |> List.filter matches in
+        let total = List.length all in
+        let shown = all |> List.filteri (fun i _ -> i >= offset && i - offset < limit) in
+        Ok
+          P.
+            {
+              snapshot;
+              tab = tab.handle;
+              url = tab.url;
+              title = tab.title;
+              rows = shown;
+              total;
+              offset;
+              truncated = offset + List.length shown < total;
+              settled;
+              dialog = tab.dialog;
+            })
 
 let report t : P.status_result =
   let chrome = Chrome.status t.chrome in
@@ -413,10 +543,39 @@ let inspect t json =
                 (Hashtbl.find_opt t.tabs k)
           | None -> ())
       | None -> ())
-  | ( Some
-        (("Page.loadEventFired" | "Page.frameNavigated" | "Page.domContentEventFired") as
-         event),
-      Some params ) -> (
+  | Some "Page.javascriptDialogOpening", Some params ->
+      Hashtbl.iter
+        (fun _ tab ->
+          if Some tab.session = text "sessionId" json then
+            match (text "type" params, text "message" params) with
+            | Some kind, Some message ->
+                tab.dialog <- Some P.{ kind = enum P.Dialog_kind.of_string kind; message }
+            | _ -> ())
+        t.tabs
+  | Some "Page.javascriptDialogClosed", _ ->
+      Hashtbl.iter
+        (fun _ tab -> if Some tab.session = text "sessionId" json then tab.dialog <- None)
+        t.tabs
+  | Some "Page.frameNavigated", Some params -> (
+      Hashtbl.iter
+        (fun _ tab ->
+          if
+            Some tab.session = text "sessionId" json
+            &&
+            match member "frame" params with
+            | Some frame -> text "parentId" frame = None
+            | None -> false
+          then tab.snapshot <- None)
+        t.tabs;
+      match text "sessionId" json with
+      | Some session ->
+          Hashtbl.iter
+            (fun _ tab ->
+              if tab.session = session && tab.loading then tab.navigated <- true)
+            t.tabs
+      | None -> ())
+  | Some (("Page.loadEventFired" | "Page.domContentEventFired") as event), Some params
+    -> (
       match text "sessionId" json with
       | None -> ()
       | Some session ->

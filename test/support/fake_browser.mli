@@ -17,7 +17,11 @@
       docs/cdp-shapes.md)
     - Target.closeTarget: {success:true}
     - Page.enable: {}; Page.navigate: {frameId:"frame-1",loaderId:"loader-1"}
-    - Runtime.evaluate: {result:{type:"undefined"}}
+    - Page.addScriptToEvaluateOnNewDocument: {identifier:"1"}; Page.getFrameTree:
+      {frameTree:{frame:{id:"frame-1",loaderId:"loader-1",url:"about:blank"}}}
+    - Accessibility.getFullAXTree: {nodes:[]}; DOMSnapshot.captureSnapshot:
+      {documents:[],strings:[]}; Runtime.evaluate: {result:{type:"undefined"}}
+      Tests override AX, DOMSnapshot and guard with fixtures captured from real Chrome.
 
     Event shapes available through [event] are Target.targetCreated and
     Target.targetInfoChanged

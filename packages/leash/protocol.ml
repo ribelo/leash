@@ -311,6 +311,7 @@ type snapshot = {
   total : int;
   offset : int;
   truncated : bool;
+  settled : bool;
   dialog : dialog option; [@yojson.null]
 }
 [@@deriving yojson]

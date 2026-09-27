@@ -69,6 +69,25 @@ let defaults replies =
       ("Target.getTargetInfo", obj [ ("targetInfo", target_info) ]);
       ("Target.closeTarget", obj [ ("success", `Bool true) ]);
       ("Page.enable", obj []);
+      ("Page.addScriptToEvaluateOnNewDocument", obj [ ("identifier", str "1") ]);
+      ( "Page.getFrameTree",
+        obj
+          [
+            ( "frameTree",
+              obj
+                [
+                  ( "frame",
+                    obj
+                      [
+                        ("id", str "frame-1");
+                        ("loaderId", str "loader-1");
+                        ("url", str "about:blank");
+                      ] );
+                ] );
+          ] );
+      ("Accessibility.getFullAXTree", obj [ ("nodes", `List []) ]);
+      ( "DOMSnapshot.captureSnapshot",
+        obj [ ("documents", `List []); ("strings", `List []) ] );
       ("Page.navigate", obj [ ("frameId", str "frame-1"); ("loaderId", str "loader-1") ]);
       ("Runtime.evaluate", obj [ ("result", obj [ ("type", str "undefined") ]) ]);
     ]

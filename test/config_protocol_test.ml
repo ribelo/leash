@@ -301,6 +301,7 @@ let snapshot_json =
       ("total", `Int 1);
       ("offset", `Int 0);
       ("truncated", `Bool false);
+      ("settled", `Bool true);
       ("dialog", assoc [ ("kind", `String "confirm"); ("message", `String "Sure?") ]);
     ]
 
@@ -761,7 +762,8 @@ let config_check_cli () =
       Alcotest.(check bool) "unknown key exits two" true (status = Unix.WEXITED 2);
       Alcotest.(check bool) "unknown key named" true (contains "oops" error))
 
-let socket_cli_case argv reply expected_status expected_command expected_owner =
+let socket_cli_case ?(expected_lines = []) argv reply expected_status expected_command
+    expected_owner =
   with_temp (fun runtime ->
       let dir = Filename.concat runtime "leash" in
       Unix.mkdir dir 0o700;
@@ -816,8 +818,17 @@ let socket_cli_case argv reply expected_status expected_command expected_owner =
           Alcotest.(check bool)
             "CLI exit code" true
             (status = Unix.WEXITED expected_status);
-          let text = input_line (Unix.in_channel_of_descr out_read) in
+          let stream = Unix.in_channel_of_descr out_read in
+          let text = input_line stream in
           Alcotest.(check bool) "prints JSON or table" true (String.length text > 0);
+          (match expected_lines with
+          | [] -> ()
+          | header :: rows ->
+              Alcotest.(check string) "table header" header text;
+              List.iter
+                (fun expected ->
+                  Alcotest.(check string) "table row" expected (input_line stream))
+                rows);
           Unix.close err_read))
 
 let socket_cli () =
@@ -828,7 +839,14 @@ let socket_cli () =
     [ "new"; "--owner"; "human"; "https://example.com" ]
     "{\"ok\":false,\"error\":{\"code\":\"tab-cap\",\"message\":\"full\"}}" 1 "new" "human";
   socket_cli_case [ "list"; "--table" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list"
-    "dsh:test-l1"
+    "dsh:test-l1";
+  (* tab-ok2i: each observed row is one readable line in --table mode. *)
+  socket_cli_case
+    ~expected_lines:
+      [ "INDEX\tROLE\tNAME\tVALUE\tSTATE"; "0\tbutton\tSave\t1\tdisabled,required" ]
+    [ "snap"; "t_9xk"; "--table" ]
+    (Yojson.Safe.to_string (assoc [ ("ok", `Bool true); ("result", snapshot_json) ]))
+    0 "snap" "dsh:test-l1"
 
 let cli_usage () =
   let binary =

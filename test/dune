@@ -10,15 +10,18 @@
 
 (test
  (name fake_browser_test)
+ (modules fake_browser_test)
  (libraries leash leash_test_support eta_test eio eio.unix yojson alcotest))
 
 (test
  (name config_protocol_test)
+ (modules config_protocol_test)
  (libraries leash eta_app eio eio_main unix yojson alcotest)
  (deps ../packages/leash/bin/main.exe))
 
 (test
  (name cdp_test)
+ (modules cdp_test)
  (libraries
   leash
   leash_test_support
@@ -31,6 +34,8 @@
 
 (test
  (name control_test)
+ (modules control_test)
+ (deps fixtures/snapshot-chrome.json)
  (libraries
   leash
   leash_test_support
@@ -45,6 +50,7 @@
 
 (test
  (name chrome_test)
+ (modules chrome_test)
  (libraries
   leash
   leash_test_support

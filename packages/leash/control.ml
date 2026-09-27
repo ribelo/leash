@@ -32,6 +32,7 @@ let dispatch tabs (request : P.request) =
   in
   match request.command with
   | P.New args -> lift P.yojson_of_tab_info (Tabs.new_tab tabs ~owner ~url:args.url)
+  | P.Snap args -> lift P.yojson_of_snapshot (Tabs.snap tabs ~owner args)
   | P.Nav args ->
       lift P.yojson_of_action_result (Tabs.navigate tabs ~owner args.tab args.url)
   | P.Close args -> lift P.yojson_of_closed_result (Tabs.close tabs ~owner args.tab)
