@@ -386,7 +386,7 @@ let helper_rig ?(replies = [ chat_reply (`String "hello") ]) f =
               ~api_key:(Eta_observability.Redact.make key)
               ()
           in
-          let helper = Leash.Text_helper.create ~client ~model:text_model () in
+          let helper = Leash.Text_helper.create ~client ~model:text_model ~logger () in
           f env sw helper server memory))
 
 (* ---------- The control seam ---------- *)
@@ -831,6 +831,47 @@ let answer_shape () =
                 (contains error.message expected))
         [ ("two members", "text"); ("not json", "text"); ("not a string", "text") ])
 
+(* drive-7tvn: every answered helper call logs its model and token counts at info; a
+   memo reuse makes no call and logs nothing. *)
+let usage_is_logged () =
+  helper_rig
+    ~replies:[ chat_reply (`String "hello") ]
+    (fun _ _ helper _ memory ->
+      let ask () =
+        match helper.Leash.Text_helper.complete context with
+        | Ok value -> value
+        | Error error -> Alcotest.fail error.Leash.Protocol.message
+      in
+      Alcotest.(check (option string)) "drive-ls3c the value" (Some "hello") (ask ());
+      Alcotest.(check (option string)) "drive-ls3c the reuse" (Some "hello") (ask ());
+      let open Logger in
+      let usage =
+        List.filter
+          (fun r -> r.level = Info && String.equal r.msg "text helper usage")
+          (Memory.records memory)
+      in
+      Alcotest.(check int) "drive-7tvn one usage line per call" 1 (List.length usage);
+      let fields = (List.hd usage).fields in
+      let field name =
+        match List.assoc_opt name fields with
+        | Some value -> value
+        | None -> Alcotest.fail ("no " ^ name ^ " field")
+      in
+      Alcotest.(check string)
+        "drive-7tvn the model" text_model
+        (match field "model" with String model -> model | _ -> Alcotest.fail "model");
+      Alcotest.(check int)
+        "drive-7tvn prompt tokens" 10
+        (match field "prompt_tokens" with Int n -> n | _ -> Alcotest.fail "prompt");
+      Alcotest.(check int)
+        "drive-7tvn completion tokens" 2
+        (match field "completion_tokens" with
+        | Int n -> n
+        | _ -> Alcotest.fail "completion");
+      Alcotest.(check int)
+        "drive-7tvn total tokens" 12
+        (match field "total_tokens" with Int n -> n | _ -> Alcotest.fail "total"))
+
 let () =
   Alcotest.run "L22 text helper"
     [
@@ -844,5 +885,6 @@ let () =
           Alcotest.test_case "drive-kh2u chat failure with steps" `Quick chat_failure;
           Alcotest.test_case "drive-ls3c jev's field_context" `Quick field_context;
           Alcotest.test_case "drive-ls3c the answer shape" `Quick answer_shape;
+          Alcotest.test_case "drive-7tvn usage is logged" `Quick usage_is_logged;
         ] );
     ]

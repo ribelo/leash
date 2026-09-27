@@ -437,6 +437,75 @@ let with_runtime f =
       Unix.rmdir runtime)
     (fun () -> f runtime)
 
+(* tab-x4v0: a text reply bigger than the listener old 64 KiB ceiling arrives whole
+   over a real socket; the service answers instead of closing the connection. *)
+let large_text_over_socket () =
+  with_runtime (fun runtime ->
+      rig (fun env sw _ tabs fake ->
+          let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+          let big = String.make 70_000 'x' in
+          Fake.on_method (fake ()) "Runtime.evaluate" (fun _ ->
+              obj [ ("result", obj [ ("type", str "string"); ("value", str big) ]) ]);
+          let _control =
+            match
+              Leash.Control.create ~sw ~runtime_dir:runtime
+                {
+                  Leash.Control.tabs;
+                  status_query = (fun () -> []);
+                  models_status =
+                    (fun () ->
+                      Leash.Protocol.
+                        {
+                          configured = false;
+                          jev_model = "unconfigured";
+                          text_model = "";
+                          systemone_endpoint = "";
+                          chat_base_url = "";
+                        });
+                  fs = env#fs;
+                  net = env#net;
+                  clock = env#clock;
+                  logger =
+                    Eta_observability.Logger.create ~service:"socket-test"
+                      ~clock:env#clock ~mono_clock:env#mono_clock
+                      ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                      ();
+                }
+            with
+            | Ok control -> control
+            | Error _ -> Alcotest.fail "tab-x4v0 listener refused"
+          in
+          let path = Filename.concat (Filename.concat runtime "leash") "control.sock" in
+          let flow = Eio.Net.connect ~sw env#net (`Unix path) in
+          let line =
+            P.encode_request
+              {
+                owner = owner "alice";
+                command = P.Text { tab = h; index = None; max_chars = None };
+              }
+            |> Yojson.Safe.to_string
+          in
+          Eio.Flow.copy_string (line ^ "\n") flow;
+          let reply =
+            Eio.Buf_read.line (Eio.Buf_read.of_flow flow ~max_size:1_048_576)
+            |> Yojson.Safe.from_string
+          in
+          match P.decode_reply reply with
+          | Error why -> Alcotest.fail why
+          | Ok (P.Failure error) ->
+              Alcotest.failf "%s: %s" (P.Error_code.to_string error.code) error.message
+          | Ok (P.Success json) ->
+              let text =
+                match field "text" json with
+                | Some (`String text) -> text
+                | _ -> Alcotest.fail "tab-x4v0 no text in reply"
+              in
+              Alcotest.(check int)
+                "tab-x4v0 the whole bounded text" 65_536 (String.length text);
+              Alcotest.(check bool)
+                "tab-x4v0 truncated" true
+                (get "truncated" json = `Bool true)))
+
 let socket () =
   with_runtime (fun runtime ->
       rig (fun env sw _ tabs _ ->
@@ -983,6 +1052,8 @@ let () =
           Alcotest.test_case "chrome-38a4" `Quick malformed;
           Alcotest.test_case "chrome-2z2z 6lfk" `Quick lost;
           Alcotest.test_case "chrome-fwnu socket" `Quick socket;
+          Alcotest.test_case "tab-x4v0 large text over socket" `Quick
+            large_text_over_socket;
           Alcotest.test_case "human-origin shutdown" `Quick human;
           Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
           Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;

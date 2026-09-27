@@ -137,6 +137,38 @@ let budget (request : (P.request, string) result) =
       Some cdp_budget
   | Ok _ -> Some (seconds 1)
 
+(* tab-x4v0 tab-0lax: the listener's 64 KiB default drops this protocol's own
+   bounded shapes — a 64K-character text reply, a 64 KiB eval result or argument, a
+   64 KiB fill — by closing the connection with no reply at all. 1 MiB each way covers
+   every bounded shape with headroom and matches the CLI's own 1 MiB reply read. *)
+let policy : Eta_ipc.Listener.policy =
+  let open Eta_ipc.Listener in
+  { default_policy with max_line_bytes = 1_048_576; max_reply_bytes = 1_048_576 }
+
+(* A peer the listener turns away is a log line, never a silent close: from the
+   client's side a dropped reply is indistinguishable from a dead service. A client
+   that went away is routine — a killed handoff waiter disconnects mid-request — while
+   a timeout, an oversize line or reply, or a budget overrun is a warning. *)
+let on_peer_error logger error =
+  let code, routine =
+    match error with
+    | `Ingress_timeout -> ("ingress_timeout", false)
+    | `Ingress_too_large -> ("ingress_too_large", false)
+    | `Ingress_closed -> ("ingress_closed", true)
+    | `Decode _ -> ("decode", false)
+    | `Handler _ -> ("handler", false)
+    | `Handler_budget_exceeded -> ("handler_budget_exceeded", false)
+    | `Egress_timeout -> ("egress_timeout", false)
+    | `Egress_too_large -> ("egress_too_large", false)
+    | `Egress_closed -> ("egress_closed", true)
+    | `Disconnected -> ("disconnected", true)
+  in
+  let fields = [ ("code", Eta_observability.Logger.String code) ] in
+  if routine then Eta_observability.Logger.debug logger ~fields "control client went away"
+  else
+    Eta_observability.Logger.warn logger ~fields
+      "control dropped a request without a reply"
+
 let create ?(model = "unconfigured") ?decide ?text_helper ~sw ~runtime_dir deps =
   let path = Filename.concat (Filename.concat runtime_dir "leash") "control.sock" in
   let decode line =
@@ -159,9 +191,10 @@ let create ?(model = "unconfigured") ?decide ?text_helper ~sw ~runtime_dir deps 
     Ok reply
   in
   match
-    Eta_ipc.Listener.run ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock ~path ~decode
+    Eta_ipc.Listener.run ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock ~path ~policy
+      ~decode
       ~encode:(fun reply -> Yojson.Safe.to_string (P.encode_reply reply))
-      ~budget ~handler ()
+      ~budget ~handler ~on_peer_error:(on_peer_error deps.logger) ()
   with
   | Ok () -> Ok { path }
   | Error error -> Error error

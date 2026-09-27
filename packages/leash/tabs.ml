@@ -1319,8 +1319,12 @@ let drive
               {
                 tab = args.tab;
                 expression =
+                  (* drive-y7v8: the document of a navigation in flight has no
+                     documentElement yet; without the guard the query throws, the
+                     observe fails, and the step after a navigation-ending action
+                     errors instead of observing the new page. *)
                   "return \
-                   {y:scrollY,viewport:innerHeight,height:Math.max(document.documentElement.scrollHeight,document.body?.scrollHeight||0)};";
+                   {y:scrollY,viewport:innerHeight,height:Math.max(document.documentElement?.scrollHeight||0,document.body?.scrollHeight||0)};";
                 argument = None;
               }
         in

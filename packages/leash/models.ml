@@ -12,6 +12,7 @@ module J = Jev_request
 
 type t = {
   config : Config.models;
+  logger : Eta_observability.Logger.t;
   http : Eta_http.Client.t;
       (** One client for every endpoint: the System One client and L22's chat client, so
           the service owns one transport and one TLS configuration. *)
@@ -47,7 +48,7 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
         Eta_ai_chat.create ~http ~clock ~logger ~endpoint:(chat_endpoint config) ~api_key
           ())
   in
-  { config; http; systemone; chat }
+  { config; logger; http; systemone; chat }
 
 (* drive-e7oi: the model id is what the client sends and checks the reply against, and the
    two endpoints are the configured ones. Nothing here reads the key. *)
@@ -88,6 +89,23 @@ let parts body =
       Result.map (fun questions -> (state, questions)) (read [] questions)
   | _ -> Error "the drive request has no state or questions"
 
+(* drive-7tvn: the provider's own accounting, at info so the operator sees it at the
+   default level — eta's clients log the same call at debug. Written for every answered
+   call, before the answers are validated, because the tokens were spent either way. *)
+let log_usage logger (response : Eta_ai_systemone.Codecs.response) =
+  let Eta_ai_systemone.Types.{ input_tokens; output_tokens; cost } =
+    response.Eta_ai_systemone.Codecs.usage
+  in
+  Eta_observability.Logger.info logger
+    ~fields:
+      [
+        ("model", Eta_observability.Logger.String response.Eta_ai_systemone.Codecs.model);
+        ("input_tokens", Eta_observability.Logger.Int input_tokens);
+        ("output_tokens", Eta_observability.Logger.Int output_tokens);
+        ("cost", Eta_observability.Logger.Float cost);
+      ]
+    "systemone usage"
+
 let default_deadline = Eta.Duration.seconds 30
 
 let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
@@ -110,6 +128,7 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
           match Eta_ai_systemone.Client.evaluate client ~deadline ~state ~questions with
           | Error error -> Error (Model_error.of_eta error)
           | Ok response -> (
+              log_usage t.logger response;
               (* The reply's answers object is what {!Jev_request.decide} reads; the
                  client decoded the envelope, the model check included. *)
               let answers =
@@ -131,4 +150,6 @@ let text_helper (t : t) : Text_helper.t =
   match t.chat with
   | None -> Text_helper.missing_key
   | Some client ->
-      Text_helper.create ~client ~model:(Config.Text.to_string t.config.text_model) ()
+      Text_helper.create ~client
+        ~model:(Config.Text.to_string t.config.text_model)
+        ~logger:t.logger ()

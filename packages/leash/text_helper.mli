@@ -40,12 +40,15 @@ type t = {
     seconds by default); the drive passes what is left of its own deadline, so a slow
     helper cannot outlast the reply the client waits for (drive-ix5t). *)
 
-val create : client:Eta_ai_chat.t -> model:string -> unit -> t
-(** [create ~client ~model ()] is the helper over the service's one chat client, for the
-    configured [model]. One instance serves one drive: it remembers the context it last
-    answered and reuses that answer when the identical context comes back — what a
+val create :
+  client:Eta_ai_chat.t -> model:string -> logger:Eta_observability.Logger.t -> unit -> t
+(** [create ~client ~model ~logger ()] is the helper over the service's one chat client,
+    for the configured [model]. One instance serves one drive: it remembers the context it
+    last answered and reuses that answer when the identical context comes back — what a
     stale-page retry is (drive-ls3c) — so an instance must not outlive the drive it
-    served. Cheap and synchronous: no I/O, no socket, nothing to release. *)
+    served. Cheap and synchronous: no I/O, no socket, nothing to release. Every answered
+    call is logged at info with the model and the token counts the provider reported
+    (drive-7tvn); a memo reuse makes no call and logs nothing. *)
 
 val unavailable : t
 (** The L19 refusal for a drive that was given no text helper at all: every call is

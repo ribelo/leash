@@ -398,7 +398,73 @@ let drive_to_done () =
       Alcotest.(check bool) "the models service logged" true (logged <> []);
       Alcotest.(check bool)
         "the key never reaches a log line" false
-        (List.exists (fun line -> contains line key) logged))
+        (List.exists (fun line -> contains line key) logged);
+      (* drive-y7v8: the scroll-metrics query the drive observes with must not throw
+         on a document mid-navigation — one without a documentElement — or the step
+         after a navigation-ending action errors instead of observing the new page. *)
+      let metrics =
+        Fake.received fake
+        |> List.filter_map (fun call ->
+            match field "method" call with
+            | Some (`String "Runtime.callFunctionOn") -> (
+                match field "params" call with
+                | Some params -> field "functionDeclaration" params
+                | None -> None)
+            | _ -> None)
+        |> List.filter (fun body ->
+            contains (match body with `String body -> body | _ -> "") "scrollHeight")
+      in
+      Alcotest.(check bool)
+        "drive-y7v8 the drive takes scroll metrics" true (metrics <> []);
+      List.iter
+        (fun body ->
+          Alcotest.(check bool)
+            "drive-y7v8 metrics survive a missing documentElement" true
+            (contains
+               (match body with `String body -> body | _ -> "")
+               "document.documentElement?.scrollHeight"))
+        metrics)
+
+(* ---------- drive-7tvn: the usage and cost of each decision, logged ---------- *)
+
+(* One answered decision writes one info line with the model, the token counts and the
+   cost the provider reported — the operator's view of what the drive cost. *)
+let usage_is_logged () =
+  rig (fun env sw tabs fake logger memory ->
+      script_page fake;
+      let server =
+        Server.serve ~net:env#net ~sw (scripted ~model:jev_model [ Answer "DONE" ])
+      in
+      let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
+      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let handle = new_tab tabs in
+      let reply = result (drive models tabs handle "Open the Wikipedia article") in
+      Alcotest.(check string) "drive-y7v8 done" "done" (text "status" reply);
+      let open Logger in
+      let usage =
+        List.filter
+          (fun r -> r.level = Info && String.equal r.msg "systemone usage")
+          (Memory.records memory)
+      in
+      Alcotest.(check int) "drive-7tvn one usage line per decision" 1 (List.length usage);
+      let fields = (List.hd usage).fields in
+      let field name =
+        match List.assoc_opt name fields with
+        | Some value -> value
+        | None -> Alcotest.fail ("no " ^ name ^ " field")
+      in
+      Alcotest.(check string)
+        "drive-7tvn the model" jev_model
+        (match field "model" with String model -> model | _ -> Alcotest.fail "model");
+      Alcotest.(check int)
+        "drive-7tvn input tokens" 10
+        (match field "input_tokens" with Int n -> n | _ -> Alcotest.fail "input");
+      Alcotest.(check int)
+        "drive-7tvn output tokens" 2
+        (match field "output_tokens" with Int n -> n | _ -> Alcotest.fail "output");
+      Alcotest.(check (float 0.0000001))
+        "drive-7tvn the cost" 0.0001
+        (match field "cost" with Float cost -> cost | _ -> Alcotest.fail "cost"))
 
 (* ---------- drive-kh2u: a provider failure, with the completed steps ---------- *)
 
@@ -594,5 +660,6 @@ let () =
           Alcotest.test_case "drive-e7oi model mismatch" `Quick model_mismatch;
           Alcotest.test_case "drive-kh2u missing key" `Quick missing_key;
           Alcotest.test_case "drive-yqxg endpoints" `Quick endpoints;
+          Alcotest.test_case "drive-7tvn usage is logged" `Quick usage_is_logged;
         ] );
     ]

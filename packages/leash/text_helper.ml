@@ -108,7 +108,25 @@ let value content =
   | _ -> refused nothing_typed
   | exception Yojson.Json_error _ -> refused nothing_typed
 
-let ask client ~model ?(deadline = default_deadline) json =
+(* drive-7tvn: the helper call's accounting, at info so the operator sees it at the
+   default level — eta's chat client logs the same call at debug. Written for every
+   answered call, before the content is parsed, because the tokens were spent either
+   way; a memo reuse makes no call and logs nothing. *)
+let log_usage logger (completion : Eta_ai_chat.Codecs.completion) =
+  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens } =
+    completion.Eta_ai_chat.Codecs.usage
+  in
+  Eta_observability.Logger.info logger
+    ~fields:
+      [
+        ("model", Eta_observability.Logger.String completion.Eta_ai_chat.Codecs.model);
+        ("prompt_tokens", Eta_observability.Logger.Int prompt_tokens);
+        ("completion_tokens", Eta_observability.Logger.Int completion_tokens);
+        ("total_tokens", Eta_observability.Logger.Int total_tokens);
+      ]
+    "text helper usage"
+
+let ask client ~model ~logger ?(deadline = default_deadline) json =
   let open Eta_ai_chat.Types in
   let messages =
     [ { role = System; content = Questions.text_value }; { role = User; content = json } ]
@@ -118,9 +136,11 @@ let ask client ~model ?(deadline = default_deadline) json =
       ~json_object:true ~reasoning:`Disabled ()
   with
   | Error error -> Error (Model_error.of_eta error)
-  | Ok completion -> value completion.Eta_ai_chat.Codecs.content
+  | Ok completion ->
+      log_usage logger completion;
+      value completion.Eta_ai_chat.Codecs.content
 
-let create ~client ~model () =
+let create ~client ~model ~logger () =
   (* The one-entry memo of agent.py:110-114, keyed by what the reference compares: the
      field context as it is written to the wire, so a reuse needs the whole helper input
      to be unchanged. A refusal is not remembered. *)
@@ -132,7 +152,7 @@ let create ~client ~model () =
         match !last with
         | Some (previous, answer) when previous = json -> answer
         | _ ->
-            let answer = ask client ~model ?deadline json in
+            let answer = ask client ~model ~logger ?deadline json in
             (match answer with Ok (Some _) -> last := Some (json, answer) | _ -> ());
             answer);
   }

@@ -10,6 +10,14 @@ let id = match P.Snapshot_id.of_string "s_test" with Ok x -> x | Error _ -> asse
 let op s = match P.Operation.of_string s with Ok x -> x | Error _ -> assert false
 let status (r : P.drive_result) = P.Drive_status.to_string r.status
 
+let contains haystack needle =
+  let n = String.length needle in
+  let rec scan at =
+    at + n <= String.length haystack
+    && (String.sub haystack at n = needle || scan (at + 1))
+  in
+  n > 0 && scan 0
+
 let snapshot ?(title = "Initial") () =
   P.
     {
@@ -409,8 +417,84 @@ let step_failure () =
       | Error _ -> Alcotest.fail (label ^ " must return a drive status")
       | Ok r ->
           check (label ^ " status") "error" (status r);
-          Alcotest.(check int) (label ^ " trace") 1 (List.length r.steps))
+          Alcotest.(check int) (label ^ " trace") 1 (List.length r.steps);
+          let reason =
+            match r.reason with
+            | Some reason -> reason
+            | None -> Alcotest.fail (label ^ " names no cause")
+          in
+          Alcotest.(check bool)
+            (label ^ " reason names the phase")
+            true
+            (contains reason
+               (if act_fails then "the click action failed"
+                else "observe after the action failed"));
+          Alcotest.(check bool)
+            (label ^ " reason names the code")
+            true (contains reason "internal"))
     [ ("act", true); ("post-action observe", false) ]
+
+(* drive-n3ld drive-y7v8: a dialog or popup mid-loop ends the drive with error and
+   names the cause — the dialog kind, the popup count. *)
+let dialog_popup_error () =
+  let alert =
+    P.
+      {
+        kind =
+          (match Dialog_kind.of_string "alert" with Ok x -> x | Error _ -> assert false);
+        message = "are you sure";
+      }
+  in
+  let popup =
+    P.
+      {
+        tab = handle;
+        url = "https://example.org/popup";
+        title = "Popup";
+        origin =
+          (match Origin.of_string "agent" with Ok x -> x | Error _ -> assert false);
+        state = (match State.of_string "owned" with Ok x -> x | Error _ -> assert false);
+        owner = None;
+        generation = 1;
+        expires = None;
+        reason = None;
+      }
+  in
+  List.iter
+    (fun (label, dialog, popups, expected) ->
+      let handler =
+        D.
+          {
+            observe = (fun () -> Ok (observation "Initial"));
+            decide = (fun _ -> Ok (decision "click"));
+            text_value = (fun _ -> Alcotest.fail "no text step in this script");
+            act =
+              (fun _ _ ~text:_ ->
+                Ok
+                  P.
+                    {
+                      tab = handle;
+                      url = "https://example.org";
+                      title = "Initial";
+                      snapshot = None;
+                      dialog;
+                      popups;
+                    });
+          }
+      in
+      match
+        D.run ~handler
+          ~now:(fun () -> 0.)
+          ~model:"test-model" ~args:(args ()) ~dry_run:false
+      with
+      | Error e -> Alcotest.failf "%s: %s" label (P.Error_code.to_string e.code)
+      | Ok r ->
+          check (label ^ " status") "error" (status r);
+          Alcotest.(check (option string)) (label ^ " reason") (Some expected) r.reason)
+    [
+      ("dialog", Some alert, [], "dialog open: alert");
+      ("popup", None, [ popup ], "1 popup opened");
+    ]
 
 let () =
   Alcotest.run "drive"
@@ -430,5 +514,6 @@ let () =
             ("drive-ls3c type-text stale", type_text_stale);
             ("drive-kh2u model-error", model_error);
             ("drive-y7v8 step-error", step_failure);
+            ("drive-n3ld dialog and popup name the cause", dialog_popup_error);
           ] );
     ]

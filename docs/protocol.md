@@ -111,7 +111,10 @@ Rules:
   never calls the text helper. A model failure is a protocol **error**
   (`model-unavailable`) with `detail: {code: string, steps: Step[]}` containing
   completed steps. Drive status `error` is reserved for non-model failures within a step
-  (including dialogs or popups), not model failures. `detail.code` is `missing-key`
+  (including dialogs or popups), not model failures. It carries `reason` naming the
+  cause: the failed action or re-observe with its error code, `dialog open: <kind>`
+  (the dialog itself is in the final snapshot), or the popup count. `detail.code`
+  is `missing-key`
   when no API key is configured — the drive fails at its first decision and nothing is
   sent — and otherwise the provider failure's kind: `unavailable`, `timeout`,
   `authentication`, `invalid-response`, `input-too-large`, or `model-mismatch` when

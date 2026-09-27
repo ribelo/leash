@@ -46,6 +46,23 @@ let internal message =
 let ms seconds = max 0 (int_of_float (seconds *. 1000.))
 let result ?reason status steps (final : observation) =
   P.{ status; steps = List.rev steps; final = final.snapshot; reason }
+
+(* drive-y7v8: an error names its cause, so the agent reading the trace knows whether
+   to hand off, retry, or give up. *)
+let failed what (error : P.error) =
+  Printf.sprintf "%s failed (%s): %s" what
+    (P.Error_code.to_string error.P.code)
+    error.P.message
+
+(* drive-n3ld: the dialog itself is in the final snapshot dialog field in full; the
+   reason names its kind. Popups are the caller tabs to list; the reason counts them. *)
+let dialog_reason (dialog : P.dialog) =
+  "dialog open: " ^ P.Dialog_kind.to_string dialog.P.kind
+
+let popup_reason popups =
+  match List.length popups with
+  | 1 -> "1 popup opened"
+  | n -> Printf.sprintf "%d popups opened" n
 let history (step : P.step) changed =
   J.{ action = op_name step.operation;
       kind = Some (if step.operation = operation "type_text" then "fill"
@@ -101,7 +118,9 @@ let loop (t : token) ~now ~model ~args ~dry_run =
     let rec go n page steps recent =
       if now () >= deadline then Ok (result (status "deadline") steps page)
       else if n >= cap then Ok (result (status "step-cap") steps page)
-      else if page.snapshot.dialog <> None then Ok (result (status "error") steps page)
+      else if page.snapshot.dialog <> None then
+        let reason = Option.map dialog_reason page.snapshot.dialog in
+        Ok (result ?reason (status "error") steps page)
       else
         let request = J.make ~model ~goal:args.goal ~snapshot:page.snapshot ~text:page.text
           ~recent:(List.rev recent) ~can_scroll_down:page.can_scroll_down ~can_scroll_up:page.can_scroll_up in
@@ -124,24 +143,36 @@ let loop (t : token) ~now ~model ~args ~dry_run =
             | Error error when P.Error_code.to_string error.code = "stale-snapshot" ->
                 (match observe t () with Error e -> Error (with_steps steps e)
                  | Ok refreshed -> go (n + 1) refreshed steps recent)
-            | Error _ ->
+            | Error act_error ->
               let steps, _ = record text page steps in
-              Ok (result (status "error") steps page)
+              let reason = failed ("the " ^ op_name op ^ " action") act_error in
+              Ok (result ~reason (status "error") steps page)
             | Ok action ->
               let next = if dry_run || terminal then Ok page else observe t () in
               (match next with
-               | Error _ ->
+               | Error observe_error ->
                  let steps, _ = record text page steps in
-                 Ok (result (status "error") steps page)
+                 let reason = failed "observe after the action" observe_error in
+                 Ok (result ~reason (status "error") steps page)
                | Ok next ->
                  let steps, entry = record text next steps in
                  let recent = entry :: recent in
-                 if action <> None && ((match action with Some a -> a.dialog <> None || a.popups <> [] | None -> false)) then
-                   Ok (result (status "error") steps next)
-                 else if op = operation "done" then Ok (result (status "done") steps next)
-                 else if op = operation "blocked" || dry_run || J.stalled (List.rev recent) then
-                   Ok (result (status "blocked") steps next)
-                 else go (n + 1) next steps recent)
+                 let interrupted =
+                   match action with
+                   | Some acted -> (
+                       match (acted.dialog, acted.popups) with
+                       | Some dialog, _ -> Some (dialog_reason dialog)
+                       | None, _ :: _ -> Some (popup_reason acted.popups)
+                       | None, [] -> None)
+                   | None -> None
+                 in
+                 (match interrupted with
+                  | Some reason -> Ok (result ~reason (status "error") steps next)
+                  | None when op = operation "done" ->
+                      Ok (result (status "done") steps next)
+                  | None when op = operation "blocked" || dry_run || J.stalled (List.rev recent)
+                    -> Ok (result (status "blocked") steps next)
+                  | None -> go (n + 1) next steps recent))
           in
           match ask_text page choice recent ~terminal with
           | Error error -> Error (with_steps steps error)

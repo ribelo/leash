@@ -53,7 +53,11 @@ val decide :
       with [detail.code = "invalid-response"] and {!Jev_request.decide}'s sentence.
 
     [deadline] (30 seconds by default) bounds the whole call, both attempts and the
-    backoff included; the drive passes what is left of its own deadline. *)
+    backoff included; the drive passes what is left of its own deadline.
+
+    Every answered call is logged at info with the model, the input and output token
+    counts and the cost the provider reported (drive-7tvn), before the answers are
+    validated: the tokens were spent either way. Refusals and failures log nothing. *)
 
 val text_helper : t -> Text_helper.t
 (** The text helper over this service's chat client and [models.text_model] (drive-ls3c).
