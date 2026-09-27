@@ -443,6 +443,19 @@ let click () =
   rig (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
+      (* tab-bw4j: real Chrome returns fractional quad centres but rejects them as
+         DOM.getNodeForLocation parameters (-32602). Keep mouse coordinates exact. *)
+      Fake.on_method fake "DOM.getContentQuads" (fun _ ->
+          o
+            [
+              ( "quads",
+                E.array
+                  [
+                    E.array
+                      (List.map num
+                         [ 10.25; 10.25; 110.5; 10.25; 110.5; 40.75; 10.25; 40.75 ]);
+                  ] );
+            ]);
       Fake.on_method fake "Target.getTargetInfo" (fun _ ->
           o
             [
@@ -473,14 +486,20 @@ let click () =
       Alcotest.(check int)
         "tab-tm6c no popups" 0
         (List.length (list (member "popups" reply)));
+      let hit = List.hd (calls fake "DOM.getNodeForLocation") |> params in
+      Alcotest.(check (pair int int))
+        "tab-bw4j rounds fractional quad centre for CDP hit test" (60, 26)
+        (integer "x" hit, integer "y" hit);
       let events = calls fake "Input.dispatchMouseEvent" in
       Alcotest.(check (list string))
         "tab-bw4j press then release, once"
         [ "mousePressed"; "mouseReleased" ]
         (kinds events);
-      Alcotest.(check int)
-        "tab-bw4j the row's click point" 60
-        (integer "x" (params (List.hd events)));
+      Alcotest.(check bool)
+        "tab-bw4j mouse dispatch retains fractional quad centre" true
+        (match member "x" (params (List.hd events)) with
+        | `Float x -> abs_float (x -. 60.375) < 0.000001
+        | _ -> false);
       Alcotest.(check int)
         "tab-bw4j the press carries the left button down" 1
         (integer "buttons" (params (List.hd events)));

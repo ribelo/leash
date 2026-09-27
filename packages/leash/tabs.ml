@@ -269,7 +269,12 @@ let new_tab t ~owner ~url =
         t.creating <- t.creating - 1;
         flush_humans t)
       (fun () ->
-        let* created = cdp_call cdp "Target.createTarget" (obj [ ("url", str target) ]) in
+        let* created =
+          (* Creating directly at [target] can finish a fast local load before
+            Page.enable has subscribed to events. Create blank, subscribe, then
+            navigate explicitly so the load waiter cannot miss it (chrome-qnul). *)
+          cdp_call cdp "Target.createTarget" (obj [ ("url", str "about:blank") ])
+        in
         match text "targetId" created with
         | None -> Error (error "internal" "browser omitted targetId")
         | Some id -> (
@@ -295,14 +300,18 @@ let new_tab t ~owner ~url =
                 tab.counter_installed <- true;
                 let* _ = cdp_call ~session cdp "Runtime.enable" (obj []) in
                 let* _ = cdp_call ~session cdp "Network.enable" (obj []) in
+                let* _ = cdp_call ~session cdp "Page.enable" (obj []) in
                 let* () =
                   if waits_for_load url then
                     with_load_wait t cdp tab (fun () ->
-                        let* _ = cdp_call ~session cdp "Page.enable" (obj []) in
-                        Ok ())
-                  else
-                    let* _ = cdp_call ~session cdp "Page.enable" (obj []) in
-                    Ok ()
+                        let* reply =
+                          cdp_call ~session cdp "Page.navigate"
+                            (obj [ ("url", str target) ])
+                        in
+                        match text "errorText" reply with
+                        | Some _ -> Error (error "internal" "browser navigation failed")
+                        | None -> Ok ())
+                  else Ok ()
                 in
                 (* tab-8la3: a tab Leash acts on keeps rendering and animating while it
                    is not the visible one, so an action on a background tab settles the
@@ -451,8 +460,8 @@ let snap t ~owner (args : P.snap_args) =
           in
           let* after = guard () in
           let* after_loader = loader () in
-          let _, _, width, height = before in
-          let rows = Snapshot_source.rows ~ax ~dom ~width ~height in
+          let _, _, width, height, scroll_x, scroll_y = before in
+          let rows = Snapshot_source.rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y in
           Ok (rows, before = after && before_loader = after_loader, after_loader)
         in
         let rec attempt remaining =

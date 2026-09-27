@@ -18,7 +18,8 @@ let counter_script =
   new MutationObserver(() => { count++; }).observe(document,
     {subtree:true, childList:true, attributes:true, characterData:true});
   Object.defineProperty(window, '__leashSnapshotGuard', {
-    value: () => ({epoch, count, width: innerWidth, height: innerHeight}),
+    value: () => ({epoch, count, width: innerWidth, height: innerHeight,
+                   scrollX, scrollY}),
     configurable:false, writable:false
   });
 })()|}
@@ -28,10 +29,18 @@ let guard_expression = "window.__leashSnapshotGuard?.()"
 let guard json =
   match (get "epoch" json, get "count" json) with
   | `String epoch, `Int count when epoch <> "" ->
-      Some (epoch, count, number (get "width" json), number (get "height" json))
+      Some
+        ( epoch,
+          count,
+          number (get "width" json),
+          number (get "height" json),
+          number (get "scrollX" json),
+          number (get "scrollY" json) )
   | _ -> None
 
-let visible dom ~width ~height =
+(* DOMSnapshot bounds are in document CSS coordinates, not viewport coordinates.
+   Clip against the viewport translated by the guard's scroll position (tab-tmoc). *)
+let visible dom ~width ~height ~scroll_x ~scroll_y =
   let result = Hashtbl.create 128 in
   (match list (get "documents" dom) with
   | doc :: _ ->
@@ -55,10 +64,10 @@ let visible dom ~width ~height =
                    && i < Array.length backends
                    && number w > 0.
                    && number h > 0.
-                   && number x +. number w > 0.
-                   && number y +. number h > 0.
-                   && number x < width
-                   && number y < height ->
+                   && number x +. number w > scroll_x
+                   && number y +. number h > scroll_y
+                   && number x < scroll_x +. width
+                   && number y < scroll_y +. height ->
                 let css = List.map (fun x -> style (integer x)) (list style_indices) in
                 if not (List.mem "none" css || List.mem "hidden" css) then
                   Hashtbl.replace result (integer backends.(i)) ()
@@ -109,8 +118,8 @@ let states n =
   in
   match checked @ expanded @ other with [] -> None | xs -> Some xs
 
-let rows ~ax ~dom ~width ~height =
-  let visible = visible dom ~width ~height in
+let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
+  let visible = visible dom ~width ~height ~scroll_x ~scroll_y in
   let nodes = list (get "nodes" ax) in
   let by_id = Hashtbl.create 128 in
   List.iter (fun n -> Hashtbl.replace by_id (text (get "nodeId" n)) n) nodes;

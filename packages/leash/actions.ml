@@ -224,8 +224,8 @@ let hit_test cdp tab ~backend ~x ~y =
       "DOM.getNodeForLocation"
       (E.object_
          [
-           ("x", E.float x);
-           ("y", E.float y);
+           ("x", Some (E.int (int_of_float (floor (x +. 0.5)))));
+           ("y", Some (E.int (int_of_float (floor (y +. 0.5)))));
            ("includeUserAgentShadowDOM", Some (E.bool false));
          ])
   with

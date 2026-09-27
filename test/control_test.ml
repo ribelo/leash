@@ -91,12 +91,12 @@ let document ~title ~url =
           ] );
     ]
 
-(* chrome-qnul: [new] with a url waits for the load event, so every test that creates such
-   a tab has to answer it. The pushed title is Chrome's tab-strip title — the formatted
+(* chrome-qnul: [new] with a url subscribes before Page.navigate and waits for the
+   load event, so every test that creates such a tab has to answer it. The pushed title is Chrome's tab-strip title — the formatted
    URL ("example.com" for https://example.com/), see docs/cdp-shapes.md — and the document
    title only comes from the query above, made once the load is done. *)
 let loads ?title fake =
-  Fake.on_method fake "Page.enable" (fun request ->
+  Fake.on_method fake "Page.navigate" (fun request ->
       let session =
         match get "sessionId" request with `String s -> s | _ -> assert false
       in
@@ -240,7 +240,33 @@ let new_waits () =
         (get "url" info = str "https://example.com/");
       Alcotest.(check bool)
         "chrome-qnul title after load" true
-        (get "title" info = str "Example Domain"))
+        (get "title" info = str "Example Domain");
+      (* chrome-qnul: a fast local document may finish during Target.createTarget. *)
+      let calls = Fake.received (fake ()) in
+      let methods =
+        List.filter_map
+          (fun call ->
+            match field "method" call with Some (`String name) -> Some name | _ -> None)
+          calls
+      in
+      let index name =
+        let rec go n = function
+          | [] -> Alcotest.fail ("missing " ^ name)
+          | x :: xs -> if x = name then n else go (n + 1) xs
+        in
+        go 0 methods
+      in
+      Alcotest.(check bool)
+        "chrome-qnul subscribe before navigate" true
+        (index "Page.enable" < index "Page.navigate");
+      let creation =
+        List.find
+          (fun call -> field "method" call = Some (str "Target.createTarget"))
+          calls
+      in
+      Alcotest.(check bool)
+        "chrome-qnul initially blank" true
+        (get "url" (get "params" creation) = str "about:blank"))
 
 (* chrome-qnul: without a url there is nothing to await, so the reply must not wait for a
    load event — none is emitted here, and the mocked clock never moves. *)
@@ -265,6 +291,12 @@ let load_timeout () =
       let after_deadline what f =
         let cell = ref None in
         Eio.Fiber.fork ~sw (fun () -> cell := Some (f ()));
+        let rec settle_calls n =
+          if n > 0 && !cell = None then (
+            Eio.Fiber.yield ();
+            settle_calls (n - 1))
+        in
+        settle_calls 100;
         let rec await n =
           match !cell with
           | Some reply -> reply
@@ -561,6 +593,7 @@ let snapshot () =
       Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
       let guard_reads = ref 0 in
       let mutating = ref false in
+      let scroll_y = ref 0 in
       Fake.on_method fake "Runtime.evaluate" (fun _ ->
           incr guard_reads;
           let counter = if !mutating then !guard_reads else 1 in
@@ -577,6 +610,7 @@ let snapshot () =
                           ("count", `Int counter);
                           ("width", `Int 800);
                           ("height", `Int 600);
+                          ("scrollY", `Int !scroll_y);
                         ] );
                   ] );
             ]);
@@ -618,6 +652,18 @@ let snapshot () =
       Alcotest.(check bool)
         "tab-1rx9 last page" true
         (get "total" page = `Int 2 && get "truncated" page = `Bool false);
+      (* tab-tmoc: real Chrome DOMSnapshot bounds are document-relative.
+         At scrollY=150, the top heading leaves the viewport while Go stays. *)
+      scroll_y := 150;
+      let scrolled = snap () in
+      Alcotest.(check int)
+        "tab-tmoc scrolled total" 1
+        (match get "total" scrolled with `Int n -> n | _ -> -1);
+      Alcotest.(check string)
+        "tab-tmoc scrolled row" "Go"
+        (match get "rows" scrolled with
+        | `List [ row ] -> ( match get "name" row with `String name -> name | _ -> "")
+        | _ -> "");
       Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogOpening"
         ~params:
           (obj
