@@ -1275,7 +1275,7 @@ let scroll t ~owner (args : P.scroll_args) =
    text, URL/title, scroll position and actionable AX rows, not snapshot IDs. *)
 let drive
     ?(decide =
-      fun _ ->
+      fun ~deadline:_ _ ->
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ]))) t ~owner ~model
@@ -1283,6 +1283,18 @@ let drive
   let* tab = locate t ~access:Act ~owner args.tab in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access:Act ~owner args.tab in
+      (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
+         drive's own deadline: the caller's remaining budget is what the model call is
+         bounded by, so a slow provider cannot outlast the reply the client is waiting
+         for. *)
+      let started = now t in
+      let budget = float_of_int (Option.value ~default:120 args.deadline_s) in
+      let decide request =
+        let remaining = budget -. (now t -. started) in
+        decide
+          ~deadline:(Eta.Duration.ms (max 1 (int_of_float (remaining *. 1000.))))
+          request
+      in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
       let browser = reading_browser t ~session tab cdp in
@@ -1400,6 +1412,9 @@ let report t : P.status_result =
       enum P.Chrome_phase.of_string
         (if chrome.phase = `Running then "running" else "restarting");
     uptime_s = max 0. (now t -. t.started);
+    (* L19: the models section belongs to the models service, which the control listener
+       merges in before the reply goes out; the registry has no opinion about it. *)
+    models = None;
   }
 
 let status t =

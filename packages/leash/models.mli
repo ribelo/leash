@@ -1,0 +1,58 @@
+(** The models the drive talks to (L19; drive-e7oi drive-yqxg).
+
+    One service owns both model clients over one {!Eta_http.Client.t} — the client is
+    created with TLS here, on the service's switch, and every endpoint goes through it —
+    and the drive's production [Decide] is {!decide}: {!Jev_request.body} shapes the
+    request, {!Eta_ai_systemone.Client.evaluate} performs it, and {!Jev_request.decide}
+    validates what came back.
+
+    Cancellation and finalizers: {!create} acquires the HTTP client against [sw] and
+    registers nothing else; every call runs in the calling fiber, opens and closes its own
+    socket, and is bounded by its deadline. Nothing here probes the network at creation or
+    for {!status}: a missing key is a refusal at the call, not a boot failure. *)
+
+type t
+
+val create :
+  sw:Eio.Switch.t ->
+  net:_ Eio.Net.t ->
+  clock:_ Eio.Time.clock ->
+  logger:Eta_observability.Logger.t ->
+  Config.models ->
+  t
+(** [create ~sw ~net ~clock ~logger models] is the models service: one TLS HTTP client on
+    [sw] and, when [models.api_key] is present, the System One client pinned to
+    [models.jev_model] and pointed at [models.systemone_endpoint]. Without a key there is
+    no client at all and {!decide} refuses before anything is sent. The API key travels as
+    a {!Eta_observability.Redact.t} and only {!Eta_ai.Bearer.header} reveals it, on the
+    request path. *)
+
+val status : t -> Protocol.models_status
+(** What [leash status] reports: [configured] is whether an API key is present, and the
+    model ids and endpoints are the configured ones. The key itself is not a field and is
+    never read here. *)
+
+val decide :
+  ?deadline:Eta.Duration.t ->
+  t ->
+  Jev_request.request ->
+  (Jev_request.decision, Protocol.error) result
+(** [decide ~deadline t request] is the drive's production Decide (drive-kh2u drive-e7oi):
+
+    - no key: [model-unavailable] with [detail.code = "missing-key"] at once, nothing
+      sent.
+    - the System One reply names another model than the configured one, or fails in any of
+      {!Eta_ai.Error}'s ways: [model-unavailable] with [detail.code] one of
+      ["unavailable"], ["timeout"], ["authentication"], ["invalid-response"],
+      ["input-too-large"], ["model-mismatch"], and the provider's own sentence as the
+      message.
+    - a reply that does not answer the questions the request asked: [model-unavailable]
+      with [detail.code = "invalid-response"] and {!Jev_request.decide}'s sentence.
+
+    [deadline] (30 seconds by default) bounds the whole call, both attempts and the
+    backoff included; the drive passes what is left of its own deadline. *)
+
+val text_helper : t -> Text_helper.t
+(** The text helper over this service's HTTP client and [models.text_model]. L22 wires it
+    to eta-next's chat client; until then it is {!Text_helper.unavailable}, and the
+    drive's TYPE_TEXT branch is its own stub. *)

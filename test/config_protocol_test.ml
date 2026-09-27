@@ -528,6 +528,8 @@ let result_shapes () =
             ("state", `List [ `String "hidden" ]);
           ]))
 
+(* L19: the models section is [T|null] on the reply — the service's own models service is
+   always there, a dispatch without one says null — and it never carries the key. *)
 let status_result () =
   let json =
     assoc
@@ -536,6 +538,7 @@ let status_result () =
         ("tabs", assoc [ ("open", `Int 2); ("cap", `Int 8) ]);
         ("chrome", `String "restarting");
         ("uptime_s", `Float 12.5);
+        ("models", `Null);
       ]
   in
   let result = assert_ok "status result" (P.status_result_of_yojson json) in
@@ -546,9 +549,63 @@ let status_result () =
     "chrome phase" "restarting"
     (P.Chrome_phase.to_string result.chrome);
   Alcotest.(check (float 0.0)) "uptime" 12.5 result.uptime_s;
+  Alcotest.(check (option string))
+    "a dispatch without a models service" None
+    (Option.map (fun (models : P.models_status) -> models.jev_model) result.models);
   Alcotest.(check string)
     "[@json.key \"open\"]" (Yojson.Safe.to_string json)
     (Yojson.Safe.to_string (P.yojson_of_status_result result));
+  let configured =
+    assoc
+      [
+        ("generation", `Int 3);
+        ("tabs", assoc [ ("open", `Int 2); ("cap", `Int 8) ]);
+        ("chrome", `String "restarting");
+        ("uptime_s", `Float 12.5);
+        ( "models",
+          assoc
+            [
+              ("configured", `Bool true);
+              ("jev_model", `String "typesafe/jev-1.13-20260917");
+              ("text_model", `String "inception/mercury-2.5");
+              ("systemone_endpoint", `String "https://openrouter.ai/api/v1/systemone");
+              ("chat_base_url", `String "https://openrouter.ai/api/v1");
+            ] );
+      ]
+  in
+  let result = assert_ok "configured status" (P.status_result_of_yojson configured) in
+  (match result.models with
+  | Some models ->
+      Alcotest.(check bool) "drive-e7oi configured" true models.configured;
+      Alcotest.(check string)
+        "drive-e7oi the pinned model" "typesafe/jev-1.13-20260917" models.jev_model;
+      Alcotest.(check string)
+        "drive-yqxg the endpoint" "https://openrouter.ai/api/v1/systemone"
+        models.systemone_endpoint
+  | None -> Alcotest.fail "the models section must decode");
+  Alcotest.(check string)
+    "the models section round-trips"
+    (Yojson.Safe.to_string configured)
+    (Yojson.Safe.to_string (P.yojson_of_status_result result));
+  expect_error "unknown models field" [ "models"; "oops" ]
+    (P.status_result_of_yojson
+       (assoc
+          [
+            ("generation", `Int 3);
+            ("tabs", assoc [ ("open", `Int 2); ("cap", `Int 8) ]);
+            ("chrome", `String "running");
+            ("uptime_s", `Float 1.0);
+            ( "models",
+              assoc
+                [
+                  ("configured", `Bool false);
+                  ("jev_model", `String "jev");
+                  ("text_model", `String "helper");
+                  ("systemone_endpoint", `String "https://openrouter.ai/api/v1/systemone");
+                  ("chat_base_url", `String "https://openrouter.ai/api/v1");
+                  ("oops", `Bool true);
+                ] );
+          ]));
   expect_error "unknown phase" [ "chrome"; "crashed" ]
     (P.status_result_of_yojson
        (assoc
@@ -557,6 +614,7 @@ let status_result () =
             ("tabs", assoc [ ("open", `Int 2); ("cap", `Int 8) ]);
             ("chrome", `String "crashed");
             ("uptime_s", `Float 1.0);
+            ("models", `Null);
           ]))
 
 let drive_result () =

@@ -76,13 +76,41 @@ type tabs = { cap : Tab_cap.t } [@@deriving yojson]
 type expiry = { idle_s : Seconds.t; unclaimed_s : Seconds.t; tombstone_s : Seconds.t }
 [@@deriving yojson]
 
-type models = { api_key : Redact.t option; jev_model : Text.t; text_model : Text.t }
+(* drive-yqxg: the two endpoints default to OpenRouter's, and TypeSafe's direct endpoint is
+   accepted as-is because it serves the same contract; the two model ids are the pinned
+   defaults the spec names, so a file that says nothing about models still decodes.
+   drive-e7oi: [jev_model] is what the System One client sends and what the reply's model
+   is checked against. *)
+let default_systemone_endpoint = "https://openrouter.ai/api/v1/systemone"
+let default_chat_base_url = "https://openrouter.ai/api/v1"
+let default_jev_model = "typesafe/jev-1.13-20260917"
+let default_text_model = "inception/mercury-2.5"
+
+type models = {
+  api_key : Redact.t option;
+  systemone_endpoint : Text.t; [@json.default default_systemone_endpoint]
+  jev_model : Text.t; [@json.default default_jev_model]
+  chat_base_url : Text.t; [@json.default default_chat_base_url]
+  text_model : Text.t; [@json.default default_text_model]
+}
 [@@deriving yojson]
 
 (* hand-04rb hand-phof hand-rg9h: the two desktop commands a handoff runs, with the spec's
    defaults — niri's window focus for the managed Chrome's window, and notify-send's Done
    action carrying the agent's reason. An element is an argv template: {!Desktop} says
    which placeholders it may carry. An empty command turns that step off. *)
+(* drive-yqxg: every field of the models section has a default, so the section itself is
+   optional too: a file that says nothing about models decodes to OpenRouter's endpoints
+   and the pinned model ids, and [OPENROUTER_API_KEY] alone is enough to run a drive. *)
+let default_models =
+  {
+    api_key = None;
+    systemone_endpoint = default_systemone_endpoint;
+    jev_model = default_jev_model;
+    chat_base_url = default_chat_base_url;
+    text_model = default_text_model;
+  }
+
 let default_focus_command =
   [ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
 
@@ -101,7 +129,7 @@ type t = {
   chrome : chrome;
   tabs : tabs;
   expiry : expiry;
-  models : models;
+  models : models; [@json.default default_models]
   handoff : handoff; [@json.default default_handoff]
 }
 [@@deriving yojson]

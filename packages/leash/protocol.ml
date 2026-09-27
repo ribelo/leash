@@ -471,11 +471,24 @@ type drive_args = {
 
 type tab_counts = { open_ : int; [@json.key "open"] cap : int } [@@deriving yojson]
 
+(* L19 drive-e7oi drive-yqxg: what [status] says about the model configuration. The key is
+   not a field: a Redact.t renders as "<redacted>" on every path, so nothing here can
+   print it, and the section is the configuration only — no probe, nothing at boot. *)
+type models_status = {
+  configured : bool;
+  jev_model : string;
+  text_model : string;
+  systemone_endpoint : string;
+  chat_base_url : string;
+}
+[@@deriving yojson]
+
 type status_result = {
   generation : int;
   tabs : tab_counts;
   chrome : Chrome_phase.t;
   uptime_s : float;
+  models : models_status option; [@json.null]
 }
 [@@deriving yojson]
 

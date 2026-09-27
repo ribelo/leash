@@ -3,6 +3,9 @@ module P = Protocol
 type ('clock, 'net) deps = {
   tabs : Tabs.t;
   status_query : unit -> Eta_app.Status.t list;
+  models_status : unit -> P.models_status;
+      (** L19: what [status] reports about the models section. The thunk reads the live
+          configuration and never the key. *)
   fs : Eio.Fs.dir_ty Eio.Path.t;
   net : 'net Eio.Net.ty Eio.Resource.t;
   clock : 'clock Eio.Time.clock;
@@ -24,7 +27,16 @@ let decode line =
 
 let unsupported = err "invalid-request" "this command is not available yet"
 
-let dispatch ?(model = "unconfigured") ?decide tabs (request : P.request) =
+(* L19: the status reply is the registry's plus the models section, which only the
+   listener's models service knows. A dispatch that was given no models service reports
+   [null] there rather than inventing a configuration. *)
+let report ?models_status tabs =
+  let report = Tabs.report tabs in
+  match models_status with
+  | None -> report
+  | Some models -> { report with P.models = Some (models ()) }
+
+let dispatch ?(model = "unconfigured") ?decide ?models_status tabs (request : P.request) =
   let owner = request.owner in
   let lift encode = function
     | Ok result -> success (encode result)
@@ -61,11 +73,11 @@ let dispatch ?(model = "unconfigured") ?decide tabs (request : P.request) =
   | P.Resume args -> lift P.yojson_of_resumed_result (Tabs.resume tabs ~owner args.tab)
   | P.List_tabs args ->
       success (P.yojson_of_list_result (Tabs.list tabs ~owner ~all:args.all))
-  | P.Status -> success (P.yojson_of_status_result (Tabs.report tabs))
+  | P.Status -> success (P.yojson_of_status_result (report ?models_status tabs))
   | P.Drive args ->
       lift P.yojson_of_drive_result (Tabs.drive ?decide tabs ~owner ~model args)
 
-let handle ?(model = "unconfigured") ?decide tabs line =
+let handle ?(model = "unconfigured") ?decide ?models_status tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
@@ -75,7 +87,7 @@ let handle ?(model = "unconfigured") ?decide tabs line =
             ("owner", P.Owner.to_string request.owner);
             ("cmd", P.command_name request.command);
           ]
-          (fun () -> dispatch ~model ?decide tabs request)
+          (fun () -> dispatch ~model ?decide ?models_status tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -121,7 +133,7 @@ let budget (request : (P.request, string) result) =
       Some cdp_budget
   | Ok _ -> Some (seconds 1)
 
-let create ?(model = "unconfigured") ~sw ~runtime_dir deps =
+let create ?(model = "unconfigured") ?decide ~sw ~runtime_dir deps =
   let path = Filename.concat (Filename.concat runtime_dir "leash") "control.sock" in
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
@@ -135,7 +147,8 @@ let create ?(model = "unconfigured") ~sw ~runtime_dir deps =
               ("owner", P.Owner.to_string request.owner);
               ("cmd", P.command_name request.command);
             ]
-            (fun () -> dispatch ~model deps.tabs request)
+            (fun () ->
+              dispatch ~model ?decide ~models_status:deps.models_status deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply

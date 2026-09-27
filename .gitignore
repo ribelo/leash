@@ -4,3 +4,4 @@ _opam/
 !.scratch/research/
 result
 *.install
+_build_*/

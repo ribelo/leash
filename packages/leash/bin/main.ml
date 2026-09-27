@@ -340,16 +340,25 @@ let program env (config : Leash.Config.t) sw =
     Leash.Expiry.create ~sw ?interval:sweep_interval ~idle ~unclaimed ~clock:base#clock
       ~logger:env.logger tabs
   in
+  (* drive-e7oi drive-yqxg: the models service is one more scoped resource in the owner,
+     created before the listener that hands its Decide to every drive. Without a key it
+     still exists — status reports that — and a drive refuses at its first Decide. *)
+  let models =
+    Leash.Models.create ~sw ~net:base#net ~clock:base#clock ~logger:env.logger
+      config.models
+  in
   Eio.Switch.on_release sw (fun () -> Leash.Tabs.stop tabs);
   let status_query = Eta_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in
   let runtime_dir = Option.value ~default:"" (Sys.getenv_opt "XDG_RUNTIME_DIR") in
   let* _control =
     Leash.Control.create
       ~model:(Leash.Config.Text.to_string config.models.jev_model)
+      ~decide:(fun ~deadline request -> Leash.Models.decide ~deadline models request)
       ~sw ~runtime_dir
       {
         Leash.Control.tabs;
         status_query;
+        models_status = (fun () -> Leash.Models.status models);
         fs = base#fs;
         net = base#net;
         clock = base#clock;

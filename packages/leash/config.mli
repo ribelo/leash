@@ -45,7 +45,24 @@ type chrome = {
 
 type tabs = { cap : Tab_cap.t }
 type expiry = { idle_s : Seconds.t; unclaimed_s : Seconds.t; tombstone_s : Seconds.t }
-type models = { api_key : Redact.t option; jev_model : Text.t; text_model : Text.t }
+
+type models = {
+  api_key : Redact.t option;
+  systemone_endpoint : Text.t;
+  jev_model : Text.t;
+  chat_base_url : Text.t;
+  text_model : Text.t;
+}
+(** drive-e7oi drive-yqxg: the models section. [api_key] is absent when the file does not
+    carry one and the environment does not either; {!env} fills it from
+    [OPENROUTER_API_KEY], and nothing but {!Eta_ai.Bearer.header} ever reveals it.
+
+    [systemone_endpoint] and [chat_base_url] default to OpenRouter's
+    [https://openrouter.ai/api/v1/systemone] and [https://openrouter.ai/api/v1];
+    TypeSafe's direct endpoint ([https://api.typesafe.ai/v1/systemone]) is accepted
+    unchanged because it serves the same contract, so either key works. [jev_model]
+    defaults to the pinned [typesafe/jev-1.13-20260917] — the model the reply is checked
+    against — and [text_model] to the text helper's [inception/mercury-2.5]. *)
 
 type handoff = { focus_command : string list; notify_command : string list }
 (** hand-04rb hand-phof hand-rg9h: the two desktop commands a handoff runs, each an argv
@@ -61,7 +78,10 @@ type t = {
   models : models;
   handoff : handoff;
 }
-(** Every section has a default, so a file that says nothing about handoff still decodes.
+(** [handoff] and [models] have defaults, so a file that says nothing about either still
+    decodes: handoff runs the spec's two commands and models is OpenRouter's endpoints
+    with the pinned model ids and no key. [chrome], [tabs] and [expiry] have none — a file
+    that does not say what browser to run and how long a tab lives is not a configuration.
 *)
 
 val t_of_yojson : Yojson.Safe.t -> (t, string) result

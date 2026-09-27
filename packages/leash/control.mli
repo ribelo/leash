@@ -4,6 +4,8 @@ type t
 type ('clock, 'net) deps = {
   tabs : Tabs.t;
   status_query : unit -> Eta_app.Status.t list;
+  models_status : unit -> Protocol.models_status;
+      (** L19: the models section [status] reports, read live from the models service. *)
   fs : Eio.Fs.dir_ty Eio.Path.t;
   net : 'net Eio.Net.ty Eio.Resource.t;
   clock : 'clock Eio.Time.clock;
@@ -12,10 +14,17 @@ type ('clock, 'net) deps = {
 
 val create :
   ?model:string ->
+  ?decide:
+    (deadline:Eta.Duration.t ->
+    Jev_request.request ->
+    (Jev_request.decision, Protocol.error) result) ->
   sw:Eio.Switch.t ->
   runtime_dir:string ->
   ('clock, 'net) deps ->
   (t, Eta_ipc.Listener.error) result
+(** [decide] is the drive's production Decide, {!Models.decide} in the program that owns
+    the models service; a listener created without one refuses every drive with
+    [model-unavailable] (L19). *)
 
 val budget : (Protocol.request, string) result -> Eta.Duration.t option
 (** The handler budget per decoded command. [new] with a url and [nav] outlast the
@@ -26,9 +35,18 @@ val budget : (Protocol.request, string) result -> Eta.Duration.t option
 
 val status : t -> Eta_app.Status.t
 
+val report :
+  ?models_status:(unit -> Protocol.models_status) -> Tabs.t -> Protocol.status_result
+(** [Tabs.report] plus the models section when a models service is given; without one the
+    reply carries [models: null] (L19). *)
+
 val dispatch :
   ?model:string ->
-  ?decide:(Jev_request.request -> (Jev_request.decision, Protocol.error) result) ->
+  ?decide:
+    (deadline:Eta.Duration.t ->
+    Jev_request.request ->
+    (Jev_request.decision, Protocol.error) result) ->
+  ?models_status:(unit -> Protocol.models_status) ->
   Tabs.t ->
   Protocol.request ->
   Protocol.reply
@@ -37,7 +55,11 @@ val decode : string -> (Protocol.request, string) result
 
 val handle :
   ?model:string ->
-  ?decide:(Jev_request.request -> (Jev_request.decision, Protocol.error) result) ->
+  ?decide:
+    (deadline:Eta.Duration.t ->
+    Jev_request.request ->
+    (Jev_request.decision, Protocol.error) result) ->
+  ?models_status:(unit -> Protocol.models_status) ->
   Tabs.t ->
   string ->
   string

@@ -445,6 +445,16 @@ let socket () =
               {
                 Leash.Control.tabs;
                 status_query = (fun () -> []);
+                models_status =
+                  (fun () ->
+                    Leash.Protocol.
+                      {
+                        configured = false;
+                        jev_model = "unconfigured";
+                        text_model = "";
+                        systemone_endpoint = "";
+                        chat_base_url = "";
+                      });
                 fs = env#fs;
                 net = env#net;
                 clock = env#clock;
@@ -487,6 +497,16 @@ let socket () =
               {
                 Leash.Control.tabs;
                 status_query = (fun () -> []);
+                models_status =
+                  (fun () ->
+                    Leash.Protocol.
+                      {
+                        configured = false;
+                        jev_model = "unconfigured";
+                        text_model = "";
+                        systemone_endpoint = "";
+                        chat_base_url = "";
+                      });
                 fs = env#fs;
                 net = env#net;
                 clock = env#clock;
@@ -513,6 +533,16 @@ let socket () =
               {
                 Leash.Control.tabs;
                 status_query = (fun () -> []);
+                models_status =
+                  (fun () ->
+                    Leash.Protocol.
+                      {
+                        configured = false;
+                        jev_model = "unconfigured";
+                        text_model = "";
+                        systemone_endpoint = "";
+                        chat_base_url = "";
+                      });
                 fs = env#fs;
                 net = env#net;
                 clock = env#clock;
@@ -819,7 +849,7 @@ let drive_dry_run () =
             ]);
       let h = result (request tabs "alice" (P.New { url = None })) |> tab in
       let decisions = ref 0 in
-      let decide (_ : Leash__Jev_request.request) =
+      let decide ~deadline:_ (_ : Leash__Jev_request.request) =
         incr decisions;
         let operation =
           match P.Operation.of_string "click" with Ok x -> x | Error _ -> assert false

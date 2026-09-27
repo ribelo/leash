@@ -62,7 +62,10 @@ val create :
     {!Protocol.tab_info} this registry reports counts down to. *)
 
 val status : t -> Eta_app.Status.t
+
 val report : t -> Protocol.status_result
+(** [report.models] is [None]: the models section is the models service's and the control
+    listener merges it in (L19). *)
 
 val waits_for_load : string option -> bool
 (** The rule [new] applies (chrome-qnul): a url other than [about:blank] is waited for
@@ -188,15 +191,20 @@ val snap :
   (Protocol.snapshot, Protocol.error) result
 
 val drive :
-  ?decide:(Jev_request.request -> (Jev_request.decision, Protocol.error) result) ->
+  ?decide:
+    (deadline:Eta.Duration.t ->
+    Jev_request.request ->
+    (Jev_request.decision, Protocol.error) result) ->
   t ->
   owner:Protocol.Owner.t ->
   model:string ->
   Protocol.drive_args ->
   (Protocol.drive_result, Protocol.error) result
-(** drive-8n2z drive-tfqh: one tab action lock covers the entire effect computation. The
-    optional model decision seam is for scripted control tests; production refuses with
-    model-unavailable until the System One client is installed. *)
+(** drive-8n2z drive-tfqh drive-kh2u: one tab action lock covers the entire effect
+    computation. The optional model decision seam is what production installs
+    ({!Models.decide}) and what scripted control tests replace; a drive that is given none
+    refuses with model-unavailable. The seam takes the deadline the drive has left, so one
+    model call can never outlast the reply the client is waiting for. *)
 
 val text :
   t ->

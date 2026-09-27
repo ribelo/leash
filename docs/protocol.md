@@ -33,7 +33,7 @@ Tab lifecycle:
 | `claim` | `{tab}` | `TabInfo` |
 | `release` | `{tab, force?}` | `{released: true}` |
 | `close` | `{tab, force?}` | `{closed: true}` |
-| `status` | `{}` | `{generation, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s}` |
+| `status` | `{}` | `{generation, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` |
 
 Observation:
 
@@ -96,6 +96,10 @@ Step         = {n: int, snapshot: id, operation: Operation, index: int|null, pro
 Operation    = "click"|"type_text"|"select"|"scroll_up"|"scroll_down"|"wait"|"done"|"blocked"
 status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
                  max_steps defaults to 30; deadline_s defaults to 120; both must be positive.
+Models       = {configured: bool, jev_model: string, text_model: string,
+                systemone_endpoint: string, chat_base_url: string}
+                 the models section as configured; configured is whether an API key is present,
+                 and no field ever carries the key
 ```
 
 Rules:
@@ -108,8 +112,21 @@ Rules:
   failure is a protocol **error** (`model-unavailable`) with
   `detail: {code: string, steps: Step[]}` containing completed steps. Drive status
   `error` is reserved for non-model failures within a step (including dialogs or
-  popups), not model failures. Production currently reports `model-unavailable` with
-  `code: "client-unavailable"` until the L19 System One client is installed.
+  popups), not model failures. `detail.code` is `missing-key` when no API key is
+  configured — the drive fails at its first decision and nothing is sent — and otherwise
+  the provider failure's kind: `unavailable`, `timeout`, `authentication`,
+  `invalid-response`, `input-too-large`, or `model-mismatch` when the reply names
+  another model than the configured `jev_model` (drive-e7oi).
+- `drive`'s decision is one System One request per step, bounded by what is left of the
+  drive's `deadline_s`: the state carries the current element table, the rendered page
+  text and the last ten steps' actions; the questions are the operation and one
+  `<operation>_target` head per offered operation, and only the head the chosen
+  operation selects is validated. A distribution that does not answer the offered
+  criteria is `model-unavailable` with `code: "invalid-response"`.
+- `status`'s `models` reports the models section — `configured` is whether an API key
+  is present, and the two model ids and two endpoints are the configured ones. It is read
+  from the live configuration: no probe, nothing at boot, and never the key. It is
+  `null` only in a dispatch with no models service; the service always reports it.
 - Ownership is checked before every tab command (ADR-0005). The `act` commands — `nav`,
   `snap`, `text`, `eval`, `shot`, `debug`, `wait`, `click`, `fill`, `press`, `select`,
   `scroll` — `dialog`, `release`, and `close` require that the caller owns the tab;
@@ -203,6 +220,6 @@ Rules:
 | `tab-cap` | no capacity for `new` |
 | `timeout` | `wait`, `handoff`, or a bounded operation ran out of time; a handoff's `detail.warnings` lists the human-facing steps that failed |
 | `browser-unavailable` | Chrome is restarting; try again shortly |
-| `model-unavailable` | System One or the text helper failed; `detail.code` carries the provider failure |
+| `model-unavailable` | System One or the text helper failed, or no API key is configured; `detail.code` carries the kind (`missing-key`, `unavailable`, `timeout`, `authentication`, `invalid-response`, `input-too-large`, `model-mismatch`, `text-helper-unavailable`) and a drive's `detail.steps` the completed steps |
 | `too-large` | expression, argument, result, or fill text over its bound |
 | `internal` | a defect; the message carries no page content |

@@ -357,12 +357,32 @@ type tab_counts = { open_ : int; cap : int }
 val tab_counts_of_yojson : Yojson.Safe.t -> (tab_counts, string) result
 val yojson_of_tab_counts : tab_counts -> Yojson.Safe.t
 
+type models_status = {
+  configured : bool;
+  jev_model : string;
+  text_model : string;
+  systemone_endpoint : string;
+  chat_base_url : string;
+}
+(** L19 drive-e7oi drive-yqxg: what [status] reports about the models section — whether an
+    API key is present, the pinned JEV model, the text helper's model, and the two
+    endpoints. It is the configuration and nothing else: it is read from the live config
+    without a probe, so nothing here touches the network at boot or at [status], and the
+    key itself is not a field — a {!Eta_observability.Redact.t} renders as ["<redacted>"]
+    on every path, so no status reply can carry one. *)
+
+val models_status_of_yojson : Yojson.Safe.t -> (models_status, string) result
+val yojson_of_models_status : models_status -> Yojson.Safe.t
+
 type status_result = {
   generation : int;
   tabs : tab_counts;
   chrome : Chrome_phase.t;
   uptime_s : float;
+  models : models_status option; [@json.null]
 }
+(** [models] is [T|null]: the service's models section, which every service the Door
+    starts has, and [null] only in a dispatch that was given no models service. *)
 
 val status_result_of_yojson : Yojson.Safe.t -> (status_result, string) result
 val yojson_of_status_result : status_result -> Yojson.Safe.t
