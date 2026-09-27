@@ -121,13 +121,24 @@ Rules:
   ends the first of: a `resume`, which is authorized for anyone because it only ever gives
   the tab back to its owner and answers `{resumed: true, url, title}` with the page as the
   human left it, and which restarts the tab's idle clock; the deadline, `timeout_s` or
-  fifteen minutes, which answers `timeout` and gives the tab back to its owner; the agent's
+  fifteen minutes measured from the request — the human-facing steps below included — which
+  answers `timeout` and gives the tab back to its owner; the agent's
   disconnect, which does the same; and the tab's disappearance, which answers `tab-gone`
   with the disposition that closed it. A forced `release` or `close` of the tab the human
   holds ends the handoff there and then rather than at the deadline: the release answers
   `not-owner` — the agent no longer owns the tab — and leaves it unowned with no `reason`,
   and the close answers `tab-gone` with its disposition. `resume` on a tab nobody is
   waiting on is `no-handoff`, so a stale notification cannot do something surprising.
+- The human-facing side of a `handoff` runs in the order the story says: `Target.activateTarget`
+  for the tab, then `handoff.focus_command`, then `handoff.notify_command`, whose stdout
+  carries the action the human took and whose Done action (`done`, what
+  `notify-send --action done=Done` prints) is a `resume`. All three are best effort by
+  contract: each one that fails is a log line and a `warnings` entry on the successful
+  reply — omitted when there is none — and none of them fails the handoff. A handoff that
+  ends `timeout` carries the same list in `detail.warnings`, because a human who was never
+  told is exactly why nobody answered. Each external command gets five seconds of its own;
+  the notification instead runs for as long as the handoff does and is stopped when the
+  handoff ends, however it ends.
 - Expiry is one sweep every 30 seconds on the service clock. Stage 1 releases an owned tab
   idle for `idle_s`: it stays open, unowned, and claimable. Stage 2 closes an unowned
   agent-origin tab unclaimed for `unclaimed_s` with disposition `closed_by_ttl`. Any action
@@ -177,7 +188,7 @@ Rules:
 | `no-handoff` | `resume` on a tab nobody is waiting on |
 | `url-refused` | scheme not http(s)/about:blank, or userinfo present |
 | `tab-cap` | no capacity for `new` |
-| `timeout` | `wait`, `handoff`, or a bounded operation ran out of time |
+| `timeout` | `wait`, `handoff`, or a bounded operation ran out of time; a handoff's `detail.warnings` lists the human-facing steps that failed |
 | `browser-unavailable` | Chrome is restarting; try again shortly |
 | `model-unavailable` | System One or the text helper failed; `detail.code` carries the provider failure |
 | `too-large` | expression, argument, result, or fill text over its bound |

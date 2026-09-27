@@ -376,13 +376,23 @@ val yojson_of_shot_result : shot_result -> Yojson.Safe.t
 val yojson_of_debug_result : debug_result -> Yojson.Safe.t
 val yojson_of_eval_result : eval_result -> Yojson.Safe.t
 
-type handoff_result = { resumed : bool; url : string; title : string }
+type handoff_result = {
+  resumed : bool;
+  url : string;
+  title : string;
+  warnings : string list option;
+}
+(** [warnings] is [key?]: the human-facing steps — [Target.activateTarget], the focus
+    command, the notification — that failed. Each is best effort: it is also a log line,
+    and none of them fails the handoff (hand-rg9h). *)
 
 val yojson_of_handoff_result : handoff_result -> Yojson.Safe.t
 (** What a handoff answers when the human resumes it (hand-lz3p): the page's url and title
-    at that moment, which is what the agent re-observes from. A handoff that ends any
-    other way is an error — [timeout] for the deadline, [tab-gone] for a tab that
-    disappeared while the request waited (hand-lmd5 hand-yytf). *)
+    at that moment, which is what the agent re-observes from, and the warnings of the
+    human-facing steps that did not complete (hand-rg9h). A handoff that ends any other
+    way is an error — [timeout] for the deadline, whose [detail.warnings] carries the same
+    list when there is one, and [tab-gone] for a tab that disappeared while the request
+    waited (hand-lmd5 hand-yytf). *)
 
 type drive_result = { status : Drive_status.t; steps : step list; final : snapshot }
 

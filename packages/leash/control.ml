@@ -92,12 +92,14 @@ let load_budget = Eta.Duration.seconds 35
    client at all. *)
 let cdp_budget = Eta.Duration.seconds 35
 
-(* hand-lmd5: a handoff's budget is its own deadline plus a margin, never less. The
-   listener's timeout cancels the handler it bounds, so a budget equal to the handoff
-   deadline would cancel the handler at the instant it is due to answer [timeout]: the
-   client would see its connection close instead of the reply. The margin is the load
-   budget's, and covers the reply's own egress as well. *)
-let handoff_margin = Eta.Duration.seconds 5
+(* hand-lmd5 hand-04rb hand-phof: a handoff's budget is its own deadline plus a margin,
+   never less. The listener's timeout cancels the handler it bounds, so a budget equal to
+   the handoff deadline would cancel the handler at the instant it is due to answer
+   [timeout]: the client would see its connection close instead of the reply. The margin
+   is the human-facing side's, which a handoff whose deadline has already passed still has
+   to finish: up to five seconds each for [Target.activateTarget], the Chrome-window lookup
+   and the focus command (hand-rg9h), plus the reply's own egress. *)
+let handoff_margin = Eta.Duration.seconds 20
 
 let budget (request : (P.request, string) result) =
   let seconds n = Eta.Duration.seconds n in

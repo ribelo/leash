@@ -318,12 +318,22 @@ let program env (config : Leash.Config.t) sw =
   let seconds duration = Eta.Duration.seconds (Leash.Config.Seconds.to_int duration) in
   let idle = seconds config.expiry.idle_s in
   let unclaimed = seconds config.expiry.unclaimed_s in
+  (* hand-04rb hand-phof hand-rg9h: the two human-facing commands a handoff runs go through
+     Eta's child process, and the registry turns whatever they report into warnings. *)
+  let desktop =
+    Leash.Desktop.create ~clock:base#clock
+      ~runner:(Leash.Desktop.process_runner ~clock:base#clock ~mgr:base#process_mgr)
+      {
+        Leash.Desktop.focus_command = config.handoff.focus_command;
+        notify_command = config.handoff.notify_command;
+      }
+  in
   let tabs =
     Leash.Tabs.create ~sw
       ~cap:(Leash.Config.Tab_cap.to_int config.tabs.cap)
       ~tombstone_s:(Leash.Config.Seconds.to_int config.expiry.tombstone_s)
       ~idle ~unclaimed
-      { Leash.Tabs.chrome; clock = base#clock; logger = env.logger }
+      { Leash.Tabs.chrome; clock = base#clock; logger = env.logger; desktop }
   in
   (* own-uo77 own-hslp: the sweep is one more service in the owner, released with the
      switch. *)

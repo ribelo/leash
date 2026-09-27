@@ -479,7 +479,16 @@ type text_result = { url : string; title : string; text : string; truncated : bo
 type shot_result = { path : string; bytes : int } [@@deriving yojson]
 type debug_result = { entries : debug_entry list } [@@deriving yojson]
 type eval_result = { value : Yojson.Safe.t } [@@deriving yojson]
-type handoff_result = { resumed : bool; url : string; title : string } [@@deriving yojson]
+
+(* hand-rg9h: [warnings] is [key?] — the human-facing steps a handoff ran and could not
+   complete, omitted when there was nothing to report. *)
+type handoff_result = {
+  resumed : bool;
+  url : string;
+  title : string;
+  warnings : string list option;
+}
+[@@deriving yojson]
 
 type drive_result = { status : Drive_status.t; steps : step list; final : snapshot }
 [@@deriving yojson]

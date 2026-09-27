@@ -15,7 +15,7 @@
     - Target.getTargetInfo: {targetInfo:{targetId:"target-1",type:"page",title:"",url:"about:blank",…}}
       (the fixture page; override for the document title a load reports, see
       docs/cdp-shapes.md)
-    - Target.closeTarget: {success:true}
+    - Target.closeTarget: {success:true}; Target.activateTarget: {}
     - Page.enable: {}; Page.navigate: {frameId:"frame-1",loaderId:"loader-1"}
     - Page.addScriptToEvaluateOnNewDocument: {identifier:"1"}; Page.getFrameTree:
       {frameTree:{frame:{id:"frame-1",loaderId:"loader-1",url:"about:blank"}}}

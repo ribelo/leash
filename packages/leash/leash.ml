@@ -7,6 +7,7 @@ let version = "0.0.0"
 module Cdp = Cdp
 module Chrome = Chrome
 module Config = Config
+module Desktop = Desktop
 module Protocol = Protocol
 module Tabs = Tabs
 module Expiry = Expiry

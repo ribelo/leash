@@ -45,6 +45,8 @@ type 'clock deps = {
   chrome : Chrome.t;
   clock : 'clock Eio.Time.clock;
   logger : Eta_observability.Logger.t;
+  desktop : Desktop.t;
+      (** The human-facing steps {!handoff} runs (hand-04rb hand-phof). *)
 }
 
 val create :
@@ -117,7 +119,8 @@ val handoff :
     - {!resume}, by anyone (hand-0sja), hands the tab back to its owner and answers with
       the page's current url and title.
     - The deadline (hand-lmd5), {!handoff_timeout} with the caller's [timeout_s], ends the
-      wait with [`timeout] and restores [Owned] by the agent that handed the tab over.
+      wait with [`timeout] and restores [Owned] by the agent that handed the tab over. It
+      is the request's own, so the human-facing steps it ran first count against it.
     - The caller's own cancellation — the control listener cancels a handler whose client
       disconnected — restores [Owned] the same way.
     - A tab that leaves the registry while the request waits ends it with the disposition
@@ -128,7 +131,15 @@ val handoff :
     - A later [resume] finds nothing to resume: [no-handoff] (hand-szz7).
 
     Handing over a tab the caller does not own is [not-owner], and one that is already
-    with the human is [with-human] (hand-beip). *)
+    with the human is [with-human] (hand-beip).
+
+    hand-04rb hand-phof hand-rg9h: once the tab is [With_human] the human-facing steps run
+    — [Target.activateTarget] for the tab, the configured focus command, and the
+    configured notification, whose Done action is a [resume]. They are best effort on a
+    switch of their own, which stops the notifier when the handoff ends by any path: each
+    step that fails is a log line and a warning the successful reply carries in
+    [warnings], and an unanswered handoff carries them in the [timeout] error's
+    [detail.warnings]. None of them fails the handoff. *)
 
 val handoff_timeout : int option -> Eta.Duration.t
 (** hand-lmd5: the deadline a handoff runs on: the caller's [timeout_s], or the contract's

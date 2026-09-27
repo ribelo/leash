@@ -71,6 +71,8 @@ let defaults replies =
       ("Target.getTargets", obj [ ("targetInfos", `List []) ]);
       ("Target.getTargetInfo", obj [ ("targetInfo", target_info) ]);
       ("Target.closeTarget", obj [ ("success", `Bool true) ]);
+      (* hand-04rb: Chrome answers the raise of the live view with an empty result. *)
+      ("Target.activateTarget", obj []);
       ("Page.enable", obj []);
       ("Runtime.enable", obj []);
       ("Network.enable", obj []);
@@ -206,7 +208,9 @@ let create ~sw ?sleep () =
             respond t request;
             loop ()
       in
-      (try loop () with Eio.Io _ when t.dropped -> ());
+      (* own-teh1 hand-yytf: [drop] closes these ends under the reader, so whatever the
+         read then raises is the test's own doing, not a defect to report. *)
+      (try loop () with ex when t.dropped -> ignore ex);
       `Stop_daemon);
   (t, { read = client_read; write = client_write })
 

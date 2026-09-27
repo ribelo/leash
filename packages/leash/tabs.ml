@@ -4,6 +4,7 @@ type 'clock deps = {
   chrome : Chrome.t;
   clock : 'clock Eio.Time.clock;
   logger : Eta_observability.Logger.t;
+  desktop : Desktop.t;
 }
 
 let obj fields = `Assoc fields
@@ -240,6 +241,7 @@ type t = {
   sleep : float -> unit;
   await_load : unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   await_handoff : Eta.Duration.t -> unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
+  desktop : Desktop.t;
   logger : Eta_observability.Logger.t;
   cap : int;
   tombstone_s : int;
@@ -372,8 +374,8 @@ let locate t ~access ?(force = false) ~owner handle =
       | Some tomb -> Error (P.tab_gone tomb.disposition)
       | None -> Error (error "unknown-tab" "unknown tab handle"))
 
-let cdp_call ?session cdp meth params =
-  match Cdp.call cdp ?session ~deadline:(Eta.Duration.seconds 30) meth params with
+let cdp_call ?(deadline = Eta.Duration.seconds 30) ?session cdp meth params =
+  match Cdp.call cdp ?session ~deadline meth params with
   | Error `Timeout -> Error (error "timeout" "browser operation timed out")
   | Error _ -> Error (unavailable ())
   | Ok reply -> (
@@ -793,45 +795,6 @@ let hand_over t ~owner ~reason handle =
   let* tab, _ = begin_handoff t ~owner ~reason handle in
   Ok (info t tab)
 
-(* hand-lz3p hand-lmd5 hand-yytf hand-szz7: the wire path into [With_human], and the one
-   request that blocks. It hands the tab over, then waits on the promise [resume] resolves
-   while the deadline runs; whichever ending comes first decides the reply:
-
-   - [resume] (hand-lz3p hand-0sja) hands the tab back to its owner and answers with the
-     page's url and title, which is what the agent re-observes from;
-   - the deadline (hand-lmd5) cancels the wait and the tab is the owner's again;
-   - the tab's disappearance (hand-yytf) wakes the wait with the disposition that closed
-     it, [browser_lost] for a browser loss;
-   - the client going away cancels this handler, which is the same restore as the
-     deadline: a disconnected agent does not leave the tab stranded with the human.
-
-   Every path but a resume gives the tab back to the owner it was handed off from and
-   drops the record, so a later [resume] is [no-handoff] rather than a second resume. *)
-let handoff t ~owner ~reason ~timeout_s handle =
-  let* tab, waiting = begin_handoff t ~owner ~reason handle in
-  let release () =
-    (* The listener cancels this fiber when the client disconnects, so the restore runs
-       under [Eio.Cancel.protect]: it must not be cancelled halfway, and it must not wait
-       on a lock it will never get. *)
-    Eio.Cancel.protect (fun () ->
-        Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-            if waiting_is tab waiting then (
-              tab.handoff <- None;
-              match tab.owner_state with
-              | With_human owner -> tab.owner_state <- Owned owner
-              | Unowned | Owned _ -> ())))
-  in
-  let answer () =
-    match waiting.outcome with
-    | Some Resumed -> Ok P.{ resumed = true; url = tab.url; title = tab.title }
-    | Some (Ended error) -> Error error
-    | None -> Error (error "timeout" "the handoff timed out")
-  in
-  Fun.protect ~finally:release (fun () ->
-      match t.await_handoff (handoff_timeout timeout_s) waiting.promise with
-      | Ok () -> answer ()
-      | Error `Timeout -> answer ())
-
 (* hand-0sja hand-szz7: the human's answer, from any terminal — the notification action
    and [leash resume <tab>] arrive here as the same request. Whoever asks, the tab goes
    back to the owner it was handed off from, which is why [Resume] is the one command
@@ -852,6 +815,156 @@ let resume t ~owner handle =
           settle tab waiting Resumed;
           Ok P.{ resumed = true }
       | _ -> Error (nothing_waiting ()))
+
+(* hand-04rb: every human-facing step a handoff waits on is bounded by five seconds — the
+   browser call that raises the view here, and the window lookup and focus command inside
+   {!Desktop} — so a desktop that has stopped answering cannot hold the handler. *)
+let step_deadline = Eta.Duration.seconds 5
+
+(* hand-0sja: the notification's action return is the human resuming, from a terminal that
+   is not the owner's, so it arrives as the same request a person types. *)
+let human_owner =
+  match P.Owner.of_string "human" with Ok owner -> owner | Error _ -> assert false
+
+(* hand-04rb hand-phof hand-rg9h: the human-facing side of one handoff, best effort by
+   contract. The tab is already [With_human] when this runs, every step that fails becomes
+   a warning the reply carries and a log line, and no failure here ends the handoff: a
+   missing notify-send must not break the agent.
+
+   - hand-04rb: [Target.activateTarget] raises the tab inside the managed Chrome's window
+     first — a compositor may still ignore it (ADR-0003) — and then the configured desktop
+     command runs, bounded by its own five seconds.
+   - hand-phof: the notification runs on the handoff's own switch, for as long as the
+     handoff does, so the human's Done action can arrive at any moment and the child is
+     stopped the moment the handoff ends by any path — resume, deadline, disconnect, or
+     the tab going away. Its Done action is the human's [resume] (hand-0sja); one that
+     arrives after the handoff already ended is logged, not retried. *)
+let announce t ~sw ~tab ~reason ~warn =
+  let context = Desktop.{ tab = tab.handle; reason; url = tab.url; title = tab.title } in
+  let guarded step f =
+    match
+      try f () with
+      | Eio.Cancel.Cancelled _ as cancelled -> raise cancelled
+      | ex -> Error (Printexc.to_string ex)
+    with
+    | Ok () -> ()
+    | Error message -> warn step message
+  in
+  guarded "activate-target" (fun () ->
+      match ready t with
+      | Error error -> Error error.P.message
+      | Ok cdp -> (
+          (* Five seconds, not the browser-op deadline: raising the view is best effort,
+             and a wedged browser must not hold the handoff (control.ml's margin counts
+             on this bound). *)
+          match
+            cdp_call ~deadline:step_deadline cdp "Target.activateTarget"
+              (obj [ ("targetId", str tab.id) ])
+          with
+          | Ok _ -> Ok ()
+          | Error error -> Error error.P.message));
+  guarded "focus" (fun () -> Desktop.focus t.desktop context);
+  (* A daemon, not a plain fork: Eio's [Switch.run] waits for plain fibers, so a notifier
+     that outlives the handoff would hold the reply. The switch cancels a daemon once the
+     handoff's own work is done and still waits for the cancellation to finish — which is
+     what stops the child and reaps it before the request answers. *)
+  Eio.Fiber.fork_daemon ~sw (fun () ->
+      guarded "notify" (fun () ->
+          Desktop.notify t.desktop ~sw context ~on_done:(fun () ->
+              match resume t ~owner:human_owner tab.handle with
+              | Ok _ -> ()
+              | Error error ->
+                  Eta_observability.Logger.info t.logger
+                    ~fields:[ ("tab", Eta_observability.Logger.String (key tab.handle)) ]
+                    ("the notification answered a handoff that had already ended: "
+                   ^ error.P.message)));
+      `Stop_daemon)
+
+(* hand-lz3p hand-lmd5 hand-yytf hand-szz7: the wire path into [With_human], and the one
+   request that blocks. It hands the tab over, then waits on the promise [resume] resolves
+   while the deadline runs; whichever ending comes first decides the reply:
+
+   - [resume] (hand-lz3p hand-0sja) hands the tab back to its owner and answers with the
+     page's url and title, which is what the agent re-observes from;
+   - the deadline (hand-lmd5) cancels the wait and the tab is the owner's again;
+   - the tab's disappearance (hand-yytf) wakes the wait with the disposition that closed
+     it, [browser_lost] for a browser loss;
+   - the client going away cancels this handler, which is the same restore as the
+     deadline: a disconnected agent does not leave the tab stranded with the human.
+
+   Every path but a resume gives the tab back to the owner it was handed off from and
+   drops the record, so a later [resume] is [no-handoff] rather than a second resume.
+
+   hand-04rb hand-phof hand-rg9h: the human-facing steps run on a switch of their own
+   between the transition and the wait, so the notification is stopped when this request
+   ends and the reply says what did not work. *)
+let handoff t ~owner ~reason ~timeout_s handle =
+  let* tab, waiting = begin_handoff t ~owner ~reason handle in
+  let started = now t in
+  let warnings = ref [] in
+  let warn step message =
+    let warning = step ^ ": " ^ message in
+    warnings := warning :: !warnings;
+    Eta_observability.Logger.warn t.logger
+      ~fields:
+        [
+          ("tab", Eta_observability.Logger.String (key tab.handle));
+          ("reason", Eta_observability.Logger.String reason);
+        ]
+      ("handoff warning: " ^ warning)
+  in
+  let release () =
+    (* The listener cancels this fiber when the client disconnects, so the restore runs
+       under [Eio.Cancel.protect]: it must not be cancelled halfway, and it must not wait
+       on a lock it will never get. *)
+    Eio.Cancel.protect (fun () ->
+        Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+            if waiting_is tab waiting then (
+              tab.handoff <- None;
+              match tab.owner_state with
+              | With_human owner -> tab.owner_state <- Owned owner
+              | Unowned | Owned _ -> ())))
+  in
+  let warnings_json () =
+    match List.rev !warnings with
+    | [] -> None
+    | warnings -> Some (obj [ ("warnings", `List (List.map str warnings)) ])
+  in
+  let answer () =
+    match waiting.outcome with
+    | Some Resumed ->
+        Ok
+          P.
+            {
+              resumed = true;
+              url = tab.url;
+              title = tab.title;
+              warnings =
+                (match List.rev !warnings with [] -> None | warnings -> Some warnings);
+            }
+    | Some (Ended error) -> Error error
+    | None ->
+        (* hand-rg9h: an unanswered handoff is exactly when the human-facing failures
+           explain it, so the timeout carries them in [detail]. *)
+        Error (error ?detail:(warnings_json ()) "timeout" "the handoff timed out")
+  in
+  (* hand-lmd5: the deadline is the request's own, so the human-facing steps that ran
+     before the wait count against it — a handoff never outlives the deadline its caller
+     gave it — and a deadline already spent answers at once. *)
+  let remaining () =
+    let spent = Eta.Duration.ms (int_of_float ((now t -. started) *. 1000.)) in
+    Eta.Duration.max Eta.Duration.zero
+      (Eta.Duration.subtract (handoff_timeout timeout_s) spent)
+  in
+  Fun.protect ~finally:release (fun () ->
+      Eio.Switch.run (fun human ->
+          (* hand-04rb hand-phof: the human-facing steps, on this handoff's own switch, so
+             the notifier is stopped when the request ends however it ends. *)
+          announce t ~sw:human ~tab ~reason ~warn;
+          let left = remaining () in
+          if not (Eta.Duration.is_zero left) then
+            ignore (t.await_handoff left waiting.promise);
+          answer ()))
 
 (* own-82jd: without [--all] a caller sees its own tabs — the ones it owns and the one the
    human is holding for it — and nothing of another agent's. *)
@@ -1290,6 +1403,7 @@ let create ~sw ~cap ~tombstone_s ?(idle = Eta.Duration.minutes 30)
           Eta.Timeout.timeout ~clock:deps.clock timeout (fun () ->
               Eio.Promise.await promise;
               Ok ()));
+      desktop = deps.desktop;
       logger = deps.logger;
       cap;
       tombstone_s;

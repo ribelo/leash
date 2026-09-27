@@ -79,7 +79,31 @@ type expiry = { idle_s : Seconds.t; unclaimed_s : Seconds.t; tombstone_s : Secon
 type models = { api_key : Redact.t option; jev_model : Text.t; text_model : Text.t }
 [@@deriving yojson]
 
-type t = { chrome : chrome; tabs : tabs; expiry : expiry; models : models }
+(* hand-04rb hand-phof hand-rg9h: the two desktop commands a handoff runs, with the spec's
+   defaults — niri's window focus for the managed Chrome's window, and notify-send's Done
+   action carrying the agent's reason. An element is an argv template: {!Desktop} says
+   which placeholders it may carry. An empty command turns that step off. *)
+let default_focus_command =
+  [ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
+
+let default_notify_command = [ "notify-send"; "--action"; "done=Done"; "{reason}" ]
+
+type handoff = {
+  focus_command : string list; [@json.default default_focus_command]
+  notify_command : string list; [@json.default default_notify_command]
+}
+[@@deriving yojson]
+
+let default_handoff =
+  { focus_command = default_focus_command; notify_command = default_notify_command }
+
+type t = {
+  chrome : chrome;
+  tabs : tabs;
+  expiry : expiry;
+  models : models;
+  handoff : handoff; [@json.default default_handoff]
+}
 [@@deriving yojson]
 
 let env ~getenv config =

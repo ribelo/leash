@@ -46,7 +46,23 @@ type chrome = {
 type tabs = { cap : Tab_cap.t }
 type expiry = { idle_s : Seconds.t; unclaimed_s : Seconds.t; tombstone_s : Seconds.t }
 type models = { api_key : Redact.t option; jev_model : Text.t; text_model : Text.t }
-type t = { chrome : chrome; tabs : tabs; expiry : expiry; models : models }
+
+type handoff = { focus_command : string list; notify_command : string list }
+(** hand-04rb hand-phof hand-rg9h: the two desktop commands a handoff runs, each an argv
+    template whose elements may carry [{tab}], [{reason}], [{url}], and [{title}], plus
+    [{window_id}] for the focus command ({!Desktop}). The defaults are the spec's:
+    [niri msg action focus-window --id {window_id}] and
+    [notify-send --action done=Done {reason}]. An empty list turns that step off. *)
+
+type t = {
+  chrome : chrome;
+  tabs : tabs;
+  expiry : expiry;
+  models : models;
+  handoff : handoff;
+}
+(** Every section has a default, so a file that says nothing about handoff still decodes.
+*)
 
 val t_of_yojson : Yojson.Safe.t -> (t, string) result
 (** The derived decoder: an unknown key or a bad value is reported with its dotted path.

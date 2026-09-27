@@ -64,7 +64,12 @@ let rig f =
       in
       let tabs =
         Leash.Tabs.create ~sw ~cap:2 ~tombstone_s:3600
-          { Leash.Tabs.chrome; clock = env#clock; logger }
+          {
+            Leash.Tabs.chrome;
+            clock = env#clock;
+            logger;
+            desktop = Leash.Desktop.disabled;
+          }
       in
       let rec ready n =
         if n = 0 then Alcotest.fail "no Chrome"

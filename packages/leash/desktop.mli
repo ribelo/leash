@@ -1,0 +1,60 @@
+(** The human-facing side of a handoff: the two best-effort desktop steps that raise the
+    live view and tell the human what is asked (hand-04rb hand-phof hand-rg9h).
+
+    Both commands come from the [handoff] section of the config, and each argv element is
+    a template. [{tab}] is the handle, [{reason}], [{url}] and [{title}] are the tab as
+    the handoff found it, and [{window_id}] — the focus command's own placeholder — is the
+    niri window id of the managed Chrome, found by app id [leash] and then by title; a
+    command that asks for it and a window that cannot be found is skipped. Nothing runs
+    through a shell: an element becomes exactly one argument however many spaces or quotes
+    it carries, and a value is inserted once, never re-scanned. An empty command list
+    turns that step off.
+
+    Focus is bounded: a command that has not exited within five seconds is stopped and the
+    step fails. The notification command instead runs for as long as the handoff does, so
+    its Done action can arrive at any moment; it is stopped, with the same five-second
+    retirement grace, when the handoff ends by any path. That command prints the name of
+    the action the human took on its stdout, and a line [done] resumes the tab — which is
+    what [notify-send --action done=Done] prints when Done is clicked. *)
+
+type runner = {
+  run :
+    sw:Eio.Switch.t ->
+    argv:string list ->
+    on_line:(string -> unit) ->
+    (unit, string) result;
+}
+(** One command's whole life: spawn it on [sw], hand its stdout lines to [on_line], and
+    answer [Ok] for a zero exit or [Error reason] for anything else. A command stopped
+    because [sw] was released — the handoff it belonged to ended — is cancelled, not
+    reported: {!notify} runs on its caller's switch for exactly that reason. *)
+
+val process_runner :
+  clock:'clock Eio.Time.clock -> mgr:'mgr Eio_unix.Process.mgr -> runner
+(** The real one, over {!Eta_process.Child} with a five-second retirement grace and its
+    stdout read as lines. A command that cannot be started at all — a missing binary, an
+    exec that fails — is an [Error], not a defect: the caller turns it into a warning. *)
+
+type commands = { focus_command : string list; notify_command : string list }
+
+type context = { tab : Protocol.Handle.t; reason : string; url : string; title : string }
+(** What a handoff knows when the human-facing steps run: what to substitute into a
+    command's argv. *)
+
+type t
+
+val create : clock:'clock Eio.Time.clock -> runner:runner -> commands -> t
+
+val disabled : t
+(** Neither step is configured, so nothing is ever run and no clock or runner is needed. A
+    registry whose tests do not exercise the human-facing side uses it. *)
+
+val focus : t -> context -> (unit, string) result
+(** hand-04rb: raise the managed Chrome's window on the tab (or skip when the command asks
+    for a window that is not there). *)
+
+val notify :
+  t -> sw:Eio.Switch.t -> context -> on_done:(unit -> unit) -> (unit, string) result
+(** hand-phof: show the human the reason and the Done action, calling [on_done] when the
+    Done action's name reaches stdout. Blocks for the command's whole life: the caller
+    forks it on the handoff's switch so the handoff ending stops it. *)

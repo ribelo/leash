@@ -695,6 +695,46 @@ let config_values () =
     "handles must not be blank" true
     (Result.is_error (P.Handle.of_string ""))
 
+(* hand-04rb hand-phof hand-rg9h: the two desktop commands a handoff runs are config with
+   the spec's defaults — niri's window focus for the managed Chrome and notify-send's Done
+   action — and an empty list turns that step off. *)
+let handoff_commands () =
+  let base = config_text "/tmp/chrome" "/tmp/profile" in
+  let value =
+    match config_decode base with
+    | Ok value -> value
+    | Error (`Config message) -> Alcotest.fail message
+  in
+  Alcotest.(check (list string))
+    "hand-04rb the default focus command is the spec's niri one"
+    [ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
+    value.C.handoff.focus_command;
+  Alcotest.(check (list string))
+    "hand-phof the default notification is notify-send's Done action, with the reason"
+    [ "notify-send"; "--action"; "done=Done"; "{reason}" ]
+    value.C.handoff.notify_command;
+  let configured =
+    base
+    ^ "[handoff]\n\
+       focus_command = [ \"focus-it\", \"--tab\", \"{tab}\" ]\n\
+       notify_command = []\n"
+  in
+  let value =
+    match config_decode configured with
+    | Ok value -> value
+    | Error (`Config message) -> Alcotest.fail message
+  in
+  Alcotest.(check (list string))
+    "hand-rg9h a configured focus command replaces the default"
+    [ "focus-it"; "--tab"; "{tab}" ]
+    value.C.handoff.focus_command;
+  Alcotest.(check (list string))
+    "hand-rg9h an empty notification command turns that step off" []
+    value.C.handoff.notify_command;
+  Alcotest.(check bool)
+    "hand-rg9h the handoff section is part of the printed config" true
+    (contains "notify_command" (Yojson.Safe.to_string (C.yojson_of_t value)))
+
 let with_temp f =
   let path = Filename.temp_file "leash-l1-" "" in
   Unix.unlink path;
@@ -986,6 +1026,7 @@ let () =
       ( "svc-tkor",
         [
           test "config decode and defaults" config_values;
+          test "hand-04rb hand-phof hand-rg9h" handoff_commands;
           test "config check prints the redacted config" config_check_cli;
         ] );
     ]

@@ -144,7 +144,7 @@ let rig ?(idle = 30) ?(unclaimed = 60) f =
       let unclaimed = Eta.Duration.seconds unclaimed in
       let tabs =
         Tabs.create ~sw ~cap:128 ~tombstone_s:3600 ~idle ~unclaimed
-          { Tabs.chrome; clock = env#clock; logger }
+          { Tabs.chrome; clock = env#clock; logger; desktop = Leash.Desktop.disabled }
       in
       let rec ready n =
         if n = 0 then Alcotest.fail "no Chrome"
