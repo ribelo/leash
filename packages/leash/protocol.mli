@@ -347,6 +347,7 @@ type drive_args = {
   goal : string;
   max_steps : int option;
   deadline_s : int option;
+  dry_run : bool option;
 }
 (** The per-command argument records: each is derived, every [key?] field is omitted when
     [None], and [decode_request] refuses a key its record does not name. *)
@@ -413,7 +414,12 @@ val yojson_of_handoff_result : handoff_result -> Yojson.Safe.t
     list when there is one, and [tab-gone] for a tab that disappeared while the request
     waited (hand-lmd5 hand-yytf). *)
 
-type drive_result = { status : Drive_status.t; steps : step list; final : snapshot }
+type drive_result = {
+  status : Drive_status.t;
+  steps : step list;
+  final : snapshot;
+  reason : string option;
+}
 
 val drive_result_of_yojson : Yojson.Safe.t -> (drive_result, string) result
 val yojson_of_drive_result : drive_result -> Yojson.Safe.t

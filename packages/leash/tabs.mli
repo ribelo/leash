@@ -187,6 +187,17 @@ val snap :
   Protocol.snap_args ->
   (Protocol.snapshot, Protocol.error) result
 
+val drive :
+  ?decide:(Jev_request.request -> (Jev_request.decision, Protocol.error) result) ->
+  t ->
+  owner:Protocol.Owner.t ->
+  model:string ->
+  Protocol.drive_args ->
+  (Protocol.drive_result, Protocol.error) result
+(** drive-8n2z drive-tfqh: one tab action lock covers the entire effect computation. The
+    optional model decision seam is for scripted control tests; production refuses with
+    model-unavailable until the System One client is installed. *)
+
 val text :
   t ->
   owner:Protocol.Owner.t ->

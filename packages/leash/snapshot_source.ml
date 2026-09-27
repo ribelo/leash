@@ -235,6 +235,7 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
   let visible = visible dom ~width ~height ~scroll_x ~scroll_y in
   let placeholders = placeholders dom in
   let values = dom_attribute dom "value" in
+  let input_types = dom_attribute dom "type" in
   let names = dom_node_names dom in
   let nodes = list (get "nodes" ax) in
   let by_id = Hashtbl.create 128 in
@@ -301,6 +302,13 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
           && (label <> "" || not (List.mem effective_role informative))
           && get "ignored" n <> `Bool true
           && backend >= 0 && Hashtbl.mem visible backend
+          && not
+               (Hashtbl.find_opt names backend = Some "INPUT"
+               && List.mem
+                    (String.lowercase_ascii
+                       (Option.value ~default:"text"
+                          (Hashtbl.find_opt input_types backend)))
+                    [ "password"; "file"; "hidden" ])
         then
           let value =
             match get "value" n with

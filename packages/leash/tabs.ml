@@ -1050,122 +1050,120 @@ let sweep t ~decide =
 
 (* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8:
    retain the unfiltered node table for later action-time revalidation. *)
+let snap_locked t tab (args : P.snap_args) =
+  let offset = Option.value ~default:0 args.offset in
+  let limit = Option.value ~default:120 args.limit in
+  if offset < 0 || limit < 0 || limit > 1000 then
+    Error (error "invalid-request" "snap offset must be nonnegative and limit 0..1000")
+  else
+    let* cdp = ready t in
+    let* session = page_session t cdp tab in
+    let call meth params = cdp_call ~session cdp meth params in
+    let* () =
+      if tab.counter_installed then Ok ()
+      else
+        let* _ =
+          call "Page.addScriptToEvaluateOnNewDocument"
+            (obj [ ("source", str Snapshot_source.counter_script) ])
+        in
+        tab.counter_installed <- true;
+        Ok ()
+    in
+    let loader () =
+      let* reply = call "Page.getFrameTree" (obj []) in
+      match member "frameTree" reply with
+      | Some tree ->
+          let frame = Option.value ~default:`Null (member "frame" tree) in
+          Ok (Option.value ~default:"" (text "loaderId" frame))
+      | None -> Error (error "internal" "browser omitted frame tree")
+    in
+    let guard () =
+      let evaluate expression =
+        let* reply =
+          call "Runtime.evaluate"
+            (obj [ ("expression", str expression); ("returnByValue", `Bool true) ])
+        in
+        match member "result" reply with
+        | Some result -> Ok (Option.value ~default:`Null (member "value" result))
+        | None -> Error (error "internal" "browser omitted guard result")
+      in
+      let* current = evaluate Snapshot_source.guard_expression in
+      match Snapshot_source.guard current with
+      | Some guard -> Ok guard
+      | None -> (
+          let* _ = evaluate Snapshot_source.counter_script in
+          let* reply = evaluate Snapshot_source.guard_expression in
+          match Snapshot_source.guard reply with
+          | Some guard -> Ok guard
+          | None -> Error (error "internal" "document mutation guard unavailable"))
+    in
+    let capture () =
+      let* before_loader = loader () in
+      let* before = guard () in
+      let* ax = call "Accessibility.getFullAXTree" (obj []) in
+      let* dom =
+        call "DOMSnapshot.captureSnapshot"
+          (obj
+             [
+               ("computedStyles", `List [ str "display"; str "visibility" ]);
+               ("includeDOMRects", `Bool true);
+             ])
+      in
+      let* after = guard () in
+      let* after_loader = loader () in
+      let _, _, width, height, scroll_x, scroll_y = before in
+      let rows = Snapshot_source.rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y in
+      Ok (rows, before = after && before_loader = after_loader, after_loader)
+    in
+    let rec attempt remaining =
+      let* rows, settled, loader_id =
+        if tab.dialog <> None then Ok ([], false, "") else capture ()
+      in
+      if (not settled) && remaining > 0 && tab.dialog = None then attempt (remaining - 1)
+      else Ok (rows, settled, loader_id)
+    in
+    let* rows, settled, loader_id = attempt 2 in
+    let snapshot = enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ())) in
+    tab.snapshot <- Some (snapshot, loader_id, rows);
+    let matches row =
+      match args.match_ with
+      | None -> true
+      | Some pattern ->
+          let pattern = String.lowercase_ascii pattern in
+          let contains s =
+            let s = String.lowercase_ascii s in
+            let n = String.length pattern in
+            let rec scan at =
+              at + n <= String.length s && (String.sub s at n = pattern || scan (at + 1))
+            in
+            scan 0
+          in
+          contains row.P.role || contains row.name
+          || Option.fold ~none:false ~some:contains row.value
+    in
+    let all = rows |> List.map fst |> List.filter matches in
+    let total = List.length all in
+    let shown = all |> List.filteri (fun i _ -> i >= offset && i - offset < limit) in
+    Ok
+      P.
+        {
+          snapshot;
+          tab = tab.handle;
+          url = tab.url;
+          title = tab.title;
+          rows = shown;
+          total;
+          offset;
+          truncated = offset + List.length shown < total;
+          settled;
+          dialog = tab.dialog;
+        }
+
 let snap t ~owner (args : P.snap_args) =
   let* tab = locate t ~access:Act ~owner args.tab in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access:Act ~owner args.tab in
-      let offset = Option.value ~default:0 args.offset in
-      let limit = Option.value ~default:120 args.limit in
-      if offset < 0 || limit < 0 || limit > 1000 then
-        Error
-          (error "invalid-request" "snap offset must be nonnegative and limit 0..1000")
-      else
-        let* cdp = ready t in
-        let* session = page_session t cdp tab in
-        let call meth params = cdp_call ~session cdp meth params in
-        let* () =
-          if tab.counter_installed then Ok ()
-          else
-            let* _ =
-              call "Page.addScriptToEvaluateOnNewDocument"
-                (obj [ ("source", str Snapshot_source.counter_script) ])
-            in
-            tab.counter_installed <- true;
-            Ok ()
-        in
-        let loader () =
-          let* reply = call "Page.getFrameTree" (obj []) in
-          match member "frameTree" reply with
-          | Some tree ->
-              let frame = Option.value ~default:`Null (member "frame" tree) in
-              Ok (Option.value ~default:"" (text "loaderId" frame))
-          | None -> Error (error "internal" "browser omitted frame tree")
-        in
-        let guard () =
-          let evaluate expression =
-            let* reply =
-              call "Runtime.evaluate"
-                (obj [ ("expression", str expression); ("returnByValue", `Bool true) ])
-            in
-            match member "result" reply with
-            | Some result -> Ok (Option.value ~default:`Null (member "value" result))
-            | None -> Error (error "internal" "browser omitted guard result")
-          in
-          let* current = evaluate Snapshot_source.guard_expression in
-          match Snapshot_source.guard current with
-          | Some guard -> Ok guard
-          | None -> (
-              let* _ = evaluate Snapshot_source.counter_script in
-              let* reply = evaluate Snapshot_source.guard_expression in
-              match Snapshot_source.guard reply with
-              | Some guard -> Ok guard
-              | None -> Error (error "internal" "document mutation guard unavailable"))
-        in
-        let capture () =
-          let* before_loader = loader () in
-          let* before = guard () in
-          let* ax = call "Accessibility.getFullAXTree" (obj []) in
-          let* dom =
-            call "DOMSnapshot.captureSnapshot"
-              (obj
-                 [
-                   ("computedStyles", `List [ str "display"; str "visibility" ]);
-                   ("includeDOMRects", `Bool true);
-                 ])
-          in
-          let* after = guard () in
-          let* after_loader = loader () in
-          let _, _, width, height, scroll_x, scroll_y = before in
-          let rows = Snapshot_source.rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y in
-          Ok (rows, before = after && before_loader = after_loader, after_loader)
-        in
-        let rec attempt remaining =
-          let* rows, settled, loader_id =
-            if tab.dialog <> None then Ok ([], false, "") else capture ()
-          in
-          if (not settled) && remaining > 0 && tab.dialog = None then
-            attempt (remaining - 1)
-          else Ok (rows, settled, loader_id)
-        in
-        let* rows, settled, loader_id = attempt 2 in
-        let snapshot =
-          enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ()))
-        in
-        tab.snapshot <- Some (snapshot, loader_id, rows);
-        let matches row =
-          match args.match_ with
-          | None -> true
-          | Some pattern ->
-              let pattern = String.lowercase_ascii pattern in
-              let contains s =
-                let s = String.lowercase_ascii s in
-                let n = String.length pattern in
-                let rec scan at =
-                  at + n <= String.length s
-                  && (String.sub s at n = pattern || scan (at + 1))
-                in
-                scan 0
-              in
-              contains row.P.role || contains row.name
-              || Option.fold ~none:false ~some:contains row.value
-        in
-        let all = rows |> List.map fst |> List.filter matches in
-        let total = List.length all in
-        let shown = all |> List.filteri (fun i _ -> i >= offset && i - offset < limit) in
-        Ok
-          P.
-            {
-              snapshot;
-              tab = tab.handle;
-              url = tab.url;
-              title = tab.title;
-              rows = shown;
-              total;
-              offset;
-              truncated = offset + List.length shown < total;
-              settled;
-              dialog = tab.dialog;
-            })
+      snap_locked t tab args)
 
 (* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax:
    the registry owns identity and the page session; Reading owns browser-specific work. *)
@@ -1270,6 +1268,128 @@ let select t ~owner (args : P.select_args) =
 
 let scroll t ~owner (args : P.scroll_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.scroll ~cdp view args)
+
+(* drive-8n2z drive-tfqh: keep the lock across observe/decide/act. Never call
+   a public Tabs action here: each would reacquire this very same mutex. The
+   metric expression reads one document state; the fingerprint hashes visible
+   text, URL/title, scroll position and actionable AX rows, not snapshot IDs. *)
+let drive
+    ?(decide =
+      fun _ ->
+        Error
+          (error "model-unavailable" "System One client unavailable"
+             ~detail:(obj [ ("code", str "client-unavailable") ]))) t ~owner ~model
+    (args : P.drive_args) =
+  let* tab = locate t ~access:Act ~owner args.tab in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = locate t ~access:Act ~owner args.tab in
+      let* cdp = ready t in
+      let* session = page_session t cdp tab in
+      let browser = reading_browser t ~session tab cdp in
+      let view = action_view t ~session ~owner tab cdp in
+      let observe () =
+        let* snapshot =
+          snap_locked t tab
+            P.{ tab = args.tab; match_ = None; limit = Some 250; offset = None }
+        in
+        let* rendered =
+          Reading.text browser P.{ tab = args.tab; index = None; max_chars = Some 12_000 }
+        in
+        let* metrics =
+          Reading.eval browser
+            P.
+              {
+                tab = args.tab;
+                expression =
+                  "return \
+                   {y:scrollY,viewport:innerHeight,height:Math.max(document.documentElement.scrollHeight,document.body?.scrollHeight||0)};";
+                argument = None;
+              }
+        in
+        let value = metrics.value in
+        let number key =
+          match member key value with
+          | Some (`Int n) -> float_of_int n
+          | Some (`Float n) -> n
+          | _ -> 0.
+        in
+        let y, viewport, height = (number "y", number "viewport", number "height") in
+        let fingerprint =
+          Digest.to_hex
+            (Digest.string
+               (Yojson.Safe.to_string
+                  (`List
+                     [
+                       str snapshot.url;
+                       str snapshot.title;
+                       str rendered.text;
+                       value;
+                       `List (List.map P.yojson_of_row snapshot.rows);
+                     ])))
+        in
+        Ok
+          Drive.
+            {
+              snapshot;
+              text = rendered.text;
+              can_scroll_down = y +. viewport < height -. 2.;
+              can_scroll_up = y > 0.;
+              fingerprint;
+            }
+      in
+      let act (page : Drive.observation) (choice : Jev_request.decision) =
+        let snapshot = page.snapshot.snapshot in
+        let index = Option.value ~default:0 choice.index in
+        match P.Operation.to_string choice.operation with
+        | "click" -> Actions.click ~cdp view P.{ tab = args.tab; snapshot; index }
+        | "select" ->
+            Actions.select ~cdp view
+              P.
+                {
+                  tab = args.tab;
+                  snapshot;
+                  index;
+                  option = Option.value ~default:0 choice.option;
+                }
+        | "scroll_down" ->
+            Actions.scroll ~cdp view
+              P.
+                {
+                  tab = args.tab;
+                  direction = enum P.Direction.of_string "down";
+                  index = None;
+                }
+        | "scroll_up" ->
+            Actions.scroll ~cdp view
+              P.
+                {
+                  tab = args.tab;
+                  direction = enum P.Direction.of_string "up";
+                  index = None;
+                }
+        | "wait" ->
+            t.sleep 0.5;
+            Ok
+              P.
+                {
+                  tab = args.tab;
+                  url = tab.url;
+                  title = tab.title;
+                  snapshot = None;
+                  dialog = tab.dialog;
+                  popups = [];
+                }
+        | "type_text" ->
+            Error
+              (error "model-unavailable" "text helper unavailable"
+                 ~detail:(obj [ ("code", str "text-helper-unavailable") ]))
+        | _ -> Error (error "invalid-request" "unsupported drive operation")
+      in
+      Drive.run
+        ~handler:Drive.{ observe; decide; act }
+        ~now:(fun () -> now t)
+        ~model ~args
+        ~dry_run:(Option.value ~default:false args.dry_run))
 
 let report t : P.status_result =
   let chrome = Chrome.status t.chrome in

@@ -463,6 +463,7 @@ type drive_args = {
   goal : string;
   max_steps : int option;
   deadline_s : int option;
+  dry_run : bool option;
 }
 [@@deriving yojson]
 
@@ -500,7 +501,12 @@ type handoff_result = {
 }
 [@@deriving yojson]
 
-type drive_result = { status : Drive_status.t; steps : step list; final : snapshot }
+type drive_result = {
+  status : Drive_status.t;
+  steps : step list;
+  final : snapshot;
+  reason : string option;
+}
 [@@deriving yojson]
 
 (* ---------- Errors and replies ---------- *)

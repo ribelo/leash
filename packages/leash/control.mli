@@ -11,6 +11,7 @@ type ('clock, 'net) deps = {
 }
 
 val create :
+  ?model:string ->
   sw:Eio.Switch.t ->
   runtime_dir:string ->
   ('clock, 'net) deps ->
@@ -24,6 +25,19 @@ val budget : (Protocol.request, string) result -> Eta.Duration.t option
     everything else stays at one second. *)
 
 val status : t -> Eta_app.Status.t
-val dispatch : Tabs.t -> Protocol.request -> Protocol.reply
+
+val dispatch :
+  ?model:string ->
+  ?decide:(Jev_request.request -> (Jev_request.decision, Protocol.error) result) ->
+  Tabs.t ->
+  Protocol.request ->
+  Protocol.reply
+
 val decode : string -> (Protocol.request, string) result
-val handle : Tabs.t -> string -> string
+
+val handle :
+  ?model:string ->
+  ?decide:(Jev_request.request -> (Jev_request.decision, Protocol.error) result) ->
+  Tabs.t ->
+  string ->
+  string

@@ -1016,6 +1016,21 @@ let stall () =
       Alcotest.(check bool) ("drive-4bhg " ^ label) expected (J.stalled recent))
     cases
 
+(* snapshot.js:99-104: at most 250 browser actions before scroll and wait.
+   A text row counts twice (TYPE_TEXT and CLICK); a select counts by option. *)
+let action_cap () =
+  let rows = List.init 300 (fun index -> button index (string_of_int index)) in
+  let capped = J.elements (snapshot rows) in
+  Alcotest.(check int) "drive-zml5 at most 250 actions" 250 (List.length capped);
+  Alcotest.(check string) "first target" "1" (List.hd capped).index;
+  Alcotest.(check string) "last target" "250" (List.nth capped 249).index;
+  let rows = textbox 0 "Query" :: List.init 300 (fun index -> button (index + 1) "Go") in
+  let capped = J.elements (snapshot rows) in
+  Alcotest.(check int) "one textbox consumes two action slots" 249 (List.length capped);
+  Alcotest.(check int)
+    "type and click offered" 2
+    (List.length (List.hd capped).operations)
+
 let () =
   Alcotest.run "jev_request"
     [
@@ -1026,6 +1041,7 @@ let () =
           Alcotest.test_case "drive-zml5 the operation criteria and controls" `Quick
             controls;
           Alcotest.test_case "drive-zml5 the target criteria" `Quick target_criteria;
+          Alcotest.test_case "drive-zml5 action cap" `Quick action_cap;
           Alcotest.test_case "drive-y37b the recent window" `Quick recent_window;
           Alcotest.test_case "drive-y37b drive-zml5 the instruction texts, verbatim"
             `Quick instruction_texts;

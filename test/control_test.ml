@@ -155,6 +155,19 @@ let lifecycle () =
             match field "method" j with Some (`String s) -> Some s | _ -> None)
       in
       Alcotest.(check bool) "attached" true (List.mem "Target.attachToTarget" methods);
+      check_code "drive-ig84 owner" "not-owner"
+        (request tabs "bob"
+           (P.Drive
+              {
+                tab = h;
+                goal = "Do a task";
+                max_steps = None;
+                deadline_s = None;
+                dry_run = Some true;
+              }));
+      Alcotest.(check int)
+        "drive-8n2z denied before browser access" (List.length methods)
+        (List.length (Fake.received (fake ())));
       check_code "owner" "not-owner"
         (request tabs "bob" (P.Close { tab = h; force = None }));
       ignore (result (request tabs "alice" (P.Close { tab = h; force = None })));
@@ -765,6 +778,108 @@ let snapshot () =
         "tab-of0i counter installed on attach" true
         (List.mem "Page.addScriptToEvaluateOnNewDocument" methods))
 
+(* drive-l7yk drive-8n2z: a real control request, captured headless Chrome
+   snapshot replies, scripted decision and no browser mutation. *)
+let drive_dry_run () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      let fixture = fixture "unlabelled-controls-chrome.json" in
+      Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
+      Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
+      Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
+      Fake.on_method fake "Runtime.evaluate" (fun request ->
+          let params = get "params" request in
+          let expression = get "expression" params in
+          let value =
+            match expression with
+            | `String s
+              when String.starts_with ~prefix:"Array.from(document.body?.innerText" s ->
+                str "Example content"
+            | _ -> get "guard" fixture
+          in
+          if expression = str "globalThis" then
+            obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
+          else obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]);
+      Fake.on_method fake "Runtime.callFunctionOn" (fun request ->
+          let body = get "functionDeclaration" (get "params" request) in
+          Alcotest.(check bool)
+            "drive-l7yk metric body returns a value" true
+            (match body with
+            | `String s -> String.starts_with ~prefix:"function(argument) {\nreturn {y:" s
+            | _ -> false);
+          obj
+            [
+              ( "result",
+                obj
+                  [
+                    ( "value",
+                      obj [ ("y", `Int 0); ("viewport", `Int 400); ("height", `Int 1000) ]
+                    );
+                  ] );
+            ]);
+      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let decisions = ref 0 in
+      let decide (_ : Leash__Jev_request.request) =
+        incr decisions;
+        let operation =
+          match P.Operation.of_string "click" with Ok x -> x | Error _ -> assert false
+        in
+        Ok
+          Leash__Jev_request.
+            {
+              operation;
+              index = Some 1;
+              option = None;
+              confidence = 1.;
+              target_confidence = None;
+              operation_probabilities = [ ("click", 1.) ];
+              target_probabilities = [];
+              targets = [];
+            }
+      in
+      let wire =
+        P.encode_request
+          {
+            owner = owner "alice";
+            command =
+              P.Drive
+                {
+                  tab = h;
+                  goal = "Open a result";
+                  max_steps = Some 3;
+                  deadline_s = Some 30;
+                  dry_run = Some true;
+                };
+          }
+        |> Yojson.Safe.to_string
+      in
+      let reply =
+        Leash.Control.handle ~model:"fixture-model" ~decide tabs wire
+        |> Yojson.Safe.from_string |> P.decode_reply
+      in
+      let reply =
+        match reply with Ok reply -> result reply | Error why -> Alcotest.fail why
+      in
+      Alcotest.(check string)
+        "drive-l7yk one-step dry-run" "blocked"
+        (match get "status" reply with `String s -> s | _ -> "");
+      Alcotest.(check int) "drive-l7yk decision once" 1 !decisions;
+      Alcotest.(check int)
+        "drive-l7yk step once" 1
+        (match get "steps" reply with `List xs -> List.length xs | _ -> 0);
+      Alcotest.(check bool)
+        "drive-l7yk no mutating browser operation" false
+        (List.exists
+           (fun json ->
+             match field "method" json with
+             | Some
+                 (`String
+                    ( "Input.dispatchMouseEvent" | "Input.insertText"
+                    | "DOM.scrollIntoViewIfNeeded" )) ->
+                 true
+             | _ -> false)
+           (Fake.received fake)))
+
 (* tab-zc36: a control with an empty accessible name is what an agent still has to act on,
    so it keeps its row with its role, an empty name, and its value or placeholder. The AX
    and DOMSnapshot replies are the recorded headless Chrome 152 shapes for a page with an
@@ -840,5 +955,6 @@ let () =
           Alcotest.test_case "chrome-fwnu socket" `Quick socket;
           Alcotest.test_case "human-origin shutdown" `Quick human;
           Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
+          Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;
         ] );
     ]

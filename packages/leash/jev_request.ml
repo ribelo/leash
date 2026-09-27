@@ -144,6 +144,24 @@ let elements (snapshot : P.snapshot) =
         operations;
         options = select_targets index row;
       })
+  (* snapshot.js:99-101 limits browser actions, not text rows. One select option
+     is one action; an editable control offers two actions. Keep the first 250
+     in DOM order, even when the cap falls in the middle of a row. *)
+  |> List.fold_left
+       (fun (budget, kept) element ->
+         if budget = 0 then (budget, kept)
+         else
+           let options = List.filteri (fun i _ -> i < budget) element.options in
+           let operations =
+             if element.options <> [] then element.operations
+             else List.filteri (fun i _ -> i < budget) element.operations
+           in
+           let cost =
+             if element.options <> [] then List.length options else List.length operations
+           in
+           (budget - cost, { element with operations; options } :: kept))
+       (250, [])
+  |> snd |> List.rev
 
 (* ---------- Operations, keys and labels (model.py:83-90, snapshot.js:102-104) ---------- *)
 

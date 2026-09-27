@@ -288,7 +288,7 @@ let commands =
       [ ("timeout_s", Int) ];
     command "resume" "Resume the handed-off tab." [ "tab" ] [];
     command "drive" "Drive a tab toward a goal." [ "tab"; "goal" ]
-      [ ("max_steps", Int); ("deadline_s", Int) ];
+      [ ("max_steps", Int); ("deadline_s", Int); ("dry_run", Bool) ];
   ]
 
 let ( let* ) = Result.bind
@@ -344,7 +344,9 @@ let program env (config : Leash.Config.t) sw =
   let status_query = Eta_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in
   let runtime_dir = Option.value ~default:"" (Sys.getenv_opt "XDG_RUNTIME_DIR") in
   let* _control =
-    Leash.Control.create ~sw ~runtime_dir
+    Leash.Control.create
+      ~model:(Leash.Config.Text.to_string config.models.jev_model)
+      ~sw ~runtime_dir
       {
         Leash.Control.tabs;
         status_query;

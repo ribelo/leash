@@ -851,6 +851,48 @@ let select_options () =
             "tab-5deq nothing is disabled" [ false; false; false ]
             (each (fun (option_ : P.row_option) -> option_.disabled)))
 
+(* snapshot.js:55-80 excludes input types that must never be actions. Substitute the
+   captured DOM's input type while keeping its real AX tree and geometry. *)
+let unsafe_inputs () =
+  let fixture = chrome_fixture () in
+  let dom = member "dom" fixture in
+  let guard = member "guard" fixture in
+  let rows dom =
+    Leash__Snapshot_source.rows ~ax:(member "ax" fixture) ~dom
+      ~width:(floating "width" guard) ~height:(floating "height" guard)
+      ~scroll_x:(floating "scrollX" guard) ~scroll_y:(floating "scrollY" guard)
+  in
+  let count dom =
+    List.length
+      (List.filter
+         (fun ((row : P.row), _) -> row.role = "textbox" || row.role = "searchbox")
+         (rows dom))
+  in
+  Alcotest.(check int) "drive-zml5 text inputs are eligible" 2 (count dom);
+  List.iter
+    (fun kind ->
+      let dom =
+        match dom with
+        | `Assoc fields ->
+            `Assoc
+              (List.map
+                 (fun (key, value) ->
+                   if key <> "strings" then (key, value)
+                   else
+                     ( key,
+                       match value with
+                       | `List words ->
+                           `List
+                             (List.map
+                                (function `String "text" -> `String kind | x -> x)
+                                words)
+                       | _ -> Alcotest.fail "missing DOM strings" ))
+                 fields)
+        | _ -> Alcotest.fail "missing DOM"
+      in
+      Alcotest.(check int) ("drive-zml5 no " ^ kind ^ " action row") 0 (count dom))
+    [ "password"; "file"; "hidden" ]
+
 (* The TargetInfo of a popup as headless Chrome sends it, with this test's ids in it. *)
 let popup_target_info fixture ~target_id ~opener_id ~url ~title =
   let attached =
@@ -1397,6 +1439,7 @@ let () =
           Alcotest.test_case "tab-5deq" `Quick select;
           Alcotest.test_case "tab-5deq tab-zc36 the observed options" `Quick
             select_options;
+          Alcotest.test_case "drive-zml5 unsafe inputs" `Quick unsafe_inputs;
           Alcotest.test_case "tab-8dop" `Quick scroll;
           Alcotest.test_case "tab-tm6c" `Quick popups;
           Alcotest.test_case "tab-8k2g" `Quick popups_exact;

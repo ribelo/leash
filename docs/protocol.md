@@ -69,7 +69,7 @@ Drive:
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab, goal, max_steps?, deadline_s?}` | `{status, steps: Step[], final: Snapshot}` |
+| `drive` | `{tab, goal, max_steps?, deadline_s?, dry_run?}` | `{status, steps: Step[], final: Snapshot, reason?: string}` |
 
 ## Types
 
@@ -95,10 +95,21 @@ Step         = {n: int, snapshot: id, operation: Operation, index: int|null, pro
                 text?: string, after: {url, title}, elapsed_ms: int}
 Operation    = "click"|"type_text"|"select"|"scroll_up"|"scroll_down"|"wait"|"done"|"blocked"
 status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
+                 max_steps defaults to 30; deadline_s defaults to 120; both must be positive.
 ```
 
 Rules:
 
+- `drive` checks ownership, then holds the tab action lock across all observations and
+  actions; no other tab command can interleave. It observes a fresh snapshot, reads
+  visible page text and scroll metrics, requests one JEV decision, acts, and records a
+  Step. `dry_run: true` makes exactly one Observe/Decide/trace pass and never acts;
+  TYPE_TEXT is blocked with `reason: "text helper unavailable"` until L22. A model
+  failure is a protocol **error** (`model-unavailable`) with
+  `detail: {code: string, steps: Step[]}` containing completed steps. Drive status
+  `error` is reserved for non-model failures within a step (including dialogs or
+  popups), not model failures. Production currently reports `model-unavailable` with
+  `code: "client-unavailable"` until the L19 System One client is installed.
 - Ownership is checked before every tab command (ADR-0005). The `act` commands — `nav`,
   `snap`, `text`, `eval`, `shot`, `debug`, `wait`, `click`, `fill`, `press`, `select`,
   `scroll` — `dialog`, `release`, and `close` require that the caller owns the tab;

@@ -24,7 +24,7 @@ let decode line =
 
 let unsupported = err "invalid-request" "this command is not available yet"
 
-let dispatch tabs (request : P.request) =
+let dispatch ?(model = "unconfigured") ?decide tabs (request : P.request) =
   let owner = request.owner in
   let lift encode = function
     | Ok result -> success (encode result)
@@ -62,9 +62,10 @@ let dispatch tabs (request : P.request) =
   | P.List_tabs args ->
       success (P.yojson_of_list_result (Tabs.list tabs ~owner ~all:args.all))
   | P.Status -> success (P.yojson_of_status_result (Tabs.report tabs))
-  | _ -> unsupported
+  | P.Drive args ->
+      lift P.yojson_of_drive_result (Tabs.drive ?decide tabs ~owner ~model args)
 
-let handle tabs line =
+let handle ?(model = "unconfigured") ?decide tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
@@ -74,7 +75,7 @@ let handle tabs line =
             ("owner", P.Owner.to_string request.owner);
             ("cmd", P.command_name request.command);
           ]
-          (fun () -> dispatch tabs request)
+          (fun () -> dispatch ~model ?decide tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -112,7 +113,7 @@ let budget (request : (P.request, string) result) =
   | Ok { command = P.Handoff args; _ } ->
       Some (Eta.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
   | Ok { command = P.Drive args; _ } ->
-      Some (seconds (max 1 (Option.value ~default:30 args.deadline_s)))
+      Some (seconds (max 1 (Option.value ~default:120 args.deadline_s) + 5))
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _; _ } -> Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
@@ -120,7 +121,7 @@ let budget (request : (P.request, string) result) =
       Some cdp_budget
   | Ok _ -> Some (seconds 1)
 
-let create ~sw ~runtime_dir deps =
+let create ?(model = "unconfigured") ~sw ~runtime_dir deps =
   let path = Filename.concat (Filename.concat runtime_dir "leash") "control.sock" in
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
@@ -134,7 +135,7 @@ let create ~sw ~runtime_dir deps =
               ("owner", P.Owner.to_string request.owner);
               ("cmd", P.command_name request.command);
             ]
-            (fun () -> dispatch deps.tabs request)
+            (fun () -> dispatch ~model deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply
