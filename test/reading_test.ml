@@ -312,7 +312,8 @@ let protocol_smoke () =
       let fake =
         match !current with Some f -> f | None -> Alcotest.fail "fake missing"
       in
-      Fake.on_method fake "Runtime.evaluate" (fun params ->
+      Fake.on_method fake "Runtime.evaluate" (fun request ->
+          let params = get "params" request in
           let value =
             match field "expression" params with
             | Some (`String s) when String.starts_with ~prefix:"Boolean(" s -> `Bool true

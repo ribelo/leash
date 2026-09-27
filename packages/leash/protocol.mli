@@ -342,6 +342,7 @@ val yojson_of_text_result : text_result -> Yojson.Safe.t
 type shot_result = { path : string; bytes : int }
 type debug_result = { entries : debug_entry list }
 type eval_result = { value : Yojson.Safe.t }
+
 val yojson_of_shot_result : shot_result -> Yojson.Safe.t
 val yojson_of_debug_result : debug_result -> Yojson.Safe.t
 val yojson_of_eval_result : eval_result -> Yojson.Safe.t

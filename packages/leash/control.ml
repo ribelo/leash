@@ -85,8 +85,7 @@ let budget (request : (P.request, string) result) =
       Some (seconds (max 1 (Option.value ~default:900 args.timeout_s)))
   | Ok { command = P.Drive args; _ } ->
       Some (seconds (max 1 (Option.value ~default:30 args.deadline_s)))
-  | Ok { command = (P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _); _ } ->
-      Some (seconds 35)
+  | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _; _ } -> Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
   | Ok { command = P.Click _ | P.Fill _ | P.Press _ | P.Select _ | P.Scroll _; _ } ->

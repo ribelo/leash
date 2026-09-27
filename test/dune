@@ -51,7 +51,17 @@
 (test
  (name reading_test)
  (modules reading_test)
- (libraries leash leash_test_support eta_test eta eta_process eta_observability eio eio.unix yojson alcotest))
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eta_process
+  eta_observability
+  eio
+  eio.unix
+  yojson
+  alcotest))
 
 (test
  (name actions_test)

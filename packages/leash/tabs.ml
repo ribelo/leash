@@ -200,19 +200,20 @@ let flush_humans t =
   if t.creating = 0 then (
     Hashtbl.iter
       (fun id (session, info) ->
-        if not (Hashtbl.mem t.targets id) then
-          (ignore
-             (register t ~id ~session
-                ~origin:(enum P.Origin.of_string "human")
-                ~owner:(Some (enum P.Owner.of_string "human"))
-                ~url:(Option.value ~default:"about:blank" (text "url" info))
-                ~title:(Option.value ~default:"" (text "title" info)));
-           match ready t with
-           | Error _ -> ()
-           | Ok cdp ->
-               List.iter (fun domain ->
-                 ignore (cdp_call ~session cdp (domain ^ ".enable") (obj [])))
-                 [ "Page"; "Runtime"; "Network" ]))
+        if not (Hashtbl.mem t.targets id) then (
+          ignore
+            (register t ~id ~session
+               ~origin:(enum P.Origin.of_string "human")
+               ~owner:(Some (enum P.Owner.of_string "human"))
+               ~url:(Option.value ~default:"about:blank" (text "url" info))
+               ~title:(Option.value ~default:"" (text "title" info)));
+          match ready t with
+          | Error _ -> ()
+          | Ok cdp ->
+              List.iter
+                (fun domain ->
+                  ignore (cdp_call ~session cdp (domain ^ ".enable") (obj [])))
+                [ "Page"; "Runtime"; "Network" ]))
       t.pending_humans;
     Hashtbl.clear t.pending_humans)
 
@@ -511,20 +512,23 @@ let reading_browser t tab cdp : Reading.browser =
     sleep = t.sleep;
     current = (fun () -> (tab.url, tab.title));
     dialog = (fun () -> tab.dialog);
-    row = (fun index ->
-      match tab.snapshot with
-      | None -> None
-      | Some (_, _, rows) ->
-          List.find_map (fun ((row : P.row), backend) ->
-            if row.P.index = index then Some backend else None) rows);
+    row =
+      (fun index ->
+        match tab.snapshot with
+        | None -> None
+        | Some (_, _, rows) ->
+            List.find_map
+              (fun ((row : P.row), backend) ->
+                if row.P.index = index then Some backend else None)
+              rows);
   }
 
 let with_reading t ~owner handle f =
   let* tab = lookup t ~owner handle in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-    let* tab = lookup t ~owner handle in
-    let* cdp = ready t in
-    f tab (reading_browser t tab cdp))
+      let* tab = lookup t ~owner handle in
+      let* cdp = ready t in
+      f tab (reading_browser t tab cdp))
 
 let read_text t ~owner (args : P.text_args) =
   with_reading t ~owner args.tab (fun _ browser -> Reading.text browser args)
@@ -617,8 +621,11 @@ let status t =
 let inspect t json =
   (match text "sessionId" json with
   | None -> ()
-  | Some session -> Hashtbl.iter (fun _ tab ->
-      if tab.session = session then Reading.observe tab.reading ~at:(now t) json) t.tabs);
+  | Some session ->
+      Hashtbl.iter
+        (fun _ tab ->
+          if tab.session = session then Reading.observe tab.reading ~at:(now t) json)
+        t.tabs);
   match (text "method" json, member "params" json) with
   | Some ("Target.targetCreated" | "Target.targetInfoChanged"), Some params -> (
       match member "targetInfo" params with
