@@ -28,9 +28,23 @@ Snapshot source is decided (spec Further Notes): accessibility tree + `DOMSnapsh
 
 L7 and L8 are independent after L6.
 
+## Milestone 3 — ownership, claim/release, expiry, disposition (`tab-ownership/01-tab-ownership.md`)
+
+Ownership today is "the creator owns it" (milestone 1). This milestone makes owner state a real variant, adds claim/release, the two-stage expiry, human-origin discovery, tombstone dispositions, and the human's `--force`. ADR-0005 is the contract.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L10 | **Milestone-2 follow-ups.** Empty-name controls kept in the table with role and value/placeholder; `popups` exact via `openerId`; `ActionResult.snapshot` documented as always null. Fake browser and one fixture from real Chrome for an unlabelled select. | tab-zc36, tab-8k2g | — | [ ] |
+| L11 | **Owner state and authorization.** `Unowned | Owned of owner | With_human of owner` in the registry; one authorization function applied before every tab command (act/close/dialog/release require owner; claim requires unowned; `not-owner`, `already-owned`, `with-human`); `claim`, `release`; `list` filtered by owner, `--all` with origin, state, owner; `--force` for `release`/`close` (logged). Two-client protocol tests over every authorization cell. | own-6ndc, own-pmr7, own-jua9, own-0np9, own-2zs7, own-82jd, own-7pzw, own-0pnk | L10 | [ ] |
+| L12 | **Origin and discovery.** `Target.setDiscoverTargets`: tabs opened in the Chrome UI or by pages appear as human-origin unowned; a popup whose opener is an agent-owned tab inherits agent origin and that owner (adopted popup); origin never changes. Tombstones on `targetDestroyed` with `Closed_externally` unless Leash issued the close. | own-c0cl, own-ehqa, own-teh1 | L11 | [ ] |
+| L13 | **Expiry and disposition.** Sweep fiber as `Retry.repeat` on the mock-testable clock every 30 s; stage 1 releases owned tabs idle past `idle` (default 30 min); stage 2 closes agent-origin unowned tabs unclaimed past `unclaimed` (default 60 min); human-origin never auto-closed; any owner action resets idle; `With_human` excluded; `Closed_by_ttl` vs `Closed_by_owner` vs `Closed_externally` vs `Browser_lost` dispositions; `expires` in `TabInfo`; config keys; restart wipes state. | own-uo77, own-hslp, own-2zpi, own-ay3s, own-nbwk, own-vhqo, own-5qoh | L11 | [ ] |
+| L14 | **Live acceptance for milestone 3** (headless): two CLI owners; a tab opened by CDP outside Leash appears human-origin and is claimable; a `window.open` popup from an owned tab is adopted; `--force` release; a short-`idle` config proves stage 1 then stage 2 on a real clock (seconds, not minutes); a tab closed via CDP reports `closed_externally`. Marks the spec completed. | own-c0cl, own-ehqa, own-teh1, own-uo77, own-hslp | L12, L13 | [ ] |
+
+L12 and L13 are independent after L11.
+
 ## Later milestones
 
-3 `tab-ownership`, 4 `human-handoff`, 5 `drive`, 6 `service-packaging` — sliced when milestone 2 lands; their specs are complete.
+4 `human-handoff`, 5 `drive`, 6 `service-packaging` — sliced when milestone 3 lands; their specs are complete.
 
 ## Definition of done, every row
 

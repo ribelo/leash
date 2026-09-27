@@ -1,5 +1,5 @@
 ---
-status: completed
+status: completed-with-followups
 milestone: 2
 ---
 
@@ -41,6 +41,8 @@ One snapshot per observation: url, title, and a numbered element table. Every ac
 24. As an agent, I want fill text over 64 KiB, or an eval expression, argument, or result over its bound, refused with `too-large`, so that I get a clear limit instead of a hang. ^tab-0lax
 25. As an agent, I want background tabs to keep rendering while I act on them, so that animations and lazy content settle without my tab being the visible one. ^tab-8la3
 26. As an operator, I want `leash snap --table` to render the table for a human in one line per row, so that I can follow what an agent sees. ^tab-ok2i
+27. As an agent, I want a control with an empty accessible name (an unlabelled native select, a bare text input, an icon button) to appear in the table with its role and an empty name, plus its value or placeholder when it has one, so that I can still act on it by index. ^tab-zc36
+28. As an agent, I want `popups` in an action result to list only tabs whose opener is the acted-on tab (Chrome's `openerId`), so that another agent's new tab is never reported as mine. ^tab-8k2g
 
 ## Implementation Decisions
 
@@ -67,6 +69,10 @@ One snapshot per observation: url, title, and a numbered element table. Every ac
 ## Out of Scope
 
 iframes, shadow roots, canvas, file inputs, drag and drop, hover, batch steps, CDP event subscriptions, network timings, typing at the current focus without a target.
+
+## Review after milestone 2 (2026-09-27)
+
+Accepted as delivered with two follow-up stories (27, 28) delivered as milestone 3 row L10. `ActionResult.snapshot` is always `null` and stays so: a post-action snapshot costs the same as `snap`, and the agent decides when to look. Iframes remain out of scope; the counter script's lifetime across navigations and frames is recorded in `docs/cdp-shapes.md` and is where an iframe milestone would start. Rounding the hit-test point is correct regardless of what `DOM.getNodeForLocation` accepts on a given build.
 
 ## Further Notes
 

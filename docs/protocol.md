@@ -84,8 +84,9 @@ Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: 
 Row          = {index: int, role: string, name: string, value?: string, state?: string[]}
                  state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly}
 Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string}
-ActionResult = {tab, url, title, snapshot: id|null, dialog: Dialog|null, popups: TabInfo[]}
-                 snapshot is the id of the fresh post-action snapshot when one was taken cheaply, else null
+ActionResult = {tab, url, title, snapshot: null, dialog: Dialog|null, popups: TabInfo[]}
+                 snapshot is always null in this version: no snapshot is taken while an action settles; call snap
+                 popups lists only tabs opened by the acted-on tab (opener), owned by the caller
 DebugEntry   = {at: iso8601, kind: "console"|"exception"|"request-failed", level?: string, text: string}
 Step         = {n: int, snapshot: id, operation: Operation, index: int|null, probabilities: {op: {..}, target: {..}},
                 text?: string, after: {url, title}, elapsed_ms: int}
