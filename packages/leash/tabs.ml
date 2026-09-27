@@ -290,6 +290,10 @@ let navigate t ~owner handle url =
     Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
         let* tab = lookup t ~owner handle in
         let* cdp = ready t in
+        (* chrome-1yn9: the tab is navigating to [url] now, so [url] is the fallback until
+           Chrome speaks; the load wait's own [Target.getTargetInfo] refresh replaces it
+           with the URL Chrome committed, which is what a redirect changes. *)
+        tab.url <- url;
         let* () =
           with_load_wait t cdp tab (fun () ->
               let* reply =
@@ -302,7 +306,6 @@ let navigate t ~owner handle url =
         in
         let* _ = lookup t ~owner handle in
         let* _ = ready t in
-        tab.url <- url;
         Ok
           P.
             {

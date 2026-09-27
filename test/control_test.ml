@@ -186,10 +186,23 @@ let nav () =
           document ~title:"Example Domain" ~url:"https://example.com/next");
       let reply =
         result
-          (request tabs "alice" (P.Nav { tab = h; url = "https://example.com/next" }))
+          (request tabs "alice" (P.Nav { tab = h; url = "https://example.com/start" }))
+      in
+      let asked =
+        Fake.received (fake ())
+        |> List.find_map (fun json ->
+            match field "method" json with
+            | Some (`String "Page.navigate") -> (
+                match field "params" json with
+                | Some params -> Some (get "url" params)
+                | None -> None)
+            | _ -> None)
       in
       Alcotest.(check bool)
-        "chrome-1yn9 complete" true
+        "chrome-1yn9 navigates to the requested url" true
+        (asked = Some (str "https://example.com/start"));
+      Alcotest.(check bool)
+        "chrome-1yn9 reports the committed url" true
         (get "url" reply = str "https://example.com/next");
       Alcotest.(check bool)
         "chrome-1yn9 title after load" true

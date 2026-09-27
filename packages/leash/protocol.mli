@@ -1,19 +1,18 @@
 (** The version-one control protocol: the wire contract of [docs/protocol.md] as types.
 
+    A closed set of wire strings is a derived variant whose constructors carry their wire
+    name as [@name]; [of_string] and [to_string] are that same codec read as a string, so
+    a value outside the set is refused by naming the set. A field that [docs/protocol.md]
+    shows as [T|null] stays on the wire and reads [null] when it has no value; a field it
+    shows as [key?] is omitted when it has none. A field of type [Yojson.Safe.t] is a
+    value whose shape belongs to the page or to the caller — an [eval] argument or result,
+    an error's [detail], the [drive] probabilities — and passes through unchanged.
+
     The envelope is dispatched by hand — a request is a ["cmd"] name with an ["args"]
     object, a reply is [{ok, result}] or [{ok, error}] — while every per-command argument
     record and every result record is a plain type with a derived codec. A decode failure
     from the deriver names the offending path and value, which is what an
     [invalid-request] reply renders. *)
-
-(** A value whose shape belongs to the page or to the caller: an [eval] argument, the
-    [drive] probabilities, an [eval] result. *)
-module Json : sig
-  type t = Yojson.Safe.t
-
-  val t_of_yojson : Yojson.Safe.t -> (t, string) result
-  val yojson_of_t : t -> Yojson.Safe.t
-end
 
 (** A tab handle: non-empty by construction. *)
 module Handle : sig
@@ -174,6 +173,8 @@ type tab_info = {
   generation : int;
   expires : expires option;
 }
+(** [owner] and [expires] are [T|null]: both keys are always on the wire and read [null]
+    when there is no value. *)
 
 val tab_info_of_yojson : Yojson.Safe.t -> (tab_info, string) result
 val yojson_of_tab_info : tab_info -> Yojson.Safe.t
@@ -185,6 +186,7 @@ type row = {
   value : string option;
   state : Row_state.t list option;
 }
+(** [value] and [state] are [key?]: both are omitted when there is no value. *)
 
 val row_of_yojson : Yojson.Safe.t -> (row, string) result
 val yojson_of_row : row -> Yojson.Safe.t
@@ -200,6 +202,7 @@ type snapshot = {
   truncated : bool;
   dialog : dialog option;
 }
+(** [dialog] is [T|null]. *)
 
 val snapshot_of_yojson : Yojson.Safe.t -> (snapshot, string) result
 val yojson_of_snapshot : snapshot -> Yojson.Safe.t
@@ -212,6 +215,7 @@ type action_result = {
   dialog : dialog option;
   popups : tab_info list;
 }
+(** [snapshot] and [dialog] are [T|null]. *)
 
 val action_result_of_yojson : Yojson.Safe.t -> (action_result, string) result
 val yojson_of_action_result : action_result -> Yojson.Safe.t
@@ -231,7 +235,9 @@ type after = { url : string; title : string }
 val after_of_yojson : Yojson.Safe.t -> (after, string) result
 val yojson_of_after : after -> Yojson.Safe.t
 
-type probabilities = { op : Json.t; target : Json.t }
+type probabilities = { op : Yojson.Safe.t; target : Yojson.Safe.t }
+(** [op] and [target] are the model's probability objects, whose shape belongs to the
+    model. *)
 
 val probabilities_of_yojson : Yojson.Safe.t -> (probabilities, string) result
 val yojson_of_probabilities : probabilities -> Yojson.Safe.t
@@ -246,6 +252,7 @@ type step = {
   after : after;
   elapsed_ms : int;
 }
+(** [index] is [T|null]; [text] is [key?]. *)
 
 val step_of_yojson : Yojson.Safe.t -> (step, string) result
 val yojson_of_step : step -> Yojson.Safe.t
@@ -264,7 +271,7 @@ type snap_args = {
 type text_args = { tab : Handle.t; index : int option; max_chars : int option }
 type shot_args = { tab : Handle.t; path : string; full_page : bool option }
 type debug_args = { tab : Handle.t; limit : int option; clear : bool option }
-type eval_args = { tab : Handle.t; expression : string; argument : Json.t option }
+type eval_args = { tab : Handle.t; expression : string; argument : Yojson.Safe.t option }
 type nav_args = { tab : Handle.t; url : string }
 type click_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
 type fill_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int; text : string }
@@ -296,8 +303,8 @@ type drive_args = {
   max_steps : int option;
   deadline_s : int option;
 }
-(** The per-command argument records: each is derived, and [decode_request] refuses a key
-    its record does not name. *)
+(** The per-command argument records: each is derived, every [key?] field is omitted when
+    [None], and [decode_request] refuses a key its record does not name. *)
 
 type tab_counts = { open_ : int; cap : int }
 
@@ -332,22 +339,22 @@ val yojson_of_text_result : text_result -> Yojson.Safe.t
 
 type shot_result = { path : string; bytes : int }
 type debug_result = { entries : debug_entry list }
-type eval_result = { value : Json.t }
+type eval_result = { value : Yojson.Safe.t }
 type handoff_result = { resumed : bool; url : string; title : string }
 type drive_result = { status : Drive_status.t; steps : step list; final : snapshot }
 
 val drive_result_of_yojson : Yojson.Safe.t -> (drive_result, string) result
 val yojson_of_drive_result : drive_result -> Yojson.Safe.t
 
-type error = { code : Error_code.t; message : string; detail : Json.t option }
+type error = { code : Error_code.t; message : string; detail : Yojson.Safe.t option }
 (** What a failed reply carries: a closed code, one sentence, and optional structured
-    context. *)
+    context ([key?]: omitted when there is none). *)
 
 val error_of_yojson : Yojson.Safe.t -> (error, string) result
 val yojson_of_error : error -> Yojson.Safe.t
 
 type reply =
-  | Success of Json.t
+  | Success of Yojson.Safe.t
   | Failure of error
       (** One of the two wire shapes; the result is raw JSON because a client that does
           not know the command's result type still prints it. *)
@@ -382,9 +389,9 @@ type command =
           tables, carrying that command's derived argument record. *)
 
 val command_name : command -> string
-val args_to_json : command -> Json.t
+val args_to_json : command -> Yojson.Safe.t
 
-val command_of_args : cmd:string -> Json.t -> (command, string) result
+val command_of_args : cmd:string -> Yojson.Safe.t -> (command, string) result
 (** The command table: the wire name, the derived argument decode, and the derived
     argument encode. [Status] takes an empty object and nothing else. *)
 

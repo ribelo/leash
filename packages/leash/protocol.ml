@@ -1,18 +1,17 @@
 (** The version-one control protocol: the wire contract of [docs/protocol.md] as types.
 
+    A closed set of wire strings is a variant whose constructors carry their wire name as
+    [@name], so the type is the schema and the codec follows from it. A field that
+    [docs/protocol.md] shows as [T|null] is an option with [@yojson.null], which keeps the
+    key on the wire as [null]; a field it shows as [key?] is a plain option, which is
+    omitted when [None]. A value whose shape belongs to the page or to the caller — an
+    [eval] argument or result, an error's [detail], the [drive] probabilities — is a raw
+    [Yojson.Safe.t] field, which the deriver passes through unchanged.
+
     The envelope does not match the deriver's variant encoding — a request is a ["cmd"]
     name with an ["args"] object, and a reply is [{ok, result}] or [{ok, error}] — so the
     envelope is dispatched here by hand. Every per-command argument record and every
     result record is a plain type with a derived codec. *)
-
-module Json = struct
-  type t = Yojson.Safe.t
-  (** A value whose shape belongs to the page or to the caller: an [eval] argument, the
-      [drive] probabilities, an [eval] result. *)
-
-  let t_of_yojson json = Ok json
-  let yojson_of_t json = json
-end
 
 let expected what json =
   Printf.sprintf "expected %s, got %s" what (Yojson.Safe.to_string json)
@@ -70,218 +69,212 @@ module Owner = struct
   let yojson_of_t t = `String t
 end
 
-(** A closed set of wire strings: the constructors are the protocol's, and a value outside
-    the set is refused by naming the set. *)
-module Closed (Spec : sig
-  type t
+(* ---------- Closed sets ---------- *)
 
-  val name : string
-  val values : (string * t) list
-end) : sig
-  type t
+(** [wire_string] and [wire_value] read the string form of a closed set out of its derived
+    codec, whose constructor tags are the wire strings, so the two cannot drift. *)
+let wire_string yojson_of_t value =
+  match yojson_of_t value with
+  | `String text -> text
+  | _ -> invalid_arg "a closed set encoded to something that is not a wire string"
 
-  val to_string : t -> string
-  val of_string : string -> (t, string) result
-  val t_of_yojson : Yojson.Safe.t -> (t, string) result
-  val yojson_of_t : t -> Yojson.Safe.t
-end = struct
-  type t = Spec.t
+let wire_value t_of_yojson text = t_of_yojson (`String text)
 
-  let to_string value =
-    match List.find_opt (fun (_, candidate) -> candidate = value) Spec.values with
-    | Some (text, _) -> text
-    | None -> invalid_arg ("Closed.to_string: value outside " ^ Spec.name)
+(** Every constructor carries the wire string of [docs/protocol.md] as [@name]: the
+    deriver otherwise speaks the constructor name verbatim, which no wire string here
+    matches. *)
 
-  let accepted () =
-    "one of "
-    ^ String.concat ", "
-        (List.map (fun (text, _) -> Printf.sprintf "%S" text) Spec.values)
+type origin = Agent [@name "agent"] | Human [@name "human"] [@@deriving yojson]
 
-  let of_string text =
-    match List.assoc_opt text Spec.values with
-    | Some value -> Ok value
-    | None -> Error (Printf.sprintf "expected %s, got %S" (accepted ()) text)
+module Origin = struct
+  type t = origin
 
-  let t_of_yojson = function
-    | `String text -> of_string text
-    | json ->
-        Error
-          (Printf.sprintf "expected %s, got %s" (accepted ()) (Yojson.Safe.to_string json))
-
-  let yojson_of_t value = `String (to_string value)
+  let of_string = wire_value origin_of_yojson
+  let to_string = wire_string yojson_of_origin
+  let t_of_yojson = origin_of_yojson
+  let yojson_of_t = yojson_of_origin
 end
 
-module Origin = Closed (struct
-  type t = Agent | Human
+type state =
+  | Unowned [@name "unowned"]
+  | Owned [@name "owned"]
+  | With_human [@name "with_human"]
+[@@deriving yojson]
 
-  let name = "origin"
-  let values = [ ("agent", Agent); ("human", Human) ]
-end)
+module State = struct
+  type t = state
 
-module State = Closed (struct
-  type t = Unowned | Owned | With_human
+  let of_string = wire_value state_of_yojson
+  let to_string = wire_string yojson_of_state
+  let t_of_yojson = state_of_yojson
+  let yojson_of_t = yojson_of_state
+end
 
-  let name = "state"
-  let values = [ ("unowned", Unowned); ("owned", Owned); ("with_human", With_human) ]
-end)
+type stage = Release [@name "release"] | Close [@name "close"] [@@deriving yojson]
 
-module Stage = Closed (struct
-  type t = Release | Close
+module Stage = struct
+  type t = stage
 
-  let name = "stage"
-  let values = [ ("release", Release); ("close", Close) ]
-end)
+  let of_string = wire_value stage_of_yojson
+  let to_string = wire_string yojson_of_stage
+  let t_of_yojson = stage_of_yojson
+  let yojson_of_t = yojson_of_stage
+end
 
-module Dialog_kind = Closed (struct
-  type t = Alert | Confirm | Prompt | Beforeunload
+type dialog_kind =
+  | Alert [@name "alert"]
+  | Confirm [@name "confirm"]
+  | Prompt [@name "prompt"]
+  | Beforeunload [@name "beforeunload"]
+[@@deriving yojson]
 
-  let name = "dialog kind"
+module Dialog_kind = struct
+  type t = dialog_kind
 
-  let values =
-    [
-      ("alert", Alert);
-      ("confirm", Confirm);
-      ("prompt", Prompt);
-      ("beforeunload", Beforeunload);
-    ]
-end)
+  let of_string = wire_value dialog_kind_of_yojson
+  let to_string = wire_string yojson_of_dialog_kind
+  let t_of_yojson = dialog_kind_of_yojson
+  let yojson_of_t = yojson_of_dialog_kind
+end
 
-module Row_state = Closed (struct
-  type t =
-    | Checked
-    | Unchecked
-    | Mixed
-    | Selected
-    | Expanded
-    | Collapsed
-    | Disabled
-    | Required
-    | Readonly
+type row_state =
+  | Checked [@name "checked"]
+  | Unchecked [@name "unchecked"]
+  | Mixed [@name "mixed"]
+  | Selected [@name "selected"]
+  | Expanded [@name "expanded"]
+  | Collapsed [@name "collapsed"]
+  | Disabled [@name "disabled"]
+  | Required [@name "required"]
+  | Readonly [@name "readonly"]
+[@@deriving yojson]
 
-  let name = "row state"
+module Row_state = struct
+  type t = row_state
 
-  let values =
-    [
-      ("checked", Checked);
-      ("unchecked", Unchecked);
-      ("mixed", Mixed);
-      ("selected", Selected);
-      ("expanded", Expanded);
-      ("collapsed", Collapsed);
-      ("disabled", Disabled);
-      ("required", Required);
-      ("readonly", Readonly);
-    ]
-end)
+  let of_string = wire_value row_state_of_yojson
+  let to_string = wire_string yojson_of_row_state
+  let t_of_yojson = row_state_of_yojson
+  let yojson_of_t = yojson_of_row_state
+end
 
-module Debug_kind = Closed (struct
-  type t = Console | Exception | Request_failed
+type debug_kind =
+  | Console [@name "console"]
+  | Exception [@name "exception"]
+  | Request_failed [@name "request-failed"]
+[@@deriving yojson]
 
-  let name = "debug kind"
+module Debug_kind = struct
+  type t = debug_kind
 
-  let values =
-    [ ("console", Console); ("exception", Exception); ("request-failed", Request_failed) ]
-end)
+  let of_string = wire_value debug_kind_of_yojson
+  let to_string = wire_string yojson_of_debug_kind
+  let t_of_yojson = debug_kind_of_yojson
+  let yojson_of_t = yojson_of_debug_kind
+end
 
-module Operation = Closed (struct
-  type t = Click | Type_text | Select | Scroll_up | Scroll_down | Wait | Done | Blocked
+type operation =
+  | Click [@name "click"]
+  | Type_text [@name "type_text"]
+  | Select [@name "select"]
+  | Scroll_up [@name "scroll_up"]
+  | Scroll_down [@name "scroll_down"]
+  | Wait [@name "wait"]
+  | Done [@name "done"]
+  | Blocked [@name "blocked"]
+[@@deriving yojson]
 
-  let name = "operation"
+module Operation = struct
+  type t = operation
 
-  let values =
-    [
-      ("click", Click);
-      ("type_text", Type_text);
-      ("select", Select);
-      ("scroll_up", Scroll_up);
-      ("scroll_down", Scroll_down);
-      ("wait", Wait);
-      ("done", Done);
-      ("blocked", Blocked);
-    ]
-end)
+  let of_string = wire_value operation_of_yojson
+  let to_string = wire_string yojson_of_operation
+  let t_of_yojson = operation_of_yojson
+  let yojson_of_t = yojson_of_operation
+end
 
-module Direction = Closed (struct
-  type t = Up | Down
+type direction = Up [@name "up"] | Down [@name "down"] [@@deriving yojson]
 
-  let name = "direction"
-  let values = [ ("up", Up); ("down", Down) ]
-end)
+module Direction = struct
+  type t = direction
 
-module Answer = Closed (struct
-  type t = Accept | Dismiss
+  let of_string = wire_value direction_of_yojson
+  let to_string = wire_string yojson_of_direction
+  let t_of_yojson = direction_of_yojson
+  let yojson_of_t = yojson_of_direction
+end
 
-  let name = "answer"
-  let values = [ ("accept", Accept); ("dismiss", Dismiss) ]
-end)
+type answer = Accept [@name "accept"] | Dismiss [@name "dismiss"] [@@deriving yojson]
 
-module Drive_status = Closed (struct
-  type t = Done | Blocked | Step_cap | Deadline | Error
+module Answer = struct
+  type t = answer
 
-  let name = "drive status"
+  let of_string = wire_value answer_of_yojson
+  let to_string = wire_string yojson_of_answer
+  let t_of_yojson = answer_of_yojson
+  let yojson_of_t = yojson_of_answer
+end
 
-  let values =
-    [
-      ("done", Done);
-      ("blocked", Blocked);
-      ("step-cap", Step_cap);
-      ("deadline", Deadline);
-      ("error", Error);
-    ]
-end)
+(** The wire's ["error"] is [Failed] here: a constructor named [Error] would shadow
+    [Result.Error] in the by-hand dispatch below. *)
+type drive_status =
+  | Done [@name "done"]
+  | Blocked [@name "blocked"]
+  | Step_cap [@name "step-cap"]
+  | Deadline [@name "deadline"]
+  | Failed [@name "error"]
+[@@deriving yojson]
 
-module Chrome_phase = Closed (struct
-  type t = Running | Restarting
+module Drive_status = struct
+  type t = drive_status
 
-  let name = "chrome phase"
-  let values = [ ("running", Running); ("restarting", Restarting) ]
-end)
+  let of_string = wire_value drive_status_of_yojson
+  let to_string = wire_string yojson_of_drive_status
+  let t_of_yojson = drive_status_of_yojson
+  let yojson_of_t = yojson_of_drive_status
+end
 
-module Error_code = Closed (struct
-  type t =
-    | Invalid_request
-    | Not_owner
-    | Already_owned
-    | With_human
-    | Tab_gone
-    | Unknown_tab
-    | Stale_snapshot
-    | No_such_row
-    | Row_not_actionable
-    | Dialog_open
-    | No_dialog
-    | Url_refused
-    | Tab_cap
-    | Timeout
-    | Browser_unavailable
-    | Model_unavailable
-    | Too_large
-    | Internal
+type chrome_phase = Running [@name "running"] | Restarting [@name "restarting"]
+[@@deriving yojson]
 
-  let name = "error code"
+module Chrome_phase = struct
+  type t = chrome_phase
 
-  let values =
-    [
-      ("invalid-request", Invalid_request);
-      ("not-owner", Not_owner);
-      ("already-owned", Already_owned);
-      ("with-human", With_human);
-      ("tab-gone", Tab_gone);
-      ("unknown-tab", Unknown_tab);
-      ("stale-snapshot", Stale_snapshot);
-      ("no-such-row", No_such_row);
-      ("row-not-actionable", Row_not_actionable);
-      ("dialog-open", Dialog_open);
-      ("no-dialog", No_dialog);
-      ("url-refused", Url_refused);
-      ("tab-cap", Tab_cap);
-      ("timeout", Timeout);
-      ("browser-unavailable", Browser_unavailable);
-      ("model-unavailable", Model_unavailable);
-      ("too-large", Too_large);
-      ("internal", Internal);
-    ]
-end)
+  let of_string = wire_value chrome_phase_of_yojson
+  let to_string = wire_string yojson_of_chrome_phase
+  let t_of_yojson = chrome_phase_of_yojson
+  let yojson_of_t = yojson_of_chrome_phase
+end
+
+type error_code =
+  | Invalid_request [@name "invalid-request"]
+  | Not_owner [@name "not-owner"]
+  | Already_owned [@name "already-owned"]
+  | With_human [@name "with-human"]
+  | Tab_gone [@name "tab-gone"]
+  | Unknown_tab [@name "unknown-tab"]
+  | Stale_snapshot [@name "stale-snapshot"]
+  | No_such_row [@name "no-such-row"]
+  | Row_not_actionable [@name "row-not-actionable"]
+  | Dialog_open [@name "dialog-open"]
+  | No_dialog [@name "no-dialog"]
+  | Url_refused [@name "url-refused"]
+  | Tab_cap [@name "tab-cap"]
+  | Timeout [@name "timeout"]
+  | Browser_unavailable [@name "browser-unavailable"]
+  | Model_unavailable [@name "model-unavailable"]
+  | Too_large [@name "too-large"]
+  | Internal [@name "internal"]
+[@@deriving yojson]
+
+module Error_code = struct
+  type t = error_code
+
+  let of_string = wire_value error_code_of_yojson
+  let to_string = wire_string yojson_of_error_code
+  let t_of_yojson = error_code_of_yojson
+  let yojson_of_t = yojson_of_error_code
+end
 
 (* ---------- Tab, snapshot and drive shapes ---------- *)
 
@@ -294,9 +287,9 @@ type tab_info = {
   title : string;
   origin : Origin.t;
   state : State.t;
-  owner : Owner.t option;
+  owner : Owner.t option; [@yojson.null]
   generation : int;
-  expires : expires option;
+  expires : expires option; [@yojson.null]
 }
 [@@deriving yojson]
 
@@ -318,7 +311,7 @@ type snapshot = {
   total : int;
   offset : int;
   truncated : bool;
-  dialog : dialog option;
+  dialog : dialog option; [@yojson.null]
 }
 [@@deriving yojson]
 
@@ -326,8 +319,8 @@ type action_result = {
   tab : Handle.t;
   url : string;
   title : string;
-  snapshot : Snapshot_id.t option;
-  dialog : dialog option;
+  snapshot : Snapshot_id.t option; [@yojson.null]
+  dialog : dialog option; [@yojson.null]
   popups : tab_info list;
 }
 [@@deriving yojson]
@@ -341,13 +334,13 @@ type debug_entry = {
 [@@deriving yojson]
 
 type after = { url : string; title : string } [@@deriving yojson]
-type probabilities = { op : Json.t; target : Json.t } [@@deriving yojson]
+type probabilities = { op : Yojson.Safe.t; target : Yojson.Safe.t } [@@deriving yojson]
 
 type step = {
   n : int;
   snapshot : Snapshot_id.t;
   operation : Operation.t;
-  index : int option;
+  index : int option; [@yojson.null]
   probabilities : probabilities;
   text : string option;
   after : after;
@@ -378,7 +371,7 @@ type shot_args = { tab : Handle.t; path : string; full_page : bool option }
 type debug_args = { tab : Handle.t; limit : int option; clear : bool option }
 [@@deriving yojson]
 
-type eval_args = { tab : Handle.t; expression : string; argument : Json.t option }
+type eval_args = { tab : Handle.t; expression : string; argument : Yojson.Safe.t option }
 [@@deriving yojson]
 
 type nav_args = { tab : Handle.t; url : string } [@@deriving yojson]
@@ -450,7 +443,7 @@ type text_result = { url : string; title : string; text : string; truncated : bo
 
 type shot_result = { path : string; bytes : int } [@@deriving yojson]
 type debug_result = { entries : debug_entry list } [@@deriving yojson]
-type eval_result = { value : Json.t } [@@deriving yojson]
+type eval_result = { value : Yojson.Safe.t } [@@deriving yojson]
 type handoff_result = { resumed : bool; url : string; title : string } [@@deriving yojson]
 
 type drive_result = { status : Drive_status.t; steps : step list; final : snapshot }
@@ -458,13 +451,13 @@ type drive_result = { status : Drive_status.t; steps : step list; final : snapsh
 
 (* ---------- Errors and replies ---------- *)
 
-type error = { code : Error_code.t; message : string; detail : Json.t option }
+type error = { code : Error_code.t; message : string; detail : Yojson.Safe.t option }
 [@@deriving yojson]
 
 (** One of the two wire shapes. The result stays raw JSON because the CLI prints it
     without knowing the command's result type; the per-command result records above are
     what the service encodes into it. *)
-type reply = Success of Json.t | Failure of error
+type reply = Success of Yojson.Safe.t | Failure of error
 
 let encode_reply = function
   | Success result -> `Assoc [ ("ok", `Bool true); ("result", result) ]
@@ -516,6 +509,10 @@ let decode_reply json =
            (Yojson.Safe.to_string json))
 
 (* ---------- Commands ---------- *)
+
+type empty_args = unit [@@deriving yojson] [@@yojson.empty_record]
+(** [status] takes an empty object and nothing else: the marker is the one way to write
+    that shape, and the derived codec refuses a non-empty object or [null]. *)
 
 type command =
   | New of new_args
@@ -571,7 +568,7 @@ let args_to_json = function
   | Claim args -> yojson_of_tab_args args
   | Release args -> yojson_of_tab_args args
   | Close args -> yojson_of_tab_args args
-  | Status -> `Assoc []
+  | Status -> yojson_of_empty_args ()
   | Snap args -> yojson_of_snap_args args
   | Text args -> yojson_of_text_args args
   | Shot args -> yojson_of_shot_args args
@@ -591,18 +588,13 @@ let args_to_json = function
 
 let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
-  let empty_object = function
-    | `Assoc [] -> Ok ()
-    | `Assoc ((key, _) :: _) -> Error (Printf.sprintf "unknown field %s" key)
-    | json -> Error (expected "an empty object" json)
-  in
   match cmd with
   | "new" -> with_args new_args_of_yojson (fun args -> New args)
   | "list" -> with_args list_args_of_yojson (fun args -> List_tabs args)
   | "claim" -> with_args tab_args_of_yojson (fun args -> Claim args)
   | "release" -> with_args tab_args_of_yojson (fun args -> Release args)
   | "close" -> with_args tab_args_of_yojson (fun args -> Close args)
-  | "status" -> with_args empty_object (fun () -> Status)
+  | "status" -> with_args empty_args_of_yojson (fun () -> Status)
   | "snap" -> with_args snap_args_of_yojson (fun args -> Snap args)
   | "text" -> with_args text_args_of_yojson (fun args -> Text args)
   | "shot" -> with_args shot_args_of_yojson (fun args -> Shot args)

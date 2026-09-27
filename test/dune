@@ -1,3 +1,13 @@
+; Eio_main picks io_uring on Linux; each ring pins locked memory against
+; RLIMIT_MEMLOCK, and dune runs suites in parallel, so they fail with ENOMEM in
+; io_uring_queue_init. The suites test Leash, not the backend: use eio_posix
+; (the spawned main.exe in config_protocol_test inherits it).
+
+(env
+ (_
+  (env-vars
+   (EIO_BACKEND posix))))
+
 (test
  (name fake_browser_test)
  (libraries leash leash_test_support eta_test eio eio.unix yojson alcotest))

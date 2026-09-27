@@ -191,6 +191,81 @@ let command_round_trip () =
         (Yojson.Safe.to_string (P.encode_request again)))
     command_table
 
+(* chrome-38a4: every closed set is a derived variant whose wire names are the [@name]s of
+   [docs/protocol.md]; the string form an error or a log line prints is read back out of
+   the same codec, so a name cannot exist in one and not the other. *)
+let closed_sets () =
+  let speaks name of_string to_string values =
+    List.iter
+      (fun wire ->
+        match of_string wire with
+        | Error message -> Alcotest.failf "%s: %S did not decode: %s" name wire message
+        | Ok value -> Alcotest.(check string) (name ^ " " ^ wire) wire (to_string value))
+      values
+  in
+  speaks "origin" P.Origin.of_string P.Origin.to_string [ "agent"; "human" ];
+  speaks "state" P.State.of_string P.State.to_string [ "unowned"; "owned"; "with_human" ];
+  speaks "stage" P.Stage.of_string P.Stage.to_string [ "release"; "close" ];
+  speaks "dialog kind" P.Dialog_kind.of_string P.Dialog_kind.to_string
+    [ "alert"; "confirm"; "prompt"; "beforeunload" ];
+  speaks "row state" P.Row_state.of_string P.Row_state.to_string
+    [
+      "checked";
+      "unchecked";
+      "mixed";
+      "selected";
+      "expanded";
+      "collapsed";
+      "disabled";
+      "required";
+      "readonly";
+    ];
+  speaks "debug kind" P.Debug_kind.of_string P.Debug_kind.to_string
+    [ "console"; "exception"; "request-failed" ];
+  speaks "operation" P.Operation.of_string P.Operation.to_string
+    [
+      "click";
+      "type_text";
+      "select";
+      "scroll_up";
+      "scroll_down";
+      "wait";
+      "done";
+      "blocked";
+    ];
+  speaks "direction" P.Direction.of_string P.Direction.to_string [ "up"; "down" ];
+  speaks "answer" P.Answer.of_string P.Answer.to_string [ "accept"; "dismiss" ];
+  speaks "drive status" P.Drive_status.of_string P.Drive_status.to_string
+    [ "done"; "blocked"; "step-cap"; "deadline"; "error" ];
+  speaks "chrome phase" P.Chrome_phase.of_string P.Chrome_phase.to_string
+    [ "running"; "restarting" ];
+  speaks "error code" P.Error_code.of_string P.Error_code.to_string
+    [
+      "invalid-request";
+      "not-owner";
+      "already-owned";
+      "with-human";
+      "tab-gone";
+      "unknown-tab";
+      "stale-snapshot";
+      "no-such-row";
+      "row-not-actionable";
+      "dialog-open";
+      "no-dialog";
+      "url-refused";
+      "tab-cap";
+      "timeout";
+      "browser-unavailable";
+      "model-unavailable";
+      "too-large";
+      "internal";
+    ];
+  match P.Error_code.of_string "mystery" with
+  | Ok _ -> Alcotest.fail "a value outside the error-code set decoded"
+  | Error message ->
+      check_needles "a value outside the set names the set" message
+        [ "mystery"; "invalid-request"; "internal" ]
+
 let tab_json =
   assoc
     [
@@ -242,6 +317,68 @@ let result_shapes () =
     "TabInfo names its fields"
     (Yojson.Safe.to_string tab_json)
     (Yojson.Safe.to_string (P.yojson_of_tab_info tab));
+  (* docs/protocol.md: [owner] and [expires] are [T|null], so both keys stay on the wire
+     and read [null] when there is no value. An absent key is still read as [None], and
+     re-encoding writes the null the protocol asks for. *)
+  let bare_json =
+    assoc
+      [
+        ("tab", `String "t_9xk");
+        ("url", `String "about:blank");
+        ("title", `String "");
+        ("origin", `String "human");
+        ("state", `String "unowned");
+        ("owner", `Null);
+        ("generation", `Int 1);
+        ("expires", `Null);
+      ]
+  in
+  let bare = assert_ok "unowned tab info" (P.tab_info_of_yojson bare_json) in
+  Alcotest.(check (option string))
+    "owner null is None" None
+    (Option.map P.Owner.to_string bare.owner);
+  Alcotest.(check bool) "expires null is None" true (bare.expires = None);
+  Alcotest.(check string)
+    "T|null fields stay on the wire as null"
+    (Yojson.Safe.to_string bare_json)
+    (Yojson.Safe.to_string (P.yojson_of_tab_info bare));
+  let absent =
+    assert_ok "absent T|null keys"
+      (P.tab_info_of_yojson
+         (assoc
+            [
+              ("tab", `String "t_9xk");
+              ("url", `String "about:blank");
+              ("title", `String "");
+              ("origin", `String "human");
+              ("state", `String "unowned");
+              ("generation", `Int 1);
+            ]))
+  in
+  Alcotest.(check string)
+    "an absent T|null key is read as null and written back null"
+    (Yojson.Safe.to_string bare_json)
+    (Yojson.Safe.to_string (P.yojson_of_tab_info absent));
+  let expiring =
+    assert_ok "expiring tab info"
+      (P.tab_info_of_yojson
+         (assoc
+            [
+              ("tab", `String "t_9xk");
+              ("url", `String "https://example.com/");
+              ("title", `String "Example");
+              ("origin", `String "agent");
+              ("state", `String "with_human");
+              ("owner", `String "human");
+              ("generation", `Int 2);
+              ("expires", assoc [ ("stage", `String "close"); ("in_s", `Int 30) ]);
+            ]))
+  in
+  Alcotest.(check bool)
+    "an expiry carries its stage as a wire string" true
+    (match expiring.expires with
+    | Some expires -> P.Stage.to_string expires.stage = "close" && expires.in_s = 30
+    | None -> false);
   let snapshot = assert_ok "snapshot" (P.snapshot_of_yojson snapshot_json) in
   Alcotest.(check int) "one row" 1 (List.length snapshot.rows);
   let row = List.hd snapshot.rows in
@@ -262,6 +399,58 @@ let result_shapes () =
     "Snapshot names its fields"
     (Yojson.Safe.to_string snapshot_json)
     (Yojson.Safe.to_string (P.yojson_of_snapshot snapshot));
+  (* docs/protocol.md: [Row.value] and [Row.state] are [key?]; [ActionResult.snapshot] and
+     [ActionResult.dialog] are [T|null]; [DebugEntry.level] is [key?]. *)
+  let bare_row_json =
+    assoc [ ("index", `Int 1); ("role", `String "textbox"); ("name", `String "Search") ]
+  in
+  let bare_row : P.row =
+    { index = 1; role = "textbox"; name = "Search"; value = None; state = None }
+  in
+  Alcotest.(check string)
+    "Row key? fields are omitted when None"
+    (Yojson.Safe.to_string bare_row_json)
+    (Yojson.Safe.to_string (P.yojson_of_row bare_row));
+  let absent_row =
+    assert_ok "row without value or state" (P.row_of_yojson bare_row_json)
+  in
+  Alcotest.(check bool)
+    "an absent Row key? field is None" true
+    (absent_row.value = None && absent_row.state = None);
+  let action : P.action_result =
+    {
+      tab = tab.tab;
+      url = "https://example.com/";
+      title = "Example";
+      snapshot = None;
+      dialog = None;
+      popups = [];
+    }
+  in
+  Alcotest.(check string)
+    "ActionResult.snapshot and .dialog stay on the wire as null"
+    {|{"tab":"t_9xk","url":"https://example.com/","title":"Example","snapshot":null,"dialog":null,"popups":[]}|}
+    (Yojson.Safe.to_string (P.yojson_of_action_result action));
+  let action_again =
+    assert_ok "action result"
+      (P.action_result_of_yojson (P.yojson_of_action_result action))
+  in
+  Alcotest.(check bool)
+    "an ActionResult round-trips" true
+    (action_again.snapshot = None && action_again.dialog = None
+   && action_again.popups = []);
+  let entry : P.debug_entry =
+    {
+      at = "2026-01-01T00:00:00Z";
+      kind = assert_ok "debug kind" (P.Debug_kind.of_string "request-failed");
+      level = None;
+      text = "boom";
+    }
+  in
+  Alcotest.(check string)
+    "DebugEntry.level is key?"
+    {|{"at":"2026-01-01T00:00:00Z","kind":"request-failed","text":"boom"}|}
+    (Yojson.Safe.to_string (P.yojson_of_debug_entry entry));
   expect_error "unknown row state" [ "state"; "hidden" ]
     (P.row_of_yojson
        (assoc
@@ -332,16 +521,17 @@ let drive_result () =
   in
   let result = assert_ok "drive result" (P.drive_result_of_yojson json) in
   Alcotest.(check string) "status" "step-cap" (P.Drive_status.to_string result.status);
-  (match result.steps with
-  | [ step ] ->
-      Alcotest.(check string)
-        "operation" "type_text"
-        (P.Operation.to_string step.operation);
-      Alcotest.(check (option int)) "index absent" None step.index
-  | _ -> Alcotest.fail "one step");
+  let step = match result.steps with [ step ] -> step | _ -> Alcotest.fail "one step" in
+  Alcotest.(check string) "operation" "type_text" (P.Operation.to_string step.operation);
+  Alcotest.(check (option int)) "index null is None" None step.index;
   Alcotest.(check string)
     "Step names its fields" (Yojson.Safe.to_string json)
-    (Yojson.Safe.to_string (P.yojson_of_drive_result result))
+    (Yojson.Safe.to_string (P.yojson_of_drive_result result));
+  let without_text = Yojson.Safe.to_string (P.yojson_of_step { step with text = None }) in
+  Alcotest.(check bool)
+    "Step.index stays on the wire as null" true
+    (contains "\"index\":null" without_text);
+  Alcotest.(check bool) "Step.text is key?" true (not (contains "\"text\"" without_text))
 
 let reply_shapes () =
   let success = assoc [ ("ok", `Bool true); ("result", assoc [ ("tabs", `List []) ]) ] in
@@ -668,6 +858,7 @@ let () =
           test "request envelope and closed arguments" request_validation;
           test "every command decodes and round-trips" command_round_trip;
           test "tab, snapshot and dialog shapes" result_shapes;
+          test "one wire name per closed set" closed_sets;
           test "drive result shape" drive_result;
           test "reply shapes" reply_shapes;
         ] );
