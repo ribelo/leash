@@ -1,10 +1,11 @@
-(** The models the drive talks to (L19; drive-e7oi drive-yqxg).
+(** The models the drive talks to (L19; drive-e7oi drive-yqxg drive-ls3c).
 
     One service owns both model clients over one {!Eta_http.Client.t} — the client is
     created with TLS here, on the service's switch, and every endpoint goes through it —
     and the drive's production [Decide] is {!decide}: {!Jev_request.body} shapes the
     request, {!Eta_ai_systemone.Client.evaluate} performs it, and {!Jev_request.decide}
-    validates what came back.
+    validates what came back. The text helper step's completion ({!Eta_ai_chat}) is the
+    second client on the same transport; {!text_helper} hands it out.
 
     Cancellation and finalizers: {!create} acquires the HTTP client against [sw] and
     registers nothing else; every call runs in the calling fiber, opens and closes its own
@@ -22,10 +23,12 @@ val create :
   t
 (** [create ~sw ~net ~clock ~logger models] is the models service: one TLS HTTP client on
     [sw] and, when [models.api_key] is present, the System One client pinned to
-    [models.jev_model] and pointed at [models.systemone_endpoint]. Without a key there is
+    [models.jev_model] and pointed at [models.systemone_endpoint], plus the chat client of
+    the text helper step pointed at [models.chat_base_url] (L22). Without a key there is
     no client at all and {!decide} refuses before anything is sent. The API key travels as
     a {!Eta_observability.Redact.t} and only {!Eta_ai.Bearer.header} reveals it, on the
-    request path. *)
+    request path; the chat client is pure and synchronous, so it is built here beside the
+    System One one and shares the transport. *)
 
 val status : t -> Protocol.models_status
 (** What [leash status] reports: [configured] is whether an API key is present, and the
@@ -53,6 +56,8 @@ val decide :
     backoff included; the drive passes what is left of its own deadline. *)
 
 val text_helper : t -> Text_helper.t
-(** The text helper over this service's HTTP client and [models.text_model]. L22 wires it
-    to eta-next's chat client; until then it is {!Text_helper.unavailable}, and the
-    drive's TYPE_TEXT branch is its own stub. *)
+(** The text helper over this service's chat client and [models.text_model] (drive-ls3c).
+    Every call is a fresh helper: the one-entry memo that reuses an answer when the whole
+    helper input is unchanged is a drive's business and must not outlive it, while the
+    client underneath is this service's. Without an API key the helper refuses with
+    [detail.code = "missing-key"] and nothing is sent. *)

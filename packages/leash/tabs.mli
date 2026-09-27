@@ -195,16 +195,25 @@ val drive :
     (deadline:Eta.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
+  ?text_helper:(unit -> Text_helper.t) ->
   t ->
   owner:Protocol.Owner.t ->
   model:string ->
   Protocol.drive_args ->
   (Protocol.drive_result, Protocol.error) result
-(** drive-8n2z drive-tfqh drive-kh2u: one tab action lock covers the entire effect
-    computation. The optional model decision seam is what production installs
+(** drive-8n2z drive-tfqh drive-kh2u drive-ls3c: one tab action lock covers the entire
+    effect computation. The optional model decision seam is what production installs
     ({!Models.decide}) and what scripted control tests replace; a drive that is given none
     refuses with model-unavailable. The seam takes the deadline the drive has left, so one
-    model call can never outlast the reply the client is waiting for. *)
+    model call can never outlast the reply the client is waiting for.
+
+    [text_helper] is asked once per drive for the helper a [type_text] step writes with
+    ({!Models.text_helper} in production): the helper keeps the answer it last gave and
+    reuses it when the whole context comes back, which is a stale-row retry, so a fresh
+    instance per drive is the caller's business and the thunk is how it is stated. A
+    [type_text] step fills with the value the helper answered, through the same action
+    path the [fill] command uses; a null answer is [blocked] naming the field, and a
+    refusal over 4 KiB is [model-unavailable] with the steps completed (drive-ls3c). *)
 
 val text :
   t ->

@@ -184,6 +184,26 @@
  (libraries leash yojson alcotest))
 
 (test
+ (name text_helper_test)
+ (modules text_helper_test)
+ (deps fixtures/unlabelled-controls-chrome.json)
+ (libraries
+  leash
+  leash_test_support
+  eta
+  eta_app
+  eta_test
+  eta_process
+  eta_observability
+  eta_http
+  eta_ai_chat
+  eio
+  eio.unix
+  eio_main
+  yojson
+  alcotest))
+
+(test
  (name models_test)
  (modules models_test)
  (deps fixtures/unlabelled-controls-chrome.json)

@@ -36,7 +36,8 @@ let report ?models_status tabs =
   | None -> report
   | Some models -> { report with P.models = Some (models ()) }
 
-let dispatch ?(model = "unconfigured") ?decide ?models_status tabs (request : P.request) =
+let dispatch ?(model = "unconfigured") ?decide ?text_helper ?models_status tabs
+    (request : P.request) =
   let owner = request.owner in
   let lift encode = function
     | Ok result -> success (encode result)
@@ -75,9 +76,12 @@ let dispatch ?(model = "unconfigured") ?decide ?models_status tabs (request : P.
       success (P.yojson_of_list_result (Tabs.list tabs ~owner ~all:args.all))
   | P.Status -> success (P.yojson_of_status_result (report ?models_status tabs))
   | P.Drive args ->
-      lift P.yojson_of_drive_result (Tabs.drive ?decide tabs ~owner ~model args)
+      (* drive-ls3c: the text helper seam travels with the decision seam: production
+         installs {!Models.text_helper}, scripted tests their own. *)
+      lift P.yojson_of_drive_result
+        (Tabs.drive ?decide ?text_helper tabs ~owner ~model args)
 
-let handle ?(model = "unconfigured") ?decide ?models_status tabs line =
+let handle ?(model = "unconfigured") ?decide ?text_helper ?models_status tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
@@ -87,7 +91,7 @@ let handle ?(model = "unconfigured") ?decide ?models_status tabs line =
             ("owner", P.Owner.to_string request.owner);
             ("cmd", P.command_name request.command);
           ]
-          (fun () -> dispatch ~model ?decide ?models_status tabs request)
+          (fun () -> dispatch ~model ?decide ?text_helper ?models_status tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -133,7 +137,7 @@ let budget (request : (P.request, string) result) =
       Some cdp_budget
   | Ok _ -> Some (seconds 1)
 
-let create ?(model = "unconfigured") ?decide ~sw ~runtime_dir deps =
+let create ?(model = "unconfigured") ?decide ?text_helper ~sw ~runtime_dir deps =
   let path = Filename.concat (Filename.concat runtime_dir "leash") "control.sock" in
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
@@ -148,7 +152,8 @@ let create ?(model = "unconfigured") ?decide ~sw ~runtime_dir deps =
               ("cmd", P.command_name request.command);
             ]
             (fun () ->
-              dispatch ~model ?decide ~models_status:deps.models_status deps.tabs request)
+              dispatch ~model ?decide ?text_helper ~models_status:deps.models_status
+                deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply

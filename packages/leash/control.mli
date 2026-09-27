@@ -18,13 +18,16 @@ val create :
     (deadline:Eta.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
+  ?text_helper:(unit -> Text_helper.t) ->
   sw:Eio.Switch.t ->
   runtime_dir:string ->
   ('clock, 'net) deps ->
   (t, Eta_ipc.Listener.error) result
 (** [decide] is the drive's production Decide, {!Models.decide} in the program that owns
     the models service; a listener created without one refuses every drive with
-    [model-unavailable] (L19). *)
+    [model-unavailable] (L19). [text_helper] is the drive's text helper — production
+    passes a thunk over {!Models.text_helper}, so every drive gets the fresh instance its
+    reuse memo belongs to (drive-ls3c); without one a [type_text] step refuses. *)
 
 val budget : (Protocol.request, string) result -> Eta.Duration.t option
 (** The handler budget per decoded command. [new] with a url and [nav] outlast the
@@ -46,6 +49,7 @@ val dispatch :
     (deadline:Eta.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
+  ?text_helper:(unit -> Text_helper.t) ->
   ?models_status:(unit -> Protocol.models_status) ->
   Tabs.t ->
   Protocol.request ->
@@ -59,6 +63,7 @@ val handle :
     (deadline:Eta.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
+  ?text_helper:(unit -> Text_helper.t) ->
   ?models_status:(unit -> Protocol.models_status) ->
   Tabs.t ->
   string ->

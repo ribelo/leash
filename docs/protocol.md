@@ -107,16 +107,25 @@ Rules:
 - `drive` checks ownership, then holds the tab action lock across all observations and
   actions; no other tab command can interleave. It observes a fresh snapshot, reads
   visible page text and scroll metrics, requests one JEV decision, acts, and records a
-  Step. `dry_run: true` makes exactly one Observe/Decide/trace pass and never acts;
-  TYPE_TEXT is blocked with `reason: "text helper unavailable"` until L22. A model
-  failure is a protocol **error** (`model-unavailable`) with
-  `detail: {code: string, steps: Step[]}` containing completed steps. Drive status
-  `error` is reserved for non-model failures within a step (including dialogs or
-  popups), not model failures. `detail.code` is `missing-key` when no API key is
-  configured — the drive fails at its first decision and nothing is sent — and otherwise
-  the provider failure's kind: `unavailable`, `timeout`, `authentication`,
-  `invalid-response`, `input-too-large`, or `model-mismatch` when the reply names
-  another model than the configured `jev_model` (drive-e7oi).
+  Step. `dry_run: true` makes exactly one Observe/Decide/trace pass and never acts, and
+  never calls the text helper. A model failure is a protocol **error**
+  (`model-unavailable`) with `detail: {code: string, steps: Step[]}` containing
+  completed steps. Drive status `error` is reserved for non-model failures within a step
+  (including dialogs or popups), not model failures. `detail.code` is `missing-key`
+  when no API key is configured — the drive fails at its first decision and nothing is
+  sent — and otherwise the provider failure's kind: `unavailable`, `timeout`,
+  `authentication`, `invalid-response`, `input-too-large`, or `model-mismatch` when
+  the reply names another model than the configured `jev_model` (drive-e7oi).
+- A `type_text` step first asks the configured text helper: jev's `field_context` —
+  the goal verbatim, the chosen row, the page's title and its text bounded at 6000 bytes
+  on a character boundary, and the last six actions — as the user message of one `chat/completions` request
+  to `chat_base_url + "/chat/completions"`, whose reply must parse as
+  `{"text": string|null}`. The value is then written through the same action path as
+  `fill`; a string over 4 KiB and a reply that is not that object are refused with
+  `model-unavailable` and `detail.code: "invalid-response"`. A `null` answer is
+  Drive status `blocked` with the field named in `reason` and nothing typed. The helper
+  is asked once per unchanged input: a stale-row retry of the same decision reuses the
+  value it already answered (drive-ls3c).
 - `drive`'s decision is one System One request per step, bounded by what is left of the
   drive's `deadline_s`: the state carries the current element table, the rendered page
   text and the last ten steps' actions; the questions are the operation and one

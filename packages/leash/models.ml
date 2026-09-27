@@ -13,25 +13,41 @@ module J = Jev_request
 type t = {
   config : Config.models;
   http : Eta_http.Client.t;
-      (** One client for every endpoint: the System One client today, the chat client of
-          L22 next, so the service owns one transport and one TLS configuration. *)
+      (** One client for every endpoint: the System One client and L22's chat client, so
+          the service owns one transport and one TLS configuration. *)
   systemone : Eta_ai_systemone.Client.t option;
       (** [None] without a key: {!decide} refuses before anything is sent. *)
+  chat : Eta_ai_chat.t option;
+      (** The text helper's chat client, [None] for the same missing key; {!text_helper}
+          is the helper a drive takes over it. *)
 }
+
+(* drive-yqxg: the chat route is the configured base URL plus the OpenAI-compatible path,
+   with the base's trailing slash trimmed as the reference's [.rstrip("/")] does. *)
+let chat_endpoint (config : Config.models) =
+  let base = Config.Text.to_string config.chat_base_url in
+  let rec trim at = if at > 0 && base.[at - 1] = '/' then trim (at - 1) else at in
+  String.sub base 0 (trim (String.length base)) ^ "/chat/completions"
 
 let create ~sw ~net ~clock ~logger (config : Config.models) =
   let http = Eta_http.Client.create ~sw ~net ~clock ~tls:(Eta_http.Client.tls ()) () in
+  let with_key f = Option.map f config.api_key in
   let systemone =
-    Option.map
-      (fun api_key ->
+    with_key (fun api_key ->
         Eta_ai_systemone.Client.create ~http ~clock ~logger
           ~endpoint:(Config.Text.to_string config.systemone_endpoint)
           ~api_key
           ~model:(Config.Text.to_string config.jev_model)
           ())
-      config.api_key
   in
-  { config; http; systemone }
+  (* L22: the chat client is pure and synchronous — no socket, nothing to release — so it
+     is built beside the System One client and shared by every drive's helper. *)
+  let chat =
+    with_key (fun api_key ->
+        Eta_ai_chat.create ~http ~clock ~logger ~endpoint:(chat_endpoint config) ~api_key
+          ())
+  in
+  { config; http; systemone; chat }
 
 (* drive-e7oi: the model id is what the client sends and checks the reply against, and the
    two endpoints are the configured ones. Nothing here reads the key. *)
@@ -45,27 +61,12 @@ let status (t : t) : P.models_status =
       chat_base_url = Config.Text.to_string t.config.chat_base_url;
     }
 
+(* drive-kh2u drive-ls3c: every provider failure, System One's and the chat text
+   helper's alike, is {!Model_error}'s one mapping into the protocol's
+   [model-unavailable]; this is the one code left that no provider produces — a request
+   that did not shape in this tree. *)
 let error_code name =
   match P.Error_code.of_string name with Ok code -> code | Error _ -> assert false
-
-let model_unavailable ?(code = "unavailable") message =
-  P.
-    {
-      code = error_code "model-unavailable";
-      message;
-      detail = Some (`Assoc [ ("code", `String code) ]);
-    }
-
-(* The six typed failures of {!Eta_ai.Error.t}, as [detail.code] (docs/protocol.md): a
-   caller reads the provider's kind without parsing the sentence. *)
-let provider_code (error : Eta_ai.Error.t) =
-  match error with
-  | `Unavailable _ -> "unavailable"
-  | `Timeout -> "timeout"
-  | `Authentication _ -> "authentication"
-  | `Invalid_response _ -> "invalid-response"
-  | `Input_too_large _ -> "input-too-large"
-  | `Model_mismatch _ -> "model-mismatch"
 
 (* {!Jev_request.body} writes the two members eta-next's client takes apart again: the
    state it posts untouched and the named questions it re-encodes, each read back
@@ -93,7 +94,7 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
   match t.systemone with
   | None ->
       Error
-        (model_unavailable ~code:"missing-key"
+        (Model_error.unavailable ~code:"missing-key"
            "no OpenRouter API key: set OPENROUTER_API_KEY or models.api_key")
   | Some client -> (
       match parts (J.body request) with
@@ -107,10 +108,7 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
               }
       | Ok (state, questions) -> (
           match Eta_ai_systemone.Client.evaluate client ~deadline ~state ~questions with
-          | Error error ->
-              Error
-                (model_unavailable ~code:(provider_code error)
-                   (Eta_ai.Error.to_string error))
+          | Error error -> Error (Model_error.of_eta error)
           | Ok response -> (
               (* The reply's answers object is what {!Jev_request.decide} reads; the
                  client decoded the envelope, the model check included. *)
@@ -123,6 +121,14 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
               in
               match J.decide request ~answers with
               | Ok decision -> Ok decision
-              | Error why -> Error (model_unavailable ~code:"invalid-response" why))))
+              | Error why -> Error (Model_error.unavailable ~code:"invalid-response" why))
+          ))
 
-let text_helper (_ : t) : Text_helper.t = Text_helper.unavailable
+(* drive-ls3c: a fresh helper per call. The helper carries the one-entry memo the
+   stale-page reuse rule needs, so it must not outlive the drive it serves; without a key
+   there is no chat client and every call refuses before anything is sent. *)
+let text_helper (t : t) : Text_helper.t =
+  match t.chat with
+  | None -> Text_helper.missing_key
+  | Some client ->
+      Text_helper.create ~client ~model:(Config.Text.to_string t.config.text_model) ()

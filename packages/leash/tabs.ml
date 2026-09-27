@@ -1278,7 +1278,8 @@ let drive
       fun ~deadline:_ _ ->
         Error
           (error "model-unavailable" "System One client unavailable"
-             ~detail:(obj [ ("code", str "client-unavailable") ]))) t ~owner ~model
+             ~detail:(obj [ ("code", str "client-unavailable") ])))
+    ?(text_helper = fun () -> Text_helper.unavailable) t ~owner ~model
     (args : P.drive_args) =
   let* tab = locate t ~access:Act ~owner args.tab in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
@@ -1286,14 +1287,19 @@ let drive
       (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
          drive's own deadline: the caller's remaining budget is what the model call is
          bounded by, so a slow provider cannot outlast the reply the client is waiting
-         for. *)
+         for. The text helper's completion is bounded by the same budget (drive-ls3c). *)
       let started = now t in
       let budget = float_of_int (Option.value ~default:120 args.deadline_s) in
-      let decide request =
-        let remaining = budget -. (now t -. started) in
-        decide
-          ~deadline:(Eta.Duration.ms (max 1 (int_of_float (remaining *. 1000.))))
-          request
+      let remaining () =
+        Eta.Duration.ms (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
+      in
+      let decide request = decide ~deadline:(remaining ()) request in
+      (* drive-ls3c: one helper per drive. It carries the one-entry memo that reuses an
+         answer for an unchanged context — what a stale-row retry is — so it is taken
+         here and goes away with the drive. *)
+      let helper = text_helper () in
+      let text_value context =
+        helper.Text_helper.complete ~deadline:(remaining ()) context
       in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
@@ -1349,7 +1355,7 @@ let drive
               fingerprint;
             }
       in
-      let act (page : Drive.observation) (choice : Jev_request.decision) =
+      let act (page : Drive.observation) (choice : Jev_request.decision) ~text =
         let snapshot = page.snapshot.snapshot in
         let index = Option.value ~default:0 choice.index in
         match P.Operation.to_string choice.operation with
@@ -1391,14 +1397,21 @@ let drive
                   dialog = tab.dialog;
                   popups = [];
                 }
-        | "type_text" ->
-            Error
-              (error "model-unavailable" "text helper unavailable"
-                 ~detail:(obj [ ("code", str "text-helper-unavailable") ]))
+        (* drive-ls3c: the helper's value is written with the same fill the [fill] command
+           uses — focus, select, Input.insertText, blur, settle — and the loop never calls
+           an act without one. *)
+        | "type_text" -> (
+            match text with
+            | Some value ->
+                Actions.fill ~cdp view P.{ tab = args.tab; snapshot; index; text = value }
+            | None ->
+                Error
+                  (error "internal" "a type_text step reached the browser without a value")
+            )
         | _ -> Error (error "invalid-request" "unsupported drive operation")
       in
       Drive.run
-        ~handler:Drive.{ observe; decide; act }
+        ~handler:Drive.{ observe; decide; text_value; act }
         ~now:(fun () -> now t)
         ~model ~args
         ~dry_run:(Option.value ~default:false args.dry_run))

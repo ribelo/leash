@@ -354,6 +354,9 @@ let program env (config : Leash.Config.t) sw =
     Leash.Control.create
       ~model:(Leash.Config.Text.to_string config.models.jev_model)
       ~decide:(fun ~deadline request -> Leash.Models.decide ~deadline models request)
+        (* drive-ls3c: the helper is a thunk, not a value — each drive takes its own
+         instance, and with it the one-entry memo the stale-row reuse rule needs. *)
+      ~text_helper:(fun () -> Leash.Models.text_helper models)
       ~sw ~runtime_dir
       {
         Leash.Control.tabs;

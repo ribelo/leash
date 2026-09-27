@@ -1,9 +1,20 @@
-(* L19 — the text helper's Leash-side seam (docs/issues/drive/01-drive.md, milestone 5).
+(* L19 — the text helper's Leash-side seam; L22 — its chat client
+   (docs/issues/drive/01-drive.md, milestone 5; drive-ls3c drive-fh1h).
 
-   drive-ls3c drive-fh1h: L22 fills {!t} with the chat client and the {"text": string|null}
-   parse; until then the drive's TYPE_TEXT branch is the stub in [Tabs.drive] and
-   {!unavailable} is what a caller that asks {!Models.text_helper} gets. Nothing here
-   performs I/O. *)
+   The request is jev-ultrafast's field_text at the pinned commit, copied and not
+   adapted: one OpenAI-compatible chat completion whose system message is questions.py's
+   TEXT_VALUE and whose user message is json.dumps of field_context — the goal verbatim,
+   the field's label, role and value, the page's title and its text bounded at 6000
+   bytes on a character boundary, and the last six actions with only their action and text
+   (model.py:154-159).
+   The reply must parse as exactly {"text": string | null}: null is the model saying the
+   value is missing, and the drive ends blocked naming the field; a string is the value
+   that goes to the browser, refused over 4 KiB. An answer is remembered and reused when
+   the identical context comes back, which is what a stale-page retry is
+   (agent.py:105-115). *)
+
+module P = Protocol
+module J = Jev_request
 
 type field = { label : string; role : string; value : string }
 
@@ -12,23 +23,128 @@ type context = {
   field : field;
   page_title : string;
   page_text : string;
-  recent : Jev_request.recent_action list;
+  recent : J.recent_action list;
 }
 
-type t = { complete : context -> (string option, Protocol.error) result }
+type t = {
+  complete : ?deadline:Eta.Duration.t -> context -> (string option, P.error) result;
+}
 
-let unavailable =
+let default_deadline = Eta.Duration.seconds 30
+
+(* model.py:157-158 and the drive spec's bound. *)
+let page_bytes = 6000
+let window = 6
+let text_bound = 4096
+
+(* The reference slices Python strings; this truncates bytes and backs off to the last
+   whole character, so what is written as a JSON string is always valid UTF-8. *)
+let bounded limit text =
+  if String.length text <= limit then text
+  else begin
+    let at = ref limit in
+    while !at > 0 && Char.code text.[!at] land 0xc0 = 0x80 do
+      decr at
+    done;
+    String.sub text 0 !at
+  end
+
+let last n list =
+  let rec drop count list =
+    if count <= 0 then list
+    else match list with [] -> [] | _ :: rest -> drop (count - 1) rest
+  in
+  drop (max 0 (List.length list - n)) list
+
+(* model.py:154-159, key for key and bound for bound: the goal as the drive stated it,
+   the field the model chose, the page's title and bounded text, and the recent window
+   with the two members the reference keeps. *)
+let field_context (context : context) =
+  let recent =
+    List.map
+      (fun (action : J.recent_action) ->
+        `Assoc
+          [
+            ("action", `String action.action);
+            ("text", match action.text with Some text -> `String text | None -> `Null);
+          ])
+      (last window context.recent)
+  in
+  `Assoc
+    [
+      ("goal", `String context.goal);
+      ( "field",
+        `Assoc
+          [
+            ("label", `String context.field.label);
+            ("role", `String context.field.role);
+            ("value", `String context.field.value);
+          ] );
+      ( "page",
+        `Assoc
+          [
+            ("title", `String context.page_title);
+            ("text", `String (bounded page_bytes context.page_text));
+          ] );
+      ("recent_actions", `List recent);
+    ]
+
+let nothing_typed =
+  "the text helper did not answer {\"text\": string|null}; nothing typed"
+
+let refused why = Error (Model_error.unavailable ~code:"invalid-response" why)
+
+(* Exactly one member, text, a string within the bound or null: anything else is a
+   refusal, and nothing is typed. *)
+let value content =
+  match Yojson.Safe.from_string content with
+  | `Assoc [ ("text", `String text) ] when String.length text <= text_bound ->
+      Ok (Some text)
+  | `Assoc [ ("text", `String _) ] ->
+      refused
+        (Printf.sprintf "the text helper answered a text over %d bytes; nothing typed"
+           text_bound)
+  | `Assoc [ ("text", `Null) ] -> Ok None
+  | _ -> refused nothing_typed
+  | exception Yojson.Json_error _ -> refused nothing_typed
+
+let ask client ~model ?(deadline = default_deadline) json =
+  let open Eta_ai_chat.Types in
+  let messages =
+    [ { role = System; content = Questions.text_value }; { role = User; content = json } ]
+  in
+  match
+    Eta_ai_chat.complete client ~deadline ~model ~messages ~max_tokens:1024
+      ~json_object:true ~reasoning:`Disabled ()
+  with
+  | Error error -> Error (Model_error.of_eta error)
+  | Ok completion -> value completion.Eta_ai_chat.Codecs.content
+
+let create ~client ~model () =
+  (* The one-entry memo of agent.py:110-114, keyed by what the reference compares: the
+     field context as it is written to the wire, so a reuse needs the whole helper input
+     to be unchanged. A refusal is not remembered. *)
+  let last = ref None in
   {
     complete =
-      (fun (_ : context) ->
-        Error
-          Protocol.
-            {
-              code =
-                (match Error_code.of_string "model-unavailable" with
-                | Ok code -> code
-                | Error _ -> assert false);
-              message = "text helper unavailable";
-              detail = Some (`Assoc [ ("code", `String "text-helper-unavailable") ]);
-            });
+      (fun ?deadline context ->
+        let json = Yojson.Safe.to_string (field_context context) in
+        match !last with
+        | Some (previous, answer) when previous = json -> answer
+        | _ ->
+            let answer = ask client ~model ?deadline json in
+            (match answer with Ok (Some _) -> last := Some (json, answer) | _ -> ());
+            answer);
   }
+
+let refusing code message : t =
+  let complete ?(deadline = default_deadline) (_ : context) =
+    ignore deadline;
+    Error (Model_error.unavailable ~code message)
+  in
+  { complete }
+
+let unavailable = refusing "text-helper-unavailable" "text helper unavailable"
+
+let missing_key =
+  refusing "missing-key" "no OpenRouter API key: set OPENROUTER_API_KEY or models.api_key"
