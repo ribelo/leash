@@ -53,9 +53,23 @@ L12 and L13 are independent after L11.
 | L17 | **Human-facing side.** `Target.activateTarget`; configurable `handoff.focus_command` and `handoff.notify_command` run through `Eta_process.Child` with a 5 s grace; `notify-send --action done=Done` whose action return runs `resume`; failures become `warnings` in the reply and a log line, never a handoff failure; `warnings` added to the handoff reply in `docs/protocol.md`. Tested with a fake command runner recording spawns. | hand-04rb, hand-phof, hand-rg9h | L16 | [x] |
 | L18 | **Live acceptance for milestone 4.** Headless for the state machine (two CLIs: agent hands off, human resumes; timeout; disconnect); one **headed** run on your desktop, by hand, for focus and notification — record what the niri rule did with `--class=leash` and whether the notification action resumed. Marks the spec completed. | hand-lz3p, hand-lmd5, hand-04rb, hand-phof | L16, L17 | [ ] |
 
+## Milestone 5 — drive (`drive/01-drive.md`)
+
+The JEV loop. Depends on three eta-next rows delivered first: `eta_http` client (row 19), `eta_ai` + System One (row 20), chat (row 21). The request contract is jev-ultrafast's at a pinned commit, copied not adapted; the reference sources are in eta-next `docs/issues/ai-systemone/reference/`.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L19 | **Models wiring.** Config `models.{api_key (Redact), systemone_endpoint, jev_model, chat_base_url, text_model}` with `OPENROUTER_API_KEY` override; `Models` Service creating the System One and chat clients over `eta_http`; `leash status` reports model reachability lazily (never at boot). `questions.ml` with the three verbatim texts and the commit hash. | drive-e7oi, drive-yqxg | eta-next 19–21 | [ ] |
+| L20 | **Request shaping and decision.** From a snapshot: jev's `elements` (label, role, current_value, states, operations per row), `page.text` from the `text` path, `recent_actions`; the `operation` question with jev's labels, per-operation target questions keyed by index; fail-closed validation of the chosen head only; decision record with probabilities. Pure functions, table-tested against the reference shapes. | drive-y37b, drive-zml5 | L19 | [ ] |
+| L21 | **The loop as an effect computation.** `Observe`/`Decide`/`Act` with a local handler token (eta-next ADR-0006); production handler; scripted test handler; `--dry-run` handler; step cap, deadline, stall rule (three non-wait no-change steps → blocked), stale-target re-decide, `wait` op (bounded settle then re-observe), `scroll_up/down`, `done`/`blocked`, dialog or popup → `error`, model failures → `error` with detail, trace with elapsed_ms, final snapshot, tab slot held for the duration; `resume`-style guards (owner, not `With_human`, no dialog). | drive-y7v8, drive-xjh6, drive-4zlp, drive-ix5t, drive-qwbp, drive-9y2s, drive-8rts, drive-8zh8, drive-kh2u, drive-tfqh, drive-ig84, drive-n3ld, drive-4bhg, drive-l7yk, drive-8n2z | L20 | [ ] |
+| L22 | **Text helper.** `TYPE_TEXT` step: jev's `field_context`, `Eta_ai_chat.complete` with json_object and reasoning off, `{text: string|null}` parse, null → blocked naming the field, 4 KiB bound, reuse on unchanged input, values from the goal used verbatim. | drive-ls3c, drive-fh1h | L21 | [ ] |
+| L23 | **Live acceptance for milestone 5** (headless, real models, real key from the environment): jev's own two tasks — the Wikipedia article goal ("Find and open the Wikipedia article about Gödel's incompleteness theorems") and a Google Flights one-way search verified independently by reading the result page — plus a `--dry-run` on each; record steps, elapsed, usage and cost per run in the spec's status. Marks the spec completed. | drive-y7v8, drive-8zh8, drive-7tvn | L22 | [ ] |
+
+L19 can start as soon as eta-next row 19 lands (with the System One and chat clients stubbed behind their interfaces); L20 is pure and can start at once from the reference sources.
+
 ## Later milestones
 
-5 `drive`, 6 `service-packaging` — sliced when milestone 4 lands; their specs are complete.
+6 `service-packaging` — sliced when milestone 5 lands; its spec is complete. The headed run for milestone 4 (L18) stays open for the operator.
 
 ## Definition of done, every row
 
