@@ -1,0 +1,25 @@
+{
+  "label": "post-add",
+  "site": "automationexercise.com",
+  "title": "Automation Exercise - Product Details",
+  "url": "https://automationexercise.com/product_details/1",
+  "page_kind": "post-add",
+  "recent_procedures": [
+    {
+      "slug": "find-product",
+      "outcome": "passed"
+    },
+    {
+      "slug": "open-offer",
+      "outcome": "passed"
+    },
+    {
+      "slug": "add-to-cart",
+      "outcome": "passed"
+    }
+  ],
+  "page_text": " Home\n Products\n Cart\n Signup / Login\n Test Cases\n API Testing\n Video Tutorials\n Contact us\nCATEGORY\nWOMEN\nMEN\nKIDS\nBRANDS\n(6)\nPOLO\n(5)\nH&M\n(5)\nMADAME\n(3)\nMAST & HARBOUR\n(4)\nBABYHUG\n(3)\nALLEN SOLLY JUNIOR\n(3)\nKOOKIE KIDS\n(5)\nBIBA\n\nAdded!\n\nYour product has been added to cart.\n\nView Cart\n\nContinue Shopping\nBlue Top\n\nCategory: Women > Tops\n\n \nRs. 500\nQuantity:   Add to cart\n\nAvailability: In Stock\n\nCondition: New\n\nBrand:  Polo\n\nWRITE YOUR REVIEW\n \nSubmit\nSUBSCRIPTION\n \n\nGet the most recent updates from\nour site and be updated your self...\n\nCopyright © 2021 All rights reserved",
+  "page_text_truncated": false,
+  "correct_choice": "go-to-cart",
+  "visible_chars": 581
+}

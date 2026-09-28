@@ -1,0 +1,17 @@
+{
+  "label": "search",
+  "site": "automationexercise.com",
+  "title": "Automation Exercise - All Products",
+  "url": "https://automationexercise.com/products?search=Blue%20Top",
+  "page_kind": "search",
+  "recent_procedures": [
+    {
+      "slug": "find-product",
+      "outcome": "passed"
+    }
+  ],
+  "page_text": " Home\n Products\n Cart\n Signup / Login\n Test Cases\n API Testing\n Video Tutorials\n Contact us\n\n\nCATEGORY\nWOMEN\nMEN\nKIDS\nDiscover more\nWomen's dresses\nDresses\nEconomics\nCasual Apparel\nTshirt\nGreen T-shirts\nSarees\nSouth Asians & Diaspora\nBRANDS\n(6)\nPOLO\n(5)\nH&M\n(5)\nMADAME\n(3)\nMAST & HARBOUR\n(4)\nBABYHUG\n(3)\nALLEN SOLLY JUNIOR\n(3)\nKOOKIE KIDS\n(5)\nBIBA\nSEARCHED PRODUCTS\nRs. 500\n\nBlue Top\n\nAdd to cart\nRs. 500\n\nBlue Top\n\nAdd to cart\nView Product\nSUBSCRIPTION\n \n\nGet the most recent updates from\nour site and be updated your self...\n\nCopyright © 2021 All rights reserved",
+  "page_text_truncated": false,
+  "correct_choice": "open-offer",
+  "visible_chars": 565
+}

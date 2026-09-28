@@ -1,0 +1,4 @@
+(executable
+ (name spike)
+ (libraries eta eta_http eta_ai eta_ai_systemone eta_observability eio eio_main eio.unix yojson)
+)

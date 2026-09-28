@@ -1,0 +1,133 @@
+{
+  "site": "automationexercise.com",
+  "entry": "https://automationexercise.com/",
+  "description": "Find Blue Top on Automation Exercise, add it to the cart, and stop before checkout or payment.",
+  "pages": [
+    {
+      "name": "post-add",
+      "description": "Add succeeded; Added! dialog offers View Cart",
+      "url_pattern": null,
+      "text_marker": "Added!"
+    },
+    {
+      "name": "home",
+      "description": "Home with Products navigation",
+      "url_pattern": "https://automationexercise.com/",
+      "text_marker": null
+    },
+    {
+      "name": "search",
+      "description": "Submitted Blue Top product search results",
+      "url_pattern": "https://automationexercise.com/products?search=*",
+      "text_marker": "SEARCHED PRODUCTS"
+    },
+    {
+      "name": "offer",
+      "description": "Blue Top product detail and Add to cart button",
+      "url_pattern": "https://automationexercise.com/product_details/*",
+      "text_marker": "Blue Top"
+    },
+    {
+      "name": "cart",
+      "description": "Cart containing Blue Top",
+      "url_pattern": "https://automationexercise.com/view_cart",
+      "text_marker": "Blue Top"
+    }
+  ],
+  "procedures": [
+    {
+      "slug": "find-product",
+      "description": "Search Automation Exercise for the named product.",
+      "args": [
+        "product"
+      ],
+      "steps": [
+        {
+          "goal": "Open Products, search for {product}, and submit the search button.",
+          "hint": "search"
+        }
+      ],
+      "expect": [
+        "the page is search",
+        "the page shows {product}"
+      ]
+    },
+    {
+      "slug": "open-offer",
+      "description": "Open the matching product detail from submitted search results.",
+      "args": [
+        "product"
+      ],
+      "steps": [
+        {
+          "goal": "Open the offer for {product}.",
+          "hint": "offer"
+        }
+      ],
+      "expect": [
+        "the page is offer"
+      ]
+    },
+    {
+      "slug": "add-to-cart",
+      "description": "Add the product to the cart; confirm the Added! dialog.",
+      "args": [],
+      "steps": [
+        {
+          "goal": "Add this product to the cart.",
+          "hint": "add to cart"
+        }
+      ],
+      "expect": [
+        "the page is post-add",
+        "the page shows Added!"
+      ]
+    },
+    {
+      "slug": "dismiss-upsell",
+      "description": "Dismiss an optional extra-offer popup, not the successful Added! confirmation.",
+      "args": [],
+      "steps": [
+        {
+          "goal": "Dismiss the optional extra-offer popup, if shown.",
+          "hint": "close"
+        }
+      ],
+      "expect": [
+        "no dialog is open"
+      ]
+    },
+    {
+      "slug": "go-to-cart",
+      "description": "Navigate to the cart and stop before payment.",
+      "args": [
+        "product"
+      ],
+      "steps": [
+        {
+          "goal": "Follow View Cart and stop before checkout/payment; verify {product} appears in the cart.",
+          "hint": "cart"
+        }
+      ],
+      "expect": [
+        "the page is cart",
+        "the page shows {product}",
+        "checkout/payment has not started"
+      ]
+    },
+    {
+      "slug": "handoff-login",
+      "description": "Ask the operator to handle login only if an account is required; not needed to reach cart in this measured flow.",
+      "args": [],
+      "steps": [
+        {
+          "goal": "Pause and ask the human to sign in; do not enter credentials.",
+          "hint": "login"
+        }
+      ],
+      "expect": [
+        "the human takes over authentication"
+      ]
+    }
+  ]
+}

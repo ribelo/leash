@@ -1,0 +1,347 @@
+[
+    {
+        "fixture": "home",
+        "mode": "A",
+        "expected": "find-product",
+        "choice": "find-product",
+        "probabilities": {
+            "DONE": 0.01,
+            "add-to-cart": 0.0,
+            "find-product": 0.95,
+            "handoff-login": 0.0,
+            "open-offer": 0.01,
+            "BLOCKED": 0.02,
+            "dismiss-upsell": 0.0,
+            "go-to-cart": 0.01
+        },
+        "confidence": 0.94,
+        "correct": true,
+        "usage": {
+            "input_tokens": 548,
+            "output_tokens": 90,
+            "cost": 2.3016e-05
+        }
+    },
+    {
+        "fixture": "home",
+        "mode": "B",
+        "expected": "find-product",
+        "choice": "find-product",
+        "probabilities": {
+            "handoff-login": 0.0,
+            "find-product": 0.99,
+            "add-to-cart": 0.0,
+            "DONE": 0.0,
+            "BLOCKED": 0.01,
+            "go-to-cart": 0.0,
+            "open-offer": 0.0,
+            "dismiss-upsell": 0.0
+        },
+        "confidence": 0.98,
+        "correct": true,
+        "usage": {
+            "input_tokens": 567,
+            "output_tokens": 90,
+            "cost": 2.3814e-05
+        }
+    },
+    {
+        "fixture": "home",
+        "mode": "C",
+        "expected": "find-product",
+        "choice": "add-to-cart",
+        "probabilities": {
+            "handoff-login": 0.0,
+            "find-product": 0.19,
+            "add-to-cart": 0.75,
+            "DONE": 0.01,
+            "BLOCKED": 0.0,
+            "dismiss-upsell": 0.0,
+            "open-offer": 0.01,
+            "go-to-cart": 0.04
+        },
+        "confidence": 0.71,
+        "correct": false,
+        "usage": {
+            "input_tokens": 2389,
+            "output_tokens": 91,
+            "cost": 0.000100338
+        }
+    },
+    {
+        "fixture": "search",
+        "mode": "A",
+        "expected": "open-offer",
+        "choice": "find-product",
+        "probabilities": {
+            "open-offer": 0.2,
+            "add-to-cart": 0.05,
+            "dismiss-upsell": 0.0,
+            "find-product": 0.67,
+            "go-to-cart": 0.02,
+            "DONE": 0.04,
+            "handoff-login": 0.0,
+            "BLOCKED": 0.01
+        },
+        "confidence": 0.62,
+        "correct": false,
+        "usage": {
+            "input_tokens": 560,
+            "output_tokens": 90,
+            "cost": 2.352e-05
+        }
+    },
+    {
+        "fixture": "search",
+        "mode": "B",
+        "expected": "open-offer",
+        "choice": "open-offer",
+        "probabilities": {
+            "find-product": 0.05,
+            "handoff-login": 0.0,
+            "dismiss-upsell": 0.0,
+            "open-offer": 0.8,
+            "DONE": 0.01,
+            "go-to-cart": 0.02,
+            "add-to-cart": 0.11,
+            "BLOCKED": 0.01
+        },
+        "confidence": 0.77,
+        "correct": true,
+        "usage": {
+            "input_tokens": 598,
+            "output_tokens": 91,
+            "cost": 2.5116e-05
+        }
+    },
+    {
+        "fixture": "search",
+        "mode": "C",
+        "expected": "open-offer",
+        "choice": "add-to-cart",
+        "probabilities": {
+            "BLOCKED": 0.0,
+            "DONE": 0.03,
+            "handoff-login": 0.0,
+            "dismiss-upsell": 0.0,
+            "open-offer": 0.02,
+            "add-to-cart": 0.89,
+            "go-to-cart": 0.05,
+            "find-product": 0.01
+        },
+        "confidence": 0.87,
+        "correct": false,
+        "usage": {
+            "input_tokens": 813,
+            "output_tokens": 91,
+            "cost": 3.4146e-05
+        }
+    },
+    {
+        "fixture": "offer",
+        "mode": "A",
+        "expected": "add-to-cart",
+        "choice": "add-to-cart",
+        "probabilities": {
+            "dismiss-upsell": 0.0,
+            "go-to-cart": 0.05,
+            "BLOCKED": 0.09,
+            "handoff-login": 0.0,
+            "open-offer": 0.02,
+            "find-product": 0.28,
+            "DONE": 0.04,
+            "add-to-cart": 0.52
+        },
+        "confidence": 0.45,
+        "correct": true,
+        "usage": {
+            "input_tokens": 554,
+            "output_tokens": 91,
+            "cost": 2.3268e-05
+        }
+    },
+    {
+        "fixture": "offer",
+        "mode": "B",
+        "expected": "add-to-cart",
+        "choice": "add-to-cart",
+        "probabilities": {
+            "add-to-cart": 0.96,
+            "DONE": 0.0,
+            "go-to-cart": 0.01,
+            "dismiss-upsell": 0.0,
+            "handoff-login": 0.0,
+            "find-product": 0.01,
+            "open-offer": 0.01,
+            "BLOCKED": 0.01
+        },
+        "confidence": 0.95,
+        "correct": true,
+        "usage": {
+            "input_tokens": 613,
+            "output_tokens": 91,
+            "cost": 2.5746e-05
+        }
+    },
+    {
+        "fixture": "offer",
+        "mode": "C",
+        "expected": "add-to-cart",
+        "choice": "add-to-cart",
+        "probabilities": {
+            "open-offer": 0.0,
+            "add-to-cart": 0.99,
+            "go-to-cart": 0.01,
+            "handoff-login": 0.0,
+            "find-product": 0.0,
+            "BLOCKED": 0.0,
+            "dismiss-upsell": 0.0,
+            "DONE": 0.0
+        },
+        "confidence": 0.99,
+        "correct": true,
+        "usage": {
+            "input_tokens": 802,
+            "output_tokens": 91,
+            "cost": 3.3684e-05
+        }
+    },
+    {
+        "fixture": "post-add",
+        "mode": "A",
+        "expected": "go-to-cart",
+        "choice": "add-to-cart",
+        "probabilities": {
+            "handoff-login": 0.0,
+            "find-product": 0.21,
+            "add-to-cart": 0.63,
+            "DONE": 0.04,
+            "BLOCKED": 0.06,
+            "go-to-cart": 0.04,
+            "open-offer": 0.02,
+            "dismiss-upsell": 0.0
+        },
+        "confidence": 0.57,
+        "correct": false,
+        "usage": {
+            "input_tokens": 554,
+            "output_tokens": 91,
+            "cost": 2.3268e-05
+        }
+    },
+    {
+        "fixture": "post-add",
+        "mode": "B",
+        "expected": "go-to-cart",
+        "choice": "DONE",
+        "probabilities": {
+            "handoff-login": 0.0,
+            "go-to-cart": 0.41,
+            "BLOCKED": 0.0,
+            "dismiss-upsell": 0.0,
+            "open-offer": 0.0,
+            "DONE": 0.58,
+            "find-product": 0.0,
+            "add-to-cart": 0.01
+        },
+        "confidence": 0.51,
+        "correct": false,
+        "usage": {
+            "input_tokens": 635,
+            "output_tokens": 89,
+            "cost": 2.667e-05
+        }
+    },
+    {
+        "fixture": "post-add",
+        "mode": "C",
+        "expected": "go-to-cart",
+        "choice": "DONE",
+        "probabilities": {
+            "open-offer": 0.0,
+            "add-to-cart": 0.0,
+            "dismiss-upsell": 0.0,
+            "find-product": 0.0,
+            "go-to-cart": 0.17,
+            "DONE": 0.83,
+            "handoff-login": 0.0,
+            "BLOCKED": 0.0
+        },
+        "confidence": 0.81,
+        "correct": false,
+        "usage": {
+            "input_tokens": 846,
+            "output_tokens": 89,
+            "cost": 3.5532e-05
+        }
+    },
+    {
+        "fixture": "cart",
+        "mode": "A",
+        "expected": "DONE",
+        "choice": "find-product",
+        "probabilities": {
+            "add-to-cart": 0.02,
+            "DONE": 0.21,
+            "go-to-cart": 0.14,
+            "dismiss-upsell": 0.0,
+            "handoff-login": 0.0,
+            "find-product": 0.51,
+            "open-offer": 0.01,
+            "BLOCKED": 0.11
+        },
+        "confidence": 0.44,
+        "correct": false,
+        "usage": {
+            "input_tokens": 551,
+            "output_tokens": 90,
+            "cost": 2.3142e-05
+        }
+    },
+    {
+        "fixture": "cart",
+        "mode": "B",
+        "expected": "DONE",
+        "choice": "DONE",
+        "probabilities": {
+            "find-product": 0.02,
+            "DONE": 0.76,
+            "go-to-cart": 0.13,
+            "BLOCKED": 0.07,
+            "handoff-login": 0.0,
+            "dismiss-upsell": 0.01,
+            "add-to-cart": 0.01,
+            "open-offer": 0.0
+        },
+        "confidence": 0.72,
+        "correct": true,
+        "usage": {
+            "input_tokens": 652,
+            "output_tokens": 89,
+            "cost": 2.7384e-05
+        }
+    },
+    {
+        "fixture": "cart",
+        "mode": "C",
+        "expected": "DONE",
+        "choice": "DONE",
+        "probabilities": {
+            "open-offer": 0.0,
+            "dismiss-upsell": 0.0,
+            "DONE": 1.0,
+            "handoff-login": 0.0,
+            "BLOCKED": 0.0,
+            "add-to-cart": 0.0,
+            "go-to-cart": 0.0,
+            "find-product": 0.0
+        },
+        "confidence": 1.0,
+        "correct": true,
+        "usage": {
+            "input_tokens": 779,
+            "output_tokens": 89,
+            "cost": 3.2718e-05
+        }
+    }
+]

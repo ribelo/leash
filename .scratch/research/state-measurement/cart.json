@@ -1,0 +1,29 @@
+{
+  "label": "cart",
+  "site": "automationexercise.com",
+  "title": "Automation Exercise - Checkout",
+  "url": "https://automationexercise.com/view_cart",
+  "page_kind": "cart",
+  "recent_procedures": [
+    {
+      "slug": "find-product",
+      "outcome": "passed"
+    },
+    {
+      "slug": "open-offer",
+      "outcome": "passed"
+    },
+    {
+      "slug": "add-to-cart",
+      "outcome": "passed"
+    },
+    {
+      "slug": "go-to-cart",
+      "outcome": "passed"
+    }
+  ],
+  "page_text": " Home\n Products\n Cart\n Signup / Login\n Test Cases\n API Testing\n Video Tutorials\n Contact us\nHome Shopping Cart\nProceed To Checkout\nItem\tDescription\tPrice\tQuantity\tTotal\t\n\nBlue Top\n\nWomen > Tops\n\n\t\n\nRs. 500\n\n\t1\t\n\nRs. 500\n\n\t\nDiscover more\nProgramming\nSoftware testing courses\nManual testing guides\nSUBSCRIPTION\n \n\nGet the most recent updates from\nour site and be updated your self...\n\nCopyright © 2021 All rights reserved",
+  "page_text_truncated": false,
+  "correct_choice": "DONE",
+  "visible_chars": 420
+}
