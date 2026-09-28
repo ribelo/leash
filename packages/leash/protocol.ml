@@ -331,7 +331,13 @@ end
 (* ---------- Tab, snapshot and drive shapes ---------- *)
 
 type expires = { stage : Stage.t; in_s : int } [@@deriving yojson]
-type dialog = { kind : Dialog_kind.t; message : string } [@@deriving yojson]
+
+type dialog = {
+  kind : Dialog_kind.t;
+  message : string;
+  default_prompt : string option; [@json.null]
+}
+[@@deriving yojson]
 
 type tab_info = {
   tab : Handle.t;
@@ -341,6 +347,7 @@ type tab_info = {
   state : State.t;
   owner : Owner.t option; [@json.null]
   generation : int;
+  dialog : dialog option; [@json.null]
   expires : expires option; [@json.null]
   reason : string option;
       (** Why the human holds this tab, the reason of the live handoff (hand-r4t1); a

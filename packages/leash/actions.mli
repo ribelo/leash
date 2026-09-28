@@ -51,6 +51,7 @@ type tab = {
       (** The current snapshot: its id, the loader id it was taken under, and every row
           with the backend node id it came from. *)
   dialog : unit -> Protocol.dialog option;
+  dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
       (** One pending acknowledgement of this tab (tab-0ohq tab-gjo0): taken before a
           trusted input is dispatched and woken by the registry when the popup that input

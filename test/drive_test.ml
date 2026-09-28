@@ -443,6 +443,7 @@ let dialog_popup_error () =
         kind =
           (match Dialog_kind.of_string "alert" with Ok x -> x | Error _ -> assert false);
         message = "are you sure";
+        default_prompt = None;
       }
   in
   let popup =
@@ -456,6 +457,7 @@ let dialog_popup_error () =
         state = (match State.of_string "owned" with Ok x -> x | Error _ -> assert false);
         owner = None;
         generation = 1;
+        dialog = None;
         expires = None;
         reason = None;
       }

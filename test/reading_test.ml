@@ -32,6 +32,8 @@ let browser ?(reply = fun _ _ -> obj []) ?(row = fun _ -> None) ?(dialog = fun (
     sleep = (fun s -> clock := !clock +. s);
     current = (fun () -> ("about:blank", "Untitled"));
     dialog;
+    dialog_race =
+      { Leash__Dialog_race.current = dialog; subscribe = (fun _ -> fun () -> ()) };
     (* No registry here, so this acknowledgement is never resolved and no event can end a
        call; [eval] still races it (tab-gjo0), which is why its cases run under Eta. *)
     acknowledge = (fun () -> fst (Leash__Dispatch.make ()));
@@ -216,6 +218,7 @@ let dialog_and_shot () =
         kind =
           (match P.Dialog_kind.of_string "alert" with Ok v -> v | _ -> assert false);
         message = "notice";
+        default_prompt = None;
       }
   in
   let active =
@@ -560,9 +563,10 @@ let () =
       ( "operations",
         [
           Alcotest.test_case "eval limits" `Quick eval_bounds;
-          Alcotest.test_case "text and AND wait" `Quick text_and_wait;
-          Alcotest.test_case "indexed text and disappearance" `Quick
-            indexed_text_and_disappearance;
+          Alcotest.test_case "text and AND wait" `Quick (fun () ->
+              Eta_test.run (fun _ _ -> text_and_wait ()));
+          Alcotest.test_case "indexed text and disappearance" `Quick (fun () ->
+              Eta_test.run (fun _ _ -> indexed_text_and_disappearance ()));
           Alcotest.test_case "dialog and PNG" `Quick dialog_and_shot;
           Alcotest.test_case "debug ring" `Quick debug_ring;
           Alcotest.test_case "control seam" `Quick protocol_smoke;

@@ -139,6 +139,7 @@ let tab_info () =
       state = ok (P.State.of_string "owned");
       owner = Some (ok (P.Owner.of_string "alice"));
       generation = 1;
+      dialog = None;
       expires = None;
       reason = None;
     }

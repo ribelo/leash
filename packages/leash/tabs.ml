@@ -229,6 +229,7 @@ type tab = {
           like the waiter of {!with_load_wait}. *)
   mutable snapshot : (P.Snapshot_id.t * string * (P.row * int) list) option;
   mutable dialog : P.dialog option;
+  mutable dialog_listeners : (P.dialog -> unit) list;
   mutable main_frame : string option;
   mutable downloads : P.download_info list;
   mutable counter_installed : bool;
@@ -322,6 +323,7 @@ let info t (tab : tab) : P.tab_info =
     state = enum P.State.of_string (state_name tab.owner_state);
     owner = owner_of tab.owner_state;
     generation = tab.generation;
+    dialog = tab.dialog;
     expires = expires t tab;
     (* hand-r4t1: why this tab is waiting on the human, which is what [list --all] shows
        so a human who stepped away can catch up. *)
@@ -431,6 +433,7 @@ let register t ~id ~session ~origin ~state ~url ~title ?opener () =
       page_loads = [];
       snapshot = None;
       dialog = None;
+      dialog_listeners = [];
       main_frame = None;
       downloads = [];
       counter_installed = false;
@@ -452,6 +455,26 @@ let ( let* ) = Result.bind
    input is sent; [wake] resolves every waiter of the tab a report named; and the no-op
    release {!Dispatch.make} leaves is replaced with the closure that drops the waiter once
    the call has settled by its own reply, so a settled dispatch leaves nothing behind. *)
+let dialog_race (tab : tab) : Dialog_race.t =
+  {
+    current = (fun () -> tab.dialog);
+    subscribe =
+      (fun notify ->
+        tab.dialog_listeners <- notify :: tab.dialog_listeners;
+        fun () ->
+          tab.dialog_listeners <-
+            List.filter (fun listener -> listener != notify) tab.dialog_listeners);
+  }
+
+(* hard-yi0a: CDP calls under a tab lock must remain cancellable by the listener
+   budget. Eio.Mutex.use_rw ~protect:true masks cancellation for the entire handler;
+   ~protect:false poisons the lock on cancellation. Each mutating operation leaves
+   its registry fields consistent at yield points, so unlock in a finally instead.
+   Synchronous bookkeeping-only sections still use protected use_rw below. *)
+let with_tab_lock tab fn =
+  Eio.Mutex.lock tab.lock;
+  Fun.protect ~finally:(fun () -> Eio.Mutex.unlock tab.lock) fn
+
 let acknowledge (tab : tab) : Dispatch.t =
   let pending, resolve = Dispatch.make () in
   tab.settlements <- resolve :: tab.settlements;
@@ -608,14 +631,14 @@ let watch_navigation t cdp tab =
   fun () ->
     let since = !seen in
     refresh_from_target cdp tab;
-    if tab.navigations <> since && tab.page_loading then (
+    if tab.dialog = None && tab.navigations <> since && tab.page_loading then (
       let promise, waiter = Eio.Promise.create () in
       tab.page_loads <- waiter :: tab.page_loads;
       Fun.protect
         ~finally:(fun () ->
           tab.page_loads <- List.filter (fun pending -> pending != waiter) tab.page_loads)
         (fun () -> ignore (t.await_load promise)));
-    if tab.navigations <> since then refresh_from_target cdp tab;
+    if tab.dialog = None && tab.navigations <> since then refresh_from_target cdp tab;
     seen := tab.navigations
 
 (* chrome-1yn9, chrome-qnul: a url is loaded when the load event fires, or when the
@@ -634,13 +657,18 @@ let with_load_wait t cdp tab start =
       tab.loading <- false;
       tab.load_waiter <- None)
     (fun () ->
-      let* () = start () in
-      match t.await_load promise with
-      | Error `Timeout ->
-          Error (error "timeout" "navigation did not load within 30 seconds")
-      | Ok () ->
-          refresh_from_target cdp tab;
-          Ok ())
+      match
+        Dialog_race.first (dialog_race tab) (fun () ->
+            let* () = start () in
+            match t.await_load promise with
+            | Error `Timeout ->
+                Error (error "timeout" "navigation did not load within 30 seconds")
+            | Ok () ->
+                refresh_from_target cdp tab;
+                Ok ())
+      with
+      | `Dialog _ -> Ok ()
+      | `Value result -> result)
 
 let new_tab t ~owner ~url =
   let target = Option.value ~default:"about:blank" url in
@@ -727,22 +755,13 @@ let navigate_locked t ~owner ~tab url =
   in
   let* _ = locate t ~access:Act ~owner tab.handle in
   let* _ = ready t in
-  Ok
-    P.
-      {
-        tab = tab.handle;
-        url = tab.url;
-        title = tab.title;
-        snapshot = None;
-        dialog = None;
-        popups = [];
-      }
+  Ok (info t tab)
 
 let navigate t ~owner handle url =
   if not (valid_url url) then Error (refusal ())
   else
     let* tab = locate t ~access:Act ~owner handle in
-    Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+    with_tab_lock tab (fun () ->
         let* tab = locate t ~access:Act ~owner handle in
         navigate_locked t ~owner ~tab url)
 
@@ -750,7 +769,7 @@ let navigate t ~owner handle url =
    command's authorization untouched. *)
 let claim t ~owner handle =
   let* tab = locate t ~access:Claim ~owner handle in
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+  with_tab_lock tab (fun () ->
       let* tab = locate t ~access:Claim ~owner handle in
       tab.owner_state <- Owned owner;
       (* own-hslp: the unclaimed clock stops when somebody takes the tab. *)
@@ -804,10 +823,28 @@ let close t ~owner ?(force = false) handle =
       Ok P.{ closed = true }
   | _ ->
       let* tab = locate t ~access:Close ~force ~owner handle in
-      Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      with_tab_lock tab (fun () ->
           let* tab = locate t ~access:Close ~force ~owner handle in
           let* cdp = ready t in
-          let* _ = cdp_call cdp "Target.closeTarget" (obj [ ("targetId", str tab.id) ]) in
+          let* session = page_session t cdp tab in
+          let close_target () =
+            cdp_call cdp "Target.closeTarget" (obj [ ("targetId", str tab.id) ])
+          in
+          let already_open = tab.dialog <> None in
+          let* _ =
+            match Dialog_race.first (dialog_race tab) close_target with
+            | `Value result -> result
+            | `Dialog dialog when P.Dialog_kind.to_string dialog.kind = "beforeunload" ->
+                let* _ =
+                  cdp_call ~session cdp "Page.handleJavaScriptDialog"
+                    (obj [ ("accept", `Bool true) ])
+                in
+                (* An already-open beforeunload needs the close dispatched now; an
+                   opening during this call came from the close already in flight. *)
+                if already_open then close_target () else Ok (`Assoc [])
+            | `Dialog _ ->
+                Error (error "dialog-open" "answer the dialog before closing the tab")
+          in
           disappear t tab (disposition "closed_by_owner");
           Ok P.{ closed = true })
 
@@ -1074,7 +1111,7 @@ let sweep t ~decide =
       match Hashtbl.find_opt t.tabs (key handle) with
       | None -> None
       | Some tab ->
-          Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+          with_tab_lock tab (fun () ->
               match Hashtbl.find_opt t.tabs (key handle) with
               | None -> None
               | Some tab -> (
@@ -1218,7 +1255,7 @@ let snap_locked t tab (args : P.snap_args) =
 
 let snap t ~owner (args : P.snap_args) =
   let* tab = locate t ~access:Act ~owner args.tab in
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+  with_tab_lock tab (fun () ->
       let* tab = locate t ~access:Act ~owner args.tab in
       snap_locked t tab args)
 
@@ -1231,6 +1268,7 @@ let reading_browser t ~session tab cdp : Reading.browser =
     sleep = t.sleep;
     current = (fun () -> (tab.url, tab.title));
     dialog = (fun () -> tab.dialog);
+    dialog_race = dialog_race tab;
     acknowledge = (fun () -> acknowledge tab);
     row =
       (fun index ->
@@ -1245,7 +1283,7 @@ let reading_browser t ~session tab cdp : Reading.browser =
 
 let with_reading t ~access ~owner handle f =
   let* tab = locate t ~access ~owner handle in
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+  with_tab_lock tab (fun () ->
       let* tab = locate t ~access ~owner handle in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
@@ -1295,6 +1333,7 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
     refresh = watch_navigation t cdp tab;
     snapshot = (fun () -> tab.snapshot);
     dialog = (fun () -> tab.dialog);
+    dialog_race = dialog_race tab;
     acknowledge = (fun () -> acknowledge tab);
     all_tabs =
       (fun () ->
@@ -1305,7 +1344,7 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
 
 let with_action t ~owner handle f =
   let* tab = locate t ~access:Act ~owner handle in
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+  with_tab_lock tab (fun () ->
       let* tab = locate t ~access:Act ~owner handle in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
@@ -1481,7 +1520,7 @@ let drive_locked
    above is what a caller that already holds it (the run's every step, run-d82w) uses. *)
 let drive ?decide ?text_helper t ~owner ~model (args : P.drive_args) =
   let* tab = locate t ~access:Act ~owner args.tab in
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+  with_tab_lock tab (fun () ->
       let* tab = locate t ~access:Act ~owner args.tab in
       drive_locked ?decide ?text_helper t ~owner ~model tab args)
 
@@ -1523,7 +1562,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
     (args : P.run_args) =
   let handle = tab in
   let* tab = locate t ~access:Act ~owner handle in
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+  with_tab_lock tab (fun () ->
       let* tab = locate t ~access:Act ~owner handle in
       (* run-fwl8: a run starts from a state it can act in. Ownership and the human's hold
          are [locate]'s refusals; a dialog waiting to be answered is this one. *)
@@ -1566,8 +1605,18 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                 P.{ tab = handle; match_ = None; limit = Some 250; offset = None }
             in
             let* rendered =
-              Reading.text browser
-                P.{ tab = handle; index = None; max_chars = Some 12_000 }
+              if snapshot.P.dialog <> None then
+                Ok
+                  P.
+                    {
+                      url = snapshot.url;
+                      title = snapshot.title;
+                      text = "";
+                      truncated = false;
+                    }
+              else
+                Reading.text browser
+                  P.{ tab = handle; index = None; max_chars = Some 12_000 }
             in
             Ok
               Run.
@@ -1647,29 +1696,39 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                   Hashtbl.replace memo key value;
                   value
             in
-            let results =
-              Playbook.await_results
-                ~now:(fun () -> now t)
-                ~sleep:t.sleep ~observe:observe_page ~score ~timeout_s checks
+            let outcome =
+              Dialog_race.first (dialog_race tab) (fun () ->
+                  Playbook.await_results
+                    ~now:(fun () -> now t)
+                    ~sleep:t.sleep ~observe:observe_page ~score ~timeout_s checks)
             in
-            match !failure with
-            | Some error -> Error error
-            | None -> (
-                match !last with
-                | None -> Error (error "internal" "the verification observed nothing")
-                | Some observation ->
-                    Ok
-                      ( List.map
-                          (fun (checked : Playbook.checked) ->
-                            P.
-                              {
-                                sentence = checked.Playbook.expectation;
-                                checker = Playbook.checker_name checked.Playbook.checker;
-                                passed = checked.Playbook.passed;
-                                score = checked.Playbook.score;
-                              })
-                          results,
-                        observation ))
+            let results =
+              match outcome with `Dialog _ -> [] | `Value results -> results
+            in
+            match outcome with
+            | `Dialog _ ->
+                let* observation = observe () in
+                Ok ([], observation)
+            | `Value _ -> (
+                match !failure with
+                | Some error -> Error error
+                | None -> (
+                    match !last with
+                    | None -> Error (error "internal" "the verification observed nothing")
+                    | Some observation ->
+                        Ok
+                          ( List.map
+                              (fun (checked : Playbook.checked) ->
+                                P.
+                                  {
+                                    sentence = checked.Playbook.expectation;
+                                    checker =
+                                      Playbook.checker_name checked.Playbook.checker;
+                                    passed = checked.Playbook.passed;
+                                    score = checked.Playbook.score;
+                                  })
+                              results,
+                            observation )))
           in
           let handler : Run.handler =
             Run.
@@ -1906,7 +1965,16 @@ let inspect t json =
           if tab.session = text "sessionId" json then
             match (text "type" params, text "message" params) with
             | Some kind, Some message ->
-                tab.dialog <- Some P.{ kind = enum P.Dialog_kind.of_string kind; message }
+                let dialog =
+                  P.
+                    {
+                      kind = enum P.Dialog_kind.of_string kind;
+                      message;
+                      default_prompt = text "defaultPrompt" params;
+                    }
+                in
+                tab.dialog <- Some dialog;
+                List.iter (fun notify -> notify dialog) tab.dialog_listeners
             | _ -> ())
         t.tabs
   | Some "Page.javascriptDialogClosed", _ ->

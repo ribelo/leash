@@ -804,6 +804,10 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                   let timeout_s = Option.value ~default:5 proc.Playbook.expect_timeout_s in
                   match verify t ~pages:book.Playbook.playbook.pages ~checks ~timeout_s with
                   | Error error -> Error (with_trace st error)
+                  | Ok (results, observation) when observation.dialog <> None ->
+                      let st = { st with observation } in
+                      let dialog = Option.get observation.dialog in
+                      Ok (Finish (finish st (status "error") ~reason:(dialog_reason dialog) ()))
                   | Ok (results, observation) ->
                       let st = { st with observation } in
                       let passed =
@@ -884,6 +888,10 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
     in
     match verify t ~pages ~checks ~timeout_s:5 with
     | Error error -> Error (with_trace st error)
+    | Ok (results, observation) when observation.dialog <> None ->
+        let st = { st with observation } in
+        let dialog = Option.get observation.dialog in
+        Ok (Finish (finish st (status "error") ~reason:(dialog_reason dialog) ()))
     | Ok (results, observation) ->
         let st = { st with observation } in
         (* run-xqh8: how the mission's own expectations came out is part of the audit,

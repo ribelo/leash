@@ -8,6 +8,7 @@ type browser = {
   sleep : float -> unit;
   current : unit -> string * string;
   dialog : unit -> Protocol.dialog option;
+  dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
       (** One pending acknowledgement of this tab (tab-gjo0): taken before the [eval] call
           is issued and woken by the registry when the window it opened appears, or when

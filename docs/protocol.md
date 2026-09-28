@@ -59,6 +59,17 @@ Actions (serialized per tab; each returns `ActionResult`):
 | `wait` | `{tab, until: {url_prefix?, text?, index_gone?: int, dialog?: bool}, timeout_ms?}` |
 | `dialog` | `{tab, answer: "accept"\|"dismiss", text?}` |
 
+`new` and `nav` return `TabInfo` (including the tab handle and any active dialog) even
+when a load is interrupted by `Page.javascriptDialogOpening`. A modal interrupts
+input settlement and `wait` immediately: action replies carry `dialog`, while `wait`
+reports `dialog-open` with the serialized dialog in `error.detail`. Run expectation
+waits stop with run status `error` and the dialog in the final observation. A prompt
+reports Chrome’s `defaultPrompt` as `default_prompt` (null for other dialog kinds).
+Answer the dialog before another command on that tab; an owner-initiated close
+automatically accepts its own `beforeunload` dialog. When a handler exhausts its
+listener budget, its socket still returns `timeout` with `detail.command` and
+`detail.budget_ms` instead of closing without a reply.
+
 Human handoff:
 
 | cmd | args | result |
@@ -87,7 +98,7 @@ A field shown as `T|null` is always present, `null` when it has no value; a fiel
 
 ```
 TabInfo      = {tab, url, title, origin: "agent"|"human", state: "unowned"|"owned"|"with_human",
-                owner: string|null, generation: int, expires: {stage: "release"|"close", in_s: int}|null,
+                owner: string|null, generation: int, dialog: Dialog|null, expires: {stage: "release"|"close", in_s: int}|null,
                 reason?: string}
 Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
                 dialog: Dialog|null}
@@ -95,7 +106,7 @@ Row          = {index: int, role: string, name: string, value?: string, state?: 
                 options?: [{index: int, label: string, value: string, selected: bool, disabled: bool}]}
                  state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly}
                  options is the option list a select row exposes, in the select's own order, index 0 first
-Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string}
+Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string, default_prompt: string|null}
 ActionResult = {tab, url, title, snapshot: null, dialog: Dialog|null, popups: TabInfo[]}
                  snapshot is always null in this version: no snapshot is taken while an action settles; call snap
                  popups lists only tabs opened by the acted-on tab (opener), owned by the caller

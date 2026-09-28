@@ -1041,6 +1041,34 @@ let popups_exact () =
         "tab-8k2g the peer keeps its own popup" 2
         (List.length (list_of "bob")))
 
+(* hard-dljv hard-owci: the opening event during dispatch beats CDP settlement. *)
+let dialog_during_dispatch () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
+          if E.string_member "type" (member "params" request) = Some "mouseReleased" then
+            Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogOpening"
+              ~params:
+                (o
+                   [
+                     ("type", s "confirm");
+                     ("message", s "Are you sure?");
+                     ("url", s "https://example.com/");
+                     ("hasBrowserHandler", b true);
+                   ]);
+          o []);
+      let reply =
+        result (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 }))
+      in
+      Alcotest.(check string)
+        "hard-dljv captures dispatch dialog" "confirm"
+        (match member "kind" (member "dialog" reply) with
+        | `String s -> s
+        | _ -> "missing"))
+
 (* tab-60kn: a dialog blocks the page, so every action refuses until it is answered. *)
 let dialog () =
   rig (fun _ _ _ tabs fake ->
@@ -1517,6 +1545,7 @@ let () =
           Alcotest.test_case "tab-tm6c" `Quick popups;
           Alcotest.test_case "tab-8k2g" `Quick popups_exact;
           Alcotest.test_case "tab-60kn" `Quick dialog;
+          Alcotest.test_case "hard-dljv dispatch modal" `Quick dialog_during_dispatch;
           Alcotest.test_case "tab-hxld" `Quick serialization;
           Alcotest.test_case "tab-8la3 bw4j" `Quick focus_emulation;
           Alcotest.test_case "tab-0ohq popup acknowledged" `Quick popup_acknowledged;

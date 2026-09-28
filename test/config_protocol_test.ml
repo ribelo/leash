@@ -287,6 +287,7 @@ let tab_json =
       ("state", `String "owned");
       ("owner", `String "dsh:test");
       ("generation", `Int 2);
+      ("dialog", `Null);
       ("expires", `Null);
     ]
 
@@ -313,7 +314,13 @@ let snapshot_json =
       ("offset", `Int 0);
       ("truncated", `Bool false);
       ("settled", `Bool true);
-      ("dialog", assoc [ ("kind", `String "confirm"); ("message", `String "Sure?") ]);
+      ( "dialog",
+        assoc
+          [
+            ("kind", `String "confirm");
+            ("message", `String "Sure?");
+            ("default_prompt", `Null);
+          ] );
     ]
 
 let result_shapes () =
@@ -342,6 +349,7 @@ let result_shapes () =
         ("state", `String "unowned");
         ("owner", `Null);
         ("generation", `Int 1);
+        ("dialog", `Null);
         ("expires", `Null);
       ]
   in
@@ -383,6 +391,7 @@ let result_shapes () =
               ("state", `String "with_human");
               ("owner", `String "human");
               ("generation", `Int 2);
+              ("dialog", `Null);
               ("expires", assoc [ ("stage", `String "close"); ("in_s", `Int 30) ]);
             ]))
   in
@@ -403,6 +412,7 @@ let result_shapes () =
         ("state", `String "with_human");
         ("owner", `String "dsh:test");
         ("generation", `Int 2);
+        ("dialog", `Null);
         ("expires", `Null);
         ("reason", `String "captcha");
       ]

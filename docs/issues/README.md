@@ -100,7 +100,7 @@ L29 first; L30 needs only L29's loader and the models service; L31–L34 in orde
 
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
-| L35 | **Dialogs end waits.** One race helper for every tab wait; `new`/`nav` return the tab with `dialog`; actions return `ActionResult` with `dialog`; `wait` returns `dialog-open`; `beforeunload`; `prompt` text; listener budget → `timeout` reply; fake-browser dialog scripts; live pages; skill line. | hard-6eei, hard-dljv, hard-s719, hard-t6cq, hard-tsva, hard-yi0a, hard-92ik, hard-owci, hard-wo78, hard-fir4 | — | [ ] |
+| L35 | **Dialogs end waits.** One race helper for every tab wait; `new`/`nav` return the tab with `dialog`; actions return `ActionResult` with `dialog`; `wait` returns `dialog-open`; `beforeunload`; `prompt` text; listener budget → `timeout` reply; fake-browser dialog scripts; live pages; skill line. | hard-6eei, hard-dljv, hard-s719, hard-t6cq, hard-tsva, hard-yi0a, hard-92ik, hard-owci, hard-wo78, hard-fir4 | — | [x] |
 
 ## Later milestones
 

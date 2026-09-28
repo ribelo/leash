@@ -1964,6 +1964,189 @@ let discover_proposal () =
                   (Filename.concat state "leash/playbooks")
                   "automationexercise.com.json"))))
 
+(* hard-6eei hard-92ik hard-s719 hard-tsva hard-t6cq hard-owci: an event
+   emitted before Chrome answers navigation still returns an answerable tab. *)
+let dialog_interruptions () =
+  rig (fun _ sw _ tabs fake ->
+      let fake = fake () in
+      Fake.on_method fake "Page.handleJavaScriptDialog" (fun _ ->
+          Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogClosed"
+            ~params:(obj [ ("result", `Bool true); ("userInput", str "") ]);
+          obj []);
+      let emit kind ?default_prompt () =
+        Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogOpening"
+          ~params:
+            (obj
+               ([
+                  ("url", str "https://example.com/");
+                  ("message", str "Question");
+                  ("type", str kind);
+                  ("hasBrowserHandler", `Bool true);
+                ]
+               @
+               match default_prompt with
+               | None -> []
+               | Some text -> [ ("defaultPrompt", str text) ]))
+      in
+      Fake.on_method fake "Page.navigate" (fun _ ->
+          emit "prompt" ~default_prompt:"Suggested" ();
+          obj [ ("frameId", str "frame-1") ]);
+      let info =
+        settle ~sw "hard-6eei new prompt" (fun () ->
+            request tabs "alice" (P.New { url = Some "https://example.com/" }))
+        |> result
+      in
+      let handle = tab info in
+      Alcotest.(check string)
+        "hard-92ik default prompt" "Suggested"
+        (match get "default_prompt" (get "dialog" info) with
+        | `String text -> text
+        | _ -> "missing");
+      Alcotest.(check string)
+        "hard-6eei title can be empty" ""
+        (match get "title" info with `String text -> text | _ -> "missing");
+      check_code "hard-s719 wait blocked" "dialog-open"
+        (request tabs "alice"
+           (P.Wait
+              {
+                tab = handle;
+                until =
+                  {
+                    url_prefix = None;
+                    text = Some "never";
+                    index_gone = None;
+                    dialog = None;
+                  };
+                timeout_ms = Some 5000;
+              }));
+      ignore
+        (result
+           (request tabs "alice"
+              (P.Dialog
+                 {
+                   tab = handle;
+                   answer =
+                     (match P.Answer.of_string "dismiss" with
+                     | Ok x -> x
+                     | Error _ -> assert false);
+                   text = None;
+                 })));
+      Fake.on_method fake "Page.navigate" (fun _ ->
+          emit "alert" ();
+          obj [ ("frameId", str "frame-1") ]);
+      let nav =
+        settle ~sw "hard-6eei nav alert" (fun () ->
+            request tabs "alice"
+              (P.Nav { tab = handle; url = "https://example.com/next" }))
+        |> result
+      in
+      Alcotest.(check bool) "hard-6eei same tab handle" true (tab nav = handle);
+      Alcotest.(check string)
+        "hard-tsva nav dialog" "alert"
+        (match get "kind" (get "dialog" nav) with `String text -> text | _ -> "missing");
+      ignore
+        (result
+           (request tabs "alice"
+              (P.Dialog
+                 {
+                   tab = handle;
+                   answer =
+                     (match P.Answer.of_string "dismiss" with
+                     | Ok x -> x
+                     | Error _ -> assert false);
+                   text = None;
+                 })));
+      Fake.on_method fake "Target.closeTarget" (fun _ ->
+          emit "beforeunload" ();
+          obj [ ("success", `Bool true) ]);
+      ignore (result (request tabs "alice" (P.Close { tab = handle; force = None })));
+      Alcotest.(check bool)
+        "hard-t6cq beforeunload accepted" true
+        (Fake.received fake
+        |> List.exists (fun call ->
+            field "method" call = Some (str "Page.handleJavaScriptDialog")
+            && Option.bind (field "params" call) (field "accept") = Some (`Bool true))))
+
+(* hard-yi0a: a real Unix listener writes a timeout envelope after cancelling a
+   blocked handler, rather than silently closing the connection. *)
+let listener_budget_reply () =
+  with_runtime (fun runtime ->
+      rig (fun env sw _ tabs fake ->
+          let tab = result (request tabs "alice" (P.New { url = None })) |> tab in
+          Fake.withhold (fake ()) "Target.closeTarget" (fun _ -> true);
+          let path = Filename.concat (Filename.concat runtime "leash") "control.sock" in
+          let _control =
+            match
+              Leash.Control.create ~sw ~path
+                {
+                  Leash.Control.tabs;
+                  status_query = (fun () -> []);
+                  models_status =
+                    (fun () ->
+                      P.
+                        {
+                          configured = false;
+                          jev_model = "unconfigured";
+                          text_model = "";
+                          systemone_endpoint = "";
+                          chat_base_url = "";
+                        });
+                  fs = env#fs;
+                  net = env#net;
+                  clock = env#clock;
+                  logger =
+                    Eta_observability.Logger.create ~service:"socket-test"
+                      ~clock:env#clock ~mono_clock:env#mono_clock
+                      ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                      ();
+                }
+            with
+            | Ok control -> control
+            | Error _ -> Alcotest.fail "hard-yi0a listener refused"
+          in
+          let flow = Eio.Net.connect ~sw env#net (`Unix path) in
+          let wire =
+            P.encode_request
+              { owner = owner "alice"; command = P.Close { tab; force = None } }
+            |> Yojson.Safe.to_string
+          in
+          Eio.Flow.copy_string (wire ^ "\n") flow;
+          Eio.Fiber.fork ~sw (fun () ->
+              let rec wait n =
+                if n = 0 then Alcotest.fail "hard-yi0a handler never reached Chrome"
+                else if
+                  Fake.received (fake ())
+                  |> List.exists (fun call ->
+                      field "method" call = Some (str "Target.closeTarget"))
+                then (
+                  Eta_test.advance env#clock (Eta.Duration.seconds 2);
+                  Eta_test.advance env#clock (Eta.Duration.seconds 2))
+                else (
+                  Eio.Fiber.yield ();
+                  wait (n - 1))
+              in
+              wait 1000);
+          let reply =
+            Eio.Buf_read.line (Eio.Buf_read.of_flow flow ~max_size:4096)
+            |> Yojson.Safe.from_string
+          in
+          Alcotest.(check bool)
+            "hard-yi0a timeout envelope" false
+            (get "ok" reply = `Bool true);
+          let failure = get "error" reply in
+          Alcotest.(check string)
+            "hard-yi0a timeout code" "timeout"
+            (match get "code" failure with `String s -> s | _ -> "missing");
+          let detail = get "detail" failure in
+          Alcotest.(check string)
+            "hard-yi0a command" "close"
+            (match get "command" detail with `String s -> s | _ -> "missing");
+          Alcotest.(check int)
+            "hard-yi0a full budget in milliseconds" 1000
+            (match get "budget_ms" detail with `Int n -> n | _ -> -1);
+          Fake.on_method (fake ()) "Target.closeTarget" (fun _ ->
+              obj [ ("success", `Bool true) ])))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -1979,11 +2162,14 @@ let () =
           Alcotest.test_case "chrome-1yn9" `Quick nav;
           Alcotest.test_case "chrome-qnul new waits" `Quick new_waits;
           Alcotest.test_case "chrome-qnul new without url" `Quick new_without_url;
+          Alcotest.test_case "hard-6eei 92ik s719 tsva t6cq owci" `Quick
+            dialog_interruptions;
           Alcotest.test_case "chrome-qnul 1yn9 load timeout" `Quick load_timeout;
           Alcotest.test_case "chrome-qnul 1yn9 handler budget" `Quick budget;
           Alcotest.test_case "chrome-38a4" `Quick malformed;
           Alcotest.test_case "chrome-2z2z 6lfk" `Quick lost;
           Alcotest.test_case "chrome-fwnu socket" `Quick socket;
+          Alcotest.test_case "hard-yi0a real socket timeout" `Quick listener_budget_reply;
           Alcotest.test_case "svc-5wm8 second instance" `Quick second_instance;
           Alcotest.test_case "tab-x4v0 large text over socket" `Quick
             large_text_over_socket;

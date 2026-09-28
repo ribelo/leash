@@ -113,6 +113,7 @@ let tab_info () =
       state = ok (P.State.of_string "owned");
       owner = Some (ok (P.Owner.of_string "alice"));
       generation = 1;
+      dialog = None;
       expires = None;
       reason = None;
     }
@@ -803,7 +804,12 @@ let dry () =
    leaves the ending to the human. *)
 let endings () =
   let dialog =
-    P.{ P.kind = ok (P.Dialog_kind.of_string "confirm"); message = "Leave?" }
+    P.
+      {
+        P.kind = ok (P.Dialog_kind.of_string "confirm");
+        message = "Leave?";
+        default_prompt = None;
+      }
   in
   let h = harness ~observations:[ observation ~dialog () ] () in
   let blocked = ran (run ~installed:[ site_a ] h (args ())) in
@@ -811,6 +817,23 @@ let endings () =
   Alcotest.(check bool)
     "run-klp9 the dialog is in the final snapshot" true
     (blocked.P.final.P.dialog <> None);
+  (* hard-owci hard-dljv: an opening during the procedure expectation wait ends
+     the run instead of making the blocked browser finish the checker. *)
+  let verifying =
+    harness ~procs:[ "step" ]
+      ~drives:[ drive () ]
+      ~verifies:[ [ expectation "the page is a" "page_kind" ~passed:false ] ]
+      ~verification_observations:[ observation ~dialog () ]
+      ()
+  in
+  let interrupted = ran (run ~installed:[ site_a ] verifying (args ())) in
+  check_status "hard-owci modal during verification ends run" "error" interrupted;
+  Alcotest.(check bool)
+    "hard-owci final snapshot carries opened dialog" true
+    (interrupted.P.final.P.dialog <> None);
+  Alcotest.(check bool)
+    "hard-owci expectation was attempted" true
+    (List.mem "verify" verifying.ops);
   let handoff =
     harness ~procs:[ "BLOCKED" ]
       ~plans:

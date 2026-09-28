@@ -28,6 +28,7 @@ type tab = {
   refresh : unit -> unit;
   snapshot : unit -> (P.Snapshot_id.t * string * (P.row * int) list) option;
   dialog : unit -> P.dialog option;
+  dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
       (** One pending acknowledgement of the tab (tab-0ohq): created before a trusted
           input is dispatched and woken by the registry when the popup that input opened
@@ -578,7 +579,7 @@ let clamp ~width ~height (x, y) =
    Taking a fresh snapshot is not part of settling, so the snapshot id is always null and
    the caller decides when to observe again. *)
 let result tab before =
-  tab.refresh ();
+  if tab.dialog () = None then tab.refresh ();
   let url, title = tab.page () in
   (* tab-8k2g: only a tab that was not there when the action began, that Chrome says
      this tab opened, and that the caller owns. Another agent's concurrent tab has
@@ -594,8 +595,13 @@ let result tab before =
 
 let with_result tab dispatch =
   let before = handles tab in
-  let* () = dispatch () in
-  Ok (result tab before)
+  match
+    Dialog_race.first tab.dialog_race (fun () ->
+        let* () = dispatch () in
+        Ok (result tab before))
+  with
+  | `Dialog dialog -> Ok { (result tab before) with P.dialog = Some dialog }
+  | `Value outcome -> outcome
 
 let guarded tab dispatch =
   match tab.dialog () with

@@ -341,7 +341,7 @@ val navigate :
   owner:Protocol.Owner.t ->
   Protocol.Handle.t ->
   string ->
-  (Protocol.action_result, Protocol.error) result
+  (Protocol.tab_info, Protocol.error) result
 
 val list : t -> owner:Protocol.Owner.t -> all:bool -> Protocol.list_result
 (** own-82jd own-c0cl: without [all], only the caller's tabs — [Owned] by it and the one

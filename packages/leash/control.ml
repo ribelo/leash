@@ -59,8 +59,7 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
   | P.Press args -> lift P.yojson_of_action_result (Tabs.press tabs ~owner args)
   | P.Select args -> lift P.yojson_of_action_result (Tabs.select tabs ~owner args)
   | P.Scroll args -> lift P.yojson_of_action_result (Tabs.scroll tabs ~owner args)
-  | P.Nav args ->
-      lift P.yojson_of_action_result (Tabs.navigate tabs ~owner args.tab args.url)
+  | P.Nav args -> lift P.yojson_of_tab_info (Tabs.navigate tabs ~owner args.tab args.url)
   | P.Claim args -> lift P.yojson_of_tab_info (Tabs.claim tabs ~owner args.tab)
   | P.Release args ->
       lift P.yojson_of_released_result
@@ -266,6 +265,26 @@ let budget (request : (P.request, string) result) =
       Some cdp_budget
   | Ok _ -> Some (seconds 1)
 
+(* hard-yi0a: Eta_ipc cancels the handler at this budget, then sends this reply
+   through ordinary encode/egress. The request was already decoded, so its command
+   and configured budget can be given to the caller without replaying any action. *)
+let budget_exceeded (request : (P.request, string) result) budget =
+  let command =
+    match request with
+    | Ok request -> P.command_name request.command
+    | Error _ -> "invalid-request"
+  in
+  let budget_ms = Eta.Duration.to_ms budget in
+  failure
+    P.
+      {
+        code = enum "timeout";
+        message =
+          Printf.sprintf "%s ran for its full handler budget of %d ms" command budget_ms;
+        detail =
+          Some (`Assoc [ ("command", `String command); ("budget_ms", `Int budget_ms) ]);
+      }
+
 (* tab-x4v0 tab-0lax: the listener's 64 KiB default drops this protocol's own
    bounded shapes — a 64K-character text reply, a 64 KiB eval result or argument, a
    64 KiB fill — by closing the connection with no reply at all. 1 MiB each way covers
@@ -321,7 +340,8 @@ let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ~sw
     Eta_ipc.Listener.run ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock ~path ~policy
       ~decode
       ~encode:(fun reply -> Yojson.Safe.to_string (P.encode_reply reply))
-      ~budget ~handler ~on_peer_error:(on_peer_error deps.logger) ()
+      ~budget ~on_budget_exceeded:budget_exceeded ~handler
+      ~on_peer_error:(on_peer_error deps.logger) ()
   with
   | Ok () -> Ok { path }
   | Error error -> Error error

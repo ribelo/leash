@@ -185,7 +185,7 @@ type expires = { stage : Stage.t; in_s : int }
 val expires_of_yojson : Yojson.Safe.t -> (expires, string) result
 val yojson_of_expires : expires -> Yojson.Safe.t
 
-type dialog = { kind : Dialog_kind.t; message : string }
+type dialog = { kind : Dialog_kind.t; message : string; default_prompt : string option }
 
 val dialog_of_yojson : Yojson.Safe.t -> (dialog, string) result
 val yojson_of_dialog : dialog -> Yojson.Safe.t
@@ -198,6 +198,7 @@ type tab_info = {
   state : State.t;
   owner : Owner.t option;
   generation : int;
+  dialog : dialog option;
   expires : expires option;
   reason : string option;
 }

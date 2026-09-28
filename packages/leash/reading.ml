@@ -7,6 +7,7 @@ type browser = {
   sleep : float -> unit;
   current : unit -> string * string;
   dialog : unit -> Protocol.dialog option;
+  dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
   row : int -> int option;
 }
@@ -72,12 +73,19 @@ let call_function browser ~object_id ~body ~argument =
    own death ends it with [tab-gone] (own-teh1). Nothing is re-issued. *)
 let evaluated browser ~object_id ~body ~argument =
   match
-    Dispatch.first (browser.acknowledge ()) (fun () ->
-        call_function browser ~object_id ~body ~argument)
+    Dialog_race.first browser.dialog_race (fun () ->
+        Dispatch.first (browser.acknowledge ()) (fun () ->
+            call_function browser ~object_id ~body ~argument))
   with
-  | `Acknowledged Dispatch.Popup -> Ok `Null
-  | `Acknowledged (Dispatch.Gone error) -> Error error
-  | `Reply result -> result
+  | `Dialog dialog ->
+      Error
+        {
+          (error "dialog-open" "a dialog opened during eval; answer it first") with
+          P.detail = Some (P.yojson_of_dialog dialog);
+        }
+  | `Value (`Acknowledged Dispatch.Popup) -> Ok `Null
+  | `Value (`Acknowledged (Dispatch.Gone error)) -> Error error
+  | `Value (`Reply result) -> result
 
 let cap = 65_536
 
@@ -239,7 +247,14 @@ let wait browser (args : P.wait_args) =
         browser.sleep (min 0.05 (deadline -. browser.now ()));
         loop ())
     in
-    loop ()
+    match Dialog_race.first browser.dialog_race loop with
+    | `Value result -> result
+    | `Dialog dialog ->
+        Error
+          {
+            (error "dialog-open" "a dialog opened during wait; answer it first") with
+            P.detail = Some (P.yojson_of_dialog dialog);
+          }
 
 let dialog browser (args : P.dialog_args) =
   if browser.dialog () = None then Error (no_dialog ())
