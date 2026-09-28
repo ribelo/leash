@@ -189,10 +189,11 @@ let budget (request : (P.request, string) result) =
   | Ok { command = P.Drive args; _ } ->
       Some (seconds (max 1 (Option.value ~default:120 args.deadline_s) + 5))
   | Ok { command = P.Run args; _ } ->
-      (* run-vspj: a run's budget is its deadline plus the margin its last steps need —
-         the procedure's own bounded expectation wait (at most 30 s) and the reply — so
-         the listener never cancels a run at the instant it is due to answer. *)
-      Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 45))
+      (* run-vspj run-obtt: a run's budget is its deadline plus the margin its last steps
+         need — the procedure's own bounded expectation wait (at most 30 s), a planner
+         turn's correction call (at most 30 s, L32) and the reply — so the listener never
+         cancels a run at the instant it is due to answer. *)
+      Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 75))
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _; _ } -> Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget

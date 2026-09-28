@@ -72,6 +72,7 @@
   eta_observability
   eio
   eio.unix
+  unix
   yojson
   alcotest))
 
@@ -243,5 +244,21 @@
   eio
   eio.unix
   eio_main
+  yojson
+  alcotest))
+
+(test
+ (name planner_test)
+ (modules planner_test)
+ (libraries
+  leash
+  leash_test_support
+  eta
+  eta_test
+  eta_observability
+  eio
+  eio.unix
+  eio_main
+  unix
   yojson
   alcotest))

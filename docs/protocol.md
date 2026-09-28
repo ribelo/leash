@@ -78,7 +78,7 @@ repeats a mission expectation (the argument is a list).
 
 | cmd | args | result |
 | --- | --- | --- |
-| `run` | `{tab, mission, max_procedures?, deadline_s?, dry_run?, expect?: string[]}` | `{status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], final: Snapshot, reason?: string}` |
+| `run` | `{tab, mission, max_procedures?, deadline_s?, dry_run?, expect?: string[]}` | `{status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], final: Snapshot, reason?: string}` |
 
 ## Types
 
@@ -206,12 +206,33 @@ Rules:
   `final.dialog`). A model or browser failure is a protocol **error**; when it is
   `model-unavailable` its `detail` carries the provider `code` and the trace completed so
   far in `detail.procedures`, so a failed mission is auditable.
-- The planner is L32's (Luna). Until it lands, the production handler answers `fail` with
-  the reason that names L32, so a run that stops needing judgment ends `blocked` or
-  `failed` saying so.
-- A run's handler budget is its `deadline_s` plus 45 seconds — the last procedure's own
-  bounded expectation wait (at most 30 s) and the reply — so the listener never cancels a
-  run at the instant it is due to answer.
+- **The planner (Luna).** A planner turn is asked exactly where JEV stops — the procedure
+  level answered `BLOCKED`, a procedure failed its expectations twice, or a required
+  argument could not be filled — and at most three times per run (the trigger that arrives
+  with the cap reached ends the run, `blocked` or `failed` naming the cap). It is one
+  `chat/completions` call to the configured `planner_endpoint` (default:
+  `chat_base_url + "/chat/completions"`) with `json_object` on, reasoning at
+  `planner_reasoning` (default `high`, `none` turns it off) and model
+  `planner_model` (default `openai/gpt-6-luna`); its messages are the planner instruction
+  and the mission, the current playbook in its own schema, the trace so far, the arguments
+  known and the observed page — its kind, title, URL and its visible text, bounded, the one
+  place page text reaches a level above the operator. It answers exactly one of
+  `{"answer": "procedure", "procedure": {...}}`, `{"answer": "handoff", "reason": "..."}`
+  or `{"answer": "fail", "reason": "..."}`, decoded fail-closed: an answer that is not one
+  of the three, a missing reason, a procedure the playbook cannot run, or a member the
+  shape does not name is refused and shown back with the refusal once; a second refusal
+  ends the run as `model-unavailable` with `code: "invalid-response"`. Its first turn may
+  also attach the mission's expectations (`"expect": [...]`), which the DONE guard then
+  verifies when the caller stated none. Every turn's tokens are in `planner_turns[].usage`
+  (`cost` is zero: the chat route reports tokens, not the provider's own cost) and logged.
+- **Proposals.** A planner-written procedure that ran and passed its expectations is written
+  to `$XDG_STATE_HOME/leash/proposed/<site>-<slug>.json` and listed in the run's
+  `proposals`. A run never merges a proposal: `leash playbook accept <file>` does, under
+  the operator's hand — it replaces the same slug or appends, refuses a merge the loader
+  would not accept, and leaves the file alone when it refuses.
+- A run's handler budget is its `deadline_s` plus 75 seconds — the last procedure's own
+  bounded expectation wait (at most 30 s), a planner turn's correction call (at most 30 s)
+  and the reply — so the listener never cancels a run at the instant it is due to answer.
 - `status`'s `models` reports the models section — `configured` is whether an API key
   is present, and the two model ids and two endpoints are the configured ones. It is read
   from the live configuration: no probe, nothing at boot, and never the key. It is

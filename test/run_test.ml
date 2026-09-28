@@ -125,7 +125,9 @@ type harness = {
   mutable verifies : P.run_expectation list list;
   mutable drives : P.drive_result list;
   mutable observations : R.observation list;
-  mutable plans : R.plan_answer list;
+  mutable plans : R.plan_reply list;
+  mutable proposed : (string * string) list;
+      (** site and slug of each proposal asked for *)
   mutable values : (string * string) list;  (** what the text helper answers per label *)
   mutable clock : float;
   mutable tick : float;  (** seconds the clock moves on every answered question *)
@@ -143,7 +145,8 @@ type harness = {
 
 let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
     ?(verifies = [ [ expectation "the page is a" "page_kind" ] ]) ?(drives = [ drive () ])
-    ?(observations = [ observation () ]) ?(plans = [ R.Fail "no plan" ])
+    ?(observations = [ observation () ])
+    ?(plans = [ R.{ answer = Fail "no plan"; expect = []; usage = None } ])
     ?(values = [ ("product", "Blue Top") ]) ?(tick = 0.) () =
   let last = match observations with [] -> observation () | first :: _ -> first in
   {
@@ -162,6 +165,7 @@ let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
     fills = [];
     navigations = [];
     handoffs = [];
+    proposed = [];
     plan_requests = [];
     ops = [];
     last;
@@ -239,6 +243,14 @@ let handler (h : harness) : R.handler =
           h.ops <- "plan" :: h.ops;
           h.plan_requests <- h.plan_requests @ [ request ];
           Ok (pop "plans" (fun () -> h.plans) (fun x -> h.plans <- x)));
+      (* L32 run-m0r8: the scripted run records what it would propose and writes nothing;
+         test/planner_test.ml is where the production writer and the operator's merge are
+         exercised. *)
+      propose =
+        (fun ~site proc ->
+          h.ops <- "propose" :: h.ops;
+          h.proposed <- h.proposed @ [ (site, proc.B.slug) ];
+          Ok (Printf.sprintf "/state/proposed/%s-%s.json" site proc.B.slug));
       hand_off =
         (fun ~reason ->
           h.ops <- "hand_off" :: h.ops;
@@ -247,8 +259,8 @@ let handler (h : harness) : R.handler =
     }
 
 let args ?(mission = "buy the thing") ?(max_procedures = 40) ?(deadline_s = 900)
-    ?(dry_run = false) ?(expect = []) () =
-  R.{ mission; max_procedures; deadline_s; dry_run; expect }
+    ?(dry_run = false) ?(max_plans = 3) ?(expect = []) () =
+  R.{ mission; max_procedures; deadline_s; dry_run; max_plans; expect }
 
 let run ?(installed = []) h run_args =
   R.loop ~handler:(handler h) ~now:(fun () -> h.clock) ~installed run_args
@@ -509,7 +521,7 @@ let added_modal () =
              not satisfy it: this is the L30 finding, in the loop. *)
           [ expectation "the page is cart" "page_kind" ~passed:false ];
         ]
-      ~plans:[ R.Fail "the planner is not built until L32" ]
+      ~plans:[ R.{ answer = Fail "nothing left to plan"; expect = []; usage = None } ]
       ()
   in
   let result =
@@ -536,7 +548,7 @@ let added_modal () =
   Alcotest.(check string)
     "run-w7ke the trigger is blocked" "blocked" (List.hd result.P.planner_turns).P.trigger;
   Alcotest.(check string)
-    "run-w7ke the stub answers fail" "fail" (List.hd result.P.planner_turns).P.answer;
+    "run-w7ke the planner answered fail" "fail" (List.hd result.P.planner_turns).P.answer;
   (* The same run with the expectation the page satisfies ends done. *)
   let cart =
     observation ~url:"https://automationexercise.com/view_cart" ~title:"Cart"
@@ -607,7 +619,7 @@ let recorded () =
              DONE here is refused by the mission's expectation. *)
           [ expectation "the page is cart" "page_kind" ~passed:false ];
         ]
-      ~plans:[ R.Fail "the planner is not built until L32" ]
+      ~plans:[ R.{ answer = Fail "nothing left to plan"; expect = []; usage = None } ]
       ()
   in
   let result =
@@ -681,7 +693,9 @@ let endings () =
     "run-klp9 the dialog is in the final snapshot" true
     (blocked.P.final.P.dialog <> None);
   let handoff =
-    harness ~procs:[ "BLOCKED" ] ~plans:[ R.Handoff "the captcha needs you" ] ()
+    harness ~procs:[ "BLOCKED" ]
+      ~plans:[ R.{ answer = Handoff "the captcha needs you"; expect = []; usage = None } ]
+      ()
   in
   let ended = ran (run ~installed:[ site_a ] handoff (args ())) in
   check_status "run-klp9 a planner handoff ends the run" "handoff" ended;
@@ -705,7 +719,8 @@ let operations () =
     harness ~procs:[ "step" ]
       ~drives:[ drive ~status:"error" ~reason:"the action failed" () ]
       ~verifies:[ [ expectation "the page is a" "page_kind" ~passed:false ] ]
-      ~plans:[ R.Fail "nothing left" ] ()
+      ~plans:[ R.{ answer = Fail "nothing left"; expect = []; usage = None } ]
+      ()
   in
   let result = ran (run ~installed:[ with_arg ] failing (args ())) in
   check_status "run-vj48 a twice-failed procedure ends failed" "failed" result;

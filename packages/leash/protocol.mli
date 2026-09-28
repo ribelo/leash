@@ -560,10 +560,12 @@ type planner_turn = {
   reason : string option;
   usage : run_usage option; [@json.null]
 }
-(** run-xqh8 run-klp9: one planner turn. [trigger] is ["blocked"], ["failed"] or
+(** run-xqh8 run-klp9 run-obtt: one planner turn. [trigger] is ["blocked"], ["failed"] or
     ["arguments"] — the point JEV stopped; [answer] is ["procedure"], ["handoff"] or
-    ["fail"]. L31's planner is a stub that answers ["fail"] (L32 is Luna), so [usage] is
-    [T|null] there. *)
+    ["fail"], and [reason] is the sentence a handoff or a failure carries. L32's planner
+    is Luna, so [usage] is what its turn cost: the tokens the endpoint reported, summed
+    when the reply had to be asked twice, with [cost] zero because the chat route Leash
+    speaks reports tokens rather than the provider's own cost (run-obtt). *)
 
 val planner_turn_of_yojson : Yojson.Safe.t -> (planner_turn, string) result
 val yojson_of_planner_turn : planner_turn -> Yojson.Safe.t
@@ -574,15 +576,19 @@ type run_result = {
   procedures : run_procedure list;
   mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
+  proposals : string list;
   final : snapshot;
   reason : string option;
 }
-(** run-9ypy: the whole run. [site] is the playbook that served the mission, [T|null] when
-    the run never chose one; [procedures] is the trace, oldest first;
-    [mission_expectations] is how the mission's own expectations came out at the DONE
-    guard (empty when the mission carried none); [final] is the last snapshot the run
-    observed — its [dialog] is what ended an [error] (run-klp9); [reason] is [key?] and
-    names why the run stopped. *)
+(** run-9ypy run-m0r8: the whole run. [site] is the playbook that served the mission,
+    [T|null] when the run never chose one; [procedures] is the trace, oldest first;
+    [mission_expectations] is how the mission's own expectations — the caller's, or the
+    ones the planner attached on its first turn — came out at the DONE guard (empty when
+    the mission carried none); [planner_turns] is every planner turn with its cost;
+    [proposals] lists the proposal files a planner-written procedure was written to,
+    oldest first, which the operator merges with `leash playbook accept` and nothing else
+    does; [final] is the last snapshot the run observed — its [dialog] is what ended an
+    [error] (run-klp9); [reason] is [key?] and names why the run stopped. *)
 
 val run_result_of_yojson : Yojson.Safe.t -> (run_result, string) result
 val yojson_of_run_result : run_result -> Yojson.Safe.t

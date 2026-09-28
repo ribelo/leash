@@ -63,6 +63,17 @@ type checker =
 
 type loaded = { file : string; playbook : t; checks : (string * checker list) list }
 
+(* run-m0r8: a planner-written procedure is proposed to the operator, never merged by the
+   run: the proposal file names the site it belongs to and carries the procedure in the
+   playbook's own schema, so the [playbook accept] command can merge it under the
+   operator's hand. *)
+type proposal = { site : string; procedure : procedure } [@@deriving yojson]
+
+(* run-m0r8: what [playbook accept] did — which site, which slug, the playbook file it
+   wrote and whether the slug replaced one that was already there. *)
+type accepted = { site : string; slug : string; playbook : string; replaced : bool }
+[@@deriving yojson]
+
 let lower = String.lowercase_ascii
 let trim = String.trim
 let starts prefix s = String.starts_with ~prefix s
@@ -161,6 +172,91 @@ let valid_name s =
        (function 'a' .. 'z' | '0' .. '9' | '-' | '_' -> true | _ -> false)
        s
 
+(* run-rq6i run-m0r8: the rules one procedure must satisfy. The loader applies them to
+   every procedure of a file; L32 applies the same function to a planner's answer before
+   the loop executes it and to a proposal before it is merged, because a procedure that did
+   not come from a validated file can break two things a file cannot: it can call itself —
+   a runaway recursion the file's cycle walk would have caught — and its expectations can
+   name a page kind the playbook does not declare. [file] only names the origin in the
+   message. *)
+let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
+  let ( let* ) = Result.bind in
+  let procedure = proc.slug in
+  let refuse reason =
+    Error (Printf.sprintf "%s: procedure %s: %s" file procedure reason)
+  in
+  let require condition message = if condition then Ok () else refuse message in
+  let unique names =
+    List.length names = List.length (List.sort_uniq String.compare names)
+  in
+  let slugs = List.map (fun (p : procedure) -> p.slug) book.procedures in
+  let* () = require (valid_name procedure) "slug must be a lowercase slug" in
+  let* () = require (trim proc.description <> "") "description must not be empty" in
+  let* () =
+    require
+      (proc.expect <> [] && List.for_all (fun s -> trim s <> "") proc.expect)
+      "expect must be a non-empty list of sentences"
+  in
+  let* () = require (proc.steps <> []) "steps must not be empty" in
+  let* () =
+    require
+      (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 30) proc.expect_timeout_s)
+      "expect_timeout_s must be 1..30"
+  in
+  (* L31 run-d82w: a step's own bounds are the operator level's, so they carry its
+     limits: at most 30 steps, and a deadline the drive accepts. *)
+  let* () =
+    require
+      (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 30) proc.max_steps)
+      "max_steps must be 1..30"
+  in
+  let* () =
+    require
+      (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 600) proc.deadline_s)
+      "deadline_s must be 1..600"
+  in
+  let* () =
+    require
+      (Option.fold ~none:true
+         ~some:(fun xs -> unique xs && List.for_all valid_name xs)
+         proc.args)
+      "args must be unique lowercase names"
+  in
+  let rec steps = function
+    | [] -> Ok ()
+    | Goal goal :: tail ->
+        let* () = require (trim goal.goal <> "") "goal must not be empty" in
+        steps tail
+    | Use use :: tail ->
+        let* () =
+          if use.use = procedure then
+            refuse ("cycle of use: " ^ procedure ^ " -> " ^ use.use)
+          else require (List.mem use.use slugs) ("use of unknown slug " ^ use.use)
+        in
+        let* () =
+          require
+            (match use.args with
+            | None -> true
+            | Some (`Assoc fields) ->
+                List.for_all (function _, `String _ -> true | _ -> false) fields
+            | Some _ -> false)
+            "use args must be an object of strings"
+        in
+        steps tail
+  in
+  let* () = steps proc.steps in
+  let rec expectations = function
+    | [] -> Ok ()
+    | sentence :: tail ->
+        let* _ =
+          Result.map_error
+            (fun reason -> Printf.sprintf "%s: procedure %s: %s" file procedure reason)
+            (resolve book.pages sentence)
+        in
+        expectations tail
+  in
+  expectations proc.expect
+
 let validate ~file (book : t) =
   let ( let* ) = Result.bind in
   let refuse ?(procedure = "<playbook>") reason =
@@ -219,78 +315,7 @@ let validate ~file (book : t) =
   let rec procedures = function
     | [] -> Ok ()
     | (proc : procedure) :: rest ->
-        let procedure = proc.slug in
-        let* () =
-          require ~procedure (trim proc.description <> "") "description must not be empty"
-        in
-        let* () =
-          require ~procedure
-            (proc.expect <> [] && List.for_all (fun s -> trim s <> "") proc.expect)
-            "expect must be a non-empty list of sentences"
-        in
-        let* () = require ~procedure (proc.steps <> []) "steps must not be empty" in
-        let* () =
-          require ~procedure
-            (Option.fold ~none:true
-               ~some:(fun n -> n > 0 && n <= 30)
-               proc.expect_timeout_s)
-            "expect_timeout_s must be 1..30"
-        in
-        (* L31 run-d82w: a step's own bounds are the operator level's, so they carry its
-           limits: at most 30 steps, and a deadline the drive accepts. *)
-        let* () =
-          require ~procedure
-            (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 30) proc.max_steps)
-            "max_steps must be 1..30"
-        in
-        let* () =
-          require ~procedure
-            (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 600) proc.deadline_s)
-            "deadline_s must be 1..600"
-        in
-        let* () =
-          require ~procedure
-            (Option.fold ~none:true
-               ~some:(fun xs -> unique xs && List.for_all valid_name xs)
-               proc.args)
-            "args must be unique lowercase names"
-        in
-        let rec steps = function
-          | [] -> Ok ()
-          | Goal goal :: tail ->
-              let* () =
-                require ~procedure (trim goal.goal <> "") "goal must not be empty"
-              in
-              steps tail
-          | Use use :: tail ->
-              let* () =
-                require ~procedure (List.mem use.use slugs)
-                  ("use of unknown slug " ^ use.use)
-              in
-              let* () =
-                require ~procedure
-                  (match use.args with
-                  | None -> true
-                  | Some (`Assoc fields) ->
-                      List.for_all (function _, `String _ -> true | _ -> false) fields
-                  | Some _ -> false)
-                  "use args must be an object of strings"
-              in
-              steps tail
-        in
-        let* () = steps proc.steps in
-        let rec expectations = function
-          | [] -> Ok ()
-          | sentence :: tail ->
-              let* _ =
-                Result.map_error
-                  (fun reason ->
-                    Printf.sprintf "%s: procedure %s: %s" file procedure reason)
-                  (resolve book.pages sentence)
-              in
-              expectations tail
-        in
-        let* () = expectations proc.expect in
+        let* () = check_procedure ~file book proc in
         procedures rest
   in
   let* () = procedures book.procedures in
@@ -384,6 +409,115 @@ let show name =
     || String.contains name '*' || String.contains name '?'
   then Error (name ^ ": invalid playbook name")
   else load (Filename.concat (directory ()) (name ^ ".json"))
+
+(* run-m0r8: the XDG state directory proposals live in, resolved the way the config
+   directory is: [$XDG_STATE_HOME/leash/proposed], [$HOME/.local/state] when the variable
+   is unset. The run writes here and nowhere else — the playbook an operator authored is
+   never touched automatically (story 32). *)
+let proposed_directory () =
+  let home =
+    match Sys.getenv_opt "XDG_STATE_HOME" with
+    | Some s when s <> "" -> s
+    | _ ->
+        Filename.concat (Option.value ~default:"." (Sys.getenv_opt "HOME")) ".local/state"
+  in
+  Filename.concat (Filename.concat home "leash") "proposed"
+
+(* run-m0r8: write one proposed procedure to
+   [<state>/leash/proposed/<site>-<slug>.json], 0600 in a private directory. A run calls
+   this once a planner-written procedure has run and passed its expectations; it never
+   writes to the playbook directory. *)
+let propose ~site (proc : procedure) =
+  let directory = proposed_directory () in
+  let path = Filename.concat directory (site ^ "-" ^ proc.slug ^ ".json") in
+  match Config.ensure_dir directory with
+  | Error message -> Error (path ^ ": " ^ message)
+  | Ok () -> (
+      let json =
+        Yojson.Safe.pretty_to_string (yojson_of_proposal { site; procedure = proc })
+        ^ "\n"
+      in
+      try
+        let channel =
+          open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 path
+        in
+        Fun.protect
+          ~finally:(fun () -> close_out channel)
+          (fun () -> output_string channel json);
+        Unix.chmod path 0o600;
+        Ok path
+      with Sys_error message -> Error (path ^ ": " ^ message))
+
+let read_proposal path =
+  try
+    let channel = open_in_bin path in
+    Fun.protect
+      ~finally:(fun () -> close_in channel)
+      (fun () ->
+        match proposal_of_yojson (Yojson.Safe.from_channel channel) with
+        | Ok proposal -> Ok proposal
+        | Error reason -> Error (path ^ ": " ^ reason))
+  with
+  | Sys_error reason -> Error (path ^ ": " ^ reason)
+  | Yojson.Json_error reason -> Error (path ^ ": invalid JSON: " ^ reason)
+
+(* run-m0r8: the installed playbook a proposal's site names. A site served by two files is
+   refused rather than guessed: the operator resolves which file is the site's before the
+   merge. *)
+let installed_for_site site =
+  match list () with
+  | Error _ as error -> error
+  | Ok books -> (
+      match List.filter (fun (book : loaded) -> book.playbook.site = site) books with
+      | [] -> Error (Printf.sprintf "no installed playbook for site %s" site)
+      | [ book ] -> Ok book
+      | books ->
+          Error
+            (Printf.sprintf "site %s is served by %d playbooks: %s" site
+               (List.length books)
+               (String.concat ", " (List.map (fun (book : loaded) -> book.file) books))))
+
+(* run-m0r8: what the [playbook accept] command does — read the proposal, merge its
+   procedure into the site's playbook by slug (replacing the same slug, appending
+   otherwise), refuse the merge unless the merged playbook validates, and only then write
+   it back. The proposal file is left where it is. *)
+let accept path =
+  let ( let* ) = Result.bind in
+  let* proposal = read_proposal path in
+  let* (book : loaded) = installed_for_site proposal.site in
+  let replaced =
+    List.exists
+      (fun (proc : procedure) -> proc.slug = proposal.procedure.slug)
+      book.playbook.procedures
+  in
+  let procedures =
+    if replaced then
+      List.map
+        (fun (proc : procedure) ->
+          if proc.slug = proposal.procedure.slug then proposal.procedure else proc)
+        book.playbook.procedures
+    else book.playbook.procedures @ [ proposal.procedure ]
+  in
+  let merged = { book.playbook with procedures } in
+  let* (_ : loaded) = validate ~file:book.file merged in
+  let json = Yojson.Safe.pretty_to_string (yojson_of_t merged) ^ "\n" in
+  try
+    let channel =
+      open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 book.file
+    in
+    (* The operator's playbook keeps whatever mode it had: this rewrite is a merge into a
+       file that already exists, and a playbook holds no secret. *)
+    Fun.protect
+      ~finally:(fun () -> close_out channel)
+      (fun () -> output_string channel json);
+    Ok
+      {
+        site = proposal.site;
+        slug = proposal.procedure.slug;
+        playbook = book.file;
+        replaced;
+      }
+  with Sys_error message -> Error (book.file ^ ": " ^ message)
 
 (* L31 run-xqh8: the checker's kind as the run's trace names it, which is also what
    [playbook check] reports a sentence resolved to. *)

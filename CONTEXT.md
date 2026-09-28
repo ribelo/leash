@@ -107,7 +107,7 @@ The human's signal (notification action or `leash resume`) that returns a handed
 One request that runs the JEV loop on one tab toward one goal until `done`, `blocked`, the step cap, the deadline, or an error, and returns the trace and a final snapshot. Leash never claims the goal is achieved.
 
 **Goal**:
-The natural-language task the outer agent hands to one drive. The outer agent is the planner; Leash never interprets multi-step plans.
+The natural-language task the outer agent hands to one drive. A goal is one step; a `run` mission is the multi-step form, which Leash interprets through playbooks (milestone 7).
 
 **JEV**:
 TypeSafe's decision model, reached through OpenRouter's System One endpoint. It answers choice questions over a JSON state with probability distributions; it never produces free text.
@@ -120,6 +120,13 @@ JEV's answer to a target question (which row to click, which row to type into) a
 
 **Text helper**:
 The small OpenRouter language model that writes the text for a `type_text` step. Its output must parse as a small JSON object before it is typed.
+
+**Planner**:
+The language model above JEV that `run` asks only where JEV stops — a `BLOCKED` answer, a procedure that failed its expectations twice, an argument the text helper cannot fill — at most three turns per run. Luna by default; it answers with a procedure to run now, a handoff for the human, or a failure with its reason.
+_Avoid_: the planner for the outer agent; that is the caller of `leash`
+
+**Proposal**:
+A procedure the planner wrote that ran and passed its expectations, written to `$XDG_STATE_HOME/leash/proposed/` and reported in the run's result. It joins no playbook until the operator merges it with `leash playbook accept`.
 
 **Step**:
 One observe, decide, act, settle cycle inside a drive, recorded in the trace.

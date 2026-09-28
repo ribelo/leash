@@ -247,9 +247,11 @@ val run :
     known playbook without touching the operator's configuration.
 
     [levels] is the run's upper levels (run-7blx): the two choice questions, the score
-    question a judgment expectation asks, and the planner turn. Production passes
-    {!Models.levels}, whose [plan] is L31's stub; without one every upper-level call
-    refuses with [model-unavailable], as a drive without a [decide] does. [decide] and
+    question a judgment expectation asks, and the planner turn — L32's Luna in production,
+    {!Models.levels} (run-w7ke). Without one every upper-level call refuses with
+    [model-unavailable], as a drive without a [decide] does. A planner-written procedure
+    that ran and passed its expectations is proposed to XDG state as the run works
+    (run-m0r8): the playbook an operator authored is never written here. [decide] and
     [text_helper] are the operator level's seams, forwarded to every step's drive, and
     [model] is the JEV model id those requests name.
 

@@ -634,8 +634,11 @@ type run_procedure = {
 }
 [@@deriving yojson]
 
-(* run-xqh8 run-klp9: one planner turn and what it answered. In L31 the planner is a stub
-   that fails, so [answer] is [fail]; L32 fills [usage]. *)
+(* run-xqh8 run-klp9 run-obtt: one planner turn and what it answered — [procedure],
+   [handoff] or [fail] — with the trigger it was taken at and what it cost. L32's planner
+   is Luna, so [usage] is the tokens its turn took (summed when the reply had to be asked
+   twice) and [cost] is zero: the chat route reports tokens, not the provider's own cost
+   (docs/missing-eta-api.md). *)
 type planner_turn = {
   n : int;
   trigger : string;
@@ -645,15 +648,17 @@ type planner_turn = {
 }
 [@@deriving yojson]
 
-(* run-9ypy: the whole run. [procedures] is the trace, oldest first; [final] is the last
-   snapshot the run observed, whose [dialog] is what ended an [error]; [reason] names why
-   the run stopped. *)
+(* run-9ypy run-m0r8: the whole run. [procedures] is the trace, oldest first;
+   [proposals] are the files a planner-written procedure was written to, oldest first —
+   the run never merges one; [final] is the last snapshot the run observed, whose [dialog]
+   is what ended an [error]; [reason] names why the run stopped. *)
 type run_result = {
   status : Run_status.t;
   site : string option; [@json.null]
   procedures : run_procedure list;
   mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
+  proposals : string list;
   final : snapshot;
   reason : string option;
 }

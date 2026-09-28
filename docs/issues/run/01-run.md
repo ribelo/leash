@@ -149,4 +149,37 @@ Conditional branching in playbooks; parallel tabs in one run; playbook sharing o
 - Gates `dune build @install`, `dune test` and `dune build @fmt` are green (18 suites).
   L34's live acceptance (real JEV and Luna, Allegro's DataDome 403 included) remains the
   milestone's own row.
+- **L32 status: delivered, 2026-09-28.** The planner is `Planner` (`packages/leash/planner.ml`):
+  one `Eta_ai_chat.complete` call to the configured planner route with `json_object` on and
+  reasoning at `planner_reasoning` (default `high`, `none` disables), whose system message is
+  the new `Questions.planner` and whose user message is the plan request as JSON — the
+  mission, the current playbook in its own schema, the trace, the arguments known and the
+  observed page, its text bounded at 6000 bytes. The reply is a derived type
+  (`[@json.name]` for the three answers, strict about members it does not name) decoded
+  fail-closed against `Playbook.check_procedure` and, for attached expectations,
+  `Playbook.resolve`; a refusal is shown back once with `Questions.planner_retry` and a
+  second refusal ends the turn `model-unavailable`/`invalid-response`. `Run` asks it only
+  at the three triggers and only while `Run.args.max_plans` (3, `Run.of_args`) allows; the
+  turn's tokens ride in `planner_turns[].usage` and are logged at info (run-w7ke run-rq6i
+  run-obtt); the correction call is bounded by the planner's own 30 s, so a hung retry
+  cannot outlast the listener budget (a run's margin is 75 s, docs/protocol.md). A first-turn `"expect"` list becomes the mission's own expectations, which the
+  DONE guard verifies when the caller stated none (run-2tt3, the L30 condition closed
+  without `--expect`). A planner procedure that ran and passed is written by
+  `Playbook.propose` to `$XDG_STATE_HOME/leash/proposed/<site>-<slug>.json`, reported in
+  `run_result.proposals` (protocol and docs/protocol.md updated) and merged only by the new
+  `leash playbook accept <file>` (run-m0r8).
+- **L32 story → test, all in `test/planner_test.ml`** (the run loop with scripted levels and
+  the production planner over a local fake chat server; no model, no browser, no network):
+  triggers run-w7ke; answers and the fail-closed decode with its one retry run-rq6i; prompt
+  shape run-rq6i; the attached expectations and the first-turn-only rule run-2tt3; the turn
+  cap and the trace's cost run-obtt; the proposal file, `accept` merging and the untouched
+  playbook run-m0r8; the default and configurable model, effort and endpoint, and the
+  keyless refusal run-d99l. `test/run_test.ml` keeps the L31 loop cases with the new
+  `plan_reply` shape. Gates green; the suite count is 19.
+- **L32 naming decisions.** Story 32's `$XDG_STATE_HOME/leash/proposed/<site>-<slug>.json`
+  is the proposal path (not `proposals/`), and the planner's configuration is the three flat
+  `[models]` keys `planner_model`, `planner_reasoning` and `planner_endpoint` beside
+  `jev_model` and `text_model` — story 33's "its reasoning effort and its endpoint
+  configurable" as the section's own shape. A planner turn's `usage.cost` is zero: eta's
+  chat client reports tokens only, recorded in docs/missing-eta-api.md.
 - L29 format decision: `nix develop -c ocamlfind list | grep -i yaml` found no YAML library on the OxCaml 5.4 switch. opam metadata for `yaml` 3.2.0 lists `ctypes` and `bos` (also `dune-configurator`) as dependencies requiring an install into the shared switch, which this job must not disturb. JSON-only `<site>.json` is the shipped format; `.yaml` is refused with an actionable JSON message.

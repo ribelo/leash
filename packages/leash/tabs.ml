@@ -1474,7 +1474,8 @@ let drive ?decide ?text_helper t ~owner ~model (args : P.drive_args) =
       let* tab = locate t ~access:Act ~owner args.tab in
       drive_locked ?decide ?text_helper t ~owner ~model tab args)
 
-(* L31 run-9ypy run-vj48 run-shgh run-fwl8: a mission over the installed playbooks, with the
+(* L31 run-9ypy run-vj48 run-shgh run-fwl8, L32 run-m0r8: a mission over the installed
+   playbooks, with the
    tab's action lock held for the whole run. Every step is one [drive_locked] call — the
    very operator level the [drive] command runs — and every judgment goes through
    [Run.loop]'s handler, which this builds over the browser and the models service's levels
@@ -1674,6 +1675,14 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                         });
                 verify;
                 plan = (fun request -> levels.Run.plan ~deadline:(remaining ()) request);
+                (* run-m0r8: a planner-written procedure that ran and passed its
+                   expectations is written to XDG state here; the playbook the operator
+                   authored is never written by a run, only by [playbook accept]. *)
+                propose =
+                  (fun ~site proc ->
+                    match Playbook.propose ~site proc with
+                    | Ok path -> Ok path
+                    | Error why -> Error (error "internal" why));
                 hand_off =
                   (fun ~reason ->
                     let tab, _ = begin_handoff_locked t ~owner ~reason tab in

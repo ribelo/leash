@@ -1,11 +1,13 @@
 (** The models the drive talks to (L19; drive-e7oi drive-yqxg drive-ls3c).
 
-    One service owns both model clients over one {!Eta_http.Client.t} — the client is
+    One service owns every model client over one {!Eta_http.Client.t} — the client is
     created with TLS here, on the service's switch, and every endpoint goes through it —
     and the drive's production [Decide] is {!decide}: {!Jev_request.body} shapes the
     request, {!Eta_ai_systemone.Client.evaluate} performs it, and {!Jev_request.decide}
     validates what came back. The text helper step's completion ({!Eta_ai_chat}) is the
-    second client on the same transport; {!text_helper} hands it out.
+    second client on the same transport; {!text_helper} hands it out. L32 adds the
+    planner's own chat client on that same transport, whose model, reasoning and endpoint
+    are the models section's to configure (run-d99l); {!levels} is what the run uses.
 
     Cancellation and finalizers: {!create} acquires the HTTP client against [sw] and
     registers nothing else; every call runs in the calling fiber, opens and closes its own
@@ -24,9 +26,11 @@ val create :
 (** [create ~sw ~net ~clock ~logger models] is the models service: one TLS HTTP client on
     [sw] and, when [models.api_key] is present, the System One client pinned to
     [models.jev_model] and pointed at [models.systemone_endpoint], plus the chat client of
-    the text helper step pointed at [models.chat_base_url] (L22). Without a key there is
-    no client at all and {!decide} refuses before anything is sent. The API key travels as
-    a {!Eta_observability.Redact.t} and only {!Eta_ai.Bearer.header} reveals it, on the
+    the text helper step pointed at [models.chat_base_url] (L22) and the planner's chat
+    client, pointed at [models.planner_endpoint] when the operator set one and at the same
+    chat route otherwise (run-d99l). Without a key there is no client at all and {!decide}
+    refuses before anything is sent. The API key travels as a
+    {!Eta_observability.Redact.t} and only {!Eta_ai.Bearer.header} reveals it, on the
     request path; the chat client is pure and synchronous, so it is built here beside the
     System One one and shares the transport. *)
 
@@ -95,6 +99,9 @@ val score :
     [invalid-response]. The caller compares it against its threshold. *)
 
 val levels : t -> Run.levels
-(** run-7blx: the run's three upper-level calls over this one service. L31's [plan] is the
-    stub the milestone pins — it answers [Run.Fail] naming L32 — so the seam is already
-    the one L32 replaces. *)
+(** run-7blx run-w7ke run-d99l: the run's three upper-level calls over this one service.
+    [plan] is L32's planner turn — {!Planner} over the configured [planner_model], at the
+    configured [planner_reasoning], through the planner's own chat client — so a run that
+    stops needing judgment gets Luna's answer, and without an API key it is [missing-key]
+    before anything is sent. Every answered call is logged at info with its tokens, and
+    those ride on as the reply's [usage] so the run's trace carries them (run-obtt). *)

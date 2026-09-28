@@ -21,6 +21,10 @@ type t = {
   chat : Eta_ai_chat.t option;
       (** The text helper's chat client, [None] for the same missing key; {!text_helper}
           is the helper a drive takes over it. *)
+  planner_chat : Eta_ai_chat.t option;
+      (** L32 run-d99l: the planner's chat client. Same key, same transport, and the same
+          route as [chat] unless [models.planner_endpoint] names another one, so the
+          fallback's model, endpoint and reasoning are all the operator's to change. *)
 }
 
 (* drive-yqxg: the chat route is the configured base URL plus the OpenAI-compatible path,
@@ -29,6 +33,13 @@ let chat_endpoint (config : Config.models) =
   let base = Config.Text.to_string config.chat_base_url in
   let rec trim at = if at > 0 && base.[at - 1] = '/' then trim (at - 1) else at in
   String.sub base 0 (trim (String.length base)) ^ "/chat/completions"
+
+(* run-d99l: the planner's route — the configured endpoint when the operator set one, and
+   otherwise the chat route the text helper uses. *)
+let planner_endpoint (config : Config.models) =
+  match config.planner_endpoint with
+  | Some endpoint -> Config.Text.to_string endpoint
+  | None -> chat_endpoint config
 
 let create ~sw ~net ~clock ~logger (config : Config.models) =
   let http = Eta_http.Client.create ~sw ~net ~clock ~tls:(Eta_http.Client.tls ()) () in
@@ -48,7 +59,12 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
         Eta_ai_chat.create ~http ~clock ~logger ~endpoint:(chat_endpoint config) ~api_key
           ())
   in
-  { config; logger; http; systemone; chat }
+  let planner_chat =
+    with_key (fun api_key ->
+        Eta_ai_chat.create ~http ~clock ~logger ~endpoint:(planner_endpoint config)
+          ~api_key ())
+  in
+  { config; logger; http; systemone; chat; planner_chat }
 
 (* drive-e7oi: the model id is what the client sends and checks the reply against, and the
    two endpoints are the configured ones. Nothing here reads the key. *)
@@ -258,17 +274,25 @@ let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
                      (Printf.sprintf "the score %g is not inside 0..1" value))
           | _ -> Error (invalid_response "the reply carries no score answer")))
 
-(* run-7blx: the one seam a run's upper levels use. The plan stub is L31's: the planner
-   arrives in L32 (run-w7ke), so a run that stops needing judgment ends naming that. *)
+(* run-7blx run-w7ke run-d99l: the one seam a run's upper levels use. The planner turn is
+   L32's Luna over the second chat client (run-d99l), with the configured model and
+   reasoning; without a key there is no client and the turn refuses before anything is
+   sent, as the two choice levels do. *)
 let levels (t : t) : Run.levels =
   Run.
     {
       choose = (fun ~deadline question -> choose ~deadline t question);
       score = (fun ~deadline ~sentence ~state -> score ~deadline t ~sentence ~state);
       plan =
-        (fun ~deadline:_ _request ->
-          Ok
-            (Run.Fail
-               "the planner is not built until L32 (run-w7ke); the run cannot decide \
-                what to                 do next"));
+        (fun ~deadline request ->
+          match t.planner_chat with
+          | None -> Error missing_key
+          | Some client ->
+              let planner =
+                Planner.create ~client
+                  ~model:(Config.Text.to_string t.config.planner_model)
+                  ~reasoning:(Config.Text.to_string t.config.planner_reasoning)
+                  ~logger:t.logger ()
+              in
+              planner.Planner.plan ~deadline request);
     }

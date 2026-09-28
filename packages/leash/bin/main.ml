@@ -357,9 +357,26 @@ let playbook_command =
       (Cmd.info "check" ~doc:"Check a JSON playbook file and show resolved checkers.")
       Term.(const (fun file () () -> output (Leash.Playbook.load file)) $ file $ const ())
   in
+  (* run-m0r8: the operator's one way to merge a proposal the planner wrote. The run
+     writes proposals to XDG state and never touches a playbook; this command is the hand
+     that accepts one, and it validates the merged playbook before it writes. *)
+  let accept =
+    Cmd.v
+      (Cmd.info "accept" ~doc:"Merge a proposed procedure into its site's playbook.")
+      Term.(
+        const (fun file () () ->
+            match Leash.Playbook.accept file with
+            | Error message -> failure message
+            | Ok accepted ->
+                print_endline
+                  (Yojson.Safe.pretty_to_string
+                     (Leash.Playbook.yojson_of_accepted accepted));
+                0)
+        $ file $ const ())
+  in
   Cmd.group
-    (Cmd.info "playbook" ~doc:"Inspect and validate site playbooks.")
-    [ list; show; check ]
+    (Cmd.info "playbook" ~doc:"Inspect, validate and grow site playbooks.")
+    [ list; show; check; accept ]
 
 let commands =
   List.map

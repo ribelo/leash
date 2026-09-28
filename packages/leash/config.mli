@@ -63,6 +63,9 @@ type models = {
   jev_model : Text.t;
   chat_base_url : Text.t;
   text_model : Text.t;
+  planner_model : Text.t;
+  planner_reasoning : Text.t;
+  planner_endpoint : Text.t option;
 }
 (** drive-e7oi drive-yqxg: the models section. [api_key] is absent when the file does not
     carry one and the environment does not either; {!env} fills it from
@@ -73,7 +76,14 @@ type models = {
     TypeSafe's direct endpoint ([https://api.typesafe.ai/v1/systemone]) is accepted
     unchanged because it serves the same contract, so either key works. [jev_model]
     defaults to the pinned [typesafe/jev-1.13-20260917] — the model the reply is checked
-    against — and [text_model] to the text helper's [inception/mercury-2.5]. *)
+    against — and [text_model] to the text helper's [inception/mercury-2.5].
+
+    L32 run-d99l: [planner_model] is the fallback planner's own model, default
+    [openai/gpt-6-luna] through the same OpenRouter chat route; [planner_reasoning] is the
+    effort that route is asked with — ["high"] by default, and ["none"] turns reasoning
+    off — and [planner_endpoint], absent by default, replaces the
+    [chat_base_url + "/chat/completions"] route the planner would otherwise share with the
+    text helper. All three are [models] keys, flat beside the model ids they tune. *)
 
 type handoff = { focus_command : string list; notify_command : string list }
 (** hand-04rb hand-phof hand-rg9h: the two desktop commands a handoff runs, each an argv

@@ -200,7 +200,8 @@ let key = "test-key"
 let models_config ?(api_key = Some key)
     ?(endpoint = "https://openrouter.ai/api/v1/systemone") () : Config.models =
   {
-    Config.api_key = Option.map Eta_observability.Redact.make api_key;
+    Config.default.models with
+    api_key = Option.map Eta_observability.Redact.make api_key;
     systemone_endpoint = text_value endpoint;
     jev_model = text_value jev_model;
     chat_base_url = text_value "https://openrouter.ai/api/v1";

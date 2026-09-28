@@ -63,16 +63,42 @@ type plan_trigger = Blocked | Failed | Arguments
 
 type plan_answer = Procedure of Playbook.procedure | Handoff of string | Fail of string
 
+type plan_reply = {
+  answer : plan_answer;
+  expect : string list;
+      (* run-2tt3: the mission's own expectations, which the planner may attach beside its
+         answer on its first turn — the sentences DONE is then verified against when the
+         caller stated none. Ignored on every later turn. *)
+  usage : P.run_usage option;
+      (* run-obtt: what the turn cost, provider-reported where the model route reports it
+         and otherwise its token counts, carried into the run's trace. *)
+}
+(** One planner turn's answer (run-rq6i), what it attached to the mission (run-2tt3) and
+    what it cost (run-obtt). *)
+
 type plan_request = {
   trigger : plan_trigger;
   reason : string;
   mission : string;
   site : string option;
-  procedures : (string * string) list;
+  playbook : Playbook.t option;
+      (* run-rq6i: the current playbook in its own schema — its procedures carry their
+         slugs, descriptions, expectations and steps, which is what a new procedure has to
+         fit — or [None] when the run has not chosen one. *)
   recent : (string * string) list;
+      (* run-rq6i: the trace so far, one procedure slug and its outcome per entry, oldest
+         first. *)
+  arguments : (string * string) list;
+  page_kind : string option;
+  title : string;
+  url : string;
+  text : string;
+      (* run-rq6i, the one level page text reaches: the planner gets the page summary plus
+         this bounded text, while the two choice levels never see it (run-pvmc). *)
 }
-(** run-rq6i's shape, asked now and answered by the stub: the mission, where it stopped and
-    why, the current playbook's procedures and the run so far. *)
+(** What one planner turn is asked from (run-rq6i, L32): the mission, the point JEV stopped
+    and why, the current playbook, the run so far, the arguments known and the observed
+    page. *)
 
 type levels = {
   choose :
@@ -80,7 +106,7 @@ type levels = {
   score :
     deadline:Eta.Duration.t -> sentence:string -> state:Yojson.Safe.t -> (float, P.error) result;
   plan :
-    deadline:Eta.Duration.t -> plan_request -> (plan_answer, P.error) result;
+    deadline:Eta.Duration.t -> plan_request -> (plan_reply, P.error) result;
 }
 (** run-7blx: the three upper-level calls as one seam over one models service, so a
     scripted test replaces the model with a function and production passes
@@ -105,7 +131,13 @@ type handler = {
           applies, each expectation with its verdict. [pages] are the current playbook's
           page kinds, which the [page_kind] checker is decided against. The observation it
           returns is the one it judged. *)
-  plan : plan_request -> (plan_answer, P.error) result;
+  plan : plan_request -> (plan_reply, P.error) result;
+      (** run-w7ke run-rq6i: the planner turn — Luna in production, a scripted answer in a
+          test — asked only at the three triggers and only while the turn cap allows it. *)
+  propose : site:string -> Playbook.procedure -> (string, P.error) result;
+      (** run-m0r8: write a planner-written procedure that ran and passed its expectations
+          to the XDG state directory, and answer the path written. The run reports it; only
+          the operator's [playbook accept] ever merges it into a playbook. *)
   hand_off : reason:string -> (P.tab_info, P.error) result;
       (** run-klp9: a planner's handoff, which leaves the tab with the human. *)
 }
@@ -115,6 +147,7 @@ type args = {
   max_procedures : int;
   deadline_s : int;
   dry_run : bool;
+  max_plans : int;  (** run-obtt: the planner turn cap, 3 by default. *)
   expect : string list;
       (** run-4j1v: the mission's own expectations, which DONE is verified against
           independently of the last procedure. Empty until L32's planner attaches them —
@@ -127,6 +160,7 @@ let of_args (args : P.run_args) : args =
     max_procedures = Option.value ~default:40 args.P.max_procedures;
     deadline_s = Option.value ~default:900 args.P.deadline_s;
     dry_run = Option.value ~default:false args.P.dry_run;
+    max_plans = 3;
     expect = Option.value ~default:[] args.P.expect;
   }
 
@@ -197,7 +231,11 @@ type state = {
   checks : (string * Playbook.checker) list;
       (** The last verified procedure's expectations, which the DONE guard re-verifies when
           the mission carries none of its own (run-4j1v). *)
+  mission_expect : string list;
+      (** run-2tt3: the mission's expectations as the planner attached them on its first
+          turn, before they are resolved. A caller's own [expect] list wins over these. *)
   mission_checks : P.run_expectation list;
+  proposals : string list;  (** run-m0r8: the proposal files the run wrote, oldest first. *)
   count : int;  (** Procedures executed, the [use] calls and planner procedures included. *)
   switch : bool;  (** The next turn asks the playbook level. *)
   asked_switch : bool;  (** A switch was already asked since the last procedure. *)
@@ -212,6 +250,7 @@ let finish (st : state) status ?reason () =
       procedures = List.rev st.trace;
       mission_expectations = st.mission_checks;
       planner_turns = List.rev st.plans;
+      proposals = List.rev st.proposals;
       final = st.observation.snapshot;
       reason;
     }
@@ -267,7 +306,8 @@ type token = {
     (string * Playbook.checker) list ->
     int ->
     (P.run_expectation list * observation, P.error) result;
-  plan : plan_request -> (plan_answer, P.error) result;
+  plan : plan_request -> (plan_reply, P.error) result;
+  propose : string -> Playbook.procedure -> (string, P.error) result;
   hand_off : string -> (P.tab_info, P.error) result;
 }
 
@@ -280,6 +320,7 @@ let execute_step (t : token @ local) request = t.execute_step request
 let verify (t : token @ local) ~pages ~checks ~timeout_s =
   ((t.verify pages) checks) timeout_s
 let plan (t : token @ local) request = t.plan request
+let propose (t : token @ local) ~site proc = (t.propose site) proc
 let hand_off (t : token @ local) ~reason = t.hand_off reason
 
 type fill_outcome = Filled of state * (string * string) list | Unfilled of state * string
@@ -306,7 +347,9 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
       visited = [];
       book = None;
       checks = [];
+      mission_expect = [];
       mission_checks = [];
+      proposals = [];
       count = 0;
       switch = false;
       asked_switch = false;
@@ -481,69 +524,98 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
 
   let dialog_reason (dialog : P.dialog) = "dialog open: " ^ P.Dialog_kind.to_string dialog.P.kind in
 
-  (* run-w7ke run-klp9: the one planner turn. In L31 the handler's answer is the stub's
-     [Fail]; the ending it maps to is the status the trigger deserves — a procedure that
-     failed twice is [failed], anything else is [blocked] — and a handoff leaves the tab
-     with the human. *)
+  (* run-w7ke run-rq6i run-2tt3 run-obtt run-klp9: the one planner turn. It is asked only
+     at the three triggers JEV stopped at, only while the run's turn cap allows it, and its
+     answer maps to the ending the trigger deserves — a procedure that failed twice is
+     [failed], anything else [blocked] — with a handoff leaving the tab with the human. The
+     first turn may attach the mission's expectations (run-2tt3), which the DONE guard then
+     verifies instead of the caller's list; every turn's cost rides in the trace
+     (run-obtt). *)
   let rec planner (st : state) ~trigger ~reason =
-    let request =
-      {
-        trigger;
-        reason;
-        mission = args.mission;
-        site = Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook.site) st.book;
-        procedures =
-          (match st.book with
-          | Some book ->
-              List.map
-                (fun (proc : Playbook.procedure) -> (proc.Playbook.slug, proc.Playbook.description))
-                book.Playbook.playbook.procedures
-          | None -> []);
-        recent = st.recent;
-      }
-    in
-    match plan t request with
-    | Error error -> Error (with_trace st error)
-    | Ok answer ->
-        let turn =
-          P.
+    if List.length st.plans >= args.max_plans then
+      Ok
+        (Finish
+           (finish st
+              (status (if trigger = Failed then "failed" else "blocked"))
+              ~reason:
+                (Printf.sprintf "%s; the planner turn cap of %d was reached" reason
+                   args.max_plans)
+              ()))
+    else
+      let kind =
+        match st.book with
+        | Some book ->
+            Playbook.page_kind book.Playbook.playbook.pages ~url:st.observation.url
+              ~text:st.observation.text
+        | None -> None
+      in
+      let request =
+        {
+          trigger;
+          reason;
+          mission = args.mission;
+          site = Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook.site) st.book;
+          playbook =
+            Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook) st.book;
+          recent = st.recent;
+          arguments = st.known;
+          page_kind = kind;
+          title = st.observation.title;
+          url = st.observation.url;
+          text = st.observation.text;
+        }
+      in
+      match plan t request with
+      | Error error -> Error (with_trace st error)
+      | Ok reply ->
+          let turn =
+            P.
+              {
+                n = List.length st.plans + 1;
+                trigger = trigger_name trigger;
+                answer = answer_name reply.answer;
+                reason =
+                  (match reply.answer with
+                  | Procedure _ -> None
+                  | Handoff why -> Some why
+                  | Fail why -> Some why);
+                usage = reply.usage;
+              }
+          in
+          (* run-2tt3: only the first turn may attach the mission's expectations. *)
+          let st =
             {
-              n = List.length st.plans + 1;
-              trigger = trigger_name trigger;
-              answer = answer_name answer;
-              reason =
-                (match answer with
-                | Procedure _ -> None
-                | Handoff why -> Some why
-                | Fail why -> Some why);
-              usage = None;
+              st with
+              plans = turn :: st.plans;
+              mission_expect =
+                (if st.plans = [] && reply.expect <> [] then reply.expect
+                 else st.mission_expect);
             }
-        in
-        let st = { st with plans = turn :: st.plans } in
-        (match answer with
-        | Fail why ->
-            Ok
-              (Finish
-                 (finish st
-                    (status (if trigger = Failed then "failed" else "blocked"))
-                    ~reason:(Printf.sprintf "%s; the planner answered fail: %s" reason why)
-                    ()))
-        | Handoff why -> (
-            match hand_off t ~reason:why with
-            | Error error -> Error (with_trace st error)
-            | Ok _ -> Ok (Finish (finish st (status "handoff") ~reason:why ())))
-        | Procedure proc -> (
-            match st.book with
-            | None ->
-                Ok
-                  (Finish
-                     (finish st (status "blocked")
-                        ~reason:"the planner wrote a procedure but no playbook is chosen" ()))
-            | Some book ->
-                let choice =
-                  { key = proc.Playbook.slug; probabilities = `Assoc []; confidence = 1.; usage = None }
-                in
-                execute st ~book ~proc ~planned:true ~choice ~optional:false ~values:[]))
+          in
+          (match reply.answer with
+          | Fail why ->
+              Ok
+                (Finish
+                   (finish st
+                      (status (if trigger = Failed then "failed" else "blocked"))
+                      ~reason:(Printf.sprintf "%s; the planner answered fail: %s" reason why)
+                      ()))
+          | Handoff why -> (
+              match hand_off t ~reason:why with
+              | Error error -> Error (with_trace st error)
+              | Ok _ -> Ok (Finish (finish st (status "handoff") ~reason:why ())))
+          | Procedure proc -> (
+              match st.book with
+              | None ->
+                  Ok
+                    (Finish
+                       (finish st (status "blocked")
+                          ~reason:"the planner wrote a procedure but no playbook is chosen" ()))
+              | Some book ->
+                  let choice =
+                    { key = proc.Playbook.slug; probabilities = `Assoc []; confidence = 1.; usage = None }
+                  in
+                  execute st ~book ~proc ~planned:true ~choice ~optional:false ~values:[]))
 
   (* run-d82w run-prrv: a procedure's steps in order. A [use] runs the named procedure
      inline with its own expectations; an [optional] one is skipped when its first step
@@ -648,6 +720,18 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
     | Error error -> Error error
     | Ok (Unfilled (st, reason)) -> planner st ~trigger:Arguments ~reason
     | Ok (Filled (st, values)) ->
+        (* run-m0r8: a planner-written procedure that ran and passed its expectations is
+           proposed to the operator as a file in XDG state; the run reports the path and
+           never touches the playbook the operator authored. *)
+        let propose_verified st =
+          if not planned then Ok st
+          else
+            match propose t ~site:book.Playbook.playbook.Playbook.site proc with
+            | Error error -> Error (with_trace st error)
+            | Ok path ->
+                if List.mem path st.proposals then Ok st
+                else Ok { st with proposals = st.proposals @ [ path ] }
+        in
         let rec attempt n st =
           match steps st book proc values ~optional with
           | Error error -> Error error
@@ -674,11 +758,14 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
                         (* run-4j1v: the verified procedure's expectations are what the
                            DONE guard re-verifies when the mission carries none. *)
                         let st = { st with checks } in
-                        Ok
-                          (Continue
-                             (record st ~book ~proc ~planned ~choice ~drives ~expectations:results
-                                ~outcome:"verified" ~attempts:n
-                                ~elapsed:(ms (now () -. proc_started)) ~reason:None))
+                        (match propose_verified st with
+                        | Error error -> Error error
+                        | Ok st ->
+                            Ok
+                              (Continue
+                                 (record st ~book ~proc ~planned ~choice ~drives
+                                    ~expectations:results ~outcome:"verified" ~attempts:n
+                                    ~elapsed:(ms (now () -. proc_started)) ~reason:None)))
                       else if n < 2 then attempt (n + 1) st
                       else
                         planner st ~trigger:Failed
@@ -702,7 +789,9 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
             | Ok checker -> go ((sentence, checker) :: acc) rest
             | Error why -> Error (invalid ("expect: " ^ why)))
       in
-      go [] args.expect
+      (* run-2tt3: the mission's expectations are the caller's when the caller stated them,
+         and otherwise the ones the planner attached on its first turn. *)
+      go [] (if args.expect <> [] then args.expect else st.mission_expect)
     in
     match mission with
     | Error error -> Error error
@@ -985,7 +1074,11 @@ let loop ~(handler : handler) ~now ~installed (args : args) =
           (P.run_expectation list * observation, P.error) result
           Effect.t
 
-      type _ Effect.t += Plan : plan_request -> (plan_answer, P.error) result Effect.t
+      type _ Effect.t += Plan : plan_request -> (plan_reply, P.error) result Effect.t
+
+      type _ Effect.t +=
+        Propose : string * Playbook.procedure -> (string, P.error) result Effect.t
+
       type _ Effect.t += Hand_off : string -> (P.tab_info, P.error) result Effect.t
     end in
     let token =
@@ -998,6 +1091,7 @@ let loop ~(handler : handler) ~now ~installed (args : args) =
         execute_step = (fun request -> Effect.perform (M.Execute_step request));
         verify = (fun pages checks timeout_s -> Effect.perform (M.Verify (pages, checks, timeout_s)));
         plan = (fun request -> Effect.perform (M.Plan request));
+        propose = (fun site proc -> Effect.perform (M.Propose (site, proc)));
         hand_off = (fun reason -> Effect.perform (M.Hand_off reason));
       }
     in
@@ -1040,6 +1134,10 @@ let loop ~(handler : handler) ~now ~installed (args : args) =
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
                     Effect.Deep.continue k (handler.plan request))
+            | M.Propose (site, proc) ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.propose ~site proc))
             | M.Hand_off reason ->
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->

@@ -113,12 +113,22 @@ let default_chat_base_url = "https://openrouter.ai/api/v1"
 let default_jev_model = "typesafe/jev-1.13-20260917"
 let default_text_model = "inception/mercury-2.5"
 
+(* L32 run-d99l: the planner is a fallback, not the driver, so its own model is configured
+   on its own: Luna through the same OpenRouter chat route the text helper uses, reasoning
+   at "high" as the L32 decisions record, and the route [planner_endpoint] overrides when
+   an operator points the planner at another OpenAI-compatible endpoint. *)
+let default_planner_model = "openai/gpt-6-luna"
+let default_planner_reasoning = "high"
+
 type models = {
   api_key : Redact.t option;
   systemone_endpoint : Text.t; [@json.default default_systemone_endpoint]
   jev_model : Text.t; [@json.default default_jev_model]
   chat_base_url : Text.t; [@json.default default_chat_base_url]
   text_model : Text.t; [@json.default default_text_model]
+  planner_model : Text.t; [@json.default default_planner_model]
+  planner_reasoning : Text.t; [@json.default default_planner_reasoning]
+  planner_endpoint : Text.t option;
 }
 [@@deriving yojson]
 
@@ -136,6 +146,9 @@ let default_models =
     jev_model = default_jev_model;
     chat_base_url = default_chat_base_url;
     text_model = default_text_model;
+    planner_model = default_planner_model;
+    planner_reasoning = default_planner_reasoning;
+    planner_endpoint = None;
   }
 
 let default_focus_command =
@@ -243,6 +256,10 @@ let default_toml =
 # jev_model = %S
 # chat_base_url = %S
 # text_model = %S
+# planner_model = %S          # the fallback planner (Luna)
+# planner_reasoning = %S      # OpenRouter effort; "none" turns reasoning off
+# planner_endpoint = "https://openrouter.ai/api/v1/chat/completions"
+#                             # default: chat_base_url + /chat/completions
 #
 # [handoff]
 # focus_command = %s
@@ -250,7 +267,8 @@ let default_toml =
 |}
     default_binary default_profile_dir default_workspace default_cap default_idle_s
     default_unclaimed_s default_tombstone_s default_socket default_systemone_endpoint
-    default_jev_model default_chat_base_url default_text_model
+    default_jev_model default_chat_base_url default_text_model default_planner_model
+    default_planner_reasoning
     (toml_array default_focus_command)
     (toml_array default_notify_command)
 

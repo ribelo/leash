@@ -12,9 +12,13 @@
     verification of the mission's own expectations or, when the mission carries none, of
     the last verified procedure's (run-4j1v, the guard L30's measurement demanded). When
     JEV stops — a BLOCKED answer, a procedure that failed twice, an argument the mission
-    does not supply — one planner turn is asked (run-w7ke); L32 fills it with Luna, and
-    until then its handler answers [Fail], so such a run ends [blocked] or [failed] naming
-    why.
+    does not supply — one planner turn is asked (run-w7ke), up to a cap of three per run
+    (run-obtt), whose answer is a procedure to run now, a handoff, or a failure with its
+    reason (run-rq6i); on its first turn it may also attach the mission's own
+    expectations, which the DONE guard then verifies when the caller stated none
+    (run-2tt3). A procedure the planner wrote that ran and passed its expectations is
+    proposed as a file under XDG state and reported, never merged into a playbook
+    (run-m0r8).
 
     Everything is a handler: production ({!Tabs.run}), a scripted test and a dry run are
     this same computation with different handlers, and the run itself touches no browser,
@@ -82,17 +86,38 @@ type plan_answer =
       (** What a planner turn may answer (run-rq6i, L32): a procedure to run now, a
           handoff with the reason the human is shown, or a failure with its reason. *)
 
+type plan_reply = {
+  answer : plan_answer;
+  expect : string list;
+  usage : Protocol.run_usage option;
+}
+(** One planner turn's answer with what came beside it (run-rq6i run-2tt3 run-obtt):
+    [expect] is the mission's own expectations the planner attached on its first turn —
+    the sentences DONE is then verified against, when the caller stated none — and [usage]
+    is what the turn cost, carried into the run's trace. *)
+
 type plan_request = {
   trigger : plan_trigger;
   reason : string;
   mission : string;
   site : string option;
-  procedures : (string * string) list;
+  playbook : Playbook.t option;
   recent : (string * string) list;
+  arguments : (string * string) list;
+  page_kind : string option;
+  title : string;
+  url : string;
+  text : string;
 }
-(** What a planner turn is asked from: the mission, the point JEV stopped and why, the
-    current playbook's procedures and the run so far. L32 adds the page summary, the
-    bounded page text and the trace. *)
+(** What a planner turn is asked from (run-rq6i, L32): the mission, the point JEV stopped
+    and why, the current playbook in its own schema — which is what a new procedure has to
+    fit — the trace so far, the arguments already known, and the observed page: its kind,
+    title and URL plus its visible text, bounded by the planner. This is the one level
+    page text reaches; the two choice levels never see it (run-pvmc). *)
+
+val trigger_name : plan_trigger -> string
+(** run-xqh8: the trigger as the trace and the planner's request name it — ["blocked"],
+    ["failed"] or ["arguments"]. *)
 
 type levels = {
   choose : deadline:Eta.Duration.t -> question -> (choice, Protocol.error) result;
@@ -101,7 +126,7 @@ type levels = {
     sentence:string ->
     state:Yojson.Safe.t ->
     (float, Protocol.error) result;
-  plan : deadline:Eta.Duration.t -> plan_request -> (plan_answer, Protocol.error) result;
+  plan : deadline:Eta.Duration.t -> plan_request -> (plan_reply, Protocol.error) result;
 }
 (** run-7blx: the upper levels as one seam over one models service — the two choice
     questions, the score question a judgment checker asks ("how well does the current page
@@ -129,9 +154,15 @@ type handler = {
           where a checker applies and scored by JEV where none does, with the bounded
           wait. [pages] are the current playbook's page kinds: the [page_kind] checker is
           decided against them. The observation it returns is the one it judged. *)
-  plan : plan_request -> (plan_answer, Protocol.error) result;
-      (** run-w7ke: the planner turn. L31's production answer is the stub's [Fail]; L32
-          replaces the handler. *)
+  plan : plan_request -> (plan_reply, Protocol.error) result;
+      (** run-w7ke run-rq6i: the planner turn, asked only at the three triggers and only
+          while the turn cap allows it. Production is Luna through {!Models.levels}; a
+          scripted test answers with a record of its own. *)
+  propose : site:string -> Playbook.procedure -> (string, Protocol.error) result;
+      (** run-m0r8: write a planner-written procedure that ran and passed its expectations
+          to the XDG state directory and answer the path written. Production writes the
+          file; the run only reports it, and nothing merges it but the operator's
+          [playbook accept]. *)
   hand_off : reason:string -> (Protocol.tab_info, Protocol.error) result;
       (** run-klp9: a planner's handoff, which leaves the tab [with_human]. *)
 }
@@ -141,6 +172,9 @@ type args = {
   max_procedures : int;  (** Default 40 (run-vspj). *)
   deadline_s : int;  (** Default 900 (run-vspj). *)
   dry_run : bool;
+  max_plans : int;
+      (** run-obtt: how many planner turns the run may take, 3 by default. The trigger
+          that arrives with the cap reached ends the run instead of asking again. *)
   expect : string list;
       (** The mission's own expectations, which DONE is verified against independently of
           the last procedure (run-4j1v). L32's planner attaches them when the mission
@@ -148,8 +182,8 @@ type args = {
 }
 
 val of_args : Protocol.run_args -> args
-(** The wire arguments with their defaults: 40 procedures, 900 seconds, no dry run, no
-    mission expectations. *)
+(** The wire arguments with their defaults: 40 procedures, 900 seconds, no dry run, three
+    planner turns, no mission expectations. *)
 
 val loop :
   handler:handler ->
@@ -160,9 +194,9 @@ val loop :
 (** [loop ~handler ~now ~installed args] runs the mission.
 
     Every ending is a result, never a refusal: [done] when DONE was verified, [blocked] or
-    [failed] when the planner answered [Fail], [handoff] when it asked for the human,
-    [limit] at the procedure cap, [deadline] at the run's deadline, and [error] when a
-    dialog is open on the page (run-klp9). A protocol error is what the run cannot start
-    with — the arguments, or a mission expectation the playbook cannot resolve — or a
-    model or browser failure, which carries the trace it had completed in
-    [detail.procedures] (run-xqh8). *)
+    [failed] when the planner answered [Fail] or its turn cap was reached (run-obtt),
+    [handoff] when it asked for the human, [limit] at the procedure cap, [deadline] at the
+    run's deadline, and [error] when a dialog is open on the page (run-klp9). A protocol
+    error is what the run cannot start with — the arguments, or a mission expectation the
+    playbook cannot resolve — or a model or browser failure, which carries the trace it
+    had completed in [detail.procedures] (run-xqh8). *)

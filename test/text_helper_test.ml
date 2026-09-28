@@ -300,9 +300,12 @@ let chat_server ~sw ~net replies =
           reply
       | [] -> Chat.failure 500 "the chat script is exhausted")
 
+(* L32: the planner's three keys keep their defaults here — the text helper's tests ask
+   the chat route, not the planner's. *)
 let models_config ~systemone_endpoint ~chat_base_url : Config.models =
   {
-    Config.api_key = Some (Eta_observability.Redact.make key);
+    Config.default.models with
+    api_key = Some (Eta_observability.Redact.make key);
     systemone_endpoint = text_value systemone_endpoint;
     jev_model = text_value jev_model;
     chat_base_url = text_value chat_base_url;

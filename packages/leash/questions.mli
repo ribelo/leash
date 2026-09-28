@@ -39,3 +39,16 @@ val score : string -> string
 val score_levels : string list
 (** The score question's two levels, in order: the answer's position is the [0, 1] score
     {!Playbook.await} compares against its threshold. *)
+
+(** L32 (run-rq6i run-2tt3 run-obtt): the planner's own texts. The planner is the level
+    above JEV, so its framing is ours; it answers in the playbook's schema, may attach the
+    mission's expectations at its first turn, and a reply that did not decode is shown
+    back with why exactly once. *)
+
+val planner : string
+(** The planner's system message: the three answer shapes, the procedure's schema, and the
+    mission expectations it may attach. *)
+
+val planner_retry : string -> string
+(** [planner_retry why] is the follow-up user message of a turn whose first reply was
+    refused, naming the refusal so the second answer can correct it. *)

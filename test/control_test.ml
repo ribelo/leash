@@ -380,6 +380,20 @@ let budget () =
   Alcotest.(check bool)
     "tab-0ohq a row action outlasts the settlement deadline" true
     (ms (P.Click { tab = handle; snapshot; index = 1 }) > 30_000);
+  (* L32 run-obtt: the margin covers the last expectation wait and a planner turn's
+     correction call, so a run that stops at the planner still answers. *)
+  Alcotest.(check int)
+    "run-obtt a run outlasts its deadline by the planner's correction call" 975_000
+    (ms
+       (P.Run
+          {
+            tab = Some handle;
+            mission = "do the thing";
+            max_procedures = None;
+            deadline_s = Some 900;
+            dry_run = None;
+            expect = None;
+          }));
   Alcotest.(check int) "other commands keep one second" 1_000 (ms P.Status)
 
 let malformed () =
@@ -1341,7 +1355,11 @@ let decide_done ~deadline:_ (_ : Jev.request) =
         targets = [];
       }
 
-let levels_with answers questions =
+(* L32 run-w7ke: the planner answer a test scripts; production's Luna is exercised in
+   test/planner_test.ml, and the run's own wiring for a proposal here. *)
+let levels_with
+    ?(plan = Run.{ answer = Fail "nothing left to plan"; expect = []; usage = None })
+    answers questions =
   let remaining = ref answers in
   Run.
     {
@@ -1361,7 +1379,7 @@ let levels_with answers questions =
                     usage = None;
                   });
       score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
-      plan = (fun ~deadline:_ _ -> Ok (Run.Fail "the planner is not built until L32"));
+      plan = (fun ~deadline:_ _ -> Ok plan);
     }
 
 let run_wire ?(who = "alice") ?expect ?tab mission =
@@ -1622,6 +1640,120 @@ let run_refusals () =
         "run-9ypy the run opened a tab" 2
         (match tabs_now with `List xs -> List.length xs | _ -> 0))
 
+(* L32 run-m0r8 run-rq6i: a planner turn through the control seam — the production handler
+   writes the procedure it wrote and verified to XDG state, the reply reports the file, and
+   the installed playbook is left exactly as it was. Only [playbook accept] merges one. *)
+let run_proposal () =
+  let state = Filename.temp_file "leash-run-proposal" "" in
+  Sys.remove state;
+  Unix.mkdir state 0o700;
+  let previous = Sys.getenv_opt "XDG_STATE_HOME" in
+  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME" state;
+  Fun.protect
+    ~finally:(fun () ->
+      (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME"
+        (Option.value ~default:"" previous))
+    (fun () ->
+      rig (fun env sw _ tabs fake ->
+          let f = fake () in
+          let fixture = fixture "unlabelled-controls-chrome.json" in
+          page_script f fixture modal_text;
+          document_at ~title:"Blue Top" ~url:product_url f;
+          (* dune runs a test from its own directory and `dune exec` from the repository
+             root; the example resolves from either. *)
+          let playbook =
+            match
+              Leash.Playbook.load "../examples/playbooks/automationexercise.com.json"
+            with
+            | Ok book -> book
+            | Error _ -> (
+                match
+                  Leash.Playbook.load "examples/playbooks/automationexercise.com.json"
+                with
+                | Ok book -> book
+                | Error why -> Alcotest.fail why)
+          in
+          let read path =
+            let channel = open_in_bin path in
+            Fun.protect
+              ~finally:(fun () -> close_in channel)
+              (fun () -> really_input_string channel (in_channel_length channel))
+          in
+          let before = read playbook.Leash.Playbook.file in
+          let h =
+            result (request tabs "alice" (P.New { url = Some product_url })) |> tab
+          in
+          let questions = ref [] in
+          (* run-w7ke: the procedure level answers BLOCKED twice, so the planner is asked
+             once; run-rq6i: it answers with a procedure, which the loop runs and verifies. *)
+          let answers =
+            [
+              "automationexercise.com";
+              "BLOCKED";
+              "automationexercise.com";
+              "BLOCKED";
+              "DONE";
+            ]
+          in
+          let planned : Run.plan_answer =
+            Run.Procedure
+              Leash.Playbook.
+                {
+                  slug = "check-modal";
+                  description = "Check the added-to-cart modal.";
+                  args = None;
+                  steps =
+                    [ Goal Leash.Playbook.{ goal = "Look at the page."; hint = None } ];
+                  expect = [ "the page is post-add" ];
+                  expect_timeout_s = None;
+                  max_steps = None;
+                  deadline_s = None;
+                }
+          in
+          let plan = Run.{ answer = planned; expect = []; usage = None } in
+          let levels = levels_with ~plan answers questions in
+          let reply =
+            with_ticking_clock env sw (fun () ->
+                Leash.Control.handle ~model:"fixture-model" ~levels
+                  ~installed:[ playbook ] ~decide:decide_done tabs
+                  (run_wire ~tab:h "check the cart"))
+            |> Yojson.Safe.from_string |> P.decode_reply
+          in
+          let body = decoded reply in
+          Alcotest.(check string)
+            "run-rq6i the planned procedure ends the mission" "done"
+            (match get "status" body with `String s -> s | _ -> "");
+          (match get "procedures" body with
+          | `List [ entry ] ->
+              Alcotest.(check string)
+                "run-rq6i the trace names it" "check-modal"
+                (match get "slug" entry with `String s -> s | _ -> "");
+              Alcotest.(check bool)
+                "run-m0r8 it is marked planned" true
+                (match get "planned" entry with `Bool b -> b | _ -> false)
+          | _ -> Alcotest.fail "run-rq6i the trace is not the one planned procedure");
+          let expected =
+            Filename.concat
+              (Filename.concat (Filename.concat state "leash") "proposed")
+              "automationexercise.com-check-modal.json"
+          in
+          (match get "proposals" body with
+          | `List [ `String path ] ->
+              Alcotest.(check string)
+                "run-m0r8 the proposal is where the state directory says" expected path;
+              Alcotest.(check bool)
+                "run-m0r8 the proposal file exists" true (Sys.file_exists path)
+          | _ -> Alcotest.fail "run-m0r8 the run reported no proposal");
+          Alcotest.(check string)
+            "run-m0r8 the installed playbook is untouched" before
+            (read playbook.Leash.Playbook.file);
+          match get "planner_turns" body with
+          | `List [ turn ] ->
+              Alcotest.(check string)
+                "run-w7ke the trigger" "blocked"
+                (match get "trigger" turn with `String s -> s | _ -> "")
+          | _ -> Alcotest.fail "run-w7ke no planner turn"))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -1651,5 +1783,6 @@ let () =
           Alcotest.test_case "run-9ypy run-4j1v run-snk4 run-shgh run-7blx" `Quick
             run_mission;
           Alcotest.test_case "run-fwl8 run refusals" `Quick run_refusals;
+          Alcotest.test_case "run-rq6i run-m0r8 planner proposal" `Quick run_proposal;
         ] );
     ]

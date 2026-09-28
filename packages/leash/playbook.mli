@@ -43,6 +43,14 @@ type checker =
 
 type loaded = { file : string; playbook : t; checks : (string * checker list) list }
 
+type proposal = { site : string; procedure : procedure }
+(** run-m0r8: one planner-written procedure as it is proposed to the operator — the site
+    it belongs to and the procedure in the playbook's own schema. *)
+
+type accepted = { site : string; slug : string; playbook : string; replaced : bool }
+(** run-m0r8: what an accepted proposal did: the site, the procedure slug, the playbook
+    file written, and whether the slug replaced a procedure that was already there. *)
+
 val t_of_yojson : Yojson.Safe.t -> (t, string) result
 val yojson_of_t : t -> Yojson.Safe.t
 
@@ -52,11 +60,44 @@ val checker_name : checker -> string
 
 val resolve : page list -> string -> (checker, string) result
 val page_kind : page list -> url:string -> text:string -> string option
+val procedure_of_yojson : Yojson.Safe.t -> (procedure, string) result
+
+val yojson_of_procedure : procedure -> Yojson.Safe.t
+(** The procedure as the playbook's own JSON: what a planner's reply is decoded into
+    (run-rq6i) and what a proposal file carries (run-m0r8). *)
+
+val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
+val yojson_of_proposal : proposal -> Yojson.Safe.t
+val yojson_of_accepted : accepted -> Yojson.Safe.t
 val of_json : file:string -> Yojson.Safe.t -> (loaded, string) result
 val load : string -> (loaded, string) result
 val directory : unit -> string
 val list : unit -> (loaded list, string) result
 val show : string -> (loaded, string) result
+
+val check_procedure : ?file:string -> t -> procedure -> (unit, string) result
+(** run-rq6i run-m0r8: the loader's own rules for one procedure, applied to a procedure
+    that did not come from a validated file — a planner's answer, before the loop executes
+    it, and a proposal, before it is merged. [file] only names the origin in the message.
+    Beyond the file rules it refuses a procedure that calls itself and an expectation that
+    names a page kind this playbook does not declare, which are the two ways a procedure
+    from outside a file can fail to be runnable. *)
+
+val proposed_directory : unit -> string
+(** run-m0r8: [$XDG_STATE_HOME/leash/proposed] ([$HOME/.local/state] when the variable is
+    unset), where a run writes the procedures the planner wrote and verified. The playbook
+    directory is never written by a run. *)
+
+val propose : site:string -> procedure -> (string, string) result
+(** run-m0r8: write one proposed procedure to [<proposed_directory>/<site>-<slug>.json],
+    0600, and answer the path written. *)
+
+val accept : string -> (accepted, string) result
+(** run-m0r8: merge a proposal file into the site's installed playbook — by slug,
+    replacing the same one and appending otherwise — and write that playbook back. The
+    merged playbook must validate first, and a site served by no playbook, by more than
+    one, or by an invalid merge is refused with nothing written. This is the operator's
+    command: a run never merges a proposal itself. *)
 
 (* run-k8bx: restart every step from the beginning after the first failed check. *)
 val retry_once : execute:(unit -> unit) -> verify:(unit -> bool) -> bool
