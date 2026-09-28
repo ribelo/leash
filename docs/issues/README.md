@@ -81,6 +81,21 @@ The last milestone: the thing you leave running. Stories 13–16 were added from
 
 L24, L25 and L27 are independent; L26 after L24. L28 needs the operator.
 
+## Milestone 7 — run (`run/01-run.md`)
+
+Missions over playbooks: three JEV levels (playbook, procedure, operator), mandatory human-language expectations verified by code first and JEV score second, Luna as a bounded planner on demand, discovery, propose-and-approve for learned procedures. Read the spec's Further Notes for the design record.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L29 | **Playbooks and checkers.** Format and types, loader with every refusal, `playbook list/show/check`, page-kind matcher, checker resolution grammar, expectation wait, the download observer and `downloads` command (protocol updated), the shipped `allegro.pl` example. Pure tests plus fake-browser download events. | run-tcuz, run-r1e9, run-2lei, run-84ds, run-zmz8, run-dbji, run-fk99, run-xfxx, run-tny5, run-vbys, run-l06s, run-ykq4, run-k8bx, run-seqo | — | [ ] |
+| L30 | **State measurement.** Hand-written Allegro playbook; upper-level JEV questions built three ways (title+URL; plus page kind and recent procedures; plus page text) against five recorded page states; record which state chooses the right procedure, with probabilities, in the spec's status. Real JEV, headless, tiny cost. Pins story 18. | run-snk4 | L29 | [ ] |
+| L31 | **The loop.** `Select_playbook`/`Select_procedure`/`Fill_args`/`Execute_step`/`Verify`/`Plan` as an effect computation with a local token; production, scripted and dry-run handlers; playbook switching with `entry` navigation; `use`/`optional`; verified DONE; caps, deadline, trace, endings, refusals; `run` in the protocol and CLI. | run-9ypy, run-kli0, run-xh5d, run-qq3o, run-pvmc, run-5rll, run-d82w, run-prrv, run-4j1v, run-vspj, run-fp7i, run-xqh8, run-klp9, run-fwl8, run-vj48, run-4mzm, run-shgh, run-7blx | L29, L30 | [ ] |
+| L32 | **The planner.** Luna turn on the three triggers, three answers decoded fail-closed, mission-level expectations, turn cap and cost, proposals to XDG state, `playbook accept`, configurable model. | run-w7ke, run-rq6i, run-2tt3, run-obtt, run-m0r8, run-d99l | L31 | [ ] |
+| L33 | **Discovery.** `leash discover` as the loop with the planner leading; payment/deletion/messaging stop; caps; proposed playbook written. Skill updated for `run` and `discover`. | run-3vat, run-tt9z, run-xda7, run-tpnf | L32 | [ ] |
+| L34 | **Live acceptance for milestone 7** (headless, real JEV and Luna): Allegro find → offer → add to cart → cart, stopping before payment; one cross-site run with a PDF download and a playbook switch; one discovery run on a harmless site; costs recorded. Marks the spec completed. | run-seqo, and the run stories end to end | L33 | [ ] |
+
+L29 first; L30 needs only L29's loader and the models service; L31–L34 in order.
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
