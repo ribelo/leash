@@ -57,3 +57,15 @@ Packaging for anyone but this machine, CI, an HTTP adapter.
 ## Further Notes
 
 - Whether the unit is home-manager managed or a flake output installed by hand follows whatever Pie does today.
+- L28 headed acceptance is prepared as `scripts/live-acceptance-m6-headed`, the one
+  desktop pass the operator runs by hand: it prints the install steps from
+  `docs/install.md`, checks the unit and `leash status`, records niri's placement of
+  the `leash` window (rule present? which workspace? focused before/after a handoff),
+  runs the L27 skill workflow (`new/snap/fill/click/text/shot/debug/close`) on a page
+  it serves on 127.0.0.1 with a DSH-style owner, triggers one handoff and asks about
+  focus, the notification and the Done click (L18, whose result file it also writes),
+  then restarts and stops the unit and checks the exit status, the socket, Chrome, the
+  profile and the journal into `/tmp/leash-m6-headed-result.txt`. `bash -n` and
+  `--dry-run` are green (the dry run prints every step and touches nothing), and the
+  headed run is pending the operator; when the result is pasted back, tick L28 and set
+  this status to `completed`.

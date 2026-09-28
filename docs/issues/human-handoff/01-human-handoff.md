@@ -59,8 +59,13 @@ A streamed viewer; handoff inside `drive`; a GUI.
   stand-in focus got the substituted tab/reason/url/title, failing stand-ins
   warned without failing the handoff; SIGTERM exited 0, Chrome gone. No
   defects found, so no code changed.
-- Headed run pending the user: `scripts/live-acceptance-m4-headed` (manual,
-  headed Chrome, real niri focus + notify-send; do NOT run it headless or from
-  an agent). It records whether the tab resumed and what niri did with
-  `--class=leash` (windows before/after) into `/tmp/leash-m4-headed-result.txt`.
-  When that result is pasted back, flip this status to `completed` and tick L18.
+- Headed run prepared, pending the operator: `scripts/live-acceptance-m6-headed`
+  (L28) carries this row's headed half — one real handoff on the installed unit, with
+  niri focus and the notify-send Done action — and writes this spec's own result file
+  `/tmp/leash-m4-headed-result.txt` (`tab_resumed`, `handoff_reply`,
+  `user_saw_focus`, `user_saw_notification_with_done`, the niri windows before and
+  after). `scripts/live-acceptance-m4-headed` stays for a separate throwaway-profile
+  run if one is ever wanted. Both are manual, headed, and never run by an agent; the M6
+  script was validated with `bash -n` and `--dry-run` on 2026-09-28, which touches no
+  systemd, no Chrome and no network. When the result is pasted back, flip this status to
+  `completed` and tick L18.
