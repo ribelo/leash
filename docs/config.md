@@ -8,9 +8,11 @@ directory fails at boot with the field's JSON pointer, and `leash config check` 
 same without starting the service.
 
 Every setting has a default, so a file that names one field — or a file that is only
-comments — is a configuration. `leash config init` writes that file with every setting
-commented out and its default shown, refusing to overwrite an existing one unless
-`--force`; the file it writes decodes to the defaults it documents.
+comments, or no file at all — is a configuration: a first run starts on the defaults, and
+only a `--config FILE` path that is not there is an error naming it (svc-x8rp,
+napp-9x0s). `leash config init` writes that file with every setting commented out and its
+default shown, refusing to overwrite an existing one unless `--force`; the file it writes
+decodes to the defaults it documents.
 
 | key | default | meaning |
 | --- | --- | --- |

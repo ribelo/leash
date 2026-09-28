@@ -1457,6 +1457,111 @@ let config_init_cli () =
       let status, _, _ = run_cli ~env [ "config"; "init"; "--force" ] in
       Alcotest.(check bool) "svc-x8rp --force overwrites" true (status = Unix.WEXITED 0))
 
+(* svc-x8rp: a first run has no file at $XDG_CONFIG_HOME/leash/config.toml. The Door
+   decodes the empty document as the defaults and enters the program — that is the service
+   starting, before Chrome is anywhere in the picture — while a --config path that is not
+   there stays an error naming it (napp-9x0s). The program here is a stub: what the service
+   does once it is entered belongs to the other stories, and unit tests launch no browser. *)
+let service_starts_without_config () =
+  with_tree (fun root ->
+      let config_home = Filename.concat root "config" in
+      let runtime = Filename.concat root "runtime" in
+      let data = Filename.concat root "data" in
+      List.iter (fun path -> Unix.mkdir path 0o700) [ config_home; runtime; data ];
+      let getenv key =
+        match key with
+        | "XDG_CONFIG_HOME" -> Some config_home
+        | "XDG_RUNTIME_DIR" -> Some runtime
+        | "XDG_DATA_HOME" -> Some data
+        | _ -> None
+      in
+      let expected = C.env ~getenv C.default in
+      let default_path =
+        Filename.concat (Filename.concat config_home "leash") "config.toml"
+      in
+      Eta_test.run (fun env _sw ->
+          let entered = ref None in
+          let read_paths = ref [] in
+          let read path =
+            read_paths := path :: !read_paths;
+            Error `Missing
+          in
+          let run argv =
+            let stderr = Buffer.create 256 in
+            let stdout = Buffer.create 256 in
+            let code =
+              Eta_app.run_for_test ~env
+                ~journal:(Eta_observability.Logger.Reporter.writer ignore)
+                ~name:"leash" ~config:C.spec
+                ~pp_err:(fun fmt (`Service message) -> Format.pp_print_string fmt message)
+                ~getenv ~read
+                ~stderr:(fun text -> Buffer.add_string stderr text)
+                ~stdout:(fun text -> Buffer.add_string stdout text)
+                ~argv
+                (fun _env config _sw ->
+                  entered := Some config;
+                  Ok ())
+            in
+            (code, Buffer.contents stdout, Buffer.contents stderr)
+          in
+          let code, _, error = run [| "leash"; "run" |] in
+          Alcotest.(check int) "svc-x8rp run with no config file exits zero" 0 code;
+          Alcotest.(check string) "svc-x8rp it writes no diagnostic" "" error;
+          Alcotest.(check (list string))
+            "svc-x8rp the Door reads the default path" [ default_path ]
+            (List.rev !read_paths);
+          (match !entered with
+          | None -> Alcotest.fail "svc-x8rp the program was never entered"
+          | Some config ->
+              Alcotest.(check string)
+                "svc-x8rp the service starts on the defaults"
+                (Yojson.Safe.to_string (C.yojson_of_t expected))
+                (Yojson.Safe.to_string (C.yojson_of_t config)));
+          entered := None;
+          read_paths := [];
+          let missing = Filename.concat root "nowhere.toml" in
+          let code, _, error = run [| "leash"; "run"; "--config"; missing |] in
+          Alcotest.(check int) "svc-x8rp an absent --config exits two" 2 code;
+          Alcotest.(check bool)
+            "svc-x8rp and names the path" true (contains missing error);
+          Alcotest.(check bool)
+            "svc-x8rp and enters no program" true (Option.is_none !entered)))
+
+(* svc-x8rp: the same through the real binary, where the Door's own filesystem read
+   supplies [`Missing] and the CLI is the operator's first call. *)
+let config_check_without_file () =
+  with_tree (fun root ->
+      let config_home = Filename.concat root "config" in
+      let runtime = Filename.concat root "runtime" in
+      let data = Filename.concat root "data" in
+      let bin = Filename.concat root "bin" in
+      List.iter (fun path -> Unix.mkdir path 0o700) [ config_home; runtime; data; bin ];
+      let stub = Filename.concat bin "google-chrome-stable" in
+      close_out (open_out stub);
+      Unix.chmod stub 0o700;
+      let env =
+        [
+          ("XDG_CONFIG_HOME", config_home);
+          ("XDG_RUNTIME_DIR", runtime);
+          ("XDG_DATA_HOME", data);
+          ("PATH", bin);
+        ]
+      in
+      let status, output, error = run_cli ~env [ "config"; "check" ] in
+      Alcotest.(check bool)
+        "svc-x8rp config check with no file exits zero" true (status = Unix.WEXITED 0);
+      Alcotest.(check string) "svc-x8rp it writes no diagnostic" "" error;
+      Alcotest.(check bool)
+        "svc-x8rp the defaults carry the runtime socket" true
+        (contains
+           (Filename.concat (Filename.concat runtime "leash") "control.sock")
+           output);
+      let missing = Filename.concat root "nowhere.toml" in
+      let status, _, error = run_cli ~env [ "config"; "check"; "--config"; missing ] in
+      Alcotest.(check bool)
+        "svc-x8rp an absent --config exits two" true (status = Unix.WEXITED 2);
+      Alcotest.(check bool) "svc-x8rp and names the path" true (contains missing error))
+
 (* svc-o4wt: the CLI connects where control.socket says — not where XDG_RUNTIME_DIR would
    put a socket — and --socket overrides the file for one call. *)
 let socket_config_cli () =
@@ -1640,6 +1745,8 @@ let () =
         [
           test "defaults for every non-secret field" config_defaults;
           test "the default binary is found on PATH" binary_on_path;
+          test "the service starts with no config file" service_starts_without_config;
+          test "config check with no config file" config_check_without_file;
           test "config init writes, refuses and --force" config_init;
           test "config init through the CLI" config_init_cli;
         ] );

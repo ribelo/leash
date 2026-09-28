@@ -19,8 +19,10 @@
   eta_rpc
   eta_json
   eta_observability
+  eta_otel
   eta_http
   eta_ai
+  eta_ai_chat
   eta_ai_systemone
   ppx_yojson_minimal
   (eta_test :with-test)

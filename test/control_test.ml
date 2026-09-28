@@ -636,6 +636,75 @@ let socket () =
           Unix.chmod dir 0o700;
           verdict))
 
+(* svc-5wm8: one socket path has one owner. A second listener on the same path is
+   refused with [`Active_listener] and does not unlink the live socket, so the first
+   instance keeps answering: the operator sees a refusal at boot instead of two
+   services fighting over one Chrome profile. *)
+let listener_error = function
+  | `Invalid_policy why -> "Invalid_policy " ^ why
+  | `Unsafe_runtime_dir -> "Unsafe_runtime_dir"
+  | `Inaccessible_runtime_dir -> "Inaccessible_runtime_dir"
+  | `Ownership_conflict why -> "Ownership_conflict " ^ why
+  | `Active_listener -> "Active_listener"
+  | `Lock_conflict -> "Lock_conflict"
+  | `Lock_identity -> "Lock_identity"
+  | `Probe_failed -> "Probe_failed"
+  | `Bind_failed why -> "Bind_failed " ^ why
+
+let second_instance () =
+  with_runtime (fun runtime ->
+      (* [socket] is the Alcotest case below, so take the path from the layout. *)
+      let path = Filename.concat (Filename.concat runtime "leash") "control.sock" in
+      rig (fun env sw _ tabs _ ->
+          let create () =
+            Leash.Control.create ~sw ~path
+              {
+                Leash.Control.tabs;
+                status_query = (fun () -> []);
+                models_status =
+                  (fun () ->
+                    Leash.Protocol.
+                      {
+                        configured = false;
+                        jev_model = "unconfigured";
+                        text_model = "";
+                        systemone_endpoint = "";
+                        chat_base_url = "";
+                      });
+                fs = env#fs;
+                net = env#net;
+                clock = env#clock;
+                logger =
+                  Eta_observability.Logger.create ~service:"socket-test" ~clock:env#clock
+                    ~mono_clock:env#mono_clock
+                    ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                    ();
+              }
+          in
+          (match create () with
+          | Ok _ -> ()
+          | Error error ->
+              Alcotest.failf "svc-5wm8 the first listener was refused: %s"
+                (listener_error error));
+          (* The lock file is what stops a second instance before the socket probe, so
+             the refusal is [`Lock_conflict]; [`Active_listener] is the same refusal seen
+             when only a live socket is there. Either one is the story: no second owner. *)
+          (match create () with
+          | Ok _ -> Alcotest.fail "svc-5wm8 a second instance started on the owned socket"
+          | Error `Lock_conflict | Error `Active_listener -> ()
+          | Error error ->
+              Alcotest.failf "svc-5wm8 expected a refusal, got %s" (listener_error error));
+          let flow = Eio.Net.connect ~sw env#net (`Unix path) in
+          Eio.Flow.copy_string {|{"v":1,"owner":"alice","cmd":"status","args":{}}
+|} flow;
+          let reply =
+            Eio.Buf_read.line (Eio.Buf_read.of_flow flow ~max_size:4096)
+            |> Yojson.Safe.from_string
+          in
+          Alcotest.(check bool)
+            "svc-5wm8 the first instance still answers after the refusal" true
+            (get "ok" reply = `Bool true)))
+
 let human () =
   rig (fun _ _ _ tabs fake ->
       let agent = result (request tabs "alice" (P.New { url = None })) |> tab in
@@ -1204,6 +1273,7 @@ let () =
           Alcotest.test_case "chrome-38a4" `Quick malformed;
           Alcotest.test_case "chrome-2z2z 6lfk" `Quick lost;
           Alcotest.test_case "chrome-fwnu socket" `Quick socket;
+          Alcotest.test_case "svc-5wm8 second instance" `Quick second_instance;
           Alcotest.test_case "tab-x4v0 large text over socket" `Quick
             large_text_over_socket;
           Alcotest.test_case "human-origin shutdown" `Quick human;

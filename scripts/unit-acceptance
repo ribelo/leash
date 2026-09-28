@@ -1,0 +1,408 @@
+#!/usr/bin/env bash
+# L26 gate: the systemd user unit's ExecStart command line, run headless against a
+# temporary root, plus the stories the unit carries:
+#
+#   svc-dit8  the ExecStart line starts the service and SIGTERM is a clean stop (0)
+#   svc-gxhu  `leash status` is the health check: it answers while the service runs
+#             and fails once the socket is gone
+#   svc-5wm8  a second instance on the same socket is refused and the first keeps
+#             serving, so two services never fight over one Chrome profile
+#   svc-46f0  ExecStart is the `nix build .#leash` output and the unit verifies
+#   svc-x8rp  a first run with no file at $XDG_CONFIG_HOME/leash/config.toml starts the
+#             service on the defaults alone
+#   svc-f4op  with OTLP enabled the last record logged before SIGTERM reaches a local
+#             collector: Leash calls no shutdown, eta_otel drains its queue on its own
+#             switch release (notel-1stb)
+#
+# The niri window rule is documented in docs/install.md and never applied by this
+# script; nothing here installs, enables, or reloads anything.
+#
+# Usage: scripts/unit-acceptance
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [[ "${1:-}" != "--inside-nix" ]]; then
+  exec nix develop -c bash "$0" --inside-nix "$@"
+fi
+shift
+if [[ "$#" != 0 ]]; then echo "usage: $0" >&2; exit 2; fi
+
+unit_dir="$(nix build .#leash-unit --print-out-paths --no-link)"
+unit="$unit_dir/leash.service"
+echo "unit: $unit"
+
+# svc-46f0 svc-dit8: the unit is the flake's, it is a graphical-session unit with a
+# restart policy and the session environment, and systemd parses it.
+for directive in \
+  'After=graphical-session.target' \
+  'PartOf=graphical-session.target' \
+  'Environment=XDG_RUNTIME_DIR=%t' \
+  'Restart=on-failure' \
+  'RestartSec=2' \
+  'SuccessExitStatus=0' \
+  'WantedBy=graphical-session.target'; do
+  grep -qxF "$directive" "$unit" || { echo "ERROR: the unit does not carry $directive" >&2; exit 1; }
+done
+systemd-analyze --user verify "$unit"
+
+exec_line="$(sed -n 's/^ExecStart=//p' "$unit")"
+echo "ExecStart: $exec_line"
+case "$exec_line" in
+  *" run") ;;
+  *) echo "ERROR: ExecStart is not the Door's run command: $exec_line" >&2; exit 1 ;;
+esac
+leash="${exec_line% run}"
+[[ -x "$leash" ]] || { echo "ERROR: ExecStart binary is not executable: $leash" >&2; exit 1; }
+echo "svc-46f0 unit: ExecStart is the nix build .#leash output ($leash)"
+
+binary="$(command -v google-chrome-stable || command -v chromium)"
+binary="$(realpath "$binary")"
+root="$(mktemp -d)"
+chmod 700 "$root"
+export XDG_RUNTIME_DIR="$root/runtime"
+mkdir -m 700 "$XDG_RUNTIME_DIR"
+profile="$root/profile"
+config="$root/leash.toml"
+log="$root/service.log"
+
+# A Chrome that belongs to this profile: the same shape scripts/live-acceptance uses.
+browser_alive() {
+  python3 - "$1" <<'PY'
+import os, sys
+profile = sys.argv[1].encode()
+for entry in os.listdir("/proc"):
+    if not entry.isdigit() or int(entry) == os.getpid():
+        continue
+    try:
+        argv = open("/proc/" + entry + "/cmdline", "rb").read().split(b"\0")
+    except OSError:
+        continue
+    if any(b"--user-data-dir=" + profile in arg for arg in argv) and any(
+        b"--remote-debugging-pipe" in arg for arg in argv
+    ):
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+
+# svc-f4op notel-1stb: a local collector stands in for the operator's OTLP endpoint. It
+# records every POST body with its arrival time and acknowledges each one slowly, so the
+# record logged just before the SIGTERM is still in flight when the Door stops: the only
+# way it can arrive again, after the stop, is the exporter's own release drain.
+collector_log="$root/collector.jsonl"
+collector_port_file="$root/collector.port"
+python3 - "$collector_log" "$collector_port_file" <<'PY' &
+import http.server, json, socketserver, sys, time
+
+log_path, port_path = sys.argv[1], sys.argv[2]
+hold = 1.5  # seconds before a POST is acknowledged
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def do_POST(self):
+        length = int(self.headers.get("content-length", 0))
+        raw = self.rfile.read(length)
+        try:
+            body = json.loads(raw)
+        except ValueError:
+            body = None
+        with open(log_path, "a") as out:
+            out.write(json.dumps({"at": time.time(), "path": self.path, "body": body}) + "\n")
+            out.flush()
+        time.sleep(hold)
+        try:
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", "2")
+            self.end_headers()
+            self.wfile.write(b"{}")
+        except OSError:
+            # The sender was cancelled and closed its socket; the body is already recorded.
+            pass
+
+    def log_message(self, *args):
+        pass
+
+
+class Server(socketserver.ThreadingTCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
+server = Server(("127.0.0.1", 0), Handler)
+with open(port_path, "w") as out:
+    out.write(str(server.server_address[1]))
+server.serve_forever()
+PY
+collector_pid=$!
+for _ in $(seq 1 200); do
+  if [[ -s "$collector_port_file" ]]; then break; fi
+  sleep 0.05
+done
+if [[ ! -s "$collector_port_file" ]]; then
+  echo "ERROR: svc-f4op the local collector did not start" >&2
+  exit 1
+fi
+collector_port="$(cat "$collector_port_file")"
+echo "svc-f4op collector: http://127.0.0.1:$collector_port (records every POST)"
+
+cat > "$config" <<EOF
+[chrome]
+binary = "$binary"
+profile_dir = "$profile"
+workspace = "leash"
+headless = true
+[models]
+jev_model = "unit-acceptance"
+text_model = "unit-acceptance"
+[otlp]
+endpoint = "http://127.0.0.1:$collector_port"
+EOF
+
+service_pid=""
+default_pid=""
+default_root=""
+default_profile=""
+cleanup() {
+  for pid in "$service_pid" "$default_pid" "$collector_pid"; do
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      kill -TERM "$pid" || :
+      wait "$pid" || :
+    fi
+  done
+  for data in "$profile" "$default_profile"; do
+    if [[ -n "$data" ]] && pgrep -f "user-data-dir=$data" >/dev/null 2>&1; then
+      pkill -f "user-data-dir=$data" || :
+    fi
+  done
+  rm -rf "$root" "${default_root:-}"
+}
+trap cleanup EXIT
+
+"$leash" run --config "$config" >"$log" 2>&1 &
+service_pid=$!
+socket="$XDG_RUNTIME_DIR/leash/control.sock"
+for _ in $(seq 1 200); do
+  if [[ -S "$socket" ]]; then break; fi
+  if ! kill -0 "$service_pid" 2>/dev/null; then
+    echo "ERROR: Leash exited before the control socket appeared" >&2
+    sed -n '1,80p' "$log" >&2
+    exit 1
+  fi
+  sleep 0.1
+done
+if [[ ! -S "$socket" ]]; then echo "ERROR: the control socket did not appear" >&2; exit 1; fi
+
+# svc-gxhu: the health check is one request the CLI answers 0 for while the service
+# is up; Chrome has to be running for the service to be healthy.
+for _ in $(seq 1 200); do
+  if "$leash" status --owner unit-acceptance --config "$config" >"$root/status.json" 2>&1; then break; fi
+  sleep 0.1
+done
+python3 - "$root/status.json" <<'PY'
+import json, sys
+report = json.load(open(sys.argv[1]))
+assert report["chrome"] == "running", report
+print("svc-gxhu leash status: healthy, chrome running, generation", report["generation"])
+PY
+generation="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["generation"])' "$root/status.json")"
+
+# svc-5wm8: the same ExecStart line again, on the same socket, is refused, and the
+# first instance keeps serving that socket.
+set +e
+"$leash" run --config "$config" >"$root/second.log" 2>&1
+second_status=$?
+set -e
+if [[ "$second_status" -eq 0 ]]; then
+  echo "ERROR: svc-5wm8 the second instance exited 0" >&2
+  exit 1
+fi
+if ! grep -q 'control socket' "$root/second.log"; then
+  echo "ERROR: svc-5wm8 the second instance did not name the control socket" >&2
+  sed -n '1,40p' "$root/second.log" >&2
+  exit 1
+fi
+running="$(pgrep -fc "bin/leash run --config $config" || true)"
+if [[ "$running" -ne 1 ]]; then
+  echo "ERROR: svc-5wm8 $running instances run the unit's command line" >&2
+  exit 1
+fi
+"$leash" status --owner unit-acceptance --config "$config" >"$root/status-after.json"
+python3 - "$root/status-after.json" "$generation" <<'PY'
+import json, sys
+report = json.load(open(sys.argv[1]))
+assert report["chrome"] == "running", report
+assert str(report["generation"]) == sys.argv[2], report
+PY
+echo "svc-5wm8 second instance: refused ($second_status: $(head -1 "$root/second.log")), first still serving generation $generation"
+
+# svc-f4op notel-1stb: the last record logged before the stop. This command's record
+# names the owner below, and the SIGTERM follows at once, so the record is in the queue or
+# in flight when the Door releases its root switch — and with the collector's slow
+# acknowledgement it cannot have been settled before then. Leash calls no shutdown and no
+# flush; the exporter's own release hook is what drains it (notel-1stb).
+"$leash" status --owner otlp-last --config "$config" >"$root/otlp-last.json"
+sigterm_at="$(python3 -c 'import time; print(time.time())')"
+
+# svc-dit8: SIGTERM is the stop the unit performs, and SuccessExitStatus=0 says it is
+# a clean one; the socket and Chrome go with the service.
+kill -TERM "$service_pid"
+set +e
+wait "$service_pid"
+service_status=$?
+set -e
+service_pid=""
+if [[ "$service_status" -ne 0 ]]; then
+  echo "ERROR: SIGTERM exit code $service_status, not 0" >&2
+  sed -n '1,80p' "$log" >&2
+  exit 1
+fi
+if [[ -S "$socket" ]]; then
+  echo "ERROR: the control socket outlived the service" >&2
+  exit 1
+fi
+if browser_alive "$profile"; then
+  echo "ERROR: Chrome outlived the service" >&2
+  exit 1
+fi
+echo "svc-dit8 SIGTERM: exit 0 (SuccessExitStatus=0), socket and Chrome gone"
+
+# svc-gxhu: with the service stopped the health check fails, which is what a
+# Restart=on-failure unit and its operator read.
+if "$leash" status --owner unit-acceptance --config "$config" >/dev/null 2>&1; then
+  echo "ERROR: svc-gxhu status answered after the service stopped" >&2
+  exit 1
+fi
+echo "svc-gxhu leash status: fails once the socket is gone"
+
+# svc-f4op notel-1stb: the record logged last before the stop reached the collector, and
+# the POST that carried it after the SIGTERM is the exporter's release drain: nothing in
+# Leash shut the exporter down, and the request the worker had in flight was cancelled with
+# it, so only the Door's switch release could re-send that record.
+if [[ ! -s "$collector_log" ]]; then
+  echo "ERROR: svc-f4op the collector received nothing" >&2
+  exit 1
+fi
+python3 - "$collector_log" "$sigterm_at" <<'PY'
+import json, sys
+
+sigterm_at = float(sys.argv[2])
+posts = [json.loads(line) for line in open(sys.argv[1])]
+
+
+def attr(record, key):
+    for item in record.get("attributes", []):
+        if item["key"] == key:
+            return item["value"].get("stringValue")
+    return None
+
+
+def is_last(record):
+    return (
+        (record.get("body") or {}).get("stringValue") == "control command"
+        and attr(record, "owner") == "otlp-last"
+    )
+
+
+def log_records(post):
+    body = post.get("body") or {}
+    return [
+        record
+        for resource in body.get("resourceLogs", [])
+        for scope in resource.get("scopeLogs", [])
+        for record in scope.get("logRecords", [])
+    ]
+
+
+def carries_last(post):
+    return next((record for record in log_records(post) if is_last(record)), None)
+
+
+records = [record for post in posts for record in log_records(post)]
+before = [post for post in posts if post["at"] <= sigterm_at and carries_last(post)]
+drained = [post for post in posts if post["at"] > sigterm_at and carries_last(post)]
+assert before or drained, "svc-f4op the record logged before SIGTERM never reached the collector"
+assert drained, (
+    "svc-f4op notel-1stb no POST after the SIGTERM carries the last record: the queue was "
+    "not drained on the switch release"
+)
+record = carries_last((drained or before)[0])
+assert attr(record, "cmd") == "status", record
+print(
+    "svc-f4op notel-1stb OTLP: the last record before SIGTERM reached the collector; "
+    "%d POST(s) before and %d after the SIGTERM (the release drain delivered it, no "
+    "shutdown call in Leash), %d log record(s) in all"
+    % (len(before), len(drained), len(records))
+)
+PY
+
+# svc-x8rp: a first run has no file at $XDG_CONFIG_HOME/leash/config.toml. The service
+# starts on the defaults alone — Chrome is the bare name on PATH, the profile and the
+# socket live under this run's XDG directories — and the CLI, which reads the same file,
+# answers it. The display is unset for this run only: a gate never puts a window on the
+# operator's desktop, and the service is up before Chrome matters.
+default_root="$(mktemp -d)"
+chmod 700 "$default_root"
+mkdir -m 700 "$default_root/runtime" "$default_root/data" "$default_root/config"
+default_profile="$default_root/data/leash/profile"
+default_socket="$default_root/runtime/leash/control.sock"
+default_env=(
+  env -u WAYLAND_DISPLAY -u DISPLAY
+  "XDG_RUNTIME_DIR=$default_root/runtime"
+  "XDG_DATA_HOME=$default_root/data"
+  "XDG_CONFIG_HOME=$default_root/config"
+)
+if [[ -e "$default_root/config/leash/config.toml" ]]; then
+  echo "ERROR: svc-x8rp the default path already has a file" >&2
+  exit 1
+fi
+"${default_env[@]}" "$leash" run >"$default_root/service.log" 2>&1 &
+default_pid=$!
+for _ in $(seq 1 200); do
+  if [[ -S "$default_socket" ]]; then break; fi
+  if ! kill -0 "$default_pid" 2>/dev/null; then
+    echo "ERROR: svc-x8rp the service exited before the control socket appeared" >&2
+    sed -n '1,80p' "$default_root/service.log" >&2
+    exit 1
+  fi
+  sleep 0.1
+done
+if [[ ! -S "$default_socket" ]]; then
+  echo "ERROR: svc-x8rp the control socket did not appear" >&2
+  exit 1
+fi
+if ! "${default_env[@]}" "$leash" status --owner unit-acceptance >"$default_root/status.json" 2>"$default_root/status.err"; then
+  echo "ERROR: svc-x8rp leash status failed against the no-config service" >&2
+  cat "$default_root/status.err" >&2
+  exit 1
+fi
+python3 - "$default_root/status.json" <<'PY'
+import json, sys
+report = json.load(open(sys.argv[1]))
+print(
+    "svc-x8rp no config file: the service started on the defaults, leash status answered, "
+    "chrome", report["chrome"]
+)
+PY
+kill -TERM "$default_pid"
+set +e
+wait "$default_pid"
+default_status=$?
+set -e
+default_pid=""
+if [[ "$default_status" -ne 0 ]]; then
+  echo "ERROR: svc-x8rp SIGTERM exit code $default_status, not 0" >&2
+  sed -n '1,80p' "$default_root/service.log" >&2
+  exit 1
+fi
+if [[ -S "$default_socket" ]]; then
+  echo "ERROR: svc-x8rp the control socket outlived the service" >&2
+  exit 1
+fi
+if browser_alive "$default_profile"; then
+  echo "ERROR: svc-x8rp Chrome outlived the service" >&2
+  exit 1
+fi
+echo "svc-x8rp no config file: SIGTERM exit 0, socket and Chrome gone"
+echo "unit acceptance passed (headless, temporary root; the niri rule stays documented)"

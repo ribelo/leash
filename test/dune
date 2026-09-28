@@ -16,7 +16,16 @@
 (test
  (name config_protocol_test)
  (modules config_protocol_test)
- (libraries leash eta_app eio eio_main unix yojson alcotest)
+ (libraries
+  leash
+  eta_app
+  eta_observability
+  eta_test
+  eio
+  eio_main
+  unix
+  yojson
+  alcotest)
  (deps ../packages/leash/bin/main.exe))
 
 (test

@@ -77,7 +77,10 @@
                   || base == "node_modules"
                 );
             };
-          pieSrc = cleanLocalSource ./.;
+          leashSrc = cleanLocalSource ./.;
+          # svc-46f0: eta-next's own metadata names the eta_json dependency of eta_http
+          # and the ppx_yojson_minimal preprocessor of the eta_ai_* packages (Eta
+          # 00501a5c), so the branch builds from opam-nix unpatched.
           etaSrc = cleanLocalSource eta;
           opamLib = opam-nix.lib.${system};
           etaRepo = opamLib.makeOpamRepo etaSrc;
@@ -164,7 +167,7 @@
               resolveArgs.env.sys-ocaml-version = "5.4.0";
             }
             "leash"
-            pieSrc
+            leashSrc
             {
               angstrom = "0.16.1";
               faraday = "0.8.2";
@@ -173,12 +176,31 @@
             };
 
           leash = scope.leash;
+          unit = import ./packaging/leash-unit.nix { lib = pkgs.lib; };
         in
         {
           default = leash;
           inherit leash;
+
+          # svc-dit8: the generated unit the home-manager module writes, as a file, for
+          # a hand install and for `systemd-analyze --user verify` (docs/install.md).
+          leash-unit = pkgs.writeTextFile {
+            name = "leash-unit";
+            destination = "/leash.service";
+            text = unit.toText (unit.unit { package = leash; });
+          };
         }
       );
+
+      # svc-dit8: the home-manager module, with the package already filled in from this
+      # flake's packages, so an import of it is the whole install:
+      #
+      #   imports = [ inputs.leash.homeManagerModules.leash ];
+      #   ribelo.leash.enable = true;
+      homeManagerModules.leash = { pkgs, lib, ... }: {
+        imports = [ ./packaging/home-manager.nix ];
+        ribelo.leash.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.leash;
+      };
 
       devShells = forAllSystems (
         system:

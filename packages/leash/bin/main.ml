@@ -69,26 +69,30 @@ let table command result =
    the wire. *)
 let cli_options = [ "owner"; "pretty"; "table"; "config"; "socket" ]
 
-(* svc-o4wt: --socket wins for one call; otherwise the CLI reads the same configuration
-   the service does — --config, or $XDG_CONFIG_HOME/leash/config.toml — and a file that is
-   not there is the defaults, so the client works before `leash config init` has run. A
-   file that is there and wrong is the error the service would report. *)
+(* svc-o4wt svc-x8rp: --socket wins for one call; otherwise the CLI reads the same
+   configuration the service does — --config, or $XDG_CONFIG_HOME/leash/config.toml — and
+   the Door's rule decides whether an absent file is allowed (napp-9x0s): nothing at the
+   default path is the defaults, so the client works before `leash config init` has run,
+   while a --config path that is not there is an error naming it, exactly what the service
+   reports. A file that is there and wrong is an error either way. *)
 let service_socket ~config ~socket =
   match socket with
   | Some path -> Ok path
   | None -> (
-      let file = Eta_app.Config.path ~name:"leash" ~config ~getenv:Sys.getenv_opt in
+      let source = Eta_app.Config.resolve ~name:"leash" ~config ~getenv:Sys.getenv_opt in
+      (* The Door's read outcome, not a message: a path with nothing at it is [`Missing],
+         which is only an error where --config named it. *)
       let read path =
-        if Sys.file_exists path then
+        if not (Sys.file_exists path) then Error `Missing
+        else
           try Ok (In_channel.with_open_bin path In_channel.input_all)
-          with Sys_error message -> Error message
-        else Ok ""
+          with Sys_error message -> Error (`Unreadable message)
       in
       match
-        Eta_app.Config.load ~spec:Leash.Config.spec ~getenv:Sys.getenv_opt ~read
-          ~path:file
+        Eta_app.Config.load ~spec:Leash.Config.spec ~getenv:Sys.getenv_opt ~read ~source
       with
       | Error (`Config message) ->
+          let file = match source with `Explicit path | `Default path -> path in
           Error ("invalid configuration in " ^ file ^ ": " ^ message)
       | Ok (config : Leash.Config.t) ->
           let path = Leash.Config.Text.to_string config.control.socket in
