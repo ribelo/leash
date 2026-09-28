@@ -96,6 +96,12 @@ Missions over playbooks: three JEV levels (playbook, procedure, operator), manda
 
 L29 first; L30 needs only L29's loader and the models service; L31–L34 in order.
 
+## Milestone 8 — hardening from use (`hardening-1/01-hardening-1.md`; more specs as findings arrive)
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L35 | **Dialogs end waits.** One race helper for every tab wait; `new`/`nav` return the tab with `dialog`; actions return `ActionResult` with `dialog`; `wait` returns `dialog-open`; `beforeunload`; `prompt` text; listener budget → `timeout` reply; fake-browser dialog scripts; live pages; skill line. | hard-6eei, hard-dljv, hard-s719, hard-t6cq, hard-tsva, hard-yi0a, hard-92ik, hard-owci, hard-wo78, hard-fir4 | — | [ ] |
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
