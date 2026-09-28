@@ -274,6 +274,10 @@ type state = {
           passed to a model. Full validated records are streamed only. *)
   collected_count : int;
   pages : int;  (** extr-ve3k: verified pages, including the first page. *)
+  complete : bool;
+      (** extr-b3u0: the last pagination ended because its end condition held or its next
+          page did not exist, not because it hit [max] or a limit — the one fact about a
+          collection the upper levels need to answer DONE. *)
   pending_scripts : P.run_script list;
       (** The script calls of the procedure being executed, newest first, moved into its
           trace entry when it is recorded. *)
@@ -416,6 +420,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         records = [];
         collected_count = 0;
         pages = 0;
+        complete = false;
         pending_scripts = [];
       switch = false;
       asked_switch = false;
@@ -433,7 +438,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
             match List.assoc_opt key fields with
             | None -> Error (invalid ("repeat key missing from record: " ^ key))
             | Some identity ->
-                let identity = Yojson.Safe.to_string identity in
+                let identity = key ^ "=" ^ Yojson.Safe.to_string identity in
                 if Hashtbl.mem seen identity then Ok false
                 else
                   match on_record item with
@@ -452,7 +457,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
       | None -> None
     in
     `Assoc
-      [
+      ([
         ("mission", `String args.mission);
         ( "site",
           match st.book with
@@ -470,6 +475,11 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         ("arguments", `Assoc (List.map (fun (name, value) -> (name, `String value)) st.known));
         ("collected", `Int st.collected_count);
       ]
+      @
+      (* extr-b3u0: once something was collected, how far the collection went — pages read
+         and whether its pagination ran out — as counts and a flag, never a record. *)
+      if st.collected_count = 0 then []
+      else [ ("pages", `Int st.pages); ("collection_complete", `Bool st.complete) ])
   in
 
   (* run-kli0 run-qq3o: the playbook question's criteria are the installed playbooks by
@@ -916,8 +926,10 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
     | Error error -> Error error
     | Ok (Unfilled (st, reason)) -> planner st ~trigger:Arguments ~reason
     | Ok (Filled (st, values)) ->
-        dedupe_key := Option.map (fun (repeat : Playbook.repeat) -> repeat.key) proc.Playbook.repeat;
-        (match proc.Playbook.repeat with None -> () | Some _ -> Hashtbl.clear seen);
+        (* extr-ve3k: a repeat's key de-duplicates for the rest of the run, so a page read
+           twice — a replayed procedure, or a next-page step the mission level chooses
+           itself — never streams a record twice. *)
+        Option.iter (fun (repeat : Playbook.repeat) -> dedupe_key := Some repeat.key) proc.Playbook.repeat;
         (* run-m0r8: a planner-written procedure that ran and passed its expectations is
            proposed to the operator as a file in XDG state; the run reports the path and
            never touches the playbook the operator authored. *)
@@ -986,16 +998,14 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                         (match propose_verified st with
                         | Error error -> Error error
                         | Ok st ->
-                            let st = { st with pages = st.pages + (if proc.Playbook.repeat = None then 0 else 1) } in
+                            let st = { st with pages = st.pages + (if proc.Playbook.repeat = None then 0 else 1); complete = false } in
                             let st = record st ~book ~proc ~planned ~choice ~drives
                               ~expectations:results ~outcome:"verified" ~attempts:n
                               ~elapsed:(ms (now () -. proc_started)) ~reason:None in
                             (match proc.Playbook.repeat with
                             | None -> Ok (Continue st)
                             | Some repeat ->
-                                let result = paginate st ~book ~values ~choice repeat in
-                                dedupe_key := None;
-                                result))
+                                paginate st ~book ~values ~choice repeat))
                       else if n < 2 then attempt (n + 1) st drives
                       else
                         let reason =
@@ -1026,7 +1036,8 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         | Error error -> Error (with_trace st error)
         | Ok (until_results, observation) ->
             let st = { st with observation } in
-            if List.for_all (fun (r : P.run_expectation) -> r.passed) until_results then Ok (Continue st)
+            if List.for_all (fun (r : P.run_expectation) -> r.passed) until_results then
+              Ok (Continue { st with complete = true })
             else (
               pause_ms (Option.value ~default:500 repeat.delay_ms);
               if now () >= deadline then
@@ -1051,7 +1062,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                           ~choice:{ choice with key = next.slug } ~drives ~expectations:results
                           ~outcome:"skipped" ~attempts:1 ~elapsed:0
                           ~reason:(Some "end of pagination: next expectations failed") in
-                        Ok (Continue st)
+                        Ok (Continue { st with complete = true })
                       else
                         let st = { st with checks; pages = st.pages + 1 } in
                         let st = record st ~book ~proc:next ~planned:false

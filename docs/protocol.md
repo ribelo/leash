@@ -211,7 +211,7 @@ Rules:
   description) plus `DONE` and `BLOCKED`. The state it and the playbook level are asked
   over is small and semantic — the mission, the site, the page kind (from the playbook's
   `pages`), the page title and URL, the last five procedures with their outcomes, and the
-  arguments already known. **Page text never reaches the upper levels**; it is the
+  arguments already known — and, once a script has collected anything, `collected` (the count), `pages` (pages read) and `collection_complete` (the last pagination ran out: its `until` held or its next page did not exist, not `max` or a limit), so that the mission level can tell a finished collection from an unfinished one (extr-b3u0, found by the L39 live gate: told only a count, JEV chose the collection again and never DONE). **Page text and records never reach the upper levels**; it is the
   operator level's and the checkers'.
 - `{name}` placeholders in a goal or an expectation sentence are substituted from the
   run's arguments; an argument the mission does not supply is asked of the text helper
@@ -254,7 +254,7 @@ Rules:
   rejection fails it (`outcome: "failed"`) and asks the planner, like a failed expectation; the call is in the procedure's
   `scripts` with its error. A browser failure ends the run, and a dialog the script opened ends it `error` as a drive's
   does. The runner streams validated records to `--out` JSONL as pages complete; it keeps only five bounded samples in memory and `collected` is the count. No model sees a record. A dry run
-  runs no script. A procedure may declare `repeat: {next, max, until, delay_ms?, key}`: after its body the runner executes the named next-page procedure up to `max` pages, checks `until` and the next procedure’s expectations, waits `delay_ms` (default 500 ms), and streams each record once by `key`.
+  runs no script. A procedure may declare `repeat: {next, max, until, delay_ms?, key}`: after its body the runner executes the named next-page procedure up to `max` pages, checks `until` and the next procedure’s expectations, waits `delay_ms` (default 500 ms), and streams each record once by `key` — the key de-duplicates for the rest of the run, so a page read twice (a replayed procedure, a next-page step the mission level chooses itself) never streams a record twice.
 - `playbook_test` runs one script of an installed playbook on the tab's page and answers its validated output, so that writing
   a script is a fast loop; it is owner-bound and takes the tab's action lock. The script is looked up by name in the
   playbooks directory (`invalid-request` for a playbook or script that is not there; a path is never a playbook name).

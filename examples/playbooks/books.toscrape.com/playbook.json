@@ -1,0 +1,167 @@
+{
+  "site": "books.toscrape.com",
+  "entry": "https://books.toscrape.com/",
+  "description": "Browse Books to Scrape, a demo bookshop, and collect the books of a category (title, price, url, category, rating, availability), optionally only those cheaper than a price.",
+  "pages": [
+    {
+      "name": "home",
+      "description": "The shop front page with the category list",
+      "url_pattern": "https://books.toscrape.com/",
+      "text_marker": null
+    },
+    {
+      "name": "more-pages",
+      "description": "A book listing whose pager offers a next link",
+      "url_pattern": null,
+      "text_marker": "next"
+    },
+    {
+      "name": "category",
+      "description": "The last (or only) page of a category listing",
+      "url_pattern": "https://books.toscrape.com/catalogue/category/*",
+      "text_marker": null
+    }
+  ],
+  "scripts": {
+    "list-page": {
+      "file": "scripts/list-page.js",
+      "returns": [
+        {
+          "title": "string",
+          "price": "number",
+          "url": "url",
+          "category": "string",
+          "rating": "number",
+          "availability": "string"
+        }
+      ]
+    },
+    "crawl-category": {
+      "file": "scripts/crawl-category.js",
+      "returns": [
+        {
+          "title": "string",
+          "price": "number",
+          "url": "url",
+          "category": "string",
+          "rating": "number",
+          "availability": "string"
+        }
+      ]
+    }
+  },
+  "procedures": [
+    {
+      "slug": "open-category",
+      "description": "Open one category of books from the category list in the sidebar.",
+      "args": [
+        "category"
+      ],
+      "steps": [
+        {
+          "goal": "Click the {category} link in the Books category list in the sidebar. Stop on the {category} listing."
+        }
+      ],
+      "expect": [
+        "the page shows results - showing"
+      ]
+    },
+    {
+      "slug": "collect-category",
+      "description": "Collect every book of a category (all its pages, no price limit): title, price, link, rating and availability. It opens the category itself and follows every page; once it is verified the whole category is collected and the collection mission is complete.",
+      "args": [
+        "category"
+      ],
+      "steps": [
+        {
+          "use": "open-category",
+          "args": {
+            "category": "{category}"
+          }
+        },
+        {
+          "script": "list-page"
+        }
+      ],
+      "expect": [
+        "the page shows results - showing"
+      ],
+      "repeat": {
+        "next": "next-page",
+        "max": 60,
+        "until": "the page is not more-pages",
+        "delay_ms": 300,
+        "key": "url"
+      }
+    },
+    {
+      "slug": "next-page",
+      "description": "Internal to collect-category, which runs it for each further page. A mission never needs it directly; do not choose it.",
+      "args": [],
+      "steps": [
+        {
+          "goal": "Click the link named \"next\" in the pager below the book list; it is in view. Never click a category in the sidebar, a book, or Add to basket. You are done when the text of the page shows \"Page 2 of 2\" or the pager shows a \"previous\" link."
+        },
+        {
+          "script": "list-page"
+        }
+      ],
+      "expect": [
+        "the page shows previous"
+      ]
+    },
+    {
+      "slug": "collect-category-under",
+      "description": "Collect the books of a category that cost less than a price limit (all its pages): title, price, link, rating and availability. It opens the category itself and follows every page; once it is verified the whole filtered collection is done and the mission is complete.",
+      "args": [
+        "category",
+        "max_price"
+      ],
+      "steps": [
+        {
+          "use": "open-category",
+          "args": {
+            "category": "{category}"
+          }
+        },
+        {
+          "script": "list-page",
+          "args": {
+            "max_price": "{max_price}"
+          }
+        }
+      ],
+      "expect": [
+        "the page shows results - showing"
+      ],
+      "repeat": {
+        "next": "next-page-under",
+        "max": 60,
+        "until": "the page is not more-pages",
+        "delay_ms": 300,
+        "key": "url"
+      }
+    },
+    {
+      "slug": "next-page-under",
+      "description": "Internal to collect-category-under, which runs it for each further page. A mission never needs it directly; do not choose it.",
+      "args": [
+        "max_price"
+      ],
+      "steps": [
+        {
+          "goal": "Click the link named \"next\" in the pager below the book list; it is in view. Never click a category in the sidebar, a book, or Add to basket. You are done when the text of the page shows \"Page 2 of 2\" or the pager shows a \"previous\" link."
+        },
+        {
+          "script": "list-page",
+          "args": {
+            "max_price": "{max_price}"
+          }
+        }
+      ],
+      "expect": [
+        "the page shows previous"
+      ]
+    }
+  ]
+}

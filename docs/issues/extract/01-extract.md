@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 9
 ---
 
@@ -57,3 +57,20 @@ A separate `extract` command (rejected: collection goes through `drive`); discov
 ## Further Notes
 
 Design from the session of 2026-09-28, revised the same evening after the operator's pushback: collection goes through `drive` and JEV, not a deterministic side command; `run` folds into `drive`; playbooks are directories so scripts are files; discovery of extraction is deferred because the coordinating agent is the playbook author. Retired story IDs from the first version: the `extract` command, its zero-call and summary stories, the inline-only `scripts:` section, the data-in-run story, and discovery-learns-extraction.
+
+## Live acceptance (L39, 2026-09-28)
+
+`scripts/live-acceptance-m9b` (headless Chrome, real JEV `typesafe/jev-1.13-20260917` and text helper `inception/mercury-2.5`, key only through `secret-env ai`, absent from every CLI output and the service log; SIGTERM exit 0, Chrome gone) against books.toscrape.com and the shipped `examples/playbooks/books.toscrape.com/` playbook. The site's Mystery category has 32 books (20 + 12 on two pages), 10 of them under £20, checked independently by fetching the category pages from the gate itself. Three consecutive runs passed with the same shape:
+
+| | records (site) | model calls (text helper / operator / playbook / procedure) | cost | elapsed |
+| --- | --- | --- | --- | --- |
+| A: "collect every book title and price in the Mystery category" (`--out`) | 32 (32) | 8 (1 / 4 / 1 / 2) | $0.00099 | 6.4 s |
+| B: "collect Mystery books cheaper than £20" (price filled by the text helper) | 10 (10) | 9 (2 / 4 / 1 / 2) | $0.00104 | 7.1 s |
+
+Every JSONL record passed the shape (title, price, url, category, rating, availability), matched the site's title, price and url, and was unique; every record of B was under £20. `playbook test` ran in the same gate: `list-page` 20 records, with `max_price`, and the fetch-based `crawl-category` script 32 records in one call.
+
+The live runs exposed three defects, fixed with tests (`test/run_test.ml`, `test/playbook_test.ml`):
+
+- the mission-level JEV, told only `collected: N`, chose the collection again and again and never DONE (55–116 records, `limit`); the state now also carries `pages` and `collection_complete` once anything was collected (extr-b3u0);
+- a page read twice streamed its records twice, because the repeat's dedupe table was cleared per repeat and dropped between procedures; the key now de-duplicates for the whole run (extr-ve3k);
+- (playbook, not Leash) the operator level does not scroll to a pager outside the viewport-filtered element table and clicked "Add to basket" instead, and a click step whose done-condition was about navigation ended `blocked`; the example's list script leaves the pager in view and the click goal states its done-condition in words the page shows. The skill records both.

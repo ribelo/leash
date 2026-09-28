@@ -670,6 +670,75 @@ let script_examples () =
   | Ok () -> ()
   | Error why -> Alcotest.fail ("extr-8o1h " ^ why)
 
+(* extr-tkco: the shipped books.toscrape.com example is a directory with a category
+   procedure, a list script in its own file, a fetch-based crawl script, a next-page
+   procedure and a repeat, and its page kinds tell a listing with a next link from the last
+   page — which is what the repeat's end condition rests on (L39 live gate: extr-8ubt). *)
+let books_toscrape_example () =
+  match B.load "../examples/playbooks/books.toscrape.com" with
+  | Error why -> Alcotest.fail ("extr-tkco " ^ why)
+  | Ok book ->
+      let procedure slug =
+        match
+          List.find_opt (fun (p : B.procedure) -> p.slug = slug) book.playbook.procedures
+        with
+        | Some p -> p
+        | None -> Alcotest.fail ("extr-tkco procedure " ^ slug)
+      in
+      let script name =
+        match B.script_named book name with
+        | Some s -> s
+        | None -> Alcotest.fail ("extr-tkco script " ^ name)
+      in
+      Alcotest.(check bool)
+        "extr-tkco the list script is a file of the directory" true
+        (String.length (script "list-page").B.code > 200
+        && (script "list-page").B.origin = "file scripts/list-page.js");
+      Alcotest.(check bool)
+        "extr-vgir extr-tkco the crawl script fetches the site's own pages" true
+        (let code = (script "crawl-category").B.code in
+         try
+           ignore (Str.search_forward (Str.regexp_string "await fetch(") code 0);
+           true
+         with Not_found -> false);
+      List.iter
+        (fun (slug, next) ->
+          match (procedure slug).repeat with
+          | Some repeat ->
+              Alcotest.(check string) "extr-ve3k next-page procedure" next repeat.next;
+              Alcotest.(check string)
+                "extr-ve3k records de-duplicated by url" "url" repeat.key;
+              Alcotest.(check bool)
+                "extr-ve3k the loader resolved the end condition" true
+                (B.resolve book.playbook.pages repeat.until
+                = Ok (B.Not_page_kind "more-pages"))
+          | None -> Alcotest.fail ("extr-ve3k " ^ slug ^ " does not repeat"))
+        [
+          ("collect-category", "next-page"); ("collect-category-under", "next-page-under");
+        ];
+      let kind url text = B.page_kind book.playbook.pages ~url ~text in
+      let category = "https://books.toscrape.com/catalogue/category/books/mystery_3" in
+      Alcotest.(check (option string))
+        "extr-ve3k a listing with a next link keeps paginating" (Some "more-pages")
+        (kind (category ^ "/index.html") "Page 1 of 2\nnext");
+      Alcotest.(check (option string))
+        "extr-ve3k the last page ends it" (Some "category")
+        (kind (category ^ "/page-2.html") "Page 2 of 2\nprevious");
+      (* extr-zdst: the declared shape accepts a well-formed book and refuses a price that is text. *)
+      let record price =
+        Yojson.Safe.from_string
+          (Printf.sprintf
+             {|[{"title":"Sharp Objects","price":%s,"url":"https://books.toscrape.com/catalogue/sharp-objects_997/index.html","category":"Mystery","rating":4,"availability":"In stock"}]|}
+             price)
+      in
+      Alcotest.(check bool)
+        "extr-zdst a book passes the declared shape" true
+        (Leash.Shape.validate (script "list-page").B.returns (record "47.82") = Ok ());
+      Alcotest.(check bool)
+        "extr-zdst a price that is text is refused" true
+        (Result.is_error
+           (Leash.Shape.validate (script "list-page").B.returns (record {|"47.82"|})))
+
 (* extr-k40c: a procedure from outside a file — a planner's answer — can name a script the
    playbook already has, and cannot bring one: no step carries source or a file, and a
    script that is not in the playbook is refused before anything runs. *)
@@ -741,5 +810,7 @@ let () =
           Alcotest.test_case "extr-k40c planner procedures" `Quick planner_procedures;
           Alcotest.test_case "extr-zdst extr-8o1h shapes" `Quick shapes;
           Alcotest.test_case "extr-8o1h many records" `Quick script_examples;
+          Alcotest.test_case "extr-tkco books.toscrape.com example" `Quick
+            books_toscrape_example;
         ] );
     ]

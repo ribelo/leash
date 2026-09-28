@@ -1128,6 +1128,72 @@ let repeat_collects_unique () =
        true
      with Not_found -> false)
 
+(* extr-b3u0 extr-ve3k, L39 live defect: a mission-level JEV that is only told a count kept
+   choosing the collection again and never DONE; and a page read twice streamed its
+   records twice. The state now says how many pages were read and whether the pagination
+   ran out — counts and a flag — and a repeat's key de-duplicates for the whole run. *)
+let collection_reported_and_deduplicated () =
+  let one =
+    R.Collected
+      {
+        value = `List [ `Assoc [ ("title", `String "only") ] ];
+        records = 1;
+        bytes = 25;
+        elapsed_ms = 1;
+      }
+  in
+  let good = [ expectation "the page is a" "page_kind" ] in
+  let until_holds = [ expectation "the page is b" "page_kind" ] in
+  let h =
+    harness
+      ~procs:[ "collect"; "collect"; "DONE" ]
+      ~verifies:[ good; until_holds; good; until_holds; good ]
+      ()
+  in
+  h.scripts <- [ Ok one; Ok one ];
+  let streamed = ref [] in
+  let result =
+    ran
+      (R.loop ~handler:(handler h)
+         ~now:(fun () -> h.clock)
+         ~installed:[ repeat_book () ]
+         ~on_record:(fun item ->
+           streamed := item :: !streamed;
+           Ok ())
+         ~pause_ms:(fun _ -> ())
+         (args ()))
+  in
+  check_status "extr-b3u0 finished" "done" result;
+  Alcotest.(check int)
+    "extr-ve3k a collection run twice streams each record once" 1 (List.length !streamed);
+  Alcotest.(check int) "extr-p7sj and counts it once" 1 result.P.collected;
+  let states =
+    List.filter_map
+      (fun (q : R.question) ->
+        if q.R.name = "select_procedure" then Some q.R.state else None)
+      h.questions
+  in
+  let first = List.hd states and last = List.nth states (List.length states - 1) in
+  Alcotest.(check bool)
+    "extr-b3u0 nothing collected yet: no collection fields" false
+    (List.mem_assoc "collection_complete" (match first with `Assoc f -> f | _ -> []));
+  let member key state =
+    match state with `Assoc f -> List.assoc_opt key f | _ -> None
+  in
+  Alcotest.(check bool)
+    "extr-b3u0 the mission level is told the pagination ran out" true
+    (member "collection_complete" last = Some (`Bool true));
+  Alcotest.(check bool)
+    "extr-b3u0 and how many pages were read" true
+    (member "pages" last = Some (`Int 2));
+  Alcotest.(check bool)
+    "extr-b3u0 still no record in any state" false
+    (try
+       ignore
+         (Str.search_forward (Str.regexp_string "only") (Yojson.Safe.to_string last) 0);
+       true
+     with Not_found -> false)
+
 (* extr-ve3k: either the explicit end condition or a failed next-page check
    stops the loop without a planner retry. *)
 let repeat_terminates () =
@@ -1305,6 +1371,8 @@ let () =
           Alcotest.test_case "extr-ve3k extr-p7sj repeat dedup" `Quick
             repeat_collects_unique;
           Alcotest.test_case "extr-ve3k until and next stop" `Quick repeat_terminates;
+          Alcotest.test_case "extr-b3u0 extr-ve3k collection reported, dedup run-wide"
+            `Quick collection_reported_and_deduplicated;
           Alcotest.test_case "extr-8o1h extr-p152 script step" `Quick script_step;
           Alcotest.test_case "extr-8o1h rejected script" `Quick script_rejected;
           Alcotest.test_case "extr-8o1h browser failure" `Quick script_browser_failure;
