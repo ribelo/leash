@@ -20,10 +20,14 @@ val create :
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
   sw:Eio.Switch.t ->
-  runtime_dir:string ->
+  path:string ->
   ('clock, 'net) deps ->
   (t, Eta_ipc.Listener.error) result
-(** [decide] is the drive's production Decide, {!Models.decide} in the program that owns
+(** svc-o4wt: [path] is the configured control socket — [control.socket], default
+    ["$XDG_RUNTIME_DIR/leash/control.sock"] — and the listener verifies the directory it
+    sits in and refuses a second instance on the same path.
+
+    [decide] is the drive's production Decide, {!Models.decide} in the program that owns
     the models service; a listener created without one refuses every drive with
     [model-unavailable] (L19). [text_helper] is the drive's text helper — production
     passes a thunk over {!Models.text_helper}, so every drive gets the fresh instance its
@@ -65,6 +69,7 @@ val handle :
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
   ?models_status:(unit -> Protocol.models_status) ->
+  ?logger:Eta_observability.Logger.t ->
   Tabs.t ->
   string ->
   string

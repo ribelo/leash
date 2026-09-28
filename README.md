@@ -7,4 +7,5 @@ Status: planning. See `docs/milestones.md`.
 - `CONTEXT.md` — vocabulary
 - `docs/adr/` — decisions
 - `docs/protocol.md` — control protocol and CLI
+- `docs/config.md` — configuration keys, defaults and environment overrides
 - `docs/issues/` — milestone specs with story IDs

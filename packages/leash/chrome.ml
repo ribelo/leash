@@ -67,6 +67,7 @@ let launch_pipe ~sw ~clock ~mgr config =
   let parent_read, child_write = Eio_unix.pipe sw in
   match
     Eta_process.Child.spawn ~sw ~clock ~mgr ~argv:(argv config) ~grace:config.grace
+      ~stderr:Pipe
       ~fds:[ (3, fd child_read); (4, fd child_write) ]
       ()
   with
@@ -111,6 +112,7 @@ type state = {
   mutable current : (int * Cdp.t) option;
   mutable failure : string option;
   mutable pending : Cdp.t option;
+  mutable stderr_tails : (int * Chrome_stderr.t * unit Eio.Promise.t) list;
   mutable closed_before_start : int option;
 }
 
@@ -124,9 +126,24 @@ let publish state event =
 let lost state generation ~origin =
   state.current <- None;
   state.phase <- `Restarting;
+  let stderr =
+    match List.find_opt (fun (n, _, _) -> n = generation) state.stderr_tails with
+    | Some (_, tail, drained) ->
+        Eio.Promise.await drained;
+        state.stderr_tails <-
+          List.filter (fun (n, _, _) -> n <> generation) state.stderr_tails;
+        Chrome_stderr.lines tail
+    | None -> []
+  in
   publish state (Lost generation);
   Log.lifecycle state.logger Eta_observability.Logger.Warn ~msg:"chrome generation lost"
-    [ Log.int "generation" generation; Log.string "origin" origin ]
+    [
+      Log.int "generation" generation;
+      Log.string "origin" origin;
+      ( "stderr",
+        Eta_observability.Logger.Json (`List (List.map (fun line -> `String line) stderr))
+      );
+    ]
 
 let on_started state generation =
   let cdp = state.pending in
@@ -195,6 +212,7 @@ let create ~sw ?(launch : 'clock launch = launch_pipe) config (deps : 'clock dep
       current = None;
       failure = None;
       pending = None;
+      stderr_tails = [];
       closed_before_start = None;
     }
   in
@@ -206,6 +224,16 @@ let create ~sw ?(launch : 'clock launch = launch_pipe) config (deps : 'clock dep
         incr spawns;
         let generation = !spawns in
         let cdp = Cdp.create ~sw:child_sw ~clock:deps.clock transport in
+        let tail = Chrome_stderr.create () in
+        let drained, resolve = Eio.Promise.create () in
+        state.stderr_tails <- (generation, tail, drained) :: state.stderr_tails;
+        (match Eta_process.Child.stderr child with
+        | None -> Eio.Promise.resolve resolve ()
+        | Some source ->
+            Eio.Fiber.fork ~sw:child_sw (fun () ->
+                Fun.protect
+                  ~finally:(fun () -> Eio.Promise.resolve resolve ())
+                  (fun () -> Chrome_stderr.read tail source)));
         state.pending <- Some cdp;
         Eio.Fiber.fork_daemon ~sw:child_sw (fun () ->
             let _reason = Eio.Promise.await (Cdp.closed cdp) in

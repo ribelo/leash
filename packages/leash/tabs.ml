@@ -217,6 +217,16 @@ type tab = {
   mutable navigated : bool;
   mutable completed : bool;
   mutable load_waiter : unit Eio.Promise.u option;
+  mutable navigations : int;
+      (** svc-hi4f: main-frame navigations observed on this tab. An action's watch reads
+          it before its dispatch and again when the action is done, so it knows whether
+          this action navigated the page. *)
+  mutable page_loading : bool;
+      (** A main-frame navigation is in flight — set by [Page.frameNavigated], cleared by
+          the load event, whether or not a load wait is armed. *)
+  mutable page_loads : unit Eio.Promise.u list;
+      (** The action watches waiting for that load to finish; resolved once, when it does,
+          like the waiter of {!with_load_wait}. *)
   mutable snapshot : (P.Snapshot_id.t * string * (P.row * int) list) option;
   mutable dialog : P.dialog option;
   mutable counter_installed : bool;
@@ -412,6 +422,9 @@ let register t ~id ~session ~origin ~state ~url ~title ?opener () =
       navigated = false;
       completed = false;
       load_waiter = None;
+      navigations = 0;
+      page_loading = false;
+      page_loads = [];
       snapshot = None;
       dialog = None;
       counter_installed = false;
@@ -575,6 +588,29 @@ let refresh_from_target cdp tab =
       | Some info ->
           Option.iter (fun url -> tab.url <- url) (text "url" info);
           Option.iter (fun title -> tab.title <- title) (text "title" info))
+
+(* svc-hi4f: the page an action navigates to is titled only once its document has
+   loaded, and the settle that ends an action is two frames — far too early, which is what
+   the L23 live run saw: the reply and [list] carried the tab strip's formatted URL instead
+   of the document title. A watch is armed before the action is dispatched, exactly as a
+   load wait is armed before its navigate. [refresh] reads the tab's target back at once,
+   waits — bounded like a load — when a main-frame navigation landed since the last watch
+   and the document is still loading, and reads again. Best effort: a page that never
+   finishes loading costs the wait, not the action. *)
+let watch_navigation t cdp tab =
+  let seen = ref tab.navigations in
+  fun () ->
+    let since = !seen in
+    refresh_from_target cdp tab;
+    if tab.navigations <> since && tab.page_loading then (
+      let promise, waiter = Eio.Promise.create () in
+      tab.page_loads <- waiter :: tab.page_loads;
+      Fun.protect
+        ~finally:(fun () ->
+          tab.page_loads <- List.filter (fun pending -> pending != waiter) tab.page_loads)
+        (fun () -> ignore (t.await_load promise)));
+    if tab.navigations <> since then refresh_from_target cdp tab;
+    seen := tab.navigations
 
 (* chrome-1yn9, chrome-qnul: a url is loaded when the load event fires, or when the
    document's main frame navigated and its DOM content is in — never when the network is
@@ -1235,7 +1271,7 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
     handle = tab.handle;
     owner;
     page = (fun () -> (tab.url, tab.title));
-    refresh = (fun () -> refresh_from_target cdp tab);
+    refresh = watch_navigation t cdp tab;
     snapshot = (fun () -> tab.snapshot);
     dialog = (fun () -> tab.dialog);
     acknowledge = (fun () -> acknowledge tab);
@@ -1494,15 +1530,19 @@ let inspect t json =
         (fun _ tab -> if tab.session = text "sessionId" json then tab.dialog <- None)
         t.tabs
   | Some "Page.frameNavigated", Some params -> (
+      (* svc-hi4f: a main-frame navigation is what clears the tab's snapshot and what an
+          action's watch counts; a subframe's is neither. *)
+      let main_frame =
+        match member "frame" params with
+        | Some frame -> text "parentId" frame = None
+        | None -> false
+      in
       Hashtbl.iter
         (fun _ tab ->
-          if
-            tab.session = text "sessionId" json
-            &&
-            match member "frame" params with
-            | Some frame -> text "parentId" frame = None
-            | None -> false
-          then tab.snapshot <- None)
+          if main_frame && tab.session = text "sessionId" json then (
+            tab.snapshot <- None;
+            tab.navigations <- tab.navigations + 1;
+            tab.page_loading <- true))
         t.tabs;
       match text "sessionId" json with
       | Some session ->
@@ -1518,21 +1558,25 @@ let inspect t json =
       | Some session ->
           Hashtbl.iter
             (fun _ tab ->
-              if tab.session = Some session && tab.loading then (
-                (if event = "Page.frameNavigated" then
-                   match member "frame" params with
-                   | Some frame when text "parentId" frame = None -> tab.navigated <- true
-                   | _ -> ());
+              if tab.session = Some session then (
                 if
-                  event = "Page.loadEventFired"
-                  || (event = "Page.domContentEventFired" && tab.navigated)
+                  tab.loading
+                  && (event = "Page.loadEventFired"
+                     || (event = "Page.domContentEventFired" && tab.navigated))
                 then (
                   tab.completed <- true;
                   match tab.load_waiter with
                   | None -> ()
                   | Some waiter ->
                       tab.load_waiter <- None;
-                      Eio.Promise.resolve waiter ())))
+                      Eio.Promise.resolve waiter ());
+                (* svc-hi4f: the watch an action armed before it dispatched waits for the
+                   navigation it counted to finish before its reply reads the title. *)
+                if tab.page_loading then (
+                  tab.page_loading <- false;
+                  let pending = tab.page_loads in
+                  tab.page_loads <- [];
+                  List.iter (fun resolve -> Eio.Promise.resolve resolve ()) pending)))
             t.tabs)
   | _ -> ()
 

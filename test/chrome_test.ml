@@ -15,10 +15,11 @@ let launch rig ~sw ~clock ~mgr:_ config =
   match
     Eta_process.Child.spawn ~sw ~clock
       ~mgr:(Eta_test.Process.mgr rig.mgr)
-      ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+      ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~stderr:Pipe ~fds:[] ()
   with
   | Error error -> Error error
   | Ok child ->
+      assert (Option.is_some (Eta_process.Child.stderr child));
       let transport : Cdp.transport = { read = client.read; write = client.write } in
       Ok (child, transport)
 
@@ -245,6 +246,62 @@ let orderly_stop () =
       | Error `Browser_unavailable -> ()
       | Ok _ -> Alcotest.fail "a stopped service has no browser to reach")
 
+let stderr_tail () =
+  (* svc-qrmc: an actual Child stderr pipe, not a synthetic ring insertion. *)
+  Eta_test.run (fun env sw ->
+      let memory = Eta_observability.Logger.Memory.create () in
+      let logger =
+        Eta_observability.Logger.create ~service:"leash-test" ~clock:env#clock
+          ~mono_clock:env#mono_clock
+          ~reporter:(Eta_observability.Logger.Memory.reporter memory)
+          ()
+      in
+      let lines = List.init 25 (fun i -> Printf.sprintf "chrome diagnostic %02d" i) in
+      let text = String.concat "\n" lines ^ "\n" ^ String.make 1300 'x' in
+      let mgr =
+        Eta_test.Process.make
+          [
+            Eta_test.Process.Output
+              ( [
+                  {
+                    Eta_test.Process.stream = Stderr;
+                    data = text;
+                    after = Eta.Duration.zero;
+                  };
+                ],
+                Eta_test.Process.Exit (`Exited 1) );
+            Block_until_signal;
+          ]
+      in
+      let rig = { mgr; browsers = [] } in
+      let chrome =
+        Chrome.create ~sw ~launch:(launch rig) (config ()) { (deps env) with logger }
+      in
+      expect_event "Started 1" env chrome (Chrome.Started 1);
+      expect_event "Lost 1" env chrome (Chrome.Lost 1);
+      let records = Eta_observability.Logger.Memory.records memory in
+      let lost =
+        match
+          List.find_opt
+            (fun record -> record.Eta_observability.Logger.msg = "chrome generation lost")
+            records
+        with
+        | Some record -> record
+        | None -> Alcotest.fail "missing generation lost record"
+      in
+      let stderr =
+        match List.assoc_opt "stderr" lost.fields with
+        | Some (Eta_observability.Logger.Json (`List xs)) ->
+            List.map
+              (function `String s -> s | _ -> Alcotest.fail "stderr must be strings")
+              xs
+        | _ -> Alcotest.fail "missing stderr tail"
+      in
+      Alcotest.(check (list string))
+        "last 19 complete and capped partial line"
+        (List.filteri (fun i _ -> i >= 6) lines @ [ String.make 1024 'x' ])
+        stderr)
+
 let () =
   Alcotest.run "L2 managed Chrome"
     [
@@ -255,6 +312,7 @@ let () =
         ] );
       ( "lifecycle",
         [
+          Alcotest.test_case "stderr tail per generation" `Quick stderr_tail;
           Alcotest.test_case "restart under backoff" `Quick restart;
           Alcotest.test_case "transport loss loses the generation" `Quick transport_loss;
           Alcotest.test_case "unavailable while restarting" `Quick

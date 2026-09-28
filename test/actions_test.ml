@@ -1427,6 +1427,54 @@ let self_closing_click_probe () =
       check_disposition "own-teh1 the probe finds the target gone" "closed_externally"
         (await ~sw "own-teh1 the self-closing click" cell))
 
+(* svc-hi4f: the follow-up to chrome-qnul from L23's live run. A click that navigates
+   leaves the tab strip's title (the formatted url Chrome pushes while the document
+   loads) in the registry until the document finishes; the reply reads the target back
+   after that load, so the trace and [list] carry the document title. *)
+let navigation_title_refresh () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let loaded = ref false in
+      (* chrome-qnul: the target reports the tab strip's title while the page loads and
+         the document's once it is in. The load event is what says which. *)
+      Fake.on_method fake "Target.getTargetInfo" (fun _ ->
+          let title = if !loaded then "Example Domain" else "example.com" in
+          if not !loaded then (
+            loaded := true;
+            Fake.emit ~session:"session-1" fake ~method_:"Page.domContentEventFired"
+              ~params:(Fake.event "Page.domContentEventFired"));
+          o
+            [
+              ( "targetInfo",
+                o
+                  [
+                    ("targetId", s "target-1");
+                    ("type", s "page");
+                    ("title", s title);
+                    ("url", s "https://example.com/");
+                  ] );
+            ]);
+      (* the click navigates: Chrome reports the main frame before the document is in *)
+      Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
+          if E.string_member "type" (member "params" request) = Some "mousePressed" then
+            Fake.emit ~session:"session-1" fake ~method_:"Page.frameNavigated"
+              ~params:(Fake.event "Page.frameNavigated");
+          o []);
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let reply =
+        result (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 }))
+      in
+      Alcotest.(check string)
+        "svc-hi4f the reply carries the loaded document's title" "Example Domain"
+        (text "title" reply);
+      Alcotest.(check string)
+        "svc-hi4f and the committed url" "https://example.com/" (text "url" reply);
+      Alcotest.(check int)
+        "svc-hi4f the target is read once mid-navigation and once after the load" 2
+        (List.length (calls fake "Target.getTargetInfo")))
+
 let () =
   Alcotest.run "L7 actions"
     [
@@ -1454,5 +1502,7 @@ let () =
             self_closing_click_reports_tab_gone;
           Alcotest.test_case "own-teh1 tab-0ohq self-closing probe" `Quick
             self_closing_click_probe;
+          Alcotest.test_case "svc-hi4f title after a navigating action" `Quick
+            navigation_title_refresh;
         ] );
     ]

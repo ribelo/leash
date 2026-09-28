@@ -36,7 +36,7 @@ let request tabs who command =
 
 let check_code label expected reply = Alcotest.(check string) label expected (code reply)
 
-let rig f =
+let rig ?reporter f =
   Eta_test.run (fun env sw ->
       let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
@@ -53,7 +53,9 @@ let rig f =
       let logger =
         Eta_observability.Logger.create ~service:"leash-tests" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+          ~reporter:
+            (Option.value reporter
+               ~default:(Eta_observability.Logger.Reporter.writer ignore))
           ()
       in
       let chrome =
@@ -437,6 +439,10 @@ let with_runtime f =
       Unix.rmdir runtime)
     (fun () -> f runtime)
 
+(* svc-o4wt: the control socket is the configured path; these tests keep the default
+   layout under their own runtime directory. *)
+let socket runtime = Filename.concat (Filename.concat runtime "leash") "control.sock"
+
 (* tab-x4v0: a text reply bigger than the listener old 64 KiB ceiling arrives whole
    over a real socket; the service answers instead of closing the connection. *)
 let large_text_over_socket () =
@@ -448,7 +454,7 @@ let large_text_over_socket () =
               obj [ ("result", obj [ ("type", str "string"); ("value", str big) ]) ]);
           let _control =
             match
-              Leash.Control.create ~sw ~runtime_dir:runtime
+              Leash.Control.create ~sw ~path:(socket runtime)
                 {
                   Leash.Control.tabs;
                   status_query = (fun () -> []);
@@ -510,7 +516,7 @@ let socket () =
   with_runtime (fun runtime ->
       rig (fun env sw _ tabs _ ->
           let make () =
-            Leash.Control.create ~sw ~runtime_dir:runtime
+            Leash.Control.create ~sw ~path:(socket runtime)
               {
                 Leash.Control.tabs;
                 status_query = (fun () -> []);
@@ -562,7 +568,7 @@ let socket () =
           let fd = Unix.openfile path [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
           Unix.close fd;
           let create () =
-            Leash.Control.create ~sw ~runtime_dir:runtime
+            Leash.Control.create ~sw ~path:(socket runtime)
               {
                 Leash.Control.tabs;
                 status_query = (fun () -> []);
@@ -598,7 +604,7 @@ let socket () =
           Unix.mkdir dir 0o700;
           Unix.chmod dir 0o755;
           let result =
-            Leash.Control.create ~sw ~runtime_dir:runtime
+            Leash.Control.create ~sw ~path:(socket runtime)
               {
                 Leash.Control.tabs;
                 status_query = (fun () -> []);
@@ -1036,6 +1042,149 @@ let empty_names () =
            (fun row -> get "name" row = str "" && value row = "Search terms")
            (rows second)))
 
+(* svc-p67t svc-qilu: inspect every command anchor and every journal line of a
+   scripted owner session; page data and credentials must never become a log line. *)
+let journal_redaction () =
+  let module L = Eta_observability.Logger in
+  let memory = L.Memory.create () in
+  rig ~reporter:(L.Memory.reporter memory) (fun env _ _ tabs fake ->
+      let logger =
+        L.create ~service:"leash-test" ~clock:env#clock ~mono_clock:env#mono_clock
+          ~reporter:(L.Memory.reporter memory) ()
+      in
+      let secret_fill = "fill-secret-do-not-log" in
+      let secret_text = "page-text-do-not-log" in
+      let api_key = "api-key-do-not-log" in
+      let userinfo = "userinfo-do-not-log" in
+      let url = "https://user:" ^ userinfo ^ "@example.com/" in
+      Fake.on_method (fake ()) "Runtime.evaluate" (fun _ ->
+          obj [ ("result", obj [ ("value", str secret_text) ]) ]);
+      let run who command =
+        let request = P.{ owner = owner who; command } in
+        let wire = P.encode_request request |> Yojson.Safe.to_string in
+        let reply = Leash.Control.handle ~logger tabs wire |> Yojson.Safe.from_string in
+        match P.decode_reply reply with Ok result -> result | Error e -> Alcotest.fail e
+      in
+      let h = result (run "alice" (P.New { url = None })) |> tab in
+      let got =
+        result (run "alice" (P.Text { tab = h; index = None; max_chars = None }))
+      in
+      Alcotest.(check string)
+        "scripted page text" secret_text
+        (match get "text" got with `String s -> s | _ -> Alcotest.fail "text reply");
+      let missing =
+        match P.Handle.of_string "t_00000000000000000000000000000000" with
+        | Ok x -> x
+        | Error e -> Alcotest.fail e
+      in
+      let snap =
+        match P.Snapshot_id.of_string "s_diagnostics" with
+        | Ok x -> x
+        | Error e -> Alcotest.fail e
+      in
+      let direction =
+        match P.Direction.of_string "down" with Ok x -> x | Error e -> Alcotest.fail e
+      in
+      let answer =
+        match P.Answer.of_string "accept" with Ok x -> x | Error e -> Alcotest.fail e
+      in
+      let commands =
+        P.
+          [
+            List_tabs { all = false };
+            Status;
+            Claim { tab = missing };
+            Release { tab = missing; force = None };
+            Close { tab = missing; force = None };
+            Snap { tab = missing; match_ = None; limit = None; offset = None };
+            Shot { tab = missing; path = "/tmp/no-shot"; full_page = None };
+            Debug { tab = missing; limit = None; clear = None };
+            Eval
+              {
+                tab = missing;
+                expression = "return argument";
+                argument = Some (str api_key);
+              };
+            Nav { tab = missing; url };
+            Click { tab = missing; snapshot = snap; index = 0 };
+            Fill { tab = missing; snapshot = snap; index = 0; text = secret_fill };
+            Press { tab = missing; snapshot = snap; index = None; key = "Enter" };
+            Select { tab = missing; snapshot = snap; index = 0; option = 0 };
+            Scroll { tab = missing; direction; index = None };
+            Wait
+              {
+                tab = missing;
+                until =
+                  { url_prefix = None; text = None; index_gone = None; dialog = None };
+                timeout_ms = Some 0;
+              };
+            Dialog { tab = missing; answer; text = None };
+            Handoff { tab = missing; reason = "test"; timeout_s = Some 1 };
+            Resume { tab = missing };
+            Drive
+              {
+                tab = missing;
+                goal = "test";
+                max_steps = Some 1;
+                deadline_s = Some 1;
+                dry_run = Some true;
+              };
+          ]
+      in
+      List.iter (fun command -> ignore (run "alice" command)) commands;
+      let records = L.Memory.records memory in
+      let anchors = List.filter (fun r -> r.L.msg = "control command") records in
+      Alcotest.(check int)
+        "one anchor per command"
+        (2 + List.length commands)
+        (List.length anchors);
+      let expected_commands =
+        P.New { url = None }
+        :: P.Text { tab = h; index = None; max_chars = None }
+        :: commands
+      in
+      List.iter2
+        (fun command record ->
+          let context key = List.assoc_opt key record.L.context in
+          Alcotest.(check (option string)) "owner" (Some "alice") (context "owner");
+          Alcotest.(check (option string))
+            "cmd"
+            (Some (P.command_name command))
+            (context "cmd");
+          let expected_tab =
+            match command with
+            | P.New _ | P.List_tabs _ | P.Status -> "-"
+            | P.Text _ -> P.Handle.to_string h
+            | _ -> P.Handle.to_string missing
+          in
+          Alcotest.(check (option string)) "tab" (Some expected_tab) (context "tab"))
+        expected_commands anchors;
+      let contains text sub =
+        let rec search i =
+          i + String.length sub <= String.length text
+          && (String.sub text i (String.length sub) = sub || search (i + 1))
+        in
+        search 0
+      in
+      List.iter
+        (fun record ->
+          let line = L.to_string record in
+          List.iter
+            (fun secret ->
+              Alcotest.(check bool) ("redacted " ^ secret) false (contains line secret))
+            [ secret_fill; secret_text; api_key; userinfo ])
+        records)
+
+let optional_otlp () =
+  Eta_test.run (fun env sw ->
+      let telemetry =
+        Leash.Telemetry.create ~sw ~net:env#net ~clock:env#clock
+          ~endpoint:"http://127.0.0.1:4318" ~headers:[]
+      in
+      Alcotest.(check int) "enabled reporter" 1 (List.length telemetry.Eta_app.reporters);
+      let id = Option.get telemetry.Eta_app.span_ids () in
+      Alcotest.(check int) "trace id length" 32 (String.length id))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -1043,6 +1192,9 @@ let () =
         [
           Alcotest.test_case "tab-of0i tmoc 1r34 hyap 1rx9 0vh8" `Quick snapshot;
           Alcotest.test_case "chrome-qnul hjw9 fuao 2n8n" `Quick lifecycle;
+          Alcotest.test_case "svc-p67t qilu journal and redaction" `Quick
+            journal_redaction;
+          Alcotest.test_case "svc-f4op optional OTLP reporter" `Quick optional_otlp;
           Alcotest.test_case "chrome-akz4 d4mz" `Quick safety;
           Alcotest.test_case "chrome-1yn9" `Quick nav;
           Alcotest.test_case "chrome-qnul new waits" `Quick new_waits;

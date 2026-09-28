@@ -1,6 +1,6 @@
 # Control protocol and the leash CLI
 
-The Leash service listens on `$XDG_RUNTIME_DIR/leash/control.sock` (owner-only, in a verified private directory). A client connects, writes one JSON object per line, and reads one JSON object per line in reply. One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `wait`) hold the connection open until they settle.
+The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, owner-only, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `wait`) hold the connection open until they settle.
 
 Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec.
 
@@ -204,13 +204,14 @@ Rules:
 - `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked).
 - `select` targets a native `<select>` row (role `combobox` or `listbox`); `option` is its index in the select's observed option order, and an index the select does not have is `invalid-request`. A row that is not a native select is `row-not-actionable`. The observed order is the row's `options`, read from the accessibility tree even while the select is closed — a closed select's options have no layout box and are never rows of their own (tab-5deq): each carries the `index` the action takes, its `label`, the `value` it holds, its label when it holds none, and whether it is `selected` or `disabled`.
 - `ActionResult.snapshot` is null unless a snapshot was taken as part of settling; actions do not observe the page again on their own, so a caller that wants a fresh table asks for one.
+- An action reply's `url` and `title` come from `Target.getTargetInfo` read after the action settled. When the action navigated the tab, that read waits — bounded like a load — for the new document to finish, so the reply, a drive step's `after`, and `list` carry the document title rather than the tab strip's formatted URL (chrome-qnul, svc-hi4f).
 - `wait` conditions are ANDed; `timeout_ms` is bounded to 30 000.
 - `eval` runs the expression as a function body in the page with `argument` bound; expression, argument, and result are each bounded to 64 KiB.
 - `shot` writes a PNG to `path`, which must be an absolute path the service can write; the reply carries no image data.
 - `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful. `settled` is false when the page kept mutating during the observation (retaken twice first); the snapshot is still usable and actions revalidate at dispatch.
 - A row's `name` may be empty: a control with no accessible name (an unlabelled native select, a bare text input, an icon button) is kept with its `role`, an empty `name`, and its `value` or `placeholder`, so it stays addressable by index (tab-zc36). `value` is omitted when the control has neither.
 - `new` with a url navigates and returns when the document has loaded, exactly like `nav`, so `title` is populated; `new` without a url returns at once with `about:blank`. Both report the URL Chrome committed — after any redirect — and the document title, not the requested URL.
-- The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Exit status 0 on `ok:true`, 1 on a protocol error, 2 on a CLI usage error.
+- The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Every command names its positional arguments in its synopsis — `leash click [OPTION]… TAB SNAPSHOT INDEX` — and accepts only the options it uses, so `leash <command> --help` is the whole call; `--owner`, `--pretty`, `--config` and `--socket` are the client options every command shares. Exit status 0 on `ok:true`, 1 on a protocol error, 2 on a CLI usage error.
 
 ## Error codes
 

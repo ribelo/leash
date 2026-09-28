@@ -81,17 +81,49 @@ let dispatch ?(model = "unconfigured") ?decide ?text_helper ?models_status tabs
       lift P.yojson_of_drive_result
         (Tabs.drive ?decide ?text_helper tabs ~owner ~model args)
 
-let handle ?(model = "unconfigured") ?decide ?text_helper ?models_status tabs line =
+(* svc-p67t: a command's journal anchor contains only identifiers, never args or
+   results. Commands without a tab use "-"; new does not have a handle yet. *)
+let command_tab = function
+  | P.New _ | P.List_tabs _ | P.Status -> "-"
+  | P.Claim args | P.Resume args -> P.Handle.to_string args.tab
+  | P.Release args | P.Close args -> P.Handle.to_string args.tab
+  | P.Snap args -> P.Handle.to_string args.tab
+  | P.Text args -> P.Handle.to_string args.tab
+  | P.Shot args -> P.Handle.to_string args.tab
+  | P.Debug args -> P.Handle.to_string args.tab
+  | P.Eval args -> P.Handle.to_string args.tab
+  | P.Nav args -> P.Handle.to_string args.tab
+  | P.Click args -> P.Handle.to_string args.tab
+  | P.Fill args -> P.Handle.to_string args.tab
+  | P.Press args -> P.Handle.to_string args.tab
+  | P.Select args -> P.Handle.to_string args.tab
+  | P.Scroll args -> P.Handle.to_string args.tab
+  | P.Wait args -> P.Handle.to_string args.tab
+  | P.Dialog args -> P.Handle.to_string args.tab
+  | P.Handoff args -> P.Handle.to_string args.tab
+  | P.Drive args -> P.Handle.to_string args.tab
+
+let with_command ?logger (request : P.request) f =
+  Eta_observability.Context.with_fields
+    [
+      ("tab", command_tab request.command);
+      ("owner", P.Owner.to_string request.owner);
+      ("cmd", P.command_name request.command);
+    ]
+    (fun () ->
+      Option.iter
+        (fun logger -> Eta_observability.Logger.info logger "control command")
+        logger;
+      f ())
+
+let handle ?(model = "unconfigured") ?decide ?text_helper ?models_status ?logger tabs line
+    =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
-        Eta_observability.Context.with_fields
-          [
-            ("owner", P.Owner.to_string request.owner);
-            ("cmd", P.command_name request.command);
-          ]
-          (fun () -> dispatch ~model ?decide ?text_helper ?models_status tabs request)
+        with_command ?logger request (fun () ->
+            dispatch ~model ?decide ?text_helper ?models_status tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -169,8 +201,10 @@ let on_peer_error logger error =
     Eta_observability.Logger.warn logger ~fields
       "control dropped a request without a reply"
 
-let create ?(model = "unconfigured") ?decide ?text_helper ~sw ~runtime_dir deps =
-  let path = Filename.concat (Filename.concat runtime_dir "leash") "control.sock" in
+(* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
+   a second instance relocates it. The listener verifies the directory it sits in (0700,
+   owned by the caller) and refuses a second instance on the same path. *)
+let create ?(model = "unconfigured") ?decide ?text_helper ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -178,12 +212,7 @@ let create ?(model = "unconfigured") ?decide ?text_helper ~sw ~runtime_dir deps 
     let reply =
       match request with
       | Ok request ->
-          Eta_observability.Context.with_fields
-            [
-              ("owner", P.Owner.to_string request.owner);
-              ("cmd", P.command_name request.command);
-            ]
-            (fun () ->
+          with_command ~logger:deps.logger request (fun () ->
               dispatch ~model ?decide ?text_helper ~models_status:deps.models_status
                 deps.tabs request)
       | Error why -> invalid why

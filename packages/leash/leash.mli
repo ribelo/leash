@@ -5,6 +5,7 @@ val version : string
 module Cdp : module type of Cdp
 module Chrome : module type of Chrome
 module Config : module type of Config
+module Telemetry : module type of Telemetry
 module Desktop : module type of Desktop
 module Models : module type of Models
 module Text_helper : module type of Text_helper

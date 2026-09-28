@@ -735,7 +735,14 @@ let config_text ?(headless = false) binary profile =
     binary profile
     (if headless then "headless = true\n" else "")
 
-let config_decode ?(getenv = fun _ -> None) text =
+(* svc-x8rp svc-o4wt: the two XDG variables a service session has, so the defaults a file
+   leaves out resolve the way they do in production; a test that wants them unset says so. *)
+let config_decode
+    ?(getenv =
+      function
+      | "XDG_DATA_HOME" -> Some "/tmp/leash-xdg-data"
+      | "XDG_RUNTIME_DIR" -> Some "/tmp/leash-xdg-runtime"
+      | _ -> None) text =
   Eta_app.Config.decode ~spec:C.spec ~getenv text
 
 let expect_config_error name needles = function
@@ -945,16 +952,21 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
               (Filename.dirname Sys.executable_name)
               "../packages/leash/bin/main.exe"
           in
+          (* svc-o4wt: a fresh XDG_CONFIG_HOME, so the CLI reads no configuration and
+             falls back to the runtime directory these cases write in. *)
           let env =
             Array.to_list (Unix.environment ())
             |> List.filter (fun item ->
                 not
                   (String.starts_with ~prefix:"XDG_RUNTIME_DIR=" item
+                  || String.starts_with ~prefix:"XDG_CONFIG_HOME=" item
                   || String.starts_with ~prefix:"DSH_SESSION_ID=" item))
           in
           let env =
             Array.of_list
-              (("XDG_RUNTIME_DIR=" ^ runtime) :: "DSH_SESSION_ID=test-l1" :: env)
+              (("XDG_RUNTIME_DIR=" ^ runtime)
+              :: ("XDG_CONFIG_HOME=" ^ Filename.concat runtime "config")
+              :: "DSH_SESSION_ID=test-l1" :: env)
           in
           let pid =
             Unix.create_process_env binary
@@ -1094,6 +1106,503 @@ let cli_usage () =
       let _, status = Unix.waitpid [] pid in
       Alcotest.(check bool) "CLI usage exits two" true (status = Unix.WEXITED 2))
 
+(* svc-f4op: default-off OTLP, enabled endpoint, secret-wrapped headers, bad URLs. *)
+let otlp_config () =
+  let base = config_text "/tmp/chrome" "/tmp/profile" in
+  let decode text =
+    match config_decode text with
+    | Ok value -> value
+    | Error (`Config message) -> Alcotest.fail message
+  in
+  let absent = decode base in
+  Alcotest.(check bool)
+    "OTLP disabled by default" true
+    (absent.C.otlp.endpoint = None && absent.C.otlp.headers = []);
+  let enabled =
+    decode
+      (base ^ "[otlp]\nendpoint = \"http://127.0.0.1:4318/base\"\n"
+     ^ "[[otlp.headers]]\nname = \"Authorization\"\nvalue = \"secret-collector-token\"\n"
+      )
+  in
+  Alcotest.(check (option string))
+    "configured endpoint" (Some "http://127.0.0.1:4318/base")
+    (Option.map C.Text.to_string enabled.C.otlp.endpoint);
+  let header = List.hd enabled.C.otlp.headers in
+  Alcotest.(check string) "header name" "Authorization" (C.Text.to_string header.C.name);
+  Alcotest.(check string)
+    "export-only header" "secret-collector-token"
+    (C.Redact.expose header.C.value);
+  let rendered = C.yojson_of_t enabled |> Yojson.Safe.to_string in
+  Alcotest.(check bool)
+    "header redacted" false
+    (contains "secret-collector-token" rendered);
+  Alcotest.(check bool) "marked redacted" true (contains "<redacted>" rendered);
+  Alcotest.(check bool) "valid endpoint" true (Result.is_ok (C.validate_otlp enabled));
+  let endpoint value =
+    match C.Text.of_string value with
+    | Ok text -> text
+    | Error message -> Alcotest.fail message
+  in
+  let error_pointer expected value =
+    match C.validate_otlp value with
+    | Ok () -> Alcotest.fail ("expected invalid " ^ expected)
+    | Error issues ->
+        Alcotest.(check string)
+          "error pointer" expected (List.hd issues).Eta_app.Config.pointer
+  in
+  error_pointer "/otlp/headers"
+    { enabled with otlp = { endpoint = None; headers = enabled.otlp.headers } };
+  error_pointer "/otlp/endpoint"
+    {
+      enabled with
+      otlp =
+        {
+          enabled.otlp with
+          endpoint = Some (endpoint "https://user:password@example.com");
+        };
+    };
+  error_pointer "/otlp/endpoint"
+    {
+      enabled with
+      otlp =
+        { enabled.otlp with endpoint = Some (endpoint "http://127.0.0.1:4318/?token=x") };
+    };
+  error_pointer "/otlp/headers/0/value"
+    {
+      enabled with
+      otlp =
+        {
+          enabled.otlp with
+          headers = [ { header with value = C.Redact.make "evil\r\nX-Test: attack" } ];
+        };
+    }
+
+(* ---------- svc-x8rp, svc-o4wt, svc-hi4f: defaults, config init, the socket, help ---------- *)
+
+let binary_path () =
+  Filename.concat (Filename.dirname Sys.executable_name) "../packages/leash/bin/main.exe"
+
+let file_contents path =
+  let channel = open_in path in
+  Fun.protect
+    ~finally:(fun () -> close_in channel)
+    (fun () -> really_input_string channel (in_channel_length channel))
+
+(* A temporary tree this test owns end to end: every file and directory it made goes away
+   with it, sockets and nested configuration directories included. *)
+let with_tree f =
+  let root = Filename.temp_file "leash-cli-" "" in
+  Unix.unlink root;
+  Unix.mkdir root 0o700;
+  let rec remove path =
+    match (Unix.lstat path).Unix.st_kind with
+    | Unix.S_DIR ->
+        Array.iter (fun name -> remove (Filename.concat path name)) (Sys.readdir path);
+        Unix.rmdir path
+    | _ -> Unix.unlink path
+  in
+  Fun.protect ~finally:(fun () -> try remove root with _ -> ()) (fun () -> f root)
+
+(* The CLI with [env] replacing the inherited values of those names, answering its status,
+   stdout and stderr. *)
+let run_cli ?(env = []) argv =
+  let binary = binary_path () in
+  with_tree (fun root ->
+      let stdout = Filename.concat root "stdout"
+      and stderr = Filename.concat root "stderr" in
+      let out = Unix.openfile stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
+      let err = Unix.openfile stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
+      let keys = List.map (fun (key, _) -> key ^ "=") env in
+      let inherited =
+        Array.to_list (Unix.environment ())
+        |> List.filter (fun item ->
+            not (List.exists (fun key -> String.starts_with ~prefix:key item) keys))
+      in
+      let pid =
+        Unix.create_process_env binary
+          (Array.of_list (binary :: argv))
+          (Array.of_list
+             (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
+          Unix.stdin out err
+      in
+      Unix.close out;
+      Unix.close err;
+      let _, status = Unix.waitpid [] pid in
+      (status, file_contents stdout, file_contents stderr))
+
+(* The CLI answered once on [listener]; how a test drives it where a service would be. *)
+let run_cli_at listener ~env argv reply =
+  let binary = binary_path () in
+  with_tree (fun root ->
+      let stdout = Filename.concat root "stdout"
+      and stderr = Filename.concat root "stderr" in
+      let out = Unix.openfile stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
+      let err = Unix.openfile stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
+      let keys = List.map (fun (key, _) -> key ^ "=") env in
+      let inherited =
+        Array.to_list (Unix.environment ())
+        |> List.filter (fun item ->
+            not (List.exists (fun key -> String.starts_with ~prefix:key item) keys))
+      in
+      let pid =
+        Unix.create_process_env binary
+          (Array.of_list (binary :: argv))
+          (Array.of_list
+             (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
+          Unix.stdin out err
+      in
+      Unix.close out;
+      Unix.close err;
+      let ready, _, _ = Unix.select [ listener ] [] [] 5. in
+      if ready = [] then Alcotest.fail "the CLI did not connect";
+      let peer, _ = Unix.accept listener in
+      let input = Unix.in_channel_of_descr peer in
+      ignore (Yojson.Safe.from_string (input_line input));
+      let output = Unix.out_channel_of_descr (Unix.dup peer) in
+      output_string output (reply ^ "\n");
+      flush output;
+      close_out output;
+      close_in input;
+      let _, status = Unix.waitpid [] pid in
+      (status, file_contents stdout, file_contents stderr))
+
+(* svc-x8rp: the default binary is a bare name, so validation looks it up on PATH and
+   names the field when nothing provides it. *)
+let binary_on_path () =
+  with_tree (fun root ->
+      let bin = Filename.concat root "bin" in
+      let empty = Filename.concat root "empty" in
+      Unix.mkdir bin 0o700;
+      Unix.mkdir empty 0o700;
+      let stub = Filename.concat bin "google-chrome-stable" in
+      close_out (open_out stub);
+      Unix.chmod stub 0o700;
+      let environment path key =
+        match key with
+        | "PATH" -> Some path
+        | "XDG_DATA_HOME" -> Some (Filename.concat root "data")
+        | "XDG_RUNTIME_DIR" -> Some (Filename.concat root "runtime")
+        | _ -> None
+      in
+      let decode path text =
+        match Eta_app.Config.decode ~spec:C.spec ~getenv:(environment path) text with
+        | Ok value -> value
+        | Error (`Config message) -> Alcotest.fail message
+      in
+      let found = decode bin "[tabs]\ncap = 2\n" in
+      let missing = decode empty "" in
+      let refusal fs label config =
+        match C.validate_paths ~getenv:(environment empty) ~fs config with
+        | Ok () -> Alcotest.fail (label ^ ": expected a refusal")
+        | Error issues -> issues
+      in
+      Eio_main.run (fun env ->
+          Alcotest.(check bool)
+            "svc-x8rp google-chrome-stable is found on PATH" true
+            (Result.is_ok (C.validate_paths ~getenv:(environment bin) ~fs:env#fs found));
+          let issues = refusal env#fs "missing binary" missing in
+          Alcotest.(check string)
+            "svc-x8rp a bare name nothing provides is refused by pointer" "/chrome/binary"
+            (List.hd issues).Eta_app.Config.pointer;
+          Alcotest.(check bool)
+            "svc-x8rp and the message says PATH" true
+            (contains "PATH" (List.hd issues).Eta_app.Config.message)))
+
+(* svc-o4wt svc-x8rp: a variable that is unset leaves its placeholder in the path, and
+   validation names that field instead of letting the service write a directory called
+   $XDG_DATA_HOME or a socket called $XDG_RUNTIME_DIR. *)
+let unset_xdg_paths () =
+  with_tree (fun root ->
+      let stub = Filename.concat root "chrome" in
+      close_out (open_out stub);
+      Unix.chmod stub 0o700;
+      let decode text =
+        match Eta_app.Config.decode ~spec:C.spec ~getenv:(fun _ -> None) text with
+        | Ok value -> value
+        | Error (`Config message) -> Alcotest.fail message
+      in
+      let pointer ~fs label config =
+        match C.validate_paths ~fs config with
+        | Ok () -> Alcotest.fail (label ^ ": expected a refusal")
+        | Error issues -> (List.hd issues).Eta_app.Config.pointer
+      in
+      let chrome = Printf.sprintf "[chrome]\nbinary = %S\n" stub in
+      Eio_main.run (fun env ->
+          Alcotest.(check string)
+            "svc-o4wt an unset XDG_RUNTIME_DIR is refused at control.socket"
+            "/control/socket"
+            (pointer ~fs:env#fs "socket" (decode chrome));
+          Alcotest.(check string)
+            "svc-x8rp an unset XDG_DATA_HOME is refused at chrome.profile_dir"
+            "/chrome/profile_dir"
+            (pointer ~fs:env#fs "profile"
+               (decode (chrome ^ "[control]\nsocket = \"/tmp/leash-unset.sock\"\n")))))
+
+(* svc-x8rp svc-o4wt: a file that says nothing — or names one setting — is a
+   configuration, and the two XDG paths expand from the environment. *)
+let config_defaults () =
+  let getenv key =
+    match key with
+    | "XDG_DATA_HOME" -> Some "/tmp/leash-xdg-data"
+    | "XDG_RUNTIME_DIR" -> Some "/tmp/leash-runtime"
+    | _ -> None
+  in
+  let default = C.env ~getenv C.default in
+  let decode name text =
+    match Eta_app.Config.decode ~spec:C.spec ~getenv text with
+    | Ok value -> value
+    | Error (`Config message) -> Alcotest.fail (name ^ ": " ^ message)
+  in
+  Alcotest.(check string)
+    "svc-x8rp a file that says nothing is the defaults"
+    (Yojson.Safe.to_string (C.yojson_of_t default))
+    (Yojson.Safe.to_string (C.yojson_of_t (decode "empty" "")));
+  let partial = decode "partial" "[tabs]\ncap = 4\n" in
+  Alcotest.(check int)
+    "svc-x8rp the named setting wins" 4
+    (C.Tab_cap.to_int partial.C.tabs.cap);
+  Alcotest.(check string)
+    "svc-x8rp the profile default expands XDG_DATA_HOME"
+    "/tmp/leash-xdg-data/leash/profile"
+    (C.Text.to_string partial.C.chrome.profile_dir);
+  Alcotest.(check string)
+    "svc-o4wt the socket default expands XDG_RUNTIME_DIR"
+    "/tmp/leash-runtime/leash/control.sock"
+    (C.Text.to_string partial.C.control.socket);
+  Alcotest.(check int) "svc-x8rp ADR-0005's cap" 32 (C.Tab_cap.to_int default.C.tabs.cap);
+  Alcotest.(check int)
+    "svc-x8rp ADR-0005's idle" 1800
+    (C.Seconds.to_int default.C.expiry.idle_s);
+  Alcotest.(check int)
+    "svc-x8rp ADR-0005's unclaimed" 3600
+    (C.Seconds.to_int default.C.expiry.unclaimed_s);
+  Alcotest.(check string)
+    "svc-x8rp the commented file is the same defaults"
+    (Yojson.Safe.to_string (C.yojson_of_t default))
+    (Yojson.Safe.to_string (C.yojson_of_t (decode "the commented file" C.default_toml)));
+  List.iter
+    (fun name ->
+      Alcotest.(check bool)
+        ("svc-x8rp the file documents " ^ name)
+        true
+        (contains name C.default_toml))
+    [
+      "binary";
+      "profile_dir";
+      "workspace";
+      "cap";
+      "idle_s";
+      "unclaimed_s";
+      "tombstone_s";
+      "socket";
+      "systemone_endpoint";
+      "jev_model";
+      "chat_base_url";
+      "text_model";
+      "focus_command";
+      "notify_command";
+    ]
+
+(* svc-x8rp: init writes the commented defaults, refuses to overwrite, and --force is the
+   operator's yes. Both go through the file mode the config's API key deserves. *)
+let config_init () =
+  with_tree (fun root ->
+      let dir = Filename.concat root "leash" in
+      let path = Filename.concat dir "config.toml" in
+      (match C.init ~path () with
+      | Ok written ->
+          Alcotest.(check string) "svc-x8rp init answers the path it wrote" path written
+      | Error _ -> Alcotest.fail "svc-x8rp init refused a fresh path");
+      Alcotest.(check string)
+        "svc-x8rp init writes the commented defaults" C.default_toml (file_contents path);
+      Alcotest.(check int)
+        "svc-x8rp the file is private" 0o600 (Unix.stat path).Unix.st_perm;
+      Alcotest.(check int)
+        "svc-x8rp its directory is private too" 0o700 (Unix.stat dir).Unix.st_perm;
+      (match C.init ~path () with
+      | Ok _ -> Alcotest.fail "svc-x8rp init overwrote a file without --force"
+      | Error (`Exists refused) ->
+          Alcotest.(check string) "svc-x8rp it names what it refused" path refused
+      | Error (`Write message) -> Alcotest.fail ("svc-x8rp init failed: " ^ message));
+      Alcotest.(check string)
+        "svc-x8rp the refused file is untouched" C.default_toml (file_contents path);
+      let out = open_out path in
+      output_string out "oops = true\n";
+      close_out out;
+      (match C.init ~force:true ~path () with
+      | Ok _ -> ()
+      | Error _ -> Alcotest.fail "svc-x8rp init --force did not overwrite");
+      Alcotest.(check string)
+        "svc-x8rp --force restores the defaults" C.default_toml (file_contents path))
+
+(* svc-x8rp: the same through the Door, which is where the operator meets it. *)
+let config_init_cli () =
+  with_tree (fun root ->
+      let home = Filename.concat root "config" in
+      let file = Filename.concat (Filename.concat home "leash") "config.toml" in
+      let env = [ ("XDG_CONFIG_HOME", home) ] in
+      let status, output, error = run_cli ~env [ "config"; "init" ] in
+      Alcotest.(check bool)
+        "svc-x8rp config init exits zero" true (status = Unix.WEXITED 0);
+      Alcotest.(check string) "svc-x8rp it names the file" (file ^ "\n") output;
+      Alcotest.(check string) "svc-x8rp it writes no diagnostic" "" error;
+      Alcotest.(check string)
+        "svc-x8rp the CLI writes the commented defaults" C.default_toml
+        (file_contents file);
+      let status, _, error = run_cli ~env [ "config"; "init" ] in
+      Alcotest.(check bool)
+        "svc-x8rp a second init exits two" true (status = Unix.WEXITED 2);
+      Alcotest.(check bool)
+        "svc-x8rp and says how to overwrite" true (contains "--force" error);
+      let status, _, _ = run_cli ~env [ "config"; "init"; "--force" ] in
+      Alcotest.(check bool) "svc-x8rp --force overwrites" true (status = Unix.WEXITED 0))
+
+(* svc-o4wt: the CLI connects where control.socket says — not where XDG_RUNTIME_DIR would
+   put a socket — and --socket overrides the file for one call. *)
+let socket_config_cli () =
+  with_tree (fun root ->
+      let config_home = Filename.concat root "config" in
+      let dir = Filename.concat config_home "leash" in
+      let runtime = Filename.concat root "runtime" in
+      Unix.mkdir config_home 0o700;
+      Unix.mkdir dir 0o700;
+      Unix.mkdir runtime 0o700;
+      let configured = Filename.concat root "configured.sock" in
+      let override = Filename.concat root "override.sock" in
+      let out = open_out (Filename.concat dir "config.toml") in
+      output_string out (Printf.sprintf "[control]\nsocket = %S\n" configured);
+      close_out out;
+      let listen path =
+        let listener = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+        Unix.bind listener (Unix.ADDR_UNIX path);
+        Unix.listen listener 1;
+        listener
+      in
+      let configured_listener = listen configured in
+      let override_listener = listen override in
+      Fun.protect
+        ~finally:(fun () ->
+          Unix.close configured_listener;
+          Unix.close override_listener)
+        (fun () ->
+          let env =
+            [
+              ("XDG_CONFIG_HOME", config_home);
+              ("XDG_RUNTIME_DIR", runtime);
+              ("DSH_SESSION_ID", "svc-o4wt");
+            ]
+          in
+          let reply = "{\"ok\":true,\"result\":{\"tabs\":[]}}" in
+          let status, output, _ = run_cli_at configured_listener ~env [ "list" ] reply in
+          Alcotest.(check bool)
+            "svc-o4wt the configured socket answers the CLI" true (status = Unix.WEXITED 0);
+          Alcotest.(check bool)
+            "svc-o4wt it prints the reply" true (contains "tabs" output);
+          (* a relative or unset socket is refused before anything connects *)
+          let status, _, error =
+            run_cli ~env [ "list"; "--socket"; "$XDG_RUNTIME_DIR/nope.sock" ]
+          in
+          Alcotest.(check bool)
+            "svc-o4wt an unresolved --socket is an error, not a silent default" false
+            (status = Unix.WEXITED 0);
+          Alcotest.(check bool)
+            "svc-o4wt and it says so" true
+            (contains "XDG_RUNTIME_DIR" error || contains "No such file" error);
+          let status, _, _ =
+            run_cli_at override_listener ~env [ "list"; "--socket"; override ] reply
+          in
+          Alcotest.(check bool)
+            "svc-o4wt --socket overrides control.socket" true (status = Unix.WEXITED 0)))
+
+(* svc-hi4f: every command's help names its positionals in the protocol's order, and the
+   page renders without a Cmdliner markup diagnostic. *)
+let client_help =
+  [
+    ([ "new" ], [ "URL" ]);
+    ([ "list" ], []);
+    ([ "claim" ], [ "TAB" ]);
+    ([ "release" ], [ "TAB" ]);
+    ([ "close" ], [ "TAB" ]);
+    ([ "status" ], []);
+    ([ "snap" ], [ "TAB" ]);
+    ([ "text" ], [ "TAB" ]);
+    ([ "shot" ], [ "TAB"; "PATH" ]);
+    ([ "debug" ], [ "TAB" ]);
+    ([ "eval" ], [ "TAB"; "EXPRESSION" ]);
+    ([ "nav" ], [ "TAB"; "URL" ]);
+    ([ "click" ], [ "TAB"; "SNAPSHOT"; "INDEX" ]);
+    ([ "fill" ], [ "TAB"; "SNAPSHOT"; "INDEX"; "TEXT" ]);
+    ([ "press" ], [ "TAB"; "SNAPSHOT"; "KEY" ]);
+    ([ "select" ], [ "TAB"; "SNAPSHOT"; "INDEX"; "OPTION" ]);
+    ([ "scroll" ], [ "TAB"; "UP|DOWN" ]);
+    ([ "wait" ], [ "TAB" ]);
+    ([ "dialog" ], [ "TAB"; "ACCEPT|DISMISS" ]);
+    ([ "handoff" ], [ "TAB"; "REASON" ]);
+    ([ "resume" ], [ "TAB" ]);
+    ([ "drive" ], [ "TAB"; "GOAL" ]);
+  ]
+
+let help_matrix () =
+  List.iter
+    (fun (argv, docvs) ->
+      let name = "leash " ^ String.concat " " argv in
+      let status, output, error = run_cli (argv @ [ "--help" ]) in
+      Alcotest.(check bool) (name ^ " --help exits zero") true (status = Unix.WEXITED 0);
+      Alcotest.(check string) (name ^ " --help leaves stderr empty") "" error;
+      Alcotest.(check bool)
+        (name ^ " --help names its positionals")
+        true
+        (List.for_all (fun docv -> contains docv output) docvs);
+      Alcotest.(check bool)
+        (name ^ " --help shows an example")
+        true (contains "EXAMPLES" output);
+      Alcotest.(check bool)
+        (name ^ " --help lists the client options")
+        true
+        (List.for_all
+           (fun flag -> contains flag output)
+           [ "--config"; "--owner"; "--socket" ]))
+    client_help;
+  List.iter
+    (fun argv ->
+      let name = "leash " ^ String.concat " " argv in
+      let status, output, error = run_cli (argv @ [ "--help" ]) in
+      Alcotest.(check bool) (name ^ " --help exits zero") true (status = Unix.WEXITED 0);
+      Alcotest.(check string) (name ^ " --help leaves stderr empty") "" error;
+      Alcotest.(check bool)
+        (name ^ " --help says what it does")
+        true
+        (String.length output > 0))
+    [ [ "config"; "check" ]; [ "config"; "init" ]; [ "config" ] ]
+
+(* svc-hi4f: a command accepts only the options it uses, so the first call is the right
+   call rather than one corrected after an ignored flag. *)
+let help_scope () =
+  let help argv =
+    let _, output, _ = run_cli (argv @ [ "--help" ]) in
+    output
+  in
+  Alcotest.(check bool)
+    "svc-hi4f only list and snap render a table" true
+    (contains "--table" (help [ "list" ])
+    && contains "--table" (help [ "snap" ])
+    && (not (contains "--table" (help [ "new" ])))
+    && not (contains "--table" (help [ "text" ])));
+  Alcotest.(check bool)
+    "svc-hi4f only release and close force ownership" true
+    (contains "--force" (help [ "release" ])
+    && contains "--force" (help [ "close" ])
+    && not (contains "--force" (help [ "new" ])));
+  Alcotest.(check bool)
+    "svc-hi4f press names its row option and click has none" true
+    (contains "--index" (help [ "press" ]) && not (contains "--index" (help [ "click" ])));
+  let status, _, _ = run_cli [ "new"; "--table" ] in
+  Alcotest.(check bool)
+    "svc-hi4f an option a command does not use is refused" true (status = Unix.WEXITED 2);
+  let status, _, _ = run_cli [ "press"; "t_9xk"; "s_3"; "Enter"; "--force" ] in
+  Alcotest.(check bool)
+    "svc-hi4f --force is refused where it means nothing" true (status = Unix.WEXITED 2)
+
 let test name case = Alcotest.test_case name `Quick case
 
 let () =
@@ -1115,6 +1624,7 @@ let () =
           test "usage exit" cli_usage;
         ] );
       ("svc-kzt6", [ test "environment override/redaction" config_values ]);
+      ("svc-f4op", [ test "OTLP disabled, enabled, redacted headers" otlp_config ]);
       ( "svc-ljl3",
         [
           test "boot path validation" path_validation;
@@ -1125,5 +1635,23 @@ let () =
           test "config decode and defaults" config_values;
           test "hand-04rb hand-phof hand-rg9h" handoff_commands;
           test "config check prints the redacted config" config_check_cli;
+        ] );
+      ( "svc-x8rp",
+        [
+          test "defaults for every non-secret field" config_defaults;
+          test "the default binary is found on PATH" binary_on_path;
+          test "config init writes, refuses and --force" config_init;
+          test "config init through the CLI" config_init_cli;
+        ] );
+      ( "svc-o4wt",
+        [
+          test "the socket default and the configured path" config_defaults;
+          test "an unset XDG variable is refused by pointer" unset_xdg_paths;
+          test "the CLI connects where the config says" socket_config_cli;
+        ] );
+      ( "svc-hi4f",
+        [
+          test "every command's help names its positionals" help_matrix;
+          test "each command accepts only its own options" help_scope;
         ] );
     ]
