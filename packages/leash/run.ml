@@ -52,6 +52,7 @@ type step_request = {
   hint : string option;
   max_steps : int;
   deadline_s : int;
+  dry_run : bool;
 }
 (** run-d82w: one playbook step as the operator level receives it — the goal with the
     hint shaping it, and the step's own cap and deadline. *)
@@ -269,8 +270,10 @@ type state = {
   proposals : string list;  (** run-m0r8: the proposal files the run wrote, oldest first. *)
   count : int;  (** Procedures executed, the [use] calls and planner procedures included. *)
   records : Yojson.Safe.t list;
-      (** extr-8o1h: the records the script steps collected, newest first. The runner
-          holds them; no model ever sees one (extr-b3u0). *)
+      (** extr-b3u0: at most five truncated display samples, newest first; never
+          passed to a model. Full validated records are streamed only. *)
+  collected_count : int;
+  pages : int;  (** extr-ve3k: verified pages, including the first page. *)
   pending_scripts : P.run_script list;
       (** The script calls of the procedure being executed, newest first, moved into its
           trace entry when it is recorded. *)
@@ -280,6 +283,15 @@ type state = {
 }
 
 let finish (st : state) status ?reason () =
+  let scripts =
+    List.concat_map (fun (entry : P.run_procedure) -> entry.P.scripts) st.trace
+    |> List.fold_left (fun acc (entry : P.run_script) ->
+         let calls, records = Option.value ~default:(0, 0) (List.assoc_opt entry.script acc) in
+         (entry.script, (calls + 1, records + entry.records))
+         :: List.remove_assoc entry.script acc) []
+    |> List.map (fun (name, (calls, records)) ->
+         `Assoc [ ("name", `String name); ("calls", `Int calls); ("records", `Int records) ])
+  in
   P.
     {
       status;
@@ -288,7 +300,11 @@ let finish (st : state) status ?reason () =
       mission_expectations = st.mission_checks;
       planner_turns = List.rev st.plans;
       proposals = List.rev st.proposals;
-      collected = List.length st.records;
+      collected = st.collected_count;
+      data = `Assoc [ ("count", `Int st.collected_count); ("first", `List (List.rev st.records)); ("pages", `Int st.pages); ("scripts", `List scripts) ];
+      model_calls = 0;
+      model_cost = 0.;
+      operator_steps = [];
       final = st.observation.snapshot;
       reason;
     }
@@ -378,7 +394,7 @@ type steps_outcome =
       (** The run ended inside a step: a dialog, or a planner turn a called procedure
           asked for. *)
 
-let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result, P.error) result =
+let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : args) : (P.run_result, P.error) result =
   let installed = installed_playbooks installed in
   let started = now () in
   let deadline = started +. float_of_int args.deadline_s in
@@ -398,11 +414,32 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
       proposals = [];
       count = 0;
         records = [];
+        collected_count = 0;
+        pages = 0;
         pending_scripts = [];
       switch = false;
       asked_switch = false;
       observation;
     }
+  in
+  let dedupe_key = ref None in
+  let seen = Hashtbl.create 128 in
+  let accept_record item =
+    match !dedupe_key with
+    | None -> Result.map (fun () -> true) (on_record item)
+    | Some key -> (
+        match item with
+        | `Assoc fields -> (
+            match List.assoc_opt key fields with
+            | None -> Error (invalid ("repeat key missing from record: " ^ key))
+            | Some identity ->
+                let identity = Yojson.Safe.to_string identity in
+                if Hashtbl.mem seen identity then Ok false
+                else
+                  match on_record item with
+                  | Error error -> Error error
+                  | Ok () -> Hashtbl.add seen identity (); Ok true)
+        | _ -> Error (invalid "repeat key requires object records"))
   in
 
   (* run-pvmc (the L30 shape B, run-snk4): the state an upper level is asked over — the
@@ -431,6 +468,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                  `Assoc [ ("procedure", `String slug); ("outcome", `String outcome) ])
                (last 5 st.recent)) );
         ("arguments", `Assoc (List.map (fun (name, value) -> (name, `String value)) st.known));
+        ("collected", `Int st.collected_count);
       ]
   in
 
@@ -713,7 +751,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
           in
           let cap = match discovery with None -> cap | Some d -> min cap (d.max_steps - st.steps_used) in
           let request =
-            { goal = goal_text; hint = goal.Playbook.hint; max_steps = cap; deadline_s }
+            { goal = goal_text; hint = goal.Playbook.hint; max_steps = cap; deadline_s; dry_run = false }
           in
           (match (match discovery with None -> None | Some _ -> unsafe_action goal_text) with
           | Some kind -> Ok (Steps_finish (finish st (status "blocked") ~reason:("discovery stopped before " ^ kind ^ " action") ()))
@@ -807,16 +845,31 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                          Printf.sprintf "script %s: %s" step.Playbook.script reason ))
               | Ok (Collected { value; records; bytes; elapsed_ms }) ->
                   let items = match value with `List items -> items | one -> [ one ] in
-                  let st =
-                    {
-                      st with
-                      records = List.rev_append items st.records;
-                      pending_scripts =
-                        called url ~records ~bytes ~elapsed_ms ~error:None
-                        :: st.pending_scripts;
-                    }
+                  let rec collect st = function
+                    | [] -> Ok st
+                    | item :: rest -> (
+                        match accept_record item with
+                        | Error error -> Error error
+                        | Ok false -> collect st rest
+                        | Ok true ->
+                            let sample =
+                              if List.length st.records >= 5 then st.records
+                              else
+                                let text = Yojson.Safe.to_string item in
+                                (if String.length text <= 2048 then item
+                                 else `String (String.sub text 0 2048 ^ "...")) :: st.records
+                            in
+                            collect { st with records = sample; collected_count = st.collected_count + 1 } rest)
                   in
-                  go st drives rest))
+                  (match collect st items with
+                  | Error error -> Error error
+                  | Ok st ->
+                      let st =
+                        { st with pending_scripts =
+                            called url ~records ~bytes ~elapsed_ms ~error:None
+                            :: st.pending_scripts }
+                      in
+                      go st drives rest)))
       | Playbook.Use use :: rest -> (
           match
             List.find_opt
@@ -863,6 +916,8 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
     | Error error -> Error error
     | Ok (Unfilled (st, reason)) -> planner st ~trigger:Arguments ~reason
     | Ok (Filled (st, values)) ->
+        dedupe_key := Option.map (fun (repeat : Playbook.repeat) -> repeat.key) proc.Playbook.repeat;
+        (match proc.Playbook.repeat with None -> () | Some _ -> Hashtbl.clear seen);
         (* run-m0r8: a planner-written procedure that ran and passed its expectations is
            proposed to the operator as a file in XDG state; the run reports the path and
            never touches the playbook the operator authored. *)
@@ -931,11 +986,16 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                         (match propose_verified st with
                         | Error error -> Error error
                         | Ok st ->
-                            Ok
-                              (Continue
-                                 (record st ~book ~proc ~planned ~choice ~drives
-                                    ~expectations:results ~outcome:"verified" ~attempts:n
-                                    ~elapsed:(ms (now () -. proc_started)) ~reason:None)))
+                            let st = { st with pages = st.pages + (if proc.Playbook.repeat = None then 0 else 1) } in
+                            let st = record st ~book ~proc ~planned ~choice ~drives
+                              ~expectations:results ~outcome:"verified" ~attempts:n
+                              ~elapsed:(ms (now () -. proc_started)) ~reason:None in
+                            (match proc.Playbook.repeat with
+                            | None -> Ok (Continue st)
+                            | Some repeat ->
+                                let result = paginate st ~book ~values ~choice repeat in
+                                dedupe_key := None;
+                                result))
                       else if n < 2 then attempt (n + 1) st drives
                       else
                         let reason =
@@ -949,6 +1009,56 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                         fail_procedure st drives ~expectations:results ~n reason))
         in
         attempt 1 st []
+
+  (* extr-ve3k extr-p7sj: a failed next expectation ends pagination, not a retry. *)
+  and paginate st ~book ~values ~choice (repeat : Playbook.repeat) =
+    let next = List.find (fun (p : Playbook.procedure) -> p.slug = repeat.next)
+      book.Playbook.playbook.procedures in
+    let until_checker = match Playbook.resolve book.Playbook.playbook.pages repeat.until with
+      | Ok checker -> checker | Error _ -> assert false in
+    let rec page st index =
+      if index >= repeat.max || st.count >= args.max_procedures then Ok (Continue st)
+      else if now () >= deadline then
+        Ok (Finish (finish st (status "deadline") ~reason:"repeat deadline" ()))
+      else
+        match verify t ~pages:book.Playbook.playbook.pages
+          ~checks:[ (repeat.until, until_checker) ] ~timeout_s:1 with
+        | Error error -> Error (with_trace st error)
+        | Ok (until_results, observation) ->
+            let st = { st with observation } in
+            if List.for_all (fun (r : P.run_expectation) -> r.passed) until_results then Ok (Continue st)
+            else (
+              pause_ms (Option.value ~default:500 repeat.delay_ms);
+              if now () >= deadline then
+                Ok (Finish (finish st (status "deadline") ~reason:"repeat deadline" ()))
+              else match steps st book next values ~optional:false with
+              | Error error -> Error error
+              | Ok (Steps_finish result) -> Ok (Finish result)
+              | Ok (Steps_failed (st, drives, reason)) ->
+                  let st = record st ~book ~proc:next ~planned:false
+                    ~choice:{ choice with key = next.slug } ~drives ~expectations:[]
+                    ~outcome:"failed" ~attempts:1 ~elapsed:0 ~reason:(Some reason) in
+                  Ok (Finish (finish st (status "blocked") ~reason ()))
+              | Ok (Steps_done (st, drives, _)) ->
+                  let checks = resolved_checks book next values in
+                  let timeout_s = Option.value ~default:5 next.Playbook.expect_timeout_s in
+                  match verify t ~pages:book.Playbook.playbook.pages ~checks ~timeout_s with
+                  | Error error -> Error (with_trace st error)
+                  | Ok (results, observation) ->
+                      let st = { st with observation } in
+                      if not (List.for_all (fun (r : P.run_expectation) -> r.passed) results) then
+                        let st = record st ~book ~proc:next ~planned:false
+                          ~choice:{ choice with key = next.slug } ~drives ~expectations:results
+                          ~outcome:"skipped" ~attempts:1 ~elapsed:0
+                          ~reason:(Some "end of pagination: next expectations failed") in
+                        Ok (Continue st)
+                      else
+                        let st = { st with checks; pages = st.pages + 1 } in
+                        let st = record st ~book ~proc:next ~planned:false
+                          ~choice:{ choice with key = next.slug } ~drives ~expectations:results
+                          ~outcome:"verified" ~attempts:1 ~elapsed:0 ~reason:None in
+                        page st (index + 1))
+    in page st 1
 
   (* run-4j1v, the L30 guard: DONE is accepted only against the mission's own expectations,
      verified now on a fresh observation, or — when the mission carries none — against the
@@ -1036,6 +1146,28 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
             Ok (Finish (finish st (status "error") ~reason:(dialog_reason dialog) ()))
         | None -> Ok (Continue st))
 
+  (* extr-andy: a "none" playbook delegates the entire mission to the existing
+     operator loop, not to the planner. It uses the same tab and action lock. *)
+  and single_goal (st : state) =
+    let request =
+      { goal = args.mission; hint = None; max_steps = 30;
+        deadline_s = remaining (); dry_run = args.dry_run }
+    in
+    match execute_step t request with
+    | Error error -> Error error
+    | Ok drive ->
+        let name = P.Drive_status.to_string drive.P.status in
+        let status =
+          match name with
+          | "done" -> status "done"
+          | "step-cap" -> status "limit"
+          | "deadline" -> status "deadline"
+          | "error" -> status "error"
+          | _ -> status "blocked"
+        in
+        Ok (Finish { (finish { st with book = None } status ?reason:drive.P.reason ()) with
+          P.final = drive.P.final; operator_steps = drive.P.steps })
+
   (* run-kli0 run-xh5d: asked at the start, after a procedure whose description or the
      mission says the next part is elsewhere, and — through [ask_procedure] — when the
      procedure level is blocked while the mission still names another site. A switch
@@ -1045,9 +1177,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
     else if installed = [] then
       (* run-tcuz: nothing to choose from, and a question whose only criterion is [none]
          is not worth a model call. *)
-      planner st ~trigger:Blocked
-        ~reason:
-          "no playbooks are installed: put a site's playbook in the XDG playbooks directory"
+      single_goal st
     else
       match playbook_question st with
       | Error error -> Error error
@@ -1056,8 +1186,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
           | Error error -> Error (with_trace st error)
           | Ok choice -> (
               if choice.key = "none" then
-                planner st ~trigger:Blocked
-                  ~reason:"no installed playbook serves this part of the mission"
+                single_goal st
               else
                 match
                   List.find_opt
@@ -1131,7 +1260,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
   (* run-fp7i: the two levels against the models, the chosen playbook and first procedure
      with its resolved checkers, and no action at all — not even the entry navigation. *)
   and dry_run (st : state) =
-    match playbook_question st with
+    if installed = [] then single_goal st else match playbook_question st with
     | Error error -> Error error
     | Ok question -> (
         match select_playbook t question with
@@ -1146,12 +1275,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
             in
             let st = { st with book } in
             (match book with
-            | None ->
-                Ok
-                  (Finish
-                     (finish st (status "blocked")
-                        ~reason:"dry run: no installed playbook serves this part of the mission"
-                        ()))
+            | None -> single_goal st
             | Some book -> (
                 match procedure_question st book with
                 | Error error -> Error error
@@ -1230,11 +1354,42 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
 
 (* ---------- The handler ---------- *)
 
-let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
+let loop ~(handler : handler) ~now ~installed ?discovery ?(on_record = fun _ -> Ok ()) ?(pause_ms = fun _ -> ()) (args : args) =
   if args.max_procedures < 1 || args.deadline_s < 1 then
     Error (invalid "run max_procedures and deadline_s must be positive")
   else
-    let module M = struct
+    let calls = ref 0 and cost = ref 0. in
+    let kinds = Hashtbl.create 8 and unreported = ref 0 in
+    (* Pure loop tests provide handler replies without provider callbacks; infer their
+       historical counts only when the handler emitted no actual request events. *)
+    let choice question =
+      let before = !calls in
+      let result = handler.choose question in
+      if !calls = before && not (Model_usage.active ()) then (
+        incr calls;
+        match result with Ok reply ->
+          Option.iter (fun (usage : P.run_usage) -> cost := !cost +. usage.cost) reply.usage
+        | Error _ -> ());
+      result
+    in
+    let plan request =
+      let before = !calls in
+      let result = handler.plan request in
+      if !calls = before && not (Model_usage.active ()) then (
+        incr calls;
+        match result with Ok reply ->
+          Option.iter (fun (usage : P.run_usage) -> cost := !cost +. usage.cost) reply.usage
+        | Error _ -> ());
+      result
+    in
+    let step request =
+      let before = !calls in
+      let result = handler.step request in
+      if !calls = before && not (Model_usage.active ()) then (
+        match result with Ok reply -> calls := !calls + List.length reply.P.steps
+        | Error _ -> ());
+      result
+    in    let module M = struct
       type _ Effect.t += Observe : (observation, P.error) result Effect.t
       type _ Effect.t += Navigate : string -> (unit, P.error) result Effect.t
 
@@ -1282,7 +1437,17 @@ let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
         run_script = (fun script args -> Effect.perform (M.Run_script (script, args)));
       }
     in
-    Effect.Deep.match_with (fun () -> compute token ~now ~installed ?discovery args) ()
+    let meter = function
+      | Model_usage.Start kind ->
+          incr calls; incr unreported;
+          Hashtbl.replace kinds kind
+            (1 + Option.value ~default:0 (Hashtbl.find_opt kinds kind))
+      | Model_usage.Reported (_, amount) ->
+          (match amount with Some value -> cost := !cost +. value; decr unreported
+           | None -> ())
+    in
+    let outcome = Model_usage.with_meter meter (fun () ->
+      Effect.Deep.match_with (fun () -> compute token ~on_record ~pause_ms ~now ~installed ?discovery args) ()
       {
         retc = Fun.id;
         exnc = raise;
@@ -1300,11 +1465,11 @@ let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
             | M.Select_playbook question ->
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
-                    Effect.Deep.continue k (handler.choose question))
+                    Effect.Deep.continue k (choice question))
             | M.Select_procedure question ->
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
-                    Effect.Deep.continue k (handler.choose question))
+                    Effect.Deep.continue k (choice question))
             | M.Fill_args context ->
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
@@ -1312,7 +1477,7 @@ let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
             | M.Execute_step request ->
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
-                    Effect.Deep.continue k (handler.step request))
+                    Effect.Deep.continue k (step request))
             | M.Verify (pages, checks, timeout_s) ->
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
@@ -1320,7 +1485,7 @@ let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
             | M.Plan request ->
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
-                    Effect.Deep.continue k (handler.plan request))
+                    Effect.Deep.continue k (plan request))
             | M.Propose (site, proc) ->
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
@@ -1334,4 +1499,11 @@ let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
                     Effect.Deep.continue k (handler.script script ~args))
             | _ -> None);
-      }
+      }) in
+    Result.map (fun result ->
+      let models = `Assoc (Hashtbl.fold (fun kind n acc -> (kind, `Int n) :: acc) kinds []) in
+      let data = match result.P.data with
+        | `Assoc fields -> `Assoc (("model_calls_by_kind", models) ::
+            ("cost_unreported", `Int !unreported) :: fields)
+        | other -> other in
+      { result with P.model_calls = !calls; model_cost = !cost; data }) outcome

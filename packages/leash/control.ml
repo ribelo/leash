@@ -90,11 +90,6 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
   | P.List_tabs args ->
       success (P.yojson_of_list_result (Tabs.list tabs ~owner ~all:args.all))
   | P.Status -> success (P.yojson_of_status_result (report ?models_status tabs))
-  | P.Drive args ->
-      (* drive-ls3c: the text helper seam travels with the decision seam: production
-         installs {!Models.text_helper}, scripted tests their own. *)
-      lift P.yojson_of_drive_result
-        (Tabs.drive ?decide ?text_helper tabs ~owner ~model args)
   | P.Discover args -> (
       let turns = Option.value ~default:20 args.max_turns in
       let steps = Option.value ~default:100 args.max_steps in
@@ -152,13 +147,14 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
                         deadline_s = Some deadline_s;
                         dry_run = Some false;
                         expect = None;
+                        out = None;
                       }
                   in
                   lift P.yojson_of_run_result
                     (Tabs.run ?levels ~model ?decide ?text_helper ?installed
                        ~discovery:(Run.{ book; max_steps = steps; max_cost = cost }, turns)
                        tabs ~owner ~tab:info.tab run_args)))
-  | P.Run args -> (
+  | P.Drive args -> (
       (* run-vj48 run-4mzm: the run's upper levels are one more seam. Production installs
          {!Models.levels} — one System One client for all three levels (run-7blx) — and
          scripted tests their own; [installed] hands a test its playbooks.
@@ -208,8 +204,7 @@ let command_tab = function
   | P.Wait args -> P.Handle.to_string args.tab
   | P.Dialog args -> P.Handle.to_string args.tab
   | P.Handoff args -> P.Handle.to_string args.tab
-  | P.Drive args -> P.Handle.to_string args.tab
-  | P.Run args -> (
+  | P.Drive args -> (
       match args.tab with Some tab -> P.Handle.to_string tab | None -> "-")
   | P.Discover _ -> "-"
 
@@ -275,11 +270,9 @@ let budget (request : (P.request, string) result) =
            + 1000))
   | Ok { command = P.Handoff args; _ } ->
       Some (Eta.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
-  | Ok { command = P.Drive args; _ } ->
-      Some (seconds (max 1 (Option.value ~default:120 args.deadline_s) + 5))
   | Ok { command = P.Discover args; _ } ->
       Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 75))
-  | Ok { command = P.Run args; _ } ->
+  | Ok { command = P.Drive args; _ } ->
       (* run-vspj run-obtt: a run's budget is its deadline plus the margin its last steps
          need — the procedure's own bounded expectation wait (at most 30 s), a planner
          turn's correction call (at most 30 s, L32) and the reply — so the listener never

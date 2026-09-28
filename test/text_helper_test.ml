@@ -416,7 +416,15 @@ let drive models tabs handle goal =
     ~text_helper:(fun () -> Models.text_helper models)
     tabs
     (P.Drive
-       { tab = handle; goal; max_steps = Some 4; deadline_s = Some 30; dry_run = None })
+       {
+         tab = Some handle;
+         mission = goal;
+         max_procedures = Some 4;
+         deadline_s = Some 30;
+         dry_run = None;
+         expect = None;
+         out = None;
+       })
 
 (* ---------- drive-ls3c drive-fh1h: the value the helper answers is typed ---------- *)
 
@@ -444,7 +452,7 @@ let fills () =
       let handle = new_tab tabs in
       let reply = result (drive models tabs handle goal) in
       Alcotest.(check string) "drive-ls3c done" "done" (text "status" reply);
-      let steps = list (get "steps" reply) in
+      let steps = list (get "operator_steps" reply) in
       Alcotest.(check int) "drive-ls3c two steps" 2 (List.length steps);
       let step = List.hd steps in
       Alcotest.(check string)
@@ -558,7 +566,7 @@ let null_is_blocked () =
         "drive-ls3c nothing is typed" 0
         (List.length (calls fake "Input.insertText"));
       Alcotest.(check int) "drive-ls3c one chat call" 1 (Chat.connections chat);
-      let steps = list (get "steps" reply) in
+      let steps = list (get "operator_steps" reply) in
       Alcotest.(check int)
         "drive-ls3c the blocked decision is in the trace" 1 (List.length steps);
       Alcotest.(check string)
@@ -643,7 +651,7 @@ let reuse () =
       Alcotest.(check string)
         "drive-ls3c the reused value is typed" "alice"
         (text "text" (params (List.hd inserted)));
-      let steps = list (get "steps" reply) in
+      let steps = list (get "operator_steps" reply) in
       Alcotest.(check int)
         "drive-9y2s the stale decision is not a trace step" 2 (List.length steps);
       Alcotest.(check string)

@@ -199,24 +199,17 @@ let command_table =
       assoc
         [
           ("tab", `String "t_9xk");
-          ("goal", `String "buy the thing");
-          ("max_steps", `Int 5);
-          ("deadline_s", `Int 60);
-        ] );
-    ( "run",
-      assoc
-        [
-          ("tab", `String "t_9xk");
           ("mission", `String "buy the thing");
           ("max_procedures", `Int 3);
           ("deadline_s", `Int 60);
           ("dry_run", `Bool true);
           ("expect", `List [ `String "the page is cart" ]);
+          ("out", `String "/tmp/leash-output.jsonl");
         ] );
   ]
 
 let command_round_trip () =
-  Alcotest.(check int) "every command of docs/protocol.md" 30 (List.length command_table);
+  Alcotest.(check int) "every command of docs/protocol.md" 29 (List.length command_table);
   List.iter
     (fun (name, args) ->
       let request = assert_ok name (P.decode_request (request_json name args)) in
@@ -1720,8 +1713,7 @@ let client_help =
     ([ "dialog" ], [ "TAB"; "ACCEPT|DISMISS" ]);
     ([ "handoff" ], [ "TAB"; "REASON" ]);
     ([ "resume" ], [ "TAB" ]);
-    ([ "drive" ], [ "TAB"; "GOAL" ]);
-    ([ "run" ], [ "MISSION" ]);
+    ([ "drive" ], [ "MISSION" ]);
     ([ "net" ], [ "TAB"; "ID" ]);
     ([ "upload" ], [ "TAB"; "SNAPSHOT"; "INDEX"; "PATH" ]);
     ([ "hover" ], [ "TAB"; "SNAPSHOT"; "INDEX" ]);

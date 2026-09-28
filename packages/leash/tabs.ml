@@ -1863,7 +1863,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                           goal = request.Run.goal;
                           max_steps = Some request.Run.max_steps;
                           deadline_s = Some request.Run.deadline_s;
-                          dry_run = Some false;
+                          dry_run = Some request.Run.dry_run;
                         });
                 verify;
                 plan =
@@ -1932,10 +1932,29 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
           with
           | Error why -> Error (error "invalid-request" why)
           | Ok books -> (
-              let* result =
-                Run.loop ~handler
+              let execute on_record =
+                Run.loop ~handler ~on_record
+                  ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)
                   ~installed:books ?discovery:(Option.map fst discovery) run_args
+              in
+              let* result =
+                match args.P.out with
+                | None -> execute (fun _ -> Ok ())
+                | Some path -> (
+                    try
+                      let channel = open_out path in
+                      Fun.protect
+                        ~finally:(fun () -> close_out channel)
+                        (fun () ->
+                          execute (fun record ->
+                              try
+                                output_string channel (Yojson.Safe.to_string record);
+                                output_char channel '\n';
+                                flush channel;
+                                Ok ()
+                              with Sys_error why -> Error (error "internal" why)))
+                    with Sys_error why -> Error (error "invalid-request" why))
               in
               match !discovered with
               | None -> Ok result

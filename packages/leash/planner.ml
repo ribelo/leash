@@ -257,6 +257,7 @@ let create ~client ~model ~reasoning ~logger () =
     | effort -> `Effort effort
   in
   let ask ~deadline messages =
+    Model_usage.start "planner";
     match
       Eta_ai_chat.complete client ~deadline ~model ~messages ~max_tokens ~json_object:true
         ~reasoning ()
@@ -264,6 +265,7 @@ let create ~client ~model ~reasoning ~logger () =
     | Error error -> Error (Model_error.of_eta error)
     | Ok completion ->
         log_usage logger completion;
+        Model_usage.report "planner" completion.Eta_ai_chat.Codecs.usage.cost;
         Ok completion
   in
   (* run-obtt: the correction call is bounded by the planner's own default deadline as

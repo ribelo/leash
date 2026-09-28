@@ -294,7 +294,15 @@ let drive models tabs handle goal =
     ~decide:(fun ~deadline request -> Models.decide ~deadline models request)
     tabs
     (P.Drive
-       { tab = handle; goal; max_steps = Some 4; deadline_s = Some 30; dry_run = None })
+       {
+         tab = Some handle;
+         mission = goal;
+         max_procedures = Some 4;
+         deadline_s = Some 30;
+         dry_run = None;
+         expect = None;
+         out = None;
+       })
 
 (* ---------- drive-y7v8 drive-xjh6 drive-4zlp drive-y37b drive-zml5 ---------- *)
 
@@ -312,7 +320,7 @@ let drive_to_done () =
       let handle = new_tab tabs in
       let reply = result (drive models tabs handle "Open the Wikipedia article") in
       Alcotest.(check string) "drive-y7v8 done" "done" (text "status" reply);
-      let steps = list (get "steps" reply) in
+      let steps = list (get "operator_steps" reply) in
       Alcotest.(check int) "drive-xjh6 two steps" 2 (List.length steps);
       let first = List.hd steps in
       Alcotest.(check string)

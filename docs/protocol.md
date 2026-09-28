@@ -1,6 +1,6 @@
 # Control protocol and the leash CLI
 
-The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, owner-only, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `run`, `wait`) hold the connection open until they settle. The socket admits 64 requests at once (hard-b1na); see Concurrency below.
+The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, owner-only, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `wait`) hold the connection open until they settle. The socket admits 64 requests at once (hard-b1na); see Concurrency below.
 
 Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec.
 
@@ -92,19 +92,13 @@ Human handoff:
 | `handoff` | `{tab, reason, timeout_s?}` | `{resumed: true, url, title, warnings?: string[]}` |
 | `resume` | `{tab}` | `{resumed: true}` |
 
-Drive:
+Drive (milestone 9): one mission over installed playbooks. `leash drive "<mission>"` selects a playbook or `none`; `none` uses the single-goal operator. `--tab` supplies the tab and `--expect` repeats a mission expectation. There is no `run` protocol verb or mission CLI alias.
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab, goal, max_steps?, deadline_s?, dry_run?}` | `{status, steps: Step[], final: Snapshot, reason?: string}` |
+| `drive` | `{tab, mission, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, data: {count, first: record[<=5], pages, scripts: {name, calls, records}[], model_calls_by_kind: {playbook?, procedure?, operator?, verifier?, text_helper?, planner?}, cost_unreported: int}, model_calls: int, model_cost: number, operator_steps: Step[], final: Snapshot, reason?: string}` |
 
-Run (milestone 7): one mission over the installed playbooks. `run` is the command
-`leash run "<mission>"` sends; the CLI's `--tab` adds the tab field, and `--expect`
-repeats a mission expectation (the argument is a list).
-
-| cmd | args | result |
-| --- | --- | --- |
-| `run` | `{tab, mission, max_procedures?, deadline_s?, dry_run?, expect?: string[]}` | `{status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, final: Snapshot, reason?: string}` |
+`model_calls` counts actual attempted provider requests, including retries and failed attempts. `model_calls_by_kind` gives the same count by provider role; absent roles made no calls. `model_cost` sums costs returned by providers, including answers later rejected by validation. `data.cost_unreported` counts requests with no returned cost (including failed requests); a positive value means the cost is partial, not zero. Text-helper memo hits and deterministic checks make no model call.
 
 ## Types
 
@@ -199,7 +193,7 @@ Rules:
   `<operation>_target` head per offered operation, and only the head the chosen
   operation selects is validated. A distribution that does not answer the offered
   criteria is `model-unavailable` with `code: "invalid-response"`.
-- `run` reuses the tab it is given and opens one when the request names none (`tab` is
+- `drive` reuses the tab it is given and opens one when the request names none (`tab` is
   `key?`; the tab it opened is the one `final` names, and it is left open). It checks
   ownership and then holds the tab action lock for the whole run, so no other tab command
   interleaves while it works; every step of it is one `drive` call with the
@@ -259,8 +253,8 @@ Rules:
   `too-large`) fails that attempt of the procedure — nothing is verified, the whole procedure is replayed once, and a second
   rejection fails it (`outcome: "failed"`) and asks the planner, like a failed expectation; the call is in the procedure's
   `scripts` with its error. A browser failure ends the run, and a dialog the script opened ends it `error` as a drive's
-  does. The runner keeps the records the scripts return and `collected` is their count; no model sees a record. A dry run
-  runs no script.
+  does. The runner streams validated records to `--out` JSONL as pages complete; it keeps only five bounded samples in memory and `collected` is the count. No model sees a record. A dry run
+  runs no script. A procedure may declare `repeat: {next, max, until, delay_ms?, key}`: after its body the runner executes the named next-page procedure up to `max` pages, checks `until` and the next procedure’s expectations, waits `delay_ms` (default 500 ms), and streams each record once by `key`.
 - `playbook_test` runs one script of an installed playbook on the tab's page and answers its validated output, so that writing
   a script is a fast loop; it is owner-bound and takes the tab's action lock. The script is looked up by name in the
   playbooks directory (`invalid-request` for a playbook or script that is not there; a path is never a playbook name).
@@ -426,7 +420,7 @@ Rules:
   up to 8 MiB (a 1 MiB body, escaped). Ten agents may run at once — five blocked in hour-long `wait`s on five
   tabs while five act — with nobody queued: a wait holds a connection and a fiber and takes no tab lock. `net`,
   `net_body`, `net_request`, `cookies`, `storage`, `debug` and `dialog` take none either; the actions,
-  `eval`, `text`, `shot`, `snap`, `drive` and `run` serialize per tab.
+  `eval`, `text`, `shot`, `snap` and `drive` serialize per tab.
 - `eval` runs the expression as a function body in the page with `argument` bound; expression, argument, and result are each bounded to 64 KiB.
 - `shot` writes a PNG to `path`, which must be an absolute path the service can write; the reply carries no image data.
 - `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful. `settled` is false when the page kept mutating during the observation (retaken twice first); the snapshot is still usable and actions revalidate at dispatch.

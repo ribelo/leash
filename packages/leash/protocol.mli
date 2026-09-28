@@ -428,6 +428,7 @@ type run_args = {
   deadline_s : int option;
   dry_run : bool option;
   expect : string list option;
+  out : string option;
 }
 (** L31 run-9ypy: one mission over the installed playbooks. [tab] is [key?]: a run given
     one reuses it, after checking ownership and that no dialog is open, and a run given
@@ -752,6 +753,10 @@ type run_result = {
   planner_turns : planner_turn list;
   proposals : string list;
   collected : int;
+  data : Yojson.Safe.t;
+  model_calls : int;
+  model_cost : float;
+  operator_steps : step list;
   final : snapshot;
   reason : string option;
 }
@@ -814,9 +819,8 @@ type command =
   | Dialog of dialog_args
   | Handoff of handoff_args
   | Resume of tab_args
-  | Drive of drive_args
+  | Drive of run_args
   | Downloads of tab_args
-  | Run of run_args
   | Discover of discover_args
   | Net of net_args
   | Net_body of net_entry_args

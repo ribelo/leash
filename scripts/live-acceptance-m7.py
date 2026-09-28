@@ -29,7 +29,7 @@ def cli(*args, timeout=60):
     except json.JSONDecodeError as e:
         raise AssertionError(f"{args[0]} did not return JSON (exit {p.returncode})") from e
     if p.returncode:
-        if args[0] == "run":
+        if args[0] == "drive":
             detail = value.get("detail") or {}
             procedures = detail.get("procedures", [])
             steps = sum(len(d.get("steps", [])) for p in procedures for d in p.get("drives", []))
@@ -42,7 +42,7 @@ def cli(*args, timeout=60):
                 print(f"  partial {proc.get('slug')}: "
                       f"drives={[(d.get('status'), str(d.get('reason'))[:120], [(s.get('operation'), s.get('index'), s.get('after', {}).get('url')) for s in d.get('steps', [])]) for d in proc.get('drives', [])]} "
                       f"checks={[(e.get('sentence'), e.get('passed')) for e in proc.get('expectations', [])]}", flush=True)
-        if args[0] == "run" and "--tab" in args:
+        if args[0] == "drive" and "--tab" in args:
             tab = args[args.index("--tab") + 1]
             rows = cli("snap", tab, "--limit", 20).get("rows", [])
             print(f"  diagnostic rows={[(r.get('index'), r.get('role'), str(r.get('name'))[:80]) for r in rows if r.get('index') in range(10, 21)]}", flush=True)
@@ -162,7 +162,7 @@ def main():
             if blocked:
                 print('allegro: navigation blocked (403); JEV=0 planner_turns=0 steps=0 cost=$0.000000000. Mission cannot proceed.', flush=True)
             else:
-                allegro = timed('allegro', mission, 'run', mission, '--tab', tab,
+                allegro = timed('allegro', mission, 'drive', mission, '--tab', tab,
                                 '--expect', 'the page is cart', '--max-procedures', 4,
                                 '--deadline-s', 130, timeout=170)
         if blocked:
@@ -173,7 +173,7 @@ def main():
             shop_page = cli('eval', tab, 'return {status: performance.getEntriesByType("navigation")[0]?.responseStatus ?? null, title: document.title, text: document.body?.innerText.slice(0,250) ?? ""}').get('value') or {}
             print(f"fallback initial page: HTTP={shop_page.get('status')} title={shop_page.get('title')!r} text={shop_page.get('text')!r}", flush=True)
             mission = 'Find Blue Top on Automation Exercise, open its offer, add Blue Top to the cart, show the cart, and stop before checkout or payment'
-            shop = timed('automationexercise', mission, 'run', mission, '--tab', tab,
+            shop = timed('automationexercise', mission, 'drive', mission, '--tab', tab,
                          '--expect', 'the page is cart', '--expect', 'the page shows Blue Top',
                          '--max-procedures', 9, '--deadline-s', 300, timeout=345)
             assert shop.get('status') == 'done', 'fallback shop did not reach verified DONE'
@@ -198,7 +198,7 @@ def main():
         tab = cli('new', 'https://github.com/mozilla/pdf.js/blob/master/test/pdfs/tracemonkey.pdf')['tab']
         mission = ('Download the public tracemonkey.pdf test fixture on GitHub, then switch '
                    'to example.com and verify Example Domain; do not post or change anything')
-        cross = timed('cross-site PDF', mission, 'run', mission, '--tab', tab,
+        cross = timed('cross-site PDF', mission, 'drive', mission, '--tab', tab,
                       '--expect', 'a file was downloaded', '--expect', 'the page shows Example Domain',
                       '--max-procedures', 5, '--deadline-s', 240, timeout=280)
         downloads = cli('downloads', tab).get('downloads', [])

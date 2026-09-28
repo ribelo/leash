@@ -575,6 +575,7 @@ type run_args = {
   deadline_s : int option;
   dry_run : bool option;
   expect : string list option;
+  out : string option;
 }
 [@@deriving yojson]
 
@@ -834,6 +835,10 @@ type run_result = {
   planner_turns : planner_turn list;
   proposals : string list;
   collected : int;
+  data : Yojson.Safe.t;
+  model_calls : int;
+  model_cost : float;
+  operator_steps : step list;
   final : snapshot;
   reason : string option;
 }
@@ -936,9 +941,8 @@ type command =
   | Dialog of dialog_args
   | Handoff of handoff_args
   | Resume of tab_args
-  | Drive of drive_args
+  | Drive of run_args
   | Downloads of tab_args
-  | Run of run_args
   | Discover of discover_args
   | Net of net_args
   | Net_body of net_entry_args
@@ -974,7 +978,6 @@ let command_name = function
   | Resume _ -> "resume"
   | Drive _ -> "drive"
   | Downloads _ -> "downloads"
-  | Run _ -> "run"
   | Discover _ -> "discover"
   | Net _ -> "net"
   | Net_body _ -> "net_body"
@@ -1008,9 +1011,8 @@ let args_to_json = function
   | Dialog args -> yojson_of_dialog_args args
   | Handoff args -> yojson_of_handoff_args args
   | Resume args -> yojson_of_tab_args args
-  | Drive args -> yojson_of_drive_args args
+  | Drive args -> yojson_of_run_args args
   | Downloads args -> yojson_of_tab_args args
-  | Run args -> yojson_of_run_args args
   | Discover args -> yojson_of_discover_args args
   | Net args -> yojson_of_net_args args
   | Net_body args | Net_request args -> yojson_of_net_entry_args args
@@ -1045,9 +1047,8 @@ let command_of_args ~cmd args =
   | "dialog" -> with_args dialog_args_of_yojson (fun args -> Dialog args)
   | "handoff" -> with_args handoff_args_of_yojson (fun args -> Handoff args)
   | "resume" -> with_args tab_args_of_yojson (fun args -> Resume args)
-  | "drive" -> with_args drive_args_of_yojson (fun args -> Drive args)
+  | "drive" -> with_args run_args_of_yojson (fun args -> Drive args)
   | "downloads" -> with_args tab_args_of_yojson (fun args -> Downloads args)
-  | "run" -> with_args run_args_of_yojson (fun args -> Run args)
   | "discover" -> with_args discover_args_of_yojson (fun args -> Discover args)
   | "net" -> with_args net_args_of_yojson (fun args -> Net args)
   | "net_body" -> with_args net_entry_args_of_yojson (fun args -> Net_body args)

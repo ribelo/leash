@@ -63,6 +63,7 @@ let procedure ?(args = []) ?(expect = []) ?max_steps ?deadline_s ~slug ~descript
       steps;
       expect;
       expect_timeout_s = None;
+      repeat = None;
       max_steps;
       deadline_s;
     }
@@ -373,7 +374,16 @@ let levels () =
   let state = procedure_question.R.state in
   Alcotest.(check (list string))
     "run-pvmc the state's keys are the small semantic ones"
-    [ "mission"; "site"; "page_kind"; "title"; "url"; "recent_procedures"; "arguments" ]
+    [
+      "mission";
+      "site";
+      "page_kind";
+      "title";
+      "url";
+      "recent_procedures";
+      "arguments";
+      "collected";
+    ]
     (match state with `Assoc fields -> List.map fst fields | _ -> []);
   Alcotest.(check bool)
     "run-pvmc no page text reaches the upper level" true
@@ -908,12 +918,14 @@ let operations () =
     [ "select_playbook"; "select_procedure" ]
     failing.asked
 
-(* run-klp9 run-9ypy: a missing playbook never reaches a model. *)
+(* extr-andy: no installed playbook delegates to the operator, without asking JEV. *)
 let no_playbook () =
   let h = harness () in
+  h.drives <- [ drive () ];
   let result = ran (run h (args ())) in
-  check_status "run-9ypy no playbook installed" "blocked" result;
-  Alcotest.(check (list string)) "run-9ypy nothing was asked" [] h.asked
+  check_status "extr-andy no playbook runs operator" "done" result;
+  Alcotest.(check int) "extr-andy one operator run" 1 (List.length h.steps);
+  Alcotest.(check (list string)) "extr-andy no upper model" [] h.asked
 
 (* L33 run-3vat run-xda7: the first discovery turn is planner-led and a verified
    draft is reported without installing it. The next turn sees learned page kinds. *)
@@ -1024,6 +1036,151 @@ let script_book () =
  "procedures":[{"slug":"collect","description":"Collect the list.","args":["product"],
    "steps":[{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"]}]
 }|}))
+
+(* extr-ve3k extr-p7sj extr-b3u0: body and next collect through the same
+   validated script, but duplicate identities are streamed just once. *)
+let repeat_book () =
+  ok
+    (B.of_json ~file:"site-a.json"
+       (Yojson.Safe.from_string
+          {|{
+      "site":"site-a.example","entry":"https://site-a.example/","description":"site-a playbook",
+      "pages":[{"name":"a","description":"a page","url_pattern":"https://site-a.example/*"},
+               {"name":"b","description":"end","text_marker":"finished"}],
+      "scripts":{"list":{"source":"return [{title: args.q}]","returns":[{"title":"string"}]}},
+      "procedures":[
+        {"slug":"collect","description":"Collect first page.","args":["product"],
+         "steps":[{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"],
+         "repeat":{"next":"next","max":2,"until":"the page is b","delay_ms":20,"key":"title"}},
+        {"slug":"next","description":"Collect next page.",
+         "steps":[{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"]}]
+    }|}))
+
+let repeat_collects_unique () =
+  let h =
+    harness ~procs:[ "collect"; "DONE" ]
+      ~verifies:
+        [
+          [ expectation "the page is a" "page_kind" ];
+          [ expectation ~passed:false "the page is b" "page_kind" ];
+          [ expectation "the page is a" "page_kind" ];
+          [ expectation "the page is a" "page_kind" ];
+        ]
+      ()
+  in
+  h.scripts <-
+    [
+      Ok
+        (R.Collected
+           {
+             value =
+               `List
+                 [ `Assoc [ ("title", `String "0") ]; `Assoc [ ("title", `String "1") ] ];
+             records = 2;
+             bytes = 40;
+             elapsed_ms = 2;
+           });
+      Ok
+        (R.Collected
+           {
+             value =
+               `List
+                 [
+                   `Assoc [ ("title", `String "1") ];
+                   `Assoc [ ("title", `String "secret-record") ];
+                 ];
+             records = 2;
+             bytes = 40;
+             elapsed_ms = 2;
+           });
+    ];
+  let streamed = ref [] and delays = ref [] in
+  let result =
+    ran
+      (R.loop ~handler:(handler h)
+         ~now:(fun () -> h.clock)
+         ~installed:[ repeat_book () ]
+         ~on_record:(fun item ->
+           streamed := item :: !streamed;
+           Ok ())
+         ~pause_ms:(fun ms -> delays := ms :: !delays)
+         (args ()))
+  in
+  check_status "extr-ve3k finished" "done" result;
+  Alcotest.(check int) "extr-p7sj unique count" 3 result.P.collected;
+  Alcotest.(check int) "extr-p7sj streamed only unique records" 3 (List.length !streamed);
+  Alcotest.(check (list int)) "extr-ve3k polite delay" [ 20 ] !delays;
+  Alcotest.(check int)
+    "extr-ve3k pages" 2
+    (match result.P.data with
+    | `Assoc fields -> ( match List.assoc "pages" fields with `Int n -> n | _ -> -1)
+    | _ -> -1);
+  Alcotest.(check (list string))
+    "extr-p152 both page traces" [ "collect"; "next" ]
+    (List.map (fun (entry : P.run_procedure) -> entry.slug) result.P.procedures);
+  let payloads =
+    Yojson.Safe.to_string (`List (List.map (fun (q : R.question) -> q.state) h.questions))
+  in
+  Alcotest.(check bool)
+    "extr-b3u0 record value absent from model payload" false
+    (try
+       ignore (Str.search_forward (Str.regexp_string "secret-record") payloads 0);
+       true
+     with Not_found -> false)
+
+(* extr-ve3k: either the explicit end condition or a failed next-page check
+   stops the loop without a planner retry. *)
+let repeat_terminates () =
+  let one =
+    R.Collected
+      {
+        value = `List [ `Assoc [ ("title", `String "first") ] ];
+        records = 1;
+        bytes = 25;
+        elapsed_ms = 1;
+      }
+  in
+  let next =
+    R.Collected
+      {
+        value = `List [ `Assoc [ ("title", `String "second") ] ];
+        records = 1;
+        bytes = 26;
+        elapsed_ms = 1;
+      }
+  in
+  let good = [ expectation "the page is a" "page_kind" ] in
+  let end_now =
+    harness ~procs:[ "collect"; "DONE" ]
+      ~verifies:[ good; [ expectation "the page is b" "page_kind" ]; good ]
+      ()
+  in
+  end_now.scripts <- [ Ok one ];
+  let stopped = ran (run ~installed:[ repeat_book () ] end_now (args ())) in
+  check_status "extr-ve3k until stop" "done" stopped;
+  Alcotest.(check int)
+    "extr-ve3k no next page after until" 1
+    (List.length end_now.script_calls);
+  let bad_next =
+    harness ~procs:[ "collect"; "DONE" ]
+      ~verifies:
+        [
+          good;
+          [ expectation ~passed:false "the page is b" "page_kind" ];
+          [ expectation ~passed:false "the page is a" "page_kind" ];
+          good;
+        ]
+      ()
+  in
+  bad_next.scripts <- [ Ok one; Ok next ];
+  let stopped = ran (run ~installed:[ repeat_book () ] bad_next (args ())) in
+  check_status "extr-ve3k next failed stop" "done" stopped;
+  Alcotest.(check int)
+    "extr-ve3k no retry of failed next" 2
+    (List.length bad_next.script_calls);
+  Alcotest.(check string)
+    "extr-p152 failed next traced" "skipped" (List.nth stopped.P.procedures 1).P.outcome;
+  Alcotest.(check int) "extr-p7sj streamed both new records" 2 stopped.P.collected
 
 let collected ?(records = 2) () =
   R.Collected
@@ -1145,6 +1302,9 @@ let () =
     [
       ( "L37",
         [
+          Alcotest.test_case "extr-ve3k extr-p7sj repeat dedup" `Quick
+            repeat_collects_unique;
+          Alcotest.test_case "extr-ve3k until and next stop" `Quick repeat_terminates;
           Alcotest.test_case "extr-8o1h extr-p152 script step" `Quick script_step;
           Alcotest.test_case "extr-8o1h rejected script" `Quick script_rejected;
           Alcotest.test_case "extr-8o1h browser failure" `Quick script_browser_failure;

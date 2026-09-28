@@ -141,10 +141,13 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
                 detail = None;
               }
       | Ok (state, questions) -> (
+          Model_usage.start "operator";
           match Eta_ai_systemone.Client.evaluate client ~deadline ~state ~questions with
           | Error error -> Error (Model_error.of_eta error)
           | Ok response -> (
               log_usage t.logger response;
+              Model_usage.report "operator"
+                (Some response.Eta_ai_systemone.Codecs.usage.cost);
               (* The reply's answers object is what {!Jev_request.decide} reads; the
                  client decoded the envelope, the model check included. *)
               let answers =
@@ -209,6 +212,10 @@ let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
         Eta_ai_systemone.Codecs.choice ~instructions:(`String question.Run.instructions)
           ~criteria
       in
+      let kind =
+        if question.Run.name = "select_playbook" then "playbook" else "procedure"
+      in
+      Model_usage.start kind;
       match
         Eta_ai_systemone.Client.evaluate client ~deadline ~state:question.Run.state
           ~questions:[ (question.Run.name, wire) ]
@@ -216,6 +223,7 @@ let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
       | Error error -> Error (Model_error.of_eta error)
       | Ok response -> (
           log_usage t.logger response;
+          Model_usage.report kind (Some response.Eta_ai_systemone.Codecs.usage.cost);
           match Eta_ai_systemone.Client.answer question.Run.name response with
           | Some (Eta_ai_systemone.Codecs.Choice answer) ->
               let chosen = answer.Eta_ai_systemone.Types.choice in
@@ -257,6 +265,7 @@ let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
           ~instructions:(`String (Questions.score sentence))
           ~criteria:Questions.score_levels
       in
+      Model_usage.start "verifier";
       match
         Eta_ai_systemone.Client.evaluate client ~deadline ~state
           ~questions:[ ("score", wire) ]
@@ -264,6 +273,7 @@ let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
       | Error error -> Error (Model_error.of_eta error)
       | Ok response -> (
           log_usage t.logger response;
+          Model_usage.report "verifier" (Some response.Eta_ai_systemone.Codecs.usage.cost);
           match Eta_ai_systemone.Client.answer "score" response with
           | Some (Eta_ai_systemone.Codecs.Score answer) ->
               let value = answer.Eta_ai_systemone.Types.score in

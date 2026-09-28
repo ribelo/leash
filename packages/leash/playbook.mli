@@ -14,6 +14,14 @@ type script_step = { script : string; args : Yojson.Safe.t option }
 
 type step = Goal of goal_step | Use of use_step | Script of script_step
 
+type repeat = {
+  next : string;
+  max : int;
+  until : string;
+  delay_ms : int option;
+  key : string;
+}
+
 type procedure = {
   slug : string;
   description : string;
@@ -25,6 +33,7 @@ type procedure = {
       (** L31 run-d82w: the cap the operator level runs one of this procedure's steps
           under; [None] is the operator's own default (30), and the loader accepts 1..30.
       *)
+  repeat : repeat option;
   deadline_s : int option;
       (** L31 run-d82w: the step's own deadline; [None] is the operator's own default (120
           s), the loader accepts 1..600, and what is left of the run always bounds it. *)

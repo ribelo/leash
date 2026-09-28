@@ -34,6 +34,15 @@ let yojson_of_step = function
   | Use step -> yojson_of_use_step step
   | Script step -> yojson_of_script_step step
 
+type repeat = {
+  next : string;
+  max : int;
+  until : string;
+  delay_ms : int option;
+  key : string;
+}
+[@@deriving yojson]
+
 type procedure = {
   slug : string;
   description : string;
@@ -44,6 +53,7 @@ type procedure = {
   max_steps : int option;
       (* L31 run-d82w: the cap one step of this procedure runs the operator level under;
          [None] is the operator's own default. *)
+  repeat : repeat option;
   deadline_s : int option;
       (* L31 run-d82w: the same step's own deadline, still bounded by what is left of the
          run. *)
@@ -282,6 +292,34 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
          ~some:(fun xs -> unique xs && List.for_all valid_name xs)
          proc.args)
       "args must be unique lowercase names"
+  in
+  let* () =
+    match proc.repeat with
+    | None -> Ok ()
+    | Some repeat ->
+        let* () =
+          require (repeat.max > 0 && repeat.max <= 1000) "repeat max must be 1..1000"
+        in
+        let* () =
+          require
+            (repeat.next <> procedure && List.mem repeat.next slugs)
+            "repeat next must name another procedure"
+        in
+        let next =
+          List.find (fun (p : procedure) -> p.slug = repeat.next) book.procedures
+        in
+        let* () = require (next.repeat = None) "repeat next must not itself repeat" in
+        let* () = require (trim repeat.until <> "") "repeat until must not be empty" in
+        let* () = require (trim repeat.key <> "") "repeat key must not be empty" in
+        let* () =
+          require
+            (Option.fold ~none:true
+               ~some:(fun ms -> ms >= 0 && ms <= 60_000)
+               repeat.delay_ms)
+            "repeat delay_ms must be 0..60000"
+        in
+        let* _ = resolve book.pages repeat.until in
+        Ok ()
   in
   let rec steps = function
     | [] -> Ok ()

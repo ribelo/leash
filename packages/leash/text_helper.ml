@@ -132,6 +132,7 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
   let messages =
     [ { role = System; content = Questions.text_value }; { role = User; content = json } ]
   in
+  Model_usage.start "text_helper";
   match
     Eta_ai_chat.complete client ~deadline ~model ~messages ~max_tokens:1024
       ~json_object:true ~reasoning:`Disabled ()
@@ -139,6 +140,7 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
   | Error error -> Error (Model_error.of_eta error)
   | Ok first -> (
       log_usage logger first;
+      Model_usage.report "text_helper" first.Eta_ai_chat.Codecs.usage.cost;
       let content = first.Eta_ai_chat.Codecs.content in
       match value content with
       | Ok answer -> Ok answer
@@ -166,6 +168,7 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
                   };
                 ]
             in
+            Model_usage.start "text_helper";
             match
               Eta_ai_chat.complete client
                 ~deadline:(Eta.Duration.min deadline default_deadline)
@@ -175,6 +178,7 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
             | Error error -> Error (Model_error.of_eta error)
             | Ok second ->
                 log_usage logger second;
+                Model_usage.report "text_helper" second.Eta_ai_chat.Codecs.usage.cost;
                 value second.Eta_ai_chat.Codecs.content))
 
 let create ~client ~model ~logger () =

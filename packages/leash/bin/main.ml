@@ -720,28 +720,20 @@ let commands =
         [],
         [ "leash resume t_9xk" ] );
       ( "drive",
-        "Drive the tab toward GOAL with the decision model.",
-        [ pos "tab" "TAB"; pos "goal" "GOAL" ],
-        [
-          opt "max_steps" Int "N" "At most N steps (default 30).";
-          opt "deadline_s" Int "S" "Seconds for the whole drive (default 120).";
-          opt "dry_run" Bool "" "Observe and decide once without acting.";
-        ],
-        [ "leash drive t_9xk 'Find the article about Goedel' --max-steps 10" ] );
-      ( "run",
-        "Run MISSION over the installed playbooks.",
+        "Drive MISSION through a playbook, or the single-goal operator when none fits.",
         [ pos "mission" "MISSION" ],
         [
           opt "tab" Str "TAB" "Reuse TAB instead of opening one.";
           opt "max_procedures" Int "N" "At most N procedures (default 40).";
+          opt "out" Str "FILE" "Stream collected records to FILE as JSONL.";
           opt "deadline_s" Int "S" "Seconds for the whole run (default 900).";
           opt "dry_run" Bool "" "Ask the two levels and report; never act.";
           opt_list "expect" Strings "SENTENCE"
             "Mission expectation the DONE guard verifies (repeatable).";
         ],
         [
-          "leash run 'Buy a Logitech MX Master 3S on allegro.pl' --deadline-s 300";
-          "leash run 'Add Blue Top to the cart' --expect 'the page is cart' --dry-run";
+          "leash drive 'Buy a Logitech MX Master 3S on allegro.pl' --deadline-s 300";
+          "leash drive 'Add Blue Top to the cart' --expect 'the page is cart' --dry-run";
         ] );
       ( "discover",
         "Explore SITE with the planner; write a proposed playbook without applying it.",

@@ -65,6 +65,7 @@ type step_request = {
   hint : string option;
   max_steps : int;
   deadline_s : int;
+  dry_run : bool;
 }
 (** One playbook step as the operator level receives it (run-d82w): the goal with the
     step's hint shaping its text, and the step's own cap and deadline — the procedure's
@@ -216,6 +217,8 @@ val loop :
   now:(unit -> float) ->
   installed:Playbook.loaded list ->
   ?discovery:discovery ->
+  ?on_record:(Yojson.Safe.t -> (unit, Protocol.error) result) ->
+  ?pause_ms:(int -> unit) ->
   args ->
   (Protocol.run_result, Protocol.error) result
 (** [loop ~handler ~now ~installed args] runs the mission.
