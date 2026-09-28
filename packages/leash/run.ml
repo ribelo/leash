@@ -72,6 +72,7 @@ type plan_reply = {
   usage : P.run_usage option;
       (* run-obtt: what the turn cost, provider-reported where the model route reports it
          and otherwise its token counts, carried into the run's trace. *)
+  pages : Playbook.page list;  (* run-3vat: newly proposed page kinds. *)
 }
 (** One planner turn's answer (run-rq6i), what it attached to the mission (run-2tt3) and
     what it cost (run-obtt). *)
@@ -174,6 +175,23 @@ let internal message = P.{ code = code "internal"; message; detail = None }
 let ms seconds = max 0 (int_of_float (seconds *. 1000.))
 let lower = String.lowercase_ascii
 
+(* run-tt9z: fail closed on action intent, including synonyms rather than only exact labels.
+   The operator also applies this to the chosen row immediately before dispatch. *)
+let unsafe_action text =
+  let words = String.lowercase_ascii text in
+  let has word =
+    let n = String.length word in
+    let rec loop i =
+      i + n <= String.length words
+      && (String.sub words i n = word || loop (i + 1))
+    in
+    loop 0
+  in
+  if List.exists has [ "payment"; "pay now"; "checkout"; "place order"; "purchase"; "buy now"; "card number" ] then Some "payment"
+  else if List.exists has [ "delete"; "remove account"; "close account"; "erase account"; "permanently remove" ] then Some "deletion"
+  else if List.exists has [ "send"; "reply"; "message"; "post comment"; "publish comment"; "submit comment" ] then Some "messaging"
+  else None
+
 let contains ~needle haystack =
   let needle = lower needle and haystack = lower haystack in
   let n = String.length needle in
@@ -221,7 +239,10 @@ let failures (results : P.run_expectation list) =
 
 (* ---------- The loop's state ---------- *)
 
+type discovery = { book : Playbook.loaded; max_steps : int; max_cost : float }
+
 type state = {
+  steps_used : int;
   trace : P.run_procedure list;  (** Newest first. *)
   plans : P.planner_turn list;  (** Newest first. *)
   recent : (string * string) list;  (** Procedure slug and outcome, oldest first. *)
@@ -333,19 +354,20 @@ type steps_outcome =
       (** The run ended inside a step: a dialog, or a planner turn a called procedure
           asked for. *)
 
-let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) result =
+let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result, P.error) result =
   let installed = installed_playbooks installed in
   let started = now () in
   let deadline = started +. float_of_int args.deadline_s in
   let remaining () = max 1 (int_of_float (deadline -. now ())) in
   let empty observation =
     {
+      steps_used = 0;
       trace = [];
       plans = [];
       recent = [];
       known = [];
       visited = [];
-      book = None;
+      book = Option.map (fun (d : discovery) -> d.book) discovery;
       checks = [];
       mission_expect = [];
       mission_checks = [];
@@ -592,7 +614,10 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
                  else st.mission_expect);
             }
           in
-          (match reply.answer with
+          let cost = List.fold_left (fun sum (turn : P.planner_turn) -> sum +. Option.fold ~none:0. ~some:(fun (u : P.run_usage) -> u.cost) turn.usage) 0. st.plans in
+          if Option.fold ~none:false ~some:(fun d -> cost > d.max_cost) discovery then
+            Ok (Finish (finish st (status "limit") ~reason:"reported discovery cost cap was reached" ()))
+          else (match reply.answer with
           | Fail why ->
               Ok
                 (Finish
@@ -612,10 +637,29 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
                        (finish st (status "blocked")
                           ~reason:"the planner wrote a procedure but no playbook is chosen" ()))
               | Some book ->
-                  let choice =
-                    { key = proc.Playbook.slug; probabilities = `Assoc []; confidence = 1.; usage = None }
-                  in
-                  execute st ~book ~proc ~planned:true ~choice ~optional:false ~values:[]))
+                  let prepared = match discovery with None -> Ok book | Some _ ->
+                    let procedures = List.filter (fun (old : Playbook.procedure) -> old.slug <> proc.slug) book.playbook.procedures @ [proc] in
+                    let updated = { book.playbook with pages = book.playbook.pages @ reply.pages; procedures } in
+                    (match Playbook.of_json ~file:book.file (Playbook.yojson_of_t updated) with
+                    | Ok book -> Ok book
+                    | Error why -> Error (internal why)) in
+                  match prepared with
+                  | Error error -> Error error
+                  | Ok book ->
+                  let st = { st with book = Some book } in
+                  let run_choice choice =
+                    let selected = match List.find_opt (fun (candidate : Playbook.procedure) -> candidate.slug = choice.key) book.playbook.procedures with
+                    | Some selected -> selected | None -> proc in
+                    execute st ~book ~proc:selected ~planned:(selected.slug = proc.slug) ~choice ~optional:false ~values:[] in
+                  match discovery with
+                  | None -> run_choice { key = proc.slug; probabilities = `Assoc []; confidence = 1.; usage = None }
+                  | Some _ -> (match procedure_question st book with
+                      | Error error -> Error error
+                      | Ok question -> (match select_procedure t question with
+                          | Error error -> Error (with_trace st error)
+                          | Ok choice when choice.key = "DONE" -> done_guard st book ~choice
+                          | Ok choice when choice.key = "BLOCKED" -> Ok (Finish (finish st (status "blocked") ~reason:"discovery procedure selection was blocked" ()))
+                          | Ok choice -> run_choice choice))))
 
   (* run-d82w run-prrv: a procedure's steps in order. A [use] runs the named procedure
      inline with its own expectations; an [optional] one is skipped when its first step
@@ -639,12 +683,18 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
           let deadline_s =
             min (remaining ()) (Option.value ~default:120 proc.Playbook.deadline_s)
           in
+          let cap = match discovery with None -> cap | Some d -> min cap (d.max_steps - st.steps_used) in
           let request =
             { goal = goal_text; hint = goal.Playbook.hint; max_steps = cap; deadline_s }
           in
-          (match execute_step t request with
+          (match (match discovery with None -> None | Some _ -> unsafe_action goal_text) with
+          | Some kind -> Ok (Steps_finish (finish st (status "blocked") ~reason:("discovery stopped before " ^ kind ^ " action") ()))
+          | None -> match execute_step t request with
+          | Error error when discovery <> None && String.starts_with ~prefix:"discovery stopped before " error.P.message ->
+              Ok (Steps_finish (finish st (status "blocked") ~reason:error.P.message ()))
           | Error error -> Error error
           | Ok drive ->
+              let st = { st with steps_used = st.steps_used + List.length drive.P.steps } in
               let entry =
                 P.{ goal = goal_text; status = drive.P.status; steps = drive.P.steps; reason = drive.P.reason }
               in
@@ -833,6 +883,8 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
            (finish st (status "deadline")
               ~reason:(Printf.sprintf "the run deadline of %d s was reached" args.deadline_s)
               ()))
+    else if Option.fold ~none:false ~some:(fun d -> st.steps_used >= d.max_steps) discovery then
+      Ok (Finish (finish st (status "limit") ~reason:"the discovery step cap was reached" ()))
     else if st.count >= args.max_procedures then
       Ok
         (Finish
@@ -841,8 +893,8 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
               ()))
     else
       let* st = observe_state st in
-      let* st = ask_playbook st in
-      let* st = ask_procedure st in
+      let* st = if discovery = None then ask_playbook st else Ok (Continue st) in
+      let* st = if discovery = None then ask_procedure st else planner st ~trigger:Blocked ~reason:"discovery: propose the next procedure or finish" in
       next st
 
   and observe_state (st : state) =
@@ -1048,7 +1100,7 @@ let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) 
 
 (* ---------- The handler ---------- *)
 
-let loop ~(handler : handler) ~now ~installed (args : args) =
+let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
   if args.max_procedures < 1 || args.deadline_s < 1 then
     Error (invalid "run max_procedures and deadline_s must be positive")
   else
@@ -1095,7 +1147,7 @@ let loop ~(handler : handler) ~now ~installed (args : args) =
         hand_off = (fun reason -> Effect.perform (M.Hand_off reason));
       }
     in
-    Effect.Deep.match_with (fun () -> compute token ~now ~installed args) ()
+    Effect.Deep.match_with (fun () -> compute token ~now ~installed ?discovery args) ()
       {
         retc = Fun.id;
         exnc = raise;

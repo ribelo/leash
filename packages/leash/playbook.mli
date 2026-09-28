@@ -53,6 +53,8 @@ type accepted = { site : string; slug : string; playbook : string; replaced : bo
 
 val t_of_yojson : Yojson.Safe.t -> (t, string) result
 val yojson_of_t : t -> Yojson.Safe.t
+val page_of_yojson : Yojson.Safe.t -> (page, string) result
+val yojson_of_page : page -> Yojson.Safe.t
 
 val checker_name : checker -> string
 (** L31 run-xqh8: the kind of a resolved checker — ["page_kind"], ["text"], ["download"],
@@ -87,6 +89,9 @@ val proposed_directory : unit -> string
 (** run-m0r8: [$XDG_STATE_HOME/leash/proposed] ([$HOME/.local/state] when the variable is
     unset), where a run writes the procedures the planner wrote and verified. The playbook
     directory is never written by a run. *)
+
+val propose_book : t -> (string, string) result
+(** Write a complete discovery proposal to XDG state, without installing it. *)
 
 val propose : site:string -> procedure -> (string, string) result
 (** run-m0r8: write one proposed procedure to [<proposed_directory>/<site>-<slug>.json],

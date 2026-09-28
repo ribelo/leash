@@ -1114,6 +1114,53 @@ let missing_key () =
         "run-d99l nothing was sent" 0
         (List.length (Fake.requests server)))
 
+(* L33 run-xda7: accepting an isolated complete proposal installs a new site only
+   after explicit operator acceptance. *)
+let discover_accept () =
+  with_xdg (fun root ->
+      let draft =
+        B.
+          {
+            site = "new.example";
+            entry = "https://new.example/";
+            description = "Discovered site";
+            pages =
+              [
+                {
+                  name = "home";
+                  description = "Home page";
+                  url_pattern = Some "https://new.example/*";
+                  text_marker = None;
+                };
+              ];
+            procedures =
+              [
+                {
+                  slug = "browse";
+                  description = "Browse home";
+                  args = None;
+                  steps = [ Goal { goal = "Inspect home"; hint = None } ];
+                  expect = [ "the page is home" ];
+                  expect_timeout_s = None;
+                  max_steps = None;
+                  deadline_s = None;
+                };
+              ];
+          }
+      in
+      let path = ok (B.propose_book draft) in
+      let target = Filename.concat (B.directory ()) "new.example.json" in
+      Alcotest.(check bool) "proposal exists" true (Sys.file_exists path);
+      Alcotest.(check bool) "not installed without accept" false (Sys.file_exists target);
+      let accepted = ok (B.accept path) in
+      Alcotest.(check string) "accepted new site" target accepted.B.playbook;
+      let loaded = ok (B.load target) in
+      Alcotest.(check int) "page installed" 1 (List.length loaded.playbook.pages);
+      Alcotest.(check int)
+        "procedure installed" 1
+        (List.length loaded.playbook.procedures);
+      ignore root)
+
 let () =
   Alcotest.run "L32 planner"
     [
@@ -1128,6 +1175,7 @@ let () =
           Alcotest.test_case "run-2tt3 mission expectations" `Quick expectations;
           Alcotest.test_case "run-m0r8 proposals" `Quick proposals;
           Alcotest.test_case "run-m0r8 accept" `Quick accept_rules;
+          Alcotest.test_case "run-xda7 discover acceptance" `Quick discover_accept;
           Alcotest.test_case "run-d99l configurable planner" `Quick config_test;
           Alcotest.test_case "run-d99l missing key" `Quick missing_key;
         ] );

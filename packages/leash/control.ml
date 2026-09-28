@@ -82,6 +82,68 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
          installs {!Models.text_helper}, scripted tests their own. *)
       lift P.yojson_of_drive_result
         (Tabs.drive ?decide ?text_helper tabs ~owner ~model args)
+  | P.Discover args -> (
+      let turns = Option.value ~default:20 args.max_turns in
+      let steps = Option.value ~default:100 args.max_steps in
+      let deadline_s = Option.value ~default:900 args.deadline_s in
+      let cost = Option.value ~default:1. args.max_cost in
+      if
+        turns <= 0 || steps <= 0 || deadline_s <= 0
+        || (not (Float.is_finite cost))
+        || cost <= 0.
+      then
+        err "invalid-request" "discovery limits must be positive and cost must be finite"
+      else
+        let entry =
+          if
+            String.starts_with ~prefix:"https://" args.site
+            || String.starts_with ~prefix:"http://" args.site
+          then args.site
+          else "https://" ^ args.site
+        in
+        let offset = if String.starts_with ~prefix:"https://" entry then 8 else 7 in
+        let authority = String.sub entry offset (String.length entry - offset) in
+        let host =
+          match String.split_on_char '/' authority with head :: _ -> head | [] -> ""
+        in
+        if
+          host = "" || String.contains host '@' || String.contains host ' '
+          || String.contains host ':'
+        then
+          err "invalid-request"
+            "discover requires a valid HTTP(S) site or URL without credentials or port"
+        else
+          let seed =
+            Playbook.
+              {
+                site = host;
+                entry;
+                description = "Discovered " ^ host;
+                pages = [];
+                procedures = [];
+              }
+          in
+          match Playbook.of_json ~file:"discovery seed" (Playbook.yojson_of_t seed) with
+          | Error why -> err "invalid-request" why
+          | Ok book -> (
+              match Tabs.new_tab tabs ~owner ~url:(Some entry) with
+              | Error error -> failure error
+              | Ok info ->
+                  let run_args =
+                    P.
+                      {
+                        tab = Some info.tab;
+                        mission = Option.value ~default:("Explore " ^ host) args.goal;
+                        max_procedures = Some turns;
+                        deadline_s = Some deadline_s;
+                        dry_run = Some false;
+                        expect = None;
+                      }
+                  in
+                  lift P.yojson_of_run_result
+                    (Tabs.run ?levels ~model ?decide ?text_helper ?installed
+                       ~discovery:(Run.{ book; max_steps = steps; max_cost = cost }, turns)
+                       tabs ~owner ~tab:info.tab run_args)))
   | P.Run args -> (
       (* run-vj48 run-4mzm: the run's upper levels are one more seam. Production installs
          {!Models.levels} — one System One client for all three levels (run-7blx) — and
@@ -127,6 +189,7 @@ let command_tab = function
   | P.Drive args -> P.Handle.to_string args.tab
   | P.Run args -> (
       match args.tab with Some tab -> P.Handle.to_string tab | None -> "-")
+  | P.Discover _ -> "-"
 
 let with_command ?logger (request : P.request) f =
   Eta_observability.Context.with_fields
@@ -188,6 +251,8 @@ let budget (request : (P.request, string) result) =
       Some (Eta.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
   | Ok { command = P.Drive args; _ } ->
       Some (seconds (max 1 (Option.value ~default:120 args.deadline_s) + 5))
+  | Ok { command = P.Discover args; _ } ->
+      Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 75))
   | Ok { command = P.Run args; _ } ->
       (* run-vspj run-obtt: a run's budget is its deadline plus the margin its last steps
          need — the procedure's own bounded expectation wait (at most 30 s), a planner

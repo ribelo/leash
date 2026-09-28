@@ -26,6 +26,7 @@ type reply = {
   procedure : Playbook.procedure option;
   reason : string option;
   expect : string list option;
+  pages : Playbook.page list option;
 }
 [@@deriving yojson]
 
@@ -159,10 +160,25 @@ let check_expectations (book : Playbook.t option) sentences =
 let answer_of (request : Run.plan_request) (reply : reply) :
     (Run.plan_reply, string) result =
   let expect = Option.value ~default:[] reply.expect in
+  let pages = Option.value ~default:[] reply.pages in
+  let playbook =
+    Option.map
+      (fun (book : Playbook.t) -> { book with pages = book.pages @ pages })
+      request.Run.playbook
+  in
+  let validate_pages =
+    match playbook with
+    | None when pages <> [] -> Error "page kinds require a chosen site"
+    | None -> Ok ()
+    | Some book ->
+        Result.map
+          (fun _ -> ())
+          (Playbook.of_json ~file:"planner page kinds" (Playbook.yojson_of_t book))
+  in
   let one_of_three =
     "answer exactly one of procedure, handoff or fail with the reason it needs"
   in
-  match check_expectations request.Run.playbook expect with
+  match Result.bind validate_pages (fun () -> check_expectations playbook expect) with
   | Error why -> Error why
   | Ok () -> (
       let no_procedure name (procedure : Playbook.procedure option) =
@@ -190,7 +206,7 @@ let answer_of (request : Run.plan_request) (reply : reply) :
                    "the answer is procedure but the reply also carries a reason; %s"
                    one_of_three)
           | Some proc, None -> (
-              match request.Run.playbook with
+              match playbook with
               | None ->
                   Error "the answer is procedure but the run has no playbook to run it in"
               | Some book -> (
@@ -198,21 +214,22 @@ let answer_of (request : Run.plan_request) (reply : reply) :
                     Playbook.check_procedure ~file:"the planner's reply" book proc
                   with
                   | Error why -> Error why
-                  | Ok () -> Ok Run.{ answer = Run.Procedure proc; expect; usage = None })
+                  | Ok () ->
+                      Ok Run.{ answer = Run.Procedure proc; expect; usage = None; pages })
               ))
       | Handoff_answer -> (
           match no_procedure "handoff" reply.procedure with
           | Error why -> Error why
           | Ok () ->
               Result.map
-                (fun why -> Run.{ answer = Run.Handoff why; expect; usage = None })
+                (fun why -> Run.{ answer = Run.Handoff why; expect; usage = None; pages })
                 (with_reason "handoff"))
       | Fail_answer -> (
           match no_procedure "fail" reply.procedure with
           | Error why -> Error why
           | Ok () ->
               Result.map
-                (fun why -> Run.{ answer = Run.Fail why; expect; usage = None })
+                (fun why -> Run.{ answer = Run.Fail why; expect; usage = None; pages })
                 (with_reason "fail")))
 
 (* run-rq6i: the reply as the loop can use it, or the sentence saying why it cannot. The

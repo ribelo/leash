@@ -1336,7 +1336,8 @@ let drive_locked
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable) t ~owner ~model tab
+    ?(text_helper = fun () -> Text_helper.unavailable)
+    ?(guard = fun (_ : P.snapshot) (_ : Jev_request.decision) -> None) t ~owner ~model tab
     (args : P.drive_args) =
   (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
          drive's own deadline: the caller's remaining budget is what the model call is
@@ -1414,51 +1415,61 @@ let drive_locked
   let act (page : Drive.observation) (choice : Jev_request.decision) ~text =
     let snapshot = page.snapshot.snapshot in
     let index = Option.value ~default:0 choice.index in
-    match P.Operation.to_string choice.operation with
-    | "click" -> Actions.click ~cdp view P.{ tab = args.tab; snapshot; index }
-    | "select" ->
-        Actions.select ~cdp view
-          P.
-            {
-              tab = args.tab;
-              snapshot;
-              index;
-              option = Option.value ~default:0 choice.option;
-            }
-    | "scroll_down" ->
-        Actions.scroll ~cdp view
-          P.
-            {
-              tab = args.tab;
-              direction = enum P.Direction.of_string "down";
-              index = None;
-            }
-    | "scroll_up" ->
-        Actions.scroll ~cdp view
-          P.{ tab = args.tab; direction = enum P.Direction.of_string "up"; index = None }
-    | "wait" ->
-        t.sleep 0.5;
-        Ok
-          P.
-            {
-              tab = args.tab;
-              url = tab.url;
-              title = tab.title;
-              snapshot = None;
-              dialog = tab.dialog;
-              popups = [];
-            }
-    (* drive-ls3c: the helper's value is written with the same fill the [fill] command
+    match guard page.snapshot choice with
+    | Some kind ->
+        Error (error "invalid-request" ("discovery stopped before " ^ kind ^ " action"))
+    | None -> (
+        match P.Operation.to_string choice.operation with
+        | "click" -> Actions.click ~cdp view P.{ tab = args.tab; snapshot; index }
+        | "select" ->
+            Actions.select ~cdp view
+              P.
+                {
+                  tab = args.tab;
+                  snapshot;
+                  index;
+                  option = Option.value ~default:0 choice.option;
+                }
+        | "scroll_down" ->
+            Actions.scroll ~cdp view
+              P.
+                {
+                  tab = args.tab;
+                  direction = enum P.Direction.of_string "down";
+                  index = None;
+                }
+        | "scroll_up" ->
+            Actions.scroll ~cdp view
+              P.
+                {
+                  tab = args.tab;
+                  direction = enum P.Direction.of_string "up";
+                  index = None;
+                }
+        | "wait" ->
+            t.sleep 0.5;
+            Ok
+              P.
+                {
+                  tab = args.tab;
+                  url = tab.url;
+                  title = tab.title;
+                  snapshot = None;
+                  dialog = tab.dialog;
+                  popups = [];
+                }
+        (* drive-ls3c: the helper's value is written with the same fill the [fill] command
            uses — focus, select, Input.insertText, blur, settle — and the loop never calls
            an act without one. *)
-    | "type_text" -> (
-        match text with
-        | Some value ->
-            Actions.fill ~cdp view P.{ tab = args.tab; snapshot; index; text = value }
-        | None ->
-            Error
-              (error "internal" "a type_text step reached the browser without a value"))
-    | _ -> Error (error "invalid-request" "unsupported drive operation")
+        | "type_text" -> (
+            match text with
+            | Some value ->
+                Actions.fill ~cdp view P.{ tab = args.tab; snapshot; index; text = value }
+            | None ->
+                Error
+                  (error "internal" "a type_text step reached the browser without a value")
+            )
+        | _ -> Error (error "invalid-request" "unsupported drive operation"))
   in
   Drive.run
     ~handler:Drive.{ observe; decide; text_value; act }
@@ -1508,7 +1519,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable) t ~owner ~tab ?installed
+    ?(text_helper = fun () -> Text_helper.unavailable) ?discovery t ~owner ~tab ?installed
     (args : P.run_args) =
   let handle = tab in
   let* tab = locate t ~access:Act ~owner handle in
@@ -1528,6 +1539,17 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
           let browser = reading_browser t ~session tab cdp in
           let started = now t in
           let run_args = Run.of_args args in
+          let run_args =
+            match discovery with
+            | None -> run_args
+            | Some (_, turns) -> { run_args with Run.max_plans = turns }
+          in
+          let discovered =
+            ref
+              (Option.map
+                 (fun ((seed : Run.discovery), _) -> seed.book.playbook)
+                 discovery)
+          in
           let budget = float_of_int run_args.Run.deadline_s in
           let remaining () =
             Eta.Duration.ms
@@ -1664,7 +1686,27 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                     (text_helper ()).Text_helper.complete ~deadline:(remaining ()) context);
                 step =
                   (fun request ->
-                    drive_locked ~decide ~text_helper t ~owner ~model tab
+                    let guard snapshot choice =
+                      match discovery with
+                      | None -> None
+                      | Some _ -> (
+                          let operation =
+                            P.Operation.to_string choice.Jev_request.operation
+                          in
+                          if
+                            operation = "wait" || operation = "scroll_down"
+                            || operation = "scroll_up"
+                          then None
+                          else
+                            match
+                              List.find_opt
+                                (fun (row : P.row) -> Some row.index = choice.index)
+                                snapshot.P.rows
+                            with
+                            | None -> Some "unrecognized target"
+                            | Some row -> Run.unsafe_action (row.name ^ " " ^ row.role))
+                    in
+                    drive_locked ~decide ~text_helper ~guard t ~owner ~model tab
                       P.
                         {
                           tab = handle;
@@ -1674,15 +1716,33 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                           dry_run = Some false;
                         });
                 verify;
-                plan = (fun request -> levels.Run.plan ~deadline:(remaining ()) request);
+                plan =
+                  (fun request ->
+                    let* reply = levels.Run.plan ~deadline:(remaining ()) request in
+                    (match !discovered with
+                    | None -> ()
+                    | Some book ->
+                        discovered :=
+                          Some { book with Playbook.pages = book.pages @ reply.Run.pages });
+                    Ok reply);
                 (* run-m0r8: a planner-written procedure that ran and passed its
                    expectations is written to XDG state here; the playbook the operator
                    authored is never written by a run, only by [playbook accept]. *)
                 propose =
                   (fun ~site proc ->
-                    match Playbook.propose ~site proc with
-                    | Ok path -> Ok path
-                    | Error why -> Error (error "internal" why));
+                    match !discovered with
+                    | Some book ->
+                        discovered :=
+                          Some
+                            { book with Playbook.procedures = book.procedures @ [ proc ] };
+                        Ok
+                          (Filename.concat
+                             (Playbook.proposed_directory ())
+                             (site ^ ".json"))
+                    | None -> (
+                        match Playbook.propose ~site proc with
+                        | Ok path -> Ok path
+                        | Error why -> Error (error "internal" why)));
                 hand_off =
                   (fun ~reason ->
                     let tab, _ = begin_handoff_locked t ~owner ~reason tab in
@@ -1693,8 +1753,18 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
             match installed with Some books -> Ok books | None -> Playbook.list ()
           with
           | Error why -> Error (error "invalid-request" why)
-          | Ok books -> Run.loop ~handler ~now:(fun () -> now t) ~installed:books run_args
-          ))
+          | Ok books -> (
+              let* result =
+                Run.loop ~handler
+                  ~now:(fun () -> now t)
+                  ~installed:books ?discovery:(Option.map fst discovery) run_args
+              in
+              match !discovered with
+              | None -> Ok result
+              | Some book -> (
+                  match Playbook.propose_book book with
+                  | Error why -> Error (error "internal" why)
+                  | Ok path -> Ok { result with P.proposals = [ path ] }))))
 
 let report t : P.status_result =
   let chrome = Chrome.status t.chrome in

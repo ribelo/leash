@@ -236,7 +236,7 @@ let perform command fields positionals options =
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
    `leash <command> --help` shows the whole call. The four shared options go on every
    command; --table only on the two that render one. *)
-type option_kind = Str | Int | Bool | Json | Strings
+type option_kind = Str | Int | Float | Bool | Json | Strings
 
 (* [Strings] is the repeated mission-expectation option [leash run] will carry
    (run-4j1v), declared here so the command lands as one table entry once the Door's name
@@ -273,6 +273,10 @@ let option_term { name; kind; docv; doc } =
       Term.(
         const (Option.map (fun number -> (name, `Int number)))
         $ Arg.(value & opt (some int) None & arg_info))
+  | Float ->
+      Term.(
+        const (Option.map (fun number -> (name, `Float number)))
+        $ Arg.(value & opt (some float) None & arg_info))
   | Str ->
       Term.(
         const (Option.map (fun value -> (name, str value)))
@@ -545,6 +549,17 @@ let commands =
           "leash run 'Buy a Logitech MX Master 3S on allegro.pl' --deadline-s 300";
           "leash run 'Add Blue Top to the cart' --expect 'the page is cart' --dry-run";
         ] );
+      ( "discover",
+        "Explore SITE with the planner; write a proposed playbook without applying it.",
+        [ pos "site" "SITE-OR-URL" ],
+        [
+          opt "goal" Str "TEXT" "What to learn (default: explore this site).";
+          opt "max_turns" Int "N" "At most N planner turns (default 20).";
+          opt "max_steps" Int "N" "At most N operator steps (default 100).";
+          opt "deadline_s" Int "S" "Seconds for discovery (default 900).";
+          opt "max_cost" Float "USD" "Reported model cost cap in USD (default 1).";
+        ],
+        [ "leash discover https://example.com --goal 'Find the documentation'" ] );
     ]
   @ [ playbook_command ]
 

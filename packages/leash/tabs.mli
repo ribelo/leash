@@ -231,6 +231,7 @@ val run :
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
+  ?discovery:Run.discovery * int ->
   t ->
   owner:Protocol.Owner.t ->
   tab:Protocol.Handle.t ->

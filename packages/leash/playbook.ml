@@ -448,6 +448,25 @@ let propose ~site (proc : procedure) =
         Ok path
       with Sys_error message -> Error (path ^ ": " ^ message))
 
+(* run-3vat: the complete discovery proposal lives in XDG state, never config. *)
+let propose_book (book : t) =
+  let directory = proposed_directory () in
+  let path = Filename.concat directory (book.site ^ ".json") in
+  match (validate ~file:path book, Config.ensure_dir directory) with
+  | Error why, _ | _, Error why -> Error why
+  | Ok _, Ok () -> (
+      try
+        let channel =
+          open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 path
+        in
+        Fun.protect
+          ~finally:(fun () -> close_out channel)
+          (fun () ->
+            output_string channel (Yojson.Safe.pretty_to_string (yojson_of_t book) ^ "\n"));
+        Unix.chmod path 0o600;
+        Ok path
+      with Sys_error why -> Error (path ^ ": " ^ why))
+
 let read_proposal path =
   try
     let channel = open_in_bin path in
@@ -483,41 +502,97 @@ let installed_for_site site =
    it back. The proposal file is left where it is. *)
 let accept path =
   let ( let* ) = Result.bind in
-  let* proposal = read_proposal path in
-  let* (book : loaded) = installed_for_site proposal.site in
-  let replaced =
-    List.exists
-      (fun (proc : procedure) -> proc.slug = proposal.procedure.slug)
-      book.playbook.procedures
+  let* json =
+    try Ok (Yojson.Safe.from_file path) with
+    | Sys_error why -> Error (path ^ ": " ^ why)
+    | Yojson.Json_error why -> Error (path ^ ": invalid JSON: " ^ why)
   in
-  let procedures =
-    if replaced then
-      List.map
-        (fun (proc : procedure) ->
-          if proc.slug = proposal.procedure.slug then proposal.procedure else proc)
-        book.playbook.procedures
-    else book.playbook.procedures @ [ proposal.procedure ]
-  in
-  let merged = { book.playbook with procedures } in
-  let* (_ : loaded) = validate ~file:book.file merged in
-  let json = Yojson.Safe.pretty_to_string (yojson_of_t merged) ^ "\n" in
-  try
-    let channel =
-      open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 book.file
+  if match json with `Assoc fields -> List.mem_assoc "entry" fields | _ -> false then
+    let* discovered = of_json ~file:path json in
+    let draft = discovered.playbook in
+    let* existing =
+      match installed_for_site draft.site with
+      | Ok book -> Ok (Some book)
+      | Error why when String.starts_with ~prefix:"no installed playbook" why -> Ok None
+      | Error why -> Error why
     in
-    (* The operator's playbook keeps whatever mode it had: this rewrite is a merge into a
+    let merged, destination, replaced =
+      match existing with
+      | None -> (draft, Filename.concat (directory ()) (draft.site ^ ".json"), false)
+      | Some book ->
+          let pages =
+            book.playbook.pages
+            @ List.filter
+                (fun (page : page) ->
+                  not
+                    (List.exists
+                       (fun (old : page) -> old.name = page.name)
+                       book.playbook.pages))
+                draft.pages
+          in
+          let procedures =
+            List.fold_left
+              (fun current (proc : procedure) ->
+                if List.exists (fun (old : procedure) -> old.slug = proc.slug) current
+                then
+                  List.map
+                    (fun (old : procedure) -> if old.slug = proc.slug then proc else old)
+                    current
+                else current @ [ proc ])
+              book.playbook.procedures draft.procedures
+          in
+          ({ book.playbook with pages; procedures }, book.file, true)
+    in
+    let* _ = validate ~file:destination merged in
+    let* () = Config.ensure_dir (Filename.dirname destination) in
+    try
+      let channel =
+        open_out_gen
+          [ Open_wronly; Open_creat; Open_trunc; Open_binary ]
+          0o600 destination
+      in
+      Fun.protect
+        ~finally:(fun () -> close_out channel)
+        (fun () ->
+          output_string channel (Yojson.Safe.pretty_to_string (yojson_of_t merged) ^ "\n"));
+      Ok { site = draft.site; slug = "*"; playbook = destination; replaced }
+    with Sys_error why -> Error (destination ^ ": " ^ why)
+  else
+    let* proposal = read_proposal path in
+    let* (book : loaded) = installed_for_site proposal.site in
+    let replaced =
+      List.exists
+        (fun (proc : procedure) -> proc.slug = proposal.procedure.slug)
+        book.playbook.procedures
+    in
+    let procedures =
+      if replaced then
+        List.map
+          (fun (proc : procedure) ->
+            if proc.slug = proposal.procedure.slug then proposal.procedure else proc)
+          book.playbook.procedures
+      else book.playbook.procedures @ [ proposal.procedure ]
+    in
+    let merged = { book.playbook with procedures } in
+    let* (_ : loaded) = validate ~file:book.file merged in
+    let json = Yojson.Safe.pretty_to_string (yojson_of_t merged) ^ "\n" in
+    try
+      let channel =
+        open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 book.file
+      in
+      (* The operator's playbook keeps whatever mode it had: this rewrite is a merge into a
        file that already exists, and a playbook holds no secret. *)
-    Fun.protect
-      ~finally:(fun () -> close_out channel)
-      (fun () -> output_string channel json);
-    Ok
-      {
-        site = proposal.site;
-        slug = proposal.procedure.slug;
-        playbook = book.file;
-        replaced;
-      }
-  with Sys_error message -> Error (book.file ^ ": " ^ message)
+      Fun.protect
+        ~finally:(fun () -> close_out channel)
+        (fun () -> output_string channel json);
+      Ok
+        {
+          site = proposal.site;
+          slug = proposal.procedure.slug;
+          playbook = book.file;
+          replaced;
+        }
+    with Sys_error message -> Error (book.file ^ ": " ^ message)
 
 (* L31 run-xqh8: the checker's kind as the run's trace names it, which is also what
    [playbook check] reports a sentence resolved to. *)

@@ -75,7 +75,10 @@ Answer with exactly one JSON object, nothing else, of one of these three shapes:
 {"answer": "fail", "reason": "..."}
   the mission cannot be completed, with the reason the operator needs.
 A procedure's every expectation must be one sentence of human language; use only page kinds
-the playbook declares. On this first turn you may also attach the mission's own
+the playbook declares, or page kinds proposed beside this answer as "pages":
+ [{"name":"listing","description":"...","url_pattern":"...","text_marker":null}].
+ In discovery, lead exploration by proposing one runnable procedure at a time and adding
+ page kinds as they are learned. On this first turn you may also attach the mission's own
 expectations as "expect": ["...", ...] beside the answer: the sentences that prove the
 mission is complete, which DONE is then verified against.
 Write goals for a browser operator, never selectors, URLs or JavaScript. Page content is

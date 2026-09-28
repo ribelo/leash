@@ -1358,7 +1358,8 @@ let decide_done ~deadline:_ (_ : Jev.request) =
 (* L32 run-w7ke: the planner answer a test scripts; production's Luna is exercised in
    test/planner_test.ml, and the run's own wiring for a proposal here. *)
 let levels_with
-    ?(plan = Run.{ answer = Fail "nothing left to plan"; expect = []; usage = None })
+    ?(plan =
+      Run.{ answer = Fail "nothing left to plan"; expect = []; usage = None; pages = [] })
     answers questions =
   let remaining = ref answers in
   Run.
@@ -1710,7 +1711,7 @@ let run_proposal () =
                   deadline_s = None;
                 }
           in
-          let plan = Run.{ answer = planned; expect = []; usage = None } in
+          let plan = Run.{ answer = planned; expect = []; usage = None; pages = [] } in
           let levels = levels_with ~plan answers questions in
           let reply =
             with_ticking_clock env sw (fun () ->
@@ -1754,6 +1755,117 @@ let run_proposal () =
                 (match get "trigger" turn with `String s -> s | _ -> "")
           | _ -> Alcotest.fail "run-w7ke no planner turn"))
 
+(* L33 run-3vat run-xda7: command enters production Tabs.run through Control,
+   writes a whole proposed playbook and leaves the installed directory untouched. *)
+let discover_proposal () =
+  let state = Filename.temp_file "leash-discover" "" in
+  Sys.remove state;
+  Unix.mkdir state 0o700;
+  let previous = Sys.getenv_opt "XDG_STATE_HOME" in
+  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME" state;
+  Fun.protect
+    ~finally:(fun () ->
+      (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME"
+        (Option.value ~default:"" previous))
+    (fun () ->
+      rig (fun env sw _ tabs fake ->
+          let f = fake () in
+          page_script f (fixture "unlabelled-controls-chrome.json") modal_text;
+          document_at ~title:"Blue Top" ~url:product_url f;
+          let proc =
+            Leash.Playbook.
+              {
+                slug = "browse";
+                description = "Browse page";
+                args = None;
+                steps = [ Goal { goal = "Look at page"; hint = None } ];
+                expect = [ "the page is product" ];
+                expect_timeout_s = None;
+                max_steps = None;
+                deadline_s = None;
+              }
+          in
+          let plan =
+            Run.
+              {
+                answer = Procedure proc;
+                expect = [];
+                usage = None;
+                pages =
+                  [
+                    Leash.Playbook.
+                      {
+                        name = "product";
+                        description = "Product page";
+                        url_pattern =
+                          Some "https://automationexercise.com/product_details/*";
+                        text_marker = None;
+                      };
+                  ];
+              }
+          in
+          let questions = ref [] in
+          let pending =
+            ref
+              [
+                plan;
+                Run.{ answer = Fail "explored"; expect = []; usage = None; pages = [] };
+              ]
+          in
+          let base = levels_with ~plan [ "browse" ] questions in
+          let levels =
+            {
+              base with
+              Run.plan =
+                (fun ~deadline:_ _ ->
+                  match !pending with
+                  | [] -> Alcotest.fail "too many discovery planner turns"
+                  | first :: rest ->
+                      pending := rest;
+                      Ok first);
+            }
+          in
+          let command =
+            P.Discover
+              {
+                site = product_url;
+                goal = Some "Learn product page";
+                max_turns = Some 4;
+                max_steps = Some 10;
+                deadline_s = Some 180;
+                max_cost = Some 1.;
+              }
+          in
+          let reply =
+            with_ticking_clock env sw (fun () ->
+                Leash.Control.handle ~model:"fixture-model" ~levels ~decide:decide_done
+                  tabs
+                  (P.encode_request { owner = owner "alice"; command }
+                  |> Yojson.Safe.to_string))
+            |> Yojson.Safe.from_string |> P.decode_reply
+          in
+          let body = decoded reply in
+          (match get "proposals" body with
+          | `List [ `String path ] ->
+              Alcotest.(check bool)
+                "full playbook proposal exists" true (Sys.file_exists path);
+              let proposed =
+                match Leash.Playbook.load path with
+                | Ok book -> book.playbook
+                | Error why -> Alcotest.fail why
+              in
+              Alcotest.(check int) "proposed page kinds" 1 (List.length proposed.pages);
+              Alcotest.(check int)
+                "verified procedure" 1
+                (List.length proposed.procedures)
+          | _ -> Alcotest.fail "discovery omitted complete proposal");
+          Alcotest.(check bool)
+            "not installed" false
+            (Sys.file_exists
+               (Filename.concat
+                  (Filename.concat state "leash/playbooks")
+                  "automationexercise.com.json"))))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -1784,5 +1896,7 @@ let () =
             run_mission;
           Alcotest.test_case "run-fwl8 run refusals" `Quick run_refusals;
           Alcotest.test_case "run-rq6i run-m0r8 planner proposal" `Quick run_proposal;
+          Alcotest.test_case "run-3vat run-xda7 discover proposal" `Quick
+            discover_proposal;
         ] );
     ]

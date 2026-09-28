@@ -508,6 +508,17 @@ type run_args = {
 }
 [@@deriving yojson]
 
+(* run-3vat run-xda7: the bounded planner-led discovery request. *)
+type discover_args = {
+  site : string;
+  goal : string option;
+  max_turns : int option;
+  max_steps : int option;
+  deadline_s : int option;
+  max_cost : float option;
+}
+[@@deriving yojson]
+
 (* ---------- Per-command results ---------- *)
 
 type tab_counts = { open_ : int; [@json.key "open"] cap : int } [@@deriving yojson]
@@ -764,6 +775,7 @@ type command =
   | Drive of drive_args
   | Downloads of tab_args
   | Run of run_args
+  | Discover of discover_args
 
 let command_name = function
   | New _ -> "new"
@@ -790,6 +802,7 @@ let command_name = function
   | Drive _ -> "drive"
   | Downloads _ -> "downloads"
   | Run _ -> "run"
+  | Discover _ -> "discover"
 
 let args_to_json = function
   | New args -> yojson_of_new_args args
@@ -816,6 +829,7 @@ let args_to_json = function
   | Drive args -> yojson_of_drive_args args
   | Downloads args -> yojson_of_tab_args args
   | Run args -> yojson_of_run_args args
+  | Discover args -> yojson_of_discover_args args
 
 let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
@@ -844,6 +858,7 @@ let command_of_args ~cmd args =
   | "drive" -> with_args drive_args_of_yojson (fun args -> Drive args)
   | "downloads" -> with_args tab_args_of_yojson (fun args -> Downloads args)
   | "run" -> with_args run_args_of_yojson (fun args -> Run args)
+  | "discover" -> with_args discover_args_of_yojson (fun args -> Discover args)
   | other ->
       Error
         (Printf.sprintf "cmd: unknown command %s" (Yojson.Safe.to_string (`String other)))

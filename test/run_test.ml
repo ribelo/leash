@@ -146,7 +146,7 @@ type harness = {
 let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
     ?(verifies = [ [ expectation "the page is a" "page_kind" ] ]) ?(drives = [ drive () ])
     ?(observations = [ observation () ])
-    ?(plans = [ R.{ answer = Fail "no plan"; expect = []; usage = None } ])
+    ?(plans = [ R.{ answer = Fail "no plan"; expect = []; usage = None; pages = [] } ])
     ?(values = [ ("product", "Blue Top") ]) ?(tick = 0.) () =
   let last = match observations with [] -> observation () | first :: _ -> first in
   {
@@ -262,8 +262,8 @@ let args ?(mission = "buy the thing") ?(max_procedures = 40) ?(deadline_s = 900)
     ?(dry_run = false) ?(max_plans = 3) ?(expect = []) () =
   R.{ mission; max_procedures; deadline_s; dry_run; max_plans; expect }
 
-let run ?(installed = []) h run_args =
-  R.loop ~handler:(handler h) ~now:(fun () -> h.clock) ~installed run_args
+let run ?(installed = []) ?discovery h run_args =
+  R.loop ~handler:(handler h) ~now:(fun () -> h.clock) ~installed ?discovery run_args
 
 let status_of (result : P.run_result) = P.Run_status.to_string result.P.status
 
@@ -521,7 +521,16 @@ let added_modal () =
              not satisfy it: this is the L30 finding, in the loop. *)
           [ expectation "the page is cart" "page_kind" ~passed:false ];
         ]
-      ~plans:[ R.{ answer = Fail "nothing left to plan"; expect = []; usage = None } ]
+      ~plans:
+        [
+          R.
+            {
+              answer = Fail "nothing left to plan";
+              expect = [];
+              usage = None;
+              pages = [];
+            };
+        ]
       ()
   in
   let result =
@@ -619,7 +628,16 @@ let recorded () =
              DONE here is refused by the mission's expectation. *)
           [ expectation "the page is cart" "page_kind" ~passed:false ];
         ]
-      ~plans:[ R.{ answer = Fail "nothing left to plan"; expect = []; usage = None } ]
+      ~plans:
+        [
+          R.
+            {
+              answer = Fail "nothing left to plan";
+              expect = [];
+              usage = None;
+              pages = [];
+            };
+        ]
       ()
   in
   let result =
@@ -694,7 +712,16 @@ let endings () =
     (blocked.P.final.P.dialog <> None);
   let handoff =
     harness ~procs:[ "BLOCKED" ]
-      ~plans:[ R.{ answer = Handoff "the captcha needs you"; expect = []; usage = None } ]
+      ~plans:
+        [
+          R.
+            {
+              answer = Handoff "the captcha needs you";
+              expect = [];
+              usage = None;
+              pages = [];
+            };
+        ]
       ()
   in
   let ended = ran (run ~installed:[ site_a ] handoff (args ())) in
@@ -719,7 +746,7 @@ let operations () =
     harness ~procs:[ "step" ]
       ~drives:[ drive ~status:"error" ~reason:"the action failed" () ]
       ~verifies:[ [ expectation "the page is a" "page_kind" ~passed:false ] ]
-      ~plans:[ R.{ answer = Fail "nothing left"; expect = []; usage = None } ]
+      ~plans:[ R.{ answer = Fail "nothing left"; expect = []; usage = None; pages = [] } ]
       ()
   in
   let result = ran (run ~installed:[ with_arg ] failing (args ())) in
@@ -742,6 +769,102 @@ let no_playbook () =
   check_status "run-9ypy no playbook installed" "blocked" result;
   Alcotest.(check (list string)) "run-9ypy nothing was asked" [] h.asked
 
+(* L33 run-3vat run-xda7: the first discovery turn is planner-led and a verified
+   draft is reported without installing it. The next turn sees learned page kinds. *)
+let discovery_plans_first () =
+  let draft =
+    procedure ~slug:"browse" ~description:"Browse catalog" ~expect:[ "catalog visible" ]
+      [ goal "Open catalog" ]
+  in
+  let h =
+    harness ~procs:[ "browse" ]
+      ~verifies:[ [ expectation "catalog visible" "page_kind" ] ]
+      ~plans:
+        [
+          R.
+            {
+              answer = Procedure draft;
+              expect = [];
+              usage = None;
+              pages = [ page ~url_pattern:"https://site-a.example/*" "catalog" ];
+            };
+          R.{ answer = Fail "explored"; expect = []; usage = None; pages = [] };
+        ]
+      ()
+  in
+  let seed = book ~site:"site-a.example" ~entry:"https://site-a.example/" [] in
+  let discovery = R.{ book = seed; max_steps = 5; max_cost = 1. } in
+  let result = ran (run ~discovery h (args ~max_plans:2 ())) in
+  check_status "planner finished exploration" "blocked" result;
+  Alcotest.(check (list string))
+    "planner precedes procedure selection" [ "plan"; "choose" ]
+    ( List.filter (fun op -> op = "choose" || op = "plan") (List.rev h.ops) |> fun ops ->
+      List.filteri (fun i _ -> i < 2) ops );
+  Alcotest.(check (list (pair string string)))
+    "verified proposal"
+    [ ("site-a.example", "browse") ]
+    h.proposed;
+  Alcotest.(check int) "two planner turns" 2 (List.length h.plan_requests);
+  let next = List.nth h.plan_requests 1 in
+  Alcotest.(check bool)
+    "learned page kind is reused" true
+    (match next.R.playbook with
+    | Some book -> List.exists (fun (p : B.page) -> p.name = "catalog") book.pages
+    | None -> false)
+
+(* L33 run-tt9z run-tpnf: protected action intent stops before the fake browser
+   receives a goal, even when the mission asks for exactly that action. *)
+let discovery_hard_stops () =
+  List.iter
+    (fun (label, goal_text) ->
+      let draft =
+        procedure ~slug:"danger" ~description:goal_text ~expect:[ "page visible" ]
+          [ goal goal_text ]
+      in
+      let h =
+        harness ~procs:[ "danger" ]
+          ~plans:[ R.{ answer = Procedure draft; expect = []; usage = None; pages = [] } ]
+          ()
+      in
+      let seed = book ~site:"site-a.example" ~entry:"https://site-a.example/" [] in
+      let result =
+        ran
+          (run
+             ~discovery:R.{ book = seed; max_steps = 3; max_cost = 1. }
+             h (args ~mission:goal_text ()))
+      in
+      check_status label "blocked" result;
+      Alcotest.(check int) (label ^ " no browser action") 0 (List.length h.steps))
+    [
+      ("payment", "Pay now"); ("deletion", "Delete account"); ("messaging", "Send message");
+    ]
+
+let discovery_cost () =
+  let draft =
+    procedure ~slug:"browse" ~description:"Browse" ~expect:[ "page visible" ]
+      [ goal "Browse" ]
+  in
+  let h =
+    harness
+      ~plans:
+        [
+          R.
+            {
+              answer = Procedure draft;
+              expect = [];
+              usage = Some P.{ input_tokens = 10; output_tokens = 10; cost = 2. };
+              pages = [];
+            };
+        ]
+      ()
+  in
+  let seed = book ~site:"site-a.example" ~entry:"https://site-a.example/" [] in
+  let result =
+    ran (run ~discovery:R.{ book = seed; max_steps = 3; max_cost = 1. } h (args ()))
+  in
+  check_status "reported cost cap" "limit" result;
+  Alcotest.(check int) "no browser steps" 0 (List.length h.steps)
+
 let () =
   Alcotest.run "L31 run"
     [
@@ -760,5 +883,10 @@ let () =
           Alcotest.test_case "run-klp9 endings" `Quick endings;
           Alcotest.test_case "run-vj48 run-7blx operations" `Quick operations;
           Alcotest.test_case "run-9ypy no playbook" `Quick no_playbook;
+          Alcotest.test_case "run-3vat run-xda7 discovery planner" `Quick
+            discovery_plans_first;
+          Alcotest.test_case "run-tt9z run-tpnf discovery stops" `Quick
+            discovery_hard_stops;
+          Alcotest.test_case "run-tpnf cost" `Quick discovery_cost;
         ] );
     ]

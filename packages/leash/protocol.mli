@@ -382,6 +382,16 @@ type run_args = {
     the L30 guard) — which L32's planner attaches on its first turn and which a caller may
     state directly. It is a [key?] list: omitted when the mission carries none. *)
 
+type discover_args = {
+  site : string;
+  goal : string option;
+  max_turns : int option;
+  max_steps : int option;
+  deadline_s : int option;
+  max_cost : float option;
+}
+(** run-3vat run-xda7: URL or site and bounded learning goal. *)
+
 type tab_counts = { open_ : int; cap : int }
 
 val tab_counts_of_yojson : Yojson.Safe.t -> (tab_counts, string) result
@@ -641,6 +651,7 @@ type command =
   | Drive of drive_args
   | Downloads of tab_args
   | Run of run_args
+  | Discover of discover_args
       (** The decoded command: one constructor per row of [docs/protocol.md]'s command
           tables, carrying that command's derived argument record. *)
 
