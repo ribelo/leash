@@ -78,7 +78,7 @@ EOF
 }
 echo "phase 0: LEASH_SWEEP_INTERVAL_S rejects a bad value before Chrome launches"
 write_config "$root/leash0.toml" "$root/profile0" 3600 3600
-LEASH_SWEEP_INTERVAL_S=bogus "$leash" run --config "$root/leash0.toml" >"$root/service0.log" 2>&1 &
+LEASH_SWEEP_INTERVAL_S=bogus "$leash" serve --config "$root/leash0.toml" >"$root/service0.log" 2>&1 &
 fail_pid=$!
 for _ in $(seq 1 200); do kill -0 "$fail_pid" 2>/dev/null || break; sleep 0.1; done
 if kill -0 "$fail_pid" 2>/dev/null; then
@@ -97,7 +97,7 @@ start_phase() {
   phase_log="$root/service-$1.log"
   write_config "$root/leash-$1.toml" "$current_profile" "$2" "$3"
   if [[ -n "$4" ]]; then export LEASH_SWEEP_INTERVAL_S="$4"; else unset LEASH_SWEEP_INTERVAL_S; fi
-  "$leash" run --config "$root/leash-$1.toml" >"$phase_log" 2>&1 &
+  "$leash" serve --config "$root/leash-$1.toml" >"$phase_log" 2>&1 &
   service_pid=$!
   unset LEASH_SWEEP_INTERVAL_S
   socket="$XDG_RUNTIME_DIR/leash/control.sock"

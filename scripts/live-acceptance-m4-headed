@@ -81,7 +81,7 @@ have_notify=1; command -v notify-send >/dev/null || have_notify=""
   echo "notify_send_present: $([[ -n "$have_notify" ]] && echo yes || echo no)"
 } > "$RESULT"
 if [[ -n "$have_niri" ]]; then niri msg --json windows >"$niri_before" 2>/dev/null || echo '[]' >"$niri_before"; else echo '[]' >"$niri_before"; fi
-"$leash" run --config "$config" >"$log" 2>&1 &
+"$leash" serve --config "$config" >"$log" 2>&1 &
 service_pid=$!
 socket="$XDG_RUNTIME_DIR/leash/control.sock"
 for _ in $(seq 1 100); do

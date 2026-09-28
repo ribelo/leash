@@ -162,7 +162,7 @@ StartLimitIntervalSec=60
 [Service]
 Environment=XDG_RUNTIME_DIR=%t
 Environment=EIO_BACKEND=posix
-ExecStart=/nix/store/00000000000000000000000000000000-leash-dev/bin/leash run
+ExecStart=/nix/store/00000000000000000000000000000000-leash-dev/bin/leash serve
 Restart=on-failure
 RestartSec=2
 SuccessExitStatus=0

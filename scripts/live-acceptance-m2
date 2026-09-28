@@ -68,7 +68,7 @@ cleanup() {
   rm -rf "$root"
 }
 trap cleanup EXIT
-"$leash" run --config "$config" >"$log" 2>&1 &
+"$leash" serve --config "$config" >"$log" 2>&1 &
 service_pid=$!
 socket="$XDG_RUNTIME_DIR/leash/control.sock"
 for _ in $(seq 1 100); do

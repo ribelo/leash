@@ -180,7 +180,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"$leash" run --config "$config" >"$log" 2>&1 &
+"$leash" serve --config "$config" >"$log" 2>&1 &
 service_pid=$!
 socket="$XDG_RUNTIME_DIR/leash/control.sock"
 for _ in $(seq 1 200); do
@@ -211,7 +211,7 @@ generation="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["g
 # svc-5wm8: the same ExecStart line again, on the same socket, is refused, and the
 # first instance keeps serving that socket.
 set +e
-"$leash" run --config "$config" >"$root/second.log" 2>&1
+"$leash" serve --config "$config" >"$root/second.log" 2>&1
 second_status=$?
 set -e
 if [[ "$second_status" -eq 0 ]]; then
@@ -357,7 +357,7 @@ if [[ -e "$default_root/config/leash/config.toml" ]]; then
   echo "ERROR: svc-x8rp the default path already has a file" >&2
   exit 1
 fi
-"${default_env[@]}" "$leash" run >"$default_root/service.log" 2>&1 &
+"${default_env[@]}" "$leash" serve >"$default_root/service.log" 2>&1 &
 default_pid=$!
 for _ in $(seq 1 200); do
   if [[ -S "$default_socket" ]]; then break; fi
