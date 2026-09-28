@@ -1,6 +1,6 @@
 # Control protocol and the leash CLI
 
-The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, owner-only, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `run`, `wait`) hold the connection open until they settle.
+The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, owner-only, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `run`, `wait`) hold the connection open until they settle. The socket admits 64 requests at once (hard-b1na); see Concurrency below.
 
 Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec.
 
@@ -44,7 +44,12 @@ Observation:
 | `text` | `{tab, index?: int, max_chars?: int}` | `{url, title, text, truncated}` |
 | `shot` | `{tab, path, full_page?: bool}` | `{path, bytes}` |
 | `debug` | `{tab, limit?: int, clear?: bool}` | `{entries: DebugEntry[]}` |
-| `eval` | `{tab, expression, argument?}` | `{value}` |
+| `eval` | `{tab, expression, argument?, index?, snapshot?}` | `{value}` |
+| `net` | `{tab, match?, limit?, type?}` | `{requests: NetEntry[]}` |
+| `net_body` | `{tab, id}` | `{id, body, base64, bytes, truncated}` |
+| `net_request` | `{tab, id}` | `{id, method, url, headers, post_data?, base64, truncated}` |
+| `cookies` | `{tab}` | `{cookies: Cookie[]}` |
+| `storage` | `{tab, area: "local"\|"session"}` | `{origin, area, items, truncated}` |
 
 Actions (serialized per tab; each returns `ActionResult`):
 
@@ -56,7 +61,9 @@ Actions (serialized per tab; each returns `ActionResult`):
 | `press` | `{tab, snapshot, index?, key}` |
 | `select` | `{tab, snapshot, index, option: int}` |
 | `scroll` | `{tab, direction: "up"\|"down", index?}` |
-| `wait` | `{tab, until: {url_prefix?, text?, index_gone?: int, dialog?: bool}, timeout_ms?}` |
+| `upload` | `{tab, snapshot, index, paths: string[]}` |
+| `hover` | `{tab, snapshot, index}` |
+| `wait` | `{tab, until: {url_prefix?, text?, index_gone?: int, dialog?: bool, changed_since?: snapshot}, timeout_ms?}` |
 | `dialog` | `{tab, answer: "accept"\|"dismiss", text?}` |
 
 `new` and `nav` return `TabInfo` (including the tab handle and any active dialog) even
@@ -105,11 +112,19 @@ Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: 
 Row          = {index: int, role: string, name: string, value?: string, state?: string[],
                 options?: [{index: int, label: string, value: string, selected: bool, disabled: bool}]}
                  state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly}
+                 role file-input (hard-2gnf) is an <input type=file>, listed even when the page hides it behind a styled
+                 button; only `upload` acts on it
                  options is the option list a select row exposes, in the select's own order, index 0 first
 Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string, default_prompt: string|null}
 ActionResult = {tab, url, title, snapshot: null, dialog: Dialog|null, popups: TabInfo[]}
                  snapshot is always null in this version: no snapshot is taken while an action settles; call snap
                  popups lists only tabs opened by the acted-on tab (opener), owned by the caller
+NetEntry     = {id: string, method, url, status: int|null, type: string, mime: string|null, size: int|null,
+                duration_ms: int|null, from_cache: bool, error?: string}
+                 one request of the tab's own ring (see the net rules below); type is Chrome's resource type
+                 lower-cased (document, xhr, fetch, script, image, ...); size is the encoded size on the wire
+Cookie       = {name, value, domain, path, expires: number|null, http_only: bool, secure: bool, same_site: string|null}
+                 expires is null for a session cookie, otherwise epoch seconds
 Download     = {id: string, suggested_name: string, mime: string, state: "in_progress"|"completed"|"canceled", path: string|null}
                  path is null until Chrome reports a completed filePath; MIME is inferred from the extension when Chrome does not report one
 DebugEntry   = {at: iso8601, kind: "console"|"exception"|"request-failed", level?: string, text: string}
@@ -250,7 +265,7 @@ Rules:
   `null` only in a dispatch with no models service; the service always reports it.
 - Ownership is checked before every tab command (ADR-0005). The `act` commands — `nav`,
   `snap`, `text`, `eval`, `shot`, `debug`, `wait`, `click`, `fill`, `press`, `select`,
-  `scroll` — `dialog`, `release`, and `close` require that the caller owns the tab;
+  `scroll`, `upload`, `hover`, `net`, `net_body`, `net_request`, `cookies`, `storage` — `dialog`, `release`, and `close` require that the caller owns the tab;
   `claim` requires that nobody does. A tab nobody owns and a tab another caller owns both
   refuse with `not-owner`; a tab handed to the human refuses with `with-human` — its
   owner's commands included, until `resume`.
@@ -315,7 +330,48 @@ Rules:
 - `select` targets a native `<select>` row (role `combobox` or `listbox`); `option` is its index in the select's observed option order, and an index the select does not have is `invalid-request`. A row that is not a native select is `row-not-actionable`. The observed order is the row's `options`, read from the accessibility tree even while the select is closed — a closed select's options have no layout box and are never rows of their own (tab-5deq): each carries the `index` the action takes, its `label`, the `value` it holds, its label when it holds none, and whether it is `selected` or `disabled`.
 - `ActionResult.snapshot` is null unless a snapshot was taken as part of settling; actions do not observe the page again on their own, so a caller that wants a fresh table asks for one.
 - An action reply's `url` and `title` come from `Target.getTargetInfo` read after the action settled. When the action navigated the tab, that read waits — bounded like a load — for the new document to finish, so the reply, a drive step's `after`, and `list` carry the document title rather than the tab strip's formatted URL (chrome-qnul, svc-hi4f).
-- `wait` conditions are ANDed; `timeout_ms` is bounded to 30 000.
+- `wait` conditions are ANDed; `timeout_ms` defaults to 30 000 and may be up to 3 600 000 — one hour
+  (hard-sr9v). The listener's handler budget for a wait is its `timeout_ms` plus one second, and a client
+  that disconnects cancels the wait. `changed_since` names a snapshot and holds once the page's main-frame
+  loader id, or its mutation guard's epoch or count, differs from what that snapshot saw (hard-sckn); the
+  last eight snapshots of a tab are remembered, and their baselines outlive the navigation that clears
+  the tab's current table, so a navigated page counts as changed. A snapshot the tab does not remember is
+  `stale-snapshot`. A wait takes **no lock of the tab's**: an action on the same tab runs beside it, and its
+  polling counts as the owner's activity, so an hour-long wait does not idle the tab out.
+- `net` (hard-xg6y hard-ovbx hard-vq5s). Chrome delivers network events per tab session, so **every tab has a
+  ring of its own** (500 requests, oldest dropped first), owner-bound like every tab command. It is fed by
+  `Network.requestWillBeSent`, `requestWillBeSentExtraInfo`, `responseReceived`, `requestServedFromCache`,
+  `loadingFinished` and `loadingFailed` from the tab's claim (or creation) on, and holds metadata only. `net`
+  lists the most recent `limit` (default 100, at most 500) whose URL contains `match` (case-insensitive)
+  and whose resource `type` equals the filter, oldest first. A request that redirected stays listed under
+  `<id>~<n>` with the redirect's status; the request it became keeps the id. `net_body` returns the response
+  body through `Network.getResponseBody`: text, or base64 with `base64: true` where Chrome gives it so; at
+  most 1 MiB of it, `truncated` when longer. A request with no response yet, a failed or redirected one, or
+  a body Chrome has evicted is `body-unavailable`; an id the ring does not hold is `unknown-request`.
+  `net_request` returns the headers (the extra-info headers, cookies included, win over the event's) and,
+  through `Network.getRequestPostData`, the post data bounded the same way. On the CLI: `leash net TAB`,
+  `leash net TAB body ID`, `leash net TAB request ID`. URLs, headers, bodies, cookie values and storage
+  values are page data for the owner and are never a log line; the journal's anchors are identifiers only.
+- `upload` (hard-o3za hard-2gnf): `paths` are 1 to 10 absolute paths of readable regular files, 50 MiB
+  together (`invalid-request`, `too-large`), checked before the browser is asked. The row must be a
+  `file-input` (`row-not-actionable` otherwise); it is revalidated like an action — current snapshot, same
+  loader — but by node, not by role and name: it must still resolve to an `<input type=file>`, be enabled, and
+  take several files only with `multiple`. The files are set with `DOM.setFileInputFiles`. Every other action
+  refuses a `file-input` row with `row-not-actionable`.
+- `hover` (hard-v1gs): the row is revalidated and hit-tested as a click's is, then one `mouseMoved` is
+  dispatched at its point and the page settles two frames; nothing is pressed. Hover menus are in the next `snap`.
+- `eval` with `index` and `snapshot` (hard-b20d, both or neither) calls the expression as
+  `function(argument, element)`, `element` being the row's node (`DOM.resolveNode` of its backend id). The
+  snapshot must be the tab's current one (`stale-snapshot`), the row must exist (`no-such-row`).
+- `cookies` and `storage` (hard-ufb7) are read-only. `cookies` is `Network.getCookies` for the tab's URL,
+  httpOnly ones included with their flags. `storage` reads `DOMStorage.getDOMStorageItems` for the page's
+  security origin (an opaque origin such as about:blank is `invalid-request`); `items` is an object of key to
+  value, at most 1000 items and 1 MiB (`truncated`). Nothing writes.
+- **Concurrency** (hard-b1na). The listener admits 64 concurrent requests, not eta_ipc's default 16, and replies of
+  up to 8 MiB (a 1 MiB body, escaped). Ten agents may run at once — five blocked in hour-long `wait`s on five
+  tabs while five act — with nobody queued: a wait holds a connection and a fiber and takes no tab lock. `net`,
+  `net_body`, `net_request`, `cookies`, `storage`, `debug` and `dialog` take none either; the actions,
+  `eval`, `text`, `shot`, `snap`, `drive` and `run` serialize per tab.
 - `eval` runs the expression as a function body in the page with `argument` bound; expression, argument, and result are each bounded to 64 KiB.
 - `shot` writes a PNG to `path`, which must be an absolute path the service can write; the reply carries no image data.
 - `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful. `settled` is false when the page kept mutating during the observation (retaken twice first); the snapshot is still usable and actions revalidate at dispatch.
@@ -335,6 +391,8 @@ Rules:
 | `unknown-tab` | no tab and no tombstone for the handle |
 | `stale-snapshot` | the targeted snapshot is not current |
 | `no-such-row` | index not in the snapshot |
+| `body-unavailable` | `net_body` / `net_request`: the request has no body to read, or Chrome has evicted it |
+| `unknown-request` | `net_body` / `net_request`: the tab's ring holds no request with that id |
 | `row-not-actionable` | the row is not visible, is disabled, or is covered at its click point |
 | `dialog-open` | a dialog blocks the page; answer it first |
 | `no-dialog` | `dialog` with nothing to answer |

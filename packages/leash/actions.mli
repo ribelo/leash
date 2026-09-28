@@ -91,6 +91,27 @@ val select :
     in the observed option order, and an index the select does not have is
     [invalid-request]. *)
 
+val hover :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.hover_args ->
+  (Protocol.action_result, Protocol.error) result
+(** hard-v1gs: the row is revalidated and hit-tested like a click's, then the mouse is
+    moved to its point with a single [mouseMoved]; nothing is pressed, and two frames of
+    settling let a hover menu open. *)
+
+val upload :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.upload_args ->
+  (Protocol.action_result, Protocol.error) result
+(** hard-o3za: sets absolute, readable files on a [file-input] row with
+    [DOM.setFileInputFiles]. At most 10 files and 50 MiB (a path that is not an absolute
+    readable regular file is [invalid-request], the total [too-large]); the row is
+    revalidated as an [<input type=file>] rather than by role and name, and several files
+    need [multiple]. Every other action refuses a [file-input] row with
+    [row-not-actionable] (hard-2gnf). *)
+
 val scroll :
   cdp:Cdp.t ->
   tab ->

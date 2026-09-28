@@ -38,6 +38,9 @@ let browser ?(reply = fun _ _ -> obj []) ?(row = fun _ -> None) ?(dialog = fun (
        call; [eval] still races it (tab-gjo0), which is why its cases run under Eta. *)
     acknowledge = (fun () -> fst (Leash__Dispatch.make ()));
     row;
+    snapshot_current = (fun _ -> false);
+    baseline = (fun _ -> None);
+    probe = (fun () -> Ok { R.loader = ""; guard = None });
   }
 
 let stub name _ =
@@ -54,7 +57,9 @@ let stub name _ =
 let eval_bounds () =
   Eta_test.run (fun _env _sw ->
       let b = browser ~reply:stub () in
-      let arg expression argument = P.{ tab = handle; expression; argument } in
+      let arg expression argument =
+        P.{ tab = handle; expression; argument; index = None; snapshot = None }
+      in
       Alcotest.(check string)
         "expression bound" "too-large"
         (code (R.eval b (arg (String.make 65_537 'x') None)));
@@ -108,6 +113,7 @@ let text_and_wait () =
         text = Some "ready";
         index_gone = None;
         dialog = Some false;
+        changed_since = None;
       }
   in
   ignore (ok (R.wait b P.{ tab = handle; until; timeout_ms = Some 200 }));
@@ -118,7 +124,7 @@ let text_and_wait () =
     (code (R.wait b P.{ tab = handle; until = never; timeout_ms = Some 100 }));
   Alcotest.(check string)
     "bounded" "invalid-request"
-    (code (R.wait b P.{ tab = handle; until; timeout_ms = Some 30_001 }))
+    (code (R.wait b P.{ tab = handle; until; timeout_ms = Some 3_600_001 }))
 
 let indexed_text_and_disappearance () =
   let calls = ref [] in
@@ -141,7 +147,16 @@ let indexed_text_and_disappearance () =
        (fun (name, params) ->
          name = "DOM.resolveNode" && get "backendNodeId" params = `Int 123)
        !calls);
-  let gone = P.{ url_prefix = None; text = None; index_gone = Some 8; dialog = None } in
+  let gone =
+    P.
+      {
+        url_prefix = None;
+        text = None;
+        index_gone = Some 8;
+        dialog = None;
+        changed_since = None;
+      }
+  in
   ignore (ok (R.wait b P.{ tab = handle; until = gone; timeout_ms = Some 0 }));
   let connected = ref false in
   let missing =
@@ -376,6 +391,7 @@ let protocol_smoke () =
             text = Some "body";
             index_gone = None;
             dialog = Some false;
+            changed_since = None;
           }
       in
       ignore (result (send (P.Wait { tab; until; timeout_ms = Some 0 })));
@@ -507,6 +523,8 @@ let eval_settlement () =
                       tab;
                       expression = "window.open('https://example.com/popup','w')";
                       argument = None;
+                      index = None;
+                      snapshot = None;
                     })));
       wait_for_call ();
       Fake.emit fake ~method_:"Target.targetCreated"
@@ -538,7 +556,16 @@ let eval_settlement () =
       let cell = ref None in
       Eio.Fiber.fork ~sw (fun () ->
           cell :=
-            Some (send (P.Eval { tab; expression = "window.close()"; argument = None })));
+            Some
+              (send
+                 (P.Eval
+                    {
+                      tab;
+                      expression = "window.close()";
+                      argument = None;
+                      index = None;
+                      snapshot = None;
+                    })));
       wait_for_call ();
       Fake.emit fake ~method_:"Target.targetDestroyed"
         ~params:(obj [ ("targetId", str "target-1") ]);

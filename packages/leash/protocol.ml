@@ -206,6 +206,21 @@ module Direction = struct
   let yojson_of_t = yojson_of_direction
 end
 
+(** hard-ufb7: which of a page's two web storages [storage] reads. *)
+type storage_area =
+  | Local_storage [@json.name "local"]
+  | Session_storage [@json.name "session"]
+[@@deriving yojson]
+
+module Storage_area = struct
+  type t = storage_area
+
+  let of_string = wire_value storage_area_of_yojson
+  let to_string = wire_string yojson_of_storage_area
+  let t_of_yojson = storage_area_of_yojson
+  let yojson_of_t = yojson_of_storage_area
+end
+
 type answer = Accept [@json.name "accept"] | Dismiss [@json.name "dismiss"]
 [@@deriving yojson]
 
@@ -306,6 +321,8 @@ type error_code =
   | Unknown_tab [@json.name "unknown-tab"]
   | Stale_snapshot [@json.name "stale-snapshot"]
   | No_such_row [@json.name "no-such-row"]
+  | Body_unavailable [@json.name "body-unavailable"]
+  | Unknown_request [@json.name "unknown-request"]
   | Row_not_actionable [@json.name "row-not-actionable"]
   | Dialog_open [@json.name "dialog-open"]
   | No_dialog [@json.name "no-dialog"]
@@ -449,7 +466,15 @@ type shot_args = { tab : Handle.t; path : string; full_page : bool option }
 type debug_args = { tab : Handle.t; limit : int option; clear : bool option }
 [@@deriving yojson]
 
-type eval_args = { tab : Handle.t; expression : string; argument : Yojson.Safe.t option }
+(* hard-b20d: [index] and [snapshot] go together — the row's element is the function's second
+   parameter. *)
+type eval_args = {
+  tab : Handle.t;
+  expression : string;
+  argument : Yojson.Safe.t option;
+  index : int option;
+  snapshot : Snapshot_id.t option;
+}
 [@@deriving yojson]
 
 type nav_args = { tab : Handle.t; url : string } [@@deriving yojson]
@@ -479,6 +504,7 @@ type wait_until = {
   text : string option;
   index_gone : int option;
   dialog : bool option;
+  changed_since : Snapshot_id.t option;
 }
 [@@deriving yojson]
 
@@ -490,6 +516,32 @@ type dialog_args = { tab : Handle.t; answer : Answer.t; text : string option }
 
 type handoff_args = { tab : Handle.t; reason : string; timeout_s : int option }
 [@@deriving yojson]
+
+(* hard-xg6y: the filter of a request listing; [match_] is a case-insensitive substring of
+   the URL, [type_] a resource type (xhr, fetch, document, ...). *)
+type net_args = {
+  tab : Handle.t;
+  match_ : string option; [@json.key "match"]
+  limit : int option;
+  type_ : string option; [@json.key "type"]
+}
+[@@deriving yojson]
+
+(* hard-ovbx hard-vq5s: one request of the tab's ring, by the id `net` listed. *)
+type net_entry_args = { tab : Handle.t; id : string } [@@deriving yojson]
+
+type upload_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  paths : string list;
+}
+[@@deriving yojson]
+
+type hover_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
+[@@deriving yojson]
+
+type storage_args = { tab : Handle.t; area : Storage_area.t } [@@deriving yojson]
 
 type drive_args = {
   tab : Handle.t;
@@ -574,6 +626,66 @@ type text_result = { url : string; title : string; text : string; truncated : bo
 type shot_result = { path : string; bytes : int } [@@deriving yojson]
 type debug_result = { entries : debug_entry list } [@@deriving yojson]
 type eval_result = { value : Yojson.Safe.t } [@@deriving yojson]
+
+(* hard-xg6y: one request of a tab's ring. Everything here is page data returned to the
+   owner; none of it is ever a log line. *)
+type net_entry = {
+  id : string;
+  method_ : string; [@json.key "method"]
+  url : string;
+  status : int option; [@json.null]
+  type_ : string; [@json.key "type"]
+  mime : string option; [@json.null]
+  size : int option; [@json.null]
+  duration_ms : int option; [@json.null]
+  from_cache : bool;
+  error : string option;
+}
+[@@deriving yojson]
+
+type net_result = { requests : net_entry list } [@@deriving yojson]
+
+type net_body_result = {
+  id : string;
+  body : string;
+  base64 : bool;
+  bytes : int;
+  truncated : bool;
+}
+[@@deriving yojson]
+
+type net_request_result = {
+  id : string;
+  method_ : string; [@json.key "method"]
+  url : string;
+  headers : Yojson.Safe.t;
+  post_data : string option;
+  base64 : bool;
+  truncated : bool;
+}
+[@@deriving yojson]
+
+type cookie = {
+  name : string;
+  value : string;
+  domain : string;
+  path : string;
+  expires : float option; [@json.null]
+  http_only : bool;
+  secure : bool;
+  same_site : string option; [@json.null]
+}
+[@@deriving yojson]
+
+type cookies_result = { cookies : cookie list } [@@deriving yojson]
+
+type storage_result = {
+  origin : string;
+  area : Storage_area.t;
+  items : Yojson.Safe.t;
+  truncated : bool;
+}
+[@@deriving yojson]
 
 (* hand-rg9h: [warnings] is [key?] — the human-facing steps a handoff ran and could not
    complete, omitted when there was nothing to report. *)
@@ -782,6 +894,13 @@ type command =
   | Downloads of tab_args
   | Run of run_args
   | Discover of discover_args
+  | Net of net_args
+  | Net_body of net_entry_args
+  | Net_request of net_entry_args
+  | Upload of upload_args
+  | Hover of hover_args
+  | Cookies of tab_args
+  | Storage of storage_args
 
 let command_name = function
   | New _ -> "new"
@@ -809,6 +928,13 @@ let command_name = function
   | Downloads _ -> "downloads"
   | Run _ -> "run"
   | Discover _ -> "discover"
+  | Net _ -> "net"
+  | Net_body _ -> "net_body"
+  | Net_request _ -> "net_request"
+  | Upload _ -> "upload"
+  | Hover _ -> "hover"
+  | Cookies _ -> "cookies"
+  | Storage _ -> "storage"
 
 let args_to_json = function
   | New args -> yojson_of_new_args args
@@ -836,6 +962,12 @@ let args_to_json = function
   | Downloads args -> yojson_of_tab_args args
   | Run args -> yojson_of_run_args args
   | Discover args -> yojson_of_discover_args args
+  | Net args -> yojson_of_net_args args
+  | Net_body args | Net_request args -> yojson_of_net_entry_args args
+  | Upload args -> yojson_of_upload_args args
+  | Hover args -> yojson_of_hover_args args
+  | Cookies args -> yojson_of_tab_args args
+  | Storage args -> yojson_of_storage_args args
 
 let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
@@ -865,6 +997,13 @@ let command_of_args ~cmd args =
   | "downloads" -> with_args tab_args_of_yojson (fun args -> Downloads args)
   | "run" -> with_args run_args_of_yojson (fun args -> Run args)
   | "discover" -> with_args discover_args_of_yojson (fun args -> Discover args)
+  | "net" -> with_args net_args_of_yojson (fun args -> Net args)
+  | "net_body" -> with_args net_entry_args_of_yojson (fun args -> Net_body args)
+  | "net_request" -> with_args net_entry_args_of_yojson (fun args -> Net_request args)
+  | "upload" -> with_args upload_args_of_yojson (fun args -> Upload args)
+  | "hover" -> with_args hover_args_of_yojson (fun args -> Hover args)
+  | "cookies" -> with_args tab_args_of_yojson (fun args -> Cookies args)
+  | "storage" -> with_args storage_args_of_yojson (fun args -> Storage args)
   | other ->
       Error
         (Printf.sprintf "cmd: unknown command %s" (Yojson.Safe.to_string (`String other)))

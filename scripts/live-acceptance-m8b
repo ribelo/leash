@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# hard-wk6q (L36): isolated HEADLESS Chrome and loopback pages only; no model credentials, no
+# public network. One live check per addition of hardening 2: net, long wait, changed-since,
+# upload, hover, eval --index, cookies, storage, and ten agents at once.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [[ "${1:-}" != --inside-nix ]]; then exec nix develop -c bash "$0" --inside-nix "$@"; fi
+shift
+DUNE_BUILD_DIR=_build_l36 dune build @install
+leash="$(pwd)/_build_l36/default/packages/leash/bin/main.exe"
+root="$(mktemp -d)"
+chmod 700 "$root"
+export XDG_RUNTIME_DIR="$root/runtime" XDG_CONFIG_HOME="$root/config" XDG_STATE_HOME="$root/state"
+mkdir -m 700 "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME"
+profile="$root/profile"
+config="$root/leash.toml"
+binary="$(command -v google-chrome-stable || command -v chromium)"
+cat > "$config" <<EOF
+[chrome]
+binary = "$binary"
+profile_dir = "$profile"
+workspace = "test"
+headless = true
+[tabs]
+cap = 16
+EOF
+service_pid=""
+cleanup() {
+  status=$?
+  if [[ -n "$service_pid" ]] && kill -0 "$service_pid" 2>/dev/null; then
+    kill -TERM "$service_pid" || :
+    wait "$service_pid" || :
+  fi
+  if [[ "$status" != 0 ]]; then tail -30 "$root/service.log" >&2 || :; fi
+  rm -rf "$root"
+}
+trap cleanup EXIT
+"$leash" serve --config "$config" >"$root/service.log" 2>&1 & service_pid=$!
+socket="$XDG_RUNTIME_DIR/leash/control.sock"
+for _ in $(seq 1 100); do
+  if [[ -S "$socket" ]]; then break; fi
+  if ! kill -0 "$service_pid" 2>/dev/null; then echo 'Leash service exited' >&2; exit 1; fi
+  sleep .1
+done
+[[ -S "$socket" ]] || { echo 'Leash socket missing' >&2; exit 1; }
+LEASH_BIN="$leash" python3 scripts/live-acceptance-m8b.py "$socket"
+kill -TERM "$service_pid"
+wait "$service_pid"
+service_pid=""
+echo 'hard-wk6q: headless Leash and Chrome stopped cleanly'

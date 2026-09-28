@@ -18,7 +18,7 @@ let send path request =
           let socket = Eio.Net.connect ~sw env#net (`Unix path) in
           let data = Yojson.Safe.to_string request ^ "\n" in
           Eio.Flow.copy_string data socket;
-          let reader = Eio.Buf_read.of_flow ~max_size:1_048_576 socket in
+          let reader = Eio.Buf_read.of_flow ~max_size:8_388_608 socket in
           Eio.Buf_read.line reader))
 
 let field key = function
@@ -102,7 +102,25 @@ let service_socket ~config ~socket =
              ^ " does not resolve; set XDG_RUNTIME_DIR or pass --socket")
           else Ok path)
 
-let perform command fields positionals options =
+let rec perform command fields positionals options =
+  match (command, positionals) with
+  (* hard-xg6y hard-ovbx hard-vq5s: `net TAB` lists; `net TAB body ID` and `net TAB request
+     ID` are commands of their own on the wire. *)
+  | "net", [ tab; (("body" | "request") as part); id ] ->
+      perform ("net_" ^ part) [ "tab"; "id" ] [ tab; id ] options
+  | "net", [ _; verb; _ ] -> usage ("net takes body or request, not " ^ verb)
+  | "net", [ _; _ ] -> usage "net takes body ID or request ID after the tab"
+  | "net", _ :: _ :: _ :: _ ->
+      usage "net takes a tab, and optionally body or request with an ID"
+  (* hard-o3za: the files are the trailing positionals. *)
+  | "upload", tab :: snapshot :: index :: (_ :: _ as paths) ->
+      perform_wire command
+        [ "tab"; "snapshot"; "index" ]
+        [ tab; snapshot; index ]
+        (Some ("paths", `List (List.map str paths)) :: options)
+  | _ -> perform_wire command fields positionals options
+
+and perform_wire command fields positionals options =
   let actual = List.length positionals in
   let options = List.filter_map Fun.id options in
   let cli = List.filter (fun (name, _) -> List.mem name cli_options) options in
@@ -164,7 +182,7 @@ let perform command fields positionals options =
                   if command <> "wait" then options
                   else
                     let condition_names =
-                      [ "url_prefix"; "text"; "index_gone"; "dialog" ]
+                      [ "url_prefix"; "text"; "index_gone"; "dialog"; "changed_since" ]
                     in
                     let conditions, rest =
                       List.partition
@@ -242,15 +260,18 @@ type option_kind = Str | Int | Float | Bool | Json | Strings
    (run-4j1v), declared here so the command lands as one table entry once the Door's name
    is free. *)
 type option_ = { name : string; kind : option_kind; docv : string; doc : string }
-type positional = { field : string; docv : string; optional : bool }
+type positional = { field : string; docv : string; optional : bool; many : bool }
 
 let opt name kind docv doc = { name; kind; docv; doc }
 
 (* svc-hi4f run-4j1v: an option a caller repeats — the mission's own expectations — becomes
    one JSON array on the wire. *)
 let opt_list name kind docv doc = { name; kind; docv; doc }
-let pos field docv = { field; docv; optional = false }
-let pos_opt field docv = { field; docv; optional = true }
+let pos field docv = { field; docv; optional = false; many = false }
+let pos_opt field docv = { field; docv; optional = true; many = false }
+
+(* hard-o3za: the trailing positionals, one or more (the files `upload` sets). *)
+let pos_many field docv = { field; docv; optional = false; many = true }
 let owner_opt = opt "owner" Str "NAME" "Request owner (default dsh:\\$DSH_SESSION_ID)."
 let pretty_opt = opt "pretty" Bool "" "Indent JSON output."
 let table_opt = opt "table" Bool "" "Render list and snap rows as a table."
@@ -296,7 +317,11 @@ let positional_term positionals =
   List.fold_left
     (fun term (index, spec) ->
       let arg =
-        if spec.optional then
+        if spec.many then
+          Term.(
+            const Fun.id
+            $ Arg.(non_empty & pos_right (index - 1) string [] & info [] ~docv:spec.docv))
+        else if spec.optional then
           Term.(
             const (fun value -> Option.to_list value)
             $ Arg.(value & pos index (some string) None & info [] ~docv:spec.docv))
@@ -455,8 +480,18 @@ let commands =
       ( "eval",
         "Evaluate EXPRESSION as a function body in the page.",
         [ pos "tab" "TAB"; pos "expression" "EXPRESSION" ],
-        [ opt "argument" Json "JSON" "JSON value bound to argument in the expression." ],
-        [ "leash eval t_9xk 'return document.title'" ] );
+        [
+          opt "argument" Json "JSON" "JSON value bound to argument in the expression.";
+          opt "index" Int "N"
+            "Call the expression as (argument, element), element being the row at index \
+             N.";
+          opt "snapshot" Str "SNAPSHOT" "The snapshot --index names (required with it).";
+        ],
+        [
+          "leash eval t_9xk 'return document.title'";
+          "leash eval t_9xk 'return element.getBoundingClientRect().width' --snapshot \
+           s_3 --index 7";
+        ] );
       ( "nav",
         "Navigate a tab to a URL (http, https or about:blank).",
         [ pos "tab" "TAB"; pos "url" "URL" ],
@@ -506,10 +541,56 @@ let commands =
           opt "text" Str "TEXT" "Until the page text contains TEXT.";
           opt "index_gone" Int "N" "Until row N is gone.";
           opt "dialog" Bool "" "Until a dialog is open.";
+          opt "changed_since" Str "SNAPSHOT"
+            "Until the page's loader or mutation counter differs from SNAPSHOT's.";
           opt "timeout" Int "MS" "Alias of --timeout-ms.";
-          opt "timeout_ms" Int "MS" "Bound the wait in milliseconds (max 30000).";
+          opt "timeout_ms" Int "MS"
+            "Bound the wait in milliseconds (default 30000, max 3600000: one hour).";
         ],
-        [ "leash wait t_9xk --text Done --timeout-ms 5000" ] );
+        [
+          "leash wait t_9xk --text Done --timeout-ms 5000";
+          "leash wait t_9xk --changed-since s_3 --timeout-ms 600000";
+        ] );
+      ( "upload",
+        "Set PATH... on the file input at INDEX of SNAPSHOT.",
+        [
+          pos "tab" "TAB";
+          pos "snapshot" "SNAPSHOT";
+          pos "index" "INDEX";
+          pos_many "paths" "PATH";
+        ],
+        [],
+        [ "leash upload t_9xk s_3 12 /home/me/report.pdf" ] );
+      ( "hover",
+        "Move the mouse to the row at INDEX of SNAPSHOT.",
+        [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "index" "INDEX" ],
+        [],
+        [ "leash hover t_9xk s_3 4" ] );
+      ( "net",
+        "List the tab's recent requests; `net TAB body ID` and `net TAB request ID` read \
+         one.",
+        [ pos "tab" "TAB"; pos_opt "part" "body|request"; pos_opt "id" "ID" ],
+        [
+          opt "match" Str "TEXT" "Keep requests whose URL contains TEXT.";
+          opt "limit" Int "N" "The most recent N requests (default 100, at most 500).";
+          opt "type" Str "TYPE"
+            "Keep one resource type: xhr, fetch, document, script, ...";
+        ],
+        [
+          "leash net t_9xk --type fetch --match /api/";
+          "leash net t_9xk body 1000.5";
+          "leash net t_9xk request 1000.5";
+        ] );
+      ( "cookies",
+        "Read the cookies of the tab's URL, httpOnly included (read-only).",
+        [ pos "tab" "TAB" ],
+        [],
+        [ "leash cookies t_9xk" ] );
+      ( "storage",
+        "Read the tab's local or session storage (read-only).",
+        [ pos "tab" "TAB"; pos "area" "local|session" ],
+        [],
+        [ "leash storage t_9xk local" ] );
       ( "dialog",
         "Answer the page's dialog (never automatic).",
         [ pos "tab" "TAB"; pos "answer" "ACCEPT|DISMISS" ],

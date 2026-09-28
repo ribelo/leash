@@ -231,6 +231,64 @@ let options ~by_id ~values ~names n =
           disabled = disabled node;
         })
 
+(* hard-2gnf: a file input is the one control an upload needs and the one a snapshot used
+   to lose — Chrome shows a button and a "no file chosen" label for it, and pages hide the
+   input itself behind a styled button of their own, so it has no box and the visible-only
+   rule would never list it. Each `<input type=file>` of the document is a row of the role
+   [file-input], visible or not, placed in document order among the rows around it. Its
+   name is what the accessibility tree calls it when that says something, otherwise the
+   author's own words for it (aria-label, title, name, id). *)
+let file_inputs ~dom ~ax_by_backend =
+  let string = dom_strings dom in
+  let nodes = dom_nodes dom in
+  let backends = list (get "backendNodeId" nodes) in
+  let names = list (get "nodeName" nodes) in
+  let types = dom_attribute dom "type" in
+  let attr name = dom_attribute dom name in
+  let aria = attr "aria-label" and title = attr "title" in
+  let name_attr = attr "name" and id = attr "id" in
+  let disabled = attr "disabled" and required = attr "required" in
+  let state wanted present backend =
+    match P.Row_state.of_string wanted with
+    | Ok s when Hashtbl.mem present backend -> [ s ]
+    | Ok _ | Error _ -> []
+  in
+  let rec collect position backends names =
+    match (backends, names) with
+    | backend :: backends, node_name :: names ->
+        let backend = integer backend in
+        let rest = collect (position + 1) backends names in
+        if
+          string (integer node_name) = "INPUT"
+          && String.lowercase_ascii
+               (Option.value ~default:"" (Hashtbl.find_opt types backend))
+             = "file"
+        then
+          let first table = Hashtbl.find_opt table backend |> Option.to_list in
+          let label =
+            let from_ax =
+              match Hashtbl.find_opt ax_by_backend backend with
+              | Some n -> name n
+              | None -> ""
+            in
+            if from_ax <> "" then from_ax
+            else
+              match
+                List.concat_map first [ aria; title; name_attr; id ]
+                |> List.find_opt (fun s -> s <> "")
+              with
+              | Some s -> s
+              | None -> ""
+          in
+          let states =
+            state "disabled" disabled backend @ state "required" required backend
+          in
+          (position, backend, label, if states = [] then None else Some states) :: rest
+        else rest
+    | _ -> []
+  in
+  collect 0 backends names
+
 let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
   let visible = visible dom ~width ~height ~scroll_x ~scroll_y in
   let placeholders = placeholders dom in
@@ -343,6 +401,43 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
   in
   let roots = List.filter (fun n -> field "parentId" n = None) nodes in
   let raw = List.concat_map walk roots in
+  let raw =
+    let ax_by_backend = Hashtbl.create 64 in
+    List.iter
+      (fun n ->
+        let backend = integer (get "backendDOMNodeId" n) in
+        if backend >= 0 && get "ignored" n <> `Bool true then
+          Hashtbl.replace ax_by_backend backend n)
+      nodes;
+    let order = Hashtbl.create 128 in
+    List.iteri
+      (fun position backend -> Hashtbl.replace order (integer backend) position)
+      (list (get "backendNodeId" (dom_nodes dom)));
+    let position (_, backend) =
+      Option.value ~default:max_int (Hashtbl.find_opt order backend)
+    in
+    List.fold_left
+      (fun rows (at, backend, label, state) ->
+        let row =
+          ( {
+              P.index = 0;
+              role = "file-input";
+              name = label;
+              value = None;
+              state;
+              options = None;
+            },
+            backend )
+        in
+        let rec place = function
+          | [] -> [ row ]
+          | next :: rest as all ->
+              if position next > at then row :: all else next :: place rest
+        in
+        place rows)
+      raw
+      (file_inputs ~dom ~ax_by_backend)
+  in
   List.mapi
     (fun index ((row : P.row), backend) -> ({ row with index = index + 1 }, backend))
     raw

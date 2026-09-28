@@ -27,6 +27,11 @@
       Page.getLayoutMetrics: an 800x600 css layout viewport (the measured shape is in
       docs/cdp-shapes.md).
 
+    - L36 (hard-wk6q): Network.getResponseBody: {body:"",base64Encoded:false};
+      Network.getRequestPostData: {postData:""}; Network.getCookies: {cookies:[]};
+      DOM.setFileInputFiles: {}; DOMStorage.enable / disable: {};
+      DOMStorage.getDOMStorageItems: {entries:[]}.
+
     Event shapes available through [event] are Target.targetCreated and
     Target.targetInfoChanged
     ({targetInfo:{targetId,type,title,url,attached,canAccessOpener,browserContextId}} —
@@ -35,7 +40,9 @@
     ({sessionId,targetInfo,waitingForDebugger}), Target.detachedFromTarget
     ({sessionId,targetId}), Page.loadEventFired ({timestamp}),
     Page.frameNavigated ({frame:{id,loaderId,url,securityOrigin,mimeType}}), and Page.domContentEventFired
-    ({timestamp}). [emit] can also send arbitrary event names and params, which is how a test
+    ({timestamp}), and the four network events of one fixed request ["request-1"]:
+    Network.requestWillBeSent, Network.responseReceived, Network.loadingFinished and
+    Network.loadingFailed (hard-xg6y). [emit] can also send arbitrary event names and params, which is how a test
     scripts a popup: the Target.attachedToTarget targetInfo then carries the [openerId] the
     default fixture omits, recorded from real Chrome in docs/cdp-shapes.md and
     test/fixtures/unlabelled-controls-chrome.json (tab-8k2g).

@@ -36,6 +36,13 @@ let request tabs who command =
 
 let check_code label expected reply = Alcotest.(check string) label expected (code reply)
 
+let contains text sub =
+  let rec search i =
+    i + String.length sub <= String.length text
+    && (String.sub text i (String.length sub) = sub || search (i + 1))
+  in
+  search 0
+
 let rig ?reporter ?download_dir f =
   Eta_test.run (fun env sw ->
       let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
@@ -1234,6 +1241,11 @@ let journal_redaction () =
       let secret_text = "page-text-do-not-log" in
       let api_key = "api-key-do-not-log" in
       let userinfo = "userinfo-do-not-log" in
+      (* L36: what the request ring, the cookie jar and the upload path hold is page or
+         caller data as well. *)
+      let secret_request = "request-secret-do-not-log" in
+      let secret_cookie = "cookie-secret-do-not-log" in
+      let secret_path = "/nonexistent/path-secret-do-not-log" in
       let url = "https://user:" ^ userinfo ^ "@example.com/" in
       Fake.on_method (fake ()) "Runtime.evaluate" (fun _ ->
           obj [ ("result", obj [ ("value", str secret_text) ]) ]);
@@ -1255,6 +1267,73 @@ let journal_redaction () =
         | Ok x -> x
         | Error e -> Alcotest.fail e
       in
+      (* The new reads, on a live tab: the results carry the secrets to the owner, and no
+         journal line may. *)
+      Fake.on_method (fake ()) "Network.getCookies" (fun _ ->
+          obj
+            [
+              ( "cookies",
+                `List
+                  [
+                    obj
+                      [
+                        ("name", str "sid");
+                        ("value", str secret_cookie);
+                        ("domain", str "example.com");
+                        ("path", str "/");
+                        ("expires", `Int (-1));
+                        ("httpOnly", `Bool true);
+                        ("secure", `Bool true);
+                      ];
+                  ] );
+            ]);
+      Fake.emit ~session:"session-1" (fake ()) ~method_:"Network.requestWillBeSent"
+        ~params:
+          (obj
+             [
+               ("requestId", str "leak-1");
+               ("timestamp", `Float 1.);
+               ("type", str "Fetch");
+               ( "request",
+                 obj
+                   [
+                     ("url", str ("https://example.com/" ^ secret_request));
+                     ("method", str "GET");
+                     ("headers", obj [ ("Authorization", str secret_request) ]);
+                   ] );
+             ]);
+      (* Wait for the event without the journal: only the one command below is anchored. *)
+      let rec await_ring n =
+        match
+          Leash.Tabs.net tabs ~owner:(owner "alice")
+            { tab = h; match_ = Some secret_request; limit = None; type_ = None }
+        with
+        | Ok { requests = _ :: _ } -> ()
+        | _ ->
+            if n = 0 then Alcotest.fail "hard-xg6y the ring never saw the request"
+            else (
+              Eio.Fiber.yield ();
+              await_ring (n - 1))
+      in
+      await_ring 10_000;
+      let listed =
+        result
+          (run "alice"
+             (P.Net { tab = h; match_ = Some secret_request; limit = None; type_ = None }))
+      in
+      Alcotest.(check bool)
+        "the owner is given the request's url" true
+        (contains (Yojson.Safe.to_string listed) secret_request);
+      let request_data =
+        result (run "alice" (P.Net_request { tab = h; id = "leak-1" }))
+      in
+      Alcotest.(check bool)
+        "the owner is given the request's headers" true
+        (contains (Yojson.Safe.to_string request_data) secret_request);
+      let jar = result (run "alice" (P.Cookies { tab = h })) in
+      Alcotest.(check bool)
+        "the owner is given the cookie's value" true
+        (contains (Yojson.Safe.to_string jar) secret_cookie);
       let snap =
         match P.Snapshot_id.of_string "s_diagnostics" with
         | Ok x -> x
@@ -1282,8 +1361,22 @@ let journal_redaction () =
                 tab = missing;
                 expression = "return argument";
                 argument = Some (str api_key);
+                index = None;
+                snapshot = None;
               };
             Nav { tab = missing; url };
+            Net
+              { tab = missing; match_ = Some secret_request; limit = None; type_ = None };
+            Net_body { tab = missing; id = secret_request };
+            Net_request { tab = missing; id = secret_request };
+            Upload { tab = missing; snapshot = snap; index = 0; paths = [ secret_path ] };
+            Hover { tab = missing; snapshot = snap; index = 0 };
+            Cookies { tab = missing };
+            Storage
+              {
+                tab = missing;
+                area = Leash.Protocol.Storage_area.of_string "local" |> Result.get_ok;
+              };
             Click { tab = missing; snapshot = snap; index = 0 };
             Fill { tab = missing; snapshot = snap; index = 0; text = secret_fill };
             Press { tab = missing; snapshot = snap; index = None; key = "Enter" };
@@ -1293,7 +1386,13 @@ let journal_redaction () =
               {
                 tab = missing;
                 until =
-                  { url_prefix = None; text = None; index_gone = None; dialog = None };
+                  {
+                    url_prefix = None;
+                    text = None;
+                    index_gone = None;
+                    dialog = None;
+                    changed_since = None;
+                  };
                 timeout_ms = Some 0;
               };
             Dialog { tab = missing; answer; text = None };
@@ -1314,15 +1413,18 @@ let journal_redaction () =
       let anchors = List.filter (fun r -> r.L.msg = "control command") records in
       Alcotest.(check int)
         "one anchor per command"
-        (2 + List.length commands)
+        (5 + List.length commands)
         (List.length anchors);
       let expected_commands =
         P.New { url = None }
         :: P.Text { tab = h; index = None; max_chars = None }
+        :: P.Net { tab = h; match_ = Some secret_request; limit = None; type_ = None }
+        :: P.Net_request { tab = h; id = "leak-1" }
+        :: P.Cookies { tab = h }
         :: commands
       in
       List.iter2
-        (fun command record ->
+        (fun (position, command) record ->
           let context key = List.assoc_opt key record.L.context in
           Alcotest.(check (option string)) "owner" (Some "alice") (context "owner");
           Alcotest.(check (option string))
@@ -1332,11 +1434,12 @@ let journal_redaction () =
           let expected_tab =
             match command with
             | P.New _ | P.List_tabs _ | P.Status -> "-"
-            | P.Text _ -> P.Handle.to_string h
+            | _ when position >= 1 && position <= 4 -> P.Handle.to_string h
             | _ -> P.Handle.to_string missing
           in
           Alcotest.(check (option string)) "tab" (Some expected_tab) (context "tab"))
-        expected_commands anchors;
+        (List.mapi (fun position command -> (position, command)) expected_commands)
+        anchors;
       let contains text sub =
         let rec search i =
           i + String.length sub <= String.length text
@@ -1350,7 +1453,15 @@ let journal_redaction () =
           List.iter
             (fun secret ->
               Alcotest.(check bool) ("redacted " ^ secret) false (contains line secret))
-            [ secret_fill; secret_text; api_key; userinfo ])
+            [
+              secret_fill;
+              secret_text;
+              api_key;
+              userinfo;
+              secret_request;
+              secret_cookie;
+              secret_path;
+            ])
         records)
 
 (* run-ykq4: no Chrome process; browser-level events and the owner-bound
@@ -2016,6 +2127,7 @@ let dialog_interruptions () =
                     text = Some "never";
                     index_gone = None;
                     dialog = None;
+                    changed_since = None;
                   };
                 timeout_ms = Some 5000;
               }));

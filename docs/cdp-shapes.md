@@ -334,3 +334,36 @@ WebSocket CDP carries the same JSON method/params as the managed debugging pipe.
   `in_progress` in the inventory), then `completed`. Only the final event carried
   `filePath`; active entries have a null path. Canceled download shape was not observed.
   Unattributable frame IDs are ignored rather than credited to the wrong owner.
+
+
+## L36 hardening 2 (Chrome/152.0.7977.64, headless pipe, scripts/live-acceptance-m8b)
+
+Measured by the live gate against loopback pages, headless. The fake browser's defaults and the
+`Network.*` event shapes in [fake_browser.mli](../test/support/fake_browser.mli) follow these.
+
+- **Network events are per page session.** `Network.requestWillBeSent` carries `requestId` (`"1588909.2"`,
+  a loader-scoped counter), `timestamp` (monotonic seconds), `type` (`"Fetch"`, `"XHR"`, `"Document"`, ...) and
+  `request:{url,method,headers,hasPostData?,postData?}`; `responseReceived` carries `response:{status,mimeType,
+  fromDiskCache,...}`; `loadingFinished` carries `encodedDataLength` and its own `timestamp`, from which the
+  duration is the difference. `Network.enable` in the tab's session (already done per tab) is all a ring needs.
+  The headers Chrome really sends, cookies included, arrive separately in `requestWillBeSentExtraInfo`.
+- `Network.getResponseBody {requestId}` answers `{body, base64Encoded}` once the load has finished, text for
+  text and JSON, base64 for binary; a request still in flight or evicted answers a CDP error, which Leash reports
+  as `body-unavailable`. `Network.getRequestPostData {requestId}` answers `{postData}` for a request that had
+  `hasPostData`.
+- **A hidden file input is not in the accessibility tree and has no layout box** (`display:none`, the usual
+  styled-upload-button pattern), but `DOMSnapshot.captureSnapshot` still lists its node (`nodeName` `INPUT`,
+  attributes `type`,`file`). The `file-input` rows come from that half, in document order, named by the
+  accessibility name when there is one and otherwise by the author's aria-label, title, name or id.
+- `DOM.setFileInputFiles {files:[...],backendNodeId}` answers `{}`, and the page sees its `change` event with
+  the files (name and size read back through `eval`). `DOM.describeNode {backendNodeId,depth:0}` reports the
+  node's `nodeName` and the flat `attributes` array, which is how `upload` checks `type=file`, `disabled` and
+  `multiple`.
+- `Input.dispatchMouseEvent {type:"mouseMoved",x,y,button:"none",buttons:0}` is enough to open a CSS `:hover`
+  menu; the menu's items are rows of the next snapshot. A hover menu that shifts the layout below it also
+  shifts what a later click lands on while the pointer is still there, so the gate's page positions its menu
+  absolutely.
+- `Network.getCookies {urls:[tab url]}` lists HttpOnly cookies with `httpOnly:true` (which `document.cookie` does
+  not show), `expires:-1` and `session:true` for a session cookie, and no `sameSite` member for a cookie
+  that sets none. `DOMStorage.getDOMStorageItems {storageId:{securityOrigin,isLocalStorage}}` answers
+  `{entries:[[key,value],...]}`; Leash enables the domain around the read and disables it again.

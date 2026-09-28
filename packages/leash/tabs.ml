@@ -228,6 +228,9 @@ type tab = {
       (** The action watches waiting for that load to finish; resolved once, when it does,
           like the waiter of {!with_load_wait}. *)
   mutable snapshot : (P.Snapshot_id.t * string * (P.row * int) list) option;
+  mutable baselines : (P.Snapshot_id.t * Reading.page_state) list;
+      (** The page's loader id and mutation guard as each of the last few snapshots saw
+          them, newest first (hard-sckn). Unlike [snapshot] this survives a navigation. *)
   mutable dialog : P.dialog option;
   mutable dialog_listeners : (P.dialog -> unit) list;
   mutable main_frame : string option;
@@ -245,6 +248,8 @@ type tab = {
           [With_human] because a [handoff] request is waiting on it (hand-lz3p). *)
   reading : Reading.t;
 }
+
+let baselines_kept = 8
 
 type tomb = { state : owner_state; disposition : P.Disposition.t; at : float }
 
@@ -432,6 +437,7 @@ let register t ~id ~session ~origin ~state ~url ~title ?opener () =
       page_loading = false;
       page_loads = [];
       snapshot = None;
+      baselines = [];
       dialog = None;
       dialog_listeners = [];
       main_frame = None;
@@ -1142,6 +1148,38 @@ let sweep t ~decide =
                       | Unowned | Owned _ | With_human _ -> None))))
     handles
 
+(* The two reads a snapshot's currency rests on, shared by `snap` and by `wait
+   --changed-since` (hard-sckn): the main frame's loader id, and the document's mutation
+   guard — installed on the spot when this document has none. [call] is a page-session
+   CDP call. *)
+let frame_loader call =
+  let* reply = call "Page.getFrameTree" (obj []) in
+  match member "frameTree" reply with
+  | Some tree ->
+      let frame = Option.value ~default:`Null (member "frame" tree) in
+      Ok (Option.value ~default:"" (text "loaderId" frame))
+  | None -> Error (error "internal" "browser omitted frame tree")
+
+let page_guard call =
+  let evaluate expression =
+    let* reply =
+      call "Runtime.evaluate"
+        (obj [ ("expression", str expression); ("returnByValue", `Bool true) ])
+    in
+    match member "result" reply with
+    | Some result -> Ok (Option.value ~default:`Null (member "value" result))
+    | None -> Error (error "internal" "browser omitted guard result")
+  in
+  let* current = evaluate Snapshot_source.guard_expression in
+  match Snapshot_source.guard current with
+  | Some guard -> Ok guard
+  | None -> (
+      let* _ = evaluate Snapshot_source.counter_script in
+      let* reply = evaluate Snapshot_source.guard_expression in
+      match Snapshot_source.guard reply with
+      | Some guard -> Ok guard
+      | None -> Error (error "internal" "document mutation guard unavailable"))
+
 (* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8:
    retain the unfiltered node table for later action-time revalidation. *)
 let snap_locked t tab (args : P.snap_args) =
@@ -1163,34 +1201,8 @@ let snap_locked t tab (args : P.snap_args) =
         tab.counter_installed <- true;
         Ok ()
     in
-    let loader () =
-      let* reply = call "Page.getFrameTree" (obj []) in
-      match member "frameTree" reply with
-      | Some tree ->
-          let frame = Option.value ~default:`Null (member "frame" tree) in
-          Ok (Option.value ~default:"" (text "loaderId" frame))
-      | None -> Error (error "internal" "browser omitted frame tree")
-    in
-    let guard () =
-      let evaluate expression =
-        let* reply =
-          call "Runtime.evaluate"
-            (obj [ ("expression", str expression); ("returnByValue", `Bool true) ])
-        in
-        match member "result" reply with
-        | Some result -> Ok (Option.value ~default:`Null (member "value" result))
-        | None -> Error (error "internal" "browser omitted guard result")
-      in
-      let* current = evaluate Snapshot_source.guard_expression in
-      match Snapshot_source.guard current with
-      | Some guard -> Ok guard
-      | None -> (
-          let* _ = evaluate Snapshot_source.counter_script in
-          let* reply = evaluate Snapshot_source.guard_expression in
-          match Snapshot_source.guard reply with
-          | Some guard -> Ok guard
-          | None -> Error (error "internal" "document mutation guard unavailable"))
-    in
+    let loader () = frame_loader call in
+    let guard () = page_guard call in
     let capture () =
       let* before_loader = loader () in
       let* before = guard () in
@@ -1207,18 +1219,32 @@ let snap_locked t tab (args : P.snap_args) =
       let* after_loader = loader () in
       let _, _, width, height, scroll_x, scroll_y = before in
       let rows = Snapshot_source.rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y in
-      Ok (rows, before = after && before_loader = after_loader, after_loader)
+      let epoch, count, _, _, _, _ = after in
+      Ok
+        ( rows,
+          before = after && before_loader = after_loader,
+          after_loader,
+          Some (epoch, count) )
     in
     let rec attempt remaining =
-      let* rows, settled, loader_id =
-        if tab.dialog <> None then Ok ([], false, "") else capture ()
+      let* rows, settled, loader_id, guard =
+        if tab.dialog <> None then Ok ([], false, "", None) else capture ()
       in
       if (not settled) && remaining > 0 && tab.dialog = None then attempt (remaining - 1)
-      else Ok (rows, settled, loader_id)
+      else Ok (rows, settled, loader_id, guard)
     in
-    let* rows, settled, loader_id = attempt 2 in
+    let* rows, settled, loader_id, guard = attempt 2 in
     let snapshot = enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ())) in
     tab.snapshot <- Some (snapshot, loader_id, rows);
+    (* hard-sckn: what the page was when this table was taken, kept beyond the next
+       navigation (which clears the table itself) so `wait --changed-since` can tell that
+       the page moved on. The last few tables are remembered. *)
+    (match guard with
+    | Some guard ->
+        tab.baselines <-
+          (snapshot, Reading.{ loader = loader_id; guard = Some guard })
+          :: List.filteri (fun i _ -> i < baselines_kept - 1) tab.baselines
+    | None -> ());
     let matches row =
       match args.match_ with
       | None -> true
@@ -1279,6 +1305,16 @@ let reading_browser t ~session tab cdp : Reading.browser =
               (fun ((row : P.row), backend) ->
                 if row.P.index = index then Some backend else None)
               rows);
+    snapshot_current =
+      (fun id ->
+        match tab.snapshot with Some (current, _, _) -> current = id | None -> false);
+    baseline = (fun id -> List.assoc_opt id tab.baselines);
+    probe =
+      (fun () ->
+        let call meth params = cdp_call ~session cdp meth params in
+        let* loader = frame_loader call in
+        let* epoch, count, _, _, _, _ = page_guard call in
+        Ok Reading.{ loader; guard = Some (epoch, count) });
   }
 
 let with_reading t ~access ~owner handle f =
@@ -1302,6 +1338,35 @@ let debug t ~owner (args : P.debug_args) =
   let* tab = locate t ~access:Act ~owner args.tab in
   Reading.debug tab.reading args
 
+(* hard-xg6y hard-ovbx hard-vq5s hard-ufb7: the request ring, cookies and storage are
+   reads. They take no action lock, like [debug] and [wait]: reading a body while a long
+   [drive] holds the tab is the point, and they change nothing a running action could
+   trip over. Ownership is still checked, and the page session still comes from the
+   registry. *)
+let with_reading_unlocked t ~owner handle f =
+  let* tab = locate t ~access:Act ~owner handle in
+  let* cdp = ready t in
+  let* session = page_session t cdp tab in
+  f tab (reading_browser t ~session tab cdp)
+
+let net t ~owner (args : P.net_args) =
+  let* tab = locate t ~access:Act ~owner args.tab in
+  Reading.net tab.reading args
+
+let net_body t ~owner (args : P.net_entry_args) =
+  with_reading_unlocked t ~owner args.tab (fun tab browser ->
+      Reading.net_body browser tab.reading args)
+
+let net_request t ~owner (args : P.net_entry_args) =
+  with_reading_unlocked t ~owner args.tab (fun tab browser ->
+      Reading.net_request browser tab.reading args)
+
+let cookies t ~owner (args : P.tab_args) =
+  with_reading_unlocked t ~owner args.tab (fun _ browser -> Reading.cookies browser)
+
+let storage t ~owner (args : P.storage_args) =
+  with_reading_unlocked t ~owner args.tab (fun _ browser -> Reading.storage browser args)
+
 (* own-pmr7: answering a dialog is the owner's, exactly as acting is — a dialog is the
    page asking the tab's owner, and a stranger answering it is the "stomping" ADR-0005
    refuses. *)
@@ -1317,7 +1382,25 @@ let wait t ~owner (args : P.wait_args) =
   let* tab = locate t ~access:Act ~owner args.tab in
   let* cdp = ready t in
   let* session = page_session t cdp tab in
-  Reading.wait (reading_browser t ~session tab cdp) args
+  let browser = reading_browser t ~session tab cdp in
+  (* hard-sr9v hard-b1na: a wait takes no lock of the tab's — an action on the same tab
+     runs beside it — and, being the owner's work in progress, keeps the tab from idling
+     out: a wait of an hour outlasts the idle clock's thirty minutes, which counts owner
+     activity. *)
+  let touch () =
+    match tab.owner_state with
+    | Owned holder when holder = owner -> tab.last_activity <- now t
+    | Owned _ | Unowned | With_human _ -> ()
+  in
+  Reading.wait
+    {
+      browser with
+      sleep =
+        (fun seconds ->
+          touch ();
+          browser.sleep seconds);
+    }
+    args
 
 (* L7 tab-bw4j tab-j1z2 tab-p3x1 tab-luo5 tab-5deq tab-8dop tab-tm6c tab-hxld tab-60kn
    tab-1lhx tab-8la3: the registry owns the tab's identity, its page session, and its
@@ -1364,6 +1447,12 @@ let select t ~owner (args : P.select_args) =
 
 let scroll t ~owner (args : P.scroll_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.scroll ~cdp view args)
+
+let upload t ~owner (args : P.upload_args) =
+  with_action t ~owner args.tab (fun cdp view -> Actions.upload ~cdp view args)
+
+let hover t ~owner (args : P.hover_args) =
+  with_action t ~owner args.tab (fun cdp view -> Actions.hover ~cdp view args)
 
 (* drive-8n2z drive-tfqh: keep the lock across observe/decide/act. Never call
    a public Tabs action here: each would reacquire this very same mutex. The
@@ -1418,6 +1507,8 @@ let drive_locked
               "return \
                {y:scrollY,viewport:innerHeight,height:Math.max(document.documentElement?.scrollHeight||0,document.body?.scrollHeight||0)};";
             argument = None;
+            index = None;
+            snapshot = None;
           }
     in
     let value = metrics.value in

@@ -263,3 +263,21 @@
   unix
   yojson
   alcotest))
+
+(test
+ (name hardening2_test)
+ (modules hardening2_test)
+ (deps ../docs/protocol.md support/fake_browser.ml)
+ (libraries
+  leash
+  leash_test_support
+  eta_test
+  eta
+  eta_ipc
+  eta_process
+  eta_observability
+  eio
+  eio.unix
+  unix
+  yojson
+  alcotest))

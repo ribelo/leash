@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 8
 ---
 
@@ -37,6 +37,11 @@ Six additions, each a thin client of existing CDP domains and existing service p
 - `upload` uses `DOM.setFileInputFiles` on the row's backend node id; `hover` uses `Input.dispatchMouseEvent` `mouseMoved` after the usual revalidation.
 - `eval --index` resolves the row's node with `DOM.resolveNode` and passes it to `Runtime.callFunctionOn` as the second argument.
 - `cookies` uses `Network.getCookies` with the tab's URL; `storage` uses `DOMStorage.getDOMStorageItems` for the tab's security origin. No write counterparts in this row.
+
+## Delivery
+
+- Live gate: `scripts/live-acceptance-m8b` (`scripts/live-acceptance-m8` is hardening 1's dialog gate), headless Chrome and loopback pages only. Result of the L36 run: net ring, body and request data over the CLI; a hidden file input listed as `file-input` and two files uploaded; hover opening a CSS menu; `eval --index`; cookies including HttpOnly and both storages; `wait --changed-since` returning after 1.5 s and timing out on a quiet page; ten agents at once — five in a 32 s wait, longer than the old 30 s bound, five acting (about 970 requests each in 12 s, slowest 0.10 s) — all served without queuing.
+- `net` commands on the CLI: `leash net TAB`, `leash net TAB body ID`, `leash net TAB request ID`; on the wire `net`, `net_body`, `net_request`.
 
 ## Testing Decisions
 

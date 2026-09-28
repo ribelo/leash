@@ -102,7 +102,7 @@ L29 first; L30 needs only L29's loader and the models service; L31–L34 in orde
 | --- | --- | --- | --- | --- |
 | L35 | **Dialogs end waits.** One race helper for every tab wait; `new`/`nav` return the tab with `dialog`; actions return `ActionResult` with `dialog`; `wait` returns `dialog-open`; `beforeunload`; `prompt` text; listener budget → `timeout` reply; fake-browser dialog scripts; live pages; skill line. | hard-6eei, hard-dljv, hard-s719, hard-t6cq, hard-tsva, hard-yi0a, hard-92ik, hard-owci, hard-wo78, hard-fir4 | — | [x] |
 
-| L36 | **Hardening 2** (`hardening-2/01-hardening-2.md`): `net` ring with bodies and request data; `wait` up to 1 h and `--changed-since`; `upload` and file-input rows; `hover`; `eval --index`; read-only `cookies`/`storage`; protocol, fake browser, live gate, skill. | hard-xg6y, hard-ovbx, hard-vq5s, hard-sr9v, hard-sckn, hard-o3za, hard-2gnf, hard-v1gs, hard-b20d, hard-ufb7, hard-wk6q, hard-2cal | — | [ ] |
+| L36 | **Hardening 2** (`hardening-2/01-hardening-2.md`): `net` ring with bodies and request data; `wait` up to 1 h and `--changed-since`; `upload` and file-input rows; `hover`; `eval --index`; read-only `cookies`/`storage`; protocol, fake browser, live gate, skill. | hard-xg6y, hard-ovbx, hard-vq5s, hard-sr9v, hard-sckn, hard-o3za, hard-2gnf, hard-v1gs, hard-b20d, hard-ufb7, hard-wk6q, hard-2cal, hard-b1na | — | [x] |
 
 ## Milestone 9 — collect through drive (`extract/01-extract.md`)
 

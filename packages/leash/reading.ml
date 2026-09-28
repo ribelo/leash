@@ -1,6 +1,8 @@
 module P = Protocol
 module D = Eta_json.Of_json
 
+type page_state = { loader : string; guard : (string * int) option }
+
 type browser = {
   call : string -> Yojson.Safe.t -> (Yojson.Safe.t, Protocol.error) result;
   now : unit -> float;
@@ -10,6 +12,9 @@ type browser = {
   dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
   row : int -> int option;
+  snapshot_current : Protocol.Snapshot_id.t -> bool;
+  baseline : Protocol.Snapshot_id.t -> page_state option;
+  probe : unit -> (page_state, Protocol.error) result;
 }
 
 let ( let* ) = Result.bind
@@ -46,14 +51,14 @@ let remote_object browser =
   | Some id -> Ok id
   | None -> Error (internal "browser omitted global object")
 
-let call_function browser ~object_id ~body ~argument =
+let call_function_with browser ~object_id ~body ~arguments =
   let* reply =
     browser.call "Runtime.callFunctionOn"
       (obj
          [
            ("objectId", str object_id);
            ("functionDeclaration", str body);
-           ("arguments", `List [ obj [ ("value", argument) ] ]);
+           ("arguments", `List arguments);
            ("returnByValue", `Bool true);
            ("awaitPromise", `Bool true);
          ])
@@ -66,16 +71,19 @@ let call_function browser ~object_id ~body ~argument =
     | None when nested [ "result"; "type" ] D.string reply = Some "undefined" -> Ok `Null
     | None -> Error (internal "browser omitted function result")
 
+let call_function browser ~object_id ~body ~argument =
+  call_function_with browser ~object_id ~body ~arguments:[ obj [ ("value", argument) ] ]
+
 (* tab-gjo0: the call that runs the caller's own function is the one Chrome withholds
    when the function opens a window -- an evaluated [window.open] is answered only once the
    popup is gone (docs/cdp-shapes.md, L10) -- so it settles the way a trusted input does: a
    new target with this tab as its opener ends the wait with a null value, and this tab's
    own death ends it with [tab-gone] (own-teh1). Nothing is re-issued. *)
-let evaluated browser ~object_id ~body ~argument =
+let evaluated browser ~object_id ~body ~arguments =
   match
     Dialog_race.first browser.dialog_race (fun () ->
         Dispatch.first (browser.acknowledge ()) (fun () ->
-            call_function browser ~object_id ~body ~argument))
+            call_function_with browser ~object_id ~body ~arguments))
   with
   | `Dialog dialog ->
       Error
@@ -89,31 +97,56 @@ let evaluated browser ~object_id ~body ~argument =
 
 let cap = 65_536
 
+let row_object browser index =
+  match browser.row index with
+  | None -> Error (error "no-such-row" "the snapshot has no such row")
+  | Some backend -> (
+      match browser.call "DOM.resolveNode" (obj [ ("backendNodeId", `Int backend) ]) with
+      | Error e when e.P.message = "browser refused DOM.resolveNode" ->
+          Error (error "stale-snapshot" "the row no longer resolves; snap again")
+      | Error e -> Error e
+      | Ok reply -> (
+          match nested [ "object"; "objectId" ] D.string reply with
+          | Some id -> Ok id
+          | None -> Error (error "stale-snapshot" "the row no longer resolves")))
+
+(* hard-b20d: with a row, the caller's function is called as (argument, element) — the
+   element is the row's node, resolved from the snapshot's backend id, so no selector is
+   ever written. The snapshot must be the tab's current one: a row of an older table may
+   name another element now. *)
 let eval browser (args : P.eval_args) =
   if String.length args.expression > cap then Error (too_large "expression")
   else
     let argument = Option.value ~default:`Null args.argument in
     if String.length (Eta_json.to_string argument) > cap then Error (too_large "argument")
     else
+      let* element =
+        match (args.index, args.snapshot) with
+        | None, None -> Ok None
+        | Some index, Some snapshot ->
+            if not (browser.snapshot_current snapshot) then
+              Error
+                (error "stale-snapshot" "that snapshot is not the current one; snap again")
+            else
+              let* element = row_object browser index in
+              Ok (Some element)
+        | _ -> Error (invalid "eval takes --index and --snapshot together")
+      in
       let* object_id = remote_object browser in
       let* value =
-        evaluated browser ~object_id
-          ~body:("function(argument) {\n" ^ args.expression ^ "\n}")
-          ~argument
+        match element with
+        | None ->
+            evaluated browser ~object_id
+              ~body:("function(argument) {\n" ^ args.expression ^ "\n}")
+              ~arguments:[ obj [ ("value", argument) ] ]
+        | Some element ->
+            evaluated browser ~object_id
+              ~body:("function(argument, element) {\n" ^ args.expression ^ "\n}")
+              ~arguments:
+                [ obj [ ("value", argument) ]; obj [ ("objectId", str element) ] ]
       in
       if String.length (Eta_json.to_string value) > cap then Error (too_large "result")
       else Ok P.{ value }
-
-let row_object browser index =
-  match browser.row index with
-  | None -> Error (error "no-such-row" "the snapshot has no such row")
-  | Some backend -> (
-      let* reply =
-        browser.call "DOM.resolveNode" (obj [ ("backendNodeId", `Int backend) ])
-      in
-      match nested [ "object"; "objectId" ] D.string reply with
-      | Some id -> Ok id
-      | None -> Error (error "stale-snapshot" "the row no longer resolves"))
 
 let truncate_chars max_chars text =
   let length = String.length text in
@@ -204,13 +237,42 @@ let action_result browser tab =
   let url, title = browser.current () in
   P.{ tab; url; title; snapshot = None; dialog = browser.dialog (); popups = [] }
 
+(* hard-sr9v: a wait may last an hour. The control listener derives its handler budget from
+   this same bound and cancels the handler when the client goes away, and a wait takes no
+   lock of the tab's, so a long wait costs nobody else anything. *)
+let max_wait_ms = 3_600_000
+
+(* Polling is quick while a change is likely and slows for a long wait: an hour of
+   fifty-millisecond probes would be wasteful, and a page that has not changed in half a
+   minute is not about to change in the next fifty milliseconds. *)
+let poll_interval elapsed =
+  if elapsed < 2. then 0.05 else if elapsed < 30. then 0.25 else 0.5
+
+(* hard-sckn: the page has changed since the snapshot when its main frame has another
+   loader, or its mutation guard another epoch or count. A document that carries no guard
+   was not the snapshot's. *)
+let changed_since browser snapshot =
+  match browser.baseline snapshot with
+  | None -> Error (error "stale-snapshot" "no such snapshot for this tab; snap again")
+  | Some baseline ->
+      Ok
+        (fun () ->
+          let* current = browser.probe () in
+          Ok (current.loader <> baseline.loader || current.guard <> baseline.guard))
+
 let wait browser (args : P.wait_args) =
   let timeout_ms = Option.value ~default:30_000 args.timeout_ms in
-  if timeout_ms < 0 || timeout_ms > 30_000 then
-    Error (invalid "timeout_ms must be 0..30000")
+  if timeout_ms < 0 || timeout_ms > max_wait_ms then
+    Error (invalid (Printf.sprintf "timeout_ms must be 0..%d" max_wait_ms))
   else
     let until = args.until in
-    let deadline = browser.now () +. (float timeout_ms /. 1000.) in
+    let started = browser.now () in
+    let deadline = started +. (float timeout_ms /. 1000.) in
+    let* changed =
+      match until.changed_since with
+      | None -> Ok (fun () -> Ok true)
+      | Some snapshot -> changed_since browser snapshot
+    in
     let rec loop () =
       let url, _ = browser.current () in
       let url_ok =
@@ -223,8 +285,13 @@ let wait browser (args : P.wait_args) =
           ~some:(fun wanted -> browser.dialog () <> None = wanted)
           until.dialog
       in
-      let* text_ok =
+      let* changed_ok =
         if (not url_ok) || not dialog_ok then Ok false
+        else if browser.dialog () <> None then Ok false
+        else changed ()
+      in
+      let* text_ok =
+        if (not url_ok) || (not dialog_ok) || not changed_ok then Ok false
         else
           match until.text with
           | None -> Ok true
@@ -239,12 +306,13 @@ let wait browser (args : P.wait_args) =
           | Some index when browser.dialog () <> None -> Ok false
           | Some index -> index_gone browser index
       in
-      if url_ok && text_ok && gone_ok && dialog_ok then
+      if url_ok && changed_ok && text_ok && gone_ok && dialog_ok then
         Ok (action_result browser args.tab)
       else if browser.now () >= deadline then
         Error (error "timeout" "wait conditions did not hold before timeout")
       else (
-        browser.sleep (min 0.05 (deadline -. browser.now ()));
+        browser.sleep
+          (min (poll_interval (browser.now () -. started)) (deadline -. browser.now ()));
         loop ())
     in
     match Dialog_race.first browser.dialog_race loop with
@@ -334,9 +402,11 @@ type t = {
   entries : P.debug_entry option array;
   mutable next : int;
   mutable length : int;
+  net : Net_log.t;
 }
 
-let create () = { entries = Array.make 200 None; next = 0; length = 0 }
+let create () =
+  { entries = Array.make 200 None; next = 0; length = 0; net = Net_log.create () }
 
 let push t entry =
   t.entries.(t.next) <- Some entry;
@@ -349,6 +419,7 @@ let timestamp at =
     (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
 
 let observe t ~at json =
+  Net_log.observe t.net json;
   let method_ = field "method" D.string json in
   let params = field "params" (fun x -> Ok x) json in
   let emit kind ?level text =
@@ -415,3 +486,176 @@ let debug t (args : P.debug_args) =
       t.next <- 0;
       Array.fill t.entries 0 200 None);
     Ok P.{ entries }
+
+(* ---------- hard-xg6y hard-ovbx hard-vq5s: the tab's request ring ---------- *)
+
+let net t args = Net_log.list t.net args
+
+let unknown_request () =
+  error "unknown-request" "the tab's request ring has no such request"
+
+let body_unavailable why = error "body-unavailable" why
+let refused meth (e : P.error) = e.P.message = "browser refused " ^ meth
+
+(* A body or post data over 1 MiB is cut there, on a character boundary for text and on a
+   four-character group for base64 (1 MiB is one); the reply says it was cut. *)
+let body_cap = 1_048_576
+
+let string_member key json =
+  match json with
+  | `Assoc fields -> (
+      match List.assoc_opt key fields with Some (`String s) -> s | _ -> "")
+  | _ -> ""
+
+let bool_member key json =
+  match json with
+  | `Assoc fields -> List.assoc_opt key fields = Some (`Bool true)
+  | _ -> false
+
+let net_body browser t (args : P.net_entry_args) =
+  match Net_log.find t.net args.id with
+  | None -> Error (unknown_request ())
+  | Some request when not request.has_body ->
+      Error (body_unavailable "that request has no response body to read")
+  | Some request -> (
+      match
+        browser.call "Network.getResponseBody"
+          (obj [ ("requestId", str request.chrome_id) ])
+      with
+      | Error e when refused "Network.getResponseBody" e ->
+          Error (body_unavailable "Chrome no longer holds that response body")
+      | Error e -> Error e
+      | Ok reply ->
+          let body, truncated = Net_log.clip body_cap (string_member "body" reply) in
+          Ok
+            P.
+              {
+                id = request.id;
+                body;
+                base64 = bool_member "base64Encoded" reply;
+                bytes = String.length body;
+                truncated;
+              })
+
+let net_request browser t (args : P.net_entry_args) =
+  match Net_log.find t.net args.id with
+  | None -> Error (unknown_request ())
+  | Some request ->
+      let* post_data, base64, truncated =
+        if not request.has_post_data then Ok (None, false, false)
+        else
+          match
+            browser.call "Network.getRequestPostData"
+              (obj [ ("requestId", str request.chrome_id) ])
+          with
+          | Error e when refused "Network.getRequestPostData" e ->
+              Error (body_unavailable "Chrome no longer holds that request's post data")
+          | Error e -> Error e
+          | Ok reply ->
+              let data, truncated =
+                Net_log.clip body_cap (string_member "postData" reply)
+              in
+              Ok (Some data, bool_member "base64Encoded" reply, truncated)
+      in
+      Ok
+        P.
+          {
+            id = request.id;
+            method_ = request.method_;
+            url = request.url;
+            headers =
+              `Assoc (List.map (fun (name, value) -> (name, str value)) request.headers);
+            post_data;
+            base64;
+            truncated;
+          }
+
+(* ---------- hard-ufb7: cookies and storage, read-only ---------- *)
+
+let cookies browser =
+  let url, _ = browser.current () in
+  let* reply = browser.call "Network.getCookies" (obj [ ("urls", `List [ str url ]) ]) in
+  let cookie json =
+    let text key = string_member key json in
+    let expires =
+      match json with
+      | `Assoc fields when List.assoc_opt "session" fields <> Some (`Bool true) -> (
+          match List.assoc_opt "expires" fields with
+          | Some (`Int n) when n >= 0 -> Some (float_of_int n)
+          | Some (`Float x) when x >= 0. -> Some x
+          | _ -> None)
+      | _ -> None
+    in
+    P.
+      {
+        name = text "name";
+        value = text "value";
+        domain = text "domain";
+        path = text "path";
+        expires;
+        http_only = bool_member "httpOnly" json;
+        secure = bool_member "secure" json;
+        same_site = (match text "sameSite" with "" -> None | site -> Some site);
+      }
+  in
+  match field "cookies" (fun x -> Ok x) reply with
+  | Some (`List cookies) -> Ok P.{ cookies = List.map cookie cookies }
+  | _ -> Error (internal "browser omitted cookies")
+
+let http_origin origin =
+  String.starts_with ~prefix:"http://" origin
+  || String.starts_with ~prefix:"https://" origin
+
+(* The origin DOMStorage names its storage by is the page's security origin, which the
+   frame tree reports; an opaque origin (about:blank) has no storage to read. *)
+let storage_origin browser =
+  let* tree = browser.call "Page.getFrameTree" (obj []) in
+  match nested [ "frameTree"; "frame"; "securityOrigin" ] D.string tree with
+  | Some origin when http_origin origin -> Ok origin
+  | _ -> Error (invalid "this page has no web storage origin")
+
+let max_storage_items = 1000
+let max_storage_bytes = 1_048_576
+
+let storage browser (args : P.storage_args) =
+  let* origin = storage_origin browser in
+  let local = P.Storage_area.to_string args.area = "local" in
+  let* _ = browser.call "DOMStorage.enable" (obj []) in
+  let read =
+    browser.call "DOMStorage.getDOMStorageItems"
+      (obj
+         [
+           ( "storageId",
+             obj [ ("securityOrigin", str origin); ("isLocalStorage", `Bool local) ] );
+         ])
+  in
+  (* Best effort: the domain only reports changes, which nobody here wants. *)
+  ignore (browser.call "DOMStorage.disable" (obj []));
+  let* reply = read in
+  match field "entries" (fun x -> Ok x) reply with
+  | Some (`List entries) ->
+      let pairs =
+        List.filter_map
+          (function
+            | `List [ `String key; `String value ] -> Some (key, value) | _ -> None)
+          entries
+      in
+      let rec take count bytes = function
+        | [] -> ([], false)
+        | (key, value) :: rest ->
+            let bytes = bytes + String.length key + String.length value in
+            if count >= max_storage_items || bytes > max_storage_bytes then ([], true)
+            else
+              let kept, truncated = take (count + 1) bytes rest in
+              ((key, value) :: kept, truncated)
+      in
+      let kept, truncated = take 0 0 pairs in
+      Ok
+        P.
+          {
+            origin;
+            area = args.area;
+            items = `Assoc (List.map (fun (key, value) -> (key, str value)) kept);
+            truncated;
+          }
+  | _ -> Error (internal "browser omitted storage entries")

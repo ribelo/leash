@@ -17,8 +17,9 @@ type owner_state = Unowned | Owned of Protocol.Owner.t | With_human of Protocol.
 
 (** The command classes the one authorization function distinguishes: [Act] is everything
     that touches the page ([nav], [snap], [text], [eval], [shot], [debug], [wait],
-    [click], [fill], [press], [select], [scroll]), [Resume] is the human's answer to a
-    handoff, and only [Close] and [Release] can be forced. *)
+    [click], [fill], [press], [select], [scroll], [upload], [hover], [net], [cookies],
+    [storage]), [Resume] is the human's answer to a handoff, and only [Close] and
+    [Release] can be forced. *)
 type access = Act | Dialog | Close | Release | Claim | Resume
 
 val authorize :
@@ -291,6 +292,45 @@ val wait :
   owner:Protocol.Owner.t ->
   Protocol.wait_args ->
   (Protocol.action_result, Protocol.error) result
+(** hard-sr9v hard-sckn hard-b1na: up to an hour, with [changed_since] naming a snapshot
+    whose loader id and mutation guard the page must differ from. A wait takes no lock of
+    the tab's — an action on the same tab runs beside it — and its polling counts as the
+    owner's activity, so a long wait does not idle the tab out. *)
+
+val net :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.net_args ->
+  (Protocol.net_result, Protocol.error) result
+(** hard-xg6y: the requests of this tab only; every tab has a ring of its own. *)
+
+val net_body :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.net_entry_args ->
+  (Protocol.net_body_result, Protocol.error) result
+(** hard-ovbx *)
+
+val net_request :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.net_entry_args ->
+  (Protocol.net_request_result, Protocol.error) result
+(** hard-vq5s *)
+
+val cookies :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.tab_args ->
+  (Protocol.cookies_result, Protocol.error) result
+(** hard-ufb7: read-only. Like [net], [wait] and [debug] it takes no action lock. *)
+
+val storage :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.storage_args ->
+  (Protocol.storage_result, Protocol.error) result
+(** hard-ufb7 *)
 
 val dialog :
   t ->
@@ -335,6 +375,20 @@ val scroll :
   Protocol.scroll_args ->
   (Protocol.action_result, Protocol.error) result
 (** tab-8dop: one viewport, from the page's centre or the row's scrollable ancestor. *)
+
+val upload :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.upload_args ->
+  (Protocol.action_result, Protocol.error) result
+(** hard-o3za: files onto a file-input row, revalidated like any action. *)
+
+val hover :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.hover_args ->
+  (Protocol.action_result, Protocol.error) result
+(** hard-v1gs: the mouse moves to the row's revalidated point and settles. *)
 
 val navigate :
   t ->

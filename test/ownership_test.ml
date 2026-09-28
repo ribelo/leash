@@ -137,14 +137,24 @@ let page_commands handle : (string * P.command) list =
     ("nav", P.Nav { tab = handle; url = "about:blank" });
     ("snap", P.Snap { tab = handle; match_ = None; limit = Some 1; offset = None });
     ("text", P.Text { tab = handle; index = None; max_chars = None });
-    ("eval", P.Eval { tab = handle; expression = "1"; argument = None });
+    ( "eval",
+      P.Eval
+        { tab = handle; expression = "1"; argument = None; index = None; snapshot = None }
+    );
     ("shot", P.Shot { tab = handle; path = "/tmp/leash-ownership.png"; full_page = None });
     ("debug", P.Debug { tab = handle; limit = None; clear = None });
     ( "wait",
       P.Wait
         {
           tab = handle;
-          until = { url_prefix = None; text = None; index_gone = None; dialog = None };
+          until =
+            {
+              url_prefix = None;
+              text = None;
+              index_gone = None;
+              dialog = None;
+              changed_since = None;
+            };
           timeout_ms = Some 1;
         } );
     ("click", P.Click { tab = handle; snapshot; index = 1 });
@@ -154,6 +164,17 @@ let page_commands handle : (string * P.command) list =
     ( "scroll",
       P.Scroll
         { tab = handle; direction = enum P.Direction.of_string "down"; index = None } );
+    (* hard-xg6y hard-ovbx hard-vq5s hard-o3za hard-v1gs hard-ufb7: the seven additions of
+       milestone 8 are Act commands like the rest, and this table is what keeps a net ring,
+       a body, a cookie or an upload from being reachable without the owner. *)
+    ("net", P.Net { tab = handle; match_ = None; limit = None; type_ = None });
+    ("net_body", P.Net_body { tab = handle; id = "1000.1" });
+    ("net_request", P.Net_request { tab = handle; id = "1000.1" });
+    ( "upload",
+      P.Upload { tab = handle; snapshot; index = 1; paths = [ "/tmp/leash-upload" ] } );
+    ("hover", P.Hover { tab = handle; snapshot; index = 1 });
+    ("cookies", P.Cookies { tab = handle });
+    ("storage", P.Storage { tab = handle; area = enum P.Storage_area.of_string "local" });
     ( "dialog",
       P.Dialog { tab = handle; answer = enum P.Answer.of_string "accept"; text = None } );
   ]

@@ -58,6 +58,52 @@ let event = function
                 ("mimeType", str "text/html");
               ] );
         ]
+  (* network events of one fixed request, "request-1": shapes recorded from
+     Chrome 152 in docs/cdp-shapes.md (L36). *)
+  | "Network.requestWillBeSent" ->
+      obj
+        [
+          ("requestId", str "request-1");
+          ("loaderId", str "loader-1");
+          ("timestamp", `Float 100.0);
+          ("type", str "Fetch");
+          ( "request",
+            obj
+              [
+                ("url", str "http://127.0.0.1/api/items");
+                ("method", str "GET");
+                ("headers", obj [ ("Accept", str "*/*") ]);
+              ] );
+        ]
+  | "Network.responseReceived" ->
+      obj
+        [
+          ("requestId", str "request-1");
+          ("timestamp", `Float 100.1);
+          ("type", str "Fetch");
+          ( "response",
+            obj
+              [
+                ("url", str "http://127.0.0.1/api/items");
+                ("status", `Int 200);
+                ("mimeType", str "application/json");
+              ] );
+        ]
+  | "Network.loadingFinished" ->
+      obj
+        [
+          ("requestId", str "request-1");
+          ("timestamp", `Float 100.25);
+          ("encodedDataLength", `Int 42);
+        ]
+  | "Network.loadingFailed" ->
+      obj
+        [
+          ("requestId", str "request-1");
+          ("timestamp", `Float 100.25);
+          ("type", str "Fetch");
+          ("errorText", str "net::ERR_CONNECTION_REFUSED");
+        ]
   | name -> invalid_arg ("no default CDP event shape: " ^ name)
 
 let defaults replies =
@@ -84,6 +130,14 @@ let defaults replies =
       ("Input.dispatchMouseEvent", obj []);
       ("Input.insertText", obj []);
       ("Input.dispatchKeyEvent", obj []);
+      (* L36 (hard-wk6q): what the net, upload, cookies and storage commands call. *)
+      ("Network.getResponseBody", obj [ ("body", str ""); ("base64Encoded", `Bool false) ]);
+      ("Network.getRequestPostData", obj [ ("postData", str "") ]);
+      ("Network.getCookies", obj [ ("cookies", `List []) ]);
+      ("DOM.setFileInputFiles", obj []);
+      ("DOMStorage.enable", obj []);
+      ("DOMStorage.disable", obj []);
+      ("DOMStorage.getDOMStorageItems", obj [ ("entries", `List []) ]);
       ( "Page.getLayoutMetrics",
         obj
           [

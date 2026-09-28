@@ -123,6 +123,8 @@ let command_table =
           ("tab", `String "t_9xk");
           ("expression", `String "() => 1");
           ("argument", assoc [ ("a", `Int 1) ]);
+          ("snapshot", `String "s_3");
+          ("index", `Int 4);
         ] );
     ("nav", assoc [ ("tab", `String "t_9xk"); ("url", `String "https://example.com") ]);
     ( "click",
@@ -154,9 +156,38 @@ let command_table =
       assoc
         [
           ("tab", `String "t_9xk");
-          ("until", assoc [ ("text", `String "Ready"); ("dialog", `Bool true) ]);
-          ("timeout_ms", `Int 1000);
+          ( "until",
+            assoc
+              [
+                ("text", `String "Ready");
+                ("dialog", `Bool true);
+                ("changed_since", `String "s_3");
+              ] );
+          ("timeout_ms", `Int 3_600_000);
         ] );
+    ( "net",
+      assoc
+        [
+          ("tab", `String "t_9xk");
+          ("match", `String "/api/");
+          ("limit", `Int 20);
+          ("type", `String "fetch");
+        ] );
+    ("net_body", assoc [ ("tab", `String "t_9xk"); ("id", `String "1000.5") ]);
+    ("net_request", assoc [ ("tab", `String "t_9xk"); ("id", `String "1000.5") ]);
+    ( "upload",
+      assoc
+        [
+          ("tab", `String "t_9xk");
+          ("snapshot", `String "s_3");
+          ("index", `Int 2);
+          ("paths", `List [ `String "/tmp/a.txt"; `String "/tmp/b.txt" ]);
+        ] );
+    ( "hover",
+      assoc [ ("tab", `String "t_9xk"); ("snapshot", `String "s_3"); ("index", `Int 4) ]
+    );
+    ("cookies", assoc [ ("tab", `String "t_9xk") ]);
+    ("storage", assoc [ ("tab", `String "t_9xk"); ("area", `String "session") ]);
     ("dialog", assoc [ ("tab", `String "t_9xk"); ("answer", `String "dismiss") ]);
     ( "handoff",
       assoc
@@ -185,7 +216,7 @@ let command_table =
   ]
 
 let command_round_trip () =
-  Alcotest.(check int) "every command of docs/protocol.md" 23 (List.length command_table);
+  Alcotest.(check int) "every command of docs/protocol.md" 30 (List.length command_table);
   List.iter
     (fun (name, args) ->
       let request = assert_ok name (P.decode_request (request_json name args)) in
@@ -245,6 +276,8 @@ let closed_sets () =
     ];
   speaks "direction" P.Direction.of_string P.Direction.to_string [ "up"; "down" ];
   speaks "answer" P.Answer.of_string P.Answer.to_string [ "accept"; "dismiss" ];
+  speaks "storage area" P.Storage_area.of_string P.Storage_area.to_string
+    [ "local"; "session" ];
   speaks "drive status" P.Drive_status.of_string P.Drive_status.to_string
     [ "done"; "blocked"; "step-cap"; "deadline"; "error" ];
   speaks "chrome phase" P.Chrome_phase.of_string P.Chrome_phase.to_string
@@ -259,6 +292,8 @@ let closed_sets () =
       "unknown-tab";
       "stale-snapshot";
       "no-such-row";
+      "body-unavailable";
+      "unknown-request";
       "row-not-actionable";
       "dialog-open";
       "no-dialog";
@@ -1687,6 +1722,11 @@ let client_help =
     ([ "resume" ], [ "TAB" ]);
     ([ "drive" ], [ "TAB"; "GOAL" ]);
     ([ "run" ], [ "MISSION" ]);
+    ([ "net" ], [ "TAB"; "ID" ]);
+    ([ "upload" ], [ "TAB"; "SNAPSHOT"; "INDEX"; "PATH" ]);
+    ([ "hover" ], [ "TAB"; "SNAPSHOT"; "INDEX" ]);
+    ([ "cookies" ], [ "TAB" ]);
+    ([ "storage" ], [ "TAB"; "local|session" ]);
   ]
 
 let help_matrix () =

@@ -43,11 +43,17 @@ val create :
     the operator's XDG configuration; production leaves it [None] and the run loads them.
 *)
 
+val policy : Eta_ipc.Listener.policy
+(** The listener's policy: 1 MiB request lines, 8 MiB replies (a 1 MiB response body,
+    escaped), and 64 concurrent requests (hard-b1na) — up from eta_ipc's default of 16, so
+    that long waits on many tabs never queue anyone else. *)
+
 val budget : (Protocol.request, string) result -> Eta.Duration.t option
 (** The handler budget per decoded command. [new] with a url and [nav] outlast the
     registry's 30-second load wait (chrome-qnul, chrome-1yn9); a [handoff] outlasts its
     own deadline, {!Tabs.handoff_timeout}, plus a margin, so the listener never cancels
-    the handler at the instant the handoff is due to answer [timeout] (hand-lmd5);
+    the handler at the instant the handoff is due to answer [timeout] (hand-lmd5); a
+    [wait] gets its own [timeout_ms] — up to an hour — plus a second (hard-sr9v);
     everything else stays at one second. *)
 
 val status : t -> Eta_app.Status.t

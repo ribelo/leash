@@ -53,6 +53,14 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
   | P.Shot args -> lift P.yojson_of_shot_result (Tabs.shot tabs ~owner args)
   | P.Debug args -> lift P.yojson_of_debug_result (Tabs.debug tabs ~owner args)
   | P.Wait args -> lift P.yojson_of_action_result (Tabs.wait tabs ~owner args)
+  | P.Net args -> lift P.yojson_of_net_result (Tabs.net tabs ~owner args)
+  | P.Net_body args -> lift P.yojson_of_net_body_result (Tabs.net_body tabs ~owner args)
+  | P.Net_request args ->
+      lift P.yojson_of_net_request_result (Tabs.net_request tabs ~owner args)
+  | P.Cookies args -> lift P.yojson_of_cookies_result (Tabs.cookies tabs ~owner args)
+  | P.Storage args -> lift P.yojson_of_storage_result (Tabs.storage tabs ~owner args)
+  | P.Upload args -> lift P.yojson_of_action_result (Tabs.upload tabs ~owner args)
+  | P.Hover args -> lift P.yojson_of_action_result (Tabs.hover tabs ~owner args)
   | P.Dialog args -> lift P.yojson_of_action_result (Tabs.dialog tabs ~owner args)
   | P.Click args -> lift P.yojson_of_action_result (Tabs.click tabs ~owner args)
   | P.Fill args -> lift P.yojson_of_action_result (Tabs.fill tabs ~owner args)
@@ -175,6 +183,12 @@ let command_tab = function
   | P.Text args -> P.Handle.to_string args.tab
   | P.Shot args -> P.Handle.to_string args.tab
   | P.Debug args -> P.Handle.to_string args.tab
+  | P.Net args -> P.Handle.to_string args.tab
+  | P.Net_body args | P.Net_request args -> P.Handle.to_string args.tab
+  | P.Cookies args -> P.Handle.to_string args.tab
+  | P.Storage args -> P.Handle.to_string args.tab
+  | P.Upload args -> P.Handle.to_string args.tab
+  | P.Hover args -> P.Handle.to_string args.tab
   | P.Eval args -> P.Handle.to_string args.tab
   | P.Nav args -> P.Handle.to_string args.tab
   | P.Click args -> P.Handle.to_string args.tab
@@ -243,9 +257,13 @@ let budget (request : (P.request, string) result) =
   match request with
   | Error _ -> Some (seconds 1)
   | Ok { command = P.Wait args; _ } ->
+      (* hard-sr9v: a wait may last an hour, and the handler budget is derived from the
+         wait's own bound plus a second for the reply, so the listener never cancels a
+         wait at the instant it is due to answer [timeout]. *)
       Some
         (Eta.Duration.ms
-           (min 30000 (max 1 (Option.value ~default:30000 args.timeout_ms)) + 1000))
+           (min Reading.max_wait_ms (max 1 (Option.value ~default:30_000 args.timeout_ms))
+           + 1000))
   | Ok { command = P.Handoff args; _ } ->
       Some (Eta.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
   | Ok { command = P.Drive args; _ } ->
@@ -261,7 +279,13 @@ let budget (request : (P.request, string) result) =
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _; _ } -> Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
-  | Ok { command = P.Click _ | P.Fill _ | P.Press _ | P.Select _ | P.Scroll _; _ } ->
+  | Ok
+      {
+        command =
+          ( P.Click _ | P.Fill _ | P.Press _ | P.Select _ | P.Scroll _ | P.Upload _
+          | P.Hover _ | P.Net_body _ | P.Net_request _ | P.Cookies _ | P.Storage _ );
+        _;
+      } ->
       Some cdp_budget
   | Ok _ -> Some (seconds 1)
 
@@ -289,9 +313,21 @@ let budget_exceeded (request : (P.request, string) result) budget =
    bounded shapes — a 64K-character text reply, a 64 KiB eval result or argument, a
    64 KiB fill — by closing the connection with no reply at all. 1 MiB each way covers
    every bounded shape with headroom and matches the CLI's own 1 MiB reply read. *)
+(* hard-ovbx: a response body is bounded to 1 MiB, and JSON escaping can make a body that
+   size several times larger on the wire, so a reply may be up to 8 MiB.
+
+   hard-b1na: sixty-four requests may be in flight at once, not eta_ipc's default sixteen.
+   A long `wait` holds its connection for as long as an hour, so ten agents with half
+   their tabs waiting must not queue the other half behind them — and a wait is cheap: it
+   takes no tab lock and one fiber. *)
 let policy : Eta_ipc.Listener.policy =
   let open Eta_ipc.Listener in
-  { default_policy with max_line_bytes = 1_048_576; max_reply_bytes = 1_048_576 }
+  {
+    default_policy with
+    peers = 64;
+    max_line_bytes = 1_048_576;
+    max_reply_bytes = 8_388_608;
+  }
 
 (* A peer the listener turns away is a log line, never a silent close: from the
    client's side a dropped reply is indistinguishable from a dead service. A client

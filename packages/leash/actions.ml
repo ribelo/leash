@@ -211,6 +211,12 @@ let disabled (row : P.row) =
 
 type target = { row : P.row; backend : int; node : int }
 
+(* hard-2gnf: a file input is a row of the table under the role [file-input], which is
+   Leash's word and not the accessibility tree's, so the role-and-name comparison below
+   cannot hold for it — and no pointer action makes sense on it: a click would open a
+   native chooser nobody can answer. Only [upload] takes it, by its own revalidation. *)
+let file_input = "file-input"
+
 let revalidate cdp tab ?snapshot_id ~index () =
   let* loader, rows =
     match snapshot_id with Some id -> current tab id | None -> current_any tab
@@ -220,7 +226,9 @@ let revalidate cdp tab ?snapshot_id ~index () =
     | Some target -> Ok target
     | None -> fail "no-such-row" (Printf.sprintf "index %d is not in the snapshot" index)
   in
-  if disabled row then fail "row-not-actionable" "the row is disabled"
+  if row.role = file_input then
+    fail "row-not-actionable" "a file input takes upload, not this action"
+  else if disabled row then fail "row-not-actionable" "the row is disabled"
   else
     let* () = loader_unchanged cdp tab loader in
     match accessed cdp tab backend with
@@ -664,6 +672,129 @@ let select ~cdp tab (args : P.select_args) =
             let* object_id = resolve_node cdp tab target.backend in
             let* () = choose cdp tab object_id args.option in
             settle cdp tab ~combobox:false))
+
+(* hard-v1gs: the mouse moves to the row's revalidated point, after the same hit test a
+   click makes — a covered row would not receive the hover — and settles two frames, so a
+   menu the hover opens is in the page when the caller next asks for a snapshot. Nothing is
+   pressed. *)
+let hover ~cdp tab (args : P.hover_args) =
+  guarded tab (fun () ->
+      with_result tab (fun () ->
+          let* target =
+            revalidate cdp tab ~snapshot_id:args.snapshot ~index:args.index ()
+          in
+          let* x, y = aim cdp tab target in
+          let* () =
+            dispatch cdp tab "Input.dispatchMouseEvent"
+              (E.object_
+                 [
+                   ("type", Some (E.string "mouseMoved"));
+                   ("x", E.float x);
+                   ("y", E.float y);
+                   ("button", Some (E.string "none"));
+                   ("buttons", Some (E.int 0));
+                 ])
+          in
+          settle cdp tab ~combobox:false))
+
+(* hard-o3za: the files are the caller's, named by absolute path, and must be readable
+   regular files here — the service and Chrome are one user's processes on one machine.
+   At most ten, fifty MiB together; each limit is refused before anything reaches the
+   browser. *)
+let max_upload_files = 10
+let max_upload_bytes = 50 * 1024 * 1024
+
+let check_files paths =
+  if paths = [] || List.length paths > max_upload_files then
+    fail "invalid-request" (Printf.sprintf "upload takes 1 to %d files" max_upload_files)
+  else
+    let rec sizes total = function
+      | [] -> Ok total
+      | path :: rest -> (
+          if Filename.is_relative path then
+            fail "invalid-request" "upload paths must be absolute"
+          else
+            match
+              try
+                let stat = Unix.stat path in
+                if stat.Unix.st_kind <> Unix.S_REG then None
+                else (
+                  close_in (open_in_bin path);
+                  Some stat.Unix.st_size)
+              with Unix.Unix_error _ | Sys_error _ -> None
+            with
+            | None -> fail "invalid-request" "upload paths must be readable regular files"
+            | Some size -> sizes (total + size) rest)
+    in
+    let* total = sizes 0 paths in
+    if total > max_upload_bytes then fail "too-large" "the files are over 50 MiB together"
+    else Ok ()
+
+(* The row must still be the file input the snapshot saw. Its role and name cannot be
+   compared (see [file_input]), so the node itself is described: it has to resolve, be an
+   <input type=file>, be enabled, and take several files only when it is [multiple]. *)
+let file_input_attributes cdp tab backend =
+  match
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
+      (E.object_ [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
+  with
+  | Error _ -> None
+  | Ok json -> (
+      match E.member "node" json with
+      | None -> None
+      | Some node ->
+          let rec pairs = function
+            | `String name :: `String value :: rest ->
+                (String.lowercase_ascii name, value) :: pairs rest
+            | _ :: _ :: rest -> pairs rest
+            | _ -> []
+          in
+          let attributes =
+            pairs (Option.value ~default:[] (E.array_member "attributes" node))
+          in
+          if
+            E.string_member "nodeName" node = Some "INPUT"
+            && Option.map String.lowercase_ascii (List.assoc_opt "type" attributes)
+               = Some "file"
+          then Some attributes
+          else None)
+
+let upload ~cdp tab (args : P.upload_args) =
+  guarded tab (fun () ->
+      with_result tab (fun () ->
+          let* () = check_files args.paths in
+          let* loader, rows = current tab args.snapshot in
+          let* row, backend =
+            match
+              List.find_opt (fun ((row : P.row), _) -> row.index = args.index) rows
+            with
+            | Some target -> Ok target
+            | None ->
+                fail "no-such-row"
+                  (Printf.sprintf "index %d is not in the snapshot" args.index)
+          in
+          if row.role <> file_input then
+            fail "row-not-actionable" "the row is not a file input"
+          else
+            let* () = loader_unchanged cdp tab loader in
+            match file_input_attributes cdp tab backend with
+            | None -> fail_stale tab "the row no longer resolves; snap again"
+            | Some attributes ->
+                if List.mem_assoc "disabled" attributes then
+                  fail "row-not-actionable" "the file input is disabled"
+                else if
+                  List.length args.paths > 1 && not (List.mem_assoc "multiple" attributes)
+                then fail "invalid-request" "the file input takes one file"
+                else
+                  let* _ =
+                    call cdp ~session:tab.session "DOM.setFileInputFiles"
+                      (E.object_
+                         [
+                           ("files", Some (E.array (List.map E.string args.paths)));
+                           ("backendNodeId", Some (E.int backend));
+                         ])
+                  in
+                  settle cdp tab ~combobox:false))
 
 let scroll ~cdp tab (args : P.scroll_args) =
   guarded tab (fun () ->

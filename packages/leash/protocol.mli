@@ -117,6 +117,17 @@ module Direction : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
+(** hard-ufb7: which of a page's two web storages `storage` reads: [local] or [session].
+*)
+module Storage_area : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
 module Answer : sig
   type t
 
@@ -330,7 +341,17 @@ type snap_args = {
 type text_args = { tab : Handle.t; index : int option; max_chars : int option }
 type shot_args = { tab : Handle.t; path : string; full_page : bool option }
 type debug_args = { tab : Handle.t; limit : int option; clear : bool option }
-type eval_args = { tab : Handle.t; expression : string; argument : Yojson.Safe.t option }
+
+type eval_args = {
+  tab : Handle.t;
+  expression : string;
+  argument : Yojson.Safe.t option;
+  index : int option;
+  snapshot : Snapshot_id.t option;
+}
+(** hard-b20d: [index] and [snapshot] come together — the expression is then called with
+    the row's element as its second parameter, [(argument, element)]. *)
+
 type nav_args = { tab : Handle.t; url : string }
 type click_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
 type fill_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int; text : string }
@@ -350,11 +371,38 @@ type wait_until = {
   text : string option;
   index_gone : int option;
   dialog : bool option;
+  changed_since : Snapshot_id.t option;
 }
+(** hard-sckn: [changed_since] holds once the page's loader id or mutation counter differs
+    from the named snapshot's. *)
 
 type wait_args = { tab : Handle.t; until : wait_until; timeout_ms : int option }
 type dialog_args = { tab : Handle.t; answer : Answer.t; text : string option }
 type handoff_args = { tab : Handle.t; reason : string; timeout_s : int option }
+
+type net_args = {
+  tab : Handle.t;
+  match_ : string option;
+  limit : int option;
+  type_ : string option;
+}
+(** hard-xg6y: [match_] is a case-insensitive substring of the URL, [limit] keeps the most
+    recent N (default 100, at most 500) and [type_] is a resource type such as [xhr],
+    [fetch] or [document], compared case-insensitively. *)
+
+type net_entry_args = { tab : Handle.t; id : string }
+(** hard-ovbx hard-vq5s: one request of the tab's ring, by the [id] a listing gave. *)
+
+type upload_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  paths : string list;
+}
+(** hard-o3za: absolute, readable regular files; at most 10 and 50 MiB together. *)
+
+type hover_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
+type storage_args = { tab : Handle.t; area : Storage_area.t }
 
 type drive_args = {
   tab : Handle.t;
@@ -468,6 +516,77 @@ type eval_result = { value : Yojson.Safe.t }
 val yojson_of_shot_result : shot_result -> Yojson.Safe.t
 val yojson_of_debug_result : debug_result -> Yojson.Safe.t
 val yojson_of_eval_result : eval_result -> Yojson.Safe.t
+
+type net_entry = {
+  id : string;
+  method_ : string;
+  url : string;
+  status : int option;
+  type_ : string;
+  mime : string option;
+  size : int option;
+  duration_ms : int option;
+  from_cache : bool;
+  error : string option;
+}
+(** hard-xg6y: one request of a tab's ring. [status], [mime], [size] and [duration_ms] are
+    [T|null] (a request still in flight or one that failed has no response); [error] is
+    [key?] and carries Chrome's error text for a failed load. Everything here is page data
+    for the owner and never reaches a log line. *)
+
+type net_result = { requests : net_entry list }
+
+type net_body_result = {
+  id : string;
+  body : string;
+  base64 : bool;
+  bytes : int;
+  truncated : bool;
+}
+(** hard-ovbx: [body] is text, or base64 when [base64] is true (Chrome's own choice for
+    binary content). At most 1 MiB of it is returned: [bytes] is how much was returned and
+    [truncated] says the body was longer. *)
+
+type net_request_result = {
+  id : string;
+  method_ : string;
+  url : string;
+  headers : Yojson.Safe.t;
+  post_data : string option;
+  base64 : bool;
+  truncated : bool;
+}
+(** hard-vq5s: the request's headers as an object, and its post data ([key?]) bounded to 1
+    MiB — [truncated] when it was longer, [base64] when Chrome gave it as base64. *)
+
+type cookie = {
+  name : string;
+  value : string;
+  domain : string;
+  path : string;
+  expires : float option;
+  http_only : bool;
+  secure : bool;
+  same_site : string option;
+}
+(** hard-ufb7: [expires] is [T|null], null for a session cookie; [same_site] is [T|null].
+*)
+
+type cookies_result = { cookies : cookie list }
+
+type storage_result = {
+  origin : string;
+  area : Storage_area.t;
+  items : Yojson.Safe.t;
+  truncated : bool;
+}
+(** hard-ufb7: [items] is an object of key to value, in the storage's own order. *)
+
+val yojson_of_net_result : net_result -> Yojson.Safe.t
+val yojson_of_net_body_result : net_body_result -> Yojson.Safe.t
+val yojson_of_net_request_result : net_request_result -> Yojson.Safe.t
+val yojson_of_cookies_result : cookies_result -> Yojson.Safe.t
+val yojson_of_storage_result : storage_result -> Yojson.Safe.t
 
 type handoff_result = {
   resumed : bool;
@@ -653,6 +772,13 @@ type command =
   | Downloads of tab_args
   | Run of run_args
   | Discover of discover_args
+  | Net of net_args
+  | Net_body of net_entry_args
+  | Net_request of net_entry_args
+  | Upload of upload_args
+  | Hover of hover_args
+  | Cookies of tab_args
+  | Storage of storage_args
       (** The decoded command: one constructor per row of [docs/protocol.md]'s command
           tables, carrying that command's derived argument record. *)
 
