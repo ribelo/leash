@@ -15,3 +15,4 @@ module Run : module type of Run
 module Tabs : module type of Tabs
 module Expiry : module type of Expiry
 module Control : module type of Control
+module Shape : module type of Shape

@@ -333,6 +333,8 @@ type error_code =
   | Browser_unavailable [@json.name "browser-unavailable"]
   | Model_unavailable [@json.name "model-unavailable"]
   | Too_large [@json.name "too-large"]
+  | Script_failed [@json.name "script-failed"]
+  | Script_invalid [@json.name "script-invalid"]
   | Internal [@json.name "internal"]
 [@@deriving yojson]
 
@@ -543,6 +545,15 @@ type hover_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
 
 type storage_args = { tab : Handle.t; area : Storage_area.t } [@@deriving yojson]
 
+(* extr-mp5z: run one script of an installed playbook on the tab's page. [script] is
+   [<playbook>/<script>]; [args] is an object of strings, [key?]. Nothing on the wire
+   carries script text: the service looks the script up in the playbook directory. *)
+type playbook_test_args = { tab : Handle.t; script : string; args : Yojson.Safe.t option }
+[@@deriving yojson]
+
+(* extr-lslp: check an installed playbook's scripts for syntax in a blank page. *)
+type playbook_check_args = { playbook : string } [@@deriving yojson]
+
 type drive_args = {
   tab : Handle.t;
   goal : string;
@@ -687,6 +698,26 @@ type storage_result = {
 }
 [@@deriving yojson]
 
+(* extr-mp5z: the validated output of one script, with its size and time. A result over
+   1 MiB is not echoed whole: [value] is then its first five records and [truncated] says
+   so. *)
+type playbook_test_result = {
+  script : string;
+  value : Yojson.Safe.t;
+  records : int;
+  bytes : int;
+  elapsed_ms : int;
+  truncated : bool;
+}
+[@@deriving yojson]
+
+(* extr-lslp: one script's syntax verdict. *)
+type script_syntax = { script : string; ok : bool; error : string option }
+[@@deriving yojson]
+
+type playbook_check_result = { playbook : string; scripts : script_syntax list }
+[@@deriving yojson]
+
 (* hand-rg9h: [warnings] is [key?] — the human-facing steps a handoff ran and could not
    complete, omitted when there was nothing to report. *)
 type handoff_result = {
@@ -750,6 +781,19 @@ type run_drive = {
    ended blocked) or [planned] (a dry run chose it and executed nothing). [planned] is true
    when a planner turn wrote it (L32). [attempts] counts the verification rounds, 2 when the
    retry-once rule replayed the procedure. *)
+(* extr-8o1h extr-p152: one script call a procedure made — the page it ran on, how many
+   records it produced, the size of its result and how long it took; [error] says why a
+   call was rejected (it threw, its result did not fit its shape, or it was too large). *)
+type run_script = {
+  script : string;
+  url : string;
+  records : int;
+  bytes : int;
+  elapsed_ms : int;
+  error : string option;
+}
+[@@deriving yojson]
+
 type run_procedure = {
   slug : string;
   site : string;
@@ -757,6 +801,7 @@ type run_procedure = {
   attempts : int;
   choice : run_choice;
   drives : run_drive list;
+  scripts : run_script list;
   expectations : run_expectation list;
   outcome : string;
   elapsed_ms : int;
@@ -788,6 +833,7 @@ type run_result = {
   mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
   proposals : string list;
+  collected : int;
   final : snapshot;
   reason : string option;
 }
@@ -901,6 +947,8 @@ type command =
   | Hover of hover_args
   | Cookies of tab_args
   | Storage of storage_args
+  | Playbook_test of playbook_test_args
+  | Playbook_check of playbook_check_args
 
 let command_name = function
   | New _ -> "new"
@@ -935,6 +983,8 @@ let command_name = function
   | Hover _ -> "hover"
   | Cookies _ -> "cookies"
   | Storage _ -> "storage"
+  | Playbook_test _ -> "playbook_test"
+  | Playbook_check _ -> "playbook_check"
 
 let args_to_json = function
   | New args -> yojson_of_new_args args
@@ -968,6 +1018,8 @@ let args_to_json = function
   | Hover args -> yojson_of_hover_args args
   | Cookies args -> yojson_of_tab_args args
   | Storage args -> yojson_of_storage_args args
+  | Playbook_test args -> yojson_of_playbook_test_args args
+  | Playbook_check args -> yojson_of_playbook_check_args args
 
 let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
@@ -1004,6 +1056,10 @@ let command_of_args ~cmd args =
   | "hover" -> with_args hover_args_of_yojson (fun args -> Hover args)
   | "cookies" -> with_args tab_args_of_yojson (fun args -> Cookies args)
   | "storage" -> with_args storage_args_of_yojson (fun args -> Storage args)
+  | "playbook_test" ->
+      with_args playbook_test_args_of_yojson (fun args -> Playbook_test args)
+  | "playbook_check" ->
+      with_args playbook_check_args_of_yojson (fun args -> Playbook_check args)
   | other ->
       Error
         (Printf.sprintf "cmd: unknown command %s" (Yojson.Safe.to_string (`String other)))

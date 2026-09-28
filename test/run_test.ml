@@ -71,8 +71,19 @@ let book ~site ~entry ?(pages = []) procedures =
   B.
     {
       file = site ^ ".json";
-      playbook = B.{ site; entry; description = site ^ " playbook"; pages; procedures };
+      playbook =
+        B.
+          {
+            site;
+            entry;
+            description = site ^ " playbook";
+            pages;
+            procedures;
+            scripts = None;
+          };
       checks = [];
+      dir = None;
+      scripts = [];
     }
 
 let choice key =
@@ -143,6 +154,10 @@ type harness = {
   mutable ops : string list;
       (** every operation performed through the token (run-vj48) *)
   mutable last : R.observation;
+  mutable scripts : (R.script_outcome, P.error) result list;
+      (** extr-8o1h: what each script step answers, in order; the last repeats *)
+  mutable script_calls : (string * string * (string * string) list) list;
+      (** extr-k40c: the name, the text and the arguments of each script the loop ran *)
 }
 
 let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
@@ -172,6 +187,8 @@ let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
     plan_requests = [];
     ops = [];
     last;
+    scripts = [];
+    script_calls = [];
   }
 
 let pop label get set =
@@ -268,6 +285,11 @@ let handler (h : harness) : R.handler =
           h.ops <- "hand_off" :: h.ops;
           h.handoffs <- h.handoffs @ [ reason ];
           Ok (tab_info ()));
+      script =
+        (fun script ~args ->
+          h.ops <- "script" :: h.ops;
+          h.script_calls <- h.script_calls @ [ (script.B.name, script.B.code, args) ];
+          pop "script results" (fun () -> h.scripts) (fun x -> h.scripts <- x));
     }
 
 let args ?(mission = "buy the thing") ?(max_procedures = 40) ?(deadline_s = 900)
@@ -542,7 +564,7 @@ let failed_retry_trace () =
    The loop offers the playbook's dismiss-consent procedure, then the interrupted
    find-product again, without inventing a planner procedure or clicking through. *)
 let delayed_consent_recovery () =
-  let installed = ok (B.load "../examples/playbooks/automationexercise.com.json") in
+  let installed = ok (B.load "../examples/playbooks/automationexercise.com") in
   let products =
     observation ~url:"https://automationexercise.com/products" ~text:"ALL PRODUCTS" ()
   in
@@ -605,7 +627,7 @@ let delayed_consent_recovery () =
    measurement (run-snk4): the offer URL with the modal's text, whose page kind is the
    playbook's [post-add] because its text marker takes priority over the offer matcher. *)
 let added_modal () =
-  let playbook = ok (B.load "../examples/playbooks/automationexercise.com.json") in
+  let playbook = ok (B.load "../examples/playbooks/automationexercise.com") in
   let modal =
     observation ~url:"https://automationexercise.com/product_details/1" ~title:"Blue Top"
       ~text:"Added! Your product has been added to cart. View Cart" ()
@@ -695,7 +717,7 @@ let added_modal () =
 
 (* run-4mzm: the recorded JEV answers of the L30 measurement, replayed as a script. *)
 let recorded () =
-  let playbook = ok (B.load "../examples/playbooks/automationexercise.com.json") in
+  let playbook = ok (B.load "../examples/playbooks/automationexercise.com") in
   let home =
     observation ~url:"https://automationexercise.com/" ~title:"Home" ~text:"Products" ()
   in
@@ -989,9 +1011,147 @@ let discovery_cost () =
   check_status "reported cost cap" "limit" result;
   Alcotest.(check int) "no browser steps" 0 (List.length h.steps)
 
+(* ---------- L37: script steps ---------- *)
+
+let script_book () =
+  ok
+    (B.of_json ~file:"site-a.json"
+       (Yojson.Safe.from_string
+          {|{
+ "site":"site-a.example","entry":"https://site-a.example/","description":"site-a playbook",
+ "pages":[{"name":"a","description":"a page","url_pattern":"https://site-a.example/*"}],
+ "scripts":{"list":{"source":"return [{title: args.q}]","returns":[{"title":"string"}]}},
+ "procedures":[{"slug":"collect","description":"Collect the list.","args":["product"],
+   "steps":[{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"]}]
+}|}))
+
+let collected ?(records = 2) () =
+  R.Collected
+    {
+      value =
+        `List
+          (List.init records (fun i -> `Assoc [ ("title", `String (string_of_int i)) ]));
+      records;
+      bytes = 40;
+      elapsed_ms = 12;
+    }
+
+(* extr-8o1h: a [script:] step calls the named script with its arguments substituted, the
+   runner holds the records, and the trace says what ran on which page. *)
+let script_step () =
+  let h =
+    harness ~procs:[ "collect"; "DONE" ]
+      ~verifies:[ [ expectation "the page is a" "page_kind" ] ]
+      ()
+  in
+  h.scripts <- [ Ok (collected ()) ];
+  let result = ran (run ~installed:[ script_book () ] h (args ())) in
+  check_status "extr-8o1h done" "done" result;
+  (match h.script_calls with
+  | [ (name, code, arguments) ] ->
+      Alcotest.(check string) "extr-8o1h the script named" "list" name;
+      Alcotest.(check string)
+        "extr-k40c its text is the loaded playbook's" "return [{title: args.q}]" code;
+      Alcotest.(check (list (pair string string)))
+        "extr-8o1h the placeholder is substituted from the mission's arguments"
+        [ ("q", "Blue Top") ]
+        arguments
+  | calls -> Alcotest.failf "extr-8o1h %d script calls" (List.length calls));
+  Alcotest.(check int)
+    "extr-8o1h the operator level was never asked" 0 (List.length h.steps);
+  Alcotest.(check int) "extr-8o1h records are counted" 2 result.P.collected;
+  let entry = List.hd result.P.procedures in
+  Alcotest.(check string) "extr-8o1h verified" "verified" entry.P.outcome;
+  match entry.P.scripts with
+  | [ call ] ->
+      Alcotest.(check string) "extr-p152 the script in the trace" "list" call.P.script;
+      Alcotest.(check string)
+        "extr-p152 the page it ran on" "https://site-a.example/" call.P.url;
+      Alcotest.(check int) "extr-p152 its records" 2 call.P.records;
+      Alcotest.(check (option string)) "extr-p152 no error" None call.P.error
+  | _ -> Alcotest.fail "extr-8o1h the trace lists no script call"
+
+(* extr-8o1h: a rejected script — threw, wrong shape, too large — fails the attempt; the
+   procedure is replayed once like a failed expectation and then fails with the reason. *)
+let script_rejected () =
+  let h = harness ~procs:[ "collect" ] () in
+  h.scripts <-
+    [
+      Ok
+        (R.Rejected { reason = "$[0].price: expected number, got string"; elapsed_ms = 3 });
+    ];
+  let result = ran (run ~installed:[ script_book () ] h (args ())) in
+  Alcotest.(check int)
+    "extr-8o1h replayed once, never more" 2 (List.length h.script_calls);
+  Alcotest.(check bool) "extr-8o1h nothing was verified" false (List.mem "verify" h.ops);
+  Alcotest.(check int) "extr-8o1h nothing was collected" 0 result.P.collected;
+  let entry = List.hd result.P.procedures in
+  Alcotest.(check string) "extr-8o1h the procedure failed" "failed" entry.P.outcome;
+  Alcotest.(check int) "extr-8o1h two attempts" 2 entry.P.attempts;
+  Alcotest.(check int) "extr-p152 both calls are traced" 2 (List.length entry.P.scripts);
+  Alcotest.(check (option string))
+    "extr-p152 the validation error with its path is in the trace"
+    (Some "$[0].price: expected number, got string") (List.hd entry.P.scripts).P.error;
+  Alcotest.(check bool) "extr-8o1h the planner is asked next" true (List.mem "plan" h.ops);
+  Alcotest.(check bool)
+    "extr-8o1h the reason names the script" true
+    (match entry.P.reason with
+    | Some reason ->
+        String.length reason > 0 && Str.string_match (Str.regexp ".*script list") reason 0
+    | None -> false)
+
+(* extr-8o1h: a browser failure is not a rejection — it ends the run as an error. *)
+let script_browser_failure () =
+  let h = harness ~procs:[ "collect" ] () in
+  h.scripts <-
+    [
+      Error
+        P.
+          {
+            code = ok (P.Error_code.of_string "tab-gone");
+            message = "gone";
+            detail = None;
+          };
+    ];
+  match run ~installed:[ script_book () ] h (args ()) with
+  | Error error ->
+      Alcotest.(check string) "extr-8o1h" "tab-gone" (P.Error_code.to_string error.P.code)
+  | Ok _ -> Alcotest.fail "extr-8o1h a browser failure was swallowed"
+
+(* extr-8o1h: a dry run chooses and reports; it runs no script. *)
+let script_dry_run () =
+  let h = harness ~procs:[ "collect" ] () in
+  h.scripts <- [ Ok (collected ()) ];
+  let (_ : P.run_result) =
+    ran (run ~installed:[ script_book () ] h (args ~dry_run:true ()))
+  in
+  Alcotest.(check int)
+    "extr-8o1h a dry run calls no script" 0 (List.length h.script_calls)
+
+(* extr-k40c: the levels' answers are criteria of the playbook, never code: a choice that
+   is JavaScript, or a slug that is no procedure, selects nothing and no script runs. *)
+let script_never_from_a_model () =
+  let h = harness ~procs:[ "alert(document.cookie)" ] () in
+  h.scripts <- [ Ok (collected ()) ];
+  (match
+     run ~installed:[ script_book () ] h (args ~mission:"run fetch('/steal') please" ())
+   with
+  | Ok _ | Error _ -> ());
+  Alcotest.(check int)
+    "extr-k40c no script from a model's text" 0 (List.length h.script_calls)
+
 let () =
   Alcotest.run "L31 run"
     [
+      ( "L37",
+        [
+          Alcotest.test_case "extr-8o1h extr-p152 script step" `Quick script_step;
+          Alcotest.test_case "extr-8o1h rejected script" `Quick script_rejected;
+          Alcotest.test_case "extr-8o1h browser failure" `Quick script_browser_failure;
+          Alcotest.test_case "extr-8o1h dry run" `Quick script_dry_run;
+          Alcotest.test_case "extr-k40c never from a model" `Quick
+            script_never_from_a_model;
+        ] );
       ( "L31",
         [
           Alcotest.test_case "run-9ypy run-xqh8 trace" `Quick trace;

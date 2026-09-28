@@ -1897,6 +1897,34 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                   (fun ~reason ->
                     let tab, _ = begin_handoff_locked t ~owner ~reason tab in
                     Ok (info t tab));
+                (* extr-8o1h extr-k40c: the only script text that reaches the page in a run
+                   is a loaded playbook's, through {!Reading.script}. A script that threw,
+                   broke its shape or was too large is the procedure's failure; a browser
+                   failure ends the run. *)
+                script =
+                  (fun script ~args ->
+                    let started = now t in
+                    match Reading.script browser script ~args with
+                    | Ok ran ->
+                        Ok
+                          (Run.Collected
+                             {
+                               value = ran.Reading.value;
+                               records = ran.Reading.records;
+                               bytes = ran.Reading.bytes;
+                               elapsed_ms = ran.Reading.elapsed_ms;
+                             })
+                    | Error failure
+                      when List.mem
+                             (P.Error_code.to_string failure.P.code)
+                             [ "script-failed"; "script-invalid"; "too-large" ] ->
+                        Ok
+                          (Run.Rejected
+                             {
+                               reason = failure.P.message;
+                               elapsed_ms = int_of_float ((now t -. started) *. 1000.);
+                             })
+                    | Error failure -> Error failure);
               }
           in
           match
@@ -1915,6 +1943,118 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                   match Playbook.propose_book book with
                   | Error why -> Error (error "internal" why)
                   | Ok path -> Ok { result with P.proposals = [ path ] }))))
+
+(* extr-mp5z extr-lslp: the playbook commands that need a page. The script is looked up in
+   the playbook directory by name — nothing on the wire carries script text — and [installed]
+   hands a control test its playbooks the way it does a run's. *)
+let find_playbook ?installed name =
+  match installed with
+  | Some books -> (
+      match
+        List.find_opt
+          (fun (book : Playbook.loaded) ->
+            Option.map Filename.basename book.Playbook.dir = Some name)
+          books
+      with
+      | Some book -> Ok book
+      | None ->
+          Error
+            (error "invalid-request" (Printf.sprintf "no playbook %s is installed" name)))
+  | None -> (
+      match Playbook.show name with
+      | Ok book -> Ok book
+      | Error why -> Error (error "invalid-request" why))
+
+let script_arguments = function
+  | None -> Ok []
+  | Some (`Assoc fields) ->
+      let rec go acc = function
+        | [] -> Ok (List.rev acc)
+        | (name, `String value) :: rest -> go ((name, value) :: acc) rest
+        | (name, _) :: _ ->
+            Error
+              (error "invalid-request"
+                 (Printf.sprintf "argument %s must be a string" name))
+      in
+      go [] fields
+  | Some _ -> Error (error "invalid-request" "args must be an object of strings")
+
+let echo_limit = 1_048_576
+
+let playbook_test ?installed t ~owner (args : P.playbook_test_args) =
+  let* playbook, name =
+    match String.split_on_char '/' args.script with
+    | [ playbook; script ] when playbook <> "" && script <> "" -> Ok (playbook, script)
+    | _ -> Error (error "invalid-request" "script must be <playbook>/<script>")
+  in
+  let* book = find_playbook ?installed playbook in
+  let* script =
+    match Playbook.script_named book name with
+    | Some script -> Ok script
+    | None ->
+        Error
+          (error "invalid-request"
+             (Printf.sprintf "playbook %s has no script %s" playbook name))
+  in
+  let* arguments = script_arguments args.args in
+  with_reading t ~access:Act ~owner args.tab (fun _ browser ->
+      let* ran = Reading.script browser script ~args:arguments in
+      let value, truncated =
+        if ran.Reading.bytes <= echo_limit then (ran.Reading.value, false)
+        else
+          match ran.Reading.value with
+          | `List items -> (`List (List.filteri (fun i _ -> i < 5) items), true)
+          | _ -> (`Null, true)
+      in
+      Ok
+        P.
+          {
+            script = args.script;
+            value;
+            records = ran.Reading.records;
+            bytes = ran.Reading.bytes;
+            elapsed_ms = ran.Reading.elapsed_ms;
+            truncated;
+          })
+
+(* extr-lslp: every script of the playbook is compiled, never called, in a blank page of
+   its own that the caller owns for the duration and that is closed after. *)
+let playbook_check ?installed t ~owner (args : P.playbook_check_args) =
+  let* book = find_playbook ?installed args.playbook in
+  match book.Playbook.scripts with
+  | [] -> Ok P.{ playbook = args.playbook; scripts = [] }
+  | scripts -> (
+      let* blank = new_tab t ~owner ~url:None in
+      let close () = Eio.Cancel.protect (fun () -> ignore (close t ~owner blank.P.tab)) in
+      match
+        with_reading t ~access:Act ~owner blank.P.tab (fun _ browser ->
+            let rec go acc = function
+              | [] -> Ok (List.rev acc)
+              | (script : Playbook.script) :: rest -> (
+                  match Reading.script_syntax browser script with
+                  | Error failure -> Error failure
+                  | Ok verdict ->
+                      go
+                        (P.
+                           {
+                             script = script.Playbook.name;
+                             ok = verdict = None;
+                             error = verdict;
+                           }
+                        :: acc)
+                        rest)
+            in
+            go [] scripts)
+      with
+      | exception exn ->
+          close ();
+          raise exn
+      | Error failure ->
+          close ();
+          Error failure
+      | Ok verdicts ->
+          close ();
+          Ok P.{ playbook = args.playbook; scripts = verdicts })
 
 let report t : P.status_result =
   let chrome = Chrome.status t.chrome in

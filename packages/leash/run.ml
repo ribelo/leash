@@ -56,6 +56,13 @@ type step_request = {
 (** run-d82w: one playbook step as the operator level receives it — the goal with the
     hint shaping it, and the step's own cap and deadline. *)
 
+type script_outcome =
+  | Collected of { value : Yojson.Safe.t; records : int; bytes : int; elapsed_ms : int }
+  | Rejected of { reason : string; elapsed_ms : int }
+(** extr-8o1h: what a script step came to. [Collected] is a result that fit its shape;
+    [Rejected] is a script that threw, whose result did not fit or was too large — the
+    procedure's step failed, and the reason is in the trace. *)
+
 type plan_trigger = Blocked | Failed | Arguments
 (** run-w7ke (L32 wires the plan; L31 asks it and takes its answer): the three points JEV
     stopped — the procedure level answered BLOCKED, a procedure failed its expectations
@@ -141,6 +148,9 @@ type handler = {
           the operator's [playbook accept] ever merges it into a playbook. *)
   hand_off : reason:string -> (P.tab_info, P.error) result;
       (** run-klp9: a planner's handoff, which leaves the tab with the human. *)
+  script :
+    Playbook.script -> args:(string * string) list -> (script_outcome, P.error) result;
+      (** extr-8o1h: run one of the current playbook's scripts on the page. *)
 }
 
 type args = {
@@ -258,6 +268,12 @@ type state = {
   mission_checks : P.run_expectation list;
   proposals : string list;  (** run-m0r8: the proposal files the run wrote, oldest first. *)
   count : int;  (** Procedures executed, the [use] calls and planner procedures included. *)
+  records : Yojson.Safe.t list;
+      (** extr-8o1h: the records the script steps collected, newest first. The runner
+          holds them; no model ever sees one (extr-b3u0). *)
+  pending_scripts : P.run_script list;
+      (** The script calls of the procedure being executed, newest first, moved into its
+          trace entry when it is recorded. *)
   switch : bool;  (** The next turn asks the playbook level. *)
   asked_switch : bool;  (** A switch was already asked since the last procedure. *)
   observation : observation;
@@ -272,6 +288,7 @@ let finish (st : state) status ?reason () =
       mission_expectations = st.mission_checks;
       planner_turns = List.rev st.plans;
       proposals = List.rev st.proposals;
+      collected = List.length st.records;
       final = st.observation.snapshot;
       reason;
     }
@@ -330,6 +347,8 @@ type token = {
   plan : plan_request -> (plan_reply, P.error) result;
   propose : string -> Playbook.procedure -> (string, P.error) result;
   hand_off : string -> (P.tab_info, P.error) result;
+  run_script :
+    Playbook.script -> (string * string) list -> (script_outcome, P.error) result;
 }
 
 let observe (t : token @ local) () = t.observe ()
@@ -343,6 +362,7 @@ let verify (t : token @ local) ~pages ~checks ~timeout_s =
 let plan (t : token @ local) request = t.plan request
 let propose (t : token @ local) ~site proc = (t.propose site) proc
 let hand_off (t : token @ local) ~reason = t.hand_off reason
+let run_script (t : token @ local) script args = (t.run_script script) args
 
 type fill_outcome = Filled of state * (string * string) list | Unfilled of state * string
 
@@ -350,6 +370,10 @@ type steps_outcome =
   | Steps_done of state * P.run_drive list * string option
       (** The procedure's steps are through. The third member is the reason an [optional]
           [use] was skipped, [None] otherwise. *)
+  | Steps_failed of state * P.run_drive list * string
+      (** extr-8o1h: a script step was rejected. The procedure's remaining steps do not
+          run and, unlike a failed expectation, nothing is verified: the attempt failed
+          for the reason given. *)
   | Steps_finish of P.run_result
       (** The run ended inside a step: a dialog, or a planner turn a called procedure
           asked for. *)
@@ -373,6 +397,8 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
       mission_checks = [];
       proposals = [];
       count = 0;
+        records = [];
+        pending_scripts = [];
       switch = false;
       asked_switch = false;
       observation;
@@ -479,6 +505,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
           attempts;
           choice;
           drives;
+          scripts = List.rev st.pending_scripts;
           expectations;
           outcome;
           elapsed_ms = elapsed;
@@ -487,6 +514,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
     in
     {
       st with
+      pending_scripts = [];
       trace = entry :: st.trace;
       recent = st.recent @ [ (proc.Playbook.slug, outcome) ];
       count = st.count + 1;
@@ -728,6 +756,67 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                                 proc.Playbook.slug (P.Drive_status.to_string drive.P.status)) ))
                   else if drive_is "done" drive.P.status then go st (entry :: drives) rest
                   else Ok (Steps_done (st, List.rev (entry :: drives), None))))
+      | Playbook.Script step :: rest -> (
+          match Playbook.script_named book step.Playbook.script with
+          | None ->
+              Error
+                (internal
+                   (Printf.sprintf "script step names unknown script %s" step.Playbook.script))
+          | Some script -> (
+              let args =
+                match step.Playbook.args with
+                | Some (`Assoc fields) ->
+                    List.filter_map
+                      (function
+                        | name, `String value -> Some (name, Playbook.substitute values value)
+                        | _ -> None)
+                      fields
+                | Some _ | None -> []
+              in
+              let called url ~records ~bytes ~elapsed_ms ~error =
+                P.{ script = step.Playbook.script; url; records; bytes; elapsed_ms; error }
+              in
+              let url = st.observation.url in
+              match run_script t script args with
+              | Error error when P.Error_code.to_string error.P.code = "dialog-open" -> (
+                  (* A dialog the script opened ends the run as a drive's does. *)
+                  match observe t () with
+                  | Error error -> Error error
+                  | Ok observation -> (
+                      let st = { st with observation } in
+                      match observation.dialog with
+                      | Some dialog ->
+                          Ok
+                            (Steps_finish
+                               (finish st (status "error") ~reason:(dialog_reason dialog) ()))
+                      | None -> Error error))
+              | Error error -> Error error
+              | Ok (Rejected { reason; elapsed_ms }) ->
+                  let st =
+                    {
+                      st with
+                      pending_scripts =
+                        called url ~records:0 ~bytes:0 ~elapsed_ms ~error:(Some reason)
+                        :: st.pending_scripts;
+                    }
+                  in
+                  Ok
+                    (Steps_failed
+                       ( st,
+                         List.rev drives,
+                         Printf.sprintf "script %s: %s" step.Playbook.script reason ))
+              | Ok (Collected { value; records; bytes; elapsed_ms }) ->
+                  let items = match value with `List items -> items | one -> [ one ] in
+                  let st =
+                    {
+                      st with
+                      records = List.rev_append items st.records;
+                      pending_scripts =
+                        called url ~records ~bytes ~elapsed_ms ~error:None
+                        :: st.pending_scripts;
+                    }
+                  in
+                  go st drives rest))
       | Playbook.Use use :: rest -> (
           match
             List.find_opt
@@ -786,10 +875,32 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                 if List.mem path st.proposals then Ok st
                 else Ok { st with proposals = st.proposals @ [ path ] }
         in
+        (* The end of a procedure that failed — its expectations twice, or a script step
+           rejected twice — is recorded, and then the planner is asked unless a delayed
+           overlay merely changed the page kind, which the procedure level recovers from. *)
+        let fail_procedure st drives ~expectations ~n reason =
+          let elapsed = ms (now () -. proc_started) in
+          let st =
+            record st ~book ~proc ~planned ~choice ~drives ~expectations ~outcome:"failed"
+              ~attempts:n ~elapsed ~reason:(Some reason)
+          in
+          let current_kind =
+            Playbook.page_kind book.Playbook.playbook.pages ~url:st.observation.url
+              ~text:st.observation.text
+          in
+          if current_kind <> None && current_kind <> initial_kind then Ok (Continue st)
+          else planner st ~trigger:Failed ~reason
+        in
         let rec attempt n st previous_drives =
           match steps st book proc values ~optional with
           | Error error -> Error error
           | Ok (Steps_finish result) -> Ok (Finish result)
+          | Ok (Steps_failed (st, current_drives, why)) ->
+              let drives = previous_drives @ current_drives in
+              if n < 2 then attempt (n + 1) st drives
+              else
+                fail_procedure st drives ~expectations:[] ~n
+                  (Printf.sprintf "procedure %s failed twice: %s" proc.Playbook.slug why)
           | Ok (Steps_done (st, current_drives, skip)) -> (
               let drives = previous_drives @ current_drives in
               let elapsed = ms (now () -. proc_started) in
@@ -831,22 +942,11 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                           Printf.sprintf "procedure %s failed its expectations twice: %s"
                             proc.Playbook.slug (failures results)
                         in
-                        let st =
-                          record st ~book ~proc ~planned ~choice ~drives
-                            ~expectations:results ~outcome:"failed" ~attempts:n
-                            ~elapsed ~reason:(Some reason)
-                        in
-                        (* run-xqh8 run-k8bx, L34: a delayed privacy overlay can
-                           change the page kind while an otherwise valid procedure
-                           fails. Let the procedure level pick the installed recovery
-                           procedure before asking the planner to invent one. *)
-                        let current_kind =
-                          Playbook.page_kind book.Playbook.playbook.pages
-                            ~url:st.observation.url ~text:st.observation.text
-                        in
-                        if current_kind <> None && current_kind <> initial_kind then
-                          Ok (Continue st)
-                        else planner st ~trigger:Failed ~reason))
+                        (* run-xqh8 run-k8bx, L34: a delayed privacy overlay can change
+                           the page kind while an otherwise valid procedure fails;
+                           [fail_procedure] lets the procedure level pick the installed
+                           recovery procedure before the planner is asked. *)
+                        fail_procedure st drives ~expectations:results ~n reason))
         in
         attempt 1 st []
 
@@ -1100,6 +1200,7 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                                     slug = proc.Playbook.slug;
                                     site = book.Playbook.playbook.site;
                                     planned = false;
+                                    scripts = [];
                                     attempts = 1;
                                     choice;
                                     drives = [];
@@ -1161,6 +1262,10 @@ let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
         Propose : string * Playbook.procedure -> (string, P.error) result Effect.t
 
       type _ Effect.t += Hand_off : string -> (P.tab_info, P.error) result Effect.t
+
+      type _ Effect.t +=
+        Run_script :
+          Playbook.script * (string * string) list -> (script_outcome, P.error) result Effect.t
     end in
     let token =
       {
@@ -1174,6 +1279,7 @@ let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
         plan = (fun request -> Effect.perform (M.Plan request));
         propose = (fun site proc -> Effect.perform (M.Propose (site, proc)));
         hand_off = (fun reason -> Effect.perform (M.Hand_off reason));
+        run_script = (fun script args -> Effect.perform (M.Run_script (script, args)));
       }
     in
     Effect.Deep.match_with (fun () -> compute token ~now ~installed ?discovery args) ()
@@ -1223,5 +1329,9 @@ let loop ~(handler : handler) ~now ~installed ?discovery (args : args) =
                 Some
                   (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
                     Effect.Deep.continue k (handler.hand_off ~reason))
+            | M.Run_script (script, args) ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.script script ~args))
             | _ -> None);
       }

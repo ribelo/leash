@@ -367,3 +367,30 @@ Measured by the live gate against loopback pages, headless. The fake browser's d
   not show), `expires:-1` and `session:true` for a session cookie, and no `sameSite` member for a cookie
   that sets none. `DOMStorage.getDOMStorageItems {storageId:{securityOrigin,isLocalStorage}}` answers
   `{entries:[[key,value],...]}`; Leash enables the domain around the read and disables it again.
+
+
+## L37 playbook scripts (Chrome/152.0.7977.64, headless, a loopback page; scripts/live-acceptance-m9)
+
+A script is called as `Runtime.callFunctionOn {objectId:<globalThis>, functionDeclaration:"async function(args) {\n<script>\n}",
+arguments:[{value:<args object>}], returnByValue:true, awaitPromise:true}` on the document's global object
+(`Runtime.evaluate "globalThis"` for its `objectId`). Measured against a page that had set a cookie:
+
+- **Success and fetch.** `await fetch('/api/books.json?...')` from inside the call is a same-origin request with the
+  page's cookies (an endpoint that answers 403 without the cookie answered 200), and the reply is
+  `{result:{type:"object",value:[...]}}`, the value fully materialised — `awaitPromise` waits for the async body.
+- **A throw, or a rejected promise**, is a *successful* CDP reply carrying `exceptionDetails`:
+  `{exceptionId, text:"Uncaught (in promise) Error: boom", exception:{type:"object", subtype:"error",
+  className:"Error", description:"Error: boom\n    at <anonymous>:2:7", objectId}}` next to `result:{type:"object",value:{}}`.
+  The `exception.description` is what Leash shows the author as `script-failed`; the top-level `result` must not be read.
+- **Nothing to return.** `return undefined` answers `result:{type:"undefined"}` with no `value`; Leash reads it as
+  null, which no `returns` shape accepts.
+- **A value that is not JSON does not fail; it flattens.** `return () => 1` answers `{type:"function", value:{}}` and a
+  DOM node `{type:"object", value:{}}` — an empty object, no error. Shape validation is therefore what catches it
+  (`$: expected an array, got object`); the CDP call cannot.
+- **A syntax error at call time** is also an `exceptionDetails` reply: `text:"Uncaught"`, `exception.description:
+  "SyntaxError: Unexpected token '}'"`, with a `scriptId`.
+- **The dry syntax check** (`playbook check`): `Runtime.evaluate` of an IIFE that does
+  `new (Object.getPrototypeOf(async function () {}).constructor)('args', <script as a JSON string literal>)` in a blank
+  page answers `{result:{type:"object", subtype:"null", value:null}}` when it parses and
+  `{result:{type:"string", value:"Unexpected token '}'"}}` (the engine's `message`, without the `SyntaxError:` prefix)
+  when it does not. The function is compiled and never called.

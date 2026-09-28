@@ -7,19 +7,49 @@ let base =
  "procedures":[{"slug":"open","description":"Open an offer","steps":[{"goal":"Open product","hint":"Offer"}],"expect":["the page is offer"]}]
 }|}
 
-let with_file suffix content f =
-  let path = Filename.temp_file "leash-playbook-" suffix in
+(* extr-plaz: a playbook is a directory. [rm_rf] removes one without following a symlink
+   out of it. *)
+let rec rm_rf path =
+  match (Unix.lstat path).Unix.st_kind with
+  | Unix.S_DIR ->
+      Array.iter (fun entry -> rm_rf (Filename.concat path entry)) (Sys.readdir path);
+      Unix.rmdir path
+  | _ -> Sys.remove path
+  | exception Unix.Unix_error _ -> ()
+
+let temp_dir () =
+  let dir = Filename.temp_file "leash-playbook-" "" in
+  Sys.remove dir;
+  Unix.mkdir dir 0o700;
+  dir
+
+let write path content =
+  let rec parents p =
+    if not (Sys.file_exists p) then (
+      parents (Filename.dirname p);
+      Unix.mkdir p 0o700)
+  in
+  parents (Filename.dirname path);
+  let output = open_out_bin path in
+  output_string output content;
+  close_out output
+
+let with_playbook ?(name = "playbook.json") ?(files = []) content f =
+  let root = temp_dir () in
   Fun.protect
-    ~finally:(fun () -> Sys.remove path)
+    ~finally:(fun () -> rm_rf root)
     (fun () ->
-      let output = open_out path in
-      output_string output content;
-      close_out output;
-      f path)
+      let dir = Filename.concat root "shop" in
+      Unix.mkdir dir 0o700;
+      write (Filename.concat dir name) content;
+      List.iter (fun (path, body) -> write (Filename.concat dir path) body) files;
+      f dir (Filename.concat dir name))
+
+let with_file _suffix content f = with_playbook content (fun _ file -> f file)
 
 let expect_error needle data =
-  with_file ".json" data (fun path ->
-      match B.load path with
+  with_playbook data (fun dir path ->
+      match B.load dir with
       | Ok _ -> Alcotest.fail ("run-dbji accepted " ^ needle)
       | Error message ->
           Alcotest.(check bool)
@@ -53,12 +83,19 @@ let procedure ?(slug = "open") ?(expect = `List [ `String "the page is offer" ])
     ]
 
 let refusal () =
-  (* run-tcuz: JSON-only, including explicit YAML refusal. *)
-  with_file ".yaml" base (fun path ->
-      match B.load path with
+  (* run-tcuz extr-plaz: JSON-only, including explicit YAML refusal, and a directory. *)
+  with_playbook ~name:"playbook.yaml" base (fun dir _ ->
+      match B.load dir with
       | Error e ->
           Alcotest.(check bool) "JSON format suggested" true (String.contains e 'J')
       | Ok _ -> Alcotest.fail "accepted YAML");
+  with_playbook base (fun _ file ->
+      match B.load file with
+      | Error e ->
+          Alcotest.(check bool)
+            "extr-plaz a single file is not a playbook" true
+            (String.starts_with ~prefix:file e)
+      | Ok _ -> Alcotest.fail "accepted a bare playbook.json file");
   expect_error "non-empty list"
     (mutate "procedures"
        (`List [ procedure ~expect:(`List []) [ `Assoc [ ("goal", `String "Open") ] ] ]));
@@ -258,15 +295,15 @@ let examples () =
       | Ok book -> Alcotest.(check bool) "resolved checkers" true (book.checks <> [])
       | Error error -> Alcotest.fail error)
     [
-      "../examples/playbooks/allegro.pl.json";
-      "../examples/playbooks/www.w3.org.json";
-      "../examples/playbooks/automationexercise.com.json";
+      "../examples/playbooks/allegro.pl";
+      "../examples/playbooks/www.w3.org";
+      "../examples/playbooks/automationexercise.com";
     ]
 
 let offscreen_offer () =
   (* run-xqh8, L34: a tiny viewport hides the product detail link; a desktop
      viewport exposes it, so scroll only when View Product is not observed. *)
-  match B.load "../examples/playbooks/automationexercise.com.json" with
+  match B.load "../examples/playbooks/automationexercise.com" with
   | Error error -> Alcotest.fail error
   | Ok book -> (
       match
@@ -286,13 +323,394 @@ let offscreen_offer () =
 let cart_after_add () =
   (* run-xqh8, L34: after View Cart, the prior Added! marker can linger in
      rendered text. The confirmed /view_cart URL must outrank post-add. *)
-  match B.load "../examples/playbooks/automationexercise.com.json" with
+  match B.load "../examples/playbooks/automationexercise.com" with
   | Error error -> Alcotest.fail error
   | Ok book ->
       Alcotest.(check (option string))
         "cart outranks lingering success marker" (Some "cart")
         (B.page_kind book.playbook.pages ~url:"https://automationexercise.com/view_cart"
            ~text:"Added! Blue Top")
+
+(* ---------- L37: playbook directories, scripts and shapes ---------- *)
+
+let books
+    ?(scripts =
+      {|{"list":{"file":"scripts/list.js","returns":[{"title":"string","price":"number"}]}}|})
+    ?(steps = {|{"script":"list","args":{"page":"{page}"}}|}) () =
+  Printf.sprintf
+    {|{
+ "site":"books.example","entry":"https://books.example/","description":"Books",
+ "pages":[{"name":"list","description":"List","url_pattern":"https://books.example/*"}],
+ "scripts": %s,
+ "procedures":[{"slug":"collect","description":"Collect","args":["page"],"steps":[%s],"expect":["the page is list"]}]
+}|}
+    scripts steps
+
+let list_js = ("scripts/list.js", "return [{title: 'A', price: 1}];")
+
+let contains needle haystack =
+  Str.string_match (Str.regexp (".*" ^ Str.quote needle)) haystack 0
+
+let expect_load_error ?(files = [ list_js ]) ~story needle json =
+  with_playbook ~files json (fun dir file ->
+      match B.load dir with
+      | Ok _ -> Alcotest.fail (story ^ " accepted: " ^ needle)
+      | Error message ->
+          Alcotest.(check bool)
+            (story ^ " names the playbook file: " ^ message)
+            true
+            (String.starts_with ~prefix:file message);
+          Alcotest.(check bool)
+            (story ^ " says why (" ^ needle ^ "): " ^ message)
+            true (contains needle message))
+
+let directory_and_scripts () =
+  (* extr-plaz: a script is a file relative to the playbook directory, or short inline
+     source; both are read at load. *)
+  let json =
+    books
+      ~scripts:
+        {|{"list":{"file":"scripts/list.js","returns":[{"title":"string","price":"number"}]},
+           "count":{"source":"return {n: 1}","returns":{"n":"number"},"max_bytes":1000}}|}
+      ()
+  in
+  with_playbook ~files:[ list_js ] json (fun dir file ->
+      match B.load dir with
+      | Error why -> Alcotest.fail ("extr-plaz " ^ why)
+      | Ok book -> (
+          Alcotest.(check string) "extr-plaz playbook.json is the file" file book.file;
+          Alcotest.(check (option string)) "extr-plaz the directory" (Some dir) book.dir;
+          (match B.script_named book "list" with
+          | Some script ->
+              Alcotest.(check string)
+                "extr-plaz a file script's text is read at load"
+                "return [{title: 'A', price: 1}];" script.code;
+              Alcotest.(check string)
+                "extr-plaz origin names the file" "file scripts/list.js" script.origin;
+              Alcotest.(check int)
+                "extr-8o1h the default bound is 8 MiB" 8_388_608 script.max_bytes
+          | None -> Alcotest.fail "extr-plaz file script missing");
+          match B.script_named book "count" with
+          | Some script ->
+              Alcotest.(check string)
+                "extr-plaz inline source" "return {n: 1}" script.code;
+              Alcotest.(check int) "extr-8o1h a per-script bound" 1000 script.max_bytes
+          | None -> Alcotest.fail "extr-plaz inline script missing"))
+
+let script_refusals () =
+  let story = "extr-plaz" in
+  let json file =
+    books
+      ~scripts:
+        (Printf.sprintf {|{"list":{"file":%S,"returns":[{"title":"string"}]}}|} file)
+      ()
+  in
+  expect_load_error ~story "must not contain .." (json "../outside.js");
+  expect_load_error ~story "must not contain .." (json "scripts/../../outside.js");
+  expect_load_error ~story "must be relative" (json "/etc/hostname");
+  expect_load_error ~story "must be a .js file" (json "scripts/list.txt");
+  expect_load_error ~story "No such file" (json "scripts/absent.js");
+  expect_load_error ~story "not a regular file"
+    ~files:[ list_js; ("scripts/sub.js/x", "") ]
+    (json "scripts/sub.js");
+  expect_load_error ~story "exactly one of file or source"
+    (books ~scripts:{|{"list":{"returns":[{"title":"string"}]}}|} ());
+  expect_load_error ~story "exactly one of file or source"
+    (books
+       ~scripts:
+         {|{"list":{"file":"scripts/list.js","source":"return []","returns":[{"title":"string"}]}}|}
+       ());
+  expect_load_error ~story "inline source is over"
+    (books
+       ~scripts:
+         (Printf.sprintf {|{"list":{"source":%S,"returns":[{"title":"string"}]}}|}
+            (String.make 5000 'x'))
+       ());
+  expect_load_error ~story "the script is empty"
+    (books ~scripts:{|{"list":{"source":"  ","returns":[{"title":"string"}]}}|} ());
+  expect_load_error ~story "name must be a lowercase slug"
+    (books ~steps:{|{"goal":"x"}|}
+       ~scripts:{|{"List":{"source":"return []","returns":[{"title":"string"}]}}|} ());
+  expect_load_error ~story "max_bytes must be"
+    (books
+       ~scripts:
+         {|{"list":{"source":"return []","returns":[{"title":"string"}],"max_bytes":0}}|}
+       ());
+  (* extr-zdst: a malformed shape refuses the playbook. *)
+  expect_load_error ~story:"extr-zdst" "unknown type"
+    (books ~scripts:{|{"list":{"source":"return []","returns":[{"title":"text"}]}}|} ());
+  expect_load_error ~story:"extr-zdst" "record or a list of records"
+    (books ~scripts:{|{"list":{"source":"return []","returns":"string"}}|} ());
+  expect_load_error ~story:"extr-zdst" "record or a list of records"
+    (books ~scripts:{|{"list":{"source":"return []","returns":["string"]}}|} ());
+  (* A step naming a script the playbook does not have. *)
+  expect_load_error ~story:"extr-8o1h" "unknown script"
+    (books ~steps:{|{"script":"absent"}|} ());
+  expect_load_error ~story:"extr-8o1h" "args must be an object of strings"
+    (books ~steps:{|{"script":"list","args":{"page":1}}|} ());
+  expect_load_error ~story:"extr-8o1h" "exactly one of goal, use or script"
+    (books ~steps:{|{"script":"list","goal":"x"}|} ())
+
+let symlinks () =
+  (* extr-plaz: a symlink is resolved, and refused when it leaves the playbook directory;
+     one that stays inside it is fine. *)
+  let root = temp_dir () in
+  Fun.protect
+    ~finally:(fun () -> rm_rf root)
+    (fun () ->
+      let dir = Filename.concat root "shop" in
+      write (Filename.concat root "outside.js") "return [];";
+      write
+        (Filename.concat dir "playbook.json")
+        (books
+           ~scripts:{|{"list":{"file":"scripts/link.js","returns":[{"title":"string"}]}}|}
+           ());
+      write (Filename.concat dir "scripts/list.js") "return [];";
+      Unix.symlink "list.js" (Filename.concat dir "scripts/link.js");
+      (match B.load dir with
+      | Ok _ -> ()
+      | Error why -> Alcotest.fail ("extr-plaz a link inside the directory: " ^ why));
+      Sys.remove (Filename.concat dir "scripts/link.js");
+      Unix.symlink "../../outside.js" (Filename.concat dir "scripts/link.js");
+      (match B.load dir with
+      | Ok _ -> Alcotest.fail "extr-plaz a symlink out of the directory was loaded"
+      | Error why ->
+          Alcotest.(check bool)
+            ("extr-plaz refused as outside: " ^ why)
+            true
+            (contains "outside the playbook directory" why));
+      (* A directory link too: scripts -> an outside directory. *)
+      Sys.remove (Filename.concat dir "scripts/link.js");
+      rm_rf (Filename.concat dir "scripts");
+      write (Filename.concat root "elsewhere/link.js") "return [];";
+      Unix.symlink "../elsewhere" (Filename.concat dir "scripts");
+      match B.load dir with
+      | Ok _ ->
+          Alcotest.fail "extr-plaz a linked directory out of the directory was loaded"
+      | Error why ->
+          Alcotest.(check bool)
+            ("extr-plaz a linked directory is refused: " ^ why)
+            true
+            (contains "outside the playbook directory" why))
+
+let no_directory_no_file_script () =
+  (* extr-plaz extr-k40c: JSON that did not come from a playbook directory (a planner's
+     book) can carry inline scripts at most, never a file. *)
+  let json = Yojson.Safe.from_string (books ()) in
+  match B.of_json ~file:"planner.json" json with
+  | Ok _ -> Alcotest.fail "extr-plaz a file script without a directory was accepted"
+  | Error why ->
+      Alcotest.(check bool)
+        ("extr-plaz refused: " ^ why) true
+        (contains "needs a playbook directory" why)
+
+let layout () =
+  (* extr-plaz: <XDG>/leash/playbooks/<name>/playbook.json; the old flat file is refused
+     rather than silently ignored. *)
+  let root = temp_dir () in
+  let previous = Sys.getenv_opt "XDG_CONFIG_HOME" in
+  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_CONFIG_HOME" root;
+  Fun.protect
+    ~finally:(fun () ->
+      (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_CONFIG_HOME"
+        (Option.value ~default:"" previous);
+      rm_rf root)
+    (fun () ->
+      let playbooks = Filename.concat root "leash/playbooks" in
+      write (Filename.concat playbooks "shop/playbook.json") (books ());
+      write (Filename.concat playbooks "shop/scripts/list.js") "return [];";
+      write (Filename.concat playbooks "shop/notes.txt") "not a playbook";
+      (match B.list () with
+      | Ok [ book ] ->
+          Alcotest.(check string)
+            "extr-plaz listed by directory" "books.example" book.playbook.site
+      | Ok _ -> Alcotest.fail "extr-plaz the directory listed a wrong count"
+      | Error why -> Alcotest.fail why);
+      (match B.show "shop" with
+      | Ok book ->
+          Alcotest.(check int)
+            "extr-lslp show carries the scripts" 1 (List.length book.scripts);
+          let shown = Yojson.Safe.to_string (B.inspect ~code:true book) in
+          Alcotest.(check bool)
+            "extr-lslp show prints the script's text" true (contains "return [];" shown);
+          Alcotest.(check bool)
+            "extr-lslp check does not print it" false
+            (contains "return [];" (Yojson.Safe.to_string (B.inspect book)));
+          Alcotest.(check bool)
+            "extr-lslp both name the declared shape" true
+            (contains "price" (Yojson.Safe.to_string (B.inspect book)))
+      | Error why -> Alcotest.fail why);
+      (match B.show "../shop" with
+      | Ok _ -> Alcotest.fail "extr-plaz show accepted a path"
+      | Error _ -> ());
+      write (Filename.concat playbooks "old.json") (books ());
+      match B.list () with
+      | Ok _ -> Alcotest.fail "extr-plaz a flat playbook file was ignored"
+      | Error why ->
+          Alcotest.(check bool)
+            ("extr-plaz names the layout: " ^ why)
+            true
+            (contains "playbooks are directories" why))
+
+let proposals_carry_no_scripts () =
+  (* extr-k40c: a proposal is written by a model; it can never bring a script in. *)
+  let root = temp_dir () in
+  Fun.protect
+    ~finally:(fun () -> rm_rf root)
+    (fun () ->
+      let path = Filename.concat root "proposal.json" in
+      write path
+        (books ~scripts:{|{"list":{"source":"return []","returns":[{"title":"string"}]}}|}
+           ());
+      match B.accept path with
+      | Ok _ -> Alcotest.fail "extr-k40c a proposal with scripts was merged"
+      | Error why ->
+          Alcotest.(check bool)
+            ("extr-k40c refused: " ^ why) true
+            (contains "cannot carry scripts" why))
+
+(* extr-zdst extr-8o1h: the shape language and its validation, as a table. *)
+let shape_of text =
+  match Leash.Shape.t_of_yojson (Yojson.Safe.from_string text) with
+  | Ok shape -> shape
+  | Error why -> Alcotest.fail ("extr-zdst shape " ^ text ^ ": " ^ why)
+
+let shapes () =
+  let listing =
+    shape_of
+      {|[{"title":"string","price":"number","in_stock":"boolean","url":"url",
+          "rating?":"number","tags":["string"],"offers":[{"seller":"string","price":"number"}]}]|}
+  in
+  let record =
+    {|{"title":"A","price":9.5,"in_stock":true,"url":"https://x.example/a","tags":["a","b"],
+       "offers":[{"seller":"s","price":1}]}|}
+  in
+  let accept ?(shape = listing) text =
+    match Leash.Shape.validate shape (Yojson.Safe.from_string text) with
+    | Ok () -> ()
+    | Error why -> Alcotest.fail ("extr-zdst rejected " ^ text ^ ": " ^ why)
+  in
+  let reject ?(shape = listing) ~path text =
+    match Leash.Shape.validate shape (Yojson.Safe.from_string text) with
+    | Ok () -> Alcotest.fail ("extr-8o1h accepted " ^ text)
+    | Error why ->
+        Alcotest.(check bool)
+          (Printf.sprintf "extr-8o1h the first mismatch is at %s: %s" path why)
+          true
+          (String.starts_with ~prefix:path why)
+  in
+  accept ("[" ^ record ^ "]");
+  accept "[]";
+  (* optional: absent or null *)
+  accept
+    ("[" ^ record ^ ","
+   ^ {|{"title":"B","price":1,"in_stock":false,"url":"http://x.example/b","rating":null,"tags":[],"offers":[]}|}
+   ^ "]");
+  accept ~shape:(shape_of {|{"n":"number"}|}) {|{"n":3}|};
+  Alcotest.(check int)
+    "extr-8o1h records of a list" 2
+    (Leash.Shape.records (Yojson.Safe.from_string "[1,2]"));
+  Alcotest.(check int)
+    "extr-8o1h records of a record" 1
+    (Leash.Shape.records (Yojson.Safe.from_string {|{"n":1}|}));
+  reject ~path:"$: expected an array, got object" record;
+  reject ~path:"$[0]: expected an object, got string" {|["x"]|};
+  reject ~path:{|$[0]: missing field "price"|}
+    {|[{"title":"A","in_stock":true,"url":"https://x.example/","tags":[],"offers":[]}]|};
+  reject ~path:"$[1].price: expected number, got string"
+    ("[" ^ record ^ ","
+   ^ {|{"title":"B","price":"9","in_stock":true,"url":"https://x.example/","tags":[],"offers":[]}|}
+   ^ "]");
+  reject ~path:"$[0].url: expected an http(s) url"
+    {|[{"title":"A","price":1,"in_stock":true,"url":"/relative","tags":[],"offers":[]}]|};
+  reject ~path:"$[0].url: expected an http(s) url"
+    {|[{"title":"A","price":1,"in_stock":true,"url":"javascript:alert(1)","tags":[],"offers":[]}]|};
+  reject ~path:"$[0].tags[1]: expected string, got number"
+    {|[{"title":"A","price":1,"in_stock":true,"url":"https://x.example/","tags":["a",2],"offers":[]}]|};
+  reject ~path:{|$[0].offers[0]: missing field "seller" (it is null)|}
+    {|[{"title":"A","price":1,"in_stock":true,"url":"https://x.example/","tags":[],"offers":[{"seller":null,"price":1}]}]|};
+  reject ~path:"$[0].sku: unexpected field"
+    {|[{"title":"A","price":1,"in_stock":true,"url":"https://x.example/","tags":[],"offers":[],"sku":"z"}]|};
+  reject ~path:"$[0]: missing field \"title\" (it is null)"
+    {|[{"title":null,"price":1,"in_stock":true,"url":"https://x.example/","tags":[],"offers":[]}]|};
+  reject ~shape:(shape_of {|{"n":"number"}|}) ~path:"$: expected an object, got null"
+    "null";
+  (* the shape language itself *)
+  let bad text needle =
+    match Leash.Shape.t_of_yojson (Yojson.Safe.from_string text) with
+    | Ok _ -> Alcotest.fail ("extr-zdst accepted shape " ^ text)
+    | Error why ->
+        Alcotest.(check bool)
+          ("extr-zdst " ^ needle ^ ": " ^ why)
+          true (contains needle why)
+  in
+  bad {|{"a":"number?"}|} "optional by a ? on its name";
+  bad {|{"a":"int"}|} "unknown type";
+  bad {|{}|} "at least one field";
+  bad {|["string","number"]|} "exactly one element";
+  bad {|{"a":"string","a?":"string"}|} "declared twice";
+  bad {|{"a":{"b":{"c":{"d":{"e":{"f":{"g":{"h":{"i":"string"}}}}}}}}}|}
+    "nested more than";
+  (* a shape round-trips as written *)
+  Alcotest.(check string)
+    "extr-zdst the shape is kept as written"
+    {|[{"title":"string","rating?":"number","tags":["string"]}]|}
+    (Yojson.Safe.to_string
+       (Leash.Shape.yojson_of_t
+          (shape_of {|[{"title":"string","rating?":"number","tags":["string"]}]|})))
+
+let script_examples () =
+  (* extr-8o1h: a large number of records validates in one linear pass. *)
+  let shape = shape_of {|[{"n":"number","s":"string"}]|} in
+  let items =
+    Yojson.Safe.to_string
+      (`List (List.init 20_000 (fun i -> `Assoc [ ("n", `Int i); ("s", `String "x") ])))
+  in
+  match Leash.Shape.validate shape (Yojson.Safe.from_string items) with
+  | Ok () -> ()
+  | Error why -> Alcotest.fail ("extr-8o1h " ^ why)
+
+(* extr-k40c: a procedure from outside a file — a planner's answer — can name a script the
+   playbook already has, and cannot bring one: no step carries source or a file, and a
+   script that is not in the playbook is refused before anything runs. *)
+let planner_procedures () =
+  with_playbook ~files:[ list_js ] (books ()) (fun dir _ ->
+      let book = match B.load dir with Ok b -> b | Error why -> Alcotest.fail why in
+      let procedure json =
+        match B.procedure_of_yojson (Yojson.Safe.from_string json) with
+        | Ok proc -> Ok proc
+        | Error why -> Error why
+      in
+      let of_steps steps =
+        Printf.sprintf
+          {|{"slug":"plan","description":"d","steps":[%s],"expect":["the page is list"]}|}
+          steps
+      in
+      (match procedure (of_steps {|{"script":"list"}|}) with
+      | Ok proc -> (
+          match B.check_procedure book.playbook proc with
+          | Ok () -> ()
+          | Error why -> Alcotest.fail ("extr-k40c a named script is allowed: " ^ why))
+      | Error why -> Alcotest.fail why);
+      (match procedure (of_steps {|{"script":"evil"}|}) with
+      | Ok proc -> (
+          match B.check_procedure book.playbook proc with
+          | Ok () -> Alcotest.fail "extr-k40c a script the playbook lacks was accepted"
+          | Error why ->
+              Alcotest.(check bool)
+                ("extr-k40c " ^ why) true
+                (contains "unknown script" why))
+      | Error why -> Alcotest.fail why);
+      List.iter
+        (fun step ->
+          match procedure (of_steps step) with
+          | Ok _ -> Alcotest.fail ("extr-k40c a step carrying code was decoded: " ^ step)
+          | Error _ -> ())
+        [
+          {|{"script":"list","source":"fetch('/x')"}|};
+          {|{"script":"list","file":"scripts/list.js"}|};
+          {|{"source":"fetch('/x')"}|};
+        ])
 
 let () =
   Alcotest.run "playbooks"
@@ -307,5 +725,21 @@ let () =
           Alcotest.test_case "run-seqo examples" `Quick examples;
           Alcotest.test_case "run-xqh8 offscreen offer" `Quick offscreen_offer;
           Alcotest.test_case "run-xqh8 cart outranks add" `Quick cart_after_add;
+        ] );
+      ( "L37",
+        [
+          Alcotest.test_case "extr-plaz extr-8o1h directory and scripts" `Quick
+            directory_and_scripts;
+          Alcotest.test_case "extr-plaz extr-zdst extr-8o1h refusals" `Quick
+            script_refusals;
+          Alcotest.test_case "extr-plaz symlinks" `Quick symlinks;
+          Alcotest.test_case "extr-plaz extr-k40c no file without a directory" `Quick
+            no_directory_no_file_script;
+          Alcotest.test_case "extr-plaz extr-lslp layout, show and check" `Quick layout;
+          Alcotest.test_case "extr-k40c proposals carry no scripts" `Quick
+            proposals_carry_no_scripts;
+          Alcotest.test_case "extr-k40c planner procedures" `Quick planner_procedures;
+          Alcotest.test_case "extr-zdst extr-8o1h shapes" `Quick shapes;
+          Alcotest.test_case "extr-8o1h many records" `Quick script_examples;
         ] );
     ]

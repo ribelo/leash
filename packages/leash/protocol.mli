@@ -404,6 +404,13 @@ type upload_args = {
 type hover_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
 type storage_args = { tab : Handle.t; area : Storage_area.t }
 
+type playbook_test_args = { tab : Handle.t; script : string; args : Yojson.Safe.t option }
+(** extr-mp5z: [script] is [<playbook>/<script>], [args] an object of strings. No script
+    text is ever on the wire: the service reads it from the playbook directory. *)
+
+type playbook_check_args = { playbook : string }
+(** extr-lslp: the installed playbook's directory name. *)
+
 type drive_args = {
   tab : Handle.t;
   goal : string;
@@ -588,6 +595,27 @@ val yojson_of_net_request_result : net_request_result -> Yojson.Safe.t
 val yojson_of_cookies_result : cookies_result -> Yojson.Safe.t
 val yojson_of_storage_result : storage_result -> Yojson.Safe.t
 
+type playbook_test_result = {
+  script : string;
+  value : Yojson.Safe.t;
+  records : int;
+  bytes : int;
+  elapsed_ms : int;
+  truncated : bool;
+}
+(** extr-mp5z: the output of one script after it was validated against its [returns].
+    [bytes] is the size of the whole result; over 1 MiB [value] is its first five records
+    and [truncated] is true. *)
+
+type script_syntax = { script : string; ok : bool; error : string option }
+type playbook_check_result = { playbook : string; scripts : script_syntax list }
+
+val playbook_test_result_of_yojson :
+  Yojson.Safe.t -> (playbook_test_result, string) result
+
+val yojson_of_playbook_test_result : playbook_test_result -> Yojson.Safe.t
+val yojson_of_playbook_check_result : playbook_check_result -> Yojson.Safe.t
+
 type handoff_result = {
   resumed : bool;
   url : string;
@@ -660,6 +688,21 @@ type run_drive = {
 val run_drive_of_yojson : Yojson.Safe.t -> (run_drive, string) result
 val yojson_of_run_drive : run_drive -> Yojson.Safe.t
 
+type run_script = {
+  script : string;
+  url : string;
+  records : int;
+  bytes : int;
+  elapsed_ms : int;
+  error : string option;
+}
+(** extr-8o1h extr-p152: one script call of a procedure — the page's URL, the records it
+    produced, its result's size and its time; [error] is [key?], the reason a call was
+    rejected. *)
+
+val run_script_of_yojson : Yojson.Safe.t -> (run_script, string) result
+val yojson_of_run_script : run_script -> Yojson.Safe.t
+
 type run_procedure = {
   slug : string;
   site : string;
@@ -667,6 +710,7 @@ type run_procedure = {
   attempts : int;
   choice : run_choice;
   drives : run_drive list;
+  scripts : run_script list;
   expectations : run_expectation list;
   outcome : string;
   elapsed_ms : int;
@@ -707,6 +751,7 @@ type run_result = {
   mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
   proposals : string list;
+  collected : int;
   final : snapshot;
   reason : string option;
 }
@@ -717,8 +762,9 @@ type run_result = {
     the mission carried none); [planner_turns] is every planner turn with its cost;
     [proposals] lists the proposal files a planner-written procedure was written to,
     oldest first, which the operator merges with `leash playbook accept` and nothing else
-    does; [final] is the last snapshot the run observed — its [dialog] is what ended an
-    [error] (run-klp9); [reason] is [key?] and names why the run stopped. *)
+    does; [collected] is how many records the run's script steps produced (extr-8o1h);
+    [final] is the last snapshot the run observed — its [dialog] is what ended an [error]
+    (run-klp9); [reason] is [key?] and names why the run stopped. *)
 
 val run_result_of_yojson : Yojson.Safe.t -> (run_result, string) result
 val yojson_of_run_result : run_result -> Yojson.Safe.t
@@ -779,6 +825,8 @@ type command =
   | Hover of hover_args
   | Cookies of tab_args
   | Storage of storage_args
+  | Playbook_test of playbook_test_args
+  | Playbook_check of playbook_check_args
       (** The decoded command: one constructor per row of [docs/protocol.md]'s command
           tables, carrying that command's derived argument record. *)
 

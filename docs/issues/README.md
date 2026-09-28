@@ -108,7 +108,7 @@ L29 first; L30 needs only L29's loader and the models service; L31–L34 in orde
 
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
-| L37 | **Playbook directories and scripts.** Directory layout, `file`/`source` scripts, `returns` shapes and validation, `script:` steps, `playbook test`, `show`/`check`, the safety test. | extr-plaz, extr-zdst, extr-8o1h, extr-vgir, extr-mp5z, extr-lslp, extr-k40c | L36 | [ ] |
+| L37 | **Playbook directories and scripts.** Directory layout, `file`/`source` scripts, `returns` shapes and validation, `script:` steps, `playbook test`, `show`/`check`, the safety test. | extr-plaz, extr-zdst, extr-8o1h, extr-vgir, extr-mp5z, extr-lslp, extr-k40c | L36 | [x] |
 | L38 | **`drive` is the one entry point.** Fold `run` into `drive` (playbook or none), argument filling for query parameters, records bypass the models, `repeat`, `data` summary and `--out` JSONL, cost reporting, trace. | extr-andy, extr-mq0e, extr-ve3k, extr-mfmf, extr-b3u0, extr-p7sj, extr-5x9e, extr-p152 | L37 | [ ] |
 | L39 | **Example and live acceptance.** books.toscrape.com playbook directory, fetch-based test script, skill update, live missions (whole category; filtered by price). Marks the spec completed. | extr-tkco, extr-oaci, extr-8ubt | L38 | [ ] |
 

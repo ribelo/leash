@@ -13,20 +13,26 @@ type goal_step = { goal : string; hint : string option } [@@deriving yojson]
 type use_step = { use : string; args : Yojson.Safe.t option; optional : bool option }
 [@@deriving yojson]
 
-type step = Goal of goal_step | Use of use_step
+(* extr-8o1h: a step that runs one of the playbook's own scripts by name; [args] are
+   strings with the run's placeholders substituted, like a [use] step's. *)
+type script_step = { script : string; args : Yojson.Safe.t option } [@@deriving yojson]
+type step = Goal of goal_step | Use of use_step | Script of script_step
 
 let step_of_yojson = function
-  | `Assoc fields as json ->
-      if List.mem_assoc "goal" fields && not (List.mem_assoc "use" fields) then
-        Result.map (fun x -> Goal x) (goal_step_of_yojson json)
-      else if List.mem_assoc "use" fields && not (List.mem_assoc "goal" fields) then
-        Result.map (fun x -> Use x) (use_step_of_yojson json)
-      else Error "step must have exactly one of goal or use"
+  | `Assoc fields as json -> (
+      match
+        List.filter (fun key -> List.mem_assoc key fields) [ "goal"; "use"; "script" ]
+      with
+      | [ "goal" ] -> Result.map (fun x -> Goal x) (goal_step_of_yojson json)
+      | [ "use" ] -> Result.map (fun x -> Use x) (use_step_of_yojson json)
+      | [ "script" ] -> Result.map (fun x -> Script x) (script_step_of_yojson json)
+      | _ -> Error "step must have exactly one of goal, use or script")
   | _ -> Error "step must be an object"
 
 let yojson_of_step = function
   | Goal step -> yojson_of_goal_step step
   | Use step -> yojson_of_use_step step
+  | Script step -> yojson_of_script_step step
 
 type procedure = {
   slug : string;
@@ -44,12 +50,42 @@ type procedure = {
 }
 [@@deriving yojson]
 
+(* extr-plaz extr-zdst: a script as the playbook writes it — a file relative to the
+   playbook directory or a short inline source, and the shape its result must have. *)
+type script_decl = {
+  file : string option;
+  source : string option;
+  returns : Shape.t;
+  max_bytes : int option;
+}
+[@@deriving yojson]
+
+(* The section is an object of script name to declaration; the derived list codec would
+   write an array, so the two functions are the object's. *)
+type scripts = (string * script_decl) list
+
+let scripts_of_yojson = function
+  | `Assoc members ->
+      let rec go acc = function
+        | [] -> Ok (List.rev acc)
+        | (name, json) :: rest -> (
+            match script_decl_of_yojson json with
+            | Ok decl -> go ((name, decl) :: acc) rest
+            | Error why -> Error (Printf.sprintf "script %s: %s" name why))
+      in
+      go [] members
+  | _ -> Error "scripts must be an object of script name to declaration"
+
+let yojson_of_scripts scripts =
+  `Assoc (List.map (fun (name, decl) -> (name, yojson_of_script_decl decl)) scripts)
+
 type t = {
   site : string;
   entry : string;
   description : string;
   pages : page list;
   procedures : procedure list;
+  scripts : scripts option;
 }
 [@@deriving yojson]
 
@@ -62,7 +98,25 @@ type checker =
   | Row of string * string
   | Judgment of string
 
-type loaded = { file : string; playbook : t; checks : (string * checker list) list }
+(* extr-plaz extr-k40c: a script the loader has resolved. The record is private: the only
+   values of this type are the ones [validate] builds from a playbook directory, and the
+   only function that hands script text to the browser takes one — so nothing a model wrote
+   can become a script. *)
+type script = {
+  name : string;
+  code : string;
+  returns : Shape.t;
+  max_bytes : int;
+  origin : string;
+}
+
+type loaded = {
+  file : string;
+  dir : string option;
+  playbook : t;
+  checks : (string * checker list) list;
+  scripts : script list;
+}
 
 (* run-m0r8: a planner-written procedure is proposed to the operator, never merged by the
    run: the proposal file names the site it belongs to and carries the procedure in the
@@ -196,6 +250,7 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
     List.length names = List.length (List.sort_uniq String.compare names)
   in
   let slugs = List.map (fun (p : procedure) -> p.slug) book.procedures in
+  let script_names = List.map fst (Option.value ~default:[] book.scripts) in
   let* () = require (valid_name procedure) "slug must be a lowercase slug" in
   let* () = require (trim proc.description <> "") "description must not be empty" in
   let* () =
@@ -249,6 +304,22 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
             "use args must be an object of strings"
         in
         steps tail
+    | Script step :: tail ->
+        let* () =
+          require
+            (List.mem step.script script_names)
+            ("script step names unknown script " ^ step.script)
+        in
+        let* () =
+          require
+            (match step.args with
+            | None -> true
+            | Some (`Assoc fields) ->
+                List.for_all (function _, `String _ -> true | _ -> false) fields
+            | Some _ -> false)
+            "script args must be an object of strings"
+        in
+        steps tail
   in
   let* () = steps proc.steps in
   let rec expectations = function
@@ -263,7 +334,104 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
   in
   expectations proc.expect
 
-let validate ~file (book : t) =
+(* extr-plaz: a script is a file relative to its playbook directory or a short inline
+   source. A file is resolved at load: no absolute path, no [..] component, and the path
+   after every symlink is resolved must still be inside the directory — a link may point
+   at another file of the playbook, never out of it. The text is read here, once, so a run
+   works from what the operator saw at load. *)
+let default_max_bytes = 8 * 1024 * 1024
+let ceiling_max_bytes = 16 * 1024 * 1024
+let max_inline_bytes = 4096
+let max_file_bytes = 1024 * 1024
+
+let read_script_file ~dir file =
+  let ( let* ) = Result.bind in
+  let* dir =
+    match dir with
+    | Some dir -> Ok dir
+    | None -> Error "a file script needs a playbook directory"
+  in
+  let* () =
+    if file = "" then Error "file must not be empty"
+    else if String.contains file '\000' then Error "file must not contain NUL"
+    else if not (Filename.is_relative file) then
+      Error (Printf.sprintf "file %s must be relative to the playbook directory" file)
+    else if List.mem ".." (String.split_on_char '/' file) then
+      Error (Printf.sprintf "file %s must not contain .." file)
+    else if not (String.ends_with ~suffix:".js" file) then
+      Error (Printf.sprintf "file %s must be a .js file" file)
+    else Ok ()
+  in
+  match (Unix.realpath dir, Unix.realpath (Filename.concat dir file)) with
+  | exception Unix.Unix_error (why, _, _) ->
+      Error (Printf.sprintf "file %s: %s" file (Unix.error_message why))
+  | root, real -> (
+      if not (starts (root ^ "/") real) then
+        Error (Printf.sprintf "file %s resolves outside the playbook directory" file)
+      else
+        match Unix.stat real with
+        | exception Unix.Unix_error (why, _, _) ->
+            Error (Printf.sprintf "file %s: %s" file (Unix.error_message why))
+        | { Unix.st_kind = Unix.S_REG; st_size; _ } -> (
+            if st_size > max_file_bytes then
+              Error (Printf.sprintf "file %s is over %d bytes" file max_file_bytes)
+            else
+              try Ok (In_channel.with_open_bin real In_channel.input_all)
+              with Sys_error why -> Error (Printf.sprintf "file %s: %s" file why))
+        | _ -> Error (Printf.sprintf "file %s is not a regular file" file))
+
+let resolve_scripts ~file ~dir (book : t) =
+  let decls = Option.value ~default:[] book.scripts in
+  let refuse name why = Error (Printf.sprintf "%s: script %s: %s" file name why) in
+  let rec go seen acc = function
+    | [] -> Ok (List.rev acc)
+    | (name, (decl : script_decl)) :: rest -> (
+        if not (valid_name name) then refuse name "name must be a lowercase slug"
+        else if List.mem name seen then refuse name "declared twice"
+        else
+          match Shape.check_returns decl.returns with
+          | Error why -> refuse name why
+          | Ok () -> (
+              match
+                Option.fold ~none:(Ok default_max_bytes)
+                  ~some:(fun n ->
+                    if n >= 1 && n <= ceiling_max_bytes then Ok n
+                    else
+                      Error (Printf.sprintf "max_bytes must be 1..%d" ceiling_max_bytes))
+                  decl.max_bytes
+              with
+              | Error why -> refuse name why
+              | Ok max_bytes -> (
+                  let code =
+                    match (decl.file, decl.source) with
+                    | Some path, None ->
+                        Result.map
+                          (fun code -> (code, "file " ^ path))
+                          (read_script_file ~dir path)
+                    | None, Some source ->
+                        if String.length source > max_inline_bytes then
+                          Error
+                            (Printf.sprintf
+                               "inline source is over %d bytes: put it in a file"
+                               max_inline_bytes)
+                        else Ok (source, "inline")
+                    | _ -> Error "declare exactly one of file or source"
+                  in
+                  match code with
+                  | Error why -> refuse name why
+                  | Ok (code, origin) ->
+                      if String.trim code = "" then refuse name "the script is empty"
+                      else if String.contains code '\000' then
+                        refuse name "the script contains NUL"
+                      else
+                        go (name :: seen)
+                          ({ name; code; returns = decl.returns; max_bytes; origin }
+                          :: acc)
+                          rest)))
+  in
+  go [] [] decls
+
+let validate ~file ~dir (book : t) =
   let ( let* ) = Result.bind in
   let refuse ?(procedure = "<playbook>") reason =
     Error (Printf.sprintf "%s: procedure %s: %s" file procedure reason)
@@ -275,7 +443,11 @@ let validate ~file (book : t) =
     List.length names = List.length (List.sort_uniq String.compare names)
   in
   let* () =
-    require (book.site <> "" && not (String.contains book.site '/')) "invalid site"
+    require
+      (book.site <> "" && book.site <> "." && book.site <> ".."
+      && (not (String.contains book.site '/'))
+      && not (String.contains book.site '\000'))
+      "invalid site"
   in
   let* () =
     require
@@ -333,7 +505,7 @@ let validate ~file (book : t) =
       let proc = List.find (fun (p : procedure) -> p.slug = slug) book.procedures in
       let rec steps = function
         | [] -> Ok ()
-        | Goal _ :: tail -> steps tail
+        | (Goal _ | Script _) :: tail -> steps tail
         | Use use :: tail ->
             let* () = visit (slug :: path) use.use in
             steps tail
@@ -357,16 +529,33 @@ let validate ~file (book : t) =
             p.expect ))
       book.procedures
   in
-  Ok { file; playbook = book; checks }
+  let* scripts = resolve_scripts ~file ~dir book in
+  Ok { file; dir; playbook = book; checks; scripts }
 
-let of_json ~file json =
+let of_json ?dir ~file json =
   match t_of_yojson json with
   | Error reason -> Error (file ^ ": " ^ reason)
-  | Ok book -> validate ~file book
+  | Ok book -> validate ~file ~dir book
 
-let load file =
-  if not (String.ends_with ~suffix:".json" file) then
-    Error (file ^ ": playbooks use JSON (<site>.json); YAML is not supported")
+(* The playbook as another playbook value, validated in the same directory: what a merge
+   or a planner's procedure needs, so a file script is resolved against the directory it
+   came from. *)
+let revalidate (book : loaded) playbook = validate ~file:book.file ~dir:book.dir playbook
+
+(* extr-plaz: a playbook is a directory, [<name>/playbook.json] and whatever files sit
+   beside it. Errors name the playbook.json path — or the path given when it is not a
+   directory at all. *)
+let load dir =
+  let file = Filename.concat dir "playbook.json" in
+  if Sys.file_exists dir && not (Sys.is_directory dir) then
+    Error (dir ^ ": a playbook is a directory holding playbook.json, not a single file")
+  else if not (Sys.file_exists file) then
+    if
+      Sys.file_exists (Filename.concat dir "playbook.yaml")
+      || Sys.file_exists (Filename.concat dir "playbook.yml")
+    then
+      Error (file ^ ": playbooks use JSON (<name>/playbook.json); YAML is not supported")
+    else Error (file ^ ": No such file or directory")
   else
     try
       let ch = open_in_bin file in
@@ -374,10 +563,13 @@ let load file =
         ~finally:(fun () -> close_in ch)
         (fun () ->
           let json = Yojson.Safe.from_channel ch in
-          of_json ~file json)
+          of_json ~dir ~file json)
     with
     | Sys_error reason -> Error (file ^ ": " ^ reason)
     | Yojson.Json_error reason -> Error (file ^ ": invalid JSON: " ^ reason)
+
+let script_named (book : loaded) name =
+  List.find_opt (fun (script : script) -> script.name = name) book.scripts
 
 let directory () =
   let home =
@@ -395,14 +587,19 @@ let list () =
       let files = Sys.readdir dir |> Array.to_list |> List.sort String.compare in
       let rec collect acc = function
         | [] -> Ok (List.rev acc)
-        | file :: tail ->
-            if
-              String.ends_with ~suffix:".json" file
-              || String.ends_with ~suffix:".yaml" file
-            then
-              match load (Filename.concat dir file) with
+        | entry :: tail ->
+            let path = Filename.concat dir entry in
+            if String.starts_with ~prefix:"." entry then collect acc tail
+            else if Sys.is_directory path then
+              match load path with
               | Error _ as error -> error
               | Ok book -> collect (book :: acc) tail
+            else if
+              List.exists
+                (fun suffix -> String.ends_with ~suffix entry)
+                [ ".json"; ".yaml"; ".yml" ]
+            then
+              Error (path ^ ": playbooks are directories; move it to <name>/playbook.json")
             else collect acc tail
       in
       collect [] files
@@ -414,7 +611,7 @@ let show name =
     || String.contains name '\\' || String.contains name '\000'
     || String.contains name '*' || String.contains name '?'
   then Error (name ^ ": invalid playbook name")
-  else load (Filename.concat (directory ()) (name ^ ".json"))
+  else load (Filename.concat (directory ()) name)
 
 (* run-m0r8: the XDG state directory proposals live in, resolved the way the config
    directory is: [$XDG_STATE_HOME/leash/proposed], [$HOME/.local/state] when the variable
@@ -458,7 +655,7 @@ let propose ~site (proc : procedure) =
 let propose_book (book : t) =
   let directory = proposed_directory () in
   let path = Filename.concat directory (book.site ^ ".json") in
-  match (validate ~file:path book, Config.ensure_dir directory) with
+  match (validate ~file:path ~dir:None book, Config.ensure_dir directory) with
   | Error why, _ | _, Error why -> Error why
   | Ok _, Ok () -> (
       try
@@ -516,15 +713,24 @@ let accept path =
   if match json with `Assoc fields -> List.mem_assoc "entry" fields | _ -> false then
     let* discovered = of_json ~file:path json in
     let draft = discovered.playbook in
+    (* extr-k40c: a discovered playbook was written by a model, and a script is never
+       model output: a proposal carries none, whatever it declares. *)
+    let* () =
+      match draft.scripts with
+      | None | Some [] -> Ok ()
+      | Some _ -> Error (path ^ ": a proposed playbook cannot carry scripts")
+    in
     let* existing =
       match installed_for_site draft.site with
       | Ok book -> Ok (Some book)
       | Error why when String.starts_with ~prefix:"no installed playbook" why -> Ok None
       | Error why -> Error why
     in
-    let merged, destination, replaced =
+    let merged, destination, dir, replaced =
       match existing with
-      | None -> (draft, Filename.concat (directory ()) (draft.site ^ ".json"), false)
+      | None ->
+          let dir = Filename.concat (directory ()) draft.site in
+          (draft, Filename.concat dir "playbook.json", Some dir, false)
       | Some book ->
           let pages =
             book.playbook.pages
@@ -547,9 +753,9 @@ let accept path =
                 else current @ [ proc ])
               book.playbook.procedures draft.procedures
           in
-          ({ book.playbook with pages; procedures }, book.file, true)
+          ({ book.playbook with pages; procedures }, book.file, book.dir, true)
     in
-    let* _ = validate ~file:destination merged in
+    let* _ = validate ~file:destination ~dir merged in
     let* () = Config.ensure_dir (Filename.dirname destination) in
     try
       let channel =
@@ -580,7 +786,7 @@ let accept path =
       else book.playbook.procedures @ [ proposal.procedure ]
     in
     let merged = { book.playbook with procedures } in
-    let* (_ : loaded) = validate ~file:book.file merged in
+    let* (_ : loaded) = revalidate book merged in
     let json = Yojson.Safe.pretty_to_string (yojson_of_t merged) ^ "\n" in
     try
       let channel =
@@ -638,7 +844,21 @@ let retry_once ~execute ~verify =
     execute ();
     verify ())
 
-let inspect book =
+let inspect ?(code = false) book =
+  let scripts =
+    List.map
+      (fun (script : script) ->
+        `Assoc
+          ([
+             ("script", `String script.name);
+             ("origin", `String script.origin);
+             ("bytes", `Int (String.length script.code));
+             ("max_bytes", `Int script.max_bytes);
+             ("returns", Shape.yojson_of_t script.returns);
+           ]
+          @ if code then [ ("code", `String script.code) ] else []))
+      book.scripts
+  in
   let checks =
     List.map
       (fun (slug, checkers) ->
@@ -653,6 +873,7 @@ let inspect book =
     [
       ("file", `String book.file);
       ("playbook", yojson_of_t book.playbook);
+      ("scripts", `List scripts);
       ("resolved", `List checks);
     ]
 

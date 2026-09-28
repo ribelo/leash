@@ -79,11 +79,11 @@ let call_function browser ~object_id ~body ~argument =
    popup is gone (docs/cdp-shapes.md, L10) -- so it settles the way a trusted input does: a
    new target with this tab as its opener ends the wait with a null value, and this tab's
    own death ends it with [tab-gone] (own-teh1). Nothing is re-issued. *)
-let evaluated browser ~object_id ~body ~arguments =
+let evaluated ?(call = call_function_with) browser ~object_id ~body ~arguments =
   match
     Dialog_race.first browser.dialog_race (fun () ->
         Dispatch.first (browser.acknowledge ()) (fun () ->
-            call_function_with browser ~object_id ~body ~arguments))
+            call browser ~object_id ~body ~arguments))
   with
   | `Dialog dialog ->
       Error
@@ -147,6 +147,100 @@ let eval browser (args : P.eval_args) =
       in
       if String.length (Eta_json.to_string value) > cap then Error (too_large "result")
       else Ok P.{ value }
+
+(* extr-8o1h extr-vgir extr-k40c: running a playbook script. This is the one function that
+   hands a script's text to the browser, and it takes a {!Playbook.script} — a value only
+   the playbook loader makes, from a playbook directory. The text is called as the body of
+   an async function of [args] on the page's global object, [returnByValue] and
+   [awaitPromise], so a script may [await fetch(...)] the site's own endpoints with the
+   page's cookies and origin. The result is bounded by the script's [max_bytes] and
+   validated against its [returns] before anyone sees it. *)
+let script_failed message = error "script-failed" message
+
+let bounded_message text =
+  let text = String.trim text in
+  if String.length text <= 500 then text else String.sub text 0 500 ^ "..."
+
+(* The exception a script threw, as its author wants to read it: the description a
+   thrown [Error] carries (name, message, stack head), else the plain text. *)
+let thrown reply =
+  let details = nested [ "exceptionDetails" ] (fun x -> Ok x) reply in
+  Option.map
+    (fun details ->
+      match nested [ "exception"; "description" ] D.string details with
+      | Some description -> description
+      | None ->
+          Option.value ~default:"the script threw" (nested [ "text" ] D.string details))
+    details
+
+let call_script browser ~object_id ~body ~arguments =
+  match
+    browser.call "Runtime.callFunctionOn"
+      (obj
+         [
+           ("objectId", str object_id);
+           ("functionDeclaration", str body);
+           ("arguments", `List arguments);
+           ("returnByValue", `Bool true);
+           ("awaitPromise", `Bool true);
+         ])
+  with
+  | Error e when e.P.message = "browser refused Runtime.callFunctionOn" ->
+      Error
+        (script_failed
+           "the browser refused the script or could not return its result by value")
+  | Error e -> Error e
+  | Ok reply -> (
+      match thrown reply with
+      | Some description -> Error (script_failed (bounded_message description))
+      | None -> ( match remote_value reply with Some x -> Ok x | None -> Ok `Null))
+
+type script_ran = { value : Yojson.Safe.t; records : int; bytes : int; elapsed_ms : int }
+
+let script_args_cap = 65_536
+
+let script browser (script : Playbook.script) ~args =
+  let arguments = `Assoc (List.map (fun (name, value) -> (name, `String value)) args) in
+  if String.length (Eta_json.to_string arguments) > script_args_cap then
+    Error (too_large "script arguments")
+  else
+    let started = browser.now () in
+    let* object_id = remote_object browser in
+    let* value =
+      evaluated ~call:call_script browser ~object_id
+        ~body:("async function(args) {\n" ^ script.Playbook.code ^ "\n}")
+        ~arguments:[ obj [ ("value", arguments) ] ]
+    in
+    let elapsed_ms = int_of_float ((browser.now () -. started) *. 1000.) in
+    let bytes = String.length (Eta_json.to_string value) in
+    if bytes > script.Playbook.max_bytes then
+      Error
+        (error "too-large"
+           (Printf.sprintf "the script's result is %d bytes, over its bound of %d" bytes
+              script.Playbook.max_bytes))
+    else
+      match Shape.validate script.Playbook.returns value with
+      | Error why -> Error (error "script-invalid" why)
+      | Ok () -> Ok { value; records = Shape.records value; bytes; elapsed_ms }
+
+(* extr-lslp: a dry parse. The script's text is only ever handed to [new Function], as the
+   text of the same async function [script] would call, in a blank page the caller owns:
+   it is compiled and never called. A page with a CSP that forbids eval would refuse
+   this, which is why the caller uses about:blank. Returns [None] when it parses and the
+   engine's message when it does not. *)
+let script_syntax browser (script : Playbook.script) =
+  let expression =
+    Printf.sprintf
+      "(() => { try { new (Object.getPrototypeOf(async function () \
+       {}).constructor)('args', %s); return null; } catch (e) { return String(e && \
+       e.message ? e.message : e); } })()"
+      (Yojson.Safe.to_string (`String script.Playbook.code))
+  in
+  let* value = evaluate browser expression in
+  match value with
+  | `Null -> Ok None
+  | `String message -> Ok (Some (bounded_message message))
+  | _ -> Error (internal "browser returned an unexpected syntax verdict")
 
 let truncate_chars max_chars text =
   let length = String.length text in

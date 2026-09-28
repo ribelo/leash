@@ -17,3 +17,4 @@ module Run = Run
 module Tabs = Tabs
 module Expiry = Expiry
 module Control = Control
+module Shape = Shape

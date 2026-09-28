@@ -81,7 +81,7 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 
 ## Implementation Decisions
 
-- **Format.** JSON only, in `<site>.json` files. Types with `[@@deriving yojson]`; smart-constructor modules for slugs, page kinds and expectation sentences. A `.yaml` file is refused explicitly with a message naming JSON.
+- **Format.** JSON only, in `<site>.json` files (milestone 9 replaced the file with a directory, `<name>/playbook.json`, so scripts can sit beside it: `extract/01-extract.md`, story `extr-plaz`). Types with `[@@deriving yojson]`; smart-constructor modules for slugs, page kinds and expectation sentences. A `.yaml` file is refused explicitly with a message naming JSON.
 - **Checker resolution** is a small grammar over the expectation sentence, tried in order: page kind (`pages` names), "shows"/"contains" text, "downloaded" (+ optional mime word), "no dialog", "<role> named <text>". Anything else → JEV score. Resolution happens at load; the playbook's `check` output shows which checker each sentence got, so an author sees when they fell through to judgment.
 - **Page kinds** are the semantic summary's key. A kind matches by URL pattern or by a text marker; the runner labels the current page with the first matching kind or `unknown`. Page text is never sent to the upper levels (story 18); the operator level keeps jev-ultrafast's contract untouched.
 - **Questions to JEV** at the upper levels use the same System One client and the same instruction style as the operator level; instruction texts are versioned in `questions.ml` next to jev's, with the 255-option ceiling asserted in code.

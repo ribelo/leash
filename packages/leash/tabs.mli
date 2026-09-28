@@ -433,3 +433,27 @@ val sweep : t -> decide:(idleness -> sweep_step) -> (Protocol.Handle.t * sweep_s
     never closed. Returns the tabs it acted on, in handle order. *)
 
 val stop : t -> unit
+
+val playbook_test :
+  ?installed:Playbook.loaded list ->
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.playbook_test_args ->
+  (Protocol.playbook_test_result, Protocol.error) result
+(** extr-mp5z: run one script of an installed playbook on the tab's page and answer its
+    validated output. The script is looked up in the playbook directory by name
+    ([<playbook>/<script>]); the wire carries no script text (extr-k40c). It is
+    owner-bound and serialized on the tab like [eval]. A script that threw is
+    [script-failed], one whose result does not fit its [returns] is [script-invalid] with
+    the path of the first mismatch, one over its bound is [too-large]. [installed] hands a
+    test its playbooks. *)
+
+val playbook_check :
+  ?installed:Playbook.loaded list ->
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.playbook_check_args ->
+  (Protocol.playbook_check_result, Protocol.error) result
+(** extr-lslp: compile every script of an installed playbook with [new Function] — never
+    calling it — in a blank tab the caller owns for the duration and that is closed after,
+    and answer each script's verdict. *)

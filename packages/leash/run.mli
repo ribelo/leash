@@ -71,6 +71,16 @@ type step_request = {
     when it declares them, the operator's defaults otherwise, always bounded by what is
     left of the run. *)
 
+type script_outcome =
+  | Collected of { value : Yojson.Safe.t; records : int; bytes : int; elapsed_ms : int }
+  | Rejected of { reason : string; elapsed_ms : int }
+      (** extr-8o1h: what a script step came to. [Collected] is a result that fit its
+          [returns] shape and its size bound; [Rejected] is a script that threw, whose
+          result did not fit its shape or was too large. A rejection fails the procedure's
+          attempt with its reason in the trace (the whole procedure is replayed once, like
+          a failed expectation); a protocol error is a browser failure and ends the run.
+      *)
+
 type plan_trigger =
   | Blocked
   | Failed
@@ -166,6 +176,15 @@ type handler = {
           [playbook accept]. *)
   hand_off : reason:string -> (Protocol.tab_info, Protocol.error) result;
       (** run-klp9: a planner's handoff, which leaves the tab [with_human]. *)
+  script :
+    Playbook.script ->
+    args:(string * string) list ->
+    (script_outcome, Protocol.error) result;
+      (** extr-8o1h extr-k40c: run one of the current playbook's scripts on the page. The
+          argument is a {!Playbook.script}, which only the playbook loader makes, so
+          nothing a model wrote can reach it; production passes {!Reading.script}'s result
+          mapped to a {!script_outcome}. A [dialog-open] error ends the run as a drive's
+          dialog does. *)
 }
 
 type args = {

@@ -59,6 +59,12 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
       lift P.yojson_of_net_request_result (Tabs.net_request tabs ~owner args)
   | P.Cookies args -> lift P.yojson_of_cookies_result (Tabs.cookies tabs ~owner args)
   | P.Storage args -> lift P.yojson_of_storage_result (Tabs.storage tabs ~owner args)
+  | P.Playbook_test args ->
+      lift P.yojson_of_playbook_test_result
+        (Tabs.playbook_test ?installed tabs ~owner args)
+  | P.Playbook_check args ->
+      lift P.yojson_of_playbook_check_result
+        (Tabs.playbook_check ?installed tabs ~owner args)
   | P.Upload args -> lift P.yojson_of_action_result (Tabs.upload tabs ~owner args)
   | P.Hover args -> lift P.yojson_of_action_result (Tabs.hover tabs ~owner args)
   | P.Dialog args -> lift P.yojson_of_action_result (Tabs.dialog tabs ~owner args)
@@ -128,6 +134,7 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
                 description = "Discovered " ^ host;
                 pages = [];
                 procedures = [];
+                scripts = None;
               }
           in
           match Playbook.of_json ~file:"discovery seed" (Playbook.yojson_of_t seed) with
@@ -190,6 +197,8 @@ let command_tab = function
   | P.Upload args -> P.Handle.to_string args.tab
   | P.Hover args -> P.Handle.to_string args.tab
   | P.Eval args -> P.Handle.to_string args.tab
+  | P.Playbook_test args -> P.Handle.to_string args.tab
+  | P.Playbook_check _ -> "-"
   | P.Nav args -> P.Handle.to_string args.tab
   | P.Click args -> P.Handle.to_string args.tab
   | P.Fill args -> P.Handle.to_string args.tab
@@ -276,7 +285,12 @@ let budget (request : (P.request, string) result) =
          turn's correction call (at most 30 s, L32) and the reply — so the listener never
          cancels a run at the instant it is due to answer. *)
       Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 75))
-  | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _; _ } -> Some (seconds 35)
+  | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _ | P.Playbook_test _; _ } ->
+      (* A script may await a fetch; the CDP call's own deadline is 30 s. *)
+      Some (seconds 35)
+  | Ok { command = P.Playbook_check _; _ } ->
+      (* A blank tab opens, each script compiles in one call, and the tab closes. *)
+      Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
   | Ok

@@ -113,8 +113,11 @@ let playbook
             description = "Site A";
             pages = [ page "cart" (cart_url ^ "*"); page "home" (home_url ^ "*") ];
             procedures;
+            scripts = None;
           };
       checks = [];
+      dir = None;
+      scripts = [];
     }
 
 let drive ?(status = "done") ?reason () =
@@ -265,6 +268,7 @@ let handler ~(models : Models.t) (h : harness) : R.handler =
         (fun ~reason ->
           h.handoffs <- h.handoffs @ [ reason ];
           Ok (tab_info ()));
+      script = (fun _ ~args:_ -> Alcotest.fail "planner tests run no script");
     }
 
 let run ?(installed = [ playbook () ]) h models run_args =
@@ -498,8 +502,8 @@ let with_xdg f =
 
 let playbook_file root =
   Filename.concat
-    (Filename.concat (Filename.concat root "leash") "playbooks")
-    (site ^ ".json")
+    (Filename.concat (Filename.concat (Filename.concat root "leash") "playbooks") site)
+    "playbook.json"
 
 let proposal_file root slug =
   Filename.concat
@@ -980,7 +984,7 @@ let proposals () =
       Alcotest.(check string) "run-m0r8 the accepted site" site accepted.B.site;
       Alcotest.(check string) "run-m0r8 the accepted slug" "go-to-cart" accepted.B.slug;
       Alcotest.(check bool) "run-m0r8 it was appended" false accepted.B.replaced;
-      let merged = ok (B.load file) in
+      let merged = ok (B.load (Filename.dirname file)) in
       Alcotest.(check (list string))
         "run-m0r8 the playbook grew by one procedure" [ "step"; "go-to-cart" ]
         (List.map
@@ -1012,7 +1016,7 @@ let accept_rules () =
       Alcotest.(check bool)
         "run-m0r8 a second proposal for the same slug replaces it" true
         replaced.B.replaced;
-      let merged = ok (B.load file) in
+      let merged = ok (B.load (Filename.dirname file)) in
       Alcotest.(check int)
         "run-m0r8 still one procedure plus the playbook's own" 2
         (List.length merged.B.playbook.B.procedures);
@@ -1153,15 +1157,18 @@ let discover_accept () =
                   deadline_s = None;
                 };
               ];
+            scripts = None;
           }
       in
       let path = ok (B.propose_book draft) in
-      let target = Filename.concat (B.directory ()) "new.example.json" in
+      let target =
+        Filename.concat (Filename.concat (B.directory ()) "new.example") "playbook.json"
+      in
       Alcotest.(check bool) "proposal exists" true (Sys.file_exists path);
       Alcotest.(check bool) "not installed without accept" false (Sys.file_exists target);
       let accepted = ok (B.accept path) in
       Alcotest.(check string) "accepted new site" target accepted.B.playbook;
-      let loaded = ok (B.load target) in
+      let loaded = ok (B.load (Filename.dirname target)) in
       Alcotest.(check int) "page installed" 1 (List.length loaded.playbook.pages);
       Alcotest.(check int)
         "procedure installed" 1

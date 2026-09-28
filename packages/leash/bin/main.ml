@@ -102,6 +102,30 @@ let service_socket ~config ~socket =
              ^ " does not resolve; set XDG_RUNTIME_DIR or pass --socket")
           else Ok path)
 
+(* One request to the service and its decoded reply; an error is the exit status to
+   return after saying what went wrong. *)
+let exchange ~config ~socket request =
+  match service_socket ~config ~socket with
+  | Error why -> Error (usage why)
+  | Ok path -> (
+      try
+        let raw = Yojson.Safe.from_string (send path request) in
+        match P.decode_reply raw with
+        | Error why -> Error (failure ("invalid service reply: " ^ why))
+        | Ok reply -> Ok reply
+      with
+      | Unix.Unix_error (code, _, _) -> Error (failure (Unix.error_message code))
+      | Eio.Io _ as err -> Error (failure (Printexc.to_string err))
+      | Yojson.Json_error msg -> Error (failure ("invalid JSON reply: " ^ msg))
+      | End_of_file -> Error (failure "service closed without a reply"))
+
+let owner_of ~owner =
+  match owner with
+  | Some owner when String.trim owner <> "" -> Some owner
+  | Some _ | None ->
+      Option.bind (Sys.getenv_opt "DSH_SESSION_ID") (fun id ->
+          if id = "" then None else Some ("dsh:" ^ id))
+
 let rec perform command fields positionals options =
   match (command, positionals) with
   (* hard-xg6y hard-ovbx hard-vq5s: `net TAB` lists; `net TAB body ID` and `net TAB request
@@ -216,45 +240,32 @@ and perform_wire command fields positionals options =
                     | Ok owner -> (
                         let request = P.encode_request P.{ owner; command = decoded } in
                         match
-                          service_socket ~config:(text "config") ~socket:(text "socket")
+                          exchange ~config:(text "config") ~socket:(text "socket") request
                         with
-                        | Error why -> usage why
-                        | Ok path -> (
-                            try
-                              let raw = Yojson.Safe.from_string (send path request) in
-                              match P.decode_reply raw with
-                              | Error why -> failure ("invalid service reply: " ^ why)
-                              | Ok reply ->
-                                  let body =
-                                    match reply with
-                                    | P.Success result -> result
-                                    | P.Failure error -> P.yojson_of_error error
-                                  in
-                                  let ok =
-                                    match reply with
-                                    | P.Success _ -> true
-                                    | P.Failure _ -> false
-                                  in
-                                  if use_table && ok then table command body
-                                  else
-                                    print_endline
-                                      (if pretty then Yojson.Safe.pretty_to_string body
-                                       else Yojson.Safe.to_string body);
-                                  if ok then 0 else 1
-                            with
-                            | Unix.Unix_error (code, _, _) ->
-                                failure (Unix.error_message code)
-                            | Eio.Io _ as err -> failure (Printexc.to_string err)
-                            | Yojson.Json_error msg ->
-                                failure ("invalid JSON reply: " ^ msg)
-                            | End_of_file -> failure "service closed without a reply")))))
-        )
+                        | Error status -> status
+                        | Ok reply ->
+                            let body =
+                              match reply with
+                              | P.Success result -> result
+                              | P.Failure error -> P.yojson_of_error error
+                            in
+                            let ok =
+                              match reply with
+                              | P.Success _ -> true
+                              | P.Failure _ -> false
+                            in
+                            if use_table && ok then table command body
+                            else
+                              print_endline
+                                (if pretty then Yojson.Safe.pretty_to_string body
+                                 else Yojson.Safe.to_string body);
+                            if ok then 0 else 1)))))
 
 (* svc-hi4f: the table is the CLI's contract. Every command names its positionals in the
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
    `leash <command> --help` shows the whole call. The four shared options go on every
    command; --table only on the two that render one. *)
-type option_kind = Str | Int | Float | Bool | Json | Strings
+type option_kind = Str | Int | Float | Bool | Json | Strings | Pairs
 
 (* [Strings] is the repeated mission-expectation option [leash run] will carry
    (run-4j1v), declared here so the command lands as one table entry once the Door's name
@@ -306,6 +317,16 @@ let option_term { name; kind; docv; doc } =
       Term.(
         const (Option.map (fun value -> (name, str value)))
         $ Arg.(value & opt (some string) None & arg_info))
+  | Pairs ->
+      (* extr-mp5z: --arg K=V, repeated, is the wire's `args` object of strings. *)
+      Term.(
+        const (fun pairs ->
+            if pairs = [] then None
+            else
+              Some
+                ( "args",
+                  `Assoc (List.map (fun (key, value) -> (key, `String value)) pairs) ))
+        $ Arg.(value & opt_all (pair ~sep:'=' string string) [] & arg_info))
   | Strings ->
       Term.(
         const (fun values ->
@@ -334,7 +355,8 @@ let positional_term positionals =
     (Term.const [])
     (List.mapi (fun index spec -> (index, spec)) positionals)
 
-let command name doc positionals options examples =
+let command ?wire name doc positionals options examples =
+  let wire = Option.value ~default:name wire in
   let fields = List.map (fun spec -> spec.field) positionals in
   let collected =
     List.fold_left
@@ -348,15 +370,15 @@ let command name doc positionals options examples =
   in
   Cmd.v (Cmd.info name ~doc ~man)
     Term.(
-      const (fun args opts () -> perform name fields args opts)
+      const (fun args opts () -> perform wire fields args opts)
       $ positional_term positionals $ collected)
 
 (* run-tcuz run-dbji run-ykq4: these authoring commands need no service. *)
 let playbook_command =
-  let output = function
+  let output ?code = function
     | Error message -> failure message
     | Ok book ->
-        print_endline (Yojson.Safe.pretty_to_string (Leash.Playbook.inspect book));
+        print_endline (Yojson.Safe.pretty_to_string (Leash.Playbook.inspect ?code book));
         0
   in
   let name = Arg.(required & pos 0 (some string) None & info [] ~docv:"NAME") in
@@ -378,13 +400,104 @@ let playbook_command =
   in
   let show =
     Cmd.v
-      (Cmd.info "show" ~doc:"Show a named installed playbook and resolved checkers.")
-      Term.(const (fun name () () -> output (Leash.Playbook.show name)) $ name $ const ())
+      (Cmd.info "show"
+         ~doc:
+           "Show a named installed playbook: its scripts with their text, and resolved \
+            checkers.")
+      Term.(
+        const (fun name () () -> output ~code:true (Leash.Playbook.show name))
+        $ name $ const ())
   in
+  (* extr-lslp: the local checks — the file resolves, no escape, `returns` well formed,
+     expectations resolve — are the loader's; the syntax check needs a page, so an
+     installed playbook (named, not a path) is sent to the service, which compiles each
+     script in a blank tab of its own. *)
   let check =
+    let collected =
+      List.fold_left
+        (fun term spec -> Term.(const (fun xs x -> xs @ [ x ]) $ term $ option_term spec))
+        (Term.const []) shared_options
+    in
+    let target = Arg.(required & pos 0 (some string) None & info [] ~docv:"NAME|DIR") in
+    let run target opts () =
+      let options = List.filter_map Fun.id opts in
+      let text key =
+        match List.assoc_opt key options with Some (`String v) -> Some v | _ -> None
+      in
+      let installed = not (String.contains target '/') in
+      match
+        if installed then Leash.Playbook.show target else Leash.Playbook.load target
+      with
+      | Error message -> failure message
+      | Ok book -> (
+          let local = match Leash.Playbook.inspect book with `Assoc f -> f | _ -> [] in
+          let print syntax =
+            print_endline
+              (Yojson.Safe.pretty_to_string (`Assoc (local @ [ ("syntax", syntax) ])))
+          in
+          if not installed then (
+            print
+              (str
+                 "skipped: only an installed playbook (its name, not a path) is compiled");
+            0)
+          else if book.Leash.Playbook.scripts = [] then (
+            print (`List []);
+            0)
+          else
+            match owner_of ~owner:(text "owner") with
+            | None -> usage "set --owner or DSH_SESSION_ID"
+            | Some owner -> (
+                match P.Owner.of_string owner with
+                | Error why -> usage why
+                | Ok owner -> (
+                    let request =
+                      P.encode_request
+                        P.{ owner; command = Playbook_check { playbook = target } }
+                    in
+                    match
+                      exchange ~config:(text "config") ~socket:(text "socket") request
+                    with
+                    | Error status -> status
+                    | Ok (P.Failure error) ->
+                        print (P.yojson_of_error error);
+                        1
+                    | Ok (P.Success result) ->
+                        let scripts =
+                          match field "scripts" result with `List xs -> xs | _ -> []
+                        in
+                        print (`List scripts);
+                        if List.for_all (fun s -> field "ok" s = `Bool true) scripts then
+                          0
+                        else 1)))
+    in
     Cmd.v
-      (Cmd.info "check" ~doc:"Check a JSON playbook file and show resolved checkers.")
-      Term.(const (fun file () () -> output (Leash.Playbook.load file)) $ file $ const ())
+      (Cmd.info "check"
+         ~doc:
+           "Check a playbook: the directory loads, its scripts resolve and their returns \
+            are well formed, and (for an installed NAME) every script compiles."
+         ~man:
+           [
+             `S "EXAMPLES";
+             `P "leash playbook check books.toscrape.com";
+             `P "leash playbook check ./my-playbook   (local checks only)";
+           ])
+      Term.(const run $ target $ collected)
+  in
+  (* extr-mp5z: runs one script of an installed playbook on a tab's page; the service
+     looks the script up by name, and nothing of it travels on the wire. *)
+  let test =
+    command ~wire:"playbook_test" "test"
+      "Run one playbook script on a tab and print its validated output."
+      [ pos "script" "PLAYBOOK/SCRIPT" ]
+      ([
+         opt "tab" Str "TAB" "The tab whose page runs the script (required).";
+         opt_list "arg" Pairs "K=V" "A string argument for the script (repeatable).";
+       ]
+      @ shared_options)
+      [
+        "leash playbook test books.toscrape.com/list_books --tab t_9xk";
+        "leash playbook test shop/search --tab t_9xk --arg q=gpu --arg max=2000";
+      ]
   in
   (* run-m0r8: the operator's one way to merge a proposal the planner wrote. The run
      writes proposals to XDG state and never touches a playbook; this command is the hand
@@ -405,7 +518,7 @@ let playbook_command =
   in
   Cmd.group
     (Cmd.info "playbook" ~doc:"Inspect, validate and grow site playbooks.")
-    [ list; show; check; accept ]
+    [ list; show; check; test; accept ]
 
 let commands =
   List.map

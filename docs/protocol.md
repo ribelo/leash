@@ -77,6 +77,14 @@ automatically accepts its own `beforeunload` dialog. When a handler exhausts its
 listener budget, its socket still returns `timeout` with `detail.command` and
 `detail.budget_ms` instead of closing without a reply.
 
+Playbooks (milestone 9): the two commands that need a page. `playbook list`, `show` and `accept` are local
+to the CLI and read the playbooks directory; nothing on the wire ever carries script text.
+
+| cmd | args | result |
+| --- | --- | --- |
+| `playbook_test` | `{tab, script: "<playbook>/<script>", args?: {name: string}}` | `{script, value, records, bytes, elapsed_ms, truncated}` |
+| `playbook_check` | `{playbook}` | `{playbook, scripts: [{script, ok, error?}]}` |
+
 Human handoff:
 
 | cmd | args | result |
@@ -96,7 +104,7 @@ repeats a mission expectation (the argument is a list).
 
 | cmd | args | result |
 | --- | --- | --- |
-| `run` | `{tab, mission, max_procedures?, deadline_s?, dry_run?, expect?: string[]}` | `{status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], final: Snapshot, reason?: string}` |
+| `run` | `{tab, mission, max_procedures?, deadline_s?, dry_run?, expect?: string[]}` | `{status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, final: Snapshot, reason?: string}` |
 
 ## Types
 
@@ -136,10 +144,14 @@ status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
 RunProcedure = {slug, site, planned: bool, attempts: int,
                 choice: {key: string, probabilities: {..}, confidence: float, usage: Usage|null},
                 drives: [{goal, status (drive), steps: Step[], reason?: string}],
+                scripts: RunScript[],
                 expectations: RunExpectation[],
                 outcome: "verified"|"failed"|"skipped"|"planned", elapsed_ms: int, reason?: string}
                 drives is empty for "planned" (a dry run executed nothing); attempts is 2 when the
                 retry-once rule replayed the procedure; planned is true when a planner turn wrote it
+RunScript   = {script, url, records: int, bytes: int, elapsed_ms: int, error?: string}
+                 one script call of a procedure's `script:` step (extr-8o1h): the page it ran on, the records it produced,
+                 the size of its result, and — when the call was rejected — why; empty for a procedure with no script step
 RunExpectation = {sentence, checker: "page_kind"|"text"|"download"|"no_dialog"|"row"|"judgment",
                   passed: bool, score: float|null}
                  score is the JEV score a judgment expectation was given, null where code decided it
@@ -222,6 +234,49 @@ Rules:
   is independent of the procedure that just ran: a confirmation page that does not show
   the mission's end state fails it, and the run then asks the planner and ends `blocked`
   naming the expectation that failed. A `DONE` nothing can verify is refused the same way.
+- **Playbook directories and scripts (milestone 9).** A playbook is a directory,
+  `$XDG_CONFIG_HOME/leash/playbooks/<name>/playbook.json`, and whatever files sit beside it; a `.json` file left directly
+  in the playbooks directory is refused. `playbook.json` may declare `scripts`, an object of script name (a lowercase slug)
+  to `{file | source, returns, max_bytes?}`. `file` is relative to the playbook directory, ends in `.js`, has no `..`
+  component and is not absolute; it is resolved with symlinks at load and refused when it leaves the directory (a link to
+  another file of the playbook is fine), and its text is read once, at load. `source` is a short inline script (at most
+  4096 bytes). Exactly one of the two. `returns` is the shape the script's result must have — a record or a list of records:
+  a type name (`string`, `number`, `boolean`, `url` — absolute http(s)), an object of field to shape (a field whose name
+  ends in `?` is optional, absent or null), or a one-element array for a list, at most eight deep. `max_bytes` bounds the
+  serialized result (default 8 MiB, at most 16 MiB). A malformed `returns`, a bad file, both or neither of `file` and
+  `source`, or a `script:` step naming a script the playbook does not declare refuses the playbook, with the path of
+  `playbook.json` first in the message.
+- A script is the body of an async function of `args` (an object of strings), called on the page's global object with
+  `Runtime.callFunctionOn`, `returnByValue` and `awaitPromise` (docs/cdp-shapes.md, L37): it may `await fetch(...)` the
+  site's own endpoints with the page's cookies. Its result is bounded by `max_bytes` (`too-large`), then validated against
+  `returns`, fail-closed: a missing field, an undeclared field, a value of another type, a null where a value is required
+  and a URL that is not absolute http(s) are each `script-invalid`, the message naming the path of the first mismatch
+  (`$[3].price: expected number, got string`). A script that threw or rejected, or whose value the browser could not
+  return, is `script-failed` with what it threw. A script's calls are serialized on the tab like `eval`, bounded by the
+  CDP call's 30 s deadline.
+- A `{"script": "<name>", "args": {...}}` step in a procedure runs the playbook's script. `args` is an object of strings with
+  `{name}` placeholders substituted from the run's arguments. A rejected script (`script-failed`, `script-invalid`,
+  `too-large`) fails that attempt of the procedure — nothing is verified, the whole procedure is replayed once, and a second
+  rejection fails it (`outcome: "failed"`) and asks the planner, like a failed expectation; the call is in the procedure's
+  `scripts` with its error. A browser failure ends the run, and a dialog the script opened ends it `error` as a drive's
+  does. The runner keeps the records the scripts return and `collected` is their count; no model sees a record. A dry run
+  runs no script.
+- `playbook_test` runs one script of an installed playbook on the tab's page and answers its validated output, so that writing
+  a script is a fast loop; it is owner-bound and takes the tab's action lock. The script is looked up by name in the
+  playbooks directory (`invalid-request` for a playbook or script that is not there; a path is never a playbook name).
+  `records` is the length of a list result, or 1; a result over 1 MiB is not echoed whole: `value` is its first five
+  records and `truncated` is true. `playbook_check` opens a blank tab for the caller, compiles every script of the
+  playbook with `new Function` — never calling it — closes the tab, and answers each script's verdict; it takes no tab, and
+  the CLI's `leash playbook check <name>` prints the loader's local checks (the file resolves, no escape, `returns` well
+  formed, expectations resolve) beside it and exits 1 when a script does not compile. `leash playbook check <dir>` (a path)
+  runs the local checks only.
+- **What reaches the page's JavaScript engine.** Only three kinds of text ever reach `Runtime.evaluate` or
+  `Runtime.callFunctionOn`: Leash's own fixed expressions, the expression an agent writes into the `eval` command, and a
+  script from a loaded playbook directory. No model output is ever any of them: a model chooses a playbook, a procedure, a
+  criterion or an argument value, and an argument value travels as JSON in the call's `arguments`, never in the function
+  text. A script is a `Playbook.script`, a type only the loader can build, and `Reading.script` is the one function that
+  hands one to the browser; a discovery proposal or planner answer cannot carry scripts, and a planner procedure may only
+  name one the playbook already has (extr-k40c).
 - `dry_run: true` asks the playbook and the procedure levels and reports the chosen
   playbook, the chosen procedure with its choice and resolved checkers, and ends
   `blocked`: it navigates nothing, executes no step, and never calls the text helper.
@@ -402,5 +457,7 @@ Rules:
 | `timeout` | `wait`, `handoff`, or a bounded operation ran out of time; a handoff's `detail.warnings` lists the human-facing steps that failed |
 | `browser-unavailable` | Chrome is restarting; try again shortly |
 | `model-unavailable` | System One or the text helper failed, or no API key is configured; `detail.code` carries the kind (`missing-key`, `unavailable`, `timeout`, `authentication`, `invalid-response`, `input-too-large`, `model-mismatch`, `text-helper-unavailable`) and a drive's `detail.steps` the completed steps |
-| `too-large` | expression, argument, result, or fill text over its bound |
+| `too-large` | expression, argument, result, or fill text over its bound; a playbook script's result over its `max_bytes` |
+| `script-failed` | a playbook script threw or rejected, could not be compiled, or the browser could not return its value; `message` carries what it threw |
+| `script-invalid` | a playbook script's result does not fit its `returns`; `message` is the path of the first mismatch |
 | `internal` | a defect; the message carries no page content |

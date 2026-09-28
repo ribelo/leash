@@ -7,7 +7,12 @@ type page = {
 
 type goal_step = { goal : string; hint : string option }
 type use_step = { use : string; args : Yojson.Safe.t option; optional : bool option }
-type step = Goal of goal_step | Use of use_step
+
+type script_step = { script : string; args : Yojson.Safe.t option }
+(** extr-8o1h: run the playbook's script [script]; [args] is an object of strings, with
+    the run's [{name}] placeholders substituted before the script is called. *)
+
+type step = Goal of goal_step | Use of use_step | Script of script_step
 
 type procedure = {
   slug : string;
@@ -25,12 +30,27 @@ type procedure = {
           s), the loader accepts 1..600, and what is left of the run always bounds it. *)
 }
 
+type script_decl = {
+  file : string option;
+  source : string option;
+  returns : Shape.t;
+  max_bytes : int option;
+}
+(** extr-plaz extr-zdst: a script as `playbook.json` writes it — exactly one of a [file]
+    relative to the playbook directory and a short inline [source] (at most 4096 bytes),
+    the shape its result must have, and an optional bound on the size of that result
+    ([max_bytes], default 8 MiB, at most 16 MiB). *)
+
+type scripts = (string * script_decl) list
+(** The [scripts] section: an object of script name to declaration. *)
+
 type t = {
   site : string;
   entry : string;
   description : string;
   pages : page list;
   procedures : procedure list;
+  scripts : scripts option;
 }
 
 type checker =
@@ -42,7 +62,27 @@ type checker =
   | Row of string * string
   | Judgment of string
 
-type loaded = { file : string; playbook : t; checks : (string * checker list) list }
+type script = private {
+  name : string;
+  code : string;  (** The text of the script's function body, read at load. *)
+  returns : Shape.t;
+  max_bytes : int;
+  origin : string;  (** [file <path>] or [inline]. *)
+}
+(** extr-plaz extr-k40c: a resolved script. The type is private — the loader is the only
+    thing that makes one, from a playbook directory — and {!Reading.script}, the only
+    function that hands script text to the browser, takes one. Model output can therefore
+    never become a script. *)
+
+type loaded = {
+  file : string;  (** The path of [playbook.json]. *)
+  dir : string option;
+      (** The playbook directory; [None] for a playbook that did not come from one (a
+          discovery seed), which may carry no file script. *)
+  playbook : t;
+  checks : (string * checker list) list;
+  scripts : script list;
+}
 
 type proposal = { site : string; procedure : procedure }
 (** run-m0r8: one planner-written procedure as it is proposed to the operator — the site
@@ -72,11 +112,32 @@ val yojson_of_procedure : procedure -> Yojson.Safe.t
 val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
 val yojson_of_proposal : proposal -> Yojson.Safe.t
 val yojson_of_accepted : accepted -> Yojson.Safe.t
-val of_json : file:string -> Yojson.Safe.t -> (loaded, string) result
+
+val of_json : ?dir:string -> file:string -> Yojson.Safe.t -> (loaded, string) result
+(** Validates a playbook. File scripts are resolved against [dir]: relative to it, no
+    [..], and after symlinks are resolved still inside it (extr-plaz); without [dir] a
+    file script is refused. *)
+
+val revalidate : loaded -> t -> (loaded, string) result
+(** [revalidate book playbook] validates another playbook value in [book]'s directory — a
+    planner's procedure added, a proposal merged. *)
+
 val load : string -> (loaded, string) result
+(** [load dir] reads [dir/playbook.json] and its scripts (extr-plaz). A path that is a
+    file, and a directory that holds only a [playbook.yaml], are refused with a message
+    that says what a playbook is. *)
+
+val script_named : loaded -> string -> script option
+
 val directory : unit -> string
+(** [$XDG_CONFIG_HOME/leash/playbooks]; each playbook is a subdirectory of it. *)
+
 val list : unit -> (loaded list, string) result
+(** Every subdirectory loaded, by name. A [.json] file left directly in the directory is
+    refused: it is the old layout. *)
+
 val show : string -> (loaded, string) result
+(** The installed playbook whose directory is called this. *)
 
 val check_procedure : ?file:string -> t -> procedure -> (unit, string) result
 (** run-rq6i run-m0r8: the loader's own rules for one procedure, applied to a procedure
@@ -107,7 +168,10 @@ val accept : string -> (accepted, string) result
 
 (* run-k8bx: restart every step from the beginning after the first failed check. *)
 val retry_once : execute:(unit -> unit) -> verify:(unit -> bool) -> bool
-val inspect : loaded -> Yojson.Safe.t
+
+val inspect : ?code:bool -> loaded -> Yojson.Safe.t
+(** The playbook, its scripts (origin, size, [returns], and with [code] their text —
+    extr-lslp) and its resolved checkers. *)
 
 type observation = {
   kind : string option;

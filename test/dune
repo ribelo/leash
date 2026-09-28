@@ -11,17 +11,16 @@
 (test
  (name run_test)
  (modules run_test)
- (deps ../examples/playbooks/automationexercise.com.json)
- (libraries leash yojson alcotest))
+ (deps
+  (source_tree ../examples/playbooks))
+ (libraries leash yojson alcotest str))
 
 (test
  (name playbook_test)
  (modules playbook_test)
  (deps
-  ../examples/playbooks/allegro.pl.json
-  ../examples/playbooks/automationexercise.com.json
-  ../examples/playbooks/www.w3.org.json)
- (libraries leash yojson alcotest str))
+  (source_tree ../examples/playbooks))
+ (libraries leash yojson alcotest str unix))
 
 (test
  (name fake_browser_test)
@@ -63,7 +62,7 @@
   fixtures/snapshot-chrome.json
   fixtures/unlabelled-controls-chrome.json
   fixtures/download-chrome.json
-  ../examples/playbooks/automationexercise.com.json)
+  (source_tree ../examples/playbooks))
  (libraries
   leash
   leash_test_support
