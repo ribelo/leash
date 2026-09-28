@@ -15,7 +15,7 @@ Six additions, each a thin client of existing CDP domains and existing service p
 
 ## User Stories
 
-1. As an agent, I want `leash net <tab> [--match TEXT] [--limit N] [--type xhr|fetch|document|...]` to list the tab's recent requests — id, method, url, status, resource type, mime, encoded size, duration, from cache — from a bounded per-tab ring (500 entries), so that I can see what the page called. ^hard-xg6y
+1. As an agent, I want `leash net <tab> [--match TEXT] [--limit N] [--type xhr|fetch|document|...]` to list the recent requests of that tab only (Chrome delivers network events per tab session; each tab has its own ring, owner-bound like every tab command) — id, method, url, status, resource type, mime, encoded size, duration, from cache — from a bounded per-tab ring (500 entries), so that I can see what the page called. ^hard-xg6y
 2. As an agent, I want `leash net <tab> body <id>` to return the response body (text, or base64 with a flag for binary) bounded to 1 MiB, and a clear `body-unavailable` when Chrome has evicted it, so that I can read an internal API's JSON. ^hard-ovbx
 3. As an agent, I want `leash net <tab> request <id>` to return the request's headers and post data (bounded), so that I can reproduce a call in a playbook script. ^hard-vq5s
 4. As an agent, I want `wait` to accept timeouts up to one hour, with the listener's handler budget derived from it and a client disconnect cancelling it, so that I can wait for a build, an upload or a queue without polling. ^hard-sr9v
@@ -27,6 +27,7 @@ Six additions, each a thin client of existing CDP domains and existing service p
 10. As an agent, I want `leash cookies <tab>` (read-only, for the tab's URL, including httpOnly with its flags) and `leash storage <tab> local|session` (read-only), with values returned to the owner and never logged, so that I can debug authentication. ^hard-ufb7
 11. As a maintainer, I want every addition in `docs/protocol.md`, the fake browser scripting the new CDP methods, and one live check per addition in `scripts/live-acceptance-m8`, so that the surface is pinned. ^hard-wk6q
 12. As an agent, I want the `leash` skill to cover `net`, the long `wait`, `upload`, `hover`, `eval --index`, `cookies` and `storage` in its minimize-output style, so that I use them instead of reaching for chrome-cdp. ^hard-2cal
+13. As an operator, I want ten agents working at once — five blocked in long `wait`s on five different tabs while five others act — to be served without queuing or refusal: `wait` never takes the tab's action lock, the control socket admits 64 concurrent requests (up from eta_ipc's default 16), and a test runs ten concurrent clients over the socket to prove it, so that long waits are cheap for everyone else. ^hard-b1na
 
 ## Implementation Decisions
 

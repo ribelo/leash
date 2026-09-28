@@ -104,13 +104,13 @@ L29 first; L30 needs only L29's loader and the models service; L31–L34 in orde
 
 | L36 | **Hardening 2** (`hardening-2/01-hardening-2.md`): `net` ring with bodies and request data; `wait` up to 1 h and `--changed-since`; `upload` and file-input rows; `hover`; `eval --index`; read-only `cookies`/`storage`; protocol, fake browser, live gate, skill. | hard-xg6y, hard-ovbx, hard-vq5s, hard-sr9v, hard-sckn, hard-o3za, hard-2gnf, hard-v1gs, hard-b20d, hard-ufb7, hard-wk6q, hard-2cal | — | [ ] |
 
-## Milestone 9 — extract (`extract/01-extract.md`)
+## Milestone 9 — collect through drive (`extract/01-extract.md`)
 
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
-| L37 | **Scripts and shapes.** `scripts:` in playbooks, shape language and validation, `script:` steps, `playbook test`, `show`/`check`, the model-output safety test. | extr-d5bv, extr-zdst, extr-8o1h, extr-vgir, extr-mp5z, extr-lslp, extr-k40c | L36 | [ ] |
-| L38 | **Extract and repeat.** `leash extract`, deterministic runner, `repeat` with delay/dedupe/until/max, JSONL streaming, summary reply, trace, extraction data in `run` results, books.toscrape.com example. | extr-ve3k, extr-igqb, extr-ugdh, extr-d9du, extr-gkj9, extr-p152, extr-tkco | L37 | [ ] |
-| L39 | **Discovery learns extraction, and live acceptance.** Planner sees `net` and element HTML, proposes DOM or fetch scripts, validated via `playbook test`, proposal only; skill update; live: books.toscrape.com category to JSONL with zero model calls, one extraction discovery run. Marks the spec completed. | extr-wua5, extr-sk3b | L38 | [ ] |
+| L37 | **Playbook directories and scripts.** Directory layout, `file`/`source` scripts, `returns` shapes and validation, `script:` steps, `playbook test`, `show`/`check`, the safety test. | extr-plaz, extr-zdst, extr-8o1h, extr-vgir, extr-mp5z, extr-lslp, extr-k40c | L36 | [ ] |
+| L38 | **`drive` is the one entry point.** Fold `run` into `drive` (playbook or none), argument filling for query parameters, records bypass the models, `repeat`, `data` summary and `--out` JSONL, cost reporting, trace. | extr-andy, extr-mq0e, extr-ve3k, extr-mfmf, extr-b3u0, extr-p7sj, extr-5x9e, extr-p152 | L37 | [ ] |
+| L39 | **Example and live acceptance.** books.toscrape.com playbook directory, fetch-based test script, skill update, live missions (whole category; filtered by price). Marks the spec completed. | extr-tkco, extr-oaci, extr-8ubt | L38 | [ ] |
 
 ## Later milestones
 
