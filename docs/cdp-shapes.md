@@ -313,3 +313,24 @@ in two:
   `tab-gone` with `closed_externally` (own-teh1). `test/reading_test.ml` (tab-gjo0)
   scripts both at the control seam; the gate itself opens popups by click, never by
   eval.
+
+## L29 download observation (run-ykq4)
+
+Measured against Google Chrome 152.0.7977.64 in **headless** mode with a temporary
+profile and local HTTP page offering a PDF attachment. The exact captured envelopes
+are in [download-chrome.json](../test/fixtures/download-chrome.json). The probe ran
+outside Dune tests; the fake-browser test replays captured events and never starts Chrome.
+WebSocket CDP carries the same JSON method/params as the managed debugging pipe.
+
+- `Browser.setDownloadBehavior` accepts `{behavior:"allow",downloadPath:"...",eventsEnabled:true}`
+  on the browser connection and answers `{}`. Leash uses its managed Chrome profile
+  `downloads/` directory.
+- `Browser.downloadWillBegin` is browser-scoped (no sessionId); it carries `frameId`,
+  `guid`, `url`, and `suggestedFilename`. The frame ID matched the page main frame.
+  MIME is absent; Leash infers `application/pdf` from `.pdf` and defaults to
+  `application/octet-stream` for other names.
+- `Browser.downloadProgress` carries `guid`, numeric `totalBytes`/`receivedBytes`,
+  and a `state` whose active spelling is **`inProgress`** (normalized to
+  `in_progress` in the inventory), then `completed`. Only the final event carried
+  `filePath`; active entries have a null path. Canceled download shape was not observed.
+  Unattributable frame IDs are ignored rather than credited to the wrong owner.

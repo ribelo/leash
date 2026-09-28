@@ -1,0 +1,41 @@
+{
+  "site": "www.w3.org",
+  "entry": "https://www.w3.org/WAI/",
+  "description": "Read W3C accessibility guidance and download a linked document.",
+  "pages": [
+    {
+      "name": "guidance",
+      "description": "W3C accessibility pages",
+      "url_pattern": "https://www.w3.org/WAI/*",
+      "text_marker": null
+    }
+  ],
+  "procedures": [
+    {
+      "slug": "open-guidance",
+      "description": "Open the W3C accessibility guidance.",
+      "args": [],
+      "steps": [
+        {
+          "goal": "Open W3C accessibility guidance."
+        }
+      ],
+      "expect": [
+        "the page is guidance"
+      ]
+    },
+    {
+      "slug": "download-document",
+      "description": "Download a linked PDF document from W3C guidance.",
+      "args": [],
+      "steps": [
+        {
+          "goal": "Find a publicly linked PDF on this site and download it."
+        }
+      ],
+      "expect": [
+        "a PDF was downloaded"
+      ]
+    }
+  ]
+}

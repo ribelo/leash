@@ -493,6 +493,18 @@ type status_result = {
 [@@deriving yojson]
 
 type list_result = { tabs : tab_info list } [@@deriving yojson]
+
+(* run-ykq4: a download belongs to the tab whose main frame began it. *)
+type download_info = {
+  id : string;
+  suggested_name : string;
+  mime : string;
+  state : string;
+  path : string option; [@json.null]
+}
+[@@deriving yojson]
+
+type downloads_result = { downloads : download_info list } [@@deriving yojson]
 type released_result = { released : bool } [@@deriving yojson]
 type closed_result = { closed : bool } [@@deriving yojson]
 type resumed_result = { resumed : bool } [@@deriving yojson]
@@ -620,6 +632,7 @@ type command =
   | Handoff of handoff_args
   | Resume of tab_args
   | Drive of drive_args
+  | Downloads of tab_args
 
 let command_name = function
   | New _ -> "new"
@@ -644,6 +657,7 @@ let command_name = function
   | Handoff _ -> "handoff"
   | Resume _ -> "resume"
   | Drive _ -> "drive"
+  | Downloads _ -> "downloads"
 
 let args_to_json = function
   | New args -> yojson_of_new_args args
@@ -668,6 +682,7 @@ let args_to_json = function
   | Handoff args -> yojson_of_handoff_args args
   | Resume args -> yojson_of_tab_args args
   | Drive args -> yojson_of_drive_args args
+  | Downloads args -> yojson_of_tab_args args
 
 let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
@@ -694,6 +709,7 @@ let command_of_args ~cmd args =
   | "handoff" -> with_args handoff_args_of_yojson (fun args -> Handoff args)
   | "resume" -> with_args tab_args_of_yojson (fun args -> Resume args)
   | "drive" -> with_args drive_args_of_yojson (fun args -> Drive args)
+  | "downloads" -> with_args tab_args_of_yojson (fun args -> Downloads args)
   | other ->
       Error
         (Printf.sprintf "cmd: unknown command %s" (Yojson.Safe.to_string (`String other)))

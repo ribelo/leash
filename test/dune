@@ -9,6 +9,14 @@
    (EIO_BACKEND posix))))
 
 (test
+ (name playbook_test)
+ (modules playbook_test)
+ (deps
+  ../examples/playbooks/allegro.pl.json
+  ../examples/playbooks/www.w3.org.json)
+ (libraries leash yojson alcotest str))
+
+(test
  (name fake_browser_test)
  (modules fake_browser_test)
  (libraries leash leash_test_support eta_test eio eio.unix yojson alcotest))
@@ -46,7 +54,8 @@
  (modules control_test)
  (deps
   fixtures/snapshot-chrome.json
-  fixtures/unlabelled-controls-chrome.json)
+  fixtures/unlabelled-controls-chrome.json
+  fixtures/download-chrome.json)
  (libraries
   leash
   leash_test_support

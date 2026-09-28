@@ -36,7 +36,7 @@ let request tabs who command =
 
 let check_code label expected reply = Alcotest.(check string) label expected (code reply)
 
-let rig ?reporter f =
+let rig ?reporter ?download_dir f =
   Eta_test.run (fun env sw ->
       let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
@@ -65,7 +65,7 @@ let rig ?reporter f =
           { Chrome.clock = env#clock; mgr = env#process_mgr; logger }
       in
       let tabs =
-        Leash.Tabs.create ~sw ~cap:2 ~tombstone_s:3600
+        Leash.Tabs.create ~sw ~cap:2 ~tombstone_s:3600 ?download_dir
           {
             Leash.Tabs.chrome;
             clock = env#clock;
@@ -1244,6 +1244,59 @@ let journal_redaction () =
             [ secret_fill; secret_text; api_key; userinfo ])
         records)
 
+(* run-ykq4: no Chrome process; browser-level events and the owner-bound
+   protocol response are driven by the scripted CDP peer. *)
+let download_events () =
+  rig ~download_dir:"/tmp/leash-scripted-downloads" (fun _ _ _ tabs fake ->
+      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let fake = fake () in
+      let behaviors =
+        List.filter
+          (fun req -> get "method" req = str "Browser.setDownloadBehavior")
+          (Fake.received fake)
+      in
+      Alcotest.(check int) "run-ykq4 behavior set" 1 (List.length behaviors);
+      let params = get "params" (List.hd behaviors) in
+      Alcotest.(check string)
+        "run-ykq4 allow" "allow"
+        (match get "behavior" params with `String s -> s | _ -> "");
+      Alcotest.(check bool)
+        "run-ykq4 events enabled" true
+        (get "eventsEnabled" params = `Bool true);
+      let fixture = Yojson.Safe.from_file "fixtures/download-chrome.json" in
+      let begin_ = get "downloadWillBegin" fixture in
+      let frame = get "frameId" (get "params" begin_) in
+      Fake.emit ~session:"session-1" fake ~method_:"Page.frameNavigated"
+        ~params:
+          (obj [ ("frame", obj [ ("id", frame); ("url", str "https://example.com/") ]) ]);
+      Fake.emit fake ~method_:"Browser.downloadWillBegin" ~params:(get "params" begin_);
+      (match get "downloadProgress" fixture with
+      | `List events ->
+          List.iter
+            (fun event ->
+              Fake.emit fake ~method_:"Browser.downloadProgress"
+                ~params:(get "params" event))
+            events
+      | _ -> Alcotest.fail "invalid Chrome download fixture");
+      let rec done_ attempts =
+        let data = result (request tabs "alice" (P.Downloads { tab = h })) in
+        match get "downloads" data with
+        | `List [ download ] when get "state" download = str "completed" -> download
+        | _ when attempts > 0 ->
+            Eio.Fiber.yield ();
+            done_ (attempts - 1)
+        | _ -> Alcotest.fail "run-ykq4 browser events not observed"
+      in
+      let download = done_ 1000 in
+      Alcotest.(check string)
+        "run-ykq4 PDF mime" "application/pdf"
+        (match get "mime" download with `String s -> s | _ -> "");
+      Alcotest.(check string)
+        "run-ykq4 path" "<managed-profile>/downloads/sample.pdf"
+        (match get "path" download with `String s -> s | _ -> "");
+      check_code "run-ykq4 other owner refused" "not-owner"
+        (request tabs "bob" (P.Downloads { tab = h })))
+
 let optional_otlp () =
   Eta_test.run (fun env sw ->
       let telemetry =
@@ -1263,6 +1316,7 @@ let () =
           Alcotest.test_case "chrome-qnul hjw9 fuao 2n8n" `Quick lifecycle;
           Alcotest.test_case "svc-p67t qilu journal and redaction" `Quick
             journal_redaction;
+          Alcotest.test_case "run-ykq4 fake Chrome downloads" `Quick download_events;
           Alcotest.test_case "svc-f4op optional OTLP reporter" `Quick optional_otlp;
           Alcotest.test_case "chrome-akz4 d4mz" `Quick safety;
           Alcotest.test_case "chrome-1yn9" `Quick nav;

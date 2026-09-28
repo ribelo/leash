@@ -389,6 +389,18 @@ val yojson_of_status_result : status_result -> Yojson.Safe.t
 
 type list_result = { tabs : tab_info list }
 
+type download_info = {
+  id : string;
+  suggested_name : string;
+  mime : string;
+  state : string;
+  path : string option; [@json.null]
+}
+
+type downloads_result = { downloads : download_info list }
+
+val downloads_result_of_yojson : Yojson.Safe.t -> (downloads_result, string) result
+val yojson_of_downloads_result : downloads_result -> Yojson.Safe.t
 val list_result_of_yojson : Yojson.Safe.t -> (list_result, string) result
 val yojson_of_list_result : list_result -> Yojson.Safe.t
 
@@ -490,6 +502,7 @@ type command =
   | Handoff of handoff_args
   | Resume of tab_args
   | Drive of drive_args
+  | Downloads of tab_args
       (** The decoded command: one constructor per row of [docs/protocol.md]'s command
           tables, carrying that command's derived argument record. *)
 

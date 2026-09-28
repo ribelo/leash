@@ -308,6 +308,45 @@ let command name doc positionals options examples =
       const (fun args opts () -> perform name fields args opts)
       $ positional_term positionals $ collected)
 
+(* run-tcuz run-dbji run-ykq4: these authoring commands need no service. *)
+let playbook_command =
+  let output = function
+    | Error message -> failure message
+    | Ok book ->
+        print_endline (Yojson.Safe.pretty_to_string (Leash.Playbook.inspect book));
+        0
+  in
+  let name = Arg.(required & pos 0 (some string) None & info [] ~docv:"NAME") in
+  let file = Arg.(required & pos 0 (some string) None & info [] ~docv:"FILE") in
+  let list =
+    Cmd.v
+      (Cmd.info "list" ~doc:"List validated installed site playbooks.")
+      Term.(
+        const (fun () () ->
+            match Leash.Playbook.list () with
+            | Error message -> failure message
+            | Ok books ->
+                List.iter
+                  (fun (book : Leash.Playbook.loaded) ->
+                    Printf.printf "%s\t%s\n" book.playbook.site book.playbook.description)
+                  books;
+                0)
+        $ const ())
+  in
+  let show =
+    Cmd.v
+      (Cmd.info "show" ~doc:"Show a named installed playbook and resolved checkers.")
+      Term.(const (fun name () () -> output (Leash.Playbook.show name)) $ name $ const ())
+  in
+  let check =
+    Cmd.v
+      (Cmd.info "check" ~doc:"Check a JSON playbook file and show resolved checkers.")
+      Term.(const (fun file () () -> output (Leash.Playbook.load file)) $ file $ const ())
+  in
+  Cmd.group
+    (Cmd.info "playbook" ~doc:"Inspect and validate site playbooks.")
+    [ list; show; check ]
+
 let commands =
   List.map
     (fun (name, doc, positionals, options, examples) ->
@@ -318,6 +357,11 @@ let commands =
         [ pos_opt "url" "URL" ],
         [],
         [ "leash new https://example.com" ] );
+      ( "downloads",
+        "List downloads started by this tab.",
+        [ pos "tab" "TAB" ],
+        [],
+        [ "leash downloads t_9xk" ] );
       ( "list",
         "List the tabs this caller owns.",
         [],
@@ -456,6 +500,7 @@ let commands =
         ],
         [ "leash drive t_9xk 'Find the article about Goedel' --max-steps 10" ] );
     ]
+  @ [ playbook_command ]
 
 let ( let* ) = Result.bind
 
@@ -504,8 +549,16 @@ let program env (config : Leash.Config.t) sw =
         notify_command = config.handoff.notify_command;
       }
   in
+  let download_dir =
+    Filename.concat (Leash.Config.Text.to_string config.chrome.profile_dir) "downloads"
+  in
+  let* () =
+    match Leash.Config.ensure_dir download_dir with
+    | Ok () -> Ok ()
+    | Error message -> Error (`Service ("cannot create downloads directory: " ^ message))
+  in
   let tabs =
-    Leash.Tabs.create ~sw
+    Leash.Tabs.create ~sw ~download_dir
       ~cap:(Leash.Config.Tab_cap.to_int config.tabs.cap)
       ~tombstone_s:(Leash.Config.Seconds.to_int config.expiry.tombstone_s)
       ~idle ~unclaimed

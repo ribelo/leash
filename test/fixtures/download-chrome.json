@@ -1,0 +1,41 @@
+{
+  "chrome": "Google Chrome 152.0.7977.64",
+  "setDownloadBehavior": {
+    "request": {
+      "behavior": "allow",
+      "downloadPath": "<managed-profile>/downloads",
+      "eventsEnabled": true
+    },
+    "response": {}
+  },
+  "downloadWillBegin": {
+    "method": "Browser.downloadWillBegin",
+    "params": {
+      "frameId": "9653A9EB51BBC362C84AB616D8150C32",
+      "guid": "f6f94b4b-054c-4728-9dfc-f022d8a40ae1",
+      "url": "<local-http-origin>/document.pdf",
+      "suggestedFilename": "sample.pdf"
+    }
+  },
+  "downloadProgress": [
+    {
+      "method": "Browser.downloadProgress",
+      "params": {
+        "guid": "f6f94b4b-054c-4728-9dfc-f022d8a40ae1",
+        "totalBytes": 0,
+        "receivedBytes": 0,
+        "state": "inProgress"
+      }
+    },
+    {
+      "method": "Browser.downloadProgress",
+      "params": {
+        "guid": "f6f94b4b-054c-4728-9dfc-f022d8a40ae1",
+        "totalBytes": 45,
+        "receivedBytes": 45,
+        "state": "completed",
+        "filePath": "<managed-profile>/downloads/sample.pdf"
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ module Desktop = Desktop
 module Models = Models
 module Text_helper = Text_helper
 module Protocol = Protocol
+module Playbook = Playbook
 module Tabs = Tabs
 module Expiry = Expiry
 module Control = Control

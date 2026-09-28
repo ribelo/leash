@@ -19,7 +19,7 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 
 ### Playbooks
 
-1. As an operator, I want playbooks stored at `$XDG_CONFIG_HOME/leash/playbooks/<name>.yaml` (or `.json`) and loaded on demand, so that `leash run` needs no playbook argument. ^run-tcuz
+1. As an operator, I want playbooks stored at `$XDG_CONFIG_HOME/leash/playbooks/<site>.json` and loaded on demand, so that `leash run` needs no playbook argument. ^run-tcuz
 2. As a playbook author, I want a playbook to declare `site` (a hostname pattern), `entry` (the URL to navigate to when switching to this site), `description`, `pages` (named page kinds, each with a description and a URL pattern or a text marker), and `procedures`, so that everything a run needs about a site is in one file. ^run-r1e9
 3. As a playbook author, I want a procedure to have a `slug`, a `description` in human language, optional `args` (names substituted into steps as `{name}`), `steps`, and a mandatory non-empty `expect` list, so that JEV can choose it by description and the runner can verify it. ^run-2lei
 4. As a playbook author, I want a step to be either `goal: "<drive goal>"` (with optional `hint`, a selector or label that shapes the goal text and `snap --match`, never a target) or `use: <slug>` (with `args` and `optional: true`), so that procedures compose by calling each other and never branch in the file. ^run-84ds
@@ -59,7 +59,7 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 29. As a runner, I want the planner to receive the mission, the current playbook (slugs, descriptions, expectations), the trace so far, the page summary plus bounded page text, and to answer exactly one of `procedure` (a new procedure in the playbook's schema, to run now), `handoff` (with a reason), or `fail` (with a reason), validated fail-closed, so that the planner's output is always something the loop can execute or report. ^run-rq6i
 30. As a runner, I want the planner also able to attach mission-level expectations at its first turn when the mission implies them ("the order confirmation page is shown"), so that `DONE` at the end has something to verify against. ^run-2tt3
 31. As an operator, I want planner turns bounded per run (default 3) and their cost logged, so that Luna is a fallback, not the driver. ^run-obtt
-32. As an operator, I want a planner-written procedure that ran and passed its expectations to be written to `$XDG_STATE_HOME/leash/proposed/<site>-<slug>.yaml` and reported in the run result, and `leash playbook accept <file>` to merge it into the site's playbook, so that the playbook grows from experience under my eye. ^run-m0r8
+32. As an operator, I want a planner-written procedure that ran and passed its expectations to be written to `$XDG_STATE_HOME/leash/proposed/<site>-<slug>.json` and reported in the run result, and `leash playbook accept <file>` to merge it into the site's playbook, so that the playbook grows from experience under my eye. ^run-m0r8
 33. As an operator, I want the planner model, its reasoning effort and its endpoint configurable (`[models].planner`, default `openai/gpt-6-luna` via OpenRouter), so that the fallback can be tuned or replaced. ^run-d99l
 
 ### Discovery
@@ -81,7 +81,7 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 
 ## Implementation Decisions
 
-- **Format.** YAML and JSON both accepted (the YAML is a strict subset that maps to the JSON shape; use a small YAML reader or require JSON if no acceptable YAML library exists on the toolchain — decide at implementation, record in the spec). Types with `[@@deriving yojson]`; smart-constructor modules for slugs, page kinds and expectation sentences.
+- **Format.** JSON only, in `<site>.json` files. Types with `[@@deriving yojson]`; smart-constructor modules for slugs, page kinds and expectation sentences. A `.yaml` file is refused explicitly with a message naming JSON.
 - **Checker resolution** is a small grammar over the expectation sentence, tried in order: page kind (`pages` names), "shows"/"contains" text, "downloaded" (+ optional mime word), "no dialog", "<role> named <text>". Anything else → JEV score. Resolution happens at load; the playbook's `check` output shows which checker each sentence got, so an author sees when they fell through to judgment.
 - **Page kinds** are the semantic summary's key. A kind matches by URL pattern or by a text marker; the runner labels the current page with the first matching kind or `unknown`. Page text is never sent to the upper levels (story 18); the operator level keeps jev-ultrafast's contract untouched.
 - **Questions to JEV** at the upper levels use the same System One client and the same instruction style as the operator level; instruction texts are versioned in `questions.ml` next to jev's, with the 255-option ceiling asserted in code.
@@ -110,4 +110,4 @@ Conditional branching in playbooks; parallel tabs in one run; playbook sharing o
 
 - Design record: the session of 2026-09-28. Two JEV levels above the operator, Luna on demand, mandatory human-language `expect` verified by code first and JEV score second, page kinds as the semantic state, the 255-option ceiling as the reason playbooks are selected rather than merged, and propose-and-approve for learned procedures.
 - Open until measured (story 40): whether one JEV model serves all three levels well with the small state; the fallback is the planner at the upper levels, by handler swap.
-- YAML library availability on OxCaml 5.4 is unknown; JSON is the guaranteed format.
+- L29 format decision: `nix develop -c ocamlfind list | grep -i yaml` found no YAML library on the OxCaml 5.4 switch. opam metadata for `yaml` 3.2.0 lists `ctypes` and `bos` (also `dune-configurator`) as dependencies requiring an install into the shared switch, which this job must not disturb. JSON-only `<site>.json` is the shipped format; `.yaml` is refused with an actionable JSON message.

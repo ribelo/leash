@@ -46,6 +46,8 @@ let dispatch ?(model = "unconfigured") ?decide ?text_helper ?models_status tabs
   match request.command with
   | P.New args -> lift P.yojson_of_tab_info (Tabs.new_tab tabs ~owner ~url:args.url)
   | P.Snap args -> lift P.yojson_of_snapshot (Tabs.snap tabs ~owner args)
+  | P.Downloads args ->
+      lift P.yojson_of_downloads_result (Tabs.downloads tabs ~owner args.tab)
   | P.Text args -> lift P.yojson_of_text_result (Tabs.text tabs ~owner args)
   | P.Eval args -> lift P.yojson_of_eval_result (Tabs.eval tabs ~owner args)
   | P.Shot args -> lift P.yojson_of_shot_result (Tabs.shot tabs ~owner args)
@@ -85,7 +87,7 @@ let dispatch ?(model = "unconfigured") ?decide ?text_helper ?models_status tabs
    results. Commands without a tab use "-"; new does not have a handle yet. *)
 let command_tab = function
   | P.New _ | P.List_tabs _ | P.Status -> "-"
-  | P.Claim args | P.Resume args -> P.Handle.to_string args.tab
+  | P.Claim args | P.Resume args | P.Downloads args -> P.Handle.to_string args.tab
   | P.Release args | P.Close args -> P.Handle.to_string args.tab
   | P.Snap args -> P.Handle.to_string args.tab
   | P.Text args -> P.Handle.to_string args.tab

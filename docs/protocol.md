@@ -40,6 +40,7 @@ Observation:
 | cmd | args | result |
 | --- | --- | --- |
 | `snap` | `{tab, match?: string, limit?: int, offset?: int}` | `Snapshot` |
+| `downloads` | `{tab}` | `{downloads: Download[]}` |
 | `text` | `{tab, index?: int, max_chars?: int}` | `{url, title, text, truncated}` |
 | `shot` | `{tab, path, full_page?: bool}` | `{path, bytes}` |
 | `debug` | `{tab, limit?: int, clear?: bool}` | `{entries: DebugEntry[]}` |
@@ -90,6 +91,8 @@ Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string
 ActionResult = {tab, url, title, snapshot: null, dialog: Dialog|null, popups: TabInfo[]}
                  snapshot is always null in this version: no snapshot is taken while an action settles; call snap
                  popups lists only tabs opened by the acted-on tab (opener), owned by the caller
+Download     = {id: string, suggested_name: string, mime: string, state: "in_progress"|"completed"|"canceled", path: string|null}
+                 path is null until Chrome reports a completed filePath; MIME is inferred from the extension when Chrome does not report one
 DebugEntry   = {at: iso8601, kind: "console"|"exception"|"request-failed", level?: string, text: string}
 Step         = {n: int, snapshot: id, operation: Operation, index: int|null, probabilities: {op: {..}, target: {..}},
                 text?: string, after: {url, title}, elapsed_ms: int}
@@ -149,6 +152,7 @@ Rules:
   ignores ownership and a human's hold so a human can clean up after an agent that is
   gone; every use is logged. A `force` key on any other command is an unknown field, so
   the request is `invalid-request`.
+- `downloads` requires ownership (also refuses with `with-human` during handoff). Only a download whose main frame belongs to that tab is listed; an unattributed browser event is ignored. Downloads live under the managed Chrome profile in `downloads/`, configured through `Browser.setDownloadBehavior` with `eventsEnabled: true`.
 - `list` shows the caller's tabs — the ones it owns and the one the human is holding for
   it — and `list --all` every tab with its `origin`, `state`, and `owner`; `owner` is
   null exactly when `state` is `unowned`.

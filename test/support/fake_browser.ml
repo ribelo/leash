@@ -67,6 +67,7 @@ let defaults replies =
       ("Target.createTarget", obj [ ("targetId", str "target-1") ]);
       ("Target.attachToTarget", obj [ ("sessionId", str "session-1") ]);
       ("Target.setDiscoverTargets", obj []);
+      ("Browser.setDownloadBehavior", obj []);
       ("Target.setAutoAttach", obj []);
       ("Target.getTargets", obj [ ("targetInfos", `List []) ]);
       ("Target.getTargetInfo", obj [ ("targetInfo", target_info) ]);

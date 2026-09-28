@@ -229,6 +229,8 @@ type tab = {
           like the waiter of {!with_load_wait}. *)
   mutable snapshot : (P.Snapshot_id.t * string * (P.row * int) list) option;
   mutable dialog : P.dialog option;
+  mutable main_frame : string option;
+  mutable downloads : P.download_info list;
   mutable counter_installed : bool;
   mutable opener : string option;
       (** The target id of the tab that opened this one, Chrome's [openerId]. *)
@@ -253,6 +255,8 @@ type t = {
   await_handoff : Eta.Duration.t -> unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   desktop : Desktop.t;
   logger : Eta_observability.Logger.t;
+  download_dir : string option;
+  downloads_by_guid : (string, string) Hashtbl.t;
   cap : int;
   tombstone_s : int;
   idle : float;
@@ -427,6 +431,8 @@ let register t ~id ~session ~origin ~state ~url ~title ?opener () =
       page_loads = [];
       snapshot = None;
       dialog = None;
+      main_frame = None;
+      downloads = [];
       counter_installed = false;
       opener;
       settlements = [];
@@ -689,6 +695,9 @@ let new_tab t ~owner ~url =
                           cdp_call ~session cdp "Page.navigate"
                             (obj [ ("url", str target) ])
                         in
+                        (match text "frameId" reply with
+                        | Some id -> tab.main_frame <- Some id
+                        | None -> ());
                         match text "errorText" reply with
                         | Some _ -> Error (error "internal" "browser navigation failed")
                         | None -> Ok ())
@@ -714,6 +723,9 @@ let navigate t ~owner handle url =
               let* reply =
                 cdp_call ~session cdp "Page.navigate" (obj [ ("url", str url) ])
               in
+              (match text "frameId" reply with
+              | Some id -> tab.main_frame <- Some id
+              | None -> ());
               match text "errorText" reply with
               | Some _ -> Error (error "internal" "browser navigation failed")
               | None -> Ok ())
@@ -1481,6 +1493,71 @@ let status t =
       [ ("open", string_of_int (Hashtbl.length t.tabs)); ("cap", string_of_int t.cap) ]
     "tabs" state
 
+(* run-ykq4: browser-level events carry the main frame id; page-level legacy
+   events carry a session. Never credit an unattributed download to another tab. *)
+let download_event t json method_ params =
+  let session = text "sessionId" json in
+  match method_ with
+  | "Browser.downloadWillBegin" | "Page.downloadWillBegin" -> (
+      match (text "guid" params, text "suggestedFilename" params) with
+      | Some id, Some suggested_name ->
+          let frame = text "frameId" params in
+          let target =
+            Hashtbl.fold
+              (fun _ (tab : tab) found ->
+                if
+                  match frame with
+                  | Some frame -> tab.main_frame = Some frame
+                  | None -> session <> None && tab.session = session
+                then Some tab
+                else found)
+              t.tabs None
+          in
+          Option.iter
+            (fun (tab : tab) ->
+              let mime =
+                if String.ends_with ~suffix:".pdf" (String.lowercase_ascii suggested_name)
+                then "application/pdf"
+                else "application/octet-stream"
+              in
+              tab.downloads <-
+                P.{ id; suggested_name; mime; state = "in_progress"; path = None }
+                :: tab.downloads;
+              Hashtbl.replace t.downloads_by_guid id (key tab.handle))
+            target
+      | _ -> ())
+  | "Browser.downloadProgress" | "Page.downloadProgress" -> (
+      match (text "guid" params, text "state" params) with
+      | Some id, Some cdp_state ->
+          let state =
+            match cdp_state with "inProgress" -> "in_progress" | other -> other
+          in
+          Option.iter
+            (fun handle ->
+              Option.iter
+                (fun (tab : tab) ->
+                  tab.downloads <-
+                    List.map
+                      (fun (download : P.download_info) ->
+                        if download.id <> id then download
+                        else
+                          {
+                            download with
+                            state;
+                            path =
+                              (if state = "completed" then text "filePath" params
+                               else None);
+                          })
+                      tab.downloads)
+                (Hashtbl.find_opt t.tabs handle))
+            (Hashtbl.find_opt t.downloads_by_guid id)
+      | _ -> ())
+  | _ -> ()
+
+let downloads t ~owner handle =
+  let* tab = locate t ~access:Act ~owner handle in
+  Ok P.{ downloads = List.rev tab.downloads }
+
 let inspect t json =
   (match text "sessionId" json with
   | None -> ()
@@ -1489,6 +1566,9 @@ let inspect t json =
         (fun _ tab ->
           if tab.session = Some session then Reading.observe tab.reading ~at:(now t) json)
         t.tabs);
+  (match (text "method" json, member "params" json) with
+  | Some method_, Some params -> download_event t json method_ params
+  | _ -> ());
   match (text "method" json, member "params" json) with
   | Some ("Target.targetCreated" | "Target.targetInfoChanged"), Some params -> (
       (* own-c0cl: the announcement every target Chrome reports arrives as, the ones Leash
@@ -1540,6 +1620,7 @@ let inspect t json =
       Hashtbl.iter
         (fun _ tab ->
           if main_frame && tab.session = text "sessionId" json then (
+            tab.main_frame <- Option.bind (member "frame" params) (text "id");
             tab.snapshot <- None;
             tab.navigations <- tab.navigations + 1;
             tab.page_loading <- true))
@@ -1580,7 +1661,7 @@ let inspect t json =
             t.tabs)
   | _ -> ()
 
-let create ~sw ~cap ~tombstone_s ?(idle = Eta.Duration.minutes 30)
+let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Eta.Duration.minutes 30)
     ?(unclaimed = Eta.Duration.hours 1) (deps : 'clock deps) =
   let t =
     {
@@ -1601,6 +1682,8 @@ let create ~sw ~cap ~tombstone_s ?(idle = Eta.Duration.minutes 30)
               Ok ()));
       desktop = deps.desktop;
       logger = deps.logger;
+      download_dir;
+      downloads_by_guid = Hashtbl.create 32;
       cap;
       tombstone_s;
       (* own-vhqo: the two expiry durations are config; the ADR's defaults stand in when a
@@ -1631,6 +1714,23 @@ let create ~sw ~cap ~tombstone_s ?(idle = Eta.Duration.minutes 30)
                       | Eta_rpc.Correlator.Closed _ -> `Stop_daemon
                     in
                     notifications ());
+                Option.iter
+                  (fun download_dir ->
+                    match
+                      cdp_call cdp "Browser.setDownloadBehavior"
+                        (obj
+                           [
+                             ("behavior", str "allow");
+                             ("downloadPath", str download_dir);
+                             ("eventsEnabled", `Bool true);
+                           ])
+                    with
+                    | Ok _ -> ()
+                    | Error _ ->
+                        Eta_observability.Logger.warn t.logger
+                          "run-ykq4: Browser.setDownloadBehavior failed; downloads \
+                           unavailable")
+                  t.download_dir;
                 ignore
                   (cdp_call cdp "Target.setDiscoverTargets"
                      (obj [ ("discover", `Bool true) ]));

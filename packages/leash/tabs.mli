@@ -53,6 +53,7 @@ val create :
   sw:Eio.Switch.t ->
   cap:int ->
   tombstone_s:int ->
+  ?download_dir:string ->
   ?idle:Eta.Duration.t ->
   ?unclaimed:Eta.Duration.t ->
   'clock deps ->
@@ -183,6 +184,13 @@ val close :
 (** own-7pzw own-0pnk: closing a tab the caller owns is idempotent while its tombstone
     lives, another agent's is [not-owner], and a tab the human holds answers [with-human]
     until resume; [--force] closes any tab and is logged. *)
+
+val downloads :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.Handle.t ->
+  (Protocol.downloads_result, Protocol.error) result
+(** run-ykq4: only the tab owner can inspect downloads that began in its main frame. *)
 
 val snap :
   t ->
