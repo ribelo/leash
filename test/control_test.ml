@@ -1125,6 +1125,101 @@ let empty_names () =
            (fun row -> get "name" row = str "" && value row = "Search terms")
            (rows second)))
 
+(* tab-bw4j, L34: a button icon's ::before pseudo-element belongs to its row,
+   while an unrelated overlay does not. *)
+let pseudo_icon_hit () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      let fixture = fixture "unlabelled-controls-chrome.json" in
+      Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
+      Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
+      Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
+      Fake.on_method fake "Runtime.evaluate" (fun _ ->
+          obj [ ("result", obj [ ("value", get "guard" fixture) ]) ]);
+      Fake.on_method fake "Accessibility.getPartialAXTree" (fun _ ->
+          obj
+            [
+              ( "nodes",
+                `List
+                  [
+                    obj
+                      [
+                        ("role", obj [ ("value", str "button") ]);
+                        ("name", obj [ ("value", str "") ]);
+                      ];
+                  ] );
+            ]);
+      Fake.on_method fake "DOM.describeNode" (fun request ->
+          let icon =
+            obj
+              [
+                ("backendNodeId", `Int 30);
+                ("pseudoElements", `List [ obj [ ("backendNodeId", `Int 894) ] ]);
+              ]
+          in
+          let node = [ ("nodeId", `Int 29); ("backendNodeId", `Int 29) ] in
+          let depth = field "depth" (get "params" request) in
+          obj
+            [
+              ( "node",
+                obj
+                  (if depth = Some (`Int (-1)) then ("children", `List [ icon ]) :: node
+                   else node) );
+            ]);
+      Fake.on_method fake "DOM.getContentQuads" (fun _ ->
+          obj
+            [
+              ( "quads",
+                `List
+                  [
+                    `List
+                      (List.map
+                         (fun x -> `Float x)
+                         [ 10.; 10.; 50.; 10.; 50.; 30.; 10.; 30. ]);
+                  ] );
+            ]);
+      let hit = ref 894 in
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          obj [ ("backendNodeId", `Int !hit) ]);
+      let tab = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let observed =
+        result
+          (request tabs "alice"
+             (P.Snap { tab; match_ = None; limit = None; offset = None }))
+      in
+      let rows = match get "rows" observed with `List rows -> rows | _ -> [] in
+      let index =
+        match
+          List.find_opt
+            (fun row -> get "role" row = str "button" && get "name" row = str "")
+            rows
+        with
+        | Some row -> ( match get "index" row with `Int i -> i | _ -> assert false)
+        | None -> Alcotest.fail "icon button absent from snapshot"
+      in
+      let snapshot =
+        match get "snapshot" observed with
+        | `String id -> (
+            match P.Snapshot_id.of_string id with
+            | Ok id -> id
+            | Error why -> Alcotest.fail why)
+        | _ -> Alcotest.fail "snapshot id missing"
+      in
+      ignore (result (request tabs "alice" (P.Click { tab; snapshot; index })));
+      let dispatched () =
+        Fake.received fake
+        |> List.filter (fun json ->
+            field "method" json = Some (str "Input.dispatchMouseEvent"))
+        |> List.length
+      in
+      let before = dispatched () in
+      Alcotest.(check int) "tab-bw4j pseudo-icon dispatched press and release" 2 before;
+      hit := 999;
+      check_code "tab-bw4j unrelated overlay still blocks click" "row-not-actionable"
+        (request tabs "alice" (P.Click { tab; snapshot; index }));
+      Alcotest.(check int)
+        "tab-bw4j overlay dispatches no mouse input" before (dispatched ()))
+
 (* svc-p67t svc-qilu: inspect every command anchor and every journal line of a
    scripted owner session; page data and credentials must never become a log line. *)
 let journal_redaction () =
@@ -1283,6 +1378,9 @@ let download_events () =
       Fake.emit ~session:"session-1" fake ~method_:"Page.frameNavigated"
         ~params:
           (obj [ ("frame", obj [ ("id", frame); ("url", str "https://example.com/") ]) ]);
+      Fake.emit fake ~method_:"Browser.downloadWillBegin" ~params:(get "params" begin_);
+      (* run-ykq4, L34 live PDF: the same GUID can arrive twice. One file must
+         still have one owner-bound record. *)
       Fake.emit fake ~method_:"Browser.downloadWillBegin" ~params:(get "params" begin_);
       (match get "downloadProgress" fixture with
       | `List events ->
@@ -1891,6 +1989,7 @@ let () =
             large_text_over_socket;
           Alcotest.test_case "human-origin shutdown" `Quick human;
           Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
+          Alcotest.test_case "tab-bw4j pseudo-icon click safety" `Quick pseudo_icon_hit;
           Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;
           Alcotest.test_case "run-9ypy run-4j1v run-snk4 run-shgh run-7blx" `Quick
             run_mission;

@@ -587,6 +587,30 @@ let click () =
         "tab-1lhx a refusal dispatches nothing" 6
         (List.length (calls fake "Input.dispatchMouseEvent")))
 
+(* tab-bw4j, L34: DOM.getNodeForLocation uses document coordinates, whereas
+   Input.dispatchMouseEvent uses viewport coordinates. A scrolled Blue Top product
+   link failed with Chrome -32000 at viewport y=203; pageY=550 reached it. *)
+let scrolled_click () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      Fake.on_method fake "Page.getLayoutMetrics" (fun _ ->
+          o [ ("cssLayoutViewport", o [ ("pageX", i 0); ("pageY", i 550) ]) ]);
+      Fake.on_method fake "DOM.getNodeForLocation" (fun request ->
+          let coordinate = integer "y" (params request) in
+          o [ ("backendNodeId", i (if coordinate = 575 then 11 else 999)) ]);
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      ignore
+        (result
+           (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+      let hit = List.hd (calls fake "DOM.getNodeForLocation") |> params in
+      Alcotest.(check int) "document-space hit point" 575 (integer "y" hit);
+      let event = List.hd (calls fake "Input.dispatchMouseEvent") |> params in
+      Alcotest.(check bool)
+        "viewport-space trusted dispatch" true
+        (match member "y" event with `Float y -> y = 25. | _ -> false))
+
 (* tab-1lhx: a dispatch that fails after the press makes the action fail, and the press
    is never issued again. *)
 let never_retried () =
@@ -1481,6 +1505,7 @@ let () =
       ( "actions",
         [
           Alcotest.test_case "tab-bw4j tm6c j1z2 1lhx" `Quick click;
+          Alcotest.test_case "tab-bw4j scrolled document hit" `Quick scrolled_click;
           Alcotest.test_case "tab-1lhx" `Quick never_retried;
           Alcotest.test_case "tab-p3x1 0lax" `Quick fill;
           Alcotest.test_case "tab-luo5" `Quick press;

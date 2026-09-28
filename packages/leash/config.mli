@@ -39,12 +39,14 @@ type chrome = {
   profile_dir : Text.t;
   workspace : Text.t;
   headless : bool;
+  window_size : Text.t;
 }
 (** svc-x8rp: [binary] defaults to ["google-chrome-stable"] — a bare name
     {!validate_paths} looks up on [PATH] — and [profile_dir] to
     ["$XDG_DATA_HOME/leash/profile"] ([$HOME/.local/share] when the variable is unset),
     both expanded by {!env}. [headless] defaults to false; production starts a headed
-    browser. *)
+    browser. [window_size] defaults to ["1366,900"] and is only passed to headless Chrome.
+*)
 
 type tabs = { cap : Tab_cap.t }
 (** [cap] defaults to 32 (ADR-0005). *)

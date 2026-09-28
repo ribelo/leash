@@ -123,6 +123,7 @@ type harness = {
   mutable books : string list;  (** level 1 answers, in order; the last repeats *)
   mutable procs : string list;  (** level 2 answers, in order; the last repeats *)
   mutable verifies : P.run_expectation list list;
+  mutable verification_observations : R.observation list;
   mutable drives : P.drive_result list;
   mutable observations : R.observation list;
   mutable plans : R.plan_reply list;
@@ -145,7 +146,7 @@ type harness = {
 
 let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
     ?(verifies = [ [ expectation "the page is a" "page_kind" ] ]) ?(drives = [ drive () ])
-    ?(observations = [ observation () ])
+    ?(observations = [ observation () ]) ?(verification_observations = [])
     ?(plans = [ R.{ answer = Fail "no plan"; expect = []; usage = None; pages = [] } ])
     ?(values = [ ("product", "Blue Top") ]) ?(tick = 0.) () =
   let last = match observations with [] -> observation () | first :: _ -> first in
@@ -153,6 +154,7 @@ let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
     books;
     procs;
     verifies;
+    verification_observations;
     drives;
     observations;
     plans;
@@ -236,8 +238,17 @@ let handler (h : harness) : R.handler =
         (fun ~pages:_ ~checks ~timeout_s:_ ->
           h.ops <- "verify" :: h.ops;
           ignore checks;
+          let observed =
+            match h.verification_observations with
+            | [] -> h.last
+            | next :: rest ->
+                h.verification_observations <- rest;
+                h.last <- next;
+                next
+          in
           Ok
-            (pop "verifications" (fun () -> h.verifies) (fun x -> h.verifies <- x), h.last));
+            ( pop "verifications" (fun () -> h.verifies) (fun x -> h.verifies <- x),
+              observed ));
       plan =
         (fun request ->
           h.ops <- "plan" :: h.ops;
@@ -496,7 +507,97 @@ let retry () =
   check_status "run-k8bx done after the replay" "done" result;
   let entry = List.hd result.P.procedures in
   Alcotest.(check int) "run-k8bx two attempts" 2 entry.P.attempts;
-  Alcotest.(check int) "run-k8bx the step ran twice" 2 (List.length h.steps)
+  Alcotest.(check int) "run-k8bx the step ran twice" 2 (List.length h.steps);
+  Alcotest.(check int) "run-k8bx both drives in trace" 2 (List.length entry.P.drives)
+
+(* run-xqh8 run-k8bx: the observed L34 live failure retried a failed procedure,
+   but the result omitted both attempts and their failed expectation entirely. *)
+let failed_retry_trace () =
+  let h =
+    harness ~procs:[ "step" ]
+      ~drives:[ drive (); drive () ]
+      ~verifies:
+        [
+          [ expectation "the page is a" "page_kind" ~passed:false ];
+          [ expectation "the page is a" "page_kind" ~passed:false ];
+        ]
+      ~plans:[ R.{ answer = Fail "nothing left"; expect = []; usage = None; pages = [] } ]
+      ()
+  in
+  let result = ran (run ~installed:[ site_a ] h (args ())) in
+  check_status "run-xqh8 failed procedure ends failed" "failed" result;
+  Alcotest.(check int)
+    "run-xqh8 failed procedure included" 1
+    (List.length result.P.procedures);
+  let entry = List.hd result.P.procedures in
+  Alcotest.(check string) "run-xqh8 failed outcome" "failed" entry.P.outcome;
+  Alcotest.(check int) "run-k8bx two failed attempts" 2 entry.P.attempts;
+  Alcotest.(check int) "run-xqh8 both failed drives" 2 (List.length entry.P.drives);
+  Alcotest.(check bool)
+    "run-xqh8 failed expectation" false (List.hd entry.P.expectations).P.passed
+
+(* run-xqh8 run-k8bx, L34: a consent overlay appears after the initial
+   Products page observation, covers both attempts, and changes its page kind.
+   The loop offers the playbook's dismiss-consent procedure, then the interrupted
+   find-product again, without inventing a planner procedure or clicking through. *)
+let delayed_consent_recovery () =
+  let installed = ok (B.load "../examples/playbooks/automationexercise.com.json") in
+  let products =
+    observation ~url:"https://automationexercise.com/products" ~text:"ALL PRODUCTS" ()
+  in
+  let overlay =
+    observation ~url:"https://automationexercise.com/products"
+      ~text:"ALL PRODUCTS This site asks for consent to use your data" ()
+  in
+  let search =
+    observation ~url:"https://automationexercise.com/products?search=Blue%20Top"
+      ~text:"SEARCHED PRODUCTS Blue Top" ()
+  in
+  let h =
+    harness ~books:[ "automationexercise.com" ]
+      ~procs:[ "find-product"; "dismiss-consent"; "find-product"; "DONE" ]
+      ~observations:[ products; products; products; overlay; products; search ]
+      ~verification_observations:[ overlay; overlay; products; search; search ]
+      ~drives:
+        [
+          drive ~status:"error" ~reason:"the row is covered" ();
+          drive ~status:"error" ~reason:"the row is covered" ();
+          drive ();
+          drive ();
+        ]
+      ~verifies:
+        [
+          [ expectation "the page is search" "page_kind" ~passed:false ];
+          [ expectation "the page is search" "page_kind" ~passed:false ];
+          [ expectation "the page is products" "page_kind" ];
+          [ expectation "the page is search" "page_kind" ];
+          [ expectation "the page is search" "page_kind" ];
+        ]
+      ()
+  in
+  let result =
+    ran (run ~installed:[ installed ] h (args ~expect:[ "the page is search" ] ()))
+  in
+  if status_of result <> "done" then
+    Alcotest.failf "run-xqh8 status=%s reason=%s asked=%s plans=%d procedures=%s"
+      (status_of result)
+      (Option.value ~default:"" result.P.reason)
+      (String.concat "," h.procs) (List.length h.plan_requests)
+      (String.concat ","
+         (List.map
+            (fun (entry : P.run_procedure) -> entry.P.slug ^ ":" ^ entry.P.outcome)
+            result.P.procedures));
+  check_status "run-xqh8 recovered consent then resumed" "done" result;
+  Alcotest.(check (list string))
+    "run-k8bx reselected installed recovery and search"
+    [ "find-product"; "dismiss-consent"; "find-product" ]
+    (List.map (fun (entry : P.run_procedure) -> entry.P.slug) result.P.procedures);
+  Alcotest.(check (list string))
+    "run-xqh8 first failure and two verified successors"
+    [ "failed"; "verified"; "verified" ]
+    (List.map (fun (entry : P.run_procedure) -> entry.P.outcome) result.P.procedures);
+  Alcotest.(check int)
+    "run-xqh8 page transition needs no planner" 0 (List.length h.plan_requests)
 
 (* run-4j1v, the L30 guard: DONE is not accepted without an independent verification of
    the mission's expectations. The state is the successful Added! modal of L30's
@@ -876,6 +977,9 @@ let () =
           Alcotest.test_case "run-5rll run-d82w arguments" `Quick arguments;
           Alcotest.test_case "run-prrv composition" `Quick composition;
           Alcotest.test_case "run-k8bx retry once" `Quick retry;
+          Alcotest.test_case "run-xqh8 failed retry trace" `Quick failed_retry_trace;
+          Alcotest.test_case "run-xqh8 late consent recovery" `Quick
+            delayed_consent_recovery;
           Alcotest.test_case "run-4j1v run-snk4 Added! modal" `Quick added_modal;
           Alcotest.test_case "run-4mzm recorded answers" `Quick recorded;
           Alcotest.test_case "run-vspj caps and deadline" `Quick limits;

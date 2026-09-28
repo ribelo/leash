@@ -113,7 +113,7 @@ let value content =
    answered call, before the content is parsed, because the tokens were spent either
    way; a memo reuse makes no call and logs nothing. *)
 let log_usage logger (completion : Eta_ai_chat.Codecs.completion) =
-  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens } =
+  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens; cost } =
     completion.Eta_ai_chat.Codecs.usage
   in
   Eta_observability.Logger.info logger
@@ -123,6 +123,7 @@ let log_usage logger (completion : Eta_ai_chat.Codecs.completion) =
         ("prompt_tokens", Eta_observability.Logger.Int prompt_tokens);
         ("completion_tokens", Eta_observability.Logger.Int completion_tokens);
         ("total_tokens", Eta_observability.Logger.Int total_tokens);
+        ("cost", Eta_observability.Logger.Float (Option.value ~default:0. cost));
       ]
     "text helper usage"
 
@@ -136,9 +137,45 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
       ~json_object:true ~reasoning:`Disabled ()
   with
   | Error error -> Error (Model_error.of_eta error)
-  | Ok completion ->
-      log_usage logger completion;
-      value completion.Eta_ai_chat.Codecs.content
+  | Ok first -> (
+      log_usage logger first;
+      let content = first.Eta_ai_chat.Codecs.content in
+      match value content with
+      | Ok answer -> Ok answer
+      | Error error -> (
+          (* drive-ls3c, L34: malformed model formatting gets one bounded correction,
+             never a permissive extraction. Overlong typed values are terminal. *)
+          let overlong =
+            match Yojson.Safe.from_string content with
+            | `Assoc [ ("text", `String text) ] -> String.length text > text_bound
+            | _ -> false
+            | exception Yojson.Json_error _ -> false
+          in
+          if overlong then Error error
+          else
+            let retry =
+              messages
+              @ [
+                  { role = Assistant; content };
+                  {
+                    role = User;
+                    content =
+                      "Your previous answer was not exactly one JSON object with only a \
+                       text member. Reply with only {\"text\": string|null}; do not add \
+                       Markdown fences, other members, or prose.";
+                  };
+                ]
+            in
+            match
+              Eta_ai_chat.complete client
+                ~deadline:(Eta.Duration.min deadline default_deadline)
+                ~model ~messages:retry ~max_tokens:1024 ~json_object:true
+                ~reasoning:`Disabled ()
+            with
+            | Error error -> Error (Model_error.of_eta error)
+            | Ok second ->
+                log_usage logger second;
+                value second.Eta_ai_chat.Codecs.content))
 
 let create ~client ~model ~logger () =
   (* The one-entry memo of agent.py:110-114, keyed by what the reference compares: the

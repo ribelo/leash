@@ -259,11 +259,10 @@ let point cdp tab backend =
   | Some point -> Ok point
   | None -> fail "row-not-actionable" "the row has no box at its click point"
 
-(* Whether the hit node is the row or one of its descendants. The hit test answers with
-   the deepest node at the point — a button with a label span answers with the span — and
-   Chrome's DOM.describeNode carries no parent chain for the nodes it describes (a subtree
-   describe reports a zero parentId), so descendanthood is decided by walking the row's
-   own subtree: one call, bounded here. *)
+(* A hit on a button icon is valid only when it belongs to that button. Font Awesome
+   renders its icon in a CSS ::before pseudo-element, which Chrome reports as the hit
+   node. Check both DOM children and pseudo-elements in the described subtree
+   (tab-bw4j, L34). *)
 let subtree_contains cdp tab ~backend ~hit =
   match
     attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
@@ -282,33 +281,62 @@ let subtree_contains cdp tab ~backend ~hit =
               decr budget;
               match E.Of_json.(field "backendNodeId" (try_or_none int)) node with
               | Ok (Some id) when id = hit -> true
-              | _ -> (
-                  match E.array_member "children" node with
-                  | Some children -> List.exists walk children
-                  | None -> false))
+              | _ ->
+                  let children =
+                    Option.value ~default:[] (E.array_member "children" node)
+                  in
+                  let pseudo =
+                    Option.value ~default:[] (E.array_member "pseudoElements" node)
+                  in
+                  List.exists walk children || List.exists walk pseudo)
           in
           walk node)
+
+(* DOM.getNodeForLocation takes document-space coordinates, while content quads and
+   Input.dispatchMouseEvent use viewport-space coordinates. A scrolled page can
+   otherwise return Chrome -32000 for a visible link (tab-bw4j, L34). *)
+let document_offset cdp tab =
+  match
+    attempt ~deadline:call_deadline cdp ~session:tab.session "Page.getLayoutMetrics"
+      (E.object_ [])
+  with
+  | Error _ -> None
+  | Ok metrics -> (
+      let read viewport =
+        let open E.Of_json in
+        match
+          (at [ viewport; "pageX" ] float metrics, at [ viewport; "pageY" ] float metrics)
+        with
+        | Ok x, Ok y -> Some (x, y)
+        | _ -> None
+      in
+      match read "cssVisualViewport" with
+      | Some offset -> Some offset
+      | None -> read "cssLayoutViewport")
 
 (* The click point must hit-test to the row or to one of its descendants: an overlay that
    covers the row answers with another node, and a row scrolled out of the viewport has
    no node at the point at all. A scroll is not staleness (ADR-0004), so a miss is given
    one [scrollIntoViewIfNeeded] and a fresh aim before it is refused. *)
 let hit_test cdp tab ~backend ~x ~y =
-  match
-    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.getNodeForLocation"
-      (E.object_
-         [
-           ("x", Some (E.int (int_of_float (floor (x +. 0.5)))));
-           ("y", Some (E.int (int_of_float (floor (y +. 0.5)))));
-           ("includeUserAgentShadowDOM", Some (E.bool false));
-         ])
-  with
-  | Error _ -> false
-  | Ok json -> (
-      match E.Of_json.(field "backendNodeId" (try_or_none int)) json with
-      | Ok (Some hit) when hit = backend -> true
-      | Ok (Some hit) -> subtree_contains cdp tab ~backend ~hit
-      | _ -> false)
+  match document_offset cdp tab with
+  | None -> false
+  | Some (page_x, page_y) -> (
+      match
+        attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.getNodeForLocation"
+          (E.object_
+             [
+               ("x", Some (E.int (int_of_float (floor (x +. page_x +. 0.5)))));
+               ("y", Some (E.int (int_of_float (floor (y +. page_y +. 0.5)))));
+               ("includeUserAgentShadowDOM", Some (E.bool false));
+             ])
+      with
+      | Error _ -> false
+      | Ok json -> (
+          match E.Of_json.(field "backendNodeId" (try_or_none int)) json with
+          | Ok (Some hit) when hit = backend -> true
+          | Ok (Some hit) -> subtree_contains cdp tab ~backend ~hit
+          | _ -> false))
 
 let aim cdp tab (target : target) =
   let* x, y = point cdp tab target.backend in

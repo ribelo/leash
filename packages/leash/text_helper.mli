@@ -47,8 +47,8 @@ val create :
     last answered and reuses that answer when the identical context comes back — what a
     stale-page retry is (drive-ls3c) — so an instance must not outlive the drive it
     served. Cheap and synchronous: no I/O, no socket, nothing to release. Every answered
-    call is logged at info with the model and the token counts the provider reported
-    (drive-7tvn); a memo reuse makes no call and logs nothing. *)
+    call is logged at info with the model, tokens and reported cost (drive-7tvn); a memo
+    reuse makes no call and logs nothing. *)
 
 val unavailable : t
 (** The L19 refusal for a drive that was given no text helper at all: every call is

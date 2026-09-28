@@ -286,6 +286,7 @@ let chat_content content =
                   ("prompt_tokens", `Int 10);
                   ("completion_tokens", `Int 2);
                   ("total_tokens", `Int 12);
+                  ("cost", `Float 0.00042);
                 ] );
           ]))
 
@@ -788,6 +789,28 @@ let field_context () =
               Alcotest.(check int)
                 "drive-ls3c a changed input is asked again" 2 (Chat.connections server)))
 
+(* drive-ls3c, L34: a real provider added a bare Markdown fence after valid
+   JSON. A bounded correction asks again; the malformed first answer is never typed. *)
+let corrective_retry () =
+  helper_rig
+    ~replies:
+      [ chat_content "{\"text\":\"Blue Top\"}\n```"; chat_reply (`String "Blue Top") ]
+    (fun _ _ helper server _ ->
+      let answer = helper.Leash.Text_helper.complete context in
+      Alcotest.(check (option string))
+        "drive-ls3c corrected strict JSON" (Some "Blue Top")
+        (match answer with Ok text -> text | Error error -> Alcotest.fail error.message);
+      Alcotest.(check int) "drive-ls3c one bounded correction" 2 (Chat.connections server);
+      let requests = Chat.requests server in
+      let second = List.nth requests 1 in
+      let messages = list (get "messages" (Yojson.Safe.from_string second.Chat.body)) in
+      Alcotest.(check int)
+        "drive-ls3c original answer and corrective reason" 4 (List.length messages);
+      let correction = text "content" (List.nth messages 3) in
+      Alcotest.(check bool)
+        "drive-ls3c asks for no Markdown fences" true
+        (contains correction "Markdown fences"))
+
 (* drive-ls3c: the answer must be exactly {"text": string|null}; anything else, and a
    text over 4 KiB, is a refusal with nothing typed. *)
 let answer_shape () =
@@ -796,7 +819,10 @@ let answer_shape () =
       chat_reply (`String (String.make 4096 'y'));
       chat_reply `Null;
       chat_reply (`Assoc [ ("text", `String "hello"); ("other", `Int 1) ]);
+      chat_reply (`Assoc [ ("text", `String "hello"); ("other", `Int 1) ]);
       chat_content "not json";
+      chat_content "not json";
+      chat_reply (`Int 5);
       chat_reply (`Int 5);
     ]
   in
@@ -834,7 +860,7 @@ let answer_shape () =
                 (contains error.message expected))
         [ ("two members", "text"); ("not json", "text"); ("not a string", "text") ])
 
-(* drive-7tvn: every answered helper call logs its model and token counts at info; a
+(* drive-7tvn: every answered helper call logs its model, tokens and cost at info; a
    memo reuse makes no call and logs nothing. *)
 let usage_is_logged () =
   helper_rig
@@ -873,7 +899,10 @@ let usage_is_logged () =
         | _ -> Alcotest.fail "completion");
       Alcotest.(check int)
         "drive-7tvn total tokens" 12
-        (match field "total_tokens" with Int n -> n | _ -> Alcotest.fail "total"))
+        (match field "total_tokens" with Int n -> n | _ -> Alcotest.fail "total");
+      Alcotest.(check (float 0.000001))
+        "drive-7tvn provider cost" 0.00042
+        (match field "cost" with Float n -> n | _ -> Alcotest.fail "cost"))
 
 let () =
   Alcotest.run "L22 text helper"
@@ -887,6 +916,8 @@ let () =
           Alcotest.test_case "drive-ls3c reuse on unchanged input" `Quick reuse;
           Alcotest.test_case "drive-kh2u chat failure with steps" `Quick chat_failure;
           Alcotest.test_case "drive-ls3c jev's field_context" `Quick field_context;
+          Alcotest.test_case "drive-ls3c Markdown corrective retry" `Quick
+            corrective_retry;
           Alcotest.test_case "drive-ls3c the answer shape" `Quick answer_shape;
           Alcotest.test_case "drive-7tvn usage is logged" `Quick usage_is_logged;
         ] );

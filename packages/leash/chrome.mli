@@ -49,6 +49,7 @@ type config = {
   grace : Eta.Duration.t;
   backoff : backoff;
   headless : bool;
+  window_size : string;
 }
 
 val make :
@@ -58,6 +59,7 @@ val make :
   ?grace:Eta.Duration.t ->
   ?backoff:backoff ->
   ?headless:bool ->
+  ?window_size:string ->
   unit ->
   config
 (** [grace] defaults to five seconds and [headless] to false. The workspace is placement
@@ -68,7 +70,7 @@ val make :
 val argv : config -> string list
 (** The exact command line: the dedicated profile, no first-run or crash-restore prompt,
     [--remote-debugging-pipe] with no debugging port, [--class=leash], and
-    [--headless=new] only when [headless] is true. *)
+    [--headless=new] and [--window-size=1366,900] only when [headless] is true. *)
 
 type 'clock deps = {
   clock : 'clock Eio.Time.clock;

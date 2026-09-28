@@ -68,6 +68,7 @@ end
 let default_binary = "google-chrome-stable"
 let default_profile_dir = "$XDG_DATA_HOME/leash/profile"
 let default_workspace = "leash"
+let default_window_size = "1366,900"
 let default_socket = "$XDG_RUNTIME_DIR/leash/control.sock"
 
 (* ADR-0005: a tab cap of 32, half an hour idle before stage 1 releases, an hour unclaimed
@@ -83,6 +84,7 @@ type chrome = {
   profile_dir : Text.t; [@json.default default_profile_dir]
   workspace : Text.t; [@json.default default_workspace]
   headless : bool; [@json.default false]
+  window_size : Text.t; [@json.default default_window_size]
 }
 [@@deriving yojson]
 (** The browser the service owns. [headless] defaults to false: production runs a headed
@@ -171,6 +173,7 @@ let default_chrome =
     profile_dir = default_profile_dir;
     workspace = default_workspace;
     headless = false;
+    window_size = default_window_size;
   }
 
 let default_tabs = { cap = default_cap }
@@ -328,7 +331,9 @@ let chrome_config (chrome : chrome) =
     ~binary:(Text.to_string chrome.binary)
     ~profile_dir:(Text.to_string chrome.profile_dir)
     ~workspace:(Text.to_string chrome.workspace)
-    ~headless:chrome.headless ()
+    ~headless:chrome.headless
+    ~window_size:(Text.to_string chrome.window_size)
+    ()
 
 let validate_otlp config =
   let error pointer message = Error [ { Eta_app.Config.pointer; message } ] in

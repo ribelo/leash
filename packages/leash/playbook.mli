@@ -35,6 +35,7 @@ type t = {
 
 type checker =
   | Page_kind of string
+  | Not_page_kind of string
   | Text of string
   | Download of string option
   | No_dialog

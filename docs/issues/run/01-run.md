@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 7
 ---
 
@@ -109,7 +109,7 @@ Conditional branching in playbooks; parallel tabs in one run; playbook sharing o
 ## Further Notes
 
 - Design record: the session of 2026-09-28. Two JEV levels above the operator, Luna on demand, mandatory human-language `expect` verified by code first and JEV score second, page kinds as the semantic state, the 255-option ceiling as the reason playbooks are selected rather than merged, and propose-and-approve for learned procedures.
-- **L30 status: measured, 2026-09-28 (story 40).** Allegro home/listing returned HTTP 403 with DataDome; no evasion attempted. The first alternate with the complete workflow, automationexercise.com, supplied five verified headless Leash states (home, submitted search results, offer, successful Added! modal, Blue Top in cart). One real System One call per state per shape, 15 final calls: A title/URL **2/5** correct, 2,767 input/452 output tokens, $0.000116214; B plus page kind/recent procedures **4/5**, 3,065/450, $0.000128730; C plus page text **2/5**, 5,629/451, $0.000236418. Final calls total $0.000481362 provider-reported cost. Per-call choices, probabilities, labels and costs are in .scratch/research/state-measurement/README.md and results.pretty.json. A discarded exploratory pass with a mislabeled login blocker is excluded from these costs. Select B for story 18; no page text at upper levels. Known arguments were not varied or supplied in this probe, and five states from one substitute shop do not establish Allegro behavior or general robustness. L34 Allegro acceptance remains open and may require an operator-headed run.
+- **L30 status: measured, 2026-09-28 (story 40).** Allegro home/listing returned HTTP 403 with DataDome; no evasion attempted. The first alternate with the complete workflow, automationexercise.com, supplied five verified headless Leash states (home, submitted search results, offer, successful Added! modal, Blue Top in cart). One real System One call per state per shape, 15 final calls: A title/URL **2/5** correct, 2,767 input/452 output tokens, $0.000116214; B plus page kind/recent procedures **4/5**, 3,065/450, $0.000128730; C plus page text **2/5**, 5,629/451, $0.000236418. Final calls total $0.000481362 provider-reported cost. Per-call choices, probabilities, labels and costs are in .scratch/research/state-measurement/README.md and results.pretty.json. A discarded exploratory pass with a mislabeled login blocker is excluded from these costs. Select B for story 18; no page text at upper levels. Known arguments were not varied or supplied in this probe, and five states from one substitute shop do not establish Allegro behavior or general robustness. At this stage the L34 Allegro path still awaited live headless acceptance; its later Chrome 403 is recorded below, with no evasion and the user-authorized substitute shop accepted instead.
 - **L31 safety condition exposed by L30:** B answered DONE on the successful Added! modal, where the correct next procedure is go-to-cart. Existing story 22 allows last-procedure expectations alone to justify DONE, but an add confirmation does not prove item-in-cart. DONE for a cart mission must be gated by mission-level item-in-cart expectations or an equivalent deterministic cart/item check. The modal text-marker page kind must take priority over the offer URL matcher. A planner remains a fallback if further measurement shows upper levels need it.
 - **L31 status: delivered, 2026-09-28.** The loop is `Run.loop` (`packages/leash/run.ml`),
   an effect computation over a local handler token: `Select_playbook`, `Select_procedure`,
@@ -180,6 +180,112 @@ Conditional branching in playbooks; parallel tabs in one run; playbook sharing o
   is the proposal path (not `proposals/`), and the planner's configuration is the three flat
   `[models]` keys `planner_model`, `planner_reasoning` and `planner_endpoint` beside
   `jev_model` and `text_model` — story 33's "its reasoning effort and its endpoint
-  configurable" as the section's own shape. A planner turn's `usage.cost` is zero: eta's
-  chat client reports tokens only, recorded in docs/missing-eta-api.md.
+  configurable" as the section's own shape. A planner turn's `usage.cost` now carries Eta's provider-reported chat cost
+  (nchat-qu3j); absent provider cost contributes zero.
+- **L34 live acceptance, 2026-09-28 (completed).** The isolated
+  `scripts/live-acceptance-m7` gate starts real `--headless=new` Chrome with a fresh
+  profile and XDG directories; OpenRouter credentials enter only through
+  `secret-env ai --`. It terminates the actual Leash service with SIGTERM (exit 0),
+  checks Chrome is gone, and inspects CLI/service logs for credential leaks.
+  `scripts/live-acceptance-m7.py` permits independent `LEASH_M7_PHASE=shop|cross|discover`
+  reruns, with bounded model and wall-clock budgets. No payment was attempted.
+  - Allegro headless home answered **403 in Chrome Navigation Timing**, corroborated
+    by curl **403**; a preceding exploratory run timed out in the model after four
+    JEV and one text-helper calls (~$0.0001256). No evasion; the headed-operator
+    instructions are in `scripts/live-acceptance-m6-headed`. For the confirmed 403
+    navigation, JEV=0, planner=0, steps=0, cost=$0.
+  - Cross-site mission: public Mozilla PDF.js `tracemonkey.pdf` on github.com, then
+    example.com in the same tab. **Done** in 5.7 s, 7 JEV calls (7,792 input/632
+    output tokens), 0 planner turns/calls, 2 operator steps, System One
+    $0.000327264, chat $0. `github.com/download-pdf` verified a completed
+    download (one GUID after deduplication; operator step cap 1), then
+    `example.com/verify-example` verified the Example Domain page; both were
+    first-attempt procedures, and the final URL was `https://example.com/`. The
+    earlier uncapped pass returned ten inventory entries and cost $0.000976080
+    (11 JEV, 6 steps, 7.2 s); the single-step pass exposed duplicate Chrome
+    begin events for one GUID (two entries, $0.000327264). Story `run-ykq4` now
+    deduplicates them, with a scripted CDP regression.
+  - Discovery mission on example.com: identify the Example Domain heading without
+    external navigation. **Done** in 15.3 s, 5 JEV calls (2,892 input/198
+    output tokens), 2 planner turns/calls (2,041 chat tokens), 1 operator step,
+    System One $0.000121464, chat $0.000623300, total $0.000744764. Trace:
+    proposed `identify-example-domain-heading` passed its heading judgment on
+    the first attempt, then the gate explicitly accepted `example.com.json`
+    into the isolated XDG config; no automatic acceptance.
+  - Shop fallback automationexercise.com is still being exercised; initial real
+    HTTP 200 home displayed Products. The first run failed after 79.8 s, 10 JEV
+    calls, 3 planner turns/calls, System One $0.001439550 + chat $0.001654530
+    = $0.003094080, while retrying `open-offer` on home and reaching the planner
+    cap; its reported zero steps was a **trace omission**, not proof no actions
+    ran. Stories `run-xqh8` and `run-k8bx` now record both attempts and their
+    failed expectation, with red/green regression tests. A later run stopped on
+    a strict text-helper `invalid-response` after 2 JEV and 1 helper calls
+    ($0.000152458); no typing occurred. Repeated shop attempts with the corrected
+    `/products` entry reached the named search button but failed clicks: a 99.6 s
+    attempt logged 10 JEV, 2 planner turns, 3 text-helper calls, $0.002625922
+    and stopped before an offer. The direct zero-model Chrome probe proved the
+    button center hits Font Awesome's `::before` pseudo-element inside the button,
+    while the click safety check treated it as an unrelated overlay. Story `tab-bw4j`
+    now walks `pseudoElements` as well as `children` in `DOM.describeNode`; the
+    action-level fake Chrome regression both dispatches the pseudo-icon click and
+    refuses a genuine overlay. A real direct click now navigates to
+    `/products?search=Blue%20Top` without bypassing trusted CDP mouse input. One
+    subsequent shop run stopped after 4.5 s on another strict text-helper
+    `invalid-response` (3 JEV, 0 planner, 2 helper calls, $0.000387970); no value
+    from that malformed answer was typed. The subsequent bounded corrective text-helper
+    retry can still return invalid JSON; its strict parser rejects the answer rather than
+    acting on it (a 5.5 s run: 3 JEV, 3 helper calls, $0.000555678).
+  - Desktop headless Chrome now uses the configured `chrome.window_size` (default
+    `1366,900`, observed content viewport 1366×813) instead of the small implicit
+    window. A direct trusted `View Product` click exposed a second click defect:
+    `DOM.getContentQuads` gave a viewport-space center, but Chrome's
+    `DOM.getNodeForLocation` requires document-space coordinates. At pageY=550,
+    viewport y≈203 returned CDP -32000 while document y≈753 hit backend 192.
+    Story `tab-bw4j` adds the current `Page.getLayoutMetrics` page offset only to
+    CDP hit testing, retaining viewport-space `Input.dispatchMouseEvent` and
+    strict foreign-overlay refusal; an Alcotest scrolled-page regression turned
+    red then green, and a direct real `View Product` click succeeded. JEV
+    sometimes selected `Add to cart` or the search icon despite the explicit
+    `View Product` hint; record this as model behavior, not a click-safety bypass.
+  - The first full fallback run after the hit fix reached `/view_cart` and visibly
+    showed Blue Top but timed out after 80.3 s (34 JEV calls, 0 planner calls,
+    4 helper calls, $0.004457884) because page-kind first-match returned
+    `post-add`: its lingering `Added!` marker preceded the exact cart URL.
+    Story `run-xqh8` tests this priority red/green. Consent remains first;
+    exact `/view_cart` now precedes `post-add`, with no broad cart text marker.
+  - **Shop accepted on automationexercise.com.** The isolated real JEV mission
+    finished in **38.6 s**, 27 JEV calls (85,177 input/5,600 output tokens),
+    0 planner turns/calls, 18 operator steps, and 8,246 helper chat tokens:
+    System One $0.003577434 + chat $0.000358330 = **$0.003935764**.
+    Trace: `find-product` failed twice on a delayed consent overlay (no
+    unsafe click); `dismiss-consent` verified trusted Manage options →
+    Confirm choices with toggles left off; resumed `find-product` verified
+    search; `open-offer` verified on its second drive after a wrong/covered
+    first selection; `add-to-cart` verified the `Added!` success marker
+    despite a drive reporting `row-not-actionable` after that mutation;
+    `go-to-cart` verified on its first drive. Final URL
+    `https://automationexercise.com/view_cart` visibly contained Blue Top;
+    page-kind, named product, and `checkout/payment has not started`
+    checks passed, then DONE re-verification passed. No account, order,
+    checkout or payment was started. SIGTERM exited 0 and Chrome was gone.
+    A second shop in the final sequential gate independently verified the same
+    seven-procedure trace in 38.3 s, 27 JEV, 0 planner turns, 18 steps,
+    System One $0.003573318 + chat $0.000364960 = $0.003938278; the
+    initial complete-gate try had first timed out in the shop after 66.9 s,
+    17 JEV/0 planner/4 helper calls, $0.002810500.
+  - **Full three-mission gate passed** after the bounded rerun: Allegro again
+    returned headless Chrome HTTP 403 (JEV=0, planner=0, steps=0, $0; no
+    evasion). The cross-site PDF.js `tracemonkey.pdf` GitHub → Example
+    Domain switch verified one completed PDF and final URL example.com in
+    8.7 s, 7 JEV/0 planner turns/2 steps, System One $0.000484806,
+    chat $0. The discovery run proposed a heading procedure, verified it,
+    then explicitly accepted `example.com.json` into temporary XDG config:
+    12.0 s, 5 JEV/2 planner turns/1 step, System One $0.000121296 +
+    chat $0.000459200 = $0.000580496. All 34 CLI outputs and 15,506
+    service-log bytes were checked for key leakage; SIGTERM exited 0
+    and Chrome disappeared. No account, checkout, payment, message or
+    order was attempted.
+  - After the successful complete live gate and final formatting, `timeout 900
+    nix develop -c env DUNE_BUILD_DIR=_build_l34 dune test`, `dune build
+    @install`, and `dune build @fmt` all passed on the final source.
 - L29 format decision: `nix develop -c ocamlfind list | grep -i yaml` found no YAML library on the OxCaml 5.4 switch. opam metadata for `yaml` 3.2.0 lists `ctypes` and `bos` (also `dune-configurator`) as dependencies requiring an install into the shared switch, which this job must not disturb. JSON-only `<site>.json` is the shipped format; `.yaml` is refused with an actionable JSON message.

@@ -55,6 +55,7 @@ type t = {
 
 type checker =
   | Page_kind of string
+  | Not_page_kind of string
   | Text of string
   | Download of string option
   | No_dialog
@@ -97,7 +98,12 @@ let resolve pages sentence =
   let after prefix =
     String.sub s (String.length prefix) (String.length s - String.length prefix) |> trim
   in
-  if starts "the page is " s then
+  if starts "the page is not " s then
+    let kind = after "the page is not " in
+    if List.exists (fun (p : page) -> lower p.name = kind) pages then
+      Ok (Not_page_kind kind)
+    else Error ("unknown page kind " ^ kind)
+  else if starts "the page is " s then
     let kind = after "the page is " in
     if List.exists (fun (p : page) -> lower p.name = kind) pages then Ok (Page_kind kind)
     else Error ("unknown page kind " ^ kind)
@@ -598,6 +604,7 @@ let accept path =
    [playbook check] reports a sentence resolved to. *)
 let checker_name = function
   | Page_kind _ -> "page_kind"
+  | Not_page_kind _ -> "not_page_kind"
   | Text _ -> "text"
   | Download _ -> "download"
   | No_dialog -> "no_dialog"
@@ -606,6 +613,8 @@ let checker_name = function
 
 let yojson_of_checker = function
   | Page_kind name -> `Assoc [ ("checker", `String "page_kind"); ("kind", `String name) ]
+  | Not_page_kind name ->
+      `Assoc [ ("checker", `String "not_page_kind"); ("kind", `String name) ]
   | Text value -> `Assoc [ ("checker", `String "text"); ("text", `String value) ]
   | Download mime ->
       `Assoc
@@ -711,6 +720,8 @@ type checked = {
 let passes checker (snapshot : observation) =
   match checker with
   | Page_kind kind -> snapshot.kind = Some kind
+  | Not_page_kind kind ->
+      Option.fold ~none:false ~some:(fun observed -> observed <> kind) snapshot.kind
   | Text text -> contains ~needle:text snapshot.text
   | Download mime ->
       List.exists

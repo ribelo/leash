@@ -30,6 +30,14 @@
 # scripts/live-acceptance-m4-headed remains available for a separate throwaway-profile
 # run of L18 alone; this run does not need it.
 #
+# Optional L34 Allegro operator step (not part of unattended L28 verification):
+# after this headed gate, while the operator is present, open a fresh owner-bound tab
+# on https://allegro.pl/ through the installed service. If the headed site permits
+# access, run the product search -> offer -> add to cart -> cart mission with
+# --expect "the page is cart", inspect the cart, and stop BEFORE checkout/payment.
+# Record whether DataDome still blocks access. Do not evade the bot wall and do
+# not ask an unattended agent to control the headed desktop.
+#
 # Usage: scripts/live-acceptance-m6-headed [--dry-run] [--yes] [--leash PATH]
 #                                          [--result FILE] [--m4-result FILE]
 #                                          [--handoff-timeout-s N]

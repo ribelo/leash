@@ -319,6 +319,7 @@ let chat_content ?(model = planner_model) content =
                   ("prompt_tokens", `Int 10);
                   ("completion_tokens", `Int 2);
                   ("total_tokens", `Int 12);
+                  ("cost", `Float 0.00042);
                 ] );
           ]))
 
@@ -828,7 +829,7 @@ let usage () =
           Alcotest.(check int)
             "run-obtt the trace's output tokens" 2 usage.P.output_tokens;
           Alcotest.(check (float 0.000001))
-            "run-obtt no provider cost on this route" 0. usage.P.cost
+            "run-obtt provider cost reaches trace" 0.00042 usage.P.cost
       | None -> Alcotest.fail "run-obtt the turn carries no usage");
       let logged =
         List.filter
@@ -847,7 +848,12 @@ let usage () =
         "run-obtt the tokens are logged" 10
         (match List.assoc_opt "prompt_tokens" fields with
         | Some (Logger.Int tokens) -> tokens
-        | _ -> Alcotest.fail "no prompt_tokens field"))
+        | _ -> Alcotest.fail "no prompt_tokens field");
+      Alcotest.(check (float 0.000001))
+        "run-obtt provider cost logged" 0.00042
+        (match List.assoc_opt "cost" fields with
+        | Some (Logger.Float cost) -> cost
+        | _ -> Alcotest.fail "no cost field"))
 
 (* ---------- run-2tt3: mission-level expectations ---------- *)
 

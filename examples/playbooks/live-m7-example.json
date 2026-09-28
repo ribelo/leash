@@ -1,0 +1,29 @@
+{
+  "site": "example.com",
+  "entry": "https://example.com/",
+  "description": "Open the harmless Example Domain page as the second site after downloading a public PDF.",
+  "pages": [
+    {
+      "name": "example",
+      "description": "Example Domain landing page",
+      "url_pattern": "https://example.com/",
+      "text_marker": "Example Domain"
+    }
+  ],
+  "procedures": [
+    {
+      "slug": "verify-example",
+      "description": "Verify the Example Domain landing page as the second and final site of the PDF mission.",
+      "args": [],
+      "steps": [
+        {
+          "goal": "Verify this is the Example Domain page without clicking external links.",
+          "hint": "Example Domain"
+        }
+      ],
+      "expect": [
+        "the page is example"
+      ]
+    }
+  ]
+}

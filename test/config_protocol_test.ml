@@ -726,13 +726,13 @@ let reply_shapes () =
 
 (* ---------- svc-ljl3, svc-kzt6, svc-tkor: the config type ---------- *)
 
-let config_text ?(headless = false) binary profile =
+let config_text ?(headless = false) ?window_size binary profile =
   Printf.sprintf
     "[chrome]\n\
      binary = %S\n\
      profile_dir = %S\n\
      workspace = \"leash\"\n\
-     %s[tabs]\n\
+     %s%s[tabs]\n\
      cap = 8\n\
      [expiry]\n\
      idle_s = 1800\n\
@@ -744,6 +744,9 @@ let config_text ?(headless = false) binary profile =
      text_model = \"helper\"\n"
     binary profile
     (if headless then "headless = true\n" else "")
+    (match window_size with
+    | None -> ""
+    | Some size -> Printf.sprintf "window_size = %S\n" size)
 
 (* svc-x8rp svc-o4wt: the two XDG variables a service session has, so the defaults a file
    leaves out resolve the way they do in production; a test that wants them unset says so. *)
@@ -778,6 +781,24 @@ let config_values () =
     | Error (`Config message) -> Alcotest.fail message
   in
   Alcotest.(check bool) "headless is opt-in" true headless.chrome.headless;
+  Alcotest.(check string)
+    "chrome-p2n4 default headless viewport" "1366,900"
+    (C.Text.to_string headless.chrome.window_size);
+  let custom =
+    match
+      config_decode
+        (config_text ~headless:true ~window_size:"1440,960" "/tmp/chrome" "/tmp/profile")
+    with
+    | Ok value -> value
+    | Error (`Config message) -> Alcotest.fail message
+  in
+  Alcotest.(check string)
+    "chrome-p2n4 custom TOML viewport" "1440,960"
+    (C.Text.to_string custom.chrome.window_size);
+  Alcotest.(check bool)
+    "chrome-p2n4 custom launch flag" true
+    (List.mem "--window-size=1440,960"
+       (Leash.Chrome.argv (C.chrome_config custom.chrome)));
   let printed = Yojson.Safe.to_string (C.yojson_of_t value) in
   Alcotest.(check bool) "environment secret absent" false (contains "env-secret" printed);
   Alcotest.(check bool) "file secret absent" false (contains "file-secret" printed);

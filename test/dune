@@ -19,6 +19,7 @@
  (modules playbook_test)
  (deps
   ../examples/playbooks/allegro.pl.json
+  ../examples/playbooks/automationexercise.com.json
   ../examples/playbooks/www.w3.org.json)
  (libraries leash yojson alcotest str))
 

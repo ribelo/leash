@@ -56,14 +56,17 @@ let bounded limit text =
 
 let trim = String.trim
 
-(* run-obtt: what one answered call cost. The chat route reports tokens only — the
-   provider's own cost is not in eta's chat usage (docs/missing-eta-api.md) — so [cost] is
-   zero and the tokens are what the operator's accounting has. *)
+(* run-obtt: each answered chat call carries provider-reported cost when available. *)
 let usage_of (completion : Eta_ai_chat.Codecs.completion) : P.run_usage =
-  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens = _ } =
+  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; cost; total_tokens = _ } =
     completion.Eta_ai_chat.Codecs.usage
   in
-  P.{ input_tokens = prompt_tokens; output_tokens = completion_tokens; cost = 0. }
+  P.
+    {
+      input_tokens = prompt_tokens;
+      output_tokens = completion_tokens;
+      cost = Option.value ~default:0. cost;
+    }
 
 let add_usage (a : P.run_usage) (b : P.run_usage) : P.run_usage =
   P.
@@ -77,7 +80,7 @@ let add_usage (a : P.run_usage) (b : P.run_usage) : P.run_usage =
    theirs — one line per call, before the reply is judged, because it was paid for either
    way. *)
 let log_usage logger (completion : Eta_ai_chat.Codecs.completion) =
-  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens } =
+  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens; cost } =
     completion.Eta_ai_chat.Codecs.usage
   in
   Eta_observability.Logger.info logger
@@ -87,6 +90,7 @@ let log_usage logger (completion : Eta_ai_chat.Codecs.completion) =
         ("prompt_tokens", Eta_observability.Logger.Int prompt_tokens);
         ("completion_tokens", Eta_observability.Logger.Int completion_tokens);
         ("total_tokens", Eta_observability.Logger.Int total_tokens);
+        ("cost", Eta_observability.Logger.Float (Option.value ~default:0. cost));
       ]
     "planner usage"
 

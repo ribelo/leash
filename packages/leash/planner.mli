@@ -33,9 +33,8 @@ type t = {
     30 seconds, so a retry that hangs cannot outlast the budget the run answers the
     listener within.
 
-    The cost of a turn rides on the reply (run-obtt): the tokens the endpoint reported,
-    summed over the calls the turn took, with [cost] zero because the chat route Leash
-    speaks reports tokens and not the provider's own cost (docs/missing-eta-api.md). *)
+    The cost of a turn rides on the reply (run-obtt): the tokens and provider-reported
+    cost summed over the calls the turn took; absent cost contributes zero. *)
 
 val create :
   client:Eta_ai_chat.t ->

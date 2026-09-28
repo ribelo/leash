@@ -26,11 +26,12 @@ type config = {
   grace : Eta.Duration.t;
   backoff : backoff;
   headless : bool;
+  window_size : string;
 }
 
 let make ~binary ~profile_dir ~workspace ?(grace = Eta.Duration.seconds 5)
-    ?(backoff = default_backoff) ?(headless = false) () =
-  { binary; profile_dir; workspace; grace; backoff; headless }
+    ?(backoff = default_backoff) ?(headless = false) ?(window_size = "1366,900") () =
+  { binary; profile_dir; workspace; grace; backoff; headless; window_size }
 
 let argv config =
   [
@@ -42,7 +43,9 @@ let argv config =
     "--remote-debugging-pipe";
     "--class=leash";
   ]
-  @ if config.headless then [ "--headless=new" ] else []
+  @
+  if config.headless then [ "--headless=new"; "--window-size=" ^ config.window_size ]
+  else []
 
 type 'clock deps = {
   clock : 'clock Eio.Time.clock;

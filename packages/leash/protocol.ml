@@ -647,9 +647,8 @@ type run_procedure = {
 
 (* run-xqh8 run-klp9 run-obtt: one planner turn and what it answered — [procedure],
    [handoff] or [fail] — with the trigger it was taken at and what it cost. L32's planner
-   is Luna, so [usage] is the tokens its turn took (summed when the reply had to be asked
-   twice) and [cost] is zero: the chat route reports tokens, not the provider's own cost
-   (docs/missing-eta-api.md). *)
+   is Luna, so [usage] is the tokens and provider-reported cost summed across both
+   calls if a correction was needed; absent provider cost contributes zero. *)
 type planner_turn = {
   n : int;
   trigger : string;

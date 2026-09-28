@@ -1818,10 +1818,16 @@ let download_event t json method_ params =
                 then "application/pdf"
                 else "application/octet-stream"
               in
-              tab.downloads <-
-                P.{ id; suggested_name; mime; state = "in_progress"; path = None }
-                :: tab.downloads;
-              Hashtbl.replace t.downloads_by_guid id (key tab.handle))
+              if
+                not
+                  (List.exists
+                     (fun (download : P.download_info) -> download.id = id)
+                     tab.downloads)
+              then (
+                tab.downloads <-
+                  P.{ id; suggested_name; mime; state = "in_progress"; path = None }
+                  :: tab.downloads;
+                Hashtbl.replace t.downloads_by_guid id (key tab.handle)))
             target
       | _ -> ())
   | "Browser.downloadProgress" | "Page.downloadProgress" -> (

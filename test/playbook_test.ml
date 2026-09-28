@@ -99,6 +99,7 @@ let grammar () =
   in
   let kind = function
     | B.Page_kind _ -> "page"
+    | B.Not_page_kind _ -> "not_page"
     | B.Text _ -> "text"
     | B.Download _ -> "download"
     | B.No_dialog -> "dialog"
@@ -115,6 +116,7 @@ let grammar () =
            | Error e -> Alcotest.fail e)))
     [
       ("the page is offer", "page");
+      ("the page is not offer", "not_page");
       ("the page shows cart", "text");
       ("a file was downloaded", "download");
       ("a PDF was downloaded", "download");
@@ -137,6 +139,39 @@ let grammar () =
   Alcotest.(check (option string))
     "run-r1e9 not another route" None
     (B.page_kind [ page ] ~url:"https://allegro.pl/koszyk" ~text:"")
+
+(* run-xqh8 run-k8bx, L34: dismissal is verified by leaving consent, whether
+   the underlying page was products, search, or an offer. Unknown is not enough. *)
+let consent_cleared () =
+  let pages =
+    [
+      B.
+        {
+          name = "consent";
+          description = "privacy overlay";
+          url_pattern = None;
+          text_marker = Some "privacy overlay";
+        };
+    ]
+  in
+  let checker =
+    match B.resolve pages "the page is not consent" with
+    | Ok checker -> checker
+    | Error message -> Alcotest.fail message
+  in
+  let check kind =
+    B.await
+      ~now:(fun () -> 0.)
+      ~sleep:(fun _ -> ())
+      ~observe:(fun () ->
+        B.{ kind; text = ""; dialog = false; rows = []; downloads = [] })
+      ~score:(fun _ _ -> 0.)
+      ~timeout_s:0 [ checker ]
+  in
+  Alcotest.(check bool) "run-xqh8 covered" false (check (Some "consent"));
+  Alcotest.(check bool) "run-k8bx unknown is not dismissed" false (check None);
+  Alcotest.(check bool) "run-xqh8 returned to search" true (check (Some "search"));
+  Alcotest.(check bool) "run-xqh8 returned to products" true (check (Some "products"))
 
 let await () =
   (* run-l06s run-k8bx: bounded retry of checkers and one rerun, never unbounded. *)
@@ -222,7 +257,42 @@ let examples () =
       match B.load path with
       | Ok book -> Alcotest.(check bool) "resolved checkers" true (book.checks <> [])
       | Error error -> Alcotest.fail error)
-    [ "../examples/playbooks/allegro.pl.json"; "../examples/playbooks/www.w3.org.json" ]
+    [
+      "../examples/playbooks/allegro.pl.json";
+      "../examples/playbooks/www.w3.org.json";
+      "../examples/playbooks/automationexercise.com.json";
+    ]
+
+let offscreen_offer () =
+  (* run-xqh8, L34: a tiny viewport hides the product detail link; a desktop
+     viewport exposes it, so scroll only when View Product is not observed. *)
+  match B.load "../examples/playbooks/automationexercise.com.json" with
+  | Error error -> Alcotest.fail error
+  | Ok book -> (
+      match
+        List.find_opt
+          (fun (p : B.procedure) -> p.slug = "open-offer")
+          book.playbook.procedures
+      with
+      | Some { steps = [ B.Goal click ]; _ } ->
+          Alcotest.(check (option string))
+            "target View Product" (Some "View Product") click.hint;
+          Alcotest.(check bool)
+            "conditionally reveal offscreen link" true
+            (let words = String.split_on_char ' ' click.goal in
+             List.mem "absent" words && List.mem "scroll" words)
+      | _ -> Alcotest.fail "open-offer must target the observed detail link")
+
+let cart_after_add () =
+  (* run-xqh8, L34: after View Cart, the prior Added! marker can linger in
+     rendered text. The confirmed /view_cart URL must outrank post-add. *)
+  match B.load "../examples/playbooks/automationexercise.com.json" with
+  | Error error -> Alcotest.fail error
+  | Ok book ->
+      Alcotest.(check (option string))
+        "cart outranks lingering success marker" (Some "cart")
+        (B.page_kind book.playbook.pages ~url:"https://automationexercise.com/view_cart"
+           ~text:"Added! Blue Top")
 
 let () =
   Alcotest.run "playbooks"
@@ -231,8 +301,11 @@ let () =
         [
           Alcotest.test_case "run-tcuz run-dbji refusals" `Quick refusal;
           Alcotest.test_case "run-r1e9 run-tny5 grammar" `Quick grammar;
+          Alcotest.test_case "run-xqh8 consent cleared" `Quick consent_cleared;
           Alcotest.test_case "run-l06s wait" `Quick await;
           Alcotest.test_case "run-k8bx retry once" `Quick retry;
           Alcotest.test_case "run-seqo examples" `Quick examples;
+          Alcotest.test_case "run-xqh8 offscreen offer" `Quick offscreen_offer;
+          Alcotest.test_case "run-xqh8 cart outranks add" `Quick cart_after_add;
         ] );
     ]

@@ -766,6 +766,10 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
   and execute (st : state) ~(book : Playbook.loaded) ~(proc : Playbook.procedure) ~planned
       ~choice ~optional ~values =
     let proc_started = now () in
+    let initial_kind =
+      Playbook.page_kind book.Playbook.playbook.pages ~url:st.observation.url
+        ~text:st.observation.text
+    in
     match fill_arguments st proc ~values with
     | Error error -> Error error
     | Ok (Unfilled (st, reason)) -> planner st ~trigger:Arguments ~reason
@@ -782,11 +786,12 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                 if List.mem path st.proposals then Ok st
                 else Ok { st with proposals = st.proposals @ [ path ] }
         in
-        let rec attempt n st =
+        let rec attempt n st previous_drives =
           match steps st book proc values ~optional with
           | Error error -> Error error
           | Ok (Steps_finish result) -> Ok (Finish result)
-          | Ok (Steps_done (st, drives, skip)) -> (
+          | Ok (Steps_done (st, current_drives, skip)) -> (
+              let drives = previous_drives @ current_drives in
               let elapsed = ms (now () -. proc_started) in
               match skip with
               | Some reason ->
@@ -816,14 +821,30 @@ let compute (t : token) ~now ~installed ?discovery (args : args) : (P.run_result
                                  (record st ~book ~proc ~planned ~choice ~drives
                                     ~expectations:results ~outcome:"verified" ~attempts:n
                                     ~elapsed:(ms (now () -. proc_started)) ~reason:None)))
-                      else if n < 2 then attempt (n + 1) st
+                      else if n < 2 then attempt (n + 1) st drives
                       else
-                        planner st ~trigger:Failed
-                          ~reason:
-                            (Printf.sprintf "procedure %s failed its expectations twice: %s"
-                               proc.Playbook.slug (failures results))))
+                        let reason =
+                          Printf.sprintf "procedure %s failed its expectations twice: %s"
+                            proc.Playbook.slug (failures results)
+                        in
+                        let st =
+                          record st ~book ~proc ~planned ~choice ~drives
+                            ~expectations:results ~outcome:"failed" ~attempts:n
+                            ~elapsed ~reason:(Some reason)
+                        in
+                        (* run-xqh8 run-k8bx, L34: a delayed privacy overlay can
+                           change the page kind while an otherwise valid procedure
+                           fails. Let the procedure level pick the installed recovery
+                           procedure before asking the planner to invent one. *)
+                        let current_kind =
+                          Playbook.page_kind book.Playbook.playbook.pages
+                            ~url:st.observation.url ~text:st.observation.text
+                        in
+                        if current_kind <> None && current_kind <> initial_kind then
+                          Ok (Continue st)
+                        else planner st ~trigger:Failed ~reason))
         in
-        attempt 1 st
+        attempt 1 st []
 
   (* run-4j1v, the L30 guard: DONE is accepted only against the mission's own expectations,
      verified now on a fresh observation, or — when the mission carries none — against the

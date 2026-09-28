@@ -1,8 +1,20 @@
 {
   "site": "automationexercise.com",
-  "entry": "https://automationexercise.com/",
+  "entry": "https://automationexercise.com/products",
   "description": "Find Blue Top on Automation Exercise, add it to the cart, and stop before checkout or payment.",
   "pages": [
+    {
+      "name": "consent",
+      "description": "Funding Choices privacy dialog currently covers this page",
+      "url_pattern": null,
+      "text_marker": "This site asks for consent to use your data"
+    },
+    {
+      "name": "cart",
+      "description": "Cart containing Blue Top",
+      "url_pattern": "https://automationexercise.com/view_cart",
+      "text_marker": null
+    },
     {
       "name": "post-add",
       "description": "Add succeeded; Added! dialog offers View Cart",
@@ -16,6 +28,12 @@
       "text_marker": null
     },
     {
+      "name": "products",
+      "description": "Product listing with Search Product field",
+      "url_pattern": "https://automationexercise.com/products",
+      "text_marker": "ALL PRODUCTS"
+    },
+    {
       "name": "search",
       "description": "Submitted Blue Top product search results",
       "url_pattern": "https://automationexercise.com/products?search=*",
@@ -26,25 +44,33 @@
       "description": "Blue Top product detail and Add to cart button",
       "url_pattern": "https://automationexercise.com/product_details/*",
       "text_marker": "Blue Top"
-    },
-    {
-      "name": "cart",
-      "description": "Cart containing Blue Top",
-      "url_pattern": "https://automationexercise.com/view_cart",
-      "text_marker": "Blue Top"
     }
   ],
   "procedures": [
     {
+      "slug": "dismiss-consent",
+      "description": "When the consent dialog covers a page, decline tracking via Manage options, then resume the interrupted shop procedure.",
+      "args": [],
+      "steps": [
+        {
+          "goal": "The privacy dialog covers the page. If it offers Reject or Do not consent, choose that; otherwise click Manage options and then Confirm choices without enabling any consent toggles. Never click Consent or Accept all. Stop when the privacy dialog is gone.",
+          "hint": "Manage options; Confirm choices"
+        }
+      ],
+      "expect": [
+        "the page is not consent"
+      ]
+    },
+    {
       "slug": "find-product",
-      "description": "Search Automation Exercise for the named product.",
+      "description": "From the Products listing: search for the named product before any offer is available.",
       "args": [
         "product"
       ],
       "steps": [
         {
-          "goal": "Open Products, search for {product}, and submit the search button.",
-          "hint": "search"
+          "goal": "Find the Search Product field, enter {product}, and submit the search button. Stop on SEARCHED PRODUCTS results.",
+          "hint": "Search Product"
         }
       ],
       "expect": [
@@ -54,14 +80,14 @@
     },
     {
       "slug": "open-offer",
-      "description": "Open the matching product detail from submitted search results.",
+      "description": "Only after SEARCHED PRODUCTS results appear: open the matching product detail.",
       "args": [
         "product"
       ],
       "steps": [
         {
-          "goal": "Open the offer for {product}.",
-          "hint": "offer"
+          "goal": "Click the View Product link beneath the {product} card on SEARCHED PRODUCTS, not the search icon or Add to cart. If View Product is absent from the current snapshot, scroll down to reveal it before clicking. Stop on the product detail page.",
+          "hint": "View Product"
         }
       ],
       "expect": [

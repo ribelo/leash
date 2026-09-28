@@ -23,9 +23,9 @@ let launch rig ~sw ~clock ~mgr:_ config =
       let transport : Cdp.transport = { read = client.read; write = client.write } in
       Ok (child, transport)
 
-let config ?(headless = false) () =
+let config ?(headless = false) ?window_size () =
   Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-profile" ~workspace:"dev"
-    ~headless ()
+    ~headless ?window_size ()
 
 let deps env : _ Chrome.deps =
   {
@@ -94,13 +94,26 @@ let argv_flags () =
   Alcotest.(check bool) "class=leash" true (has "--class=leash");
   Alcotest.(check bool) "headed by default" false (has "--headless=new");
   Alcotest.(check bool) "no debugging port" false (prefixed "--remote-debugging-port");
-  (* headless is an operator and gate choice: [--headless=new] and nothing else moves *)
+  (* chrome-p2n4, L34: match a usable desktop viewport in headless mode without
+     changing the flags of the headed browser or adding a debugging port. *)
   let headless = Chrome.argv (config ~headless:true ()) in
   let has_headless flag = List.exists (fun value -> value = flag) headless in
   Alcotest.(check bool) "headless=new when asked" true (has_headless "--headless=new");
+  Alcotest.(check bool) "headed has no window-size flag" false (prefixed "--window-size=");
   Alcotest.(check bool)
-    "headless adds one flag" true
-    (List.length headless = List.length argv + 1);
+    "headless desktop viewport" true
+    (has_headless "--window-size=1366,900");
+  Alcotest.(check bool)
+    "headless adds only size and mode" true
+    (List.length headless = List.length argv + 2);
+  let custom = Chrome.argv (config ~headless:true ~window_size:"1440,960" ()) in
+  Alcotest.(check bool)
+    "headless respects configured viewport" true
+    (List.mem "--window-size=1440,960" custom);
+  let headed_custom = Chrome.argv (config ~window_size:"1440,960" ()) in
+  Alcotest.(check bool)
+    "headed ignores configured viewport" false
+    (List.mem "--window-size=1440,960" headed_custom);
   Alcotest.(check bool)
     "debugging pipe stays" true
     (has_headless "--remote-debugging-pipe")
