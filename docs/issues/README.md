@@ -102,6 +102,16 @@ L29 first; L30 needs only L29's loader and the models service; L31–L34 in orde
 | --- | --- | --- | --- | --- |
 | L35 | **Dialogs end waits.** One race helper for every tab wait; `new`/`nav` return the tab with `dialog`; actions return `ActionResult` with `dialog`; `wait` returns `dialog-open`; `beforeunload`; `prompt` text; listener budget → `timeout` reply; fake-browser dialog scripts; live pages; skill line. | hard-6eei, hard-dljv, hard-s719, hard-t6cq, hard-tsva, hard-yi0a, hard-92ik, hard-owci, hard-wo78, hard-fir4 | — | [x] |
 
+| L36 | **Hardening 2** (`hardening-2/01-hardening-2.md`): `net` ring with bodies and request data; `wait` up to 1 h and `--changed-since`; `upload` and file-input rows; `hover`; `eval --index`; read-only `cookies`/`storage`; protocol, fake browser, live gate, skill. | hard-xg6y, hard-ovbx, hard-vq5s, hard-sr9v, hard-sckn, hard-o3za, hard-2gnf, hard-v1gs, hard-b20d, hard-ufb7, hard-wk6q, hard-2cal | — | [ ] |
+
+## Milestone 9 — extract (`extract/01-extract.md`)
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L37 | **Scripts and shapes.** `scripts:` in playbooks, shape language and validation, `script:` steps, `playbook test`, `show`/`check`, the model-output safety test. | extr-d5bv, extr-zdst, extr-8o1h, extr-vgir, extr-mp5z, extr-lslp, extr-k40c | L36 | [ ] |
+| L38 | **Extract and repeat.** `leash extract`, deterministic runner, `repeat` with delay/dedupe/until/max, JSONL streaming, summary reply, trace, extraction data in `run` results, books.toscrape.com example. | extr-ve3k, extr-igqb, extr-ugdh, extr-d9du, extr-gkj9, extr-p152, extr-tkco | L37 | [ ] |
+| L39 | **Discovery learns extraction, and live acceptance.** Planner sees `net` and element HTML, proposes DOM or fetch scripts, validated via `playbook test`, proposal only; skill update; live: books.toscrape.com category to JSONL with zero model calls, one extraction discovery run. Marks the spec completed. | extr-wua5, extr-sk3b | L38 | [ ] |
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
