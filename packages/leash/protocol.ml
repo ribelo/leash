@@ -237,6 +237,32 @@ module Drive_status = struct
   let yojson_of_t = yojson_of_drive_status
 end
 
+(** L31 run-9ypy: how a run ended. [Run_done] is a DONE the guard verified, [Run_blocked]
+    the loop stopping with nothing that can progress, [Run_failed] a procedure that failed
+    its expectations twice, [Run_handoff] a planner turn asking for the human, [Run_limit]
+    the procedure cap, [Run_deadline] the run's own deadline, and [Run_error] a page state
+    the run cannot work in (a dialog) or a model or browser failure. The constructors
+    carry a [Run_] prefix because the wire strings are the operator's and a [Done] here
+    would collide with the drive's. *)
+type run_status =
+  | Run_done [@json.name "done"]
+  | Run_blocked [@json.name "blocked"]
+  | Run_failed [@json.name "failed"]
+  | Run_handoff [@json.name "handoff"]
+  | Run_limit [@json.name "limit"]
+  | Run_deadline [@json.name "deadline"]
+  | Run_error [@json.name "error"]
+[@@deriving yojson]
+
+module Run_status = struct
+  type t = run_status
+
+  let of_string = wire_value run_status_of_yojson
+  let to_string = wire_string yojson_of_run_status
+  let t_of_yojson = run_status_of_yojson
+  let yojson_of_t = yojson_of_run_status
+end
+
 type chrome_phase =
   | Running [@json.name "running"]
   | Restarting [@json.name "restarting"]
@@ -467,6 +493,21 @@ type drive_args = {
 }
 [@@deriving yojson]
 
+(* L31 run-9ypy: one mission over the installed playbooks. [expect] is the mission's own
+   expectations, which L32's planner attaches on its first turn and which a caller may
+   state directly; they are what DONE is verified against, independently of the last
+   procedure (run-4j1v, the L30 guard). A [key?] list: omitted when the mission carries
+   none. *)
+type run_args = {
+  tab : Handle.t option;
+  mission : string;
+  max_procedures : int option;
+  deadline_s : int option;
+  dry_run : bool option;
+  expect : string list option;
+}
+[@@deriving yojson]
+
 (* ---------- Per-command results ---------- *)
 
 type tab_counts = { open_ : int; [@json.key "open"] cap : int } [@@deriving yojson]
@@ -529,6 +570,90 @@ type handoff_result = {
 type drive_result = {
   status : Drive_status.t;
   steps : step list;
+  final : snapshot;
+  reason : string option;
+}
+[@@deriving yojson]
+
+(* ---------- L31: the run's result and trace ---------- *)
+
+(* run-xqh8: the provider's own accounting for one upper-level call, so a run's trace
+   carries what the mission cost as well as what it did. *)
+type run_usage = { input_tokens : int; output_tokens : int; cost : float }
+[@@deriving yojson]
+
+(* run-xqh8 run-qq3o: the upper level's answer with the distribution behind it. [key] is
+   the criterion the model chose — a playbook's site, a procedure's slug, [DONE] or
+   [BLOCKED] — and [probabilities] the model's own object, as the step trace carries one. *)
+type run_choice = {
+  key : string;
+  probabilities : Yojson.Safe.t;
+  confidence : float;
+  usage : run_usage option; [@json.null]
+}
+[@@deriving yojson]
+
+(* run-xqh8: one expectation and how it was verified: the checker the loader resolved, and
+   the JEV score when no checker applied. *)
+type run_expectation = {
+  sentence : string;
+  checker : string;
+  passed : bool;
+  score : float option; [@json.null]
+}
+[@@deriving yojson]
+
+(* run-d82w run-xqh8: one operator step — a single [drive] call — with the goal it was
+   given and the drive's own result, so the run's trace holds the operator level's steps
+   without renumbering them. *)
+type run_drive = {
+  goal : string;
+  status : Drive_status.t;
+  steps : step list;
+  reason : string option;
+}
+[@@deriving yojson]
+
+(* run-xqh8: one procedure the run executed: the choice that picked it, the drive calls its
+   steps became, the expectations it was verified against, and how it ended — [verified],
+   [failed] (its second verification failed), [skipped] (an optional [use] whose first step
+   ended blocked) or [planned] (a dry run chose it and executed nothing). [planned] is true
+   when a planner turn wrote it (L32). [attempts] counts the verification rounds, 2 when the
+   retry-once rule replayed the procedure. *)
+type run_procedure = {
+  slug : string;
+  site : string;
+  planned : bool;
+  attempts : int;
+  choice : run_choice;
+  drives : run_drive list;
+  expectations : run_expectation list;
+  outcome : string;
+  elapsed_ms : int;
+  reason : string option;
+}
+[@@deriving yojson]
+
+(* run-xqh8 run-klp9: one planner turn and what it answered. In L31 the planner is a stub
+   that fails, so [answer] is [fail]; L32 fills [usage]. *)
+type planner_turn = {
+  n : int;
+  trigger : string;
+  answer : string;
+  reason : string option;
+  usage : run_usage option; [@json.null]
+}
+[@@deriving yojson]
+
+(* run-9ypy: the whole run. [procedures] is the trace, oldest first; [final] is the last
+   snapshot the run observed, whose [dialog] is what ended an [error]; [reason] names why
+   the run stopped. *)
+type run_result = {
+  status : Run_status.t;
+  site : string option; [@json.null]
+  procedures : run_procedure list;
+  mission_expectations : run_expectation list;
+  planner_turns : planner_turn list;
   final : snapshot;
   reason : string option;
 }
@@ -633,6 +758,7 @@ type command =
   | Resume of tab_args
   | Drive of drive_args
   | Downloads of tab_args
+  | Run of run_args
 
 let command_name = function
   | New _ -> "new"
@@ -658,6 +784,7 @@ let command_name = function
   | Resume _ -> "resume"
   | Drive _ -> "drive"
   | Downloads _ -> "downloads"
+  | Run _ -> "run"
 
 let args_to_json = function
   | New args -> yojson_of_new_args args
@@ -683,6 +810,7 @@ let args_to_json = function
   | Resume args -> yojson_of_tab_args args
   | Drive args -> yojson_of_drive_args args
   | Downloads args -> yojson_of_tab_args args
+  | Run args -> yojson_of_run_args args
 
 let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
@@ -710,6 +838,7 @@ let command_of_args ~cmd args =
   | "resume" -> with_args tab_args_of_yojson (fun args -> Resume args)
   | "drive" -> with_args drive_args_of_yojson (fun args -> Drive args)
   | "downloads" -> with_args tab_args_of_yojson (fun args -> Downloads args)
+  | "run" -> with_args run_args_of_yojson (fun args -> Run args)
   | other ->
       Error
         (Printf.sprintf "cmd: unknown command %s" (Yojson.Safe.to_string (`String other)))

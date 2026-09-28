@@ -236,11 +236,19 @@ let perform command fields positionals options =
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
    `leash <command> --help` shows the whole call. The four shared options go on every
    command; --table only on the two that render one. *)
-type option_kind = Str | Int | Bool | Json
+type option_kind = Str | Int | Bool | Json | Strings
+
+(* [Strings] is the repeated mission-expectation option [leash run] will carry
+   (run-4j1v), declared here so the command lands as one table entry once the Door's name
+   is free. *)
 type option_ = { name : string; kind : option_kind; docv : string; doc : string }
 type positional = { field : string; docv : string; optional : bool }
 
 let opt name kind docv doc = { name; kind; docv; doc }
+
+(* svc-hi4f run-4j1v: an option a caller repeats — the mission's own expectations — becomes
+   one JSON array on the wire. *)
+let opt_list name kind docv doc = { name; kind; docv; doc }
 let pos field docv = { field; docv; optional = false }
 let pos_opt field docv = { field; docv; optional = true }
 let owner_opt = opt "owner" Str "NAME" "Request owner (default dsh:\\$DSH_SESSION_ID)."
@@ -273,6 +281,12 @@ let option_term { name; kind; docv; doc } =
       Term.(
         const (Option.map (fun value -> (name, str value)))
         $ Arg.(value & opt (some string) None & arg_info))
+  | Strings ->
+      Term.(
+        const (fun values ->
+            if values = [] then None
+            else Some (name, `List (List.map (fun value -> `String value) values)))
+        $ Arg.(value & opt_all string [] & arg_info))
 
 let positional_term positionals =
   List.fold_left
@@ -499,6 +513,21 @@ let commands =
           opt "dry_run" Bool "" "Observe and decide once without acting.";
         ],
         [ "leash drive t_9xk 'Find the article about Goedel' --max-steps 10" ] );
+      ( "run",
+        "Run MISSION over the installed playbooks.",
+        [ pos "mission" "MISSION" ],
+        [
+          opt "tab" Str "TAB" "Reuse TAB instead of opening one.";
+          opt "max_procedures" Int "N" "At most N procedures (default 40).";
+          opt "deadline_s" Int "S" "Seconds for the whole run (default 900).";
+          opt "dry_run" Bool "" "Ask the two levels and report; never act.";
+          opt_list "expect" Strings "SENTENCE"
+            "Mission expectation the DONE guard verifies (repeatable).";
+        ],
+        [
+          "leash run 'Buy a Logitech MX Master 3S on allegro.pl' --deadline-s 300";
+          "leash run 'Add Blue Top to the cart' --expect 'the page is cart' --dry-run";
+        ] );
     ]
   @ [ playbook_command ]
 
@@ -585,6 +614,10 @@ let program env (config : Leash.Config.t) sw =
   let* _control =
     Leash.Control.create
       ~model:(Leash.Config.Text.to_string config.models.jev_model)
+        (* run-7blx: the run's three upper levels over the same one models service — the
+           playbook question, the procedure question and the judgment score — and L31's
+           planner stub inside them. *)
+      ~levels:(Leash.Models.levels models)
       ~decide:(fun ~deadline request -> Leash.Models.decide ~deadline models request)
         (* drive-ls3c: the helper is a thunk, not a value — each drive takes its own
          instance, and with it the one-entry memo the stale-row reuse rule needs. *)
@@ -647,7 +680,8 @@ let telemetry ~sw env config =
 
 let () =
   exit
-    (Eta_app.run ~name:"leash" ~config:Leash.Config.spec ~commands ~telemetry
-       ~config_commands:[ init_command ] ~validate:Leash.Config.validate
+    (Eta_app.run ~name:"leash" ~service_command:"serve" ~config:Leash.Config.spec
+       ~commands ~telemetry ~config_commands:[ init_command ]
+       ~validate:Leash.Config.validate
        ~pp_err:(fun fmt (`Service msg) -> Format.pp_print_string fmt msg)
        program)

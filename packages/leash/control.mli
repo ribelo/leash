@@ -14,11 +14,13 @@ type ('clock, 'net) deps = {
 
 val create :
   ?model:string ->
+  ?levels:Run.levels ->
   ?decide:
     (deadline:Eta.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
+  ?installed:Playbook.loaded list ->
   sw:Eio.Switch.t ->
   path:string ->
   ('clock, 'net) deps ->
@@ -31,7 +33,15 @@ val create :
     the models service; a listener created without one refuses every drive with
     [model-unavailable] (L19). [text_helper] is the drive's text helper — production
     passes a thunk over {!Models.text_helper}, so every drive gets the fresh instance its
-    reuse memo belongs to (drive-ls3c); without one a [type_text] step refuses. *)
+    reuse memo belongs to (drive-ls3c); without one a [type_text] step refuses.
+
+    L31 run-7blx run-4mzm: [levels] are the run's upper levels — production passes
+    {!Models.levels}, one System One client for the playbook level, the procedure level
+    and the judgment score, whose planner is L31's stub; without one every upper-level
+    call refuses with [model-unavailable]. [installed] hands a listener the playbooks a
+    run works from, which is how a scripted test runs a known playbook without touching
+    the operator's XDG configuration; production leaves it [None] and the run loads them.
+*)
 
 val budget : (Protocol.request, string) result -> Eta.Duration.t option
 (** The handler budget per decoded command. [new] with a url and [nav] outlast the
@@ -49,11 +59,13 @@ val report :
 
 val dispatch :
   ?model:string ->
+  ?levels:Run.levels ->
   ?decide:
     (deadline:Eta.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
+  ?installed:Playbook.loaded list ->
   ?models_status:(unit -> Protocol.models_status) ->
   Tabs.t ->
   Protocol.request ->
@@ -63,11 +75,13 @@ val decode : string -> (Protocol.request, string) result
 
 val handle :
   ?model:string ->
+  ?levels:Run.levels ->
   ?decide:
     (deadline:Eta.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
+  ?installed:Playbook.loaded list ->
   ?models_status:(unit -> Protocol.models_status) ->
   ?logger:Eta_observability.Logger.t ->
   Tabs.t ->

@@ -172,10 +172,20 @@ let command_table =
           ("max_steps", `Int 5);
           ("deadline_s", `Int 60);
         ] );
+    ( "run",
+      assoc
+        [
+          ("tab", `String "t_9xk");
+          ("mission", `String "buy the thing");
+          ("max_procedures", `Int 3);
+          ("deadline_s", `Int 60);
+          ("dry_run", `Bool true);
+          ("expect", `List [ `String "the page is cart" ]);
+        ] );
   ]
 
 let command_round_trip () =
-  Alcotest.(check int) "every command of docs/protocol.md" 22 (List.length command_table);
+  Alcotest.(check int) "every command of docs/protocol.md" 23 (List.length command_table);
   List.iter
     (fun (name, args) ->
       let request = assert_ok name (P.decode_request (request_json name args)) in
@@ -1645,6 +1655,7 @@ let client_help =
     ([ "handoff" ], [ "TAB"; "REASON" ]);
     ([ "resume" ], [ "TAB" ]);
     ([ "drive" ], [ "TAB"; "GOAL" ]);
+    ([ "run" ], [ "MISSION" ]);
   ]
 
 let help_matrix () =

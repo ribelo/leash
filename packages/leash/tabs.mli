@@ -223,6 +223,42 @@ val drive :
     path the [fill] command uses; a null answer is [blocked] naming the field, and a
     refusal over 4 KiB is [model-unavailable] with the steps completed (drive-ls3c). *)
 
+val run :
+  ?levels:Run.levels ->
+  ?model:string ->
+  ?decide:
+    (deadline:Eta.Duration.t ->
+    Jev_request.request ->
+    (Jev_request.decision, Protocol.error) result) ->
+  ?text_helper:(unit -> Text_helper.t) ->
+  t ->
+  owner:Protocol.Owner.t ->
+  tab:Protocol.Handle.t ->
+  ?installed:Playbook.loaded list ->
+  Protocol.run_args ->
+  (Protocol.run_result, Protocol.error) result
+(** L31 run-9ypy run-vj48 run-shgh run-fwl8: one mission over the installed playbooks.
+
+    The run holds the tab's action lock for its whole duration (run-d82w), so no other
+    command interleaves while it works, and every step is one [drive_locked] call — the
+    very operator level the [drive] command runs, with its step cap and deadline. The
+    playbooks are loaded here once, from the XDG directory the [playbook] commands read
+    (run-tcuz), unless [installed] hands them in — which is how a control test runs a
+    known playbook without touching the operator's configuration.
+
+    [levels] is the run's upper levels (run-7blx): the two choice questions, the score
+    question a judgment expectation asks, and the planner turn. Production passes
+    {!Models.levels}, whose [plan] is L31's stub; without one every upper-level call
+    refuses with [model-unavailable], as a drive without a [decide] does. [decide] and
+    [text_helper] are the operator level's seams, forwarded to every step's drive, and
+    [model] is the JEV model id those requests name.
+
+    The refusals of run-fwl8 come first: the tab must be owned by the caller, not handed
+    to the human, and free of an open dialog ([dialog-open]), so the run starts from a
+    state it can act in. Everything after that is a result — see {!Run.loop} — and a model
+    or browser failure is the protocol error it is, carrying the trace it had completed in
+    [detail.procedures]. *)
+
 val text :
   t ->
   owner:Protocol.Owner.t ->

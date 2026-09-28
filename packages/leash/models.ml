@@ -153,3 +153,122 @@ let text_helper (t : t) : Text_helper.t =
       Text_helper.create ~client
         ~model:(Config.Text.to_string t.config.text_model)
         ~logger:t.logger ()
+
+(* ---------- L31: the run's upper levels ---------- *)
+
+(* run-7blx run-vj48: every level's answer is validated where the drive's is: the chosen
+   key must be one of the offered criteria, and the distribution must be the reference's
+   own valid one. The probabilities travel to the trace as the object the model answered. *)
+let wire_probabilities probabilities =
+  `Assoc (List.map (fun (key, value) -> (key, `Float value)) probabilities)
+
+let usage_of (usage : Eta_ai_systemone.Types.usage) : P.run_usage =
+  P.
+    {
+      input_tokens = usage.Eta_ai_systemone.Types.input_tokens;
+      output_tokens = usage.Eta_ai_systemone.Types.output_tokens;
+      cost = usage.Eta_ai_systemone.Types.cost;
+    }
+
+let invalid_response message = Model_error.unavailable ~code:"invalid-response" message
+
+let missing_key =
+  Model_error.unavailable ~code:"missing-key"
+    "no OpenRouter API key: set OPENROUTER_API_KEY or models.api_key"
+
+(* run-qq3o run-kli0: one choice question of the two upper levels, through the same System
+   One client the operator level's questions go through. A criterion the model did not
+   offer, or a distribution the reference validator refuses, is [model-unavailable] with
+   [invalid-response]: the loop does nothing with an answer like that. *)
+let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
+  match t.systemone with
+  | None -> Error missing_key
+  | Some client -> (
+      let criteria =
+        List.map
+          (fun (key, description) -> (key, `String description))
+          question.Run.criteria
+      in
+      let wire =
+        Eta_ai_systemone.Codecs.choice ~instructions:(`String question.Run.instructions)
+          ~criteria
+      in
+      match
+        Eta_ai_systemone.Client.evaluate client ~deadline ~state:question.Run.state
+          ~questions:[ (question.Run.name, wire) ]
+      with
+      | Error error -> Error (Model_error.of_eta error)
+      | Ok response -> (
+          log_usage t.logger response;
+          match Eta_ai_systemone.Client.answer question.Run.name response with
+          | Some (Eta_ai_systemone.Codecs.Choice answer) ->
+              let chosen = answer.Eta_ai_systemone.Types.choice in
+              if not (List.mem_assoc chosen question.Run.criteria) then
+                Error
+                  (invalid_response
+                     (Printf.sprintf "the answer %S is not one of the offered criteria"
+                        chosen))
+              else if not (Eta_ai_systemone.Codecs.choice_answer_valid answer) then
+                Error
+                  (invalid_response
+                     (Printf.sprintf "the distribution behind %S is not a valid choice"
+                        chosen))
+              else
+                Ok
+                  Run.
+                    {
+                      key = chosen;
+                      probabilities =
+                        wire_probabilities answer.Eta_ai_systemone.Types.probabilities;
+                      confidence = answer.Eta_ai_systemone.Types.confidence;
+                      usage = Some (usage_of response.Eta_ai_systemone.Codecs.usage);
+                    }
+          | _ ->
+              Error
+                (invalid_response
+                   (Printf.sprintf "the reply carries no choice answer named %S"
+                      question.Run.name))))
+
+(* run-vbys: the score question a judgment expectation asks, over the page summary the
+   registry builds. Its two levels make the answer's position the [0, 1] score the wait's
+   threshold compares. *)
+let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
+  match t.systemone with
+  | None -> Error missing_key
+  | Some client -> (
+      let wire =
+        Eta_ai_systemone.Codecs.score
+          ~instructions:(`String (Questions.score sentence))
+          ~criteria:Questions.score_levels
+      in
+      match
+        Eta_ai_systemone.Client.evaluate client ~deadline ~state
+          ~questions:[ ("score", wire) ]
+      with
+      | Error error -> Error (Model_error.of_eta error)
+      | Ok response -> (
+          log_usage t.logger response;
+          match Eta_ai_systemone.Client.answer "score" response with
+          | Some (Eta_ai_systemone.Codecs.Score answer) ->
+              let value = answer.Eta_ai_systemone.Types.score in
+              if Float.is_finite value && value >= 0. && value <= 1. then Ok value
+              else
+                Error
+                  (invalid_response
+                     (Printf.sprintf "the score %g is not inside 0..1" value))
+          | _ -> Error (invalid_response "the reply carries no score answer")))
+
+(* run-7blx: the one seam a run's upper levels use. The plan stub is L31's: the planner
+   arrives in L32 (run-w7ke), so a run that stops needing judgment ends naming that. *)
+let levels (t : t) : Run.levels =
+  Run.
+    {
+      choose = (fun ~deadline question -> choose ~deadline t question);
+      score = (fun ~deadline ~sentence ~state -> score ~deadline t ~sentence ~state);
+      plan =
+        (fun ~deadline:_ _request ->
+          Ok
+            (Run.Fail
+               "the planner is not built until L32 (run-w7ke); the run cannot decide \
+                what to                 do next"));
+    }

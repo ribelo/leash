@@ -1,0 +1,1048 @@
+(* L31 run-vj48 run-9ypy run-4mzm (docs/issues/run/01-run.md, milestone 7): the run loop —
+   one mission over the installed playbooks.
+
+   The loop is an effect computation over a local handler token, exactly as the drive is
+   (drive-8n2z, eta-next ADR-0006): Select_playbook, Select_procedure, Fill_args,
+   Execute_step, Verify and Plan are the six judgments of story 37, performed through a
+   token that cannot escape this module; Observe, Navigate and Hand_off are the loop's own
+   perception, its playbook switch and the ending a planner's handoff asks for. Production
+   builds the handler over the registry and the models service (Tabs.run); a scripted test
+   builds its own; a dry run is the same computation with dry_run set. Nothing here touches
+   a browser, a model or a clock: now is the caller's.
+
+   OxCaml local mode annotations below are not parsed by ocamlformat 0.29. Keep this file
+   in .ocamlformat-ignore until the formatter supports them. *)
+module P = Protocol
+
+(* ---------- The loop's vocabulary ---------- *)
+
+type observation = {
+  url : string;
+  title : string;
+  text : string;
+      (* run-4j1v run-xqh8: the page's visible text, which the checkers and the text
+         helper read. It never reaches the upper levels (run-pvmc). *)
+  dialog : P.dialog option;
+  rows : (string * string) list;
+  downloads : (string * string * string) list;
+  snapshot : P.snapshot;
+}
+
+type choice = P.run_choice = {
+  key : string;
+  probabilities : Yojson.Safe.t;
+  confidence : float;
+  usage : P.run_usage option;
+}
+(** One answer of an upper level: the criterion it chose and the distribution behind it.
+    It is the protocol's own {!Protocol.run_choice}, so the trace records the answer the
+    handler gave without a translation. *)
+
+type question = {
+  name : string;
+  instructions : string;
+  criteria : (string * string) list;
+  state : Yojson.Safe.t;
+}
+(** One choice question as the loop asks it: the question's name on the wire, the
+    instruction text, the criteria (key, description) and the small state of story 18. *)
+
+type step_request = {
+  goal : string;
+  hint : string option;
+  max_steps : int;
+  deadline_s : int;
+}
+(** run-d82w: one playbook step as the operator level receives it — the goal with the
+    hint shaping it, and the step's own cap and deadline. *)
+
+type plan_trigger = Blocked | Failed | Arguments
+(** run-w7ke (L32 wires the plan; L31 asks it and takes its answer): the three points JEV
+    stopped — the procedure level answered BLOCKED, a procedure failed its expectations
+    twice, or an argument the mission does not supply could not be filled. *)
+
+type plan_answer = Procedure of Playbook.procedure | Handoff of string | Fail of string
+
+type plan_request = {
+  trigger : plan_trigger;
+  reason : string;
+  mission : string;
+  site : string option;
+  procedures : (string * string) list;
+  recent : (string * string) list;
+}
+(** run-rq6i's shape, asked now and answered by the stub: the mission, where it stopped and
+    why, the current playbook's procedures and the run so far. *)
+
+type levels = {
+  choose :
+    deadline:Eta.Duration.t -> question -> (choice, P.error) result;
+  score :
+    deadline:Eta.Duration.t -> sentence:string -> state:Yojson.Safe.t -> (float, P.error) result;
+  plan :
+    deadline:Eta.Duration.t -> plan_request -> (plan_answer, P.error) result;
+}
+(** run-7blx: the three upper-level calls as one seam over one models service, so a
+    scripted test replaces the model with a function and production passes
+    {!Models.levels}: the choice questions of the two levels, the score question the
+    judgment checkers ask, and the planner turn. *)
+
+type handler = {
+  observe : unit -> (observation, P.error) result;
+  navigate : string -> (unit, P.error) result;
+      (** run-xh5d: the entry navigation of a playbook switch. *)
+  choose : question -> (choice, P.error) result;
+  text_value : Text_helper.context -> (string option, P.error) result;
+      (** run-5rll: the text helper, one call per argument the mission does not supply. *)
+  step : step_request -> (P.drive_result, P.error) result;
+      (** run-d82w: the operator level — exactly one drive call per playbook step. *)
+  verify :
+    pages:Playbook.page list ->
+    checks:(string * Playbook.checker) list ->
+    timeout_s:int ->
+    (P.run_expectation list * observation, P.error) result;
+      (** run-l06s run-vbys: the checkers first, the JEV score only where no checker
+          applies, each expectation with its verdict. [pages] are the current playbook's
+          page kinds, which the [page_kind] checker is decided against. The observation it
+          returns is the one it judged. *)
+  plan : plan_request -> (plan_answer, P.error) result;
+  hand_off : reason:string -> (P.tab_info, P.error) result;
+      (** run-klp9: a planner's handoff, which leaves the tab with the human. *)
+}
+
+type args = {
+  mission : string;
+  max_procedures : int;
+  deadline_s : int;
+  dry_run : bool;
+  expect : string list;
+      (** run-4j1v: the mission's own expectations, which DONE is verified against
+          independently of the last procedure. Empty until L32's planner attaches them —
+          and, from L31 on, whatever a caller states directly. *)
+}
+
+let of_args (args : P.run_args) : args =
+  {
+    mission = args.P.mission;
+    max_procedures = Option.value ~default:40 args.P.max_procedures;
+    deadline_s = Option.value ~default:900 args.P.deadline_s;
+    dry_run = Option.value ~default:false args.P.dry_run;
+    expect = Option.value ~default:[] args.P.expect;
+  }
+
+(* ---------- Small helpers ---------- *)
+
+let code name = match P.Error_code.of_string name with Ok x -> x | Error _ -> assert false
+let status name = match P.Run_status.of_string name with Ok x -> x | Error _ -> assert false
+
+let invalid message = P.{ code = code "invalid-request"; message; detail = None }
+let internal message = P.{ code = code "internal"; message; detail = None }
+let ms seconds = max 0 (int_of_float (seconds *. 1000.))
+let lower = String.lowercase_ascii
+
+let contains ~needle haystack =
+  let needle = lower needle and haystack = lower haystack in
+  let n = String.length needle in
+  let rec loop i =
+    i + n <= String.length haystack && (String.sub haystack i n = needle || loop (i + 1))
+  in
+  loop 0
+
+let last n xs =
+  let rec drop k = function
+    | [] -> []
+    | rest when k <= 0 -> rest
+    | _ :: tail -> drop (k - 1) tail
+  in
+  drop (max 0 (List.length xs - n)) xs
+
+(* The first installed playbook for a site serves it; a second file for the same site is
+   not a second criterion (the choice keys are sites). *)
+let installed_playbooks books =
+  let rec go seen acc = function
+    | [] -> List.rev acc
+    | (book : Playbook.loaded) :: rest ->
+        let site = book.Playbook.playbook.Playbook.site in
+        if List.mem site seen then go seen acc rest
+        else go (site :: seen) (book :: acc) rest
+  in
+  go [] [] books
+
+(* The drive's status is a closed wire string in the protocol's interface, so the loop
+   compares it by name rather than by constructor. *)
+let drive_is name (status : P.Drive_status.t) = P.Drive_status.to_string status = name
+
+let trigger_name = function Blocked -> "blocked" | Failed -> "failed" | Arguments -> "arguments"
+
+let answer_name = function
+  | Procedure _ -> "procedure"
+  | Handoff _ -> "handoff"
+  | Fail _ -> "fail"
+
+let failures (results : P.run_expectation list) =
+  results
+  |> List.filter (fun (result : P.run_expectation) -> not result.P.passed)
+  |> List.map (fun (result : P.run_expectation) -> result.P.sentence)
+  |> String.concat "; "
+
+(* ---------- The loop's state ---------- *)
+
+type state = {
+  trace : P.run_procedure list;  (** Newest first. *)
+  plans : P.planner_turn list;  (** Newest first. *)
+  recent : (string * string) list;  (** Procedure slug and outcome, oldest first. *)
+  known : (string * string) list;  (** The arguments the run knows. *)
+  visited : string list;  (** Sites the run has served the mission from. *)
+  book : Playbook.loaded option;
+  checks : (string * Playbook.checker) list;
+      (** The last verified procedure's expectations, which the DONE guard re-verifies when
+          the mission carries none of its own (run-4j1v). *)
+  mission_checks : P.run_expectation list;
+  count : int;  (** Procedures executed, the [use] calls and planner procedures included. *)
+  switch : bool;  (** The next turn asks the playbook level. *)
+  asked_switch : bool;  (** A switch was already asked since the last procedure. *)
+  observation : observation;
+}
+
+let finish (st : state) status ?reason () =
+  P.
+    {
+      status;
+      site = Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook.Playbook.site) st.book;
+      procedures = List.rev st.trace;
+      mission_expectations = st.mission_checks;
+      planner_turns = List.rev st.plans;
+      final = st.observation.snapshot;
+      reason;
+    }
+
+(* drive-y7v8's rule for a run: a model failure carries the work it had done when it
+   failed, so a failed mission is auditable. *)
+let with_trace (st : state) (error : P.error) =
+  if P.Error_code.to_string error.P.code <> "model-unavailable" then error
+  else
+    let kind =
+      match error.P.detail with
+      | Some (`Assoc fields) -> (
+          match List.assoc_opt "code" fields with Some json -> json | None -> `String "unavailable")
+      | _ -> `String "unavailable"
+    in
+    {
+      error with
+      P.detail =
+        Some
+          (`Assoc
+            [
+              ("code", kind);
+              ( "site",
+                match st.book with
+                | Some book -> `String book.Playbook.playbook.Playbook.site
+                | None -> `Null );
+              ("procedures", `List (List.map P.yojson_of_run_procedure (List.rev st.trace)));
+            ]);
+    }
+
+type step_result = Continue of state | Finish of P.run_result
+
+let ( let* ) x f =
+  match x with
+  | Error error -> Error error
+  | Ok (Finish result) -> Ok (Finish result)
+  | Ok (Continue st) -> f st
+
+(* ---------- The computation ---------- *)
+
+(* Each judgment has an internal callback and a local-only public use, as the drive's does:
+   a token cannot escape the dynamic extent of [loop], and a nested run would have its own
+   effect constructors. *)
+type token = {
+  observe : unit -> (observation, P.error) result;
+  navigate : string -> (unit, P.error) result;
+  select_playbook : question -> (choice, P.error) result;
+  select_procedure : question -> (choice, P.error) result;
+  fill_args : Text_helper.context -> (string option, P.error) result;
+  execute_step : step_request -> (P.drive_result, P.error) result;
+  verify :
+    Playbook.page list ->
+    (string * Playbook.checker) list ->
+    int ->
+    (P.run_expectation list * observation, P.error) result;
+  plan : plan_request -> (plan_answer, P.error) result;
+  hand_off : string -> (P.tab_info, P.error) result;
+}
+
+let observe (t : token @ local) () = t.observe ()
+let navigate (t : token @ local) url = t.navigate url
+let select_playbook (t : token @ local) question = t.select_playbook question
+let select_procedure (t : token @ local) question = t.select_procedure question
+let fill_args (t : token @ local) context = t.fill_args context
+let execute_step (t : token @ local) request = t.execute_step request
+let verify (t : token @ local) ~pages ~checks ~timeout_s =
+  ((t.verify pages) checks) timeout_s
+let plan (t : token @ local) request = t.plan request
+let hand_off (t : token @ local) ~reason = t.hand_off reason
+
+type fill_outcome = Filled of state * (string * string) list | Unfilled of state * string
+
+type steps_outcome =
+  | Steps_done of state * P.run_drive list * string option
+      (** The procedure's steps are through. The third member is the reason an [optional]
+          [use] was skipped, [None] otherwise. *)
+  | Steps_finish of P.run_result
+      (** The run ended inside a step: a dialog, or a planner turn a called procedure
+          asked for. *)
+
+let compute (t : token) ~now ~installed (args : args) : (P.run_result, P.error) result =
+  let installed = installed_playbooks installed in
+  let started = now () in
+  let deadline = started +. float_of_int args.deadline_s in
+  let remaining () = max 1 (int_of_float (deadline -. now ())) in
+  let empty observation =
+    {
+      trace = [];
+      plans = [];
+      recent = [];
+      known = [];
+      visited = [];
+      book = None;
+      checks = [];
+      mission_checks = [];
+      count = 0;
+      switch = false;
+      asked_switch = false;
+      observation;
+    }
+  in
+
+  (* run-pvmc (the L30 shape B, run-snk4): the state an upper level is asked over — the
+     mission, the site, the page kind, the title and URL, the last five procedures with
+     their outcomes, and the arguments known. Never the page text. *)
+  let state_json (st : state) =
+    let kind =
+      match st.book with
+      | Some book -> Playbook.page_kind book.Playbook.playbook.pages ~url:st.observation.url ~text:st.observation.text
+      | None -> None
+    in
+    `Assoc
+      [
+        ("mission", `String args.mission);
+        ( "site",
+          match st.book with
+          | Some book -> `String book.Playbook.playbook.site
+          | None -> `Null );
+        ("page_kind", match kind with Some kind -> `String kind | None -> `Null);
+        ("title", `String st.observation.title);
+        ("url", `String st.observation.url);
+        ( "recent_procedures",
+          `List
+            (List.map
+               (fun (slug, outcome) ->
+                 `Assoc [ ("procedure", `String slug); ("outcome", `String outcome) ])
+               (last 5 st.recent)) );
+        ("arguments", `Assoc (List.map (fun (name, value) -> (name, `String value)) st.known));
+      ]
+  in
+
+  (* run-kli0 run-qq3o: the playbook question's criteria are the installed playbooks by
+     site and description plus none; playbooks are selected, never merged, so no choice
+     ever carries more than 255 options. *)
+  let playbook_question (st : state) =
+    let criteria =
+      List.map
+        (fun (book : Playbook.loaded) -> (book.Playbook.playbook.site, book.Playbook.playbook.description))
+        installed
+      @ [ ("none", "no installed playbook serves this part of the mission") ]
+    in
+    if List.length criteria > 255 then
+      Error (invalid "more than 255 playbooks are installed; one choice is bounded at 255")
+    else
+      Ok
+        {
+          name = "select_playbook";
+          instructions = Questions.select_playbook;
+          criteria;
+          state = state_json st;
+        }
+  in
+
+  (* run-qq3o: every turn, the current playbook's procedures plus DONE and BLOCKED. *)
+  let procedure_question (st : state) (book : Playbook.loaded) =
+    let criteria =
+      List.map
+        (fun (proc : Playbook.procedure) -> (proc.Playbook.slug, proc.Playbook.description))
+        book.Playbook.playbook.procedures
+      @ [
+          ("DONE", "the mission is visibly complete");
+          ("BLOCKED", "no offered procedure can progress");
+        ]
+    in
+    if List.length criteria > 255 then
+      Error
+        (invalid
+           (Printf.sprintf "playbook %s offers more than 253 procedures" book.Playbook.playbook.site))
+    else
+      Ok
+        {
+          name = "select_procedure";
+          instructions = Questions.select_procedure;
+          criteria;
+          state = state_json st;
+        }
+  in
+
+  (* run-kli0: the mission or a procedure's description says the next part is elsewhere
+     when it names an installed site the run has not served from yet. *)
+  let mentions_other_site (st : state) text =
+    List.exists
+      (fun (book : Playbook.loaded) ->
+        let site = book.Playbook.playbook.site in
+        let current =
+          match st.book with Some current -> current.Playbook.playbook.site = site | None -> false
+        in
+        (not current) && (not (List.mem site st.visited)) && contains ~needle:site text)
+      installed
+  in
+
+  let record (st : state) ~(book : Playbook.loaded) ~(proc : Playbook.procedure) ~planned
+      ~choice ~drives ~expectations ~outcome ~attempts ~elapsed ~reason =
+    let entry =
+      P.
+        {
+          slug = proc.Playbook.slug;
+          site = book.Playbook.playbook.site;
+          planned;
+          attempts;
+          choice;
+          drives;
+          expectations;
+          outcome;
+          elapsed_ms = elapsed;
+          reason;
+        }
+    in
+    {
+      st with
+      trace = entry :: st.trace;
+      recent = st.recent @ [ (proc.Playbook.slug, outcome) ];
+      count = st.count + 1;
+      switch = mentions_other_site st (proc.Playbook.description ^ " " ^ args.mission);
+      asked_switch = false;
+    }
+  in
+
+  (* run-5rll: every argument a procedure declares is resolved before its steps run — from
+     what the caller passed (a [use] step's args), from what the run already knows, or from
+     one text-helper call — and the values travel with the steps, so a placeholder is
+     substituted or the run blocks asking the planner for the missing fact. *)
+  let fill_arguments (st : state) (proc : Playbook.procedure) ~values =
+    let declared = Option.value ~default:[] proc.Playbook.args in
+    let ask st name =
+      let context =
+        Text_helper.
+          {
+            goal = args.mission;
+            field = { label = name; role = "argument"; value = "" };
+            page_title = st.observation.title;
+            page_text = st.observation.text;
+            recent = [];
+          }
+      in
+      match fill_args t context with
+      | Error error -> Error error
+      | Ok None ->
+          Ok
+            (Unfilled
+               ( st,
+                 Printf.sprintf "no value for argument %S of procedure %s" name
+                   proc.Playbook.slug ))
+      | Ok (Some value) -> Ok (Filled ({ st with known = (name, value) :: st.known }, [ (name, value) ]))
+    in
+    let rec go st acc = function
+      | [] ->
+          (* The caller's values and the run's known arguments travel with the resolved
+             ones, so a step of a procedure that declares no argument still sees what the
+             mission supplied (run-5rll). *)
+          Ok (Filled (st, acc @ values @ st.known))
+      | name :: rest -> (
+          match (List.assoc_opt name values, List.assoc_opt name st.known) with
+          | Some value, _ | None, Some value -> go st (acc @ [ (name, value) ]) rest
+          | None, None -> (
+              match ask st name with
+              | Error error -> Error error
+              | Ok (Unfilled _ as unfilled) -> Ok unfilled
+              | Ok (Filled (st, answered)) -> go st (acc @ answered) rest))
+    in
+    go st [] declared
+  in
+
+  let resolved_checks (book : Playbook.loaded) (proc : Playbook.procedure) values =
+    Playbook.resolved ~values book.Playbook.playbook proc
+  in
+
+  let dialog_reason (dialog : P.dialog) = "dialog open: " ^ P.Dialog_kind.to_string dialog.P.kind in
+
+  (* run-w7ke run-klp9: the one planner turn. In L31 the handler's answer is the stub's
+     [Fail]; the ending it maps to is the status the trigger deserves — a procedure that
+     failed twice is [failed], anything else is [blocked] — and a handoff leaves the tab
+     with the human. *)
+  let rec planner (st : state) ~trigger ~reason =
+    let request =
+      {
+        trigger;
+        reason;
+        mission = args.mission;
+        site = Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook.site) st.book;
+        procedures =
+          (match st.book with
+          | Some book ->
+              List.map
+                (fun (proc : Playbook.procedure) -> (proc.Playbook.slug, proc.Playbook.description))
+                book.Playbook.playbook.procedures
+          | None -> []);
+        recent = st.recent;
+      }
+    in
+    match plan t request with
+    | Error error -> Error (with_trace st error)
+    | Ok answer ->
+        let turn =
+          P.
+            {
+              n = List.length st.plans + 1;
+              trigger = trigger_name trigger;
+              answer = answer_name answer;
+              reason =
+                (match answer with
+                | Procedure _ -> None
+                | Handoff why -> Some why
+                | Fail why -> Some why);
+              usage = None;
+            }
+        in
+        let st = { st with plans = turn :: st.plans } in
+        (match answer with
+        | Fail why ->
+            Ok
+              (Finish
+                 (finish st
+                    (status (if trigger = Failed then "failed" else "blocked"))
+                    ~reason:(Printf.sprintf "%s; the planner answered fail: %s" reason why)
+                    ()))
+        | Handoff why -> (
+            match hand_off t ~reason:why with
+            | Error error -> Error (with_trace st error)
+            | Ok _ -> Ok (Finish (finish st (status "handoff") ~reason:why ())))
+        | Procedure proc -> (
+            match st.book with
+            | None ->
+                Ok
+                  (Finish
+                     (finish st (status "blocked")
+                        ~reason:"the planner wrote a procedure but no playbook is chosen" ()))
+            | Some book ->
+                let choice =
+                  { key = proc.Playbook.slug; probabilities = `Assoc []; confidence = 1.; usage = None }
+                in
+                execute st ~book ~proc ~planned:true ~choice ~optional:false ~values:[]))
+
+  (* run-d82w run-prrv: a procedure's steps in order. A [use] runs the named procedure
+     inline with its own expectations; an [optional] one is skipped when its first step
+     ends blocked within two operator steps. A drive that ends anything but [done] ends the
+     procedure's remaining steps — the expectations decide what that means (run-k8bx). *)
+  and steps (st : state) (book : Playbook.loaded) (proc : Playbook.procedure) values ~optional =
+    let first_drive drives = drives = [] in
+    let rec go st drives = function
+      | [] -> Ok (Steps_done (st, List.rev drives, None))
+      | Playbook.Goal goal :: rest ->
+          let text = Playbook.substitute values goal.Playbook.goal in
+          let goal_text =
+            match goal.Playbook.hint with None -> text | Some hint -> text ^ " Hint: " ^ hint
+          in
+          let first = first_drive drives in
+          let cap =
+            match proc.Playbook.max_steps with
+            | Some n -> if optional && first then min 2 n else n
+            | None -> if optional && first then 2 else 30
+          in
+          let deadline_s =
+            min (remaining ()) (Option.value ~default:120 proc.Playbook.deadline_s)
+          in
+          let request =
+            { goal = goal_text; hint = goal.Playbook.hint; max_steps = cap; deadline_s }
+          in
+          (match execute_step t request with
+          | Error error -> Error error
+          | Ok drive ->
+              let entry =
+                P.{ goal = goal_text; status = drive.P.status; steps = drive.P.steps; reason = drive.P.reason }
+              in
+              (* The drive's final snapshot is fresher than the run's own observation, and
+                 a dialog it stopped on is what ends the run (run-klp9). *)
+              let st =
+                {
+                  st with
+                  observation =
+                    {
+                      st.observation with
+                      snapshot = drive.P.final;
+                      url = drive.P.final.P.url;
+                      title = drive.P.final.P.title;
+                      dialog = drive.P.final.P.dialog;
+                    };
+                }
+              in
+              (match drive.P.final.P.dialog with
+              | Some dialog -> Ok (Steps_finish (finish st (status "error") ~reason:(dialog_reason dialog) ()))
+              | None ->
+                  if optional && first
+                     && (drive_is "blocked" drive.P.status || drive_is "step-cap" drive.P.status)
+                  then
+                    Ok
+                      (Steps_done
+                         ( st,
+                           List.rev (entry :: drives),
+                           Some
+                             (Printf.sprintf "procedure %s was skipped: its first step ended %s"
+                                proc.Playbook.slug (P.Drive_status.to_string drive.P.status)) ))
+                  else if drive_is "done" drive.P.status then go st (entry :: drives) rest
+                  else Ok (Steps_done (st, List.rev (entry :: drives), None))))
+      | Playbook.Use use :: rest -> (
+          match
+            List.find_opt
+              (fun (sub : Playbook.procedure) -> sub.Playbook.slug = use.Playbook.use)
+              book.Playbook.playbook.procedures
+          with
+          | None ->
+              Error (internal (Printf.sprintf "use of unknown procedure %s" use.Playbook.use))
+          | Some sub ->
+              let extra =
+                match use.Playbook.args with
+                | Some (`Assoc fields) ->
+                    List.filter_map
+                      (function
+                        | name, `String value -> Some (name, Playbook.substitute values value)
+                        | _ -> None)
+                      fields
+                | Some _ | None -> []
+              in
+              let choice =
+                { key = sub.Playbook.slug; probabilities = `Assoc []; confidence = 1.; usage = None }
+              in
+              (match
+                 execute st ~book ~proc:sub ~planned:false ~choice
+                   ~optional:(Option.value ~default:false use.Playbook.optional)
+                   ~values:extra
+               with
+              | Error error -> Error error
+              | Ok (Finish result) -> Ok (Steps_finish result)
+              | Ok (Continue st) -> go st drives rest))
+    in
+    go st [] proc.Playbook.steps
+
+  (* run-k8bx run-28: the procedure's steps, then its expectations; a failed verification
+     replays the whole procedure once and a second failure is reported to the planner. *)
+  and execute (st : state) ~(book : Playbook.loaded) ~(proc : Playbook.procedure) ~planned
+      ~choice ~optional ~values =
+    let proc_started = now () in
+    match fill_arguments st proc ~values with
+    | Error error -> Error error
+    | Ok (Unfilled (st, reason)) -> planner st ~trigger:Arguments ~reason
+    | Ok (Filled (st, values)) ->
+        let rec attempt n st =
+          match steps st book proc values ~optional with
+          | Error error -> Error error
+          | Ok (Steps_finish result) -> Ok (Finish result)
+          | Ok (Steps_done (st, drives, skip)) -> (
+              let elapsed = ms (now () -. proc_started) in
+              match skip with
+              | Some reason ->
+                  Ok
+                    (Continue
+                       (record st ~book ~proc ~planned ~choice ~drives ~expectations:[]
+                          ~outcome:"skipped" ~attempts:n ~elapsed ~reason:(Some reason)))
+              | None -> (
+                  let checks = resolved_checks book proc values in
+                  let timeout_s = Option.value ~default:5 proc.Playbook.expect_timeout_s in
+                  match verify t ~pages:book.Playbook.playbook.pages ~checks ~timeout_s with
+                  | Error error -> Error (with_trace st error)
+                  | Ok (results, observation) ->
+                      let st = { st with observation } in
+                      let passed =
+                        List.for_all (fun (result : P.run_expectation) -> result.P.passed) results
+                      in
+                      if passed then
+                        (* run-4j1v: the verified procedure's expectations are what the
+                           DONE guard re-verifies when the mission carries none. *)
+                        let st = { st with checks } in
+                        Ok
+                          (Continue
+                             (record st ~book ~proc ~planned ~choice ~drives ~expectations:results
+                                ~outcome:"verified" ~attempts:n
+                                ~elapsed:(ms (now () -. proc_started)) ~reason:None))
+                      else if n < 2 then attempt (n + 1) st
+                      else
+                        planner st ~trigger:Failed
+                          ~reason:
+                            (Printf.sprintf "procedure %s failed its expectations twice: %s"
+                               proc.Playbook.slug (failures results))))
+        in
+        attempt 1 st
+
+  (* run-4j1v, the L30 guard: DONE is accepted only against the mission's own expectations,
+     verified now on a fresh observation, or — when the mission carries none — against the
+     expectations of the procedure that ran last, re-verified the same way. A DONE nothing
+     can verify is refused to the planner. *)
+  and done_guard (st : state) (book : Playbook.loaded) ~choice =
+    let mission =
+      let rec go acc = function
+        | [] -> Ok (List.rev acc)
+        | sentence :: rest -> (
+            let sentence = Playbook.substitute st.known sentence in
+            match Playbook.resolve book.Playbook.playbook.pages sentence with
+            | Ok checker -> go ((sentence, checker) :: acc) rest
+            | Error why -> Error (invalid ("expect: " ^ why)))
+      in
+      go [] args.expect
+    in
+    match mission with
+    | Error error -> Error error
+    | Ok [] -> (
+        (* The mission carries none: the last verified procedure's expectations are the
+           check, re-verified now — and they are not the mission's, so they stay out of
+           the result's [mission_expectations]. *)
+        match st.checks with
+        | [] ->
+            planner st ~trigger:Blocked
+              ~reason:
+                "DONE was answered but nothing can verify it: no procedure has been verified and the mission carries no expectations"
+        | checks -> check_done st ~mission:false checks)
+    | Ok checks -> check_done st ~mission:true checks
+
+  and check_done (st : state) ~mission checks =
+    let pages =
+      match st.book with Some book -> book.Playbook.playbook.pages | None -> []
+    in
+    match verify t ~pages ~checks ~timeout_s:5 with
+    | Error error -> Error (with_trace st error)
+    | Ok (results, observation) ->
+        let st = { st with observation } in
+        (* run-xqh8: how the mission's own expectations came out is part of the audit,
+           whether they held or not. *)
+        let st = if mission then { st with mission_checks = results } else st in
+        if List.for_all (fun (result : P.run_expectation) -> result.P.passed) results then
+          Ok (Finish (finish st (status "done") ()))
+        else
+          planner st ~trigger:Blocked
+            ~reason:(Printf.sprintf "DONE was refused: %s" (failures results))
+
+  (* One turn: observe, ask the playbook level when a switch is due, ask the procedure
+     level, and run what it chose. *)
+  and next (st : state) =
+    if now () >= deadline then
+      Ok
+        (Finish
+           (finish st (status "deadline")
+              ~reason:(Printf.sprintf "the run deadline of %d s was reached" args.deadline_s)
+              ()))
+    else if st.count >= args.max_procedures then
+      Ok
+        (Finish
+           (finish st (status "limit")
+              ~reason:(Printf.sprintf "the procedure cap of %d was reached" args.max_procedures)
+              ()))
+    else
+      let* st = observe_state st in
+      let* st = ask_playbook st in
+      let* st = ask_procedure st in
+      next st
+
+  and observe_state (st : state) =
+    match observe t () with
+    | Error error -> Error (with_trace st error)
+    | Ok observation -> (
+        let st = { st with observation } in
+        match observation.dialog with
+        | Some dialog ->
+            Ok (Finish (finish st (status "error") ~reason:(dialog_reason dialog) ()))
+        | None -> Ok (Continue st))
+
+  (* run-kli0 run-xh5d: asked at the start, after a procedure whose description or the
+     mission says the next part is elsewhere, and — through [ask_procedure] — when the
+     procedure level is blocked while the mission still names another site. A switch
+     navigates the same tab to the playbook's entry, so the profile's logins carry over. *)
+  and ask_playbook (st : state) =
+    if st.book <> None && not st.switch then Ok (Continue st)
+    else if installed = [] then
+      (* run-tcuz: nothing to choose from, and a question whose only criterion is [none]
+         is not worth a model call. *)
+      planner st ~trigger:Blocked
+        ~reason:
+          "no playbooks are installed: put a site's playbook in the XDG playbooks directory"
+    else
+      match playbook_question st with
+      | Error error -> Error error
+      | Ok question -> (
+          match select_playbook t question with
+          | Error error -> Error (with_trace st error)
+          | Ok choice -> (
+              if choice.key = "none" then
+                planner st ~trigger:Blocked
+                  ~reason:"no installed playbook serves this part of the mission"
+              else
+                match
+                  List.find_opt
+                    (fun (book : Playbook.loaded) -> book.Playbook.playbook.site = choice.key)
+                    installed
+                with
+                | None ->
+                    Error
+                      (internal
+                         (Printf.sprintf "the playbook answer names no installed playbook: %s"
+                            choice.key))
+                | Some book -> (
+                    let current =
+                      match st.book with
+                      | Some current -> current.Playbook.playbook.site
+                      | None -> ""
+                    in
+                    let st =
+                      {
+                        st with
+                        book = Some book;
+                        switch = false;
+                        visited = book.Playbook.playbook.site :: st.visited;
+                      }
+                    in
+                    if book.Playbook.playbook.site = current then Ok (Continue st)
+                    else
+                      match navigate t book.Playbook.playbook.entry with
+                      | Error error -> Error (with_trace st error)
+                      | Ok _ -> (
+                          match observe t () with
+                          | Error error -> Error (with_trace st error)
+                          | Ok observation -> Ok (Continue { st with observation })))))
+
+  and ask_procedure (st : state) =
+    match st.book with
+    | None -> Error (internal "the run asked the procedure level without a playbook")
+    | Some book -> (
+        match procedure_question st book with
+        | Error error -> Error error
+        | Ok question -> (
+            match select_procedure t question with
+            | Error error -> Error (with_trace st error)
+            | Ok choice ->
+                let chosen = choice in
+                if choice.key = "DONE" then done_guard st book ~choice:chosen
+                else if choice.key = "BLOCKED" then
+                  (* run-kli0: the playbook level gets one last look before the planner —
+                     another installed site may serve the next part — and a second BLOCKED
+                     from the same playbook goes to the planner. *)
+                  if not st.asked_switch then
+                    Ok (Continue { st with switch = true; asked_switch = true })
+                  else
+                    planner st ~trigger:Blocked
+                      ~reason:"the procedure level answered BLOCKED"
+                else
+                  match
+                    List.find_opt
+                      (fun (proc : Playbook.procedure) -> proc.Playbook.slug = choice.key)
+                      book.Playbook.playbook.procedures
+                  with
+                  | None ->
+                      Error
+                        (internal
+                           (Printf.sprintf
+                              "the procedure answer names no offered procedure: %s" choice.key))
+                  | Some proc ->
+                      execute st ~book ~proc ~planned:false ~choice:chosen ~optional:false
+                        ~values:[]))
+
+  (* run-fp7i: the two levels against the models, the chosen playbook and first procedure
+     with its resolved checkers, and no action at all — not even the entry navigation. *)
+  and dry_run (st : state) =
+    match playbook_question st with
+    | Error error -> Error error
+    | Ok question -> (
+        match select_playbook t question with
+        | Error error -> Error (with_trace st error)
+        | Ok choice ->
+            let book =
+              if choice.key = "none" then None
+              else
+                List.find_opt
+                  (fun (book : Playbook.loaded) -> book.Playbook.playbook.site = choice.key)
+                  installed
+            in
+            let st = { st with book } in
+            (match book with
+            | None ->
+                Ok
+                  (Finish
+                     (finish st (status "blocked")
+                        ~reason:"dry run: no installed playbook serves this part of the mission"
+                        ()))
+            | Some book -> (
+                match procedure_question st book with
+                | Error error -> Error error
+                | Ok question -> (
+                    match select_procedure t question with
+                    | Error error -> Error (with_trace st error)
+                    | Ok choice ->
+                        if choice.key = "DONE" || choice.key = "BLOCKED" then
+                          Ok
+                            (Finish
+                               (finish st (status "blocked")
+                                  ~reason:
+                                    (Printf.sprintf
+                                       "dry run: the procedure level answered %s; nothing was executed"
+                                       choice.key)
+                                  ()))
+                        else
+                          match
+                            List.find_opt
+                              (fun (proc : Playbook.procedure) -> proc.Playbook.slug = choice.key)
+                              book.Playbook.playbook.procedures
+                          with
+                          | None ->
+                              Error
+                                (internal
+                                   (Printf.sprintf
+                                      "the procedure answer names no offered procedure: %s"
+                                      choice.key))
+                          | Some proc ->
+                              let checks = resolved_checks book proc st.known in
+                              let expectations =
+                                List.map
+                                  (fun (sentence, checker) ->
+                                    P.
+                                      {
+                                        sentence;
+                                        checker = Playbook.checker_name checker;
+                                        passed = false;
+                                        score = None;
+                                      })
+                                  checks
+                              in
+                              let entry =
+                                P.
+                                  {
+                                    slug = proc.Playbook.slug;
+                                    site = book.Playbook.playbook.site;
+                                    planned = false;
+                                    attempts = 1;
+                                    choice;
+                                    drives = [];
+                                    expectations;
+                                    outcome = "planned";
+                                    elapsed_ms = ms (now () -. started);
+                                    reason = Some "dry run: nothing was executed";
+                                  }
+                              in
+                              let st = { st with trace = entry :: st.trace } in
+                              Ok
+                                (Finish
+                                   (finish st (status "blocked")
+                                      ~reason:"dry run: nothing was executed" ()))))))
+
+  in
+  (* run-fwl8's refusals are the registry's, before this runs; the first observation is the
+     loop's own. *)
+  match observe t () with
+  | Error error -> Error error
+  | Ok observation -> (
+      let st = empty observation in
+      match (if args.dry_run then dry_run st else next st) with
+      | Error error -> Error error
+      | Ok (Finish result) -> Ok result
+      | Ok (Continue _) -> Error (internal "the run loop stopped without an ending"))
+
+(* ---------- The handler ---------- *)
+
+let loop ~(handler : handler) ~now ~installed (args : args) =
+  if args.max_procedures < 1 || args.deadline_s < 1 then
+    Error (invalid "run max_procedures and deadline_s must be positive")
+  else
+    let module M = struct
+      type _ Effect.t += Observe : (observation, P.error) result Effect.t
+      type _ Effect.t += Navigate : string -> (unit, P.error) result Effect.t
+
+      type _ Effect.t +=
+        Select_playbook : question -> (choice, P.error) result Effect.t
+
+      type _ Effect.t +=
+        Select_procedure : question -> (choice, P.error) result Effect.t
+
+      type _ Effect.t +=
+        Fill_args : Text_helper.context -> (string option, P.error) result Effect.t
+
+      type _ Effect.t +=
+        Execute_step : step_request -> (P.drive_result, P.error) result Effect.t
+
+      type _ Effect.t +=
+        Verify :
+          Playbook.page list * (string * Playbook.checker) list * int ->
+          (P.run_expectation list * observation, P.error) result
+          Effect.t
+
+      type _ Effect.t += Plan : plan_request -> (plan_answer, P.error) result Effect.t
+      type _ Effect.t += Hand_off : string -> (P.tab_info, P.error) result Effect.t
+    end in
+    let token =
+      {
+        observe = (fun () -> Effect.perform M.Observe);
+        navigate = (fun url -> Effect.perform (M.Navigate url));
+        select_playbook = (fun question -> Effect.perform (M.Select_playbook question));
+        select_procedure = (fun question -> Effect.perform (M.Select_procedure question));
+        fill_args = (fun context -> Effect.perform (M.Fill_args context));
+        execute_step = (fun request -> Effect.perform (M.Execute_step request));
+        verify = (fun pages checks timeout_s -> Effect.perform (M.Verify (pages, checks, timeout_s)));
+        plan = (fun request -> Effect.perform (M.Plan request));
+        hand_off = (fun reason -> Effect.perform (M.Hand_off reason));
+      }
+    in
+    Effect.Deep.match_with (fun () -> compute token ~now ~installed args) ()
+      {
+        retc = Fun.id;
+        exnc = raise;
+        effc =
+          (fun (type a) (eff : a Effect.t) ->
+            match eff with
+            | M.Observe ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.observe ()))
+            | M.Navigate url ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.navigate url))
+            | M.Select_playbook question ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.choose question))
+            | M.Select_procedure question ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.choose question))
+            | M.Fill_args context ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.text_value context))
+            | M.Execute_step request ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.step request))
+            | M.Verify (pages, checks, timeout_s) ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.verify ~pages ~checks ~timeout_s))
+            | M.Plan request ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.plan request))
+            | M.Hand_off reason ->
+                Some
+                  (fun (k : (a, (P.run_result, P.error) result) Effect.Deep.continuation) ->
+                    Effect.Deep.continue k (handler.hand_off ~reason))
+            | _ -> None);
+      }

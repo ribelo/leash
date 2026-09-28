@@ -70,7 +70,7 @@ let history (step : P.step) changed =
                    else op_name step.operation);
       text = step.text; page_changed = Some changed }
 
-let loop (t : token) ~now ~model ~args ~dry_run =
+let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run =
   let started = now () in
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
   let cap = Option.value ~default:30 args.P.max_steps in
@@ -186,7 +186,7 @@ let loop (t : token) ~now ~model ~args ~dry_run =
           | Ok Nothing -> step None
     in go 0 first [] []
 
-let run ~(handler : handler) ~now ~model ~args ~dry_run =
+let run ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run =
   if Option.value ~default:30 args.P.max_steps < 1 ||
      Option.value ~default:120 args.deadline_s < 1 then
     Error P.{code=(match Error_code.of_string "invalid-request" with Ok x -> x | Error _ -> assert false);

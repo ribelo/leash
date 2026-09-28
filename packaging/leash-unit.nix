@@ -3,8 +3,10 @@
 # output renders the same value with `toText`, so the text installed by hand is the
 # text home-manager writes and `systemd-analyze --user verify` checks the same thing.
 #
-# ExecStart is the `nix build .#leash` binary with the Door's `run` subcommand
-# (Eta_app adds it; a bare invocation runs the same program). The unit belongs to the
+# ExecStart is the `nix build .#leash` binary with the Door's start subcommand, named
+# `serve` because `run` is the mission command (run-9ypy, L31: `leash run "<mission>"`
+# runs a mission over the playbooks). Eta_app adds it under that name; a bare invocation
+# starts the same program. The unit belongs to the
 # graphical session: After/PartOf graphical-session.target, installed into
 # graphical-session.target, `Restart=on-failure` with a two-second delay. The session
 # environment the Door needs is XDG_RUNTIME_DIR (systemd's %t) and the Eio backend;
@@ -44,7 +46,7 @@ rec {
           "XDG_RUNTIME_DIR=%t"
           "EIO_BACKEND=posix"
         ];
-        ExecStart = "${package}/bin/leash run";
+        ExecStart = "${package}/bin/leash serve";
         Restart = "on-failure";
         RestartSec = 2;
         # The Door exits 0 on SIGTERM, so a stop or a restart is a clean stop and not a

@@ -57,6 +57,12 @@ Packaging for anyone but this machine, CI, an HTTP adapter.
 ## Further Notes
 
 - Whether the unit is home-manager managed or a flake output installed by hand follows whatever Pie does today.
+- **svc-dit8 note, 2026-09-28 (L31):** the Door's start subcommand is named `serve`, not
+  `run`. L31's story run-9ypy gives `leash run "<mission>"` to the mission command, so
+  Eta_app grew `?service_command` (eta-next napp-d5e4) and Leash passes `"serve"`:
+  `ExecStart` is `…/bin/leash serve`, and `docs/install.md`, `packaging/leash-unit.nix`
+  and `scripts/unit-acceptance` were moved with it. A bare `leash` still starts the
+  same program.
 - L28 headed acceptance is prepared as `scripts/live-acceptance-m6-headed`, the one
   desktop pass the operator runs by hand: it prints the install steps from
   `docs/install.md`, checks the unit and `leash status`, records niri's placement of

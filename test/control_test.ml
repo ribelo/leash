@@ -1307,6 +1307,321 @@ let optional_otlp () =
       let id = Option.get telemetry.Eta_app.span_ids () in
       Alcotest.(check int) "trace id length" 32 (String.length id))
 
+(* ---------- L31: the run over the fake browser ----------
+
+   run-9ypy run-4j1v run-snk4 run-shgh run-7blx run-fwl8: the whole control seam — a real
+   request through {!Leash.Control.handle}, the fake CDP peer, the modelled upper levels
+   scripted and the operator level's decision scripted — so the loop is proven without a
+   model and without a browser. The page is L30's measured state: the successful Added!
+   modal on the offer URL, whose playbook kind is [post-add] because its text marker takes
+   priority over the offer URL matcher. *)
+
+module Run = Leash.Run
+module Jev = Leash__Jev_request
+
+let modal_text = "Added! Your product has been added to cart. View Cart"
+let product_url = "https://automationexercise.com/product_details/1"
+let decoded = function Ok reply -> result reply | Error why -> Alcotest.fail why
+let reply_of = function Ok reply -> reply | Error why -> Alcotest.fail why
+
+let operation name =
+  match P.Operation.of_string name with Ok x -> x | Error _ -> assert false
+
+let decide_done ~deadline:_ (_ : Jev.request) =
+  Ok
+    Jev.
+      {
+        operation = operation "done";
+        index = None;
+        option = None;
+        confidence = 1.;
+        target_confidence = None;
+        operation_probabilities = [ ("done", 1.) ];
+        target_probabilities = [];
+        targets = [];
+      }
+
+let levels_with answers questions =
+  let remaining = ref answers in
+  Run.
+    {
+      choose =
+        (fun ~deadline:_ (question : Run.question) ->
+          questions := question :: !questions;
+          match !remaining with
+          | [] -> Alcotest.fail "the run asked for more answers than the test scripted"
+          | key :: rest ->
+              remaining := rest;
+              Ok
+                Run.
+                  {
+                    key;
+                    probabilities = `Assoc [ (key, `Float 1.) ];
+                    confidence = 1.;
+                    usage = None;
+                  });
+      score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
+      plan = (fun ~deadline:_ _ -> Ok (Run.Fail "the planner is not built until L32"));
+    }
+
+let run_wire ?(who = "alice") ?expect ?tab mission =
+  P.encode_request
+    {
+      owner = owner who;
+      command =
+        P.Run
+          {
+            tab;
+            mission;
+            max_procedures = None;
+            deadline_s = None;
+            dry_run = None;
+            expect;
+          };
+    }
+  |> Yojson.Safe.to_string
+
+(* The page the fake CDP peer serves: the recorded sh*ap*es of the unlabelled-controls
+   fixture for the tree and the modal's text for the document. *)
+let page_script fake fixture text =
+  Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
+  Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
+  Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
+  Fake.on_method fake "Runtime.evaluate" (fun request ->
+      let expression = get "expression" (get "params" request) in
+      let value =
+        match expression with
+        | `String s
+          when String.starts_with ~prefix:"Array.from(document.body?.innerText" s ->
+            str text
+        | _ -> get "guard" fixture
+      in
+      if expression = str "globalThis" then
+        obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
+      else obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]);
+  Fake.on_method fake "Runtime.callFunctionOn" (fun _ ->
+      obj
+        [
+          ( "result",
+            obj
+              [
+                ( "value",
+                  obj [ ("y", `Int 0); ("viewport", `Int 400); ("height", `Int 1000) ] );
+              ] );
+        ])
+
+(* The registry reads the document's title and committed URL from this query once the load
+   is done, which is where the run's page kind comes from. *)
+let document_at ~title ~url fake =
+  Fake.on_method fake "Target.getTargetInfo" (fun _ ->
+      obj
+        [
+          ( "targetInfo",
+            obj
+              [
+                ("targetId", str "target-1");
+                ("type", str "page");
+                ("title", str title);
+                ("url", str url);
+              ] );
+        ]);
+  Fake.on_method fake "Page.navigate" (fun request ->
+      let session =
+        match get "sessionId" request with `String s -> s | _ -> assert false
+      in
+      Fake.emit ~session fake ~method_:"Target.targetInfoChanged"
+        ~params:
+          (obj
+             [
+               ( "targetInfo",
+                 obj
+                   [
+                     ("targetId", str "target-1");
+                     ("type", str "page");
+                     ("title", str title);
+                     ("url", str url);
+                   ] );
+             ]);
+      Fake.emit ~session fake ~method_:"Page.loadEventFired"
+        ~params:(Fake.event "Page.loadEventFired");
+      obj [])
+
+(* The rig's clocks are Eio_mock's, so a run whose expectation wait sleeps needs the
+   virtual clock moved while it works: this fiber advances it by 100 ms at a time until the
+   request is answered. The wait's own timeout bounds it (run-l06s). *)
+let with_ticking_clock env sw f =
+  let stop = ref false in
+  Eio.Fiber.fork ~sw (fun () ->
+      let rec tick n =
+        if n = 0 || !stop then ()
+        else (
+          Eta_test.advance env#clock (Eta.Duration.ms 100);
+          tick (n - 1))
+      in
+      tick 5_000);
+  Fun.protect ~finally:(fun () -> stop := true) f
+
+let run_mission () =
+  rig (fun env sw _ tabs fake ->
+      let f = fake () in
+      let fixture = fixture "unlabelled-controls-chrome.json" in
+      page_script f fixture modal_text;
+      document_at ~title:"Blue Top" ~url:product_url f;
+      let playbook =
+        match Leash.Playbook.load "../examples/playbooks/automationexercise.com.json" with
+        | Ok book -> book
+        | Error why -> Alcotest.fail why
+      in
+      let h = result (request tabs "alice" (P.New { url = Some product_url })) |> tab in
+      let questions = ref [] in
+      let answers = [ "automationexercise.com"; "add-to-cart"; "DONE" ] in
+      let levels = levels_with answers questions in
+      let reply =
+        with_ticking_clock env sw (fun () ->
+            Leash.Control.handle ~model:"fixture-model" ~levels ~installed:[ playbook ]
+              ~decide:decide_done tabs
+              (run_wire ~tab:h ~expect:[ "the page is cart" ] "add Blue Top to the cart")
+            |> Yojson.Safe.from_string |> P.decode_reply)
+      in
+      let body = decoded reply in
+      Alcotest.(check string)
+        "run-4j1v the Added! modal is not DONE" "blocked"
+        (match get "status" body with `String s -> s | _ -> "");
+      (match get "procedures" body with
+      | `List (entry :: _) ->
+          Alcotest.(check string)
+            "run-9ypy the procedure the level chose" "add-to-cart"
+            (match get "slug" entry with `String s -> s | _ -> "");
+          Alcotest.(check string)
+            "run-9ypy the procedure verified" "verified"
+            (match get "outcome" entry with `String s -> s | _ -> "")
+      | _ -> Alcotest.fail "run-9ypy the trace has no procedure");
+      (match get "mission_expectations" body with
+      | `List [ expectation ] ->
+          Alcotest.(check bool)
+            "run-4j1v the mission's own expectation was verified and did not hold" false
+            (match get "passed" expectation with `Bool b -> b | _ -> true);
+          Alcotest.(check string)
+            "run-4j1v the expectation is the mission's" "the page is cart"
+            (match get "sentence" expectation with `String s -> s | _ -> "")
+      | _ -> Alcotest.fail "run-4j1v the mission expectations are missing");
+      (match get "planner_turns" body with
+      | `List [ turn ] ->
+          Alcotest.(check string)
+            "run-w7ke the planner was asked at the refusal" "blocked"
+            (match get "trigger" turn with `String s -> s | _ -> "")
+      | _ -> Alcotest.fail "run-w7ke no planner turn");
+      (* run-qq3o run-pvmc: the state the procedure level was asked over. Its page kind is
+         the modal's, not the offer URL's, and no page text is in it. *)
+      let procedure_question =
+        match
+          List.find_opt
+            (fun (question : Run.question) -> question.Run.name = "select_procedure")
+            !questions
+        with
+        | Some question -> question
+        | None -> Alcotest.fail "run-qq3o the procedure level was never asked"
+      in
+      let state = procedure_question.Run.state in
+      Alcotest.(check string)
+        "run-snk4 the modal is the post-add kind, not the offer URL" "post-add"
+        (match
+           List.assoc_opt "page_kind"
+             (match state with `Assoc fields -> fields | _ -> [])
+         with
+        | Some (`String kind) -> kind
+        | _ -> "");
+      Alcotest.(check bool)
+        "run-pvmc no page text reaches the upper level" false
+        (List.mem_assoc "text" (match state with `Assoc fields -> fields | _ -> []));
+      (* run-shgh: the step went through the same service path [drive] uses, and nothing
+         acted on the page: the decision was [done]. *)
+      let methods =
+        Fake.received f
+        |> List.filter_map (fun json ->
+            match field "method" json with Some (`String name) -> Some name | _ -> None)
+      in
+      Alcotest.(check bool)
+        "run-shgh the step drove the operator level" true
+        (List.mem "Accessibility.getFullAXTree" methods);
+      Alcotest.(check bool)
+        "run-d82w nothing was dispatched" false
+        (List.mem "Input.dispatchMouseEvent" methods))
+
+(* run-fwl8: a run starts from a state it can act in. *)
+let run_refusals () =
+  rig (fun _ _ _ tabs fake ->
+      let f = fake () in
+      let fixture = fixture "unlabelled-controls-chrome.json" in
+      page_script f fixture "";
+      document_at ~title:"A page" ~url:"https://example.com/" f;
+      let h =
+        result (request tabs "alice" (P.New { url = Some "https://example.com/" })) |> tab
+      in
+      let levels = levels_with [] (ref []) in
+      let run ?expect who =
+        reply_of
+          (P.decode_reply
+             (Yojson.Safe.from_string
+                (Leash.Control.handle ~model:"fixture-model" ~levels ~installed:[]
+                   ~decide:decide_done tabs
+                   (run_wire ~who ?expect ~tab:h "do the thing"))))
+      in
+      check_code "run-fwl8 not-owner" "not-owner" (run "bob");
+      (* The human's hold: every command on the tab answers [with-human], a run included. *)
+      (match
+         Leash.Tabs.hand_over tabs ~owner:(owner "alice") ~reason:"look at this" h
+       with
+      | Ok _ -> ()
+      | Error error -> Alcotest.fail error.P.message);
+      check_code "run-fwl8 with-human" "with-human" (run "alice");
+      ignore (Leash.Tabs.resume tabs ~owner:(owner "human") h);
+      (* A dialog waiting to be answered: the run refuses to start rather than fight it. *)
+      Fake.emit ~session:"session-1" f ~method_:"Page.javascriptDialogOpening"
+        ~params:
+          (obj
+             [
+               ("type", str "alert");
+               ("message", str "stay here");
+               ("url", str "https://example.com/");
+               ("hasBrowserHandler", `Bool true);
+             ]);
+      let rec wait_dialog n =
+        if n = 0 then Alcotest.fail "run-fwl8 the dialog event was not delivered"
+        else
+          match
+            Leash.Tabs.snap tabs ~owner:(owner "alice")
+              { tab = h; match_ = None; limit = None; offset = None }
+          with
+          | Ok { dialog = Some _; _ } -> ()
+          | _ ->
+              Eio.Fiber.yield ();
+              wait_dialog (n - 1)
+      in
+      wait_dialog 100;
+      check_code "run-fwl8 dialog-open" "dialog-open" (run "alice");
+      (* run-9ypy: a mission with no tab opens one of its own — listed for its owner, and
+         left open for the next call. *)
+      let opened =
+        reply_of
+          (P.decode_reply
+             (Yojson.Safe.from_string
+                (Leash.Control.handle ~model:"fixture-model" ~levels ~installed:[]
+                   ~decide:decide_done tabs (run_wire "learn the thing"))))
+      in
+      (match opened with
+      | P.Failure error -> Alcotest.fail error.P.message
+      | P.Success body ->
+          Alcotest.(check string)
+            "run-9ypy a mission with no tab still ends in a result" "blocked"
+            (match get "status" body with `String s -> s | _ -> ""));
+      let tabs_now =
+        result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
+      in
+      Alcotest.(check int)
+        "run-9ypy the run opened a tab" 2
+        (match tabs_now with `List xs -> List.length xs | _ -> 0))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -1333,5 +1648,8 @@ let () =
           Alcotest.test_case "human-origin shutdown" `Quick human;
           Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
           Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;
+          Alcotest.test_case "run-9ypy run-4j1v run-snk4 run-shgh run-7blx" `Quick
+            run_mission;
+          Alcotest.test_case "run-fwl8 run refusals" `Quick run_refusals;
         ] );
     ]

@@ -135,6 +135,19 @@ module Drive_status : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
+(** L31 run-9ypy: the closed set a run answers with — [done], [blocked], [failed],
+    [handoff], [limit], [deadline], [error]. It is not the drive's set: a run adds
+    [handoff] and [failed], and its [error] is a page state or a model or browser failure
+    rather than a step that could not act. *)
+module Run_status : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
 module Chrome_phase : sig
   type t
 
@@ -352,6 +365,23 @@ type drive_args = {
 (** The per-command argument records: each is derived, every [key?] field is omitted when
     [None], and [decode_request] refuses a key its record does not name. *)
 
+type run_args = {
+  tab : Handle.t option;
+  mission : string;
+  max_procedures : int option;
+  deadline_s : int option;
+  dry_run : bool option;
+  expect : string list option;
+}
+(** L31 run-9ypy: one mission over the installed playbooks. [tab] is [key?]: a run given
+    one reuses it, after checking ownership and that no dialog is open, and a run given
+    none opens a tab of its own — the one the [final] snapshot names — and leaves it open.
+    [max_procedures] defaults to 40 and [deadline_s] to 900; [dry_run] asks the two levels
+    and reports without acting (run-fp7i). [expect] is the mission's own expectations —
+    the sentences DONE is verified against independently of the last procedure (run-4j1v,
+    the L30 guard) — which L32's planner attaches on its first turn and which a caller may
+    state directly. It is a [key?] list: omitted when the mission carries none. *)
+
 type tab_counts = { open_ : int; cap : int }
 
 val tab_counts_of_yojson : Yojson.Safe.t -> (tab_counts, string) result
@@ -456,6 +486,107 @@ type drive_result = {
 val drive_result_of_yojson : Yojson.Safe.t -> (drive_result, string) result
 val yojson_of_drive_result : drive_result -> Yojson.Safe.t
 
+type run_usage = { input_tokens : int; output_tokens : int; cost : float }
+(** run-xqh8: one upper-level or planner call's provider-reported accounting. *)
+
+val run_usage_of_yojson : Yojson.Safe.t -> (run_usage, string) result
+val yojson_of_run_usage : run_usage -> Yojson.Safe.t
+
+type run_choice = {
+  key : string;
+  probabilities : Yojson.Safe.t;
+  confidence : float;
+  usage : run_usage option; [@json.null]
+}
+(** run-xqh8 run-qq3o: the upper level's answer with the distribution behind it: [key] is
+    the criterion it chose — a playbook's site, a procedure's slug, [DONE] or [BLOCKED] —
+    and [probabilities] the model's own object, keyed as the model answered it. *)
+
+val run_choice_of_yojson : Yojson.Safe.t -> (run_choice, string) result
+val yojson_of_run_choice : run_choice -> Yojson.Safe.t
+
+type run_expectation = {
+  sentence : string;
+  checker : string;
+  passed : bool;
+  score : float option; [@json.null]
+}
+(** run-xqh8: one expectation and how it was verified — the checker's kind (["page_kind"],
+    ["text"], ["download"], ["no_dialog"], ["row"] or ["judgment"]) and, where only
+    judgment could decide, the JEV score. [score] is [T|null]. *)
+
+val run_expectation_of_yojson : Yojson.Safe.t -> (run_expectation, string) result
+val yojson_of_run_expectation : run_expectation -> Yojson.Safe.t
+
+type run_drive = {
+  goal : string;
+  status : Drive_status.t;
+  steps : step list;
+  reason : string option;
+}
+(** run-d82w run-xqh8: one operator step — the single [drive] call a playbook step became
+    — with the goal it was given and the drive's own result. *)
+
+val run_drive_of_yojson : Yojson.Safe.t -> (run_drive, string) result
+val yojson_of_run_drive : run_drive -> Yojson.Safe.t
+
+type run_procedure = {
+  slug : string;
+  site : string;
+  planned : bool;
+  attempts : int;
+  choice : run_choice;
+  drives : run_drive list;
+  expectations : run_expectation list;
+  outcome : string;
+  elapsed_ms : int;
+  reason : string option;
+}
+(** run-xqh8: one procedure the run executed. [outcome] is one of ["verified"], ["failed"]
+    (its second verification failed), ["skipped"] (an optional [use] whose first step
+    ended blocked) or ["planned"] (a dry run chose it and executed nothing). [attempts] is
+    2 when the retry-once rule replayed the procedure (run-k8bx); [planned] is true when a
+    planner turn wrote it (run-m0r8). [drives] is empty for ["planned"] — and, in a dry
+    run, for every entry: nothing was executed. [reason] is [key?] and says why a skipped
+    or failed procedure ended that way. *)
+
+val run_procedure_of_yojson : Yojson.Safe.t -> (run_procedure, string) result
+val yojson_of_run_procedure : run_procedure -> Yojson.Safe.t
+
+type planner_turn = {
+  n : int;
+  trigger : string;
+  answer : string;
+  reason : string option;
+  usage : run_usage option; [@json.null]
+}
+(** run-xqh8 run-klp9: one planner turn. [trigger] is ["blocked"], ["failed"] or
+    ["arguments"] — the point JEV stopped; [answer] is ["procedure"], ["handoff"] or
+    ["fail"]. L31's planner is a stub that answers ["fail"] (L32 is Luna), so [usage] is
+    [T|null] there. *)
+
+val planner_turn_of_yojson : Yojson.Safe.t -> (planner_turn, string) result
+val yojson_of_planner_turn : planner_turn -> Yojson.Safe.t
+
+type run_result = {
+  status : Run_status.t;
+  site : string option; [@json.null]
+  procedures : run_procedure list;
+  mission_expectations : run_expectation list;
+  planner_turns : planner_turn list;
+  final : snapshot;
+  reason : string option;
+}
+(** run-9ypy: the whole run. [site] is the playbook that served the mission, [T|null] when
+    the run never chose one; [procedures] is the trace, oldest first;
+    [mission_expectations] is how the mission's own expectations came out at the DONE
+    guard (empty when the mission carried none); [final] is the last snapshot the run
+    observed — its [dialog] is what ended an [error] (run-klp9); [reason] is [key?] and
+    names why the run stopped. *)
+
+val run_result_of_yojson : Yojson.Safe.t -> (run_result, string) result
+val yojson_of_run_result : run_result -> Yojson.Safe.t
+
 type error = { code : Error_code.t; message : string; detail : Yojson.Safe.t option }
 (** What a failed reply carries: a closed code, one sentence, and optional structured
     context ([key?]: omitted when there is none). *)
@@ -503,6 +634,7 @@ type command =
   | Resume of tab_args
   | Drive of drive_args
   | Downloads of tab_args
+  | Run of run_args
       (** The decoded command: one constructor per row of [docs/protocol.md]'s command
           tables, carrying that command's derived argument record. *)
 

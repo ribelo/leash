@@ -18,3 +18,24 @@ val target : string
 
 val text_value : string
 (** [TEXT_VALUE]: what the text helper is asked for. *)
+
+(** L31 (run-vj48 run-qq3o run-kli0 run-vbys): the three questions the run's upper levels
+    ask. They are not JEV-trained texts like jev's own — JEV sees whatever framing it is
+    given — so they may be revised; the state they are asked over is the part the L30
+    measurement pinned (story 18) and is built by {!Run}. [select_procedure] carries the
+    L30 lesson in its instructions: DONE is the mission's end state, not an intermediate
+    confirmation. *)
+
+val select_playbook : string
+(** The playbook question: the installed playbooks by site and description plus [none]. *)
+
+val select_procedure : string
+(** The procedure question, asked every turn over the small observed state. *)
+
+val score : string -> string
+(** [score sentence] is the score question's instructions for an expectation no checker
+    resolves ("how well does the current page satisfy: <sentence>?"). *)
+
+val score_levels : string list
+(** The score question's two levels, in order: the answer's position is the [0, 1] score
+    {!Playbook.await} compares against its threshold. *)

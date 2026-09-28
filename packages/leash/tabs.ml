@@ -705,43 +705,46 @@ let new_tab t ~owner ~url =
                 in
                 Ok (info t tab)))
 
+(* chrome-1yn9: the lock-free body, for a caller that already holds the tab's lock (the
+   run's playbook switch, run-xh5d). *)
+let navigate_locked t ~owner ~tab url =
+  let* cdp = ready t in
+  let* session = page_session t cdp tab in
+  (* chrome-1yn9: the tab is navigating to [url] now, so [url] is the fallback until
+     Chrome speaks; the load wait's own [Target.getTargetInfo] refresh replaces it with
+     the URL Chrome committed, which is what a redirect changes. *)
+  tab.url <- url;
+  tab.snapshot <- None;
+  let* () =
+    with_load_wait t cdp tab (fun () ->
+        let* reply = cdp_call ~session cdp "Page.navigate" (obj [ ("url", str url) ]) in
+        (match text "frameId" reply with
+        | Some id -> tab.main_frame <- Some id
+        | None -> ());
+        match text "errorText" reply with
+        | Some _ -> Error (error "internal" "browser navigation failed")
+        | None -> Ok ())
+  in
+  let* _ = locate t ~access:Act ~owner tab.handle in
+  let* _ = ready t in
+  Ok
+    P.
+      {
+        tab = tab.handle;
+        url = tab.url;
+        title = tab.title;
+        snapshot = None;
+        dialog = None;
+        popups = [];
+      }
+
 let navigate t ~owner handle url =
   if not (valid_url url) then Error (refusal ())
   else
     let* tab = locate t ~access:Act ~owner handle in
     Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
         let* tab = locate t ~access:Act ~owner handle in
-        let* cdp = ready t in
-        let* session = page_session t cdp tab in
-        (* chrome-1yn9: the tab is navigating to [url] now, so [url] is the fallback until
-           Chrome speaks; the load wait's own [Target.getTargetInfo] refresh replaces it
-           with the URL Chrome committed, which is what a redirect changes. *)
-        tab.url <- url;
-        tab.snapshot <- None;
-        let* () =
-          with_load_wait t cdp tab (fun () ->
-              let* reply =
-                cdp_call ~session cdp "Page.navigate" (obj [ ("url", str url) ])
-              in
-              (match text "frameId" reply with
-              | Some id -> tab.main_frame <- Some id
-              | None -> ());
-              match text "errorText" reply with
-              | Some _ -> Error (error "internal" "browser navigation failed")
-              | None -> Ok ())
-        in
-        let* _ = locate t ~access:Act ~owner handle in
-        let* _ = ready t in
-        Ok
-          P.
-            {
-              tab = handle;
-              url = tab.url;
-              title = tab.title;
-              snapshot = None;
-              dialog = None;
-              popups = [];
-            })
+        navigate_locked t ~owner ~tab url)
 
 (* own-jua9: claiming takes a tab nobody owns for the caller, and leaves every other
    command's authorization untouched. *)
@@ -821,20 +824,26 @@ let handoff_timeout = function
    refusal has to be reachable to be tested: the tab moves to [With_human] holding the
    reason the human is shown and the promise the blocked request awaits, and from that
    moment every command is refused, the owner's own included, until [resume]. *)
+(* hand-len8 hand-nisr: the transition itself, for a caller that already holds the tab's
+   lock — which the run does for its whole duration (run-d82w) — and for the command
+   below. *)
+let begin_handoff_locked t ~owner ~reason tab =
+  (* hand-len8: a handoff is not an owner action, so it leaves the idle clock where it
+     was; [With_human] is exempt from stage 1 anyway (ADR-0005). *)
+  let activity = tab.last_activity in
+  let promise, resolve = Eio.Promise.create () in
+  let waiting = { reason; promise; resolve; outcome = None } in
+  tab.owner_state <- With_human owner;
+  tab.unowned_since <- None;
+  tab.last_activity <- activity;
+  tab.handoff <- Some waiting;
+  (tab, waiting)
+
 let begin_handoff t ~owner ~reason handle =
   let* tab = locate t ~access:Act ~owner handle in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       let* tab = locate t ~access:Act ~owner handle in
-      (* hand-len8: a handoff is not an owner action, so it leaves the idle clock where
-         it was; [With_human] is exempt from stage 1 anyway (ADR-0005). *)
-      let activity = tab.last_activity in
-      let promise, resolve = Eio.Promise.create () in
-      let waiting = { reason; promise; resolve; outcome = None } in
-      tab.owner_state <- With_human owner;
-      tab.unowned_since <- None;
-      tab.last_activity <- activity;
-      tab.handoff <- Some waiting;
-      Ok (tab, waiting))
+      Ok (begin_handoff_locked t ~owner ~reason tab))
 
 (* hand-nisr hand-lz3p: the transition without its wait, which is what [handoff] is built
    from and what a caller that only needs the state — the authorization matrix of
@@ -1321,152 +1330,362 @@ let scroll t ~owner (args : P.scroll_args) =
    a public Tabs action here: each would reacquire this very same mutex. The
    metric expression reads one document state; the fingerprint hashes visible
    text, URL/title, scroll position and actionable AX rows, not snapshot IDs. *)
-let drive
+let drive_locked
     ?(decide =
       fun ~deadline:_ _ ->
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable) t ~owner ~model
+    ?(text_helper = fun () -> Text_helper.unavailable) t ~owner ~model tab
     (args : P.drive_args) =
-  let* tab = locate t ~access:Act ~owner args.tab in
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-      let* tab = locate t ~access:Act ~owner args.tab in
-      (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
+  (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
          drive's own deadline: the caller's remaining budget is what the model call is
          bounded by, so a slow provider cannot outlast the reply the client is waiting
          for. The text helper's completion is bounded by the same budget (drive-ls3c). *)
-      let started = now t in
-      let budget = float_of_int (Option.value ~default:120 args.deadline_s) in
-      let remaining () =
-        Eta.Duration.ms (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
-      in
-      let decide request = decide ~deadline:(remaining ()) request in
-      (* drive-ls3c: one helper per drive. It carries the one-entry memo that reuses an
+  let started = now t in
+  let budget = float_of_int (Option.value ~default:120 args.deadline_s) in
+  let remaining () =
+    Eta.Duration.ms (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
+  in
+  let decide request = decide ~deadline:(remaining ()) request in
+  (* drive-ls3c: one helper per drive. It carries the one-entry memo that reuses an
          answer for an unchanged context — what a stale-row retry is — so it is taken
          here and goes away with the drive. *)
-      let helper = text_helper () in
-      let text_value context =
-        helper.Text_helper.complete ~deadline:(remaining ()) context
-      in
-      let* cdp = ready t in
-      let* session = page_session t cdp tab in
-      let browser = reading_browser t ~session tab cdp in
-      let view = action_view t ~session ~owner tab cdp in
-      let observe () =
-        let* snapshot =
-          snap_locked t tab
-            P.{ tab = args.tab; match_ = None; limit = Some 250; offset = None }
-        in
-        let* rendered =
-          Reading.text browser P.{ tab = args.tab; index = None; max_chars = Some 12_000 }
-        in
-        let* metrics =
-          Reading.eval browser
-            P.
-              {
-                tab = args.tab;
-                expression =
-                  (* drive-y7v8: the document of a navigation in flight has no
+  let helper = text_helper () in
+  let text_value context = helper.Text_helper.complete ~deadline:(remaining ()) context in
+  let* cdp = ready t in
+  let* session = page_session t cdp tab in
+  let browser = reading_browser t ~session tab cdp in
+  let view = action_view t ~session ~owner tab cdp in
+  let observe () =
+    let* snapshot =
+      snap_locked t tab
+        P.{ tab = args.tab; match_ = None; limit = Some 250; offset = None }
+    in
+    let* rendered =
+      Reading.text browser P.{ tab = args.tab; index = None; max_chars = Some 12_000 }
+    in
+    let* metrics =
+      Reading.eval browser
+        P.
+          {
+            tab = args.tab;
+            expression =
+              (* drive-y7v8: the document of a navigation in flight has no
                      documentElement yet; without the guard the query throws, the
                      observe fails, and the step after a navigation-ending action
                      errors instead of observing the new page. *)
-                  "return \
-                   {y:scrollY,viewport:innerHeight,height:Math.max(document.documentElement?.scrollHeight||0,document.body?.scrollHeight||0)};";
-                argument = None;
-              }
-        in
-        let value = metrics.value in
-        let number key =
-          match member key value with
-          | Some (`Int n) -> float_of_int n
-          | Some (`Float n) -> n
-          | _ -> 0.
-        in
-        let y, viewport, height = (number "y", number "viewport", number "height") in
-        let fingerprint =
-          Digest.to_hex
-            (Digest.string
-               (Yojson.Safe.to_string
-                  (`List
-                     [
-                       str snapshot.url;
-                       str snapshot.title;
-                       str rendered.text;
-                       value;
-                       `List (List.map P.yojson_of_row snapshot.rows);
-                     ])))
-        in
-        Ok
-          Drive.
+              "return \
+               {y:scrollY,viewport:innerHeight,height:Math.max(document.documentElement?.scrollHeight||0,document.body?.scrollHeight||0)};";
+            argument = None;
+          }
+    in
+    let value = metrics.value in
+    let number key =
+      match member key value with
+      | Some (`Int n) -> float_of_int n
+      | Some (`Float n) -> n
+      | _ -> 0.
+    in
+    let y, viewport, height = (number "y", number "viewport", number "height") in
+    let fingerprint =
+      Digest.to_hex
+        (Digest.string
+           (Yojson.Safe.to_string
+              (`List
+                 [
+                   str snapshot.url;
+                   str snapshot.title;
+                   str rendered.text;
+                   value;
+                   `List (List.map P.yojson_of_row snapshot.rows);
+                 ])))
+    in
+    Ok
+      Drive.
+        {
+          snapshot;
+          text = rendered.text;
+          can_scroll_down = y +. viewport < height -. 2.;
+          can_scroll_up = y > 0.;
+          fingerprint;
+        }
+  in
+  let act (page : Drive.observation) (choice : Jev_request.decision) ~text =
+    let snapshot = page.snapshot.snapshot in
+    let index = Option.value ~default:0 choice.index in
+    match P.Operation.to_string choice.operation with
+    | "click" -> Actions.click ~cdp view P.{ tab = args.tab; snapshot; index }
+    | "select" ->
+        Actions.select ~cdp view
+          P.
             {
+              tab = args.tab;
               snapshot;
-              text = rendered.text;
-              can_scroll_down = y +. viewport < height -. 2.;
-              can_scroll_up = y > 0.;
-              fingerprint;
+              index;
+              option = Option.value ~default:0 choice.option;
             }
-      in
-      let act (page : Drive.observation) (choice : Jev_request.decision) ~text =
-        let snapshot = page.snapshot.snapshot in
-        let index = Option.value ~default:0 choice.index in
-        match P.Operation.to_string choice.operation with
-        | "click" -> Actions.click ~cdp view P.{ tab = args.tab; snapshot; index }
-        | "select" ->
-            Actions.select ~cdp view
-              P.
-                {
-                  tab = args.tab;
-                  snapshot;
-                  index;
-                  option = Option.value ~default:0 choice.option;
-                }
-        | "scroll_down" ->
-            Actions.scroll ~cdp view
-              P.
-                {
-                  tab = args.tab;
-                  direction = enum P.Direction.of_string "down";
-                  index = None;
-                }
-        | "scroll_up" ->
-            Actions.scroll ~cdp view
-              P.
-                {
-                  tab = args.tab;
-                  direction = enum P.Direction.of_string "up";
-                  index = None;
-                }
-        | "wait" ->
-            t.sleep 0.5;
-            Ok
-              P.
-                {
-                  tab = args.tab;
-                  url = tab.url;
-                  title = tab.title;
-                  snapshot = None;
-                  dialog = tab.dialog;
-                  popups = [];
-                }
-        (* drive-ls3c: the helper's value is written with the same fill the [fill] command
+    | "scroll_down" ->
+        Actions.scroll ~cdp view
+          P.
+            {
+              tab = args.tab;
+              direction = enum P.Direction.of_string "down";
+              index = None;
+            }
+    | "scroll_up" ->
+        Actions.scroll ~cdp view
+          P.{ tab = args.tab; direction = enum P.Direction.of_string "up"; index = None }
+    | "wait" ->
+        t.sleep 0.5;
+        Ok
+          P.
+            {
+              tab = args.tab;
+              url = tab.url;
+              title = tab.title;
+              snapshot = None;
+              dialog = tab.dialog;
+              popups = [];
+            }
+    (* drive-ls3c: the helper's value is written with the same fill the [fill] command
            uses — focus, select, Input.insertText, blur, settle — and the loop never calls
            an act without one. *)
-        | "type_text" -> (
-            match text with
-            | Some value ->
-                Actions.fill ~cdp view P.{ tab = args.tab; snapshot; index; text = value }
-            | None ->
-                Error
-                  (error "internal" "a type_text step reached the browser without a value")
-            )
-        | _ -> Error (error "invalid-request" "unsupported drive operation")
-      in
-      Drive.run
-        ~handler:Drive.{ observe; decide; text_value; act }
-        ~now:(fun () -> now t)
-        ~model ~args
-        ~dry_run:(Option.value ~default:false args.dry_run))
+    | "type_text" -> (
+        match text with
+        | Some value ->
+            Actions.fill ~cdp view P.{ tab = args.tab; snapshot; index; text = value }
+        | None ->
+            Error
+              (error "internal" "a type_text step reached the browser without a value"))
+    | _ -> Error (error "invalid-request" "unsupported drive operation")
+  in
+  Drive.run
+    ~handler:Drive.{ observe; decide; text_value; act }
+    ~now:(fun () -> now t)
+    ~model ~args
+    ~dry_run:(Option.value ~default:false args.dry_run)
+
+(* drive-8n2z: the public drive takes the tab's lock for the whole computation; the body
+   above is what a caller that already holds it (the run's every step, run-d82w) uses. *)
+let drive ?decide ?text_helper t ~owner ~model (args : P.drive_args) =
+  let* tab = locate t ~access:Act ~owner args.tab in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = locate t ~access:Act ~owner args.tab in
+      drive_locked ?decide ?text_helper t ~owner ~model tab args)
+
+(* L31 run-9ypy run-vj48 run-shgh run-fwl8: a mission over the installed playbooks, with the
+   tab's action lock held for the whole run. Every step is one [drive_locked] call — the
+   very operator level the [drive] command runs — and every judgment goes through
+   [Run.loop]'s handler, which this builds over the browser and the models service's levels
+   (Control installs them; a scripted test installs its own, which is what makes the whole
+   loop testable offline). The playbooks are loaded here, once, from the XDG directory the
+   [playbook] commands read (run-tcuz) unless a test hands them in. *)
+let no_levels : Run.levels =
+  Run.
+    {
+      choose =
+        (fun ~deadline:_ _ ->
+          Error
+            (error "model-unavailable"
+               "no model client is configured for the run's playbook and procedure levels"));
+      score =
+        (fun ~deadline:_ ~sentence:_ ~state:_ ->
+          Error
+            (error "model-unavailable"
+               "no model client is configured for the run's judgment score"));
+      plan =
+        (fun ~deadline:_ _ ->
+          Error
+            (error "model-unavailable"
+               "no model client is configured for the run's planner"));
+    }
+
+let run ?(levels = no_levels) ?(model = "unconfigured")
+    ?(decide =
+      fun ~deadline:_ _ ->
+        Error
+          (error "model-unavailable" "System One client unavailable"
+             ~detail:(obj [ ("code", str "client-unavailable") ])))
+    ?(text_helper = fun () -> Text_helper.unavailable) t ~owner ~tab ?installed
+    (args : P.run_args) =
+  let handle = tab in
+  let* tab = locate t ~access:Act ~owner handle in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      let* tab = locate t ~access:Act ~owner handle in
+      (* run-fwl8: a run starts from a state it can act in. Ownership and the human's hold
+         are [locate]'s refusals; a dialog waiting to be answered is this one. *)
+      match tab.dialog with
+      | Some dialog ->
+          Error
+            (error "dialog-open"
+               (Printf.sprintf "a %s dialog is open on the tab; answer it before the run"
+                  (P.Dialog_kind.to_string dialog.P.kind)))
+      | None -> (
+          let* cdp = ready t in
+          let* session = page_session t cdp tab in
+          let browser = reading_browser t ~session tab cdp in
+          let started = now t in
+          let run_args = Run.of_args args in
+          let budget = float_of_int run_args.Run.deadline_s in
+          let remaining () =
+            Eta.Duration.ms
+              (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
+          in
+          let bounded limit text =
+            if String.length text <= limit then text else String.sub text 0 limit
+          in
+          (* run-pvmc: the page text stays on this side of the loop; the upper levels are
+             asked over the small state Run builds. *)
+          let observe () =
+            let* snapshot =
+              snap_locked t tab
+                P.{ tab = handle; match_ = None; limit = Some 250; offset = None }
+            in
+            let* rendered =
+              Reading.text browser
+                P.{ tab = handle; index = None; max_chars = Some 12_000 }
+            in
+            Ok
+              Run.
+                {
+                  url = snapshot.P.url;
+                  title = snapshot.P.title;
+                  text = rendered.P.text;
+                  dialog = snapshot.P.dialog;
+                  rows =
+                    List.map
+                      (fun (row : P.row) -> (row.P.role, row.P.name))
+                      snapshot.P.rows;
+                  downloads =
+                    List.map
+                      (fun (download : P.download_info) ->
+                        (download.P.suggested_name, download.P.mime, download.P.state))
+                      (List.rev tab.downloads);
+                  snapshot;
+                }
+          in
+          (* run-l06s run-vbys run-xqh8: the checkers first and the JEV score only where no
+             checker applies. The score is one model call per unchanged page — the bounded
+             wait would otherwise ask it every 100 ms — so the answer is memoized on the
+             sentence and the text it was asked over. *)
+          let verify ~pages ~checks ~timeout_s =
+            let failure = ref None in
+            let memo = Hashtbl.create 4 in
+            let last = ref None in
+            let observe_page () =
+              match observe () with
+              | Error _ ->
+                  Playbook.
+                    { kind = None; text = ""; dialog = false; rows = []; downloads = [] }
+              | Ok observation ->
+                  last := Some observation;
+                  Playbook.
+                    {
+                      kind =
+                        Playbook.page_kind pages ~url:observation.Run.url
+                          ~text:observation.Run.text;
+                      text = observation.Run.text;
+                      dialog = Option.is_some observation.Run.dialog;
+                      rows = observation.Run.rows;
+                      downloads = observation.Run.downloads;
+                    }
+            in
+            let score sentence (observation : Playbook.observation) =
+              let key = sentence ^ "\000" ^ observation.Playbook.text in
+              match Hashtbl.find_opt memo key with
+              | Some value -> value
+              | None ->
+                  let state =
+                    match !last with
+                    | Some observation ->
+                        `Assoc
+                          [
+                            ("title", `String observation.Run.title);
+                            ("url", `String observation.Run.url);
+                            ( "page_kind",
+                              match
+                                Playbook.page_kind pages ~url:observation.Run.url
+                                  ~text:observation.Run.text
+                              with
+                              | Some kind -> `String kind
+                              | None -> `Null );
+                            ("text", `String (bounded 6_000 observation.Run.text));
+                          ]
+                    | None -> `Null
+                  in
+                  let value =
+                    match levels.Run.score ~deadline:(remaining ()) ~sentence ~state with
+                    | Ok value -> value
+                    | Error error ->
+                        if !failure = None then failure := Some error;
+                        0.
+                  in
+                  Hashtbl.replace memo key value;
+                  value
+            in
+            let results =
+              Playbook.await_results
+                ~now:(fun () -> now t)
+                ~sleep:t.sleep ~observe:observe_page ~score ~timeout_s checks
+            in
+            match !failure with
+            | Some error -> Error error
+            | None -> (
+                match !last with
+                | None -> Error (error "internal" "the verification observed nothing")
+                | Some observation ->
+                    Ok
+                      ( List.map
+                          (fun (checked : Playbook.checked) ->
+                            P.
+                              {
+                                sentence = checked.Playbook.expectation;
+                                checker = Playbook.checker_name checked.Playbook.checker;
+                                passed = checked.Playbook.passed;
+                                score = checked.Playbook.score;
+                              })
+                          results,
+                        observation ))
+          in
+          let handler : Run.handler =
+            Run.
+              {
+                observe;
+                navigate =
+                  (fun url ->
+                    let* _ = navigate_locked t ~owner ~tab url in
+                    Ok ());
+                choose =
+                  (fun question -> levels.Run.choose ~deadline:(remaining ()) question);
+                text_value =
+                  (fun context ->
+                    (text_helper ()).Text_helper.complete ~deadline:(remaining ()) context);
+                step =
+                  (fun request ->
+                    drive_locked ~decide ~text_helper t ~owner ~model tab
+                      P.
+                        {
+                          tab = handle;
+                          goal = request.Run.goal;
+                          max_steps = Some request.Run.max_steps;
+                          deadline_s = Some request.Run.deadline_s;
+                          dry_run = Some false;
+                        });
+                verify;
+                plan = (fun request -> levels.Run.plan ~deadline:(remaining ()) request);
+                hand_off =
+                  (fun ~reason ->
+                    let tab, _ = begin_handoff_locked t ~owner ~reason tab in
+                    Ok (info t tab));
+              }
+          in
+          match
+            match installed with Some books -> Ok books | None -> Playbook.list ()
+          with
+          | Error why -> Error (error "invalid-request" why)
+          | Ok books -> Run.loop ~handler ~now:(fun () -> now t) ~installed:books run_args
+          ))
 
 let report t : P.status_result =
   let chrome = Chrome.status t.chrome in

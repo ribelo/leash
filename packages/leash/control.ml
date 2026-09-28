@@ -36,8 +36,8 @@ let report ?models_status tabs =
   | None -> report
   | Some models -> { report with P.models = Some (models ()) }
 
-let dispatch ?(model = "unconfigured") ?decide ?text_helper ?models_status tabs
-    (request : P.request) =
+let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
+    ?models_status tabs (request : P.request) =
   let owner = request.owner in
   let lift encode = function
     | Ok result -> success (encode result)
@@ -82,6 +82,27 @@ let dispatch ?(model = "unconfigured") ?decide ?text_helper ?models_status tabs
          installs {!Models.text_helper}, scripted tests their own. *)
       lift P.yojson_of_drive_result
         (Tabs.drive ?decide ?text_helper tabs ~owner ~model args)
+  | P.Run args -> (
+      (* run-vj48 run-4mzm: the run's upper levels are one more seam. Production installs
+         {!Models.levels} — one System One client for all three levels (run-7blx) — and
+         scripted tests their own; [installed] hands a test its playbooks.
+
+         run-9ypy: a mission with no tab opens one the way the [new] command does and the
+         run reuses it; the [final] snapshot names it and the run never closes it. *)
+      let tab =
+        match args.P.tab with
+        | Some tab -> Ok tab
+        | None ->
+            Result.map
+              (fun (info : P.tab_info) -> info.P.tab)
+              (Tabs.new_tab tabs ~owner ~url:None)
+      in
+      match tab with
+      | Error error -> failure error
+      | Ok tab ->
+          lift P.yojson_of_run_result
+            (Tabs.run ?levels ~model ?decide ?text_helper ?installed tabs ~owner ~tab args)
+      )
 
 (* svc-p67t: a command's journal anchor contains only identifiers, never args or
    results. Commands without a tab use "-"; new does not have a handle yet. *)
@@ -104,6 +125,8 @@ let command_tab = function
   | P.Dialog args -> P.Handle.to_string args.tab
   | P.Handoff args -> P.Handle.to_string args.tab
   | P.Drive args -> P.Handle.to_string args.tab
+  | P.Run args -> (
+      match args.tab with Some tab -> P.Handle.to_string tab | None -> "-")
 
 let with_command ?logger (request : P.request) f =
   Eta_observability.Context.with_fields
@@ -118,14 +141,15 @@ let with_command ?logger (request : P.request) f =
         logger;
       f ())
 
-let handle ?(model = "unconfigured") ?decide ?text_helper ?models_status ?logger tabs line
-    =
+let handle ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
+    ?models_status ?logger tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
-            dispatch ~model ?decide ?text_helper ?models_status tabs request)
+            dispatch ~model ?levels ?decide ?text_helper ?installed ?models_status tabs
+              request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -164,6 +188,11 @@ let budget (request : (P.request, string) result) =
       Some (Eta.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
   | Ok { command = P.Drive args; _ } ->
       Some (seconds (max 1 (Option.value ~default:120 args.deadline_s) + 5))
+  | Ok { command = P.Run args; _ } ->
+      (* run-vspj: a run's budget is its deadline plus the margin its last steps need —
+         the procedure's own bounded expectation wait (at most 30 s) and the reply — so
+         the listener never cancels a run at the instant it is due to answer. *)
+      Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 45))
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _; _ } -> Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
@@ -206,7 +235,8 @@ let on_peer_error logger error =
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
-let create ?(model = "unconfigured") ?decide ?text_helper ~sw ~path deps =
+let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ~sw ~path
+    deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -215,8 +245,8 @@ let create ?(model = "unconfigured") ?decide ?text_helper ~sw ~path deps =
       match request with
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
-              dispatch ~model ?decide ?text_helper ~models_status:deps.models_status
-                deps.tabs request)
+              dispatch ~model ?levels ?decide ?text_helper ?installed
+                ~models_status:deps.models_status deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply

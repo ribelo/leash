@@ -35,6 +35,12 @@ type procedure = {
   steps : step list;
   expect : string list;
   expect_timeout_s : int option;
+  max_steps : int option;
+      (* L31 run-d82w: the cap one step of this procedure runs the operator level under;
+         [None] is the operator's own default. *)
+  deadline_s : int option;
+      (* L31 run-d82w: the same step's own deadline, still bounded by what is left of the
+         run. *)
 }
 [@@deriving yojson]
 
@@ -230,6 +236,18 @@ let validate ~file (book : t) =
                proc.expect_timeout_s)
             "expect_timeout_s must be 1..30"
         in
+        (* L31 run-d82w: a step's own bounds are the operator level's, so they carry its
+           limits: at most 30 steps, and a deadline the drive accepts. *)
+        let* () =
+          require ~procedure
+            (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 30) proc.max_steps)
+            "max_steps must be 1..30"
+        in
+        let* () =
+          require ~procedure
+            (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 600) proc.deadline_s)
+            "deadline_s must be 1..600"
+        in
         let* () =
           require ~procedure
             (Option.fold ~none:true
@@ -367,6 +385,16 @@ let show name =
   then Error (name ^ ": invalid playbook name")
   else load (Filename.concat (directory ()) (name ^ ".json"))
 
+(* L31 run-xqh8: the checker's kind as the run's trace names it, which is also what
+   [playbook check] reports a sentence resolved to. *)
+let checker_name = function
+  | Page_kind _ -> "page_kind"
+  | Text _ -> "text"
+  | Download _ -> "download"
+  | No_dialog -> "no_dialog"
+  | Row _ -> "row"
+  | Judgment _ -> "judgment"
+
 let yojson_of_checker = function
   | Page_kind name -> `Assoc [ ("checker", `String "page_kind"); ("kind", `String name) ]
   | Text value -> `Assoc [ ("checker", `String "text"); ("text", `String value) ]
@@ -418,40 +446,118 @@ type observation = {
   downloads : (string * string * string) list;
 }
 
-(* run-l06s run-vbys: the runner supplies browser-owned observation and the JEV
-   score. No sleeping after the deadline; each observation gets a fresh snapshot. *)
-let await ~now ~sleep ~observe ~score ?(threshold = 0.8) ?(timeout_s = 5) checks =
+(* run-2lei run-5rll: {name} is the format's one substitution, applied to a step's goal and
+   to an expectation sentence from the values the run knows. A name with no value is left
+   as it stands: the loader refused every argument a procedure does not declare, so an
+   unfilled placeholder is a value the run has yet to ask for, not a defect. *)
+let substitute values text =
+  let buffer = Buffer.create (String.length text) in
+  let rec scan i =
+    if i >= String.length text then ()
+    else if text.[i] = '{' then (
+      match String.index_from_opt text (i + 1) '}' with
+      | Some close -> (
+          let name = String.sub text (i + 1) (close - i - 1) in
+          match List.assoc_opt name values with
+          | Some value ->
+              Buffer.add_string buffer value;
+              scan (close + 1)
+          | None ->
+              Buffer.add_char buffer text.[i];
+              scan (i + 1))
+      | None ->
+          Buffer.add_char buffer text.[i];
+          scan (i + 1))
+    else (
+      Buffer.add_char buffer text.[i];
+      scan (i + 1))
+  in
+  scan 0;
+  Buffer.contents buffer
+
+(* run-tny5 run-vj48: each expectation as the sentence it is, next to the checker the
+   loader resolved it to. The run substitutes its known arguments into the sentence
+   first, so "the page shows {product}" is checked for the product the mission named; a
+   substituted sentence the grammar no longer matches is judged by JEV rather than
+   refused, because the authored form was validated at load. *)
+let resolved ?(values = []) (book : t) (proc : procedure) =
+  List.map
+    (fun sentence ->
+      let sentence = substitute values sentence in
+      match resolve book.pages sentence with
+      | Ok checker -> (sentence, checker)
+      | Error _ -> (sentence, Judgment sentence))
+    proc.expect
+
+type checked = {
+  expectation : string;
+  checker : checker;
+  passed : bool;
+  score : float option;
+}
+
+(* run-l06s run-vbys run-xqh8: one checker against one observation. Judgment is never
+   decided here — the score question is the runner's — so only the deterministic checkers
+   are evaluated in code. *)
+let passes checker (snapshot : observation) =
+  match checker with
+  | Page_kind kind -> snapshot.kind = Some kind
+  | Text text -> contains ~needle:text snapshot.text
+  | Download mime ->
+      List.exists
+        (fun (name, media, state) ->
+          state = "completed" && name <> ""
+          && Option.fold ~none:true
+               ~some:(fun required -> contains ~needle:required media)
+               mime)
+        snapshot.downloads
+  | No_dialog -> not snapshot.dialog
+  | Row (role, name) ->
+      List.exists
+        (fun (r, n) -> lower r = lower role && contains ~needle:name n)
+        snapshot.rows
+  | Judgment _ -> assert false
+
+(* run-l06s run-vbys: the bounded wait, keeping what each expectation came to, so the run's
+   trace can say which checker decided it and — for a judgment — the score it carried. The
+   result is the last observation's verdicts: the one that passed everything, or the one
+   the deadline found. No sleeping after the deadline; each observation is fresh. *)
+let await_results ~now ~sleep ~observe ~score ?(threshold = 0.8) ?(timeout_s = 5) checks =
   let deadline = now () +. float_of_int timeout_s in
-  let rec loop () =
+  let evaluate () =
     let snapshot = observe () in
-    let pass =
-      List.for_all
-        (function
-          | Judgment sentence -> score sentence snapshot >= threshold
-          | checker -> (
-              match checker with
-              | Page_kind kind -> snapshot.kind = Some kind
-              | Text text -> contains ~needle:text snapshot.text
-              | Download mime ->
-                  List.exists
-                    (fun (name, media, state) ->
-                      state = "completed" && name <> ""
-                      && Option.fold ~none:true
-                           ~some:(fun required -> contains ~needle:required media)
-                           mime)
-                    snapshot.downloads
-              | No_dialog -> not snapshot.dialog
-              | Row (role, name) ->
-                  List.exists
-                    (fun (r, n) -> lower r = lower role && contains ~needle:name n)
-                    snapshot.rows
-              | Judgment _ -> assert false))
-        checks
-    in
-    if pass then true
-    else if now () >= deadline then false
+    List.map
+      (fun (sentence, checker) ->
+        match checker with
+        | Judgment _ ->
+            let value = score sentence snapshot in
+            {
+              expectation = sentence;
+              checker;
+              passed = value >= threshold;
+              score = Some value;
+            }
+        | checker ->
+            {
+              expectation = sentence;
+              checker;
+              passed = passes checker snapshot;
+              score = None;
+            })
+      checks
+  in
+  let rec loop () =
+    let results = evaluate () in
+    if List.for_all (fun (result : checked) -> result.passed) results then results
+    else if now () >= deadline then results
     else (
       sleep (min 0.1 (deadline -. now ()));
       loop ())
   in
   loop ()
+
+let await ~now ~sleep ~observe ~score ?threshold ?timeout_s checks =
+  List.for_all
+    (fun (result : checked) -> result.passed)
+    (await_results ~now ~sleep ~observe ~score ?threshold ?timeout_s
+       (List.map (fun checker -> ("", checker)) checks))

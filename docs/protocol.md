@@ -1,6 +1,6 @@
 # Control protocol and the leash CLI
 
-The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, owner-only, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `wait`) hold the connection open until they settle.
+The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, owner-only, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `run`, `wait`) hold the connection open until they settle.
 
 Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec.
 
@@ -72,6 +72,14 @@ Drive:
 | --- | --- | --- |
 | `drive` | `{tab, goal, max_steps?, deadline_s?, dry_run?}` | `{status, steps: Step[], final: Snapshot, reason?: string}` |
 
+Run (milestone 7): one mission over the installed playbooks. `run` is the command
+`leash run "<mission>"` sends; the CLI's `--tab` adds the tab field, and `--expect`
+repeats a mission expectation (the argument is a list).
+
+| cmd | args | result |
+| --- | --- | --- |
+| `run` | `{tab, mission, max_procedures?, deadline_s?, dry_run?, expect?: string[]}` | `{status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], final: Snapshot, reason?: string}` |
+
 ## Types
 
 A field shown as `T|null` is always present, `null` when it has no value; a field shown as
@@ -99,6 +107,21 @@ Step         = {n: int, snapshot: id, operation: Operation, index: int|null, pro
 Operation    = "click"|"type_text"|"select"|"scroll_up"|"scroll_down"|"wait"|"done"|"blocked"
 status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
                  max_steps defaults to 30; deadline_s defaults to 120; both must be positive.
+RunProcedure = {slug, site, planned: bool, attempts: int,
+                choice: {key: string, probabilities: {..}, confidence: float, usage: Usage|null},
+                drives: [{goal, status (drive), steps: Step[], reason?: string}],
+                expectations: RunExpectation[],
+                outcome: "verified"|"failed"|"skipped"|"planned", elapsed_ms: int, reason?: string}
+                drives is empty for "planned" (a dry run executed nothing); attempts is 2 when the
+                retry-once rule replayed the procedure; planned is true when a planner turn wrote it
+RunExpectation = {sentence, checker: "page_kind"|"text"|"download"|"no_dialog"|"row"|"judgment",
+                  passed: bool, score: float|null}
+                 score is the JEV score a judgment expectation was given, null where code decided it
+PlannerTurn = {n: int, trigger: "blocked"|"failed"|"arguments",
+               answer: "procedure"|"handoff"|"fail", reason?: string, usage: Usage|null}
+Usage       = {input_tokens: int, output_tokens: int, cost: float}
+status (run) = "done"|"blocked"|"failed"|"handoff"|"limit"|"deadline"|"error"
+               max_procedures defaults to 40; deadline_s defaults to 900; both must be positive.
 Models       = {configured: bool, jev_model: string, text_model: string,
                 systemone_endpoint: string, chat_base_url: string}
                  the models section as configured; configured is whether an API key is present,
@@ -138,6 +161,57 @@ Rules:
   `<operation>_target` head per offered operation, and only the head the chosen
   operation selects is validated. A distribution that does not answer the offered
   criteria is `model-unavailable` with `code: "invalid-response"`.
+- `run` reuses the tab it is given and opens one when the request names none (`tab` is
+  `key?`; the tab it opened is the one `final` names, and it is left open). It checks
+  ownership and then holds the tab action lock for the whole run, so no other tab command
+  interleaves while it works; every step of it is one `drive` call with the
+  procedure's `max_steps` and `deadline_s` (the operator's defaults of 30 and 120 s
+  otherwise), bounded by what is left of the run. It is refused before it starts on a tab
+  the caller does not own (`not-owner`), one the human holds (`with-human`), or one with a
+  dialog open (`dialog-open`).
+- The playbook level is asked at the start, after a procedure whose description or the
+  mission names another installed site the run has not served yet, and once more when the
+  procedure level answers BLOCKED. Its criteria are the installed playbooks by `site` and
+  `description` plus `none` — playbooks are selected, never merged, and one choice never
+  carries more than 255 options. A playbook other than the current one is switched to by
+  navigating the same tab to its `entry` URL, so the shared profile's logins carry over.
+- The procedure level is asked every turn: the current playbook's procedures (slug and
+  description) plus `DONE` and `BLOCKED`. The state it and the playbook level are asked
+  over is small and semantic — the mission, the site, the page kind (from the playbook's
+  `pages`), the page title and URL, the last five procedures with their outcomes, and the
+  arguments already known. **Page text never reaches the upper levels**; it is the
+  operator level's and the checkers'.
+- `{name}` placeholders in a goal or an expectation sentence are substituted from the
+  run's arguments; an argument the mission does not supply is asked of the text helper
+  once, and the value is reused for the rest of the run.
+- A procedure's expectations are verified with the bounded wait: the checker the loader
+  resolved where one applies (page kind, text, download, no dialog, row), a JEV score
+  question where none does. A procedure whose expectations fail is replayed once from its
+  first step and a second failure is reported to the planner. A `use` step runs the named
+  procedure inline with its own expectations; an `optional` one is skipped when its first
+  step ends blocked within two operator steps.
+- **The DONE guard.** `DONE` is accepted only against a fresh verification of the
+  mission's own expectations (the `expect` list), or — when the mission carries none — of
+  the last verified procedure's expectations, re-verified at that moment. The verification
+  is independent of the procedure that just ran: a confirmation page that does not show
+  the mission's end state fails it, and the run then asks the planner and ends `blocked`
+  naming the expectation that failed. A `DONE` nothing can verify is refused the same way.
+- `dry_run: true` asks the playbook and the procedure levels and reports the chosen
+  playbook, the chosen procedure with its choice and resolved checkers, and ends
+  `blocked`: it navigates nothing, executes no step, and never calls the text helper.
+- The endings are `done` (DONE verified), `blocked` (the loop stopped with nothing that
+  can progress), `failed` (a procedure failed twice and the planner failed), `handoff`
+  (the planner asked for the human; the tab is left `with_human`), `limit` (the procedure
+  cap), `deadline` (the run deadline) and `error` (a dialog opened on the page — it is in
+  `final.dialog`). A model or browser failure is a protocol **error**; when it is
+  `model-unavailable` its `detail` carries the provider `code` and the trace completed so
+  far in `detail.procedures`, so a failed mission is auditable.
+- The planner is L32's (Luna). Until it lands, the production handler answers `fail` with
+  the reason that names L32, so a run that stops needing judgment ends `blocked` or
+  `failed` saying so.
+- A run's handler budget is its `deadline_s` plus 45 seconds — the last procedure's own
+  bounded expectation wait (at most 30 s) and the reply — so the listener never cancels a
+  run at the instant it is due to answer.
 - `status`'s `models` reports the models section — `configured` is whether an API key
   is present, and the two model ids and two endpoints are the configured ones. It is read
   from the live configuration: no probe, nothing at boot, and never the key. It is

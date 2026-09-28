@@ -47,10 +47,10 @@ systemd-analyze --user verify "$unit"
 exec_line="$(sed -n 's/^ExecStart=//p' "$unit")"
 echo "ExecStart: $exec_line"
 case "$exec_line" in
-  *" run") ;;
-  *) echo "ERROR: ExecStart is not the Door's run command: $exec_line" >&2; exit 1 ;;
+  *" serve") ;;
+  *) echo "ERROR: ExecStart is not the Door's serve command: $exec_line" >&2; exit 1 ;;
 esac
-leash="${exec_line% run}"
+leash="${exec_line% serve}"
 [[ -x "$leash" ]] || { echo "ERROR: ExecStart binary is not executable: $leash" >&2; exit 1; }
 echo "svc-46f0 unit: ExecStart is the nix build .#leash output ($leash)"
 
@@ -223,7 +223,7 @@ if ! grep -q 'control socket' "$root/second.log"; then
   sed -n '1,40p' "$root/second.log" >&2
   exit 1
 fi
-running="$(pgrep -fc "bin/leash run --config $config" || true)"
+running="$(pgrep -fc "bin/leash serve --config $config" || true)"
 if [[ "$running" -ne 1 ]]; then
   echo "ERROR: svc-5wm8 $running instances run the unit's command line" >&2
   exit 1

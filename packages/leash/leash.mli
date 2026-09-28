@@ -11,6 +11,7 @@ module Models : module type of Models
 module Text_helper : module type of Text_helper
 module Protocol : module type of Protocol
 module Playbook : module type of Playbook
+module Run : module type of Run
 module Tabs : module type of Tabs
 module Expiry : module type of Expiry
 module Control : module type of Control

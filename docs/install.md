@@ -29,7 +29,7 @@ StartLimitIntervalSec=60
 [Service]
 Environment=XDG_RUNTIME_DIR=%t
 Environment=EIO_BACKEND=posix
-ExecStart=/nix/store/…-leash-dev/bin/leash run
+ExecStart=/nix/store/…-leash-dev/bin/leash serve
 Restart=on-failure
 RestartSec=2
 SuccessExitStatus=0
@@ -43,8 +43,9 @@ WantedBy=graphical-session.target
 - `Environment=XDG_RUNTIME_DIR=%t` — the control socket's default lives in the user
   manager's runtime directory (`control.socket`, docs/config.md).
 - `Environment=EIO_BACKEND=posix` — the backend the sibling services' units use.
-- `ExecStart=… run` — the Door's `run` subcommand (Eta_app); a bare `leash` runs the
-  same program.
+- `ExecStart=… serve` — the Door's start subcommand (Eta_app), named `serve` because
+  `leash run "<mission>"` runs a mission over the playbooks (run-9ypy); a bare `leash`
+  starts the same program.
 - `Restart=on-failure`, `RestartSec=2` — a crashed service comes back on its own
   (svc-gxhu). A stop exits 0, so systemd does not count it as a failure.
 - `SuccessExitStatus=0` — the Door exits 0 on SIGTERM; this is systemd's default and is

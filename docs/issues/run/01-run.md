@@ -111,4 +111,42 @@ Conditional branching in playbooks; parallel tabs in one run; playbook sharing o
 - Design record: the session of 2026-09-28. Two JEV levels above the operator, Luna on demand, mandatory human-language `expect` verified by code first and JEV score second, page kinds as the semantic state, the 255-option ceiling as the reason playbooks are selected rather than merged, and propose-and-approve for learned procedures.
 - **L30 status: measured, 2026-09-28 (story 40).** Allegro home/listing returned HTTP 403 with DataDome; no evasion attempted. The first alternate with the complete workflow, automationexercise.com, supplied five verified headless Leash states (home, submitted search results, offer, successful Added! modal, Blue Top in cart). One real System One call per state per shape, 15 final calls: A title/URL **2/5** correct, 2,767 input/452 output tokens, $0.000116214; B plus page kind/recent procedures **4/5**, 3,065/450, $0.000128730; C plus page text **2/5**, 5,629/451, $0.000236418. Final calls total $0.000481362 provider-reported cost. Per-call choices, probabilities, labels and costs are in .scratch/research/state-measurement/README.md and results.pretty.json. A discarded exploratory pass with a mislabeled login blocker is excluded from these costs. Select B for story 18; no page text at upper levels. Known arguments were not varied or supplied in this probe, and five states from one substitute shop do not establish Allegro behavior or general robustness. L34 Allegro acceptance remains open and may require an operator-headed run.
 - **L31 safety condition exposed by L30:** B answered DONE on the successful Added! modal, where the correct next procedure is go-to-cart. Existing story 22 allows last-procedure expectations alone to justify DONE, but an add confirmation does not prove item-in-cart. DONE for a cart mission must be gated by mission-level item-in-cart expectations or an equivalent deterministic cart/item check. The modal text-marker page kind must take priority over the offer URL matcher. A planner remains a fallback if further measurement shows upper levels need it.
+- **L31 status: delivered, 2026-09-28.** The loop is `Run.loop` (`packages/leash/run.ml`),
+  an effect computation over a local handler token: `Select_playbook`, `Select_procedure`,
+  `Fill_args`, `Execute_step`, `Verify` and `Plan` are performed through it — story 37
+  (`run-vj48`), whose test asserts every one of the six went through the handler — with
+  `Observe`, `Navigate` and `Hand_off` as the loop's own perception, its playbook switch
+  and a planner's ending. Production builds the handler in `Tabs.run` (the tab's action
+  lock held for the whole run, each step one `drive_locked` call — story 41, `run-shgh`),
+  `Models.levels` serves the two choice levels and the judgment score through one client
+  (story 42, `run-7blx`), and `Control` and `leash run` carry it. A scripted handler
+  covers the loop at its own seam (`test/run_test.ml`, thirteen cases) and the fake browser
+  covers it at the control seam (`test/control_test.ml`: `run_mission`, `run_refusals`).
+- **The state is L30's shape B (story 18, `run-pvmc`)**: the mission, the site, the page
+  kind, the title and URL, the last five procedures with their outcomes and the known
+  arguments — never page text. The test asserts the keys and the absence.
+- **The DONE guard (L30's finding, story 22 `run-4j1v`)**: DONE is accepted only after a
+  fresh verification of the mission's own expectations, or of the last verified procedure's
+  when the mission carries none; a refused DONE goes to the planner and ends `blocked`
+  naming the expectation. L30's Added! modal is the case in both test files: the playbook's
+  `post-add` text marker wins over the offer URL matcher, the modal's own expectations
+  pass, and the mission's "the page is cart" fails.
+- **Mission expectations travel in the run's arguments** (`expect` on the wire, the CLI's
+  repeatable `--expect`) until L32's planner attaches them on its first turn (story 30).
+  Without them the guard falls back to the last procedure's expectations, which L30 showed
+  is not enough for a cart mission; the carrier is the bridge and L32 may drop it.
+- **Format addition**: a procedure may declare `max_steps` (1..30) and `deadline_s`
+  (1..600) for its steps (story 20's "procedure defaults, overridable"); absent, the
+  operator's own defaults apply and the run's remaining budget always bounds them.
+- **Planner**: L31 asks the turn at the three points of story 28 and takes its answer —
+  procedure, handoff or fail — but production's handler answers `fail` naming L32, so a
+  stopped run ends `blocked` (a BLOCKED answer or an unfillable argument) or `failed` (a
+  procedure that failed twice). `Run.plan_answer` is the seam L32 fills.
+- **CLI naming**: `leash run "<mission>"` is the mission command, so the Door's start
+  subcommand is `serve` from L31 on (Eta_app's new `?service_command`, eta-next
+  napp-d5e4); `packaging/leash-unit.nix`, `docs/install.md` and `scripts/unit-acceptance`
+  moved with it, and the milestone-6 spec carries a note under svc-dit8.
+- Gates `dune build @install`, `dune test` and `dune build @fmt` are green (18 suites).
+  L34's live acceptance (real JEV and Luna, Allegro's DataDome 403 included) remains the
+  milestone's own row.
 - L29 format decision: `nix develop -c ocamlfind list | grep -i yaml` found no YAML library on the OxCaml 5.4 switch. opam metadata for `yaml` 3.2.0 lists `ctypes` and `bos` (also `dune-configurator`) as dependencies requiring an install into the shared switch, which this job must not disturb. JSON-only `<site>.json` is the shipped format; `.yaml` is refused with an actionable JSON message.
