@@ -27,6 +27,10 @@ A systemd user unit in the desktop session, a TOML config with fail-fast validat
 10. As an operator, I want the service to refuse to start if another instance owns the control socket, so that two services never fight over one profile. ^svc-5wm8
 11. As an operator, I want a `leash config check` command that validates the file without starting the service, so that I can edit safely. ^svc-tkor
 12. As an operator, I want optional OTLP export switchable in config, so that I can send traces to the same collector Pie uses when I care. ^svc-f4op
+13. As an operator, I want every non-secret config field to have a default and `leash config init` to write a commented config file with those defaults to `$XDG_CONFIG_HOME/leash/config.toml`, so that a first run needs only the Chrome binary path (found on `PATH` if absent). ^svc-x8rp
+14. As an operator, I want the control socket path configurable (`control.socket`, default under `$XDG_RUNTIME_DIR/leash/`), so that a test or a second instance can relocate the socket without moving the Wayland socket's directory. ^svc-o4wt
+15. As an operator, I want Chrome's last 20 stderr lines kept per generation and included in the `chrome generation lost` log entry, so that a Chrome that dies at start says why (a missing display took three restarts to diagnose on 2026-09-27). ^svc-qrmc
+16. As an agent, I want `leash <command> --help` to name each positional argument (`TAB`, `SNAPSHOT`, `INDEX`) and each command to accept only the options it uses, so that the first call is right; and I want the tab title refreshed from `Target.getTargetInfo` after any navigation an action caused, so that traces and `list` show the page, not the tab-strip text. ^svc-hi4f
 
 ## Implementation Decisions
 
@@ -34,7 +38,9 @@ A systemd user unit in the desktop session, a TOML config with fail-fast validat
 - Defects at the process door are printed only once Eta ticket `main-door-cause-diagnostics` lands; until then the service owner wraps its main effect and renders the full cause with `Eta.Cause.pp` itself, recorded as an `etagap-*` workaround, so a crash never leaves an empty journal.
 - Config schema in one module with a typed record; unknown keys are errors; defaults are documented in `docs/config.md` generated from the same record.
 - Logging through Eta observability with a journal reporter; a redaction rule set keeps `fill` text, `text` results, and userinfo out of records.
-- The chrome-cdp skill is replaced in the dotfiles skills library by a `leash` skill; the old script remains until the replacement has passed live acceptance.
+- The chrome-cdp skill is replaced in the dotfiles skills library (`/home/ribelo/.dotfiles/skills/engineering/debugging/`) by a `leash` skill written in the same minimize-output style: `snap --match`, `--limit`, `text`, never a full table when a row will do; the old script remains until the replacement has passed live acceptance with an agent completing the same workflow.
+- The niri window rule (`match app-id="^leash$"` → `open-on-workspace "leash"`, `open-focused false`) is documented for the operator to add; Leash does not edit the niri config.
+- The systemd unit: `Restart=on-failure`, `SuccessExitStatus=0` (the Door exits 0 on SIGTERM), `After=graphical-session.target`, `PartOf=graphical-session.target`, environment imported from the session (`WAYLAND_DISPLAY`, `XDG_RUNTIME_DIR`, `DISPLAY`); installed by home-manager like Pie's, or by a `scripts/install-user-unit` if Pie's is installed by hand.
 
 ## Testing Decisions
 

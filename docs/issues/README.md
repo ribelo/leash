@@ -67,9 +67,23 @@ The JEV loop. Depends on three eta-next rows delivered first: `eta_http` client 
 
 L19 can start as soon as eta-next row 19 lands (with the System One and chat clients stubbed behind their interfaces); L20 is pure and can start at once from the reference sources.
 
+## Milestone 6 — service packaging (`service-packaging/01-service-packaging.md`)
+
+The last milestone: the thing you leave running. Stories 13–16 were added from the coordinator's own headed run on 2026-09-27.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L24 | **Config and CLI polish.** Defaults for every non-secret field; `leash config init`; `control.socket`; per-command `--help` with positional names and only the options a command uses; title refresh after action navigation. | svc-ljl3, svc-kzt6, svc-tkor, svc-x8rp, svc-o4wt, svc-hi4f | — | [ ] |
+| L25 | **Diagnostics.** Chrome stderr ring per generation in the `generation lost` entry; journal fields (tab, owner, cmd) verified on every command; redaction test that `fill` text, `text` results, API key and userinfo never reach a log line; optional OTLP export via `eta_otel` switched by config. | svc-p67t, svc-qilu, svc-f4op, svc-qrmc | — | [ ] |
+| L26 | **Unit and install.** systemd user unit as the spec describes; `nix build .#leash` output installed to the profile the way Pie's is (read Pie's flake/home-manager for the pattern); listener refuses a second instance; `leash status` as the health check; the niri rule documented in `README.md`. | svc-dit8, svc-gxhu, svc-5wm8, svc-46f0 | L24 | [ ] |
+| L27 | **The `leash` skill.** New skill at `/home/ribelo/.dotfiles/skills/engineering/debugging/leash/` in the chrome-cdp skill's minimize-output style, covering new/snap/click/fill/text/eval/shot/debug/handoff/drive; the old chrome-cdp skill left in place until L28. Verified by an agent completing the chrome-cdp workflow (open a page, find a control, act, read the result) through `leash` only. | svc-itcb | L24 | [ ] |
+| L28 | **Live acceptance for milestone 6**, headed, on the operator's desktop with the operator present: install the unit, start it, watch Chrome land on the `leash` workspace, run the L27 workflow from a DSH session, trigger one handoff and click Done, `systemctl --user restart leash`, confirm tabs are gone and the profile's login survived. Together with L18. Marks the spec completed and the project usable. | svc-dit8, svc-xafg, chrome-2y3t, hand-04rb, hand-phof | L25, L26, L27 | [ ] |
+
+L24, L25 and L27 are independent; L26 after L24. L28 needs the operator.
+
 ## Later milestones
 
-6 `service-packaging` — sliced when milestone 5 lands; its spec is complete. The headed run for milestone 4 (L18) stays open for the operator.
+After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
 
 ## Definition of done, every row
 
