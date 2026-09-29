@@ -9,11 +9,40 @@
    (EIO_BACKEND posix))))
 
 (test
+ (name run_control_test)
+ (modules run_control_test)
+ (libraries leash yojson alcotest))
+
+(test
  (name run_test)
  (modules run_test)
  (deps
   (source_tree ../examples/playbooks))
  (libraries leash yojson alcotest str))
+
+(test
+ (name choice_review_test)
+ (modules choice_review_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_observability
+  eio
+  eio_main
+  yojson
+  alcotest))
+
+(test
+ (name playbook_choice_test)
+ (modules playbook_choice_test)
+ (libraries
+  leash
+  leash_test_support
+  eta_observability
+  eio
+  eio_main
+  yojson
+  alcotest))
 
 (test
  (name playbook_test)

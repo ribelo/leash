@@ -16,16 +16,27 @@ type use_step = { use : string; args : Yojson.Safe.t option; optional : bool opt
 (* extr-8o1h: a step that runs one of the playbook's own scripts by name; [args] are
    strings with the run's placeholders substituted, like a [use] step's. *)
 type script_step = { script : string; args : Yojson.Safe.t option } [@@deriving yojson]
-type step = Goal of goal_step | Use of use_step | Script of script_step
+
+type step =
+  | Goal of goal_step
+  | Use of use_step
+  | Script of script_step
+  | Navigate of script_step
 
 let step_of_yojson = function
   | `Assoc fields as json -> (
       match
-        List.filter (fun key -> List.mem_assoc key fields) [ "goal"; "use"; "script" ]
+        List.filter
+          (fun key -> List.mem_assoc key fields)
+          [ "goal"; "use"; "script"; "navigate" ]
       with
       | [ "goal" ] -> Result.map (fun x -> Goal x) (goal_step_of_yojson json)
       | [ "use" ] -> Result.map (fun x -> Use x) (use_step_of_yojson json)
       | [ "script" ] -> Result.map (fun x -> Script x) (script_step_of_yojson json)
+      | [ "navigate" ] when List.length fields = 1 ->
+          Result.map
+            (fun x -> Navigate x)
+            (script_step_of_yojson (List.assoc "navigate" fields))
       | _ -> Error "step must have exactly one of goal, use or script")
   | _ -> Error "step must be an object"
 
@@ -33,11 +44,23 @@ let yojson_of_step = function
   | Goal step -> yojson_of_goal_step step
   | Use step -> yojson_of_use_step step
   | Script step -> yojson_of_script_step step
+  | Navigate step -> `Assoc [ ("navigate", yojson_of_script_step step) ]
+
+type repeat_until = Expectation of string | Script_check of string
+
+let repeat_until_of_yojson = function
+  | `String sentence -> Ok (Expectation sentence)
+  | `Assoc [ ("script", `String name) ] -> Ok (Script_check name)
+  | _ -> Error "repeat until must be an expectation or {script: name}"
+
+let yojson_of_repeat_until = function
+  | Expectation sentence -> `String sentence
+  | Script_check name -> `Assoc [ ("script", `String name) ]
 
 type repeat = {
   next : string;
   max : int;
-  until : string;
+  until : repeat_until;
   delay_ms : int option;
   key : string;
 }
@@ -309,7 +332,15 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
           List.find (fun (p : procedure) -> p.slug = repeat.next) book.procedures
         in
         let* () = require (next.repeat = None) "repeat next must not itself repeat" in
-        let* () = require (trim repeat.until <> "") "repeat until must not be empty" in
+        let* () =
+          match repeat.until with
+          | Expectation sentence ->
+              require (trim sentence <> "") "repeat until must not be empty"
+          | Script_check name ->
+              require
+                (List.mem_assoc name (Option.value ~default:[] book.scripts))
+                "repeat until script must be declared"
+        in
         let* () = require (trim repeat.key <> "") "repeat key must not be empty" in
         let* () =
           require
@@ -318,7 +349,11 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
                repeat.delay_ms)
             "repeat delay_ms must be 0..60000"
         in
-        let* _ = resolve book.pages repeat.until in
+        let* _ =
+          match repeat.until with
+          | Expectation sentence -> Result.map (fun _ -> ()) (resolve book.pages sentence)
+          | Script_check _ -> Ok ()
+        in
         Ok ()
   in
   let rec steps = function
@@ -342,7 +377,7 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
             "use args must be an object of strings"
         in
         steps tail
-    | Script step :: tail ->
+    | (Script step | Navigate step) :: tail ->
         let* () =
           require
             (List.mem step.script script_names)
@@ -543,7 +578,7 @@ let validate ~file ~dir (book : t) =
       let proc = List.find (fun (p : procedure) -> p.slug = slug) book.procedures in
       let rec steps = function
         | [] -> Ok ()
-        | (Goal _ | Script _) :: tail -> steps tail
+        | (Goal _ | Script _ | Navigate _) :: tail -> steps tail
         | Use use :: tail ->
             let* () = visit (slug :: path) use.use in
             steps tail

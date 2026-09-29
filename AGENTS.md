@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Read `CONTEXT.md` first (domain vocabulary), then `docs/milestones.md` (the plan spine and where we are), then `docs/adr/` (settled decisions), then the spec for the milestone you are working on under `docs/issues/`. Leash builds on eta-next: the worktree at `/home/ribelo/projects/ribelo/ocaml/eta-next` (branch `eta-next` of the Eta repository; v1 is the `v1` tag). Pie at `/home/ribelo/projects/ribelo/pie` is the sibling service whose conventions Leash copies.
+Read `CONTEXT.md` first (domain vocabulary), then `docs/milestones.md` (the plan spine and where we are), then `docs/adr/` (settled decisions), then the spec for the milestone you are working on under `docs/issues/`. Leash builds on Eta: the checkout at `/home/ribelo/projects/ribelo/ocaml/Eta`, branch `master` (the former eta-next line; v1 is the `v1` tag). Pie at `/home/ribelo/projects/ribelo/pie` is the sibling service whose conventions Leash copies.
 
 ## Landing: work is done when it is committed
 

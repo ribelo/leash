@@ -664,6 +664,18 @@ type run_choice = {
 val run_choice_of_yojson : Yojson.Safe.t -> (run_choice, string) result
 val yojson_of_run_choice : run_choice -> Yojson.Safe.t
 
+type playbook_choice = {
+  source : string;
+  key : string option; [@json.null]
+  probabilities : Yojson.Safe.t;
+  confidence : float option; [@json.null]
+  usage : run_usage option; [@json.null]
+  note : string option; [@json.null]
+}
+
+val yojson_of_playbook_choice : playbook_choice -> Yojson.Safe.t
+val playbook_choice_of_yojson : Yojson.Safe.t -> (playbook_choice, string) result
+
 type run_expectation = {
   sentence : string;
   checker : string;
@@ -746,6 +758,7 @@ val planner_turn_of_yojson : Yojson.Safe.t -> (planner_turn, string) result
 val yojson_of_planner_turn : planner_turn -> Yojson.Safe.t
 
 type run_result = {
+  playbook_choices : playbook_choice list;
   status : Run_status.t;
   site : string option; [@json.null]
   procedures : run_procedure list;

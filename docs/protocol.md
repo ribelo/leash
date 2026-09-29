@@ -143,6 +143,16 @@ RunProcedure = {slug, site, planned: bool, attempts: int,
                 outcome: "verified"|"failed"|"skipped"|"planned", elapsed_ms: int, reason?: string}
                 drives is empty for "planned" (a dry run executed nothing); attempts is 2 when the
                 retry-once rule replayed the procedure; planned is true when a planner turn wrote it
+PlaybookChoice = {source: "jev"|"planner", key: string|null, probabilities: {..}|null, confidence: float|null,
+                  usage: Usage|null, note: string|null}
+                 drive replies retain playbook_choices in decision order, including JEV none answers
+                 and any confidence-triggered planner arbitration; model-error details retain them too.
+                 JEV preserves its own distribution/confidence; planner probabilities/confidence are null.
+                 A refused planner review has key:null and a note; JEV argmax remains selected.
+                 models.choice_confidence defaults to 0.7 and compares the top probability (not confidence);
+                 one review uses the same options/descriptions, at most 30s within the remaining deadline.
+                 Actual planner calls and reported cost are included in the run totals.
+                 No unvalidated planner text is executable.
 RunScript   = {script, url, records: int, bytes: int, elapsed_ms: int, error?: string}
                  one script call of a procedure's `script:` step (extr-8o1h): the page it ran on, the records it produced,
                  the size of its result, and — when the call was rejected — why; empty for a procedure with no script step
@@ -248,6 +258,7 @@ Rules:
   (`$[3].price: expected number, got string`). A script that threw or rejected, or whose value the browser could not
   return, is `script-failed` with what it threw. A script's calls are serialized on the tab like `eval`, bounded by the
   CDP call's 30 s deadline.
+- L40 (`extr-uhnc`): `{"navigate": {"script": "<name>", "args": {...}}}` runs a prepared script returning exactly `{url: string}`, then navigates the real browser tab and observes the resulting page. Only HTTP(S) and `about:blank` are permitted. `repeat.until` accepts either an existing expectation string or `{"script":"<name>"}` returning exactly `{done: boolean}`. Control scripts use their declared shape validation and appear in script traces with zero collected records; their values never enter JSONL. Termination is checked before the page cap; a cap with more pages remaining fails explicitly. Repeat targets are internal helpers, not mission choices.
 - A `{"script": "<name>", "args": {...}}` step in a procedure runs the playbook's script. `args` is an object of strings with
   `{name}` placeholders substituted from the run's arguments. A rejected script (`script-failed`, `script-invalid`,
   `too-large`) fails that attempt of the procedure — nothing is verified, the whole procedure is replayed once, and a second

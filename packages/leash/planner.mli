@@ -21,6 +21,9 @@
     accounting. Nothing here reads a clock or a file. *)
 
 type t = {
+  choose : deadline:Eta.Duration.t -> Run.question -> Protocol.playbook_choice;
+      (** One bounded choice-only call. Invalid answers are recorded with no key; the
+          caller retains JEV's argmax. No correction call or procedure generation. *)
   plan :
     ?deadline:Eta.Duration.t ->
     Run.plan_request ->

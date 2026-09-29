@@ -94,6 +94,7 @@ let choice key =
       probabilities = `Assoc [ (key, `Float 1.) ];
       confidence = 1.;
       usage = Some P.{ input_tokens = 10; output_tokens = 2; cost = 0.0001 };
+      judgments = [];
     }
 
 let field_string key = function
@@ -1248,6 +1249,12 @@ let repeat_terminates () =
     "extr-p152 failed next traced" "skipped" (List.nth stopped.P.procedures 1).P.outcome;
   Alcotest.(check int) "extr-p7sj streamed both new records" 2 stopped.P.collected
 
+let contains_text needle haystack =
+  try
+    ignore (Str.search_forward (Str.regexp_string needle) haystack 0);
+    true
+  with Not_found -> false
+
 let collected ?(records = 2) () =
   R.Collected
     {
@@ -1363,6 +1370,175 @@ let script_never_from_a_model () =
   Alcotest.(check int)
     "extr-k40c no script from a model's text" 0 (List.length h.script_calls)
 
+(* extr-8o1h extr-ve3k: a blocked click cannot skip a remaining script, either in
+   the selected procedure or on a repeat's next page. No operator action is replayed. *)
+let incomplete_steps_stop () =
+  let with_script =
+    let book = script_book () in
+    let proc = List.hd book.B.playbook.B.procedures in
+    let proc = { proc with B.steps = goal "Open next page" :: proc.B.steps } in
+    { book with B.playbook = { book.B.playbook with B.procedures = [ proc ] } }
+  in
+  let h =
+    harness ~procs:[ "collect"; "DONE" ]
+      ~drives:[ drive ~status:"blocked" ~reason:"navigation was blocked" () ]
+      ()
+  in
+  let stopped = ran (run ~installed:[ with_script ] h (args ())) in
+  check_status "extr-8o1h unfinished script step blocks" "blocked" stopped;
+  Alcotest.(check int) "extr-8o1h no skipped script runs" 0 (List.length h.script_calls);
+  Alcotest.(check int) "extr-8o1h no action replay" 1 (List.length h.steps);
+  Alcotest.(check bool)
+    "extr-8o1h no premature expectations" false (List.mem "verify" h.ops);
+  let entry = List.hd stopped.P.procedures in
+  Alcotest.(check string) "extr-8o1h failed trace" "failed" entry.P.outcome;
+  Alcotest.(check bool)
+    "extr-8o1h step and reason traced" true
+    (match entry.P.reason with
+    | Some reason ->
+        contains_text "Open next page" reason
+        && contains_text "navigation was blocked" reason
+    | None -> false);
+  let book = repeat_book () in
+  let procs =
+    List.map
+      (fun (proc : B.procedure) ->
+        if proc.B.slug = "next" then
+          { proc with B.steps = goal "Open next page" :: proc.B.steps }
+        else proc)
+      book.B.playbook.B.procedures
+  in
+  let book = { book with B.playbook = { book.B.playbook with B.procedures = procs } } in
+  let h =
+    harness ~procs:[ "collect"; "DONE" ]
+      ~drives:[ drive ~status:"blocked" ~reason:"pager unavailable" () ]
+      ~verifies:
+        [
+          [ expectation "the page is a" "page_kind" ];
+          [ expectation ~passed:false "the page is b" "page_kind" ];
+        ]
+      ()
+  in
+  h.scripts <- [ Ok (collected ()) ];
+  let stopped = ran (run ~installed:[ book ] h (args ())) in
+  check_status "extr-ve3k next-page interruption blocks" "blocked" stopped;
+  Alcotest.(check int)
+    "extr-ve3k next script not silently run" 1 (List.length h.script_calls);
+  Alcotest.(check int) "extr-ve3k next action not replayed" 1 (List.length h.steps);
+  let next = List.nth stopped.P.procedures 1 in
+  Alcotest.(check string) "extr-ve3k failed next traced" "failed" next.P.outcome;
+  Alcotest.(check bool)
+    "extr-ve3k failed next reason" true
+    (match next.P.reason with
+    | Some reason -> contains_text "pager unavailable" reason
+    | None -> false)
+
+(* extr-ve3k extr-b3u0: check until even on the final permitted page; a
+   bound reached while until is still false is an explicit, traced failure. *)
+let repeat_cap_is_failure () =
+  let good = [ expectation "the page is a" "page_kind" ] in
+  let until = [ expectation "the page is b" "page_kind" ] in
+  let not_until = [ expectation ~passed:false "the page is b" "page_kind" ] in
+  let h =
+    harness ~procs:[ "collect"; "DONE" ] ~verifies:[ good; not_until; good; not_until ] ()
+  in
+  h.scripts <- [ Ok (collected ()) ];
+  let result = ran (run ~installed:[ repeat_book () ] h (args ())) in
+  check_status "extr-ve3k cap is failure" "failed" result;
+  Alcotest.(check bool)
+    "extr-ve3k cap reason names max" true
+    (match result.P.reason with
+    | Some reason -> contains_text "max 2" reason
+    | None -> false);
+  let last = List.nth result.P.procedures 1 in
+  Alcotest.(check string) "extr-ve3k cap is traced" "failed" last.P.outcome;
+  Alcotest.(check bool)
+    "extr-ve3k cap reason in page trace" true
+    (match last.P.reason with
+    | Some reason -> contains_text "max 2" reason
+    | None -> false);
+  Alcotest.(check int) "extr-ve3k no extra page" 2 (List.length h.script_calls);
+  let h =
+    harness ~procs:[ "collect"; "DONE" ]
+      ~verifies:[ good; not_until; good; until; good ]
+      ()
+  in
+  h.scripts <- [ Ok (collected ()) ];
+  let completed = ran (run ~installed:[ repeat_book () ] h (args ())) in
+  check_status "extr-ve3k until on cap completes" "done" completed;
+  Alcotest.(check int) "extr-ve3k no third page" 2 (List.length h.script_calls)
+
+(* extr-b3u0: after a failed collection, even a later successful recovery and
+   passing mission-level page expectation cannot claim the batch is complete. *)
+let incomplete_collection_refuses_done () =
+  let recovery =
+    procedure ~slug:"recover" ~description:"Recover the page" ~expect:[ "the page is a" ]
+      [ goal "Recover" ]
+  in
+  let book = repeat_book () in
+  let book =
+    {
+      book with
+      B.playbook =
+        {
+          book.B.playbook with
+          B.procedures = book.B.playbook.B.procedures @ [ recovery ];
+        };
+    }
+  in
+  let good = [ expectation "the page is a" "page_kind" ] in
+  let bad = [ expectation ~passed:false "the page is a" "page_kind" ] in
+  let h =
+    harness ~procs:[ "collect"; "DONE" ] ~verifies:[ bad; bad; good ]
+      ~plans:
+        [
+          R.{ answer = Procedure recovery; expect = []; usage = None; pages = [] };
+          R.
+            {
+              answer = Fail "collection is incomplete";
+              expect = [];
+              usage = None;
+              pages = [];
+            };
+        ]
+      ()
+  in
+  h.scripts <- [ Ok (collected ()) ];
+  let result = ran (run ~installed:[ book ] h (args ~expect:[ "the page is a" ] ())) in
+  check_status "extr-b3u0 incomplete collection refuses DONE" "blocked" result;
+  Alcotest.(check int)
+    "extr-b3u0 no DONE verification" 0
+    (List.length result.P.mission_expectations);
+  Alcotest.(check bool)
+    "extr-b3u0 refusal explains incomplete collection" true
+    (match result.P.reason with
+    | Some reason -> contains_text "collection is incomplete" reason
+    | None -> false);
+  Alcotest.(check int)
+    "extr-b3u0 a planner sees refused DONE" 2 (List.length h.plan_requests)
+
+(* extr-ve3k: the next-page procedure belongs to the repeat and is never a
+   mission-level choice offered to the scripted selector. *)
+let repeat_next_not_selectable () =
+  let h =
+    harness ~procs:[ "collect" ]
+      ~verifies:
+        [
+          [ expectation "the page is a" "page_kind" ];
+          [ expectation "the page is b" "page_kind" ];
+        ]
+      ()
+  in
+  h.scripts <- [ Ok (collected ()) ];
+  ignore (ran (run ~installed:[ repeat_book () ] h (args ~max_procedures:1 ())));
+  let question =
+    List.find (fun (q : R.question) -> q.R.name = "select_procedure") h.questions
+  in
+  Alcotest.(check (list string))
+    "extr-ve3k next is absent from model choices"
+    [ "collect"; "DONE"; "BLOCKED" ]
+    (List.map fst question.R.criteria)
+
 let () =
   Alcotest.run "L31 run"
     [
@@ -1371,6 +1547,13 @@ let () =
           Alcotest.test_case "extr-ve3k extr-p7sj repeat dedup" `Quick
             repeat_collects_unique;
           Alcotest.test_case "extr-ve3k until and next stop" `Quick repeat_terminates;
+          Alcotest.test_case "extr-8o1h extr-ve3k incomplete steps" `Quick
+            incomplete_steps_stop;
+          Alcotest.test_case "extr-ve3k repeat cap" `Quick repeat_cap_is_failure;
+          Alcotest.test_case "extr-b3u0 DONE refuses incomplete batch" `Quick
+            incomplete_collection_refuses_done;
+          Alcotest.test_case "extr-ve3k next not selectable" `Quick
+            repeat_next_not_selectable;
           Alcotest.test_case "extr-b3u0 extr-ve3k collection reported, dedup run-wide"
             `Quick collection_reported_and_deduplicated;
           Alcotest.test_case "extr-8o1h extr-p152 script step" `Quick script_step;

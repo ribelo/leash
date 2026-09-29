@@ -2,23 +2,23 @@
     docs/issues/run/01-run.md, milestone 7).
 
     A mission is one sentence of human language. A playbook is a site's file of named
-    procedures written in human language. The loop asks three levels of judgment, all JEV:
-    which playbook serves the current part of the mission (asked at the start and when the
-    site changes, run-kli0), which procedure comes next (asked every turn over the small
-    observed state, run-qq3o run-pvmc), and the operator level that drives each step
-    (run-d82w — exactly the tested {!Drive} loop, one call per playbook step).
-    Expectations are verified by code where a checker applies and by a JEV score where
-    only judgment can (run-tny5 run-vbys); DONE is accepted only against a fresh
-    verification of the mission's own expectations or, when the mission carries none, of
-    the last verified procedure's (run-4j1v, the guard L30's measurement demanded). When
-    JEV stops — a BLOCKED answer, a procedure that failed twice, an argument the mission
-    does not supply — one planner turn is asked (run-w7ke), up to a cap of three per run
-    (run-obtt), whose answer is a procedure to run now, a handoff, or a failure with its
-    reason (run-rq6i); on its first turn it may also attach the mission's own
-    expectations, which the DONE guard then verifies when the caller stated none
-    (run-2tt3). A procedure the planner wrote that ran and passed its expectations is
-    proposed as a file under XDG state and reported, never merged into a playbook
-    (run-m0r8).
+    procedures written in human language. The loop asks three levels of judgment through
+    JEV (uncertain playbook choices receive one bounded planner review): which playbook
+    serves the current part of the mission (asked at the start and when the site changes,
+    run-kli0), which procedure comes next (asked every turn over the small observed state,
+    run-qq3o run-pvmc), and the operator level that drives each step (run-d82w — exactly
+    the tested {!Drive} loop, one call per playbook step). Expectations are verified by
+    code where a checker applies and by a JEV score where only judgment can (run-tny5
+    run-vbys); DONE is accepted only against a fresh verification of the mission's own
+    expectations or, when the mission carries none, of the last verified procedure's
+    (run-4j1v, the guard L30's measurement demanded). When JEV stops — a BLOCKED answer, a
+    procedure that failed twice, an argument the mission does not supply — one planner
+    turn is asked (run-w7ke), up to a cap of three per run (run-obtt), whose answer is a
+    procedure to run now, a handoff, or a failure with its reason (run-rq6i); on its first
+    turn it may also attach the mission's own expectations, which the DONE guard then
+    verifies when the caller stated none (run-2tt3). A procedure the planner wrote that
+    ran and passed its expectations is proposed as a file under XDG state and reported,
+    never merged into a playbook (run-m0r8).
 
     Everything is a handler: production ({!Tabs.run}), a scripted test and a dry run are
     this same computation with different handlers, and the run itself touches no browser,
@@ -41,14 +41,17 @@ type observation = {
 (** What one observation of the page gives the loop: the same facts the checkers, the text
     helper and the last snapshot of a result need. *)
 
-type choice = Protocol.run_choice = {
+type choice = {
   key : string;
   probabilities : Yojson.Safe.t;
   confidence : float;
   usage : Protocol.run_usage option;
+  judgments : Protocol.playbook_choice list;
 }
-(** One upper-level answer: the chosen criterion and the distribution behind it
-    (run-xqh8). *)
+(** One upper-level decision (run-xqh8). Probability, confidence and usage describe JEV;
+    [key] may be the reviewed choice. [judgments] preserves each original playbook answer
+    in decision order, including a refused planner review. Empty for unreviewed answers;
+    the run then records JEV directly. *)
 
 type question = {
   name : string;

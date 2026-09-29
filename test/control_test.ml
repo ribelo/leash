@@ -1594,6 +1594,7 @@ let levels_with
                     probabilities = `Assoc [ (key, `Float 1.) ];
                     confidence = 1.;
                     usage = None;
+                    judgments = [];
                   });
       score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
       plan = (fun ~deadline:_ _ -> Ok plan);

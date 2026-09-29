@@ -755,8 +755,18 @@ type run_choice = {
 }
 [@@deriving yojson]
 
-(* run-xqh8: one expectation and how it was verified: the checker the loader resolved, and
-   the JEV score when no checker applied. *)
+(* extr-uhnc run-xqh8: original playbook judgments in order. A planner answer has
+   no distribution or confidence; a refused review has no key and explains fallback. *)
+type playbook_choice = {
+  source : string;
+  key : string option; [@json.null]
+  probabilities : Yojson.Safe.t;
+  confidence : float option; [@json.null]
+  usage : run_usage option; [@json.null]
+  note : string option; [@json.null]
+}
+[@@deriving yojson]
+
 type run_expectation = {
   sentence : string;
   checker : string;
@@ -828,6 +838,7 @@ type planner_turn = {
    the run never merges one; [final] is the last snapshot the run observed, whose [dialog]
    is what ended an [error]; [reason] names why the run stopped. *)
 type run_result = {
+  playbook_choices : playbook_choice list;
   status : Run_status.t;
   site : string option; [@json.null]
   procedures : run_procedure list;

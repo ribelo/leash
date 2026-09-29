@@ -670,11 +670,25 @@ let script_examples () =
   | Ok () -> ()
   | Error why -> Alcotest.fail ("extr-8o1h " ^ why)
 
-(* extr-tkco: the shipped books.toscrape.com example is a directory with a category
-   procedure, a list script in its own file, a fetch-based crawl script, a next-page
-   procedure and a repeat, and its page kinds tell a listing with a next link from the last
-   page — which is what the repeat's end condition rests on (L39 live gate: extr-8ubt). *)
+(* extr-tkco extr-uhnc: the shipped primary fetch collector and optional native-repeat
+   variant share scripts and factual page kinds; real pager checks terminate repeat. *)
 let books_toscrape_example () =
+  let dir = "../examples/playbooks/books.toscrape.com" in
+  let file = Filename.concat dir "repeat.json" in
+  (match B.of_json ~dir ~file (Yojson.Safe.from_file file) with
+  | Error why -> Alcotest.fail ("extr-tkco repeat: " ^ why)
+  | Ok book ->
+      let first = List.hd book.playbook.procedures in
+      Alcotest.(check bool)
+        "extr-uhnc example checks real pager" true
+        (match first.repeat with
+        | Some { until = B.Script_check "last-page"; next = "next-page"; _ } -> true
+        | _ -> false);
+      Alcotest.(check bool)
+        "extr-uhnc example navigates natively" true
+        (match first.steps with
+        | [ B.Navigate _; B.Script { script = "list-page"; _ } ] -> true
+        | _ -> false));
   match B.load "../examples/playbooks/books.toscrape.com" with
   | Error why -> Alcotest.fail ("extr-tkco " ^ why)
   | Ok book ->
@@ -702,24 +716,15 @@ let books_toscrape_example () =
            true
          with Not_found -> false);
       List.iter
-        (fun (slug, next) ->
-          match (procedure slug).repeat with
-          | Some repeat ->
-              Alcotest.(check string) "extr-ve3k next-page procedure" next repeat.next;
-              Alcotest.(check string)
-                "extr-ve3k records de-duplicated by url" "url" repeat.key;
-              Alcotest.(check bool)
-                "extr-ve3k the loader resolved the end condition" true
-                (B.resolve book.playbook.pages repeat.until
-                = Ok (B.Not_page_kind "more-pages"))
-          | None -> Alcotest.fail ("extr-ve3k " ^ slug ^ " does not repeat"))
-        [
-          ("collect-category", "next-page"); ("collect-category-under", "next-page-under");
-        ];
+        (fun slug ->
+          Alcotest.(check bool)
+            "extr-uhnc whole-category fetch needs no click repeat" true
+            ((procedure slug).repeat = None))
+        [ "collect-category"; "collect-category-under" ];
       let kind url text = B.page_kind book.playbook.pages ~url ~text in
       let category = "https://books.toscrape.com/catalogue/category/books/mystery_3" in
       Alcotest.(check (option string))
-        "extr-ve3k a listing with a next link keeps paginating" (Some "more-pages")
+        "extr-uhnc next in book text does not classify pagination" (Some "category")
         (kind (category ^ "/index.html") "Page 1 of 2\nnext");
       Alcotest.(check (option string))
         "extr-ve3k the last page ends it" (Some "category")
@@ -781,6 +786,38 @@ let planner_procedures () =
           {|{"source":"fetch('/x')"}|};
         ])
 
+(* extr-uhnc: control scripts are typed steps/checks, not collected records. *)
+let control_scripts () =
+  let data =
+    {|{"site":"example.com","entry":"https://example.com/","description":"Catalogue",
+    "pages":[],"scripts":{"next":{"source":"return {url: location.href};","returns":{"url":"url"}},
+    "last":{"source":"return {done: true};","returns":{"done":"boolean"}}},
+    "procedures":[{"slug":"collect","description":"Collect pages","steps":[{"navigate":{"script":"next"}}],
+    "expect":["no dialog is open"],"repeat":{"next":"next-page","max":8,"until":{"script":"last"},"key":"url"}},
+    {"slug":"next-page","description":"Next page","steps":[{"navigate":{"script":"next"}}],"expect":["no dialog is open"]}]}|}
+  in
+  with_playbook data (fun dir _ ->
+      match B.load dir with
+      | Error reason -> Alcotest.fail reason
+      | Ok book ->
+          let proc = List.hd book.playbook.procedures in
+          Alcotest.(check bool)
+            "extr-uhnc typed navigation" true
+            (match proc.steps with
+            | [ B.Navigate { script = "next"; _ } ] -> true
+            | _ -> false);
+          Alcotest.(check bool)
+            "extr-uhnc typed termination" true
+            (match proc.repeat with
+            | Some { until = B.Script_check "last"; _ } -> true
+            | _ -> false));
+  let replace old next = Str.global_replace (Str.regexp_string old) next data in
+  expect_error "repeat until script must be declared"
+    (replace {|"script":"last"|} {|"script":"missing"|});
+  expect_error "step must"
+    (replace {|{"navigate":{"script":"next"}}|}
+       {|{"navigate":{"script":"next"},"goal":"unsafe"}|})
+
 let () =
   Alcotest.run "playbooks"
     [
@@ -810,6 +847,7 @@ let () =
           Alcotest.test_case "extr-k40c planner procedures" `Quick planner_procedures;
           Alcotest.test_case "extr-zdst extr-8o1h shapes" `Quick shapes;
           Alcotest.test_case "extr-8o1h many records" `Quick script_examples;
+          Alcotest.test_case "extr-uhnc typed control scripts" `Quick control_scripts;
           Alcotest.test_case "extr-tkco books.toscrape.com example" `Quick
             books_toscrape_example;
         ] );

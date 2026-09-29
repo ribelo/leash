@@ -7,11 +7,26 @@ if (limit !== null && !Number.isFinite(limit)) throw new Error('max_price is not
 const maxPages = Math.min(Number(args.max_pages) || 50, 50);
 const books = [];
 let url = location.href;
+if (args.category) {
+  const category = String(args.category).trim().toLowerCase();
+  const link = [...document.querySelectorAll('.side_categories a')]
+    .find(a => a.textContent.trim().toLowerCase() === category);
+  if (!link) throw new Error('unknown category: ' + args.category);
+  url = link.href;
+}
+const visited = new Set();
 for (let page = 0; url && page < maxPages; page++) {
+  const target = new URL(url);
+  if (target.origin !== location.origin || !target.pathname.startsWith('/catalogue/category/books/'))
+    throw new Error('not a same-origin category URL');
+  if (visited.has(url)) throw new Error('pagination cycle: ' + url);
+  visited.add(url);
   const response = await fetch(url);
   if (!response.ok) throw new Error(url + ' answered ' + response.status);
   const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
   const category = doc.querySelector('.page-header h1')?.textContent.trim();
+  if (args.category && category?.toLowerCase() !== String(args.category).trim().toLowerCase())
+    throw new Error('category response mismatch');
   const cards = [...doc.querySelectorAll('article.product_pod')];
   if (!category || cards.length === 0) throw new Error('not a category listing page: ' + url);
   for (const card of cards) {
@@ -28,4 +43,5 @@ for (let page = 0; url && page < maxPages; page++) {
   const next = doc.querySelector('li.next a');
   url = next ? new URL(next.getAttribute('href'), url).href : null;
 }
+if (url) throw new Error('category exceeds max_pages');
 return limit === null ? books : books.filter(book => book.price < limit);

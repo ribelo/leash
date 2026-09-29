@@ -207,7 +207,14 @@ let next_observation (h : harness) =
       one
 
 let choice key =
-  R.{ key; probabilities = `Assoc [ (key, `Float 1.) ]; confidence = 1.; usage = None }
+  R.
+    {
+      key;
+      probabilities = `Assoc [ (key, `Float 1.) ];
+      confidence = 1.;
+      usage = None;
+      judgments = [];
+    }
 
 let args ?(mission = "buy a Blue Top on site-a.example") ?(max_plans = 3) ?(expect = [])
     () =
@@ -297,6 +304,7 @@ let models_config ?(api_key = Some (Eta_observability.Redact.make key))
     planner_model = text_value planner_model;
     planner_reasoning = text_value planner_reasoning;
     planner_endpoint = Option.map text_value planner_endpoint;
+    choice_confidence = Config.default.models.choice_confidence;
   }
 
 let chat_content ?(model = planner_model) content =

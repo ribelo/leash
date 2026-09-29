@@ -1,6 +1,6 @@
 # Leash delivery map
 
-Each row is one worker's job. The behaviour is specified in the milestone specs (`<slug>/01-<slug>.md`); this map only slices them into deliverable pieces and fixes the order. Read `../../AGENTS.md`, `../../CONTEXT.md`, `../protocol.md`, `../adr/` and the milestone spec before starting a row. eta-next (`/home/ribelo/projects/ribelo/ocaml/eta-next`, rows 0–13 delivered) is the kernel: its `docs/why-next.md`, `docs/modes.md` and the `.mli` files under `lib/` are the interfaces; the milestone-1 spec's "Shape against eta-next" section names which ones each module uses.
+Each row is one worker's job. The behaviour is specified in the milestone specs (`<slug>/01-<slug>.md`); this map only slices them into deliverable pieces and fixes the order. Read `../../AGENTS.md`, `../../CONTEXT.md`, `../protocol.md`, `../adr/` and the milestone spec before starting a row. Eta (`/home/ribelo/projects/ribelo/ocaml/Eta`, branch `master`, formerly eta-next) is the kernel: its `docs/why-next.md`, `docs/modes.md` and the `.mli` files under `lib/` are the interfaces; the milestone-1 spec's "Shape against eta-next" section names which ones each module uses.
 
 ## Milestone 1 — managed Chrome (`managed-chrome/01-managed-chrome.md`)
 
@@ -112,7 +112,7 @@ L29 first; L30 needs only L29's loader and the models service; L31–L34 in orde
 | L38 | **`drive` is the one entry point.** Fold `run` into `drive` (playbook or none), argument filling for query parameters, records bypass the models, `repeat`, `data` summary and `--out` JSONL, cost reporting, trace. | extr-andy, extr-mq0e, extr-ve3k, extr-mfmf, extr-b3u0, extr-p7sj, extr-5x9e, extr-p152 | L37 | [x] |
 | L39 | **Example and live acceptance.** books.toscrape.com playbook directory, fetch-based test script, skill update, live missions (whole category; filtered by price). Marks the spec completed. | extr-tkco, extr-oaci, extr-8ubt | L38 | [x] |
 
-| L40 | **Playbook robustness.** The L39 example was tuned to JEV's quirks and a variant failed on an 8-page category. Collect three categories of different sizes (one ≥ 8 pages) with plain wording; diagnose each failure to its cause and fix it there — not by rephrasing to suit the model. Record the diagnosis in the spec. | extr-uhnc | L39 | [ ] |
+| L40 | **Playbook robustness.** The L39 example was tuned to JEV's quirks and a variant failed on an 8-page category. Collect three categories of different sizes (one ≥ 8 pages) with plain wording; diagnose each failure to its cause and fix it there — not by rephrasing to suit the model. Record the diagnosis in the spec. | extr-uhnc | L39 | [x] |
 
 ## Later milestones
 

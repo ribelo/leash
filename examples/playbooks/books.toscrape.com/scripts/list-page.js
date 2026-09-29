@@ -16,5 +16,4 @@ const books = cards.map(card => ({
   rating: words[[...card.querySelector('.star-rating').classList].find(c => c in words)],
   availability: card.querySelector('.availability').textContent.trim(),
 }));
-document.querySelector('.pager')?.scrollIntoView({block: 'center'});
 return limit === null ? books : books.filter(book => book.price < limit);

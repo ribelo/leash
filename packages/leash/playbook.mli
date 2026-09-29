@@ -12,12 +12,18 @@ type script_step = { script : string; args : Yojson.Safe.t option }
 (** extr-8o1h: run the playbook's script [script]; [args] is an object of strings, with
     the run's [{name}] placeholders substituted before the script is called. *)
 
-type step = Goal of goal_step | Use of use_step | Script of script_step
+type step =
+  | Goal of goal_step
+  | Use of use_step
+  | Script of script_step
+  | Navigate of script_step
+
+type repeat_until = Expectation of string | Script_check of string
 
 type repeat = {
   next : string;
   max : int;
-  until : string;
+  until : repeat_until;
   delay_ms : int option;
   key : string;
 }

@@ -11,6 +11,7 @@ module P = Protocol
 module J = Jev_request
 
 type t = {
+  now : unit -> float;
   config : Config.models;
   logger : Eta_observability.Logger.t;
   http : Eta_http.Client.t;
@@ -64,7 +65,15 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
         Eta_ai_chat.create ~http ~clock ~logger ~endpoint:(planner_endpoint config)
           ~api_key ())
   in
-  { config; logger; http; systemone; chat; planner_chat }
+  {
+    now = (fun () -> Eio.Time.now clock);
+    config;
+    logger;
+    http;
+    systemone;
+    chat;
+    planner_chat;
+  }
 
 (* drive-e7oi: the model id is what the client sends and checks the reply against, and the
    two endpoints are the configured ones. Nothing here reads the key. *)
@@ -199,7 +208,7 @@ let missing_key =
    One client the operator level's questions go through. A criterion the model did not
    offer, or a distribution the reference validator refuses, is [model-unavailable] with
    [invalid-response]: the loop does nothing with an answer like that. *)
-let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
+let choose_jev ~deadline (t : t) (question : Run.question) =
   match t.systemone with
   | None -> Error missing_key
   | Some client -> (
@@ -246,12 +255,85 @@ let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
                         wire_probabilities answer.Eta_ai_systemone.Types.probabilities;
                       confidence = answer.Eta_ai_systemone.Types.confidence;
                       usage = Some (usage_of response.Eta_ai_systemone.Codecs.usage);
+                      judgments = [];
                     }
           | _ ->
               Error
                 (invalid_response
                    (Printf.sprintf "the reply carries no choice answer named %S"
                       question.Run.name))))
+
+(* extr-uhnc: review uncertainty at the playbook boundary, not by tuning the JEV
+   instruction. Threshold the top probability, never JEV's margin-like confidence. *)
+let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
+  let started = t.now () in
+  match choose_jev ~deadline t question with
+  | Error _ as error -> error
+  | Ok choice ->
+      let top =
+        match choice.Run.probabilities with
+        | `Assoc fields ->
+            List.fold_left
+              (fun acc (_, value) ->
+                match value with
+                | `Float p -> max acc p
+                | `Int p -> max acc (float_of_int p)
+                | _ -> acc)
+              0. fields
+        | _ -> 0.
+      in
+      if
+        question.name <> "select_playbook"
+        || top >= Config.Probability.to_float t.config.choice_confidence
+      then Ok choice
+      else
+        let initial =
+          P.
+            {
+              source = "jev";
+              key = Some choice.key;
+              probabilities = choice.probabilities;
+              confidence = Some choice.confidence;
+              usage = choice.usage;
+              note = None;
+            }
+        in
+        let remaining = Eta.Duration.to_seconds_float deadline -. (t.now () -. started) in
+        let unavailable note =
+          P.
+            {
+              source = "planner";
+              key = None;
+              probabilities = `Null;
+              confidence = None;
+              usage = None;
+              note = Some note;
+            }
+        in
+        let review =
+          match t.planner_chat with
+          | None ->
+              unavailable "choice review unavailable: no planner key; using JEV argmax"
+          | Some _ when remaining <= 0. ->
+              unavailable "choice review skipped: deadline exhausted; using JEV argmax"
+          | Some client ->
+              let planner =
+                Planner.create ~client
+                  ~model:(Config.Text.to_string t.config.planner_model)
+                  ~reasoning:(Config.Text.to_string t.config.planner_reasoning)
+                  ~logger:t.logger ()
+              in
+              planner.Planner.choose
+                ~deadline:
+                  (Eta.Duration.ms (max 1 (int_of_float (min 30. remaining *. 1000.))))
+                question
+        in
+        Ok
+          {
+            choice with
+            Run.key = Option.value ~default:choice.key review.key;
+            judgments = [ initial; review ];
+          }
 
 (* run-vbys: the score question a judgment expectation asks, over the page summary the
    registry builds. Its two levels make the answer's position the [0, 1] score the wait's

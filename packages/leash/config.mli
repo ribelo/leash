@@ -24,6 +24,16 @@ module Seconds : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
+(** A finite probability in [0, 1]. *)
+module Probability : sig
+  type t
+
+  val of_float : float -> (t, string) result
+  val to_float : t -> float
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
 (** A non-empty text value. *)
 module Text : sig
   type t
@@ -68,6 +78,8 @@ type models = {
   planner_model : Text.t;
   planner_reasoning : Text.t;
   planner_endpoint : Text.t option;
+  choice_confidence : Probability.t;
+      (** Top playbook probability below which Luna reviews the choice; default 0.7. *)
 }
 (** drive-e7oi drive-yqxg: the models section. [api_key] is absent when the file does not
     carry one and the environment does not either; {!env} fills it from

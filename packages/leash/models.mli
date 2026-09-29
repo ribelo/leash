@@ -85,7 +85,13 @@ val choose :
     [deadline] (30 seconds by default) bounds the whole call, both attempts and the
     backoff included; the run passes what is left of its own deadline. An answered call is
     logged at info with the tokens and cost the provider reported, and those ride on as
-    the answer's [usage] so the run's trace carries them (run-xqh8). *)
+    the answer's [usage] so the run's trace carries them (run-xqh8).
+
+    For [select_playbook] only, a top probability below [models.choice_confidence]
+    (default 0.7) adds one bounded choice-only planner review over the same state and
+    options. [Run.choice.judgments] retains both answers and their own usage. An invalid
+    review leaves the validated JEV argmax in force with a trace note. The review is
+    capped at 30 seconds and the remaining caller budget, with no correction call. *)
 
 val score :
   ?deadline:Eta.Duration.t ->

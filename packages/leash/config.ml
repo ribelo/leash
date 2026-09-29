@@ -43,6 +43,24 @@ module Seconds = struct
   let yojson_of_t t = `Int t
 end
 
+(** A finite probability threshold in the closed interval [0, 1]. *)
+module Probability = struct
+  type t = float
+
+  let of_float value =
+    if Float.is_finite value && value >= 0. && value <= 1. then Ok value
+    else Error "expected a finite probability between 0 and 1"
+
+  let to_float value = value
+
+  let t_of_yojson = function
+    | `Float value -> of_float value
+    | `Int value -> of_float (float_of_int value)
+    | _ -> Error "expected a probability number"
+
+  let yojson_of_t value = `Float value
+end
+
 (** A non-empty text value: a path, a workspace name, or a model id. *)
 module Text = struct
   type t = string
@@ -131,6 +149,7 @@ type models = {
   planner_model : Text.t; [@json.default default_planner_model]
   planner_reasoning : Text.t; [@json.default default_planner_reasoning]
   planner_endpoint : Text.t option;
+  choice_confidence : Probability.t; [@json.default 0.7]
 }
 [@@deriving yojson]
 
@@ -151,6 +170,7 @@ let default_models =
     planner_model = default_planner_model;
     planner_reasoning = default_planner_reasoning;
     planner_endpoint = None;
+    choice_confidence = 0.7;
   }
 
 let default_focus_command =
@@ -261,6 +281,7 @@ let default_toml =
 # text_model = %S
 # planner_model = %S          # the fallback planner (Luna)
 # planner_reasoning = %S      # OpenRouter effort; "none" turns reasoning off
+# choice_confidence = 0.7     # review a playbook choice below this top probability
 # planner_endpoint = "https://openrouter.ai/api/v1/chat/completions"
 #                             # default: chat_base_url + /chat/completions
 #

@@ -28,15 +28,23 @@ type observation = {
   snapshot : P.snapshot;
 }
 
-type choice = P.run_choice = {
+type choice = {
   key : string;
   probabilities : Yojson.Safe.t;
   confidence : float;
   usage : P.run_usage option;
+  judgments : P.playbook_choice list;
 }
-(** One answer of an upper level: the criterion it chose and the distribution behind it.
-    It is the protocol's own {!Protocol.run_choice}, so the trace records the answer the
-    handler gave without a translation. *)
+(** An upper-level decision. Probability, confidence and usage describe JEV; [key]
+    may be the reviewed choice. [judgments] preserves each original answer in order. *)
+
+let wire_choice (choice : choice) : P.run_choice =
+  {
+    key = choice.key;
+    probabilities = choice.probabilities;
+    confidence = choice.confidence;
+    usage = choice.usage;
+  }
 
 type question = {
   name : string;
@@ -267,6 +275,7 @@ type state = {
       (** run-2tt3: the mission's expectations as the planner attached them on its first
           turn, before they are resolved. A caller's own [expect] list wins over these. *)
   mission_checks : P.run_expectation list;
+  playbook_choices : P.playbook_choice list;
   proposals : string list;  (** run-m0r8: the proposal files the run wrote, oldest first. *)
   count : int;  (** Procedures executed, the [use] calls and planner procedures included. *)
   records : Yojson.Safe.t list;
@@ -278,6 +287,9 @@ type state = {
       (** extr-b3u0: the last pagination ended because its end condition held or its next
           page did not exist, not because it hit [max] or a limit — the one fact about a
           collection the upper levels need to answer DONE. *)
+  collection_pending : bool;
+      (** extr-b3u0: a repeat started but has not reached [until] or the expected
+           end-of-pagination check. DONE cannot verify a partial collection. *)
   pending_scripts : P.run_script list;
       (** The script calls of the procedure being executed, newest first, moved into its
           trace entry when it is recorded. *)
@@ -302,6 +314,7 @@ let finish (st : state) status ?reason () =
       site = Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook.Playbook.site) st.book;
       procedures = List.rev st.trace;
       mission_expectations = st.mission_checks;
+      playbook_choices = List.rev st.playbook_choices;
       planner_turns = List.rev st.plans;
       proposals = List.rev st.proposals;
       collected = st.collected_count;
@@ -336,6 +349,9 @@ let with_trace (st : state) (error : P.error) =
                 | Some book -> `String book.Playbook.playbook.Playbook.site
                 | None -> `Null );
               ("procedures", `List (List.map P.yojson_of_run_procedure (List.rev st.trace)));
+              ( "playbook_choices",
+                `List
+                  (List.map P.yojson_of_playbook_choice (List.rev st.playbook_choices)) );
             ]);
     }
 
@@ -390,6 +406,9 @@ type steps_outcome =
   | Steps_done of state * P.run_drive list * string option
       (** The procedure's steps are through. The third member is the reason an [optional]
           [use] was skipped, [None] otherwise. *)
+  | Steps_interrupted of state * P.run_drive list * string
+      (** extr-8o1h: a non-done operator step prevented remaining steps, with no
+           automatic replay or verification of an unfinished page. *)
   | Steps_failed of state * P.run_drive list * string
       (** extr-8o1h: a script step was rejected. The procedure's remaining steps do not
           run and, unlike a failed expectation, nothing is verified: the attempt failed
@@ -407,6 +426,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
     {
       steps_used = 0;
       trace = [];
+      playbook_choices = [];
       plans = [];
       recent = [];
       known = [];
@@ -421,6 +441,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         collected_count = 0;
         pages = 0;
         complete = false;
+        collection_pending = false;
         pending_scripts = [];
       switch = false;
       asked_switch = false;
@@ -478,7 +499,8 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
       @
       (* extr-b3u0: once something was collected, how far the collection went — pages read
          and whether its pagination ran out — as counts and a flag, never a record. *)
-      if st.collected_count = 0 then []
+      (if st.observation.url = "about:blank" then [("current_page", `String "Blank page; no site is loaded.")] else [])
+      @ if st.collected_count = 0 && not st.complete then []
       else [ ("pages", `Int st.pages); ("collection_complete", `Bool st.complete) ])
   in
 
@@ -490,7 +512,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
       List.map
         (fun (book : Playbook.loaded) -> (book.Playbook.playbook.site, book.Playbook.playbook.description))
         installed
-      @ [ ("none", "no installed playbook serves this part of the mission") ]
+      @ [ ("none", "Continue on the current page without a playbook.") ]
     in
     if List.length criteria > 255 then
       Error (invalid "more than 255 playbooks are installed; one choice is bounded at 255")
@@ -504,12 +526,26 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         }
   in
 
-  (* run-qq3o: every turn, the current playbook's procedures plus DONE and BLOCKED. *)
+  (* extr-ve3k: next-page procedures belong to their repeats, not to the mission's
+     choice list. A model must not run a page-navigation step without its collector. *)
+  let selectable_procedures (book : Playbook.loaded) =
+    let next_slugs =
+      List.filter_map
+        (fun (proc : Playbook.procedure) ->
+          Option.map (fun (repeat : Playbook.repeat) -> repeat.next) proc.Playbook.repeat)
+        book.Playbook.playbook.procedures
+    in
+    List.filter
+      (fun (proc : Playbook.procedure) -> not (List.mem proc.Playbook.slug next_slugs))
+      book.Playbook.playbook.procedures
+  in
+
+  (* run-qq3o: every turn, selectable procedures plus DONE and BLOCKED. *)
   let procedure_question (st : state) (book : Playbook.loaded) =
     let criteria =
       List.map
         (fun (proc : Playbook.procedure) -> (proc.Playbook.slug, proc.Playbook.description))
-        book.Playbook.playbook.procedures
+        (selectable_procedures book)
       @ [
           ("DONE", "the mission is visibly complete");
           ("BLOCKED", "no offered procedure can progress");
@@ -551,7 +587,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
           site = book.Playbook.playbook.site;
           planned;
           attempts;
-          choice;
+          choice = wire_choice choice;
           drives;
           scripts = List.rev st.pending_scripts;
           expectations;
@@ -728,7 +764,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                     | Some selected -> selected | None -> proc in
                     execute st ~book ~proc:selected ~planned:(selected.slug = proc.slug) ~choice ~optional:false ~values:[] in
                   match discovery with
-                  | None -> run_choice { key = proc.slug; probabilities = `Assoc []; confidence = 1.; usage = None }
+                  | None -> run_choice { key = proc.slug; probabilities = `Assoc []; confidence = 1.; usage = None; judgments = [] }
                   | Some _ -> (match procedure_question st book with
                       | Error error -> Error error
                       | Ok question -> (match select_procedure t question with
@@ -737,10 +773,24 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                           | Ok choice when choice.key = "BLOCKED" -> Ok (Finish (finish st (status "blocked") ~reason:"discovery procedure selection was blocked" ()))
                           | Ok choice -> run_choice choice))))
 
-  (* run-d82w run-prrv: a procedure's steps in order. A [use] runs the named procedure
-     inline with its own expectations; an [optional] one is skipped when its first step
-     ends blocked within two operator steps. A drive that ends anything but [done] ends the
-     procedure's remaining steps — the expectations decide what that means (run-k8bx). *)
+  (* run-d82w run-prrv extr-8o1h: a procedure's steps in order. An [optional]
+     [use] is skipped when its first step ends blocked within two operator steps.
+     Otherwise a non-done drive cannot silently skip remaining steps. *)
+  and control_script st book name arguments =
+    match Playbook.script_named book name with
+    | None -> Error (internal ("unknown control script " ^ name))
+    | Some script ->
+        let call ~records ~bytes ~elapsed_ms ~error =
+          P.{ script = name; url = st.observation.url; records; bytes; elapsed_ms; error } in
+        (match run_script t script arguments with
+        | Error error -> Error error
+        | Ok (Rejected { reason; elapsed_ms }) ->
+            let st = { st with pending_scripts = call ~records:0 ~bytes:0 ~elapsed_ms ~error:(Some reason) :: st.pending_scripts } in
+            Ok (st, Error reason)
+        | Ok (Collected { value; records = _; bytes; elapsed_ms }) ->
+            let st = { st with pending_scripts = call ~records:0 ~bytes ~elapsed_ms ~error:None :: st.pending_scripts } in
+            Ok (st, Ok value))
+
   and steps (st : state) (book : Playbook.loaded) (proc : Playbook.procedure) values ~optional =
     let first_drive drives = drives = [] in
     let rec go st drives = function
@@ -792,7 +842,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
               (match drive.P.final.P.dialog with
               | Some dialog -> Ok (Steps_finish (finish st (status "error") ~reason:(dialog_reason dialog) ()))
               | None ->
-                  if optional && first
+                  if optional && first && rest = []
                      && (drive_is "blocked" drive.P.status || drive_is "step-cap" drive.P.status)
                   then
                     Ok
@@ -803,7 +853,33 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                              (Printf.sprintf "procedure %s was skipped: its first step ended %s"
                                 proc.Playbook.slug (P.Drive_status.to_string drive.P.status)) ))
                   else if drive_is "done" drive.P.status then go st (entry :: drives) rest
+                  else if rest <> [] then
+                    let reason =
+                      Printf.sprintf "procedure %s stopped at step %S (%s): %s; %d step(s) remain"
+                        proc.Playbook.slug goal_text
+                        (P.Drive_status.to_string drive.P.status)
+                        (Option.value ~default:"no reason given" drive.P.reason)
+                        (List.length rest)
+                    in
+                    Ok (Steps_interrupted (st, List.rev (entry :: drives), reason))
                   else Ok (Steps_done (st, List.rev (entry :: drives), None))))
+      | Playbook.Navigate step :: rest ->
+          let arguments = match step.Playbook.args with
+            | Some (`Assoc fields) -> List.filter_map (function name, `String value -> Some (name, Playbook.substitute values value) | _ -> None) fields
+            | _ -> [] in
+          (match control_script st book step.script arguments with
+          | Error error -> Error error
+          | Ok (st, Error reason) -> Ok (Steps_failed (st, List.rev drives, reason))
+          | Ok (st, Ok value) ->
+              match value with
+              | `Assoc [ ("url", `String url) ] when
+                  String.starts_with ~prefix:"https://" url || String.starts_with ~prefix:"http://" url || url = "about:blank" ->
+                  (match navigate t url with
+                  | Error error -> Error error
+                  | Ok () -> match observe t () with
+                    | Error error -> Error error
+                    | Ok observation -> go { st with observation } drives rest)
+              | _ -> Ok (Steps_failed (st, List.rev drives, "navigation script must return {url: an http(s) URL or about:blank}")))
       | Playbook.Script step :: rest -> (
           match Playbook.script_named book step.Playbook.script with
           | None ->
@@ -900,7 +976,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                 | Some _ | None -> []
               in
               let choice =
-                { key = sub.Playbook.slug; probabilities = `Assoc []; confidence = 1.; usage = None }
+                { key = sub.Playbook.slug; probabilities = `Assoc []; confidence = 1.; usage = None; judgments = [] }
               in
               (match
                  execute st ~book ~proc:sub ~planned:false ~choice
@@ -927,9 +1003,12 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
     | Ok (Unfilled (st, reason)) -> planner st ~trigger:Arguments ~reason
     | Ok (Filled (st, values)) ->
         (* extr-ve3k: a repeat's key de-duplicates for the rest of the run, so a page read
-           twice — a replayed procedure, or a next-page step the mission level chooses
-           itself — never streams a record twice. *)
+           twice — a replayed procedure or repeated page — never streams a record twice. *)
         Option.iter (fun (repeat : Playbook.repeat) -> dedupe_key := Some repeat.key) proc.Playbook.repeat;
+        let st =
+          if proc.Playbook.repeat = None then st
+          else { st with collection_pending = true; complete = false }
+        in
         (* run-m0r8: a planner-written procedure that ran and passed its expectations is
            proposed to the operator as a file in XDG state; the run reports the path and
            never touches the playbook the operator authored. *)
@@ -962,6 +1041,14 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
           match steps st book proc values ~optional with
           | Error error -> Error error
           | Ok (Steps_finish result) -> Ok (Finish result)
+          | Ok (Steps_interrupted (st, current_drives, reason)) ->
+              let st =
+                record st ~book ~proc ~planned ~choice
+                  ~drives:(previous_drives @ current_drives) ~expectations:[]
+                  ~outcome:"failed" ~attempts:n ~elapsed:(ms (now () -. proc_started))
+                  ~reason:(Some reason)
+              in
+              Ok (Finish (finish st (status "blocked") ~reason ()))
           | Ok (Steps_failed (st, current_drives, why)) ->
               let drives = previous_drives @ current_drives in
               if n < 2 then attempt (n + 1) st drives
@@ -998,7 +1085,8 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                         (match propose_verified st with
                         | Error error -> Error error
                         | Ok st ->
-                            let st = { st with pages = st.pages + (if proc.Playbook.repeat = None then 0 else 1); complete = false } in
+                            let st = { st with pages = st.pages + (if proc.Playbook.repeat = None then 0 else 1);
+                              complete = proc.Playbook.repeat = None && not st.collection_pending && st.pending_scripts <> [] } in
                             let st = record st ~book ~proc ~planned ~choice ~drives
                               ~expectations:results ~outcome:"verified" ~attempts:n
                               ~elapsed:(ms (now () -. proc_started)) ~reason:None in
@@ -1024,20 +1112,50 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
   and paginate st ~book ~values ~choice (repeat : Playbook.repeat) =
     let next = List.find (fun (p : Playbook.procedure) -> p.slug = repeat.next)
       book.Playbook.playbook.procedures in
-    let until_checker = match Playbook.resolve book.Playbook.playbook.pages repeat.until with
-      | Ok checker -> checker | Error _ -> assert false in
+    let until_name = match repeat.until with Playbook.Expectation sentence -> sentence | Playbook.Script_check name -> "script:" ^ name in
+    let check_until st = match repeat.until with
+      | Playbook.Expectation sentence ->
+          (match Playbook.resolve book.Playbook.playbook.pages sentence with
+          | Error reason -> Error (internal reason)
+          | Ok checker -> Result.map (fun (results, observation) -> ({ st with observation }, Ok (List.for_all (fun (r : P.run_expectation) -> r.passed) results)))
+              (verify t ~pages:book.Playbook.playbook.pages ~checks:[sentence, checker] ~timeout_s:1))
+      | Playbook.Script_check name ->
+          Result.map (fun (st, result) ->
+            let trace = match st.trace with [] -> [] | entry :: rest -> { entry with P.scripts = entry.P.scripts @ List.rev st.pending_scripts } :: rest in
+            let st = { st with trace; pending_scripts = [] } in
+            st, Result.bind result (function `Assoc [("done", `Bool done_)] -> Ok done_ | _ -> Error "repeat script must return {done: boolean}"))
+            (control_script st book name values) in
+    let cap_failure st reason =
+      let trace =
+        match st.trace with
+        | [] -> []
+        | entry :: rest -> { entry with P.outcome = "failed"; reason = Some reason } :: rest
+      in
+      let recent =
+        match List.rev st.recent with
+        | [] -> []
+        | (slug, _) :: rest -> List.rev ((slug, "failed") :: rest)
+      in
+      Finish (finish { st with trace; recent } (status "failed") ~reason ())
+    in
     let rec page st index =
-      if index >= repeat.max || st.count >= args.max_procedures then Ok (Continue st)
-      else if now () >= deadline then
+      if now () >= deadline then
         Ok (Finish (finish st (status "deadline") ~reason:"repeat deadline" ()))
       else
-        match verify t ~pages:book.Playbook.playbook.pages
-          ~checks:[ (repeat.until, until_checker) ] ~timeout_s:1 with
+        match check_until st with
         | Error error -> Error (with_trace st error)
-        | Ok (until_results, observation) ->
-            let st = { st with observation } in
-            if List.for_all (fun (r : P.run_expectation) -> r.passed) until_results then
-              Ok (Continue { st with complete = true })
+        | Ok (st, Error reason) -> Ok (cap_failure st reason)
+        | Ok (st, Ok done_) ->
+            if done_ then
+              Ok (Continue { st with complete = true; collection_pending = false })
+            else if index >= repeat.max then
+              let reason = Printf.sprintf "repeat %s reached max %d before %S held"
+                repeat.next repeat.max until_name in
+              Ok (cap_failure st reason)
+            else if st.count >= args.max_procedures then
+              let reason = Printf.sprintf "repeat %s reached procedure cap %d before %S held"
+                repeat.next args.max_procedures until_name in
+              Ok (cap_failure st reason)
             else (
               pause_ms (Option.value ~default:500 repeat.delay_ms);
               if now () >= deadline then
@@ -1045,6 +1163,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
               else match steps st book next values ~optional:false with
               | Error error -> Error error
               | Ok (Steps_finish result) -> Ok (Finish result)
+              | Ok (Steps_interrupted (st, drives, reason))
               | Ok (Steps_failed (st, drives, reason)) ->
                   let st = record st ~book ~proc:next ~planned:false
                     ~choice:{ choice with key = next.slug } ~drives ~expectations:[]
@@ -1062,7 +1181,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                           ~choice:{ choice with key = next.slug } ~drives ~expectations:results
                           ~outcome:"skipped" ~attempts:1 ~elapsed:0
                           ~reason:(Some "end of pagination: next expectations failed") in
-                        Ok (Continue { st with complete = true })
+                        Ok (Continue { st with complete = true; collection_pending = false })
                       else
                         let st = { st with checks; pages = st.pages + 1 } in
                         let st = record st ~book ~proc:next ~planned:false
@@ -1076,7 +1195,10 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
      expectations of the procedure that ran last, re-verified the same way. A DONE nothing
      can verify is refused to the planner. *)
   and done_guard (st : state) (book : Playbook.loaded) ~choice =
-    let mission =
+    if st.collection_pending then
+      planner st ~trigger:Blocked
+        ~reason:"DONE was refused: the collection is incomplete; pagination has not finished"
+    else let mission =
       let rec go acc = function
         | [] -> Ok (List.rev acc)
         | sentence :: rest -> (
@@ -1196,6 +1318,25 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
           match select_playbook t question with
           | Error error -> Error (with_trace st error)
           | Ok choice -> (
+              let judgments =
+                match choice.judgments with
+                | [] ->
+                    [
+                      P.
+                        {
+                          source = "jev";
+                          key = Some choice.key;
+                          probabilities = choice.probabilities;
+                          confidence = Some choice.confidence;
+                          usage = choice.usage;
+                          note = None;
+                        };
+                    ]
+                | judgments -> judgments
+              in
+              let st =
+                { st with playbook_choices = List.rev_append judgments st.playbook_choices }
+              in
               if choice.key = "none" then
                 single_goal st
               else
@@ -1257,7 +1398,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                   match
                     List.find_opt
                       (fun (proc : Playbook.procedure) -> proc.Playbook.slug = choice.key)
-                      book.Playbook.playbook.procedures
+                      (selectable_procedures book)
                   with
                   | None ->
                       Error
@@ -1337,7 +1478,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                                     planned = false;
                                     scripts = [];
                                     attempts = 1;
-                                    choice;
+                                    choice = wire_choice choice;
                                     drives = [];
                                     expectations;
                                     outcome = "planned";
