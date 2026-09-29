@@ -15,9 +15,10 @@ flights    fresh tab on Google Flights: dry-run, then the one-way search. The
            not Leash). Only a model failure or a drive error fails the gate.
 leak       the key is in no CLI reply and no service log line.
 
-Per task the gate prints steps, decisions with top probabilities, wall time,
+Per task the gate prints operator steps, decisions with top probabilities, wall time,
 model call counts, token/cost usage from the service log (drive-7tvn), and a
-one-line-per-step trace summary.
+one-line-per-step trace summary. L38 folded the old run command into drive: the
+current CLI takes MISSION first, --tab TAB, and --max-procedures.
 """
 import json
 import os
@@ -37,7 +38,7 @@ WIKI_GOAL = "Find and open the Wikipedia article about G\u00f6del's incompletene
 FLIGHTS_URL = "https://www.google.com/travel/flights"
 FLIGHTS_GOAL = ("Search Google Flights for a one-way flight from Warsaw (WAW) to "
                 "London (LHR) leaving on October 15, 2026.")
-MAX_STEPS = 15
+MAX_PROCEDURES = 10
 DEADLINE_S = 300
 
 TRANSCRIPT = []
@@ -90,7 +91,7 @@ def top1(dist):
 
 
 def summarize(name, reply, wall_s, systemone, helper):
-    steps = reply.get("steps", [])
+    steps = reply.get("operator_steps", [])
     print(f"--- {name}: status={reply.get('status')} steps={len(steps)} "
           f"wall={wall_s:.1f}s reason={reply.get('reason', '-')}", flush=True)
     for step in steps:
@@ -121,10 +122,10 @@ def dry_run(tab, goal, name):
     before = cli("live", "snap", tab)
     pos = log_pos()
     started = time.monotonic()
-    reply = cli("live", "drive", tab, goal, "--dry-run", timeout=120)
+    reply = cli("live", "drive", goal, "--tab", tab, "--dry-run", timeout=120)
     wall = time.monotonic() - started
     systemone, helper = usage_since(pos)
-    steps = reply.get("steps", [])
+    steps = reply.get("operator_steps", [])
     assert len(steps) == 1, (name, reply)
     step = steps[0]
     op, prob = top1(step.get("probabilities", {}).get("op"))
@@ -154,8 +155,8 @@ def main():
     dry_run(wiki_tab, WIKI_GOAL, "wikipedia")
     pos = log_pos()
     started = time.monotonic()
-    wiki = cli("live", "drive", wiki_tab, WIKI_GOAL,
-               "--max-steps", MAX_STEPS, "--deadline-s", DEADLINE_S, timeout=360)
+    wiki = cli("live", "drive", WIKI_GOAL, "--tab", wiki_tab,
+               "--max-procedures", MAX_PROCEDURES, "--deadline-s", DEADLINE_S, timeout=360)
     wiki_wall = time.monotonic() - started
     wiki_sys, wiki_help = usage_since(pos)
     wiki_summary = summarize("wikipedia drive", wiki, wiki_wall, wiki_sys, wiki_help)
@@ -176,8 +177,8 @@ def main():
     pos = log_pos()
     started = time.monotonic()
     try:
-        flights = cli("live", "drive", flights_tab, FLIGHTS_GOAL,
-                      "--max-steps", MAX_STEPS, "--deadline-s", DEADLINE_S, timeout=360)
+        flights = cli("live", "drive", FLIGHTS_GOAL, "--tab", flights_tab,
+                      "--max-procedures", MAX_PROCEDURES, "--deadline-s", DEADLINE_S, timeout=360)
     except AssertionError as exc:
         raise AssertionError(f"flights drive failed at the protocol: {exc}") from exc
     flights_wall = time.monotonic() - started

@@ -260,6 +260,12 @@ let failures (results : P.run_expectation list) =
 
 type discovery = { book : Playbook.loaded; max_steps : int; max_cost : float }
 
+(* ncaps-mygj: the observation ID changes on every read; compare the visible page,
+   not download history, before deciding an action has already run here. *)
+let same_page (a : observation) (b : observation) =
+  a.url = b.url && a.title = b.title && a.text = b.text
+  && a.rows = b.rows && a.dialog = b.dialog
+
 type state = {
   steps_used : int;
   trace : P.run_procedure list;  (** Newest first. *)
@@ -275,6 +281,9 @@ type state = {
       (** run-2tt3: the mission's expectations as the planner attached them on its first
           turn, before they are resolved. A caller's own [expect] list wins over these. *)
   mission_checks : P.run_expectation list;
+  verified_pages : (string * string * observation) list;
+      (** ncaps-mygj: site, slug and visible page of successful procedures; a second
+          selection on the unchanged page must not replay their actions. *)
   playbook_choices : P.playbook_choice list;
   proposals : string list;  (** run-m0r8: the proposal files the run wrote, oldest first. *)
   count : int;  (** Procedures executed, the [use] calls and planner procedures included. *)
@@ -349,6 +358,8 @@ let with_trace (st : state) (error : P.error) =
                 | Some book -> `String book.Playbook.playbook.Playbook.site
                 | None -> `Null );
               ("procedures", `List (List.map P.yojson_of_run_procedure (List.rev st.trace)));
+              ("mission_expectations",
+                `List (List.map P.yojson_of_run_expectation st.mission_checks));
               ( "playbook_choices",
                 `List
                   (List.map P.yojson_of_playbook_choice (List.rev st.playbook_choices)) );
@@ -435,6 +446,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
       checks = [];
       mission_expect = [];
       mission_checks = [];
+      verified_pages = [];
       proposals = [];
       count = 0;
         records = [];
@@ -1087,13 +1099,20 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                         | Ok st ->
                             let st = { st with pages = st.pages + (if proc.Playbook.repeat = None then 0 else 1);
                               complete = proc.Playbook.repeat = None && not st.collection_pending && st.pending_scripts <> [] } in
+                            let site = book.Playbook.playbook.site in
+                            let st = { st with verified_pages =
+                              (site, proc.Playbook.slug, st.observation)
+                              :: List.filter (fun (saved_site, saved_slug, _) ->
+                                saved_site <> site || saved_slug <> proc.Playbook.slug)
+                                   st.verified_pages } in
                             let st = record st ~book ~proc ~planned ~choice ~drives
                               ~expectations:results ~outcome:"verified" ~attempts:n
                               ~elapsed:(ms (now () -. proc_started)) ~reason:None in
                             (match proc.Playbook.repeat with
-                            | None -> Ok (Continue st)
+                            | None -> auto_mission_done st
                             | Some repeat ->
-                                paginate st ~book ~values ~choice repeat))
+                                let* st = paginate st ~book ~values ~choice repeat in
+                                auto_mission_done st))
                       else if n < 2 then attempt (n + 1) st drives
                       else
                         let reason =
@@ -1190,6 +1209,19 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                         page st (index + 1))
     in page st 1
 
+  and resolve_mission (st : state) (book : Playbook.loaded) =
+    let rec go acc = function
+      | [] -> Ok (List.rev acc)
+      | sentence :: rest -> (
+          let sentence = Playbook.substitute st.known sentence in
+          match Playbook.resolve book.Playbook.playbook.pages sentence with
+          | Ok checker -> go ((sentence, checker) :: acc) rest
+          | Error why -> Error (invalid ("expect: " ^ why)))
+    in
+    (* run-2tt3: caller expectations take precedence over those the first planner
+       turn attached to the mission. *)
+    go [] (if args.expect <> [] then args.expect else st.mission_expect)
+
   (* run-4j1v, the L30 guard: DONE is accepted only against the mission's own expectations,
      verified now on a fresh observation, or — when the mission carries none — against the
      expectations of the procedure that ran last, re-verified the same way. A DONE nothing
@@ -1198,20 +1230,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
     if st.collection_pending then
       planner st ~trigger:Blocked
         ~reason:"DONE was refused: the collection is incomplete; pagination has not finished"
-    else let mission =
-      let rec go acc = function
-        | [] -> Ok (List.rev acc)
-        | sentence :: rest -> (
-            let sentence = Playbook.substitute st.known sentence in
-            match Playbook.resolve book.Playbook.playbook.pages sentence with
-            | Ok checker -> go ((sentence, checker) :: acc) rest
-            | Error why -> Error (invalid ("expect: " ^ why)))
-      in
-      (* run-2tt3: the mission's expectations are the caller's when the caller stated them,
-         and otherwise the ones the planner attached on its first turn. *)
-      go [] (if args.expect <> [] then args.expect else st.mission_expect)
-    in
-    match mission with
+    else match resolve_mission st book with
     | Error error -> Error error
     | Ok [] -> (
         (* The mission carries none: the last verified procedure's expectations are the
@@ -1225,7 +1244,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         | checks -> check_done st ~mission:false checks)
     | Ok checks -> check_done st ~mission:true checks
 
-  and check_done (st : state) ~mission checks =
+  and check_done ?(auto = false) (st : state) ~mission checks =
     let pages =
       match st.book with Some book -> book.Playbook.playbook.pages | None -> []
     in
@@ -1242,9 +1261,23 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         let st = if mission then { st with mission_checks = results } else st in
         if List.for_all (fun (result : P.run_expectation) -> result.P.passed) results then
           Ok (Finish (finish st (status "done") ()))
+        else if auto then Ok (Continue st)
         else
           planner st ~trigger:Blocked
             ~reason:(Printf.sprintf "DONE was refused: %s" (failures results))
+
+  (* ncaps-mygj run-4j1v: completing a verified procedure is enough when a fresh
+     observation independently satisfies every mission expectation. Do not spend an
+     additional model call just to ask for DONE. A site switch or failed check keeps
+     the normal model decision path. *)
+  and auto_mission_done (st : state) =
+    if discovery <> None || st.collection_pending then Ok (Continue st)
+    else match (st.trace, st.book) with
+    | { P.outcome = "verified"; _ } :: _, Some book -> (
+        match resolve_mission st book with
+        | Ok (_ :: _ as checks) -> check_done st ~mission:true ~auto:true checks
+        | Ok [] | Error _ -> Ok (Continue st))
+    | _ -> Ok (Continue st)
 
   (* One turn: observe, ask the playbook level when a switch is due, ask the procedure
      level, and run what it chose. *)
@@ -1406,8 +1439,20 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                            (Printf.sprintf
                               "the procedure answer names no offered procedure: %s" choice.key))
                   | Some proc ->
-                      execute st ~book ~proc ~planned:false ~choice:chosen ~optional:false
-                        ~values:[]))
+                      if List.exists (fun (site, slug, page) ->
+                          site = book.Playbook.playbook.site
+                          && slug = proc.Playbook.slug
+                          && same_page page st.observation) st.verified_pages then
+                        (* ncaps-mygj: preserve the model vote without replaying an
+                           action already verified on this unchanged page. *)
+                        let st = record st ~book ~proc ~planned:false ~choice:chosen
+                          ~drives:[] ~expectations:[] ~outcome:"skipped" ~attempts:0
+                          ~elapsed:0
+                          ~reason:(Some "already verified on this page; treating repeated selection as DONE") in
+                        done_guard st book ~choice:chosen
+                      else
+                        execute st ~book ~proc ~planned:false ~choice:chosen ~optional:false
+                          ~values:[]))
 
   (* run-fp7i: the two levels against the models, the chosen playbook and first procedure
      with its resolved checkers, and no action at all — not even the entry navigation. *)

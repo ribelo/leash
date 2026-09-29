@@ -132,7 +132,7 @@ for _ in $(seq 1 100); do
   sleep 0.1
 done
 if ! browser_alive >/dev/null; then echo 'ERROR: no headless Chrome with the test profile' >&2; exit 1; fi
-python3 scripts/live-acceptance-m4.py "$leash" "$root"
+python3 scripts/live-acceptance-m4.py "$leash" "$root" "$log"
 kill -TERM "$service_pid"
 if wait "$service_pid"; then echo 'SIGTERM: Leash exited 0'; else
   echo 'ERROR: Leash exited nonzero' >&2; sed -n '1,100p' "$log" >&2; exit 1

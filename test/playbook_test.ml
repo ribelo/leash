@@ -177,6 +177,47 @@ let grammar () =
     "run-r1e9 not another route" None
     (B.page_kind [ page ] ~url:"https://allegro.pl/koszyk" ~text:"")
 
+(* ncaps-mygj L34: the live example.com page has a browser title but no
+   "Example Domain" body heading. A body-text checker must not silently treat
+   the browser title or a URL-only page-kind match as body text. *)
+let example_title_is_not_body () =
+  let title = "Example Domain" in
+  let page =
+    B.
+      {
+        name = "example";
+        description = "";
+        url_pattern = Some "https://example.com/";
+        text_marker = Some title;
+      }
+  in
+  let body = "This domain is for use in documentation examples." in
+  let observation =
+    B.
+      {
+        kind = B.page_kind [ page ] ~url:"https://example.com/" ~text:body;
+        text = body;
+        dialog = false;
+        rows = [];
+        downloads = [];
+      }
+  in
+  Alcotest.(check (option string))
+    "URL identifies site despite missing heading" (Some "example") observation.kind;
+  let checker =
+    match B.resolve [ page ] "the page shows Example Domain" with
+    | Ok checker -> checker
+    | Error reason -> Alcotest.fail reason
+  in
+  Alcotest.(check bool)
+    "title alone does not satisfy a body-text checker" false
+    (B.await
+       ~now:(fun () -> 0.)
+       ~sleep:(fun _ -> ())
+       ~observe:(fun () -> observation)
+       ~score:(fun _ _ -> 0.)
+       ~timeout_s:0 [ checker ])
+
 (* run-xqh8 run-k8bx, L34: dismissal is verified by leaving consent, whether
    the underlying page was products, search, or an offer. Unknown is not enough. *)
 let consent_cleared () =
@@ -843,6 +884,8 @@ let () =
           Alcotest.test_case "run-seqo examples" `Quick examples;
           Alcotest.test_case "run-xqh8 offscreen offer" `Quick offscreen_offer;
           Alcotest.test_case "run-xqh8 cart outranks add" `Quick cart_after_add;
+          Alcotest.test_case "ncaps-mygj Example title is not body text" `Quick
+            example_title_is_not_body;
         ] );
       ( "L37",
         [

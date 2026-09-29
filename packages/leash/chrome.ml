@@ -156,7 +156,7 @@ let lost state generation ~origin =
     | Ok taken -> taken
     | Error `Agent_stopped -> None
   in
-  let stderr =
+  let stderr_lines =
     match taken with
     | Some (_, tail, drained) ->
         Eio.Promise.await drained;
@@ -169,8 +169,8 @@ let lost state generation ~origin =
       Log.int "generation" generation;
       Log.string "origin" origin;
       ( "stderr",
-        Ox_observability.Logger.Json (`List (List.map (fun line -> `String line) stderr))
-      );
+        Ox_observability.Logger.Json
+          (`List (List.map (fun line -> `String line) stderr_lines)) );
     ]
 
 let on_started state generation =

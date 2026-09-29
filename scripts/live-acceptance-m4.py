@@ -39,7 +39,7 @@ import sys
 import threading
 import time
 
-LEASH, ROOT = sys.argv[1:]
+LEASH, ROOT, SERVICE_LOG = sys.argv[1:]
 FOCUS_LOG = os.path.join(ROOT, "focus-argv.log")
 NOTIFY_LOG = os.path.join(ROOT, "notify-argv.log")
 
@@ -126,6 +126,17 @@ def read_log(path):
             return handle.read()
     except OSError:
         return ""
+
+
+def wait_warning(tab, step, timeout=5):
+    """hand-rg9h: resume only after the async stand-in has actually failed."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        for line in read_log(SERVICE_LOG).splitlines():
+            if f"handoff warning: {step}:" in line and tab in line:
+                return
+        time.sleep(0.05)
+    raise AssertionError(f"{step} warning for {tab} did not reach the service log")
 
 
 def main():
@@ -216,6 +227,7 @@ def main():
     failing_focus = cli("alice", "new", local + "/m4")["tab"]
     proc = handoff_async("alice", failing_focus, "fail-focus induction")
     wait_state(failing_focus, "with_human")
+    wait_warning(failing_focus, "focus")
     assert cli("human", "resume", failing_focus) == {"resumed": True}
     rc, answered = handoff_result(proc)
     assert rc == 0, (rc, answered)
@@ -224,6 +236,7 @@ def main():
     failing_notify = cli("alice", "new", local + "/m4")["tab"]
     proc = handoff_async("alice", failing_notify, "fail-notify induction")
     wait_state(failing_notify, "with_human")
+    wait_warning(failing_notify, "notify")
     assert cli("human", "resume", failing_notify) == {"resumed": True}
     rc, answered = handoff_result(proc)
     assert rc == 0, (rc, answered)

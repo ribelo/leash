@@ -593,7 +593,7 @@ let delayed_consent_recovery () =
     harness ~books:[ "automationexercise.com" ]
       ~procs:[ "find-product"; "dismiss-consent"; "find-product"; "DONE" ]
       ~observations:[ products; products; products; overlay; products; search ]
-      ~verification_observations:[ overlay; overlay; products; search; search ]
+      ~verification_observations:[ overlay; overlay; products; products; search; search ]
       ~drives:
         [
           drive ~status:"error" ~reason:"the row is covered" ();
@@ -606,6 +606,7 @@ let delayed_consent_recovery () =
           [ expectation "the page is search" "page_kind" ~passed:false ];
           [ expectation "the page is search" "page_kind" ~passed:false ];
           [ expectation "the page is products" "page_kind" ];
+          [ expectation "the page is search" "page_kind" ~passed:false ];
           [ expectation "the page is search" "page_kind" ];
           [ expectation "the page is search" "page_kind" ];
         ]
@@ -760,11 +761,14 @@ let recorded () =
             expectation "the page is search" "page_kind";
             expectation "the page shows Blue Top" "text";
           ];
+          [ expectation "the page is cart" "page_kind" ~passed:false ];
           [ expectation "the page is offer" "page_kind" ];
+          [ expectation "the page is cart" "page_kind" ~passed:false ];
           [
             expectation "the page is post-add" "page_kind";
             expectation "the page shows Added!" "text";
           ];
+          [ expectation "the page is cart" "page_kind" ~passed:false ];
           (* L30's own label for this state: the correct next procedure is go-to-cart, and
              DONE here is refused by the mission's expectation. *)
           [ expectation "the page is cart" "page_kind" ~passed:false ];
@@ -792,10 +796,50 @@ let recorded () =
     [ "find-product"; "open-offer"; "add-to-cart" ]
     (List.map (fun (entry : P.run_procedure) -> entry.P.slug) result.P.procedures)
 
+(* ncaps-mygj run-4j1v: a verified procedure may satisfy the mission's own
+   expectations; do not ask either model for another decision afterwards. *)
+let verified_mission_finishes_without_model () =
+  let h = harness ~procs:[ "step" ] () in
+  let result = ran (run ~installed:[ site_a ] h (args ~expect:[ "the page is a" ] ())) in
+  check_status "ncaps-mygj verified mission ends done" "done" result;
+  Alcotest.(check (list string))
+    "ncaps-mygj no further model choice"
+    [ "select_playbook"; "select_procedure" ]
+    h.asked;
+  Alcotest.(check int) "one execution" 1 (List.length h.steps);
+  Alcotest.(check int) "one verified procedure" 1 (List.length result.P.procedures);
+  Alcotest.(check bool)
+    "mission expectations verified" true
+    (List.for_all (fun (e : P.run_expectation) -> e.passed) result.P.mission_expectations)
+
+(* ncaps-mygj run-4j1v: reselecting a verified procedure on the same page is
+   a DONE vote, not an invitation to repeat an already successful action. *)
+let verified_procedure_is_not_replayed () =
+  let h = harness ~procs:[ "step"; "step" ] () in
+  let result = ran (run ~installed:[ site_a ] h (args ())) in
+  check_status "ncaps-mygj repeated choice ends done" "done" result;
+  Alcotest.(check int) "the operator ran once" 1 (List.length h.steps);
+  Alcotest.(check (list string))
+    "one verified and one skipped trace" [ "verified"; "skipped" ]
+    (List.map (fun (p : P.run_procedure) -> p.outcome) result.P.procedures);
+  Alcotest.(check bool)
+    "skip explains unchanged page" true
+    (match List.nth result.P.procedures 1 with
+    | { P.reason = Some reason; _ } ->
+        String.starts_with ~prefix:"already verified on this page" reason
+    | _ -> false)
+
 (* run-vspj: the procedure cap and the run deadline bound a wandering run. *)
 let limits () =
   let h =
     harness ~procs:[ "step"; "step" ]
+      ~observations:
+        [
+          observation ();
+          observation ();
+          observation ();
+          observation ~text:"new page state" ();
+        ]
       ~drives:[ drive () ]
       ~verifies:[ [ expectation "the page is a" "page_kind" ] ]
       ()
@@ -1154,6 +1198,13 @@ let collection_reported_and_deduplicated () =
   let h =
     harness
       ~procs:[ "collect"; "collect"; "DONE" ]
+      ~observations:
+        [
+          observation ();
+          observation ();
+          observation ();
+          observation ~text:"next collection page" ();
+        ]
       ~verifies:[ good; until_holds; good; until_holds; good ]
       ()
   in
@@ -1582,6 +1633,10 @@ let () =
             delayed_consent_recovery;
           Alcotest.test_case "run-4j1v run-snk4 Added! modal" `Quick added_modal;
           Alcotest.test_case "run-4mzm recorded answers" `Quick recorded;
+          Alcotest.test_case "ncaps-mygj verified mission needs no next model" `Quick
+            verified_mission_finishes_without_model;
+          Alcotest.test_case "ncaps-mygj unchanged verified procedure is not replayed"
+            `Quick verified_procedure_is_not_replayed;
           Alcotest.test_case "run-vspj caps and deadline" `Quick limits;
           Alcotest.test_case "run-fp7i dry run" `Quick dry;
           Alcotest.test_case "run-klp9 endings" `Quick endings;

@@ -48,7 +48,7 @@ Specs live at `docs/issues/<slug>/01-<slug>.md` with `status:` frontmatter. Ever
 nix develop -c dune build @install
 nix develop -c dune test
 nix develop -c dune build @fmt
-nix develop -c scripts/caps-gate
+nix develop -c scripts/caps-gate   # delegates to the gate installed with ox_caps (share/ox_caps/caps-gate)
 ```
 
 ## Safety defaults that are not up for local negotiation

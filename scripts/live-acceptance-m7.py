@@ -38,6 +38,8 @@ def cli(*args, timeout=60):
                   f"planner_turns={len(detail.get('planner_turns', []))} "
                   f"final={detail.get('final', {}).get('url')} procedures="
                   f"{[(x.get('slug'), x.get('outcome'), x.get('attempts'), len(x.get('drives', []))) for x in procedures]}", flush=True)
+            print(f"  partial mission checks={[(x.get('sentence'), x.get('checker'), x.get('passed')) for x in detail.get('mission_expectations', [])]} "
+                  f"upper choices={[(x.get('source'), x.get('key')) for x in detail.get('playbook_choices', [])]}", flush=True)
             for proc in detail.get("procedures", []):
                 print(f"  partial {proc.get('slug')}: "
                       f"drives={[(d.get('status'), str(d.get('reason'))[:120], [(s.get('operation'), s.get('index'), s.get('after', {}).get('url')) for s in d.get('steps', [])]) for d in proc.get('drives', [])]} "
@@ -87,6 +89,7 @@ def summarize(name, mission, result, elapsed, usage):
           f"JEV={len(usage['systemone usage'])} planner_turns={len(turns)} "
           f"planner_calls={len(usage['planner usage'])} "
           f"steps={steps} elapsed={elapsed:.1f}s", flush=True)
+    print(f"  mission checks={[(x.get('sentence'), x.get('checker'), x.get('passed')) for x in result.get('mission_expectations', [])]}", flush=True)
     print(f"  cost USD={cost:.9f} (System One="
           f"{sum(float(f.get('cost') or 0) for f in usage['systemone usage']):.9f}, "
           f"chat={sum(float(f.get('cost') or 0) for f in usage['planner usage'] + usage['text helper usage']):.9f}); "
@@ -199,12 +202,13 @@ def main():
         mission = ('Download the public tracemonkey.pdf test fixture on GitHub, then switch '
                    'to example.com and verify Example Domain; do not post or change anything')
         cross = timed('cross-site PDF', mission, 'drive', mission, '--tab', tab,
-                      '--expect', 'a file was downloaded', '--expect', 'the page shows Example Domain',
+                      '--expect', 'a file was downloaded', '--expect', 'the page is example',
                       '--max-procedures', 5, '--deadline-s', 240, timeout=280)
         downloads = cli('downloads', tab).get('downloads', [])
         print(f"  downloads={[(x.get('suggested_name'), x.get('state')) for x in downloads]} "
               f"sites={list(dict.fromkeys(x.get('site') for x in cross.get('procedures', [])))}", flush=True)
         assert cross.get('status') == 'done', 'cross-site mission did not reach DONE'
+        assert 'Example Domain' in cross.get('final', {}).get('title', ''), 'the final Chrome title is not Example Domain'
         assert any(x.get('site') == 'github.com' for x in cross['procedures']), 'PDF source not used'
         assert any(x.get('site') == 'example.com' for x in cross['procedures']), 'no playbook switch'
         assert len(downloads) == 1, f'expected one PDF download, got {len(downloads)}'
