@@ -25,7 +25,15 @@ type context = { tab : Protocol.Handle.t; reason : string; url : string; title :
 
 type t
 
-val create : clock:'clock Eio.Time.clock -> mgr:'mgr Eio_unix.Process.mgr -> commands -> t
+type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
+(** The two commands are programs the desktop steps start (^ncaps-4tjy). *)
+
+val create :
+  caps:caps ->
+  clock:'clock Eio.Time.clock ->
+  mgr:'mgr Eio_unix.Process.mgr ->
+  commands ->
+  t
 (** One command's whole life, over {!Ox_process.Child} with a five-second retirement
     grace: spawned on [sw], its stdout lines handed to the step that asked for it, [Ok]
     for a zero exit and [Error reason] for anything else. A command stopped because [sw]

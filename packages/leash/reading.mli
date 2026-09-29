@@ -69,7 +69,13 @@ val wait :
 
 val text : browser -> Protocol.text_args -> (Protocol.text_result, Protocol.error) result
 val eval : browser -> Protocol.eval_args -> (Protocol.eval_result, Protocol.error) result
-val shot : browser -> Protocol.shot_args -> (Protocol.shot_result, Protocol.error) result
+
+val shot :
+  caps:< Ox_caps.Cap.fs_write ; .. > ->
+  browser ->
+  Protocol.shot_args ->
+  (Protocol.shot_result, Protocol.error) result
+(** Writes the PNG to the caller's path, hence [fs_write] (^ncaps-4tjy). *)
 
 val dialog :
   browser -> Protocol.dialog_args -> (Protocol.action_result, Protocol.error) result

@@ -1,15 +1,21 @@
 open Cmdliner
 module P = Leash.Protocol
+module Cap_stdlib = Ox_caps.Cap_stdlib
+module Cap_sys = Ox_caps.Cap_sys
+
+(* ^ncaps-4tjy: every command gets its capabilities from the Door's powerbox
+   ([Ox_app.Env.caps], handed to the command builders below); nothing here touches the
+   environment, the standard streams or a file except through them. *)
 
 let obj fields = `Assoc fields
 let str s = `String s
 
-let usage msg =
-  prerr_endline ("leash: " ^ msg);
+let usage ~caps msg =
+  Cap_stdlib.prerr_endline ~caps ("leash: " ^ msg);
   2
 
-let failure msg =
-  prerr_endline ("leash: " ^ msg);
+let failure ~caps msg =
+  Cap_stdlib.prerr_endline ~caps ("leash: " ^ msg);
   1
 
 let send path request =
@@ -32,16 +38,16 @@ let cell = function
   | `Null -> "-"
   | other -> Yojson.Safe.to_string other
 
-let table command result =
+let table ~caps command result =
   let tabs = match field "tabs" result with `List xs -> xs | _ -> [] in
   match command with
   | "list" ->
       (* hand-r4t1: REASON is what the tab is waiting on the human for, "-" on every tab
          nobody is waiting on, so a human who stepped away can see what is asked. *)
-      print_endline "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER\tREASON";
+      Cap_stdlib.print_endline ~caps "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER\tREASON";
       List.iter
         (fun row ->
-          Printf.printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
+          Cap_stdlib.printf ~caps "%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
             (cell (field "tab" row))
             (cell (field "url" row))
             (cell (field "title" row))
@@ -51,10 +57,10 @@ let table command result =
             (cell (field "reason" row)))
         tabs
   | "snap" ->
-      print_endline "INDEX\tROLE\tNAME\tVALUE\tSTATE";
+      Cap_stdlib.print_endline ~caps "INDEX\tROLE\tNAME\tVALUE\tSTATE";
       (match field "rows" result with `List xs -> xs | _ -> [])
       |> List.iter (fun row ->
-          Printf.printf "%s\t%s\t%s\t%s\t%s\n"
+          Cap_stdlib.printf ~caps "%s\t%s\t%s\t%s\t%s\n"
             (cell (field "index" row))
             (cell (field "role" row))
             (cell (field "name" row))
@@ -75,21 +81,24 @@ let cli_options = [ "owner"; "pretty"; "table"; "config"; "socket" ]
    default path is the defaults, so the client works before `leash config init` has run,
    while a --config path that is not there is an error naming it, exactly what the service
    reports. A file that is there and wrong is an error either way. *)
-let service_socket ~config ~socket =
+let service_socket ~caps ~config ~socket =
   match socket with
   | Some path -> Ok path
   | None -> (
-      let source = Ox_app.Config.resolve ~name:"leash" ~config ~getenv:Sys.getenv_opt in
+      let source =
+        Ox_app.Config.resolve ~name:"leash" ~config ~getenv:(Cap_sys.getenv_opt ~caps)
+      in
       (* The Door's read outcome, not a message: a path with nothing at it is [`Missing],
          which is only an error where --config named it. *)
       let read path =
         if not (Sys.file_exists path) then Error `Missing
         else
-          try Ok (In_channel.with_open_bin path In_channel.input_all)
+          try Ok (Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all)
           with Sys_error message -> Error (`Unreadable message)
       in
       match
-        Ox_app.Config.load ~spec:Leash.Config.spec ~getenv:Sys.getenv_opt ~read ~source
+        Ox_app.Config.load ~spec:Leash.Config.spec ~getenv:(Cap_sys.getenv_opt ~caps)
+          ~read ~source
       with
       | Error (`Config message) ->
           let file = match source with `Explicit path | `Default path -> path in
@@ -104,47 +113,47 @@ let service_socket ~config ~socket =
 
 (* One request to the service and its decoded reply; an error is the exit status to
    return after saying what went wrong. *)
-let exchange ~config ~socket request =
-  match service_socket ~config ~socket with
-  | Error why -> Error (usage why)
+let exchange ~caps ~config ~socket request =
+  match service_socket ~caps ~config ~socket with
+  | Error why -> Error (usage ~caps why)
   | Ok path -> (
       try
         let raw = Yojson.Safe.from_string (send path request) in
         match P.decode_reply raw with
-        | Error why -> Error (failure ("invalid service reply: " ^ why))
+        | Error why -> Error (failure ~caps ("invalid service reply: " ^ why))
         | Ok reply -> Ok reply
       with
-      | Unix.Unix_error (code, _, _) -> Error (failure (Unix.error_message code))
-      | Eio.Io _ as err -> Error (failure (Printexc.to_string err))
-      | Yojson.Json_error msg -> Error (failure ("invalid JSON reply: " ^ msg))
-      | End_of_file -> Error (failure "service closed without a reply"))
+      | Unix.Unix_error (code, _, _) -> Error (failure ~caps (Unix.error_message code))
+      | Eio.Io _ as err -> Error (failure ~caps (Printexc.to_string err))
+      | Yojson.Json_error msg -> Error (failure ~caps ("invalid JSON reply: " ^ msg))
+      | End_of_file -> Error (failure ~caps "service closed without a reply"))
 
-let owner_of ~owner =
+let owner_of ~caps ~owner =
   match owner with
   | Some owner when String.trim owner <> "" -> Some owner
   | Some _ | None ->
-      Option.bind (Sys.getenv_opt "DSH_SESSION_ID") (fun id ->
+      Option.bind (Cap_sys.getenv_opt ~caps "DSH_SESSION_ID") (fun id ->
           if id = "" then None else Some ("dsh:" ^ id))
 
-let rec perform command fields positionals options =
+let rec perform ~caps command fields positionals options =
   match (command, positionals) with
   (* hard-xg6y hard-ovbx hard-vq5s: `net TAB` lists; `net TAB body ID` and `net TAB request
      ID` are commands of their own on the wire. *)
   | "net", [ tab; (("body" | "request") as part); id ] ->
-      perform ("net_" ^ part) [ "tab"; "id" ] [ tab; id ] options
-  | "net", [ _; verb; _ ] -> usage ("net takes body or request, not " ^ verb)
-  | "net", [ _; _ ] -> usage "net takes body ID or request ID after the tab"
+      perform ~caps ("net_" ^ part) [ "tab"; "id" ] [ tab; id ] options
+  | "net", [ _; verb; _ ] -> usage ~caps ("net takes body or request, not " ^ verb)
+  | "net", [ _; _ ] -> usage ~caps "net takes body ID or request ID after the tab"
   | "net", _ :: _ :: _ :: _ ->
-      usage "net takes a tab, and optionally body or request with an ID"
+      usage ~caps "net takes a tab, and optionally body or request with an ID"
   (* hard-o3za: the files are the trailing positionals. *)
   | "upload", tab :: snapshot :: index :: (_ :: _ as paths) ->
-      perform_wire command
+      perform_wire ~caps command
         [ "tab"; "snapshot"; "index" ]
         [ tab; snapshot; index ]
         (Some ("paths", `List (List.map str paths)) :: options)
-  | _ -> perform_wire command fields positionals options
+  | _ -> perform_wire ~caps command fields positionals options
 
-and perform_wire command fields positionals options =
+and perform_wire ~caps command fields positionals options =
   let actual = List.length positionals in
   let options = List.filter_map Fun.id options in
   let cli = List.filter (fun (name, _) -> List.mem name cli_options) options in
@@ -156,17 +165,10 @@ and perform_wire command fields positionals options =
     match List.assoc_opt name cli with Some (`String value) -> Some value | _ -> None
   in
   let pretty = flag "pretty" and use_table = flag "table" in
-  if use_table && pretty then usage "--table and --pretty cannot both be given"
+  if use_table && pretty then usage ~caps "--table and --pretty cannot both be given"
   else
-    let owner =
-      match text "owner" with
-      | Some owner when String.trim owner <> "" -> Some owner
-      | Some _ | None ->
-          Option.bind (Sys.getenv_opt "DSH_SESSION_ID") (fun id ->
-              if id = "" then None else Some ("dsh:" ^ id))
-    in
-    match owner with
-    | None -> usage "set --owner or DSH_SESSION_ID"
+    match owner_of ~caps ~owner:(text "owner") with
+    | None -> usage ~caps "set --owner or DSH_SESSION_ID"
     | Some owner -> (
         let encode_pos key value =
           if List.mem key [ "index"; "option" ] then
@@ -184,7 +186,7 @@ and perform_wire command fields positionals options =
           | Ok x :: xs -> Result.map (fun tail -> x :: tail) (collect xs)
         in
         match collect fields with
-        | Error why -> usage why
+        | Error why -> usage ~caps why
         | Ok fields -> (
             let options =
               try
@@ -200,7 +202,7 @@ and perform_wire command fields positionals options =
               with Yojson.Json_error why -> Error ("invalid JSON option: " ^ why)
             in
             match options with
-            | Error why -> usage why
+            | Error why -> usage ~caps why
             | Ok options -> (
                 let options =
                   if command <> "wait" then options
@@ -233,14 +235,15 @@ and perform_wire command fields positionals options =
                 in
                 let args = obj (fields @ options) in
                 match P.command_of_args ~cmd:command args with
-                | Error why -> usage why
+                | Error why -> usage ~caps why
                 | Ok decoded -> (
                     match P.Owner.of_string owner with
-                    | Error why -> usage why
+                    | Error why -> usage ~caps why
                     | Ok owner -> (
                         let request = P.encode_request P.{ owner; command = decoded } in
                         match
-                          exchange ~config:(text "config") ~socket:(text "socket") request
+                          exchange ~caps ~config:(text "config") ~socket:(text "socket")
+                            request
                         with
                         | Error status -> status
                         | Ok reply ->
@@ -254,9 +257,9 @@ and perform_wire command fields positionals options =
                               | P.Success _ -> true
                               | P.Failure _ -> false
                             in
-                            if use_table && ok then table command body
+                            if use_table && ok then table ~caps command body
                             else
-                              print_endline
+                              Cap_stdlib.print_endline ~caps
                                 (if pretty then Yojson.Safe.pretty_to_string body
                                  else Yojson.Safe.to_string body);
                             if ok then 0 else 1)))))
@@ -355,7 +358,7 @@ let positional_term positionals =
     (Term.const [])
     (List.mapi (fun index spec -> (index, spec)) positionals)
 
-let command ?wire name doc positionals options examples =
+let command ~caps ?wire name doc positionals options examples =
   let wire = Option.value ~default:name wire in
   let fields = List.map (fun spec -> spec.field) positionals in
   let collected =
@@ -370,15 +373,16 @@ let command ?wire name doc positionals options examples =
   in
   Cmd.v (Cmd.info name ~doc ~man)
     Term.(
-      const (fun args opts () -> perform wire fields args opts)
+      const (fun args opts () -> perform ~caps wire fields args opts)
       $ positional_term positionals $ collected)
 
 (* run-tcuz run-dbji run-ykq4: these authoring commands need no service. *)
-let playbook_command =
+let playbook_command ~caps =
   let output ?code = function
-    | Error message -> failure message
+    | Error message -> failure ~caps message
     | Ok book ->
-        print_endline (Yojson.Safe.pretty_to_string (Leash.Playbook.inspect ?code book));
+        Cap_stdlib.print_endline ~caps
+          (Yojson.Safe.pretty_to_string (Leash.Playbook.inspect ?code book));
         0
   in
   let name = Arg.(required & pos 0 (some string) None & info [] ~docv:"NAME") in
@@ -388,12 +392,13 @@ let playbook_command =
       (Cmd.info "list" ~doc:"List validated installed site playbooks.")
       Term.(
         const (fun () () ->
-            match Leash.Playbook.list () with
-            | Error message -> failure message
+            match Leash.Playbook.list ~caps () with
+            | Error message -> failure ~caps message
             | Ok books ->
                 List.iter
                   (fun (book : Leash.Playbook.loaded) ->
-                    Printf.printf "%s\t%s\n" book.playbook.site book.playbook.description)
+                    Cap_stdlib.printf ~caps "%s\t%s\n" book.playbook.site
+                      book.playbook.description)
                   books;
                 0)
         $ const ())
@@ -405,7 +410,7 @@ let playbook_command =
            "Show a named installed playbook: its scripts with their text, and resolved \
             checkers.")
       Term.(
-        const (fun name () () -> output ~code:true (Leash.Playbook.show name))
+        const (fun name () () -> output ~code:true (Leash.Playbook.show ~caps name))
         $ name $ const ())
   in
   (* extr-lslp: the local checks — the file resolves, no escape, `returns` well formed,
@@ -426,13 +431,14 @@ let playbook_command =
       in
       let installed = not (String.contains target '/') in
       match
-        if installed then Leash.Playbook.show target else Leash.Playbook.load target
+        if installed then Leash.Playbook.show ~caps target
+        else Leash.Playbook.load ~caps target
       with
-      | Error message -> failure message
+      | Error message -> failure ~caps message
       | Ok book -> (
           let local = match Leash.Playbook.inspect book with `Assoc f -> f | _ -> [] in
           let print syntax =
-            print_endline
+            Cap_stdlib.print_endline ~caps
               (Yojson.Safe.pretty_to_string (`Assoc (local @ [ ("syntax", syntax) ])))
           in
           if not installed then (
@@ -444,18 +450,19 @@ let playbook_command =
             print (`List []);
             0)
           else
-            match owner_of ~owner:(text "owner") with
-            | None -> usage "set --owner or DSH_SESSION_ID"
+            match owner_of ~caps ~owner:(text "owner") with
+            | None -> usage ~caps "set --owner or DSH_SESSION_ID"
             | Some owner -> (
                 match P.Owner.of_string owner with
-                | Error why -> usage why
+                | Error why -> usage ~caps why
                 | Ok owner -> (
                     let request =
                       P.encode_request
                         P.{ owner; command = Playbook_check { playbook = target } }
                     in
                     match
-                      exchange ~config:(text "config") ~socket:(text "socket") request
+                      exchange ~caps ~config:(text "config") ~socket:(text "socket")
+                        request
                     with
                     | Error status -> status
                     | Ok (P.Failure error) ->
@@ -486,7 +493,7 @@ let playbook_command =
   (* extr-mp5z: runs one script of an installed playbook on a tab's page; the service
      looks the script up by name, and nothing of it travels on the wire. *)
   let test =
-    command ~wire:"playbook_test" "test"
+    command ~caps ~wire:"playbook_test" "test"
       "Run one playbook script on a tab and print its validated output."
       [ pos "script" "PLAYBOOK/SCRIPT" ]
       ([
@@ -507,10 +514,10 @@ let playbook_command =
       (Cmd.info "accept" ~doc:"Merge a proposed procedure into its site's playbook.")
       Term.(
         const (fun file () () ->
-            match Leash.Playbook.accept file with
-            | Error message -> failure message
+            match Leash.Playbook.accept ~caps file with
+            | Error message -> failure ~caps message
             | Ok accepted ->
-                print_endline
+                Cap_stdlib.print_endline ~caps
                   (Yojson.Safe.pretty_to_string
                      (Leash.Playbook.yojson_of_accepted accepted));
                 0)
@@ -520,10 +527,10 @@ let playbook_command =
     (Cmd.info "playbook" ~doc:"Inspect, validate and grow site playbooks.")
     [ list; show; check; test; accept ]
 
-let commands =
+let commands ~caps =
   List.map
     (fun (name, doc, positionals, options, examples) ->
-      command name doc positionals (options @ shared_options) examples)
+      command ~caps name doc positionals (options @ shared_options) examples)
     [
       ( "new",
         "Open an agent-owned tab.",
@@ -747,7 +754,7 @@ let commands =
         ],
         [ "leash discover https://example.com --goal 'Find the documentation'" ] );
     ]
-  @ [ playbook_command ]
+  @ [ playbook_command ~caps ]
 
 let ( let* ) = Result.bind
 
@@ -758,7 +765,7 @@ let program env (config : Leash.Config.t) sw =
      seconds; production always uses the 30 s contract default. A bad value fails fast,
      before Chrome launches, rather than silently changing the cadence. *)
   let* sweep_interval =
-    match Sys.getenv_opt "LEASH_SWEEP_INTERVAL_S" with
+    match Cap_sys.getenv_opt ~caps:env.Ox_app.Env.caps "LEASH_SWEEP_INTERVAL_S" with
     | None | Some "" -> Ok None
     | Some text -> (
         match int_of_string_opt (String.trim text) with
@@ -771,7 +778,8 @@ let program env (config : Leash.Config.t) sw =
      makes its own runtime directory. The validator accepted what it can create. *)
   let* () =
     match
-      Leash.Config.ensure_dir (Leash.Config.Text.to_string config.chrome.profile_dir)
+      Leash.Config.ensure_dir ~caps:env.caps
+        (Leash.Config.Text.to_string config.chrome.profile_dir)
     with
     | Ok () -> Ok ()
     | Error message ->
@@ -780,7 +788,13 @@ let program env (config : Leash.Config.t) sw =
   let chrome =
     Leash.Chrome.create ~sw
       (Leash.Config.chrome_config config.chrome)
-      { Leash.Chrome.clock = base#clock; mgr = base#process_mgr; logger = env.logger }
+      {
+        Leash.Chrome.clock = base#clock;
+        mgr = base#process_mgr;
+        logger = env.logger;
+        (* ^ncaps-4tjy: the powerbox narrowed by ascription to what Chrome may touch. *)
+        caps = (env.caps :> Leash.Chrome.caps);
+      }
   in
   (* own-vhqo: the two expiry durations are config. The registry counts every tab down
      to them and the sweep applies them. *)
@@ -790,7 +804,9 @@ let program env (config : Leash.Config.t) sw =
   (* hand-04rb hand-phof hand-rg9h: the two human-facing commands a handoff runs go through
      Ox's child process, and the registry turns whatever they report into warnings. *)
   let desktop =
-    Leash.Desktop.create ~clock:base#clock ~mgr:base#process_mgr
+    Leash.Desktop.create
+      ~caps:(env.caps :> Leash.Desktop.caps)
+      ~clock:base#clock ~mgr:base#process_mgr
       {
         Leash.Desktop.focus_command = config.handoff.focus_command;
         notify_command = config.handoff.notify_command;
@@ -800,7 +816,7 @@ let program env (config : Leash.Config.t) sw =
     Filename.concat (Leash.Config.Text.to_string config.chrome.profile_dir) "downloads"
   in
   let* () =
-    match Leash.Config.ensure_dir download_dir with
+    match Leash.Config.ensure_dir ~caps:env.caps download_dir with
     | Ok () -> Ok ()
     | Error message -> Error (`Service ("cannot create downloads directory: " ^ message))
   in
@@ -809,7 +825,13 @@ let program env (config : Leash.Config.t) sw =
       ~cap:(Leash.Config.Tab_cap.to_int config.tabs.cap)
       ~tombstone_s:(Leash.Config.Seconds.to_int config.expiry.tombstone_s)
       ~idle ~unclaimed
-      { Leash.Tabs.chrome; clock = base#clock; logger = env.logger; desktop }
+      {
+        Leash.Tabs.chrome;
+        clock = base#clock;
+        logger = env.logger;
+        desktop;
+        caps = (env.caps :> Leash.Tabs.caps);
+      }
   in
   (* own-uo77 own-hslp: the sweep is one more service in the owner, released with the
      switch. *)
@@ -858,7 +880,7 @@ let program env (config : Leash.Config.t) sw =
    of `config` (napp-wf22), not an ordinary command: it needs no service and sends no
    request, only the path the Door reads — which is exactly the file it writes — so
    --config and its XDG resolution stay the Door's. *)
-let init_command =
+let init_command ~caps =
   let config_file =
     Arg.(
       value
@@ -868,15 +890,16 @@ let init_command =
   let force = Arg.(value & flag & info [ "force" ] ~doc:"Overwrite an existing file.") in
   let run config_file force () =
     let path =
-      Ox_app.Config.path ~name:"leash" ~config:config_file ~getenv:Sys.getenv_opt
+      Ox_app.Config.path ~name:"leash" ~config:config_file
+        ~getenv:(Cap_sys.getenv_opt ~caps)
     in
-    match Leash.Config.init ~force ~path () with
+    match Leash.Config.init ~caps ~force ~path () with
     | Ok path ->
-        print_endline path;
+        Cap_stdlib.print_endline ~caps path;
         0
     | Error (`Exists path) ->
-        usage (path ^ " already exists; pass --force to overwrite it")
-    | Error (`Write message) -> failure ("cannot write " ^ path ^ ": " ^ message)
+        usage ~caps (path ^ " already exists; pass --force to overwrite it")
+    | Error (`Write message) -> failure ~caps ("cannot write " ^ path ^ ": " ^ message)
   in
   Cmd.v
     (Cmd.info "init" ~doc:"Write a commented default configuration file.")
@@ -896,9 +919,16 @@ let telemetry ~sw env config =
                  Leash.Config.Redact.expose header.value ))
              config.otlp.headers)
 
+(* ^ncaps-4tjy: the Door mints the powerbox; the commands are built from its Env so
+   they receive it, and the program narrows it for each service. The exit around the
+   Door's code is the one raw exit the capability gate allows. *)
 let () =
   exit
-    (Ox_app.run ~name:"leash" ~service_command:"serve" ~config:Leash.Config.spec ~commands
-       ~telemetry ~config_commands:[ init_command ] ~validate:Leash.Config.validate
+    (Ox_app.run_with_args ~name:"leash" ~service_command:"serve" ~config:Leash.Config.spec
+       ~service_args:(Term.const ())
+       ~commands_with_env:(fun env _run_owned -> commands ~caps:env.Ox_app.Env.caps)
+       ~telemetry
+       ~config_commands_with_env:(fun env -> [ init_command ~caps:env.Ox_app.Env.caps ])
+       ~validate:Leash.Config.validate
        ~pp_err:(fun fmt (`Service msg) -> Format.pp_print_string fmt msg)
-       program)
+       (fun env _source config () sw -> program env config sw))

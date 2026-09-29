@@ -575,7 +575,9 @@ let failed_retry_trace () =
    The loop offers the playbook's dismiss-consent procedure, then the interrupted
    find-product again, without inventing a planner procedure or clicking through. *)
 let delayed_consent_recovery () =
-  let installed = ok (B.load "../examples/playbooks/automationexercise.com") in
+  let installed =
+    ok (B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/automationexercise.com")
+  in
   let products =
     observation ~url:"https://automationexercise.com/products" ~text:"ALL PRODUCTS" ()
   in
@@ -638,7 +640,9 @@ let delayed_consent_recovery () =
    measurement (run-snk4): the offer URL with the modal's text, whose page kind is the
    playbook's [post-add] because its text marker takes priority over the offer matcher. *)
 let added_modal () =
-  let playbook = ok (B.load "../examples/playbooks/automationexercise.com") in
+  let playbook =
+    ok (B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/automationexercise.com")
+  in
   let modal =
     observation ~url:"https://automationexercise.com/product_details/1" ~title:"Blue Top"
       ~text:"Added! Your product has been added to cart. View Cart" ()
@@ -728,7 +732,9 @@ let added_modal () =
 
 (* run-4mzm: the recorded JEV answers of the L30 measurement, replayed as a script. *)
 let recorded () =
-  let playbook = ok (B.load "../examples/playbooks/automationexercise.com") in
+  let playbook =
+    ok (B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/automationexercise.com")
+  in
   let home =
     observation ~url:"https://automationexercise.com/" ~title:"Home" ~text:"Products" ()
   in

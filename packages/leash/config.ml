@@ -387,7 +387,7 @@ let validate_otlp config =
   in
   headers 0 config.otlp.headers
 
-let validate_paths ?(getenv = Sys.getenv_opt) ~fs config =
+let validate_paths ~getenv ~fs config =
   let error pointer message = Error [ { Ox_app.Config.pointer; message } ] in
   let check pointer path expected permissions =
     let path = Eio.Path.(fs / path) in
@@ -459,39 +459,43 @@ let validate_paths ?(getenv = Sys.getenv_opt) ~fs config =
   | _ -> error "/chrome/profile_dir" "not a directory"
 
 let validate (env : Eio_unix.Stdenv.base Ox_app.Env.t) config =
-  validate_paths ~fs:env.base#fs config
+  validate_paths
+    ~getenv:(Ox_caps.Cap_sys.getenv_opt ~caps:env.caps)
+    ~fs:env.base#fs config
 
 type init_error = [ `Exists of string | `Write of string ]
 
 (* A private directory for the file, 0700 like the runtime one: a config may hold the
    models' API key. Every level up to an existing ancestor. *)
-let rec ensure_dir path =
+let rec ensure_dir ~caps path =
   if path = "" || path = "/" || path = "." then Ok ()
   else if Sys.file_exists path then Ok ()
   else
-    match ensure_dir (Filename.dirname path) with
+    match ensure_dir ~caps (Filename.dirname path) with
     | Error _ as error -> error
     | Ok () -> (
         try
-          Unix.mkdir path 0o700;
+          Ox_caps.Cap_unix.mkdir ~caps path 0o700;
           Ok ()
         with Unix.Unix_error (code, _, _) -> Error (Unix.error_message code))
 
 (* svc-x8rp: what `leash config init` writes. Without [force] an existing file is refused
    and left exactly as it was, so a typo cannot cost the operator a configuration. *)
-let init ?(force = false) ~path () =
+let init ~caps ?(force = false) ~path () =
   if (not force) && Sys.file_exists path then Error (`Exists path)
   else
-    match ensure_dir (Filename.dirname path) with
+    match ensure_dir ~caps (Filename.dirname path) with
     | Error message -> Error (`Write message)
     | Ok () -> (
         try
           let channel =
-            open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 path
+            Ox_caps.Cap_stdlib.open_out_gen ~caps
+              [ Open_wronly; Open_creat; Open_trunc; Open_binary ]
+              0o600 path
           in
           Fun.protect
             ~finally:(fun () -> close_out channel)
             (fun () -> output_string channel default_toml);
-          Unix.chmod path 0o600;
+          Ox_caps.Cap_unix.chmod ~caps path 0o600;
           Ok path
         with Sys_error message -> Error (`Write message))

@@ -267,7 +267,7 @@ let handler ~(models : Models.t) (h : harness) : R.handler =
           levels.R.plan ~deadline:(Ox.Duration.seconds 30) request);
       propose =
         (fun ~site proc ->
-          match B.propose ~site proc with
+          match B.propose ~caps:(Ox_test.powerbox ()) ~site proc with
           | Ok path ->
               h.proposed <- h.proposed @ [ path ];
               Ok path
@@ -481,7 +481,7 @@ let read_file path =
     (fun () -> really_input_string channel (in_channel_length channel))
 
 let write_file path content =
-  ignore (ok (Config.ensure_dir (Filename.dirname path)));
+  ignore (ok (Config.ensure_dir ~caps:(Ox_test.powerbox ()) (Filename.dirname path)));
   let channel =
     open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 path
   in
@@ -989,11 +989,13 @@ let proposals () =
             proposal.B.procedure.B.slug);
       ignore (Option.get !run_result);
       (* the operator accepts it *)
-      let accepted = ok (B.accept (proposal_file root "go-to-cart")) in
+      let accepted =
+        ok (B.accept ~caps:(Ox_test.powerbox ()) (proposal_file root "go-to-cart"))
+      in
       Alcotest.(check string) "run-m0r8 the accepted site" site accepted.B.site;
       Alcotest.(check string) "run-m0r8 the accepted slug" "go-to-cart" accepted.B.slug;
       Alcotest.(check bool) "run-m0r8 it was appended" false accepted.B.replaced;
-      let merged = ok (B.load (Filename.dirname file)) in
+      let merged = ok (B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname file)) in
       Alcotest.(check (list string))
         "run-m0r8 the playbook grew by one procedure" [ "step"; "go-to-cart" ]
         (List.map
@@ -1012,20 +1014,24 @@ let accept_rules () =
       let installed = playbook () in
       let file = playbook_file root in
       write_file file (Yojson.Safe.pretty_to_string (B.yojson_of_t installed.B.playbook));
-      let first = ok (B.propose ~site (ok (B.procedure_of_yojson (procedure_json ())))) in
-      let appended = ok (B.accept first) in
+      let first =
+        ok
+          (B.propose ~caps:(Ox_test.powerbox ()) ~site
+             (ok (B.procedure_of_yojson (procedure_json ()))))
+      in
+      let appended = ok (B.accept ~caps:(Ox_test.powerbox ()) first) in
       Alcotest.(check bool) "run-m0r8 the first accept appends" false appended.B.replaced;
       let revised =
         ok
           (B.procedure_of_yojson
              (procedure_json ~description:"Open the cart, revised." ()))
       in
-      let second = ok (B.propose ~site revised) in
-      let replaced = ok (B.accept second) in
+      let second = ok (B.propose ~caps:(Ox_test.powerbox ()) ~site revised) in
+      let replaced = ok (B.accept ~caps:(Ox_test.powerbox ()) second) in
       Alcotest.(check bool)
         "run-m0r8 a second proposal for the same slug replaces it" true
         replaced.B.replaced;
-      let merged = ok (B.load (Filename.dirname file)) in
+      let merged = ok (B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname file)) in
       Alcotest.(check int)
         "run-m0r8 still one procedure plus the playbook's own" 2
         (List.length merged.B.playbook.B.procedures);
@@ -1038,10 +1044,12 @@ let accept_rules () =
         "run-m0r8 the revised description is the one kept" "Open the cart, revised."
         procedure.B.description;
       (* a site no installed playbook serves *)
-      let orphan = ok (B.propose ~site:"other.example" revised) in
+      let orphan =
+        ok (B.propose ~caps:(Ox_test.powerbox ()) ~site:"other.example" revised)
+      in
       Alcotest.(check bool)
         "run-m0r8 an unserved site is refused" true
-        (match B.accept orphan with
+        (match B.accept ~caps:(Ox_test.powerbox ()) orphan with
         | Error why -> contains why "no installed playbook"
         | Ok _ -> false);
       (* a procedure the playbook could not run *)
@@ -1050,11 +1058,11 @@ let accept_rules () =
           (B.procedure_of_yojson
              (procedure_json ~slug:"bad" ~steps:[ `Assoc [ ("use", str "absent") ] ] ()))
       in
-      let bad_path = ok (B.propose ~site bad) in
+      let bad_path = ok (B.propose ~caps:(Ox_test.powerbox ()) ~site bad) in
       let before = read_file file in
       Alcotest.(check bool)
         "run-m0r8 an unrunnable procedure is refused" true
-        (match B.accept bad_path with
+        (match B.accept ~caps:(Ox_test.powerbox ()) bad_path with
         | Error why -> contains why "unknown slug"
         | Ok _ -> false);
       Alcotest.(check string)
@@ -1063,7 +1071,7 @@ let accept_rules () =
       write_file second "{ not json";
       Alcotest.(check bool)
         "run-m0r8 a file that is not JSON is refused" true
-        (match B.accept second with
+        (match B.accept ~caps:(Ox_test.powerbox ()) second with
         | Error why -> contains why "invalid JSON"
         | Ok _ -> false))
 
@@ -1170,15 +1178,17 @@ let discover_accept () =
             scripts = None;
           }
       in
-      let path = ok (B.propose_book draft) in
+      let path = ok (B.propose_book ~caps:(Ox_test.powerbox ()) draft) in
       let target =
-        Filename.concat (Filename.concat (B.directory ()) "new.example") "playbook.json"
+        Filename.concat
+          (Filename.concat (B.directory ~caps:(Ox_test.powerbox ()) ()) "new.example")
+          "playbook.json"
       in
       Alcotest.(check bool) "proposal exists" true (Sys.file_exists path);
       Alcotest.(check bool) "not installed without accept" false (Sys.file_exists target);
-      let accepted = ok (B.accept path) in
+      let accepted = ok (B.accept ~caps:(Ox_test.powerbox ()) path) in
       Alcotest.(check string) "accepted new site" target accepted.B.playbook;
-      let loaded = ok (B.load (Filename.dirname target)) in
+      let loaded = ok (B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname target)) in
       Alcotest.(check int) "page installed" 1 (List.length loaded.playbook.pages);
       Alcotest.(check int)
         "procedure installed" 1

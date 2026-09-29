@@ -18,7 +18,7 @@
  (modules run_test)
  (deps
   (source_tree ../examples/playbooks))
- (libraries leash yojson alcotest str))
+ (libraries leash ox_caps ox_test yojson alcotest str))
 
 (test
  (name choice_review_test)
@@ -49,7 +49,7 @@
  (modules playbook_test)
  (deps
   (source_tree ../examples/playbooks))
- (libraries leash yojson alcotest str unix))
+ (libraries leash ox_caps ox_test yojson alcotest str unix))
 
 (test
  (name fake_browser_test)

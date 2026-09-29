@@ -241,7 +241,7 @@
 
               # etabuild-e0gr: install committed Ox master for development.
               ox_path="''${OX_PATH:-$repo_root/../ocaml/ox}"
-              export OX_OPAM_PACKAGES="''${OX_OPAM_PACKAGES:-ox ox_app ox_process ox_ipc ox_rpc ox_json ox_observability ox_test}"
+              export OX_OPAM_PACKAGES="''${OX_OPAM_PACKAGES:-ox ox_app ox_caps ox_process ox_ipc ox_rpc ox_json ox_observability ox_test}"
               if command -v ox-opam-install >/dev/null 2>&1; then
                 OX_REPO_ROOT="$ox_path" ox-opam-install
               elif [ -d "$ox_path" ]; then
@@ -313,6 +313,8 @@
               pkgs.opam
               pkgs.patch
               pkgs.pkg-config
+              # The capability gate, scripts/caps-gate (ox ^ncaps-w6n2 ^ncaps-4tjy).
+              pkgs.semgrep
               pkgs.unzip
               pkgs.which
               setup

@@ -49,7 +49,7 @@ let with_file _suffix content f = with_playbook content (fun _ file -> f file)
 
 let expect_error needle data =
   with_playbook data (fun dir path ->
-      match B.load dir with
+      match B.load ~caps:(Ox_test.powerbox ()) dir with
       | Ok _ -> Alcotest.fail ("run-dbji accepted " ^ needle)
       | Error message ->
           Alcotest.(check bool)
@@ -85,12 +85,12 @@ let procedure ?(slug = "open") ?(expect = `List [ `String "the page is offer" ])
 let refusal () =
   (* run-tcuz extr-plaz: JSON-only, including explicit YAML refusal, and a directory. *)
   with_playbook ~name:"playbook.yaml" base (fun dir _ ->
-      match B.load dir with
+      match B.load ~caps:(Ox_test.powerbox ()) dir with
       | Error e ->
           Alcotest.(check bool) "JSON format suggested" true (String.contains e 'J')
       | Ok _ -> Alcotest.fail "accepted YAML");
   with_playbook base (fun _ file ->
-      match B.load file with
+      match B.load ~caps:(Ox_test.powerbox ()) file with
       | Error e ->
           Alcotest.(check bool)
             "extr-plaz a single file is not a playbook" true
@@ -291,7 +291,7 @@ let examples () =
   (* run-seqo run-fk99 *)
   List.iter
     (fun path ->
-      match B.load path with
+      match B.load ~caps:(Ox_test.powerbox ()) path with
       | Ok book -> Alcotest.(check bool) "resolved checkers" true (book.checks <> [])
       | Error error -> Alcotest.fail error)
     [
@@ -303,7 +303,9 @@ let examples () =
 let offscreen_offer () =
   (* run-xqh8, L34: a tiny viewport hides the product detail link; a desktop
      viewport exposes it, so scroll only when View Product is not observed. *)
-  match B.load "../examples/playbooks/automationexercise.com" with
+  match
+    B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/automationexercise.com"
+  with
   | Error error -> Alcotest.fail error
   | Ok book -> (
       match
@@ -323,7 +325,9 @@ let offscreen_offer () =
 let cart_after_add () =
   (* run-xqh8, L34: after View Cart, the prior Added! marker can linger in
      rendered text. The confirmed /view_cart URL must outrank post-add. *)
-  match B.load "../examples/playbooks/automationexercise.com" with
+  match
+    B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/automationexercise.com"
+  with
   | Error error -> Alcotest.fail error
   | Ok book ->
       Alcotest.(check (option string))
@@ -353,7 +357,7 @@ let contains needle haystack =
 
 let expect_load_error ?(files = [ list_js ]) ~story needle json =
   with_playbook ~files json (fun dir file ->
-      match B.load dir with
+      match B.load ~caps:(Ox_test.powerbox ()) dir with
       | Ok _ -> Alcotest.fail (story ^ " accepted: " ^ needle)
       | Error message ->
           Alcotest.(check bool)
@@ -375,7 +379,7 @@ let directory_and_scripts () =
       ()
   in
   with_playbook ~files:[ list_js ] json (fun dir file ->
-      match B.load dir with
+      match B.load ~caps:(Ox_test.powerbox ()) dir with
       | Error why -> Alcotest.fail ("extr-plaz " ^ why)
       | Ok book -> (
           Alcotest.(check string) "extr-plaz playbook.json is the file" file book.file;
@@ -467,12 +471,12 @@ let symlinks () =
            ());
       write (Filename.concat dir "scripts/list.js") "return [];";
       Unix.symlink "list.js" (Filename.concat dir "scripts/link.js");
-      (match B.load dir with
+      (match B.load ~caps:(Ox_test.powerbox ()) dir with
       | Ok _ -> ()
       | Error why -> Alcotest.fail ("extr-plaz a link inside the directory: " ^ why));
       Sys.remove (Filename.concat dir "scripts/link.js");
       Unix.symlink "../../outside.js" (Filename.concat dir "scripts/link.js");
-      (match B.load dir with
+      (match B.load ~caps:(Ox_test.powerbox ()) dir with
       | Ok _ -> Alcotest.fail "extr-plaz a symlink out of the directory was loaded"
       | Error why ->
           Alcotest.(check bool)
@@ -484,7 +488,7 @@ let symlinks () =
       rm_rf (Filename.concat dir "scripts");
       write (Filename.concat root "elsewhere/link.js") "return [];";
       Unix.symlink "../elsewhere" (Filename.concat dir "scripts");
-      match B.load dir with
+      match B.load ~caps:(Ox_test.powerbox ()) dir with
       | Ok _ ->
           Alcotest.fail "extr-plaz a linked directory out of the directory was loaded"
       | Error why ->
@@ -520,13 +524,13 @@ let layout () =
       write (Filename.concat playbooks "shop/playbook.json") (books ());
       write (Filename.concat playbooks "shop/scripts/list.js") "return [];";
       write (Filename.concat playbooks "shop/notes.txt") "not a playbook";
-      (match B.list () with
+      (match B.list ~caps:(Ox_test.powerbox ()) () with
       | Ok [ book ] ->
           Alcotest.(check string)
             "extr-plaz listed by directory" "books.example" book.playbook.site
       | Ok _ -> Alcotest.fail "extr-plaz the directory listed a wrong count"
       | Error why -> Alcotest.fail why);
-      (match B.show "shop" with
+      (match B.show ~caps:(Ox_test.powerbox ()) "shop" with
       | Ok book ->
           Alcotest.(check int)
             "extr-lslp show carries the scripts" 1 (List.length book.scripts);
@@ -540,11 +544,11 @@ let layout () =
             "extr-lslp both name the declared shape" true
             (contains "price" (Yojson.Safe.to_string (B.inspect book)))
       | Error why -> Alcotest.fail why);
-      (match B.show "../shop" with
+      (match B.show ~caps:(Ox_test.powerbox ()) "../shop" with
       | Ok _ -> Alcotest.fail "extr-plaz show accepted a path"
       | Error _ -> ());
       write (Filename.concat playbooks "old.json") (books ());
-      match B.list () with
+      match B.list ~caps:(Ox_test.powerbox ()) () with
       | Ok _ -> Alcotest.fail "extr-plaz a flat playbook file was ignored"
       | Error why ->
           Alcotest.(check bool)
@@ -562,7 +566,7 @@ let proposals_carry_no_scripts () =
       write path
         (books ~scripts:{|{"list":{"source":"return []","returns":[{"title":"string"}]}}|}
            ());
-      match B.accept path with
+      match B.accept ~caps:(Ox_test.powerbox ()) path with
       | Ok _ -> Alcotest.fail "extr-k40c a proposal with scripts was merged"
       | Error why ->
           Alcotest.(check bool)
@@ -675,7 +679,11 @@ let script_examples () =
 let books_toscrape_example () =
   let dir = "../examples/playbooks/books.toscrape.com" in
   let file = Filename.concat dir "repeat.json" in
-  (match B.of_json ~dir ~file (Yojson.Safe.from_file file) with
+  (match
+     B.of_json
+       ~dir:((Ox_test.powerbox () :> Ox_caps.Cap.fs_read), dir)
+       ~file (Yojson.Safe.from_file file)
+   with
   | Error why -> Alcotest.fail ("extr-tkco repeat: " ^ why)
   | Ok book ->
       let first = List.hd book.playbook.procedures in
@@ -689,7 +697,7 @@ let books_toscrape_example () =
         (match first.steps with
         | [ B.Navigate _; B.Script { script = "list-page"; _ } ] -> true
         | _ -> false));
-  match B.load "../examples/playbooks/books.toscrape.com" with
+  match B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/books.toscrape.com" with
   | Error why -> Alcotest.fail ("extr-tkco " ^ why)
   | Ok book ->
       let procedure slug =
@@ -749,7 +757,11 @@ let books_toscrape_example () =
    script that is not in the playbook is refused before anything runs. *)
 let planner_procedures () =
   with_playbook ~files:[ list_js ] (books ()) (fun dir _ ->
-      let book = match B.load dir with Ok b -> b | Error why -> Alcotest.fail why in
+      let book =
+        match B.load ~caps:(Ox_test.powerbox ()) dir with
+        | Ok b -> b
+        | Error why -> Alcotest.fail why
+      in
       let procedure json =
         match B.procedure_of_yojson (Yojson.Safe.from_string json) with
         | Ok proc -> Ok proc
@@ -797,7 +809,7 @@ let control_scripts () =
     {"slug":"next-page","description":"Next page","steps":[{"navigate":{"script":"next"}}],"expect":["no dialog is open"]}]}|}
   in
   with_playbook data (fun dir _ ->
-      match B.load dir with
+      match B.load ~caps:(Ox_test.powerbox ()) dir with
       | Error reason -> Alcotest.fail reason
       | Ok book ->
           let proc = List.hd book.playbook.procedures in

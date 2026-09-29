@@ -1,10 +1,14 @@
 module P = Protocol
 
+type caps =
+  < Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.random >
+
 type 'clock deps = {
   chrome : Chrome.t;
   clock : 'clock Eio.Time.clock;
   logger : Ox_observability.Logger.t;
   desktop : Desktop.t;
+  caps : caps;
 }
 
 let obj fields = `Assoc fields
@@ -61,10 +65,8 @@ let valid_url url =
    budget and the registry's wait cannot drift apart. *)
 let waits_for_load = function Some url -> url <> "about:blank" | None -> false
 
-let handle () =
-  let bytes =
-    In_channel.with_open_bin "/dev/urandom" (fun ch -> really_input_string ch 16)
-  in
+let handle ~caps =
+  let bytes = Ox_caps.Cap_sys.urandom ~caps 16 in
   let hex = "0123456789abcdef" in
   let buf = Buffer.create 34 in
   Buffer.add_string buf "t_";
@@ -340,6 +342,9 @@ type answer =
 
 type t = {
   chrome : Chrome.t;
+  caps : caps;
+      (** ^ncaps-4tjy: handles from the system's randomness; screenshots, [run --out] and
+          proposals written, uploads and playbooks read, the XDG directories looked up. *)
   now : unit -> float;
   sleep : float -> unit;
   await_load : unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
@@ -502,12 +507,12 @@ let register_entry ~tombstone_s ~at ledger tab state =
   in
   (ledger, entry)
 
-let new_record ~generation ~id ~session ~origin ~url ~title ~opener =
+let new_record ~fresh ~generation ~id ~session ~origin ~url ~title ~opener =
   {
     id;
     session;
     enabled_session = None;
-    handle = handle ();
+    handle = fresh ();
     url;
     title;
     origin;
@@ -535,7 +540,8 @@ let new_record ~generation ~id ~session ~origin ~url ~title ~opener =
 (* own-c0cl own-ehqa: a target Chrome reports from outside the control protocol enters the
    registry here, with the origin and owner [Discovery.born] gives it: the tab that opened
    it when the ledger knows that tab, and a human's unowned tab otherwise. *)
-let adopt ~tombstone_s ~generation ~at ledger ~id ~session (info : Discovery.target) =
+let adopt ~fresh ~tombstone_s ~generation ~at ledger ~id ~session
+    (info : Discovery.target) =
   let opener_entry =
     Option.bind info.opener (fun opener ->
         Option.bind (Keys.find_opt opener ledger.targets) (fun k ->
@@ -549,7 +555,7 @@ let adopt ~tombstone_s ~generation ~at ledger ~id ~session (info : Discovery.tar
          opener_entry)
   in
   let tab =
-    new_record ~generation ~id ~session ~origin:creator.origin
+    new_record ~fresh ~generation ~id ~session ~origin:creator.origin
       ~url:(Option.value ~default:"about:blank" info.url)
       ~title:(Option.value ~default:"" info.title)
       ~opener:info.opener
@@ -561,13 +567,15 @@ let adopt ~tombstone_s ~generation ~at ledger ~id ~session (info : Discovery.tar
 (* Targets Chrome reported while Leash was creating one of its own: the tab it created —
    which createTarget's reply has registered by now — and anything else that appeared in
    that window, a human's tab included. *)
-let flush_pending ~tombstone_s ~generation ~at ledger =
+let flush_pending ~fresh ~tombstone_s ~generation ~at ledger =
   let ledger, adopted =
     Keys.fold
       (fun id (session, info) (ledger, adopted) ->
         if Keys.mem id ledger.targets then (ledger, adopted)
         else
-          let ledger, one = adopt ~tombstone_s ~generation ~at ledger ~id ~session info in
+          let ledger, one =
+            adopt ~fresh ~tombstone_s ~generation ~at ledger ~id ~session info
+          in
           (ledger, one :: adopted))
       ledger.pending (ledger, [])
   in
@@ -576,7 +584,7 @@ let flush_pending ~tombstone_s ~generation ~at ledger =
 (* The whole behaviour of the registry's actor: one request against the current ledger,
    answered with the next ledger and what the caller needs. A refusal is an [Error] and
    leaves the ledger as it was (^nactor-7qi7). It never suspends. *)
-let fold ~logger ~tombstone_s ~generation ledger request =
+let fold ~fresh ~logger ~tombstone_s ~generation ledger request =
   let authorized = authorized ~logger ~tombstone_s ledger in
   match request with
   | Locate { access; force; caller; handle; at } -> (
@@ -663,7 +671,8 @@ let fold ~logger ~tombstone_s ~generation ledger request =
       | _ -> Ok (ledger, Nothing))
   | Register { id; session; origin; state; url; title; opener; at } ->
       let tab =
-        new_record ~generation:(generation ()) ~id ~session ~origin ~url ~title ~opener
+        new_record ~fresh ~generation:(generation ()) ~id ~session ~origin ~url ~title
+          ~opener
       in
       let ledger, entry = register_entry ~tombstone_s ~at ledger tab state in
       Ok (ledger, Entry entry)
@@ -695,7 +704,7 @@ let fold ~logger ~tombstone_s ~generation ledger request =
       if ledger.creating > 0 then Ok (ledger, Nothing)
       else
         let ledger, adopted =
-          flush_pending ~tombstone_s ~generation:(generation ()) ~at ledger
+          flush_pending ~fresh ~tombstone_s ~generation:(generation ()) ~at ledger
         in
         Ok (ledger, Adopted adopted)
   | Discover { session; info; at } -> (
@@ -718,7 +727,7 @@ let fold ~logger ~tombstone_s ~generation ledger request =
                 Nothing )
           else
             let ledger, adopted =
-              adopt ~tombstone_s ~generation:(generation ()) ~at ledger ~id:info.id
+              adopt ~fresh ~tombstone_s ~generation:(generation ()) ~at ledger ~id:info.id
                 ~session info
             in
             Ok (ledger, Adopted [ adopted ]))
@@ -1554,7 +1563,9 @@ let snap_locked t tab (args : P.snap_args) =
       else Ok (rows, settled, loader_id, guard)
     in
     let* rows, settled, loader_id, guard = attempt 2 in
-    let snapshot = enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ())) in
+    let snapshot =
+      enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ~caps:t.caps))
+    in
     tab.snapshot <- Some (snapshot, loader_id, rows);
     (* hard-sckn: what the page was when this table was taken, kept beyond the next
        navigation (which clears the table itself) so `wait --changed-since` can tell that
@@ -1652,7 +1663,8 @@ let eval t ~owner (args : P.eval_args) =
   with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.eval browser args)
 
 let shot t ~owner (args : P.shot_args) =
-  with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.shot browser args)
+  with_reading t ~access:Act ~owner args.tab (fun _ browser ->
+      Reading.shot ~caps:t.caps browser args)
 
 let debug t ~owner (args : P.debug_args) =
   let* tab = locate t ~access:Act ~owner args.tab in
@@ -1769,7 +1781,8 @@ let scroll t ~owner (args : P.scroll_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.scroll ~cdp view args)
 
 let upload t ~owner (args : P.upload_args) =
-  with_action t ~owner args.tab (fun cdp view -> Actions.upload ~cdp view args)
+  with_action t ~owner args.tab (fun cdp view ->
+      Actions.upload ~caps:t.caps ~cdp view args)
 
 let hover t ~owner (args : P.hover_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.hover ~cdp view args)
@@ -2207,10 +2220,10 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                             { book with Playbook.procedures = book.procedures @ [ proc ] };
                         Ok
                           (Filename.concat
-                             (Playbook.proposed_directory ())
+                             (Playbook.proposed_directory ~caps:t.caps ())
                              (site ^ ".json"))
                     | None -> (
-                        match Playbook.propose ~site proc with
+                        match Playbook.propose ~caps:t.caps ~site proc with
                         | Ok path -> Ok path
                         | Error why -> Error (error "internal" why)));
                 hand_off =
@@ -2248,7 +2261,9 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
               }
           in
           match
-            match installed with Some books -> Ok books | None -> Playbook.list ()
+            match installed with
+            | Some books -> Ok books
+            | None -> Playbook.list ~caps:t.caps ()
           with
           | Error why -> Error (error "invalid-request" why)
           | Ok books -> (
@@ -2263,7 +2278,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                 | None -> execute (fun _ -> Ok ())
                 | Some path -> (
                     try
-                      let channel = open_out path in
+                      let channel = Ox_caps.Cap_stdlib.open_out ~caps:t.caps path in
                       Fun.protect
                         ~finally:(fun () -> close_out channel)
                         (fun () ->
@@ -2279,14 +2294,14 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
               match !discovered with
               | None -> Ok result
               | Some book -> (
-                  match Playbook.propose_book book with
+                  match Playbook.propose_book ~caps:t.caps book with
                   | Error why -> Error (error "internal" why)
                   | Ok path -> Ok { result with P.proposals = [ path ] }))))
 
 (* extr-mp5z extr-lslp: the playbook commands that need a page. The script is looked up in
    the playbook directory by name — nothing on the wire carries script text — and [installed]
    hands a control test its playbooks the way it does a run's. *)
-let find_playbook ?installed name =
+let find_playbook ~caps ?installed name =
   match installed with
   | Some books -> (
       match
@@ -2300,7 +2315,7 @@ let find_playbook ?installed name =
           Error
             (error "invalid-request" (Printf.sprintf "no playbook %s is installed" name)))
   | None -> (
-      match Playbook.show name with
+      match Playbook.show ~caps name with
       | Ok book -> Ok book
       | Error why -> Error (error "invalid-request" why))
 
@@ -2326,7 +2341,7 @@ let playbook_test ?installed t ~owner (args : P.playbook_test_args) =
     | [ playbook; script ] when playbook <> "" && script <> "" -> Ok (playbook, script)
     | _ -> Error (error "invalid-request" "script must be <playbook>/<script>")
   in
-  let* book = find_playbook ?installed playbook in
+  let* book = find_playbook ~caps:t.caps ?installed playbook in
   let* script =
     match Playbook.script_named book name with
     | Some script -> Ok script
@@ -2359,7 +2374,7 @@ let playbook_test ?installed t ~owner (args : P.playbook_test_args) =
 (* extr-lslp: every script of the playbook is compiled, never called, in a blank page of
    its own that the caller owns for the duration and that is closed after. *)
 let playbook_check ?installed t ~owner (args : P.playbook_check_args) =
-  let* book = find_playbook ?installed args.playbook in
+  let* book = find_playbook ~caps:t.caps ?installed args.playbook in
   match book.Playbook.scripts with
   | [] -> Ok P.{ playbook = args.playbook; scripts = [] }
   | scripts -> (
@@ -2600,13 +2615,16 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Ox.Duration.minutes 30)
   let ledger =
     Ox.Actor.create ~sw ~init:empty_ledger
       ~handle:
-        (fold ~logger:deps.logger ~tombstone_s ~generation:(fun () ->
-             Chrome.generation deps.chrome))
+        (fold
+           ~fresh:(fun () -> handle ~caps:deps.caps)
+           ~logger:deps.logger ~tombstone_s
+           ~generation:(fun () -> Chrome.generation deps.chrome))
       ()
   in
   let t =
     {
       chrome = deps.chrome;
+      caps = deps.caps;
       now = (fun () -> Eio.Time.now deps.clock);
       sleep = (fun seconds -> Eio.Time.sleep deps.clock seconds);
       await_load =

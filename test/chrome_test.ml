@@ -13,8 +13,9 @@ let launch rig ~sw ~clock ~mgr:_ config =
   let fake, client = Fake.create ~sw () in
   rig.browsers <- (fake, client) :: rig.browsers;
   match
-    Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr rig.mgr)
-      ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~stderr:Pipe ~fds:[] ()
+    Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
+      ~mgr:(Ox_test.Process.mgr rig.mgr) ~argv:(Chrome.argv config)
+      ~grace:(Ox.Duration.ms 50) ~stderr:Pipe ~fds:[] ()
   with
   | Error error -> Error error
   | Ok child ->
@@ -35,6 +36,7 @@ let deps env : _ Chrome.deps =
         ~mono_clock:env#mono_clock
         ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
         ();
+    caps = (Ox_test.powerbox () :> Chrome.caps);
   }
 
 (* The mock clock only moves when the test moves it, so every wait steps it until the
@@ -122,8 +124,8 @@ let pipe_launch () =
   Ox_test.run (fun env sw ->
       let fake = Ox_test.Process.make [ Block_until_signal ] in
       match
-        Chrome.launch_pipe ~sw ~clock:env#clock ~mgr:(Ox_test.Process.mgr fake)
-          (config ())
+        Chrome.launch_pipe ~caps:(Ox_test.powerbox ()) ~sw ~clock:env#clock
+          ~mgr:(Ox_test.Process.mgr fake) (config ())
       with
       | Error _ -> Alcotest.fail "the pipe launch failed"
       | Ok (_child, transport) ->

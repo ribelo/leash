@@ -140,12 +140,17 @@ type init_error = [ `Exists of string | `Write of string ]
 (** [`Exists path] is a file already there and no [force]; [`Write message] is the
     operating system refusing the directory or the file. *)
 
-val init : ?force:bool -> path:string -> unit -> (string, init_error) result
+val init :
+  caps:< Ox_caps.Cap.fs_write ; .. > ->
+  ?force:bool ->
+  path:string ->
+  unit ->
+  (string, init_error) result
 (** svc-x8rp: write {!default_toml} to [path], creating the parent directories 0700 and
     the file 0600, and answer the path written. Without [force] an existing file is left
     exactly as it was. *)
 
-val ensure_dir : string -> (unit, string) result
+val ensure_dir : caps:< Ox_caps.Cap.fs_write ; .. > -> string -> (unit, string) result
 (** Create [path] and every missing parent, 0700; an existing path is left alone. The
     service makes the configured profile directory with it before Chrome starts. *)
 
@@ -171,13 +176,14 @@ val validate_otlp : t -> (unit, Ox_app.validation_error list) result
 (** Check the optional endpoint and collector headers without filesystem access. *)
 
 val validate_paths :
-  ?getenv:(string -> string option) ->
+  getenv:(string -> string option) ->
   fs:_ Eio.Path.t ->
   t ->
   (unit, Ox_app.validation_error list) result
 (** Non-mutating filesystem validation with the filesystem passed explicitly, and the
-    environment for a bare [chrome.binary] name's [PATH] lookup ([Sys.getenv_opt] when the
-    caller does not say). Errors carry JSON pointers and messages. *)
+    environment for a bare [chrome.binary] name's [PATH] lookup ({!validate} passes
+    [Cap_sys.getenv_opt] over the Door's powerbox, ^ncaps-4tjy). Errors carry JSON
+    pointers and messages. *)
 
 val validate :
   Eio_unix.Stdenv.base Ox_app.Env.t -> t -> (unit, Ox_app.validation_error list) result

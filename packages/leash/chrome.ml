@@ -47,10 +47,13 @@ let argv config =
   if config.headless then [ "--headless=new"; "--window-size=" ^ config.window_size ]
   else []
 
+type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
+
 type 'clock deps = {
   clock : 'clock Eio.Time.clock;
   mgr : Eio_unix.Process.mgr_ty Eio.Resource.t;
   logger : Ox_observability.Logger.t;
+  caps : caps;
 }
 
 type 'clock launch =
@@ -65,11 +68,11 @@ let fd flow =
   | Some fd -> fd
   | None -> invalid_arg "Chrome: pipe flow without a unix descriptor"
 
-let launch_pipe ~sw ~clock ~mgr config =
+let launch_pipe ~caps ~sw ~clock ~mgr config =
   let child_read, parent_write = Eio_unix.pipe sw in
   let parent_read, child_write = Eio_unix.pipe sw in
   match
-    Ox_process.Child.spawn ~sw ~clock ~mgr ~argv:(argv config) ~grace:config.grace
+    Ox_process.Child.spawn ~caps ~sw ~clock ~mgr ~argv:(argv config) ~grace:config.grace
       ~stderr:Pipe
       ~fds:[ (3, fd child_read); (4, fd child_write) ]
       ()
@@ -265,7 +268,10 @@ let restart_delay backoff ~now_ms n =
   in
   go (Ox.Schedule.start (schedule backoff)) 1
 
-let create ~sw ?(launch : 'clock launch = launch_pipe) config (deps : 'clock deps) =
+let create ~sw ?launch config (deps : 'clock deps) =
+  let launch : 'clock launch =
+    match launch with Some launch -> launch | None -> launch_pipe ~caps:deps.caps
+  in
   let stop_signal, resolve_stop = Eio.Promise.create () in
   let give_up, resolve_give_up = Eio.Promise.create () in
   let finished, resolve_finished = Eio.Promise.create () in

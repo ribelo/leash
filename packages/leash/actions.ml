@@ -704,7 +704,7 @@ let hover ~cdp tab (args : P.hover_args) =
 let max_upload_files = 10
 let max_upload_bytes = 50 * 1024 * 1024
 
-let check_files paths =
+let check_files ~caps paths =
   if paths = [] || List.length paths > max_upload_files then
     fail "invalid-request" (Printf.sprintf "upload takes 1 to %d files" max_upload_files)
   else
@@ -719,7 +719,7 @@ let check_files paths =
                 let stat = Unix.stat path in
                 if stat.Unix.st_kind <> Unix.S_REG then None
                 else (
-                  close_in (open_in_bin path);
+                  close_in (Ox_caps.Cap_stdlib.open_in_bin ~caps path);
                   Some stat.Unix.st_size)
               with Unix.Unix_error _ | Sys_error _ -> None
             with
@@ -759,10 +759,10 @@ let file_input_attributes cdp tab backend =
           then Some attributes
           else None)
 
-let upload ~cdp tab (args : P.upload_args) =
+let upload ~caps ~cdp tab (args : P.upload_args) =
   guarded tab (fun () ->
       with_result tab (fun () ->
-          let* () = check_files args.paths in
+          let* () = check_files ~caps args.paths in
           let* loader, rows = current tab args.snapshot in
           let* row, backend =
             match

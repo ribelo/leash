@@ -128,30 +128,41 @@ val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
 val yojson_of_proposal : proposal -> Yojson.Safe.t
 val yojson_of_accepted : accepted -> Yojson.Safe.t
 
-val of_json : ?dir:string -> file:string -> Yojson.Safe.t -> (loaded, string) result
+val of_json :
+  ?dir:Ox_caps.Cap.fs_read * string ->
+  file:string ->
+  Yojson.Safe.t ->
+  (loaded, string) result
 (** Validates a playbook. File scripts are resolved against [dir]: relative to it, no
     [..], and after symlinks are resolved still inside it (extr-plaz); without [dir] a
-    file script is refused. *)
+    file script is refused. A directory comes with the capability to read it
+    (^ncaps-4tjy): a playbook decoded from a message, with no directory, touches nothing.
+*)
 
-val revalidate : loaded -> t -> (loaded, string) result
+val revalidate :
+  caps:< Ox_caps.Cap.fs_read ; .. > -> loaded -> t -> (loaded, string) result
 (** [revalidate book playbook] validates another playbook value in [book]'s directory — a
     planner's procedure added, a proposal merged. *)
 
-val load : string -> (loaded, string) result
+val load : caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) result
 (** [load dir] reads [dir/playbook.json] and its scripts (extr-plaz). A path that is a
     file, and a directory that holds only a [playbook.yaml], are refused with a message
     that says what a playbook is. *)
 
 val script_named : loaded -> string -> script option
 
-val directory : unit -> string
+val directory : caps:< Ox_caps.Cap.env ; .. > -> unit -> string
 (** [$XDG_CONFIG_HOME/leash/playbooks]; each playbook is a subdirectory of it. *)
 
-val list : unit -> (loaded list, string) result
+val list :
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; .. > ->
+  unit ->
+  (loaded list, string) result
 (** Every subdirectory loaded, by name. A [.json] file left directly in the directory is
     refused: it is the old layout. *)
 
-val show : string -> (loaded, string) result
+val show :
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) result
 (** The installed playbook whose directory is called this. *)
 
 val check_procedure : ?file:string -> t -> procedure -> (unit, string) result
@@ -162,19 +173,27 @@ val check_procedure : ?file:string -> t -> procedure -> (unit, string) result
     names a page kind this playbook does not declare, which are the two ways a procedure
     from outside a file can fail to be runnable. *)
 
-val proposed_directory : unit -> string
+val proposed_directory : caps:< Ox_caps.Cap.env ; .. > -> unit -> string
 (** run-m0r8: [$XDG_STATE_HOME/leash/proposed] ([$HOME/.local/state] when the variable is
     unset), where a run writes the procedures the planner wrote and verified. The playbook
     directory is never written by a run. *)
 
-val propose_book : t -> (string, string) result
+val propose_book :
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_write ; .. > -> t -> (string, string) result
 (** Write a complete discovery proposal to XDG state, without installing it. *)
 
-val propose : site:string -> procedure -> (string, string) result
+val propose :
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_write ; .. > ->
+  site:string ->
+  procedure ->
+  (string, string) result
 (** run-m0r8: write one proposed procedure to [<proposed_directory>/<site>-<slug>.json],
     0600, and answer the path written. *)
 
-val accept : string -> (accepted, string) result
+val accept :
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
+  string ->
+  (accepted, string) result
 (** run-m0r8: merge a proposal file into the site's installed playbook — by slug,
     replacing the same one and appending otherwise — and write that playbook back. The
     merged playbook must validate first, and a site served by no playbook, by more than

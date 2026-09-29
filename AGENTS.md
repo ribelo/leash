@@ -26,6 +26,7 @@ Leash has no released users. Until 1.0, prioritize maintainability over backward
 - **Config**: TOML at `$XDG_CONFIG_HOME/leash/config.toml`, fail fast at boot. `OPENROUTER_API_KEY` in the environment overrides the file. Config and protocol shapes are plain types with `[@@deriving yojson]`; no schema DSL (ADR-0009).
 - **Models**: JEV through OpenRouter System One; a configurable OpenRouter text helper. Model output never becomes selectors, coordinates, shell, or JavaScript.
 - **Logs** to the journal through Ox observability; OTLP export optional.
+- **Capabilities.** Dangerous calls go through `Ox_caps.Cap_*` and require a capability in the signature; the Door's powerbox (`env.caps`) is narrowed by ascription for each service (ox `docs/caps.md`).
 
 ## Test seams
 
@@ -47,6 +48,7 @@ Specs live at `docs/issues/<slug>/01-<slug>.md` with `status:` frontmatter. Ever
 nix develop -c dune build @install
 nix develop -c dune test
 nix develop -c dune build @fmt
+nix develop -c scripts/caps-gate
 ```
 
 ## Safety defaults that are not up for local negotiation

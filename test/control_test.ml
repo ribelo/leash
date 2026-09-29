@@ -51,8 +51,9 @@ let rig ?reporter ?download_dir f =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
+            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
+            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -69,7 +70,12 @@ let rig ?reporter ?download_dir f =
         Chrome.create ~sw ~launch
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true ())
-          { Chrome.clock = env#clock; mgr = env#process_mgr; logger }
+          {
+            Chrome.clock = env#clock;
+            mgr = env#process_mgr;
+            logger;
+            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+          }
       in
       let tabs =
         Leash.Tabs.create ~sw ~cap:2 ~tombstone_s:3600 ?download_dir
@@ -78,6 +84,7 @@ let rig ?reporter ?download_dir f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
+            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
           }
       in
       let rec ready n =
@@ -1705,7 +1712,10 @@ let run_mission () =
       page_script f fixture modal_text;
       document_at ~title:"Blue Top" ~url:product_url f;
       let playbook =
-        match Leash.Playbook.load "../examples/playbooks/automationexercise.com" with
+        match
+          Leash.Playbook.load ~caps:(Ox_test.powerbox ())
+            "../examples/playbooks/automationexercise.com"
+        with
         | Ok book -> book
         | Error why -> Alcotest.fail why
       in
@@ -1942,10 +1952,16 @@ let run_proposal () =
           (* dune runs a test from its own directory and `dune exec` from the repository
              root; the example resolves from either. *)
           let playbook =
-            match Leash.Playbook.load "../examples/playbooks/automationexercise.com" with
+            match
+              Leash.Playbook.load ~caps:(Ox_test.powerbox ())
+                "../examples/playbooks/automationexercise.com"
+            with
             | Ok book -> book
             | Error _ -> (
-                match Leash.Playbook.load "examples/playbooks/automationexercise.com" with
+                match
+                  Leash.Playbook.load ~caps:(Ox_test.powerbox ())
+                    "examples/playbooks/automationexercise.com"
+                with
                 | Ok book -> book
                 | Error why -> Alcotest.fail why)
           in
@@ -2381,7 +2397,9 @@ let with_books f =
     (fun () ->
       write_tree root
         [ ("books/playbook.json", books_json); ("books/scripts/list.js", list_js) ];
-      match Leash.Playbook.load (Filename.concat root "books") with
+      match
+        Leash.Playbook.load ~caps:(Ox_test.powerbox ()) (Filename.concat root "books")
+      with
       | Ok book -> f book
       | Error why -> Alcotest.fail why)
 

@@ -1,5 +1,10 @@
 (* run-tcuz run-r1e9 run-2lei run-84ds run-zmz8: playbooks are author-owned
    JSON data, never model-addressable browser targets. *)
+module Cap = Ox_caps.Cap
+module Cap_stdlib = Ox_caps.Cap_stdlib
+module Cap_sys = Ox_caps.Cap_sys
+module Cap_unix = Ox_caps.Cap_unix
+
 type page = {
   name : string;
   description : string;
@@ -417,11 +422,13 @@ let ceiling_max_bytes = 16 * 1024 * 1024
 let max_inline_bytes = 4096
 let max_file_bytes = 1024 * 1024
 
+(* ^ncaps-4tjy: a directory comes with the capability to read it; a playbook decoded
+   without one (a discovery seed, a proposal) cannot name a file script. *)
 let read_script_file ~dir file =
   let ( let* ) = Result.bind in
-  let* dir =
+  let* caps, dir =
     match dir with
-    | Some dir -> Ok dir
+    | Some (caps, dir) -> Ok (caps, dir)
     | None -> Error "a file script needs a playbook directory"
   in
   let* () =
@@ -449,7 +456,7 @@ let read_script_file ~dir file =
             if st_size > max_file_bytes then
               Error (Printf.sprintf "file %s is over %d bytes" file max_file_bytes)
             else
-              try Ok (In_channel.with_open_bin real In_channel.input_all)
+              try Ok (Cap_stdlib.In_channel.with_open_bin ~caps real In_channel.input_all)
               with Sys_error why -> Error (Printf.sprintf "file %s: %s" file why))
         | _ -> Error (Printf.sprintf "file %s is not a regular file" file))
 
@@ -603,7 +610,7 @@ let validate ~file ~dir (book : t) =
       book.procedures
   in
   let* scripts = resolve_scripts ~file ~dir book in
-  Ok { file; dir; playbook = book; checks; scripts }
+  Ok { file; dir = Option.map snd dir; playbook = book; checks; scripts }
 
 let of_json ?dir ~file json =
   match t_of_yojson json with
@@ -613,12 +620,17 @@ let of_json ?dir ~file json =
 (* The playbook as another playbook value, validated in the same directory: what a merge
    or a planner's procedure needs, so a file script is resolved against the directory it
    came from. *)
-let revalidate (book : loaded) playbook = validate ~file:book.file ~dir:book.dir playbook
+let reads caps = (caps : < Cap.fs_read ; .. > :> Cap.fs_read)
+
+let revalidate ~caps (book : loaded) playbook =
+  validate ~file:book.file
+    ~dir:(Option.map (fun dir -> (reads caps, dir)) book.dir)
+    playbook
 
 (* extr-plaz: a playbook is a directory, [<name>/playbook.json] and whatever files sit
    beside it. Errors name the playbook.json path — or the path given when it is not a
    directory at all. *)
-let load dir =
+let load ~caps dir =
   let file = Filename.concat dir "playbook.json" in
   if Sys.file_exists dir && not (Sys.is_directory dir) then
     Error (dir ^ ": a playbook is a directory holding playbook.json, not a single file")
@@ -631,12 +643,12 @@ let load dir =
     else Error (file ^ ": No such file or directory")
   else
     try
-      let ch = open_in_bin file in
+      let ch = Cap_stdlib.open_in_bin ~caps file in
       Fun.protect
         ~finally:(fun () -> close_in ch)
         (fun () ->
           let json = Yojson.Safe.from_channel ch in
-          of_json ~dir ~file json)
+          of_json ~dir:(reads caps, dir) ~file json)
     with
     | Sys_error reason -> Error (file ^ ": " ^ reason)
     | Yojson.Json_error reason -> Error (file ^ ": invalid JSON: " ^ reason)
@@ -644,27 +656,32 @@ let load dir =
 let script_named (book : loaded) name =
   List.find_opt (fun (script : script) -> script.name = name) book.scripts
 
-let directory () =
+let directory ~caps () =
   let home =
-    match Sys.getenv_opt "XDG_CONFIG_HOME" with
+    match Cap_sys.getenv_opt ~caps "XDG_CONFIG_HOME" with
     | Some s when s <> "" -> s
-    | _ -> Filename.concat (Option.value ~default:"." (Sys.getenv_opt "HOME")) ".config"
+    | _ ->
+        Filename.concat
+          (Option.value ~default:"." (Cap_sys.getenv_opt ~caps "HOME"))
+          ".config"
   in
   Filename.concat (Filename.concat home "leash") "playbooks"
 
-let list () =
-  let dir = directory () in
+let list ~caps () =
+  let dir = directory ~caps () in
   if not (Sys.file_exists dir) then Ok []
   else
     try
-      let files = Sys.readdir dir |> Array.to_list |> List.sort String.compare in
+      let files =
+        Cap_sys.readdir ~caps dir |> Array.to_list |> List.sort String.compare
+      in
       let rec collect acc = function
         | [] -> Ok (List.rev acc)
         | entry :: tail ->
             let path = Filename.concat dir entry in
             if String.starts_with ~prefix:"." entry then collect acc tail
             else if Sys.is_directory path then
-              match load path with
+              match load ~caps path with
               | Error _ as error -> error
               | Ok book -> collect (book :: acc) tail
             else if
@@ -678,24 +695,26 @@ let list () =
       collect [] files
     with Sys_error reason -> Error (dir ^ ": " ^ reason)
 
-let show name =
+let show ~caps name =
   if
     name = "" || name = "." || name = ".." || String.contains name '/'
     || String.contains name '\\' || String.contains name '\000'
     || String.contains name '*' || String.contains name '?'
   then Error (name ^ ": invalid playbook name")
-  else load (Filename.concat (directory ()) name)
+  else load ~caps (Filename.concat (directory ~caps ()) name)
 
 (* run-m0r8: the XDG state directory proposals live in, resolved the way the config
    directory is: [$XDG_STATE_HOME/leash/proposed], [$HOME/.local/state] when the variable
    is unset. The run writes here and nowhere else — the playbook an operator authored is
    never touched automatically (story 32). *)
-let proposed_directory () =
+let proposed_directory ~caps () =
   let home =
-    match Sys.getenv_opt "XDG_STATE_HOME" with
+    match Cap_sys.getenv_opt ~caps "XDG_STATE_HOME" with
     | Some s when s <> "" -> s
     | _ ->
-        Filename.concat (Option.value ~default:"." (Sys.getenv_opt "HOME")) ".local/state"
+        Filename.concat
+          (Option.value ~default:"." (Cap_sys.getenv_opt ~caps "HOME"))
+          ".local/state"
   in
   Filename.concat (Filename.concat home "leash") "proposed"
 
@@ -703,10 +722,10 @@ let proposed_directory () =
    [<state>/leash/proposed/<site>-<slug>.json], 0600 in a private directory. A run calls
    this once a planner-written procedure has run and passed its expectations; it never
    writes to the playbook directory. *)
-let propose ~site (proc : procedure) =
-  let directory = proposed_directory () in
+let propose ~caps ~site (proc : procedure) =
+  let directory = proposed_directory ~caps () in
   let path = Filename.concat directory (site ^ "-" ^ proc.slug ^ ".json") in
-  match Config.ensure_dir directory with
+  match Config.ensure_dir ~caps directory with
   | Error message -> Error (path ^ ": " ^ message)
   | Ok () -> (
       let json =
@@ -715,37 +734,41 @@ let propose ~site (proc : procedure) =
       in
       try
         let channel =
-          open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 path
+          Cap_stdlib.open_out_gen ~caps
+            [ Open_wronly; Open_creat; Open_trunc; Open_binary ]
+            0o600 path
         in
         Fun.protect
           ~finally:(fun () -> close_out channel)
           (fun () -> output_string channel json);
-        Unix.chmod path 0o600;
+        Cap_unix.chmod ~caps path 0o600;
         Ok path
       with Sys_error message -> Error (path ^ ": " ^ message))
 
 (* run-3vat: the complete discovery proposal lives in XDG state, never config. *)
-let propose_book (book : t) =
-  let directory = proposed_directory () in
+let propose_book ~caps (book : t) =
+  let directory = proposed_directory ~caps () in
   let path = Filename.concat directory (book.site ^ ".json") in
-  match (validate ~file:path ~dir:None book, Config.ensure_dir directory) with
+  match (validate ~file:path ~dir:None book, Config.ensure_dir ~caps directory) with
   | Error why, _ | _, Error why -> Error why
   | Ok _, Ok () -> (
       try
         let channel =
-          open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 path
+          Cap_stdlib.open_out_gen ~caps
+            [ Open_wronly; Open_creat; Open_trunc; Open_binary ]
+            0o600 path
         in
         Fun.protect
           ~finally:(fun () -> close_out channel)
           (fun () ->
             output_string channel (Yojson.Safe.pretty_to_string (yojson_of_t book) ^ "\n"));
-        Unix.chmod path 0o600;
+        Cap_unix.chmod ~caps path 0o600;
         Ok path
       with Sys_error why -> Error (path ^ ": " ^ why))
 
-let read_proposal path =
+let read_proposal ~caps path =
   try
-    let channel = open_in_bin path in
+    let channel = Cap_stdlib.open_in_bin ~caps path in
     Fun.protect
       ~finally:(fun () -> close_in channel)
       (fun () ->
@@ -759,8 +782,8 @@ let read_proposal path =
 (* run-m0r8: the installed playbook a proposal's site names. A site served by two files is
    refused rather than guessed: the operator resolves which file is the site's before the
    merge. *)
-let installed_for_site site =
-  match list () with
+let installed_for_site ~caps site =
+  match list ~caps () with
   | Error _ as error -> error
   | Ok books -> (
       match List.filter (fun (book : loaded) -> book.playbook.site = site) books with
@@ -776,10 +799,10 @@ let installed_for_site site =
    procedure into the site's playbook by slug (replacing the same slug, appending
    otherwise), refuse the merge unless the merged playbook validates, and only then write
    it back. The proposal file is left where it is. *)
-let accept path =
+let accept ~caps path =
   let ( let* ) = Result.bind in
   let* json =
-    try Ok (Yojson.Safe.from_file path) with
+    try Ok (Cap_stdlib.In_channel.with_open_bin ~caps path Yojson.Safe.from_channel) with
     | Sys_error why -> Error (path ^ ": " ^ why)
     | Yojson.Json_error why -> Error (path ^ ": invalid JSON: " ^ why)
   in
@@ -794,7 +817,7 @@ let accept path =
       | Some _ -> Error (path ^ ": a proposed playbook cannot carry scripts")
     in
     let* existing =
-      match installed_for_site draft.site with
+      match installed_for_site ~caps draft.site with
       | Ok book -> Ok (Some book)
       | Error why when String.starts_with ~prefix:"no installed playbook" why -> Ok None
       | Error why -> Error why
@@ -802,7 +825,7 @@ let accept path =
     let merged, destination, dir, replaced =
       match existing with
       | None ->
-          let dir = Filename.concat (directory ()) draft.site in
+          let dir = Filename.concat (directory ~caps ()) draft.site in
           (draft, Filename.concat dir "playbook.json", Some dir, false)
       | Some book ->
           let pages =
@@ -828,11 +851,15 @@ let accept path =
           in
           ({ book.playbook with pages; procedures }, book.file, book.dir, true)
     in
-    let* _ = validate ~file:destination ~dir merged in
-    let* () = Config.ensure_dir (Filename.dirname destination) in
+    let* _ =
+      validate ~file:destination
+        ~dir:(Option.map (fun dir -> (reads caps, dir)) dir)
+        merged
+    in
+    let* () = Config.ensure_dir ~caps (Filename.dirname destination) in
     try
       let channel =
-        open_out_gen
+        Cap_stdlib.open_out_gen ~caps
           [ Open_wronly; Open_creat; Open_trunc; Open_binary ]
           0o600 destination
       in
@@ -843,8 +870,8 @@ let accept path =
       Ok { site = draft.site; slug = "*"; playbook = destination; replaced }
     with Sys_error why -> Error (destination ^ ": " ^ why)
   else
-    let* proposal = read_proposal path in
-    let* (book : loaded) = installed_for_site proposal.site in
+    let* proposal = read_proposal ~caps path in
+    let* (book : loaded) = installed_for_site ~caps proposal.site in
     let replaced =
       List.exists
         (fun (proc : procedure) -> proc.slug = proposal.procedure.slug)
@@ -859,11 +886,13 @@ let accept path =
       else book.playbook.procedures @ [ proposal.procedure ]
     in
     let merged = { book.playbook with procedures } in
-    let* (_ : loaded) = revalidate book merged in
+    let* (_ : loaded) = revalidate ~caps book merged in
     let json = Yojson.Safe.pretty_to_string (yojson_of_t merged) ^ "\n" in
     try
       let channel =
-        open_out_gen [ Open_wronly; Open_creat; Open_trunc; Open_binary ] 0o600 book.file
+        Cap_stdlib.open_out_gen ~caps
+          [ Open_wronly; Open_creat; Open_trunc; Open_binary ]
+          0o600 book.file
       in
       (* The operator's playbook keeps whatever mode it had: this rewrite is a merge into a
        file that already exists, and a playbook holds no secret. *)

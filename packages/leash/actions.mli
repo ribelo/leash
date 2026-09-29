@@ -101,6 +101,7 @@ val hover :
     settling let a hover menu open. *)
 
 val upload :
+  caps:< Ox_caps.Cap.fs_read ; .. > ->
   cdp:Cdp.t ->
   tab ->
   Protocol.upload_args ->

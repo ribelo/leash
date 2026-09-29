@@ -154,7 +154,12 @@ let run env ~binary ~profile =
   Eio.Switch.run (fun sw ->
       let chrome =
         Chrome.create ~sw config
-          { Chrome.clock; mgr = Eio.Stdenv.process_mgr env; logger }
+          {
+            Chrome.clock;
+            mgr = Eio.Stdenv.process_mgr env;
+            logger;
+            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+          }
       in
       let generation = await_started ~clock chrome in
       ok "started, generation %d" generation;

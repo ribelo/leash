@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Leash's capability gate (ox ^ncaps-w6n2, ^ncaps-4tjy): the fourth gate beside build,
+# test and fmt.
+#   nix develop -c scripts/caps-gate
+# Runs ox's gate script and rules, as installed with the ox_caps Leash builds against
+# (share/ox_caps beside the findlib package; OX_CAPS_GATE names another copy), over
+# packages/. Leash has no allow-list: every dangerous call goes through Ox_caps with the
+# capability in its function's signature, and the only raw call left is the entry's
+# exit (Ox_app.run_with_args ...), which the rules allow.
+set -euo pipefail
+cd "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+
+gate="${OX_CAPS_GATE:-}"
+if [ -z "$gate" ]; then
+  if ! lib_dir="$(ocamlfind query ox_caps 2>/dev/null)"; then
+    echo "caps-gate: ox_caps is not installed (ocamlfind query ox_caps failed)" >&2
+    exit 2
+  fi
+  gate="$lib_dir/../../share/ox_caps/caps-gate"
+fi
+if [ ! -f "$gate" ]; then
+  echo "caps-gate: no gate script at $gate" >&2
+  exit 2
+fi
+
+exec bash "$gate" "$@" packages

@@ -934,7 +934,7 @@ let path_validation () =
         | Error (`Config message) -> Alcotest.fail message
       in
       Eio_main.run (fun env ->
-          let check () = C.validate_paths ~fs:env#fs config in
+          let check () = C.validate_paths ~getenv:Sys.getenv_opt ~fs:env#fs config in
           Alcotest.(check bool) "missing binary" true (Result.is_error (check ()));
           let out = open_out binary in
           close_out out;
@@ -1391,7 +1391,7 @@ let unset_xdg_paths () =
         | Error (`Config message) -> Alcotest.fail message
       in
       let pointer ~fs label config =
-        match C.validate_paths ~fs config with
+        match C.validate_paths ~getenv:Sys.getenv_opt ~fs config with
         | Ok () -> Alcotest.fail (label ^ ": expected a refusal")
         | Error issues -> (List.hd issues).Ox_app.Config.pointer
       in
@@ -1478,7 +1478,7 @@ let config_init () =
   with_tree (fun root ->
       let dir = Filename.concat root "leash" in
       let path = Filename.concat dir "config.toml" in
-      (match C.init ~path () with
+      (match C.init ~caps:(Ox_test.powerbox ()) ~path () with
       | Ok written ->
           Alcotest.(check string) "svc-x8rp init answers the path it wrote" path written
       | Error _ -> Alcotest.fail "svc-x8rp init refused a fresh path");
@@ -1488,7 +1488,7 @@ let config_init () =
         "svc-x8rp the file is private" 0o600 (Unix.stat path).Unix.st_perm;
       Alcotest.(check int)
         "svc-x8rp its directory is private too" 0o700 (Unix.stat dir).Unix.st_perm;
-      (match C.init ~path () with
+      (match C.init ~caps:(Ox_test.powerbox ()) ~path () with
       | Ok _ -> Alcotest.fail "svc-x8rp init overwrote a file without --force"
       | Error (`Exists refused) ->
           Alcotest.(check string) "svc-x8rp it names what it refused" path refused
@@ -1498,7 +1498,7 @@ let config_init () =
       let out = open_out path in
       output_string out "oops = true\n";
       close_out out;
-      (match C.init ~force:true ~path () with
+      (match C.init ~caps:(Ox_test.powerbox ()) ~force:true ~path () with
       | Ok _ -> ()
       | Error _ -> Alcotest.fail "svc-x8rp init --force did not overwrite");
       Alcotest.(check string)

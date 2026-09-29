@@ -9,6 +9,7 @@
  (libraries
   ox
   ox_app
+  ox_caps
   ox_process
   ox_ipc
   ox_rpc

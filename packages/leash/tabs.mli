@@ -42,12 +42,20 @@ val authorize :
       whatever the state and whoever calls: it is the human's override for an agent that
       died without releasing, and the registry logs every use of it (own-0pnk). *)
 
+type caps =
+  < Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.random >
+(** What the registry may touch beyond its Eio values (^ncaps-4tjy): [random] for tab and
+    snapshot handles, [fs_write] for screenshots, [run --out] and playbook proposals,
+    [fs_read] for uploads and installed playbooks, [env] for the XDG directories those
+    live in. *)
+
 type 'clock deps = {
   chrome : Chrome.t;
   clock : 'clock Eio.Time.clock;
   logger : Ox_observability.Logger.t;
   desktop : Desktop.t;
       (** The human-facing steps {!handoff} runs (hand-04rb hand-phof). *)
+  caps : caps;  (** The Door's powerbox narrowed to {!caps}. *)
 }
 
 val create :

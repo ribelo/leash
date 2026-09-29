@@ -77,10 +77,16 @@ val argv : config -> string list
     [--remote-debugging-pipe] with no debugging port, [--class=leash], and
     [--headless=new] and [--window-size=1366,900] only when [headless] is true. *)
 
+type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
+(** What Chrome may touch beyond its Eio values: it starts the browser, so it forks and
+    execs (^ncaps-4tjy). Nothing else — no environment, no file outside the Eio values it
+    is given. *)
+
 type 'clock deps = {
   clock : 'clock Eio.Time.clock;
   mgr : Eio_unix.Process.mgr_ty Eio.Resource.t;
   logger : Ox_observability.Logger.t;
+  caps : caps;  (** The Door's powerbox narrowed to {!caps} (^ncaps-4tjy). *)
 }
 
 type 'clock launch =
@@ -92,10 +98,11 @@ type 'clock launch =
 (** How one generation's process and transport are created, on the child switch that the
     supervisor releases when the generation ends. *)
 
-val launch_pipe : 'clock launch
-(** The real one: two pipes, the child ends on descriptors 3 and 4, the parent ends as the
-    transport. The parent closes its copies of the child ends right after the spawn, so
-    the browser's exit reaches the CDP reader as end of input. *)
+val launch_pipe : caps:< Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; .. > -> 'clock launch
+(** The real one, given the capabilities spawning needs; {!create} passes [deps.caps]. two
+    pipes, the child ends on descriptors 3 and 4, the parent ends as the transport. The
+    parent closes its copies of the child ends right after the spawn, so the browser's
+    exit reaches the CDP reader as end of input. *)
 
 type t
 

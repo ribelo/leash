@@ -3,4 +3,4 @@
 (executable
  (public_name leash)
  (name main)
- (libraries leash ox ox_app eio eio_main yojson unix cmdliner))
+ (libraries leash ox ox_app ox_caps eio eio_main yojson unix cmdliner))

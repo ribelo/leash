@@ -465,7 +465,7 @@ let decode_png encoded =
     in
     decode 0 0
 
-let shot browser (args : P.shot_args) =
+let shot ~caps browser (args : P.shot_args) =
   if Filename.is_relative args.path then
     Error (invalid "screenshot path must be absolute")
   else
@@ -485,7 +485,7 @@ let shot browser (args : P.shot_args) =
           Error (internal "browser returned non-PNG screenshot")
         else
           try
-            let output = open_out_bin args.path in
+            let output = Ox_caps.Cap_stdlib.open_out_bin ~caps args.path in
             Fun.protect
               ~finally:(fun () -> close_out output)
               (fun () -> output_bytes output png);

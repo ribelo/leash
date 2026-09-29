@@ -169,8 +169,9 @@ let rig ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr process)
-            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
+            ~mgr:(Ox_test.Process.mgr process) ~argv:(Chrome.argv config)
+            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -184,16 +185,29 @@ let rig ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
         Chrome.create ~sw ~launch
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-human-profile"
              ~workspace:"test" ~headless:true ())
-          { Chrome.clock = env#clock; mgr = env#process_mgr; logger }
+          {
+            Chrome.clock = env#clock;
+            mgr = env#process_mgr;
+            logger;
+            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+          }
       in
       let desktop =
-        Desktop.create ~clock:env#clock
+        Desktop.create
+          ~caps:(Ox_test.powerbox () :> Desktop.caps)
+          ~clock:env#clock
           ~mgr:(if real then env#process_mgr else Ox_test.Process.mgr process)
           { Desktop.focus_command = focus; notify_command = notify }
       in
       let tabs =
         Tabs.create ~sw ~cap:128 ~tombstone_s:3600
-          { Tabs.chrome; clock = env#clock; logger; desktop }
+          {
+            Tabs.chrome;
+            clock = env#clock;
+            logger;
+            desktop;
+            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+          }
       in
       let rec ready n =
         if n = 0 then Alcotest.fail "no Chrome"

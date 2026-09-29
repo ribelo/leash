@@ -5,6 +5,9 @@
 (* hand-rg9h: five seconds is both a command's deadline for the steps a handoff waits on
    and the retirement grace of every child it starts. *)
 let step_timeout = Ox.Duration.seconds 5
+
+type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
+
 let retirement_grace = Ox.Duration.seconds 5
 
 (* hand-phof hand-rg9h: one command's whole life, as a real child. It is spawned on the
@@ -12,10 +15,10 @@ let retirement_grace = Ox.Duration.seconds 5
    five-second retirement grace and its stdout read as lines, and answers [Ok] for a zero
    exit and [Error reason] for anything else. A command stopped because that switch was
    released is cancelled, not reported. *)
-let run_command ~clock ~mgr ~sw ~argv ~on_line =
+let run_command ~caps ~clock ~mgr ~sw ~argv ~on_line =
   try
     match
-      Ox_process.Child.spawn ~sw ~clock ~mgr ~argv ~grace:retirement_grace
+      Ox_process.Child.spawn ~caps ~sw ~clock ~mgr ~argv ~grace:retirement_grace
         ~stdout:Ox_process.Child.Pipe ~fds:[] ()
     with
     | Error (`Invalid_fd descriptor) ->
@@ -141,11 +144,11 @@ let chrome_window = function
       match by_app with Some window -> id window | None -> Option.bind by_title id)
   | _ -> None
 
-let create ~clock ~mgr commands =
+let create ~(caps : caps) ~clock ~mgr commands =
   let run_bounded argv ~on_line =
     match
       Ox.Timeout.timeout ~clock step_timeout (fun () ->
-          Eio.Switch.run (fun sw -> run_command ~clock ~mgr ~sw ~argv ~on_line)
+          Eio.Switch.run (fun sw -> run_command ~caps ~clock ~mgr ~sw ~argv ~on_line)
           |> Result.map_error (fun message -> `Failed message))
     with
     | Ok () -> Ok ()
@@ -187,7 +190,7 @@ let create ~clock ~mgr commands =
     match commands.notify_command with
     | [] -> Ok ()
     | command ->
-        run_command ~clock ~mgr ~sw
+        run_command ~caps ~clock ~mgr ~sw
           ~argv:(List.map (render (values context)) command)
           ~on_line:(fun line ->
             if String.lowercase_ascii (String.trim line) = "done" then on_done ())
