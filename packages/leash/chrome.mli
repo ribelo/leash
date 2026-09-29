@@ -1,12 +1,17 @@
 (** Managed Chrome: one browser process under a restart schedule, and one CDP connection
     per browser generation.
 
-    [create] owns an {!Ox_process.Supervised} over a spawn that builds Chrome's
-    [--remote-debugging-pipe] pair, hands the child ends to descriptors 3 and 4 and speaks
-    CDP over the parents' ends. A generation ends when its process exits or its transport
-    closes; the supervisor then restarts it under the configured backoff. Losing the
-    browser is an event on {!events}, never a failure of this service: the tab registry
-    answers it by tombstoning its tabs. *)
+    [create] runs one {!Ox.Supervisor} child (Permanent, one incarnation per generation,
+    ^nactor-d120) whose start builds Chrome's [--remote-debugging-pipe] pair, hands the
+    child ends to descriptors 3 and 4 and speaks CDP over the parents' ends. A generation
+    ends when its process exits or its transport closes; the supervisor then restarts it
+    after the configured backoff (the delay is the schedule's, the attempt limit the
+    supervisor's restart intensity). A launch that fails — a typed spawn error or a defect
+    — is not a generation that exited and is not retried: the service gives up with that
+    cause. Each generation's stderr tail lives in a table owned by an {!Ox.Agent}, because
+    the launching fiber and the observer both touch it (^nactor-75ef). Losing the browser
+    is an event on {!events}, never a failure of this service: the tab registry answers it
+    by tombstoning its tabs. *)
 
 type spawn_error = Ox_process.Child.error
 (** [`Invalid_fd] or [`Duplicate_fd] from {!Ox_process.Child.spawn}. *)

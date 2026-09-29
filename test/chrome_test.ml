@@ -226,7 +226,9 @@ let gave_up () =
       let rec drain remaining gave_up =
         if remaining = 0 then Alcotest.fail "the supervisor never gave up"
         else
-          match next_event ~step:(Ox.Duration.seconds 30) ~budget:4 env chrome with
+          (* nactor-d120: a generation now passes through a supervisor's scopes before the
+             next one starts, so an event takes a few more scheduler turns than it did *)
+          match next_event ~step:(Ox.Duration.seconds 30) ~budget:12 env chrome with
           | Chrome.Stopped -> gave_up
           | Chrome.Gave_up _ -> drain (remaining - 1) true
           | _ -> drain (remaining - 1) gave_up
@@ -239,6 +241,43 @@ let gave_up () =
         ("failure recorded: " ^ Option.value ~default:"none" status.failure)
         true
         (Option.is_some status.failure))
+
+(* nactor-d120: a launch that fails — a typed spawn error or a defect — is not a generation
+   that exited, so the relaunch loop does not retry it: the service gives up with that
+   cause at once. *)
+let launch_failure_is_not_retried () =
+  let run_with launch check =
+    Ox_test.run (fun env sw ->
+        let calls = ref 0 in
+        let launch ~sw ~clock ~mgr config =
+          incr calls;
+          launch ~sw ~clock ~mgr config
+        in
+        let chrome = Chrome.create ~sw ~launch (config ()) (deps env) in
+        let rec until_stopped seen budget =
+          if budget = 0 then Alcotest.fail "the service never stopped"
+          else
+            match next_event ~step:(Ox.Duration.seconds 30) ~budget:12 env chrome with
+            | Chrome.Stopped -> List.rev seen
+            | event -> until_stopped (event :: seen) (budget - 1)
+        in
+        let events = until_stopped [] 10 in
+        Alcotest.(check int) "launched exactly once" 1 !calls;
+        check events;
+        Alcotest.(check bool) "terminal" true ((Chrome.status chrome).phase = `Stopped))
+  in
+  run_with
+    (fun ~sw:_ ~clock:_ ~mgr:_ _ -> Error (`Invalid_fd 3))
+    (function
+      | [ Chrome.Gave_up (Ox.Cause.Fail (`Spawn (`Invalid_fd 3))) ] -> ()
+      | _ -> Alcotest.fail "expected Gave_up with the spawn error, then Stopped");
+  let boom = Failure "launch defect" in
+  run_with
+    (fun ~sw:_ ~clock:_ ~mgr:_ _ -> raise boom)
+    (function
+      | [ Chrome.Gave_up (Ox.Cause.Die (ex, _)) ] ->
+          Alcotest.(check bool) "the original exception" true (ex == boom)
+      | _ -> Alcotest.fail "expected Gave_up with the defect, then Stopped")
 
 let orderly_stop () =
   (* chrome-b288 *)
@@ -329,6 +368,8 @@ let () =
           Alcotest.test_case "unavailable while restarting" `Quick
             unavailable_during_restart;
           Alcotest.test_case "give up after the schedule" `Quick gave_up;
+          Alcotest.test_case "nactor-d120 a failed launch is not retried" `Quick
+            launch_failure_is_not_retried;
           Alcotest.test_case "orderly stop" `Quick orderly_stop;
         ] );
     ]

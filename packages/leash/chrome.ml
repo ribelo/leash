@@ -104,7 +104,13 @@ module Log = struct
   let string name value = (name, Ox_observability.Logger.String value)
 end
 
+(* Each generation's stderr tail and the promise that says its reader reached end of input.
+   The launching fiber adds an entry and the observer takes it when the generation is lost:
+   two fibers, one table, so an {!Ox.Agent} owns it and serializes both (^nactor-75ef). *)
+type tails = (int * Chrome_stderr.t * unit Eio.Promise.t) list
+
 type state = {
+  tails : tails Ox.Agent.t;
   signals :
     [ `Supervised of spawn_error Ox_process.Supervised.event | `Transport_closed of int ]
     Eio.Stream.t;
@@ -115,11 +121,20 @@ type state = {
   mutable current : (int * Cdp.t) option;
   mutable failure : string option;
   mutable pending : Cdp.t option;
-  mutable stderr_tails : (int * Chrome_stderr.t * unit Eio.Promise.t) list;
   mutable closed_before_start : int option;
+  mutable spawns : int;
+  mutable abandoned : reason Ox.Cause.t option;
+      (** A launch that failed (a typed spawn error or a defect) is not retried: the
+          supervisor is stopped and the cause is what the service gave up with. *)
+  stop_signal : unit Eio.Promise.t;
+  resolve_stop : unit Eio.Promise.u;
+  give_up : unit Eio.Promise.t;
+  resolve_give_up : unit Eio.Promise.u;
+  finished : unit Eio.Promise.t;
+  resolve_finished : unit Eio.Promise.u;
 }
 
-type t = { state : state; supervised : spawn_error Ox_process.Supervised.t }
+type t = { state : state }
 
 let publish state event =
   if Eio.Stream.length state.events >= 32 then
@@ -129,12 +144,19 @@ let publish state event =
 let lost state generation ~origin =
   state.current <- None;
   state.phase <- `Restarting;
+  let taken =
+    match
+      Ox.Agent.get_and_update state.tails ~fn:(fun tails ->
+          ( List.find_opt (fun (n, _, _) -> n = generation) tails,
+            List.filter (fun (n, _, _) -> n <> generation) tails ))
+    with
+    | Ok taken -> taken
+    | Error `Agent_stopped -> None
+  in
   let stderr =
-    match List.find_opt (fun (n, _, _) -> n = generation) state.stderr_tails with
+    match taken with
     | Some (_, tail, drained) ->
         Eio.Promise.await drained;
-        state.stderr_tails <-
-          List.filter (fun (n, _, _) -> n <> generation) state.stderr_tails;
         Chrome_stderr.lines tail
     | None -> []
   in
@@ -204,9 +226,52 @@ let rec observe state : [ `Stop_daemon ] =
   | `Transport_closed generation -> on_transport_closed state generation);
   observe state
 
+(* The relaunch loop is one Permanent {!Ox.Supervisor} child: an incarnation is one Chrome
+   generation, and it fails with the process's exit so the supervisor starts the next
+   (^nactor-d120). The child's error type is what the incarnation ended with; the service
+   reports it as the reason it gave up with. *)
+type failure = [ `Spawn of spawn_error | `Exited of Ox_process.Child.exit ]
+
+let reason_of_failure : failure -> reason = function
+  | `Spawn error -> `Spawn error
+  | `Exited exit -> `Schedule_exhausted exit
+
+let rec reason_cause : failure Ox.Cause.t -> reason Ox.Cause.t = function
+  | Ox.Cause.Fail failure -> Ox.Cause.Fail (reason_of_failure failure)
+  | Ox.Cause.Die (exn, bt) -> Ox.Cause.Die (exn, bt)
+  | Ox.Cause.Interrupt id -> Ox.Cause.Interrupt id
+  | Ox.Cause.Finalizer cause -> Ox.Cause.Finalizer (reason_cause cause)
+  | Ox.Cause.Suppressed { primary; finalizer } ->
+      Ox.Cause.Suppressed
+        { primary = reason_cause primary; finalizer = reason_cause finalizer }
+  | Ox.Cause.Concurrent causes -> Ox.Cause.Concurrent (List.map reason_cause causes)
+
+let rec has_defect = function
+  | Ox.Cause.Die _ -> true
+  | Ox.Cause.Finalizer cause -> has_defect cause
+  | Ox.Cause.Suppressed { primary; finalizer } ->
+      has_defect primary || has_defect finalizer
+  | Ox.Cause.Concurrent causes -> List.exists has_defect causes
+  | Ox.Cause.Fail _ | Ox.Cause.Interrupt _ -> false
+
+(* The delay before restart number [n] (from 1): the configured schedule, stepped [n]
+   times. It is the same exponential, capped schedule the process supervisor applied. *)
+let restart_delay backoff ~now_ms n =
+  let rec go driver i =
+    match Ox.Schedule.step ~now_ms ~input:(Ox_process.Child.Exited 1) driver with
+    | Ox.Schedule.Continue metadata, next ->
+        if i >= n then Some metadata.delay else go next (i + 1)
+    | Ox.Schedule.Done _, _ -> None
+  in
+  go (Ox.Schedule.start (schedule backoff)) 1
+
 let create ~sw ?(launch : 'clock launch = launch_pipe) config (deps : 'clock deps) =
+  let stop_signal, resolve_stop = Eio.Promise.create () in
+  let give_up, resolve_give_up = Eio.Promise.create () in
+  let finished, resolve_finished = Eio.Promise.create () in
   let state =
     {
+      tails = Ox.Agent.create ~sw ~init:(fun () -> []) ();
       signals = Eio.Stream.create max_int;
       events = Eio.Stream.create 32;
       logger = deps.logger;
@@ -215,60 +280,175 @@ let create ~sw ?(launch : 'clock launch = launch_pipe) config (deps : 'clock dep
       current = None;
       failure = None;
       pending = None;
-      stderr_tails = [];
       closed_before_start = None;
+      spawns = 0;
+      abandoned = None;
+      stop_signal;
+      resolve_stop;
+      give_up;
+      resolve_give_up;
+      finished;
+      resolve_finished;
     }
   in
-  let spawns = ref 0 in
-  let spawn ~sw:child_sw =
-    match launch ~sw:child_sw ~clock:deps.clock ~mgr:deps.mgr config with
-    | Error error -> Error error
-    | Ok (child, transport) ->
-        incr spawns;
-        let generation = !spawns in
-        let cdp = Cdp.create ~sw:child_sw ~clock:deps.clock transport in
-        let tail = Chrome_stderr.create () in
-        let drained, resolve = Eio.Promise.create () in
-        state.stderr_tails <- (generation, tail, drained) :: state.stderr_tails;
-        (match Ox_process.Child.stderr child with
-        | None -> Eio.Promise.resolve resolve ()
-        | Some source ->
-            Eio.Fiber.fork ~sw:child_sw (fun () ->
-                Fun.protect
-                  ~finally:(fun () -> Eio.Promise.resolve resolve ())
-                  (fun () -> Chrome_stderr.read tail source)));
-        state.pending <- Some cdp;
-        Eio.Fiber.fork_daemon ~sw:child_sw (fun () ->
-            let _reason = Eio.Promise.await (Cdp.closed cdp) in
-            Eio.Stream.add state.signals (`Transport_closed generation);
-            (* The generation is over either way: a browser we cannot talk to still holds
-               the profile lock, so the process is retired before the restart. *)
-            ignore (Ox_process.Child.stop child);
-            `Stop_daemon);
-        Ok child
+  let push signal = Eio.Stream.add state.signals signal in
+  let abandon cause = if state.abandoned = None then state.abandoned <- Some cause in
+  let pause (ctx : failure Ox.Supervisor.context) delay =
+    Eio.Fiber.first
+      (fun () -> Eio.Time.sleep deps.clock (Ox.Duration.to_seconds_float delay))
+      (fun () -> Eio.Promise.await ctx.stop_requested)
   in
-  let supervised =
-    Ox_process.Supervised.start ~sw ~clock:deps.clock ~schedule:(schedule config.backoff)
-      ~spawn
+  let start_generation (ctx : failure Ox.Supervisor.context) =
+    match state.abandoned with
+    | Some _ ->
+        (* the launch failed for good; the service is being stopped, nothing more spawns *)
+        ctx.ready ();
+        Eio.Promise.await ctx.stop_requested;
+        Ok ()
+    | None -> (
+        (if ctx.incarnation > 1 then
+           let now_ms = int_of_float (Eio.Time.now deps.clock *. 1000.) in
+           match restart_delay config.backoff ~now_ms (ctx.incarnation - 1) with
+           | Some delay -> pause ctx delay
+           | None -> ());
+        if Eio.Promise.is_resolved ctx.stop_requested then Ok ()
+        else
+          let child_sw = Ox.Scope.switch ctx.scope in
+          match launch ~sw:child_sw ~clock:deps.clock ~mgr:deps.mgr config with
+          | exception (Eio.Cancel.Cancelled _ as ex) -> raise ex
+          | exception ex ->
+              let bt = Printexc.get_raw_backtrace () in
+              abandon (Ox.Cause.Die (ex, bt));
+              Printexc.raise_with_backtrace ex bt
+          | Error error ->
+              abandon (Ox.Cause.Fail (`Spawn error));
+              Error (`Spawn error)
+          | Ok (child, transport) -> (
+              state.spawns <- state.spawns + 1;
+              let generation = state.spawns in
+              let cdp = Cdp.create ~sw:child_sw ~clock:deps.clock transport in
+              let tail = Chrome_stderr.create () in
+              let drained, resolve = Eio.Promise.create () in
+              ignore
+                (Ox.Agent.update state.tails ~fn:(fun tails ->
+                     (generation, tail, drained) :: tails));
+              (match Ox_process.Child.stderr child with
+              | None -> Eio.Promise.resolve resolve ()
+              | Some source ->
+                  Eio.Fiber.fork ~sw:child_sw (fun () ->
+                      Fun.protect
+                        ~finally:(fun () -> Eio.Promise.resolve resolve ())
+                        (fun () -> Chrome_stderr.read tail source)));
+              state.pending <- Some cdp;
+              Eio.Fiber.fork_daemon ~sw:child_sw (fun () ->
+                  let _reason = Eio.Promise.await (Cdp.closed cdp) in
+                  push (`Transport_closed generation);
+                  (* The generation is over either way: a browser we cannot talk to still
+                     holds the profile lock, so the process is retired before the restart. *)
+                  ignore (Ox_process.Child.stop child);
+                  `Stop_daemon);
+              push (`Supervised (Ox_process.Supervised.Started generation));
+              ctx.ready ();
+              match
+                Eio.Fiber.first
+                  (fun () -> `Exited (Ox_process.Child.await child))
+                  (fun () ->
+                    Eio.Promise.await ctx.stop_requested;
+                    `Stop)
+              with
+              | `Exited exit ->
+                  (* An [Error] ends the child's scope by cancelling its fibers, so the
+                     stderr reader is allowed to reach end of input first: the generation's
+                     diagnostics are complete when it is reported lost. *)
+                  Eio.Promise.await drained;
+                  (* One turn between [Started] and an exit that follows at once: a reader
+                     that has just taken [Started] still finds its connection, as it did
+                     when the exit crossed the process supervisor's fibers. *)
+                  Eio.Fiber.yield ();
+                  push (`Supervised (Ox_process.Supervised.Exited (generation, exit)));
+                  Error (`Exited exit)
+              | `Stop -> Ok ()))
   in
+  let pp_failure ppf = function
+    | `Spawn error -> Format.fprintf ppf "spawn: %a" pp_reason (`Spawn error)
+    | `Exited exit -> pp_reason ppf (`Schedule_exhausted exit)
+  in
+  let on_event = function
+    | Ox.Supervisor.Child_exited { cause = Some cause; induced = false; _ } ->
+        if has_defect cause then
+          Log.lifecycle state.logger Ox_observability.Logger.Error
+            ~msg:"chrome generation ended with a defect"
+            [ Log.string "cause" (Format.asprintf "%a" (Ox.Cause.pp pp_failure) cause) ];
+        if state.abandoned <> None && not (Eio.Promise.is_resolved state.give_up) then
+          Eio.Promise.resolve state.resolve_give_up ()
+    | _ -> ()
+  in
+  let intensity =
+    {
+      Ox.Supervisor.max_restarts = config.backoff.attempts;
+      window = Ox.Duration.days 36500;
+    }
+  in
+  let gave_up cause = push (`Supervised (Ox_process.Supervised.Gave_up cause)) in
   Eio.Fiber.fork_daemon ~sw (fun () ->
-      let rec forward () : [ `Stop_daemon ] =
-        Eio.Stream.add state.signals
-          (`Supervised (Eio.Stream.take (Ox_process.Supervised.events supervised)));
-        forward ()
+      let run () =
+        match
+          Ox.Scope.supervised_error ~sw (fun scope ->
+              match
+                Ox.Supervisor.start ~scope ~clock:deps.clock ~intensity ~on_event
+                  ~strategy:Ox.Supervisor.One_for_one
+                  [
+                    Ox.Supervisor.child ~id:"chrome" ~restart:Ox.Supervisor.Permanent
+                      ~shutdown:Ox.Supervisor.Infinity start_generation;
+                  ]
+              with
+              | Error (`Invalid_supervisor message) ->
+                  invalid_arg ("Chrome.create: " ^ message)
+              | Error (`Start_failed failure) ->
+                  gave_up
+                    (match state.abandoned with
+                    | Some cause -> cause
+                    | None -> reason_cause failure.Ox.Supervisor.cause);
+                  Ok ()
+              | Ok supervisor ->
+                  Eio.Fiber.first
+                    (fun () -> ignore (Ox.Supervisor.await supervisor))
+                    (fun () ->
+                      Eio.Fiber.first
+                        (fun () -> Eio.Promise.await state.stop_signal)
+                        (fun () ->
+                          Eio.Promise.await state.give_up;
+                          Option.iter gave_up state.abandoned);
+                      ignore (Ox.Supervisor.stop supervisor));
+                  Ok ())
+        with
+        | Ok () -> ()
+        | Error (`Restart_intensity_exceeded exceeded) ->
+            gave_up
+              (match exceeded.Ox.Supervisor.last_cause with
+              | Some cause -> reason_cause cause
+              | None -> Ox.Cause.Fail (`Schedule_exhausted (Ox_process.Child.Exited 0)))
       in
-      forward ());
+      let result =
+        match run () with
+        | () -> Ok ()
+        | exception Eio.Cancel.Cancelled _ -> Ok ()
+        | exception ex ->
+            let bt = Printexc.get_raw_backtrace () in
+            gave_up (Ox.Cause.Die (ex, bt));
+            Error ex
+      in
+      Eio.Cancel.protect (fun () ->
+          push (`Supervised Ox_process.Supervised.Stopped);
+          Eio.Promise.resolve state.resolve_finished ());
+      match result with Ok () -> `Stop_daemon | Error ex -> raise ex);
   Eio.Fiber.fork_daemon ~sw (fun () -> observe state);
-  { state; supervised }
+  { state }
 
-let generation t = Ox_process.Supervised.generation t.supervised
+let generation t = t.state.spawns
 
 let status t =
-  {
-    generation = Ox_process.Supervised.generation t.supervised;
-    phase = t.state.phase;
-    failure = t.state.failure;
-  }
+  { generation = t.state.spawns; phase = t.state.phase; failure = t.state.failure }
 
 let connection t =
   match (t.state.phase, t.state.current) with
@@ -276,4 +456,9 @@ let connection t =
   | _ -> Error `Browser_unavailable
 
 let events t = t.state.events
-let stop t = Ox_process.Supervised.stop t.supervised
+
+let stop t =
+  Eio.Cancel.protect (fun () ->
+      if not (Eio.Promise.is_resolved t.state.stop_signal) then
+        Eio.Promise.resolve t.state.resolve_stop ();
+      Eio.Promise.await t.state.finished)
