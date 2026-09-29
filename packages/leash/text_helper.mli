@@ -1,7 +1,7 @@
 (** The text helper a [type_text] step writes its value with (drive-ls3c drive-fh1h).
 
-    L19 defined the seam; L22 fills it with eta-next's chat client: {!create} is one
-    OpenAI-compatible completion over the service's {!Eta_ai_chat} client — [json_object]
+    L19 defined the seam; L22 fills it with ox's chat client: {!create} is one
+    OpenAI-compatible completion over the service's {!Ox_ai_chat} client — [json_object]
     on, reasoning off, [max_tokens] 1024, the pinned [Config.text_model] — whose system
     message is {!Questions.text_value} and whose user message is jev's [field_context].
     The reply must parse as [{"text": string | null}]. Everything the helper needs from a
@@ -27,7 +27,7 @@ type context = {
     drive's history, oldest first. *)
 
 type t = {
-  complete : ?deadline:Eta.Duration.t -> context -> (string option, Protocol.error) result;
+  complete : ?deadline:Ox.Duration.t -> context -> (string option, Protocol.error) result;
 }
 (** One configured text helper. [complete] answers the value to type, [Ok None] when the
     model answered [null] — the value is missing, and the drive ends [blocked] naming the
@@ -41,7 +41,7 @@ type t = {
     helper cannot outlast the reply the client waits for (drive-ix5t). *)
 
 val create :
-  client:Eta_ai_chat.t -> model:string -> logger:Eta_observability.Logger.t -> unit -> t
+  client:Ox_ai_chat.t -> model:string -> logger:Ox_observability.Logger.t -> unit -> t
 (** [create ~client ~model ~logger ()] is the helper over the service's one chat client,
     for the configured [model]. One instance serves one drive: it remembers the context it
     last answered and reuses that answer when the identical context comes back — what a

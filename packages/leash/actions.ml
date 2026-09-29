@@ -3,7 +3,7 @@
    tab-1lhx tab-8la3. *)
 
 module P = Protocol
-module E = Eta_json
+module E = Ox_json
 
 let ( let* ) = Result.bind
 let ( let+ ) result f = Result.map f result
@@ -43,7 +43,7 @@ type tab = {
    action's failure and is never replayed (tab-1lhx). Every call is bounded by the one
    deadline, a dispatch included: a reply that is withheld is settled by the popup or by
    the target's death, never by a bound of the dispatch's own (tab-0ohq). *)
-let call_deadline = Eta.Duration.seconds 30
+let call_deadline = Ox.Duration.seconds 30
 
 type failure = Refused of int * string | Transport of string
 
@@ -69,7 +69,7 @@ let call cdp ~session method_ params =
 
 (* The two probes a dispatch that ran out the CDP deadline still makes: is the page
    answering at all, and does the browser still know the target (own-ehqa own-teh1). *)
-let liveness_timeout = Eta.Duration.seconds 2
+let liveness_timeout = Ox.Duration.seconds 2
 
 let disposition name =
   match P.Disposition.of_string name with Ok d -> d | Error _ -> assert false
@@ -404,7 +404,7 @@ let settle_suggestions cdp tab =
   let rec poll remaining =
     if remaining = 0 then ()
     else
-      match evaluate ~deadline:(Eta.Duration.ms 20) cdp tab suggestions_expression with
+      match evaluate ~deadline:(Ox.Duration.ms 20) cdp tab suggestions_expression with
       | Error _ -> ()
       | Ok json -> (
           match E.Of_json.(at [ "result"; "value" ] (try_or_none bool)) json with
@@ -415,7 +415,7 @@ let settle_suggestions cdp tab =
 
 let settle cdp tab ~combobox =
   if combobox then settle_suggestions cdp tab
-  else ignore (evaluate ~deadline:(Eta.Duration.ms 50) cdp tab frames_expression);
+  else ignore (evaluate ~deadline:(Ox.Duration.ms 50) cdp tab frames_expression);
   Ok ()
 
 let focus_row cdp tab backend =
@@ -519,7 +519,7 @@ let insert_text cdp tab text =
    dialog blocks the renderer, and the reply must still report that dialog. *)
 let blur cdp tab =
   ignore
-    (evaluate ~deadline:(Eta.Duration.seconds 1) cdp tab
+    (evaluate ~deadline:(Ox.Duration.seconds 1) cdp tab
        "document.activeElement && document.activeElement.blur()");
   Ok ()
 

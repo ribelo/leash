@@ -10,6 +10,6 @@
 
 ## Consequences
 
-- The System One contract is the one SmartRouter already uses, built into `eta_ai_openrouter` (Eta ticket `etaso`).
+- The System One contract is the one SmartRouter already uses, built into `ox_ai_openrouter` (Ox ticket `etaso`).
 - Defaults: 30 steps, 120 seconds. Per-step waits are bounded as in jev-ultrafast (suggestions after typing up to 200 ms, otherwise two frames or 50 ms).
 - The trace records probabilities so a human can audit why a step happened.

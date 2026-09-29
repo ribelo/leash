@@ -6,7 +6,7 @@
 module P = Leash.Protocol
 module Fake = Leash_test_support.Fake_browser
 module Chrome = Leash.Chrome
-module E = Eta_json
+module E = Ox_json
 
 let o fields = E.object_ (List.map (fun (k, v) -> (k, Some v)) fields)
 let s = E.string
@@ -70,9 +70,9 @@ let request tabs who command =
 let check_code label expected reply = Alcotest.(check string) label expected (code reply)
 
 let rig f =
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let mgr =
-        Eta_test.Process.make
+        Ox_test.Process.make
           [ Block_until_signal; Block_until_signal; Block_until_signal ]
       in
       let current = ref None in
@@ -80,16 +80,16 @@ let rig f =
         let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
       in
       let logger =
-        Eta_observability.Logger.create ~service:"leash-actions-tests" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"leash-actions-tests" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+          ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
           ()
       in
       let chrome =
@@ -1353,7 +1353,7 @@ let slow_reply_settles () =
             Some
               (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
       wait_for_press fake;
-      Eta_test.advance env#clock (Eta.Duration.seconds 3);
+      Ox_test.advance env#clock (Ox.Duration.seconds 3);
       ignore (result (await ~sw "tab-1lhx the slow reply" cell));
       Alcotest.(check (list string))
         "tab-1lhx the slow reply is not a second dispatch"
@@ -1397,7 +1397,7 @@ let silent_page_unavailable () =
         | None ->
             if n = 0 then Alcotest.fail "tab-0ohq the silent click never replied"
             else (
-              Eta_test.advance env#clock (Eta.Duration.seconds 1);
+              Ox_test.advance env#clock (Ox.Duration.seconds 1);
               (* The probes between two bounds are round trips through the fake; yielding
                  once per virtual second would expire their deadlines before their answers
                  are read. *)
@@ -1469,7 +1469,7 @@ let self_closing_click_probe () =
         | None ->
             if n = 0 then Alcotest.fail "own-teh1 the self-closing click never replied"
             else (
-              Eta_test.advance env#clock (Eta.Duration.seconds 1);
+              Ox_test.advance env#clock (Ox.Duration.seconds 1);
               for _ = 1 to 20 do
                 Eio.Fiber.yield ()
               done;

@@ -1,10 +1,10 @@
 (* L17 — the human-facing side of a handoff (docs/issues/human-handoff/01-human-handoff.md,
    milestone 4). Stories: hand-04rb hand-phof hand-rg9h. Everything runs at the
-   control-protocol seam over the fake browser, the mock clock and eta_test's fake process
+   control-protocol seam over the fake browser, the mock clock and ox_test's fake process
    manager, and the desktop commands go through the real {!Leash.Desktop.create} and the
-   real {!Eta_process.Child}: argv, exit statuses, retirement and the notification's stdout
+   real {!Ox_process.Child}: argv, exit statuses, retirement and the notification's stdout
    are the production path, with no child started. What a child prints is a script of
-   {!Eta_test.Process.Output} chunks delayed on the mock clock — a notification's Done
+   {!Ox_test.Process.Output} chunks delayed on the mock clock — a notification's Done
    action and a notifier stopped before it prints are both made of one. No test runs a
    focus command, a notification or niri for real, and nothing here touches the desktop. *)
 
@@ -12,7 +12,7 @@ module P = Leash.Protocol
 module Fake = Leash_test_support.Fake_browser
 module Chrome = Leash.Chrome
 module Desktop = Leash.Desktop
-module Logger = Eta_observability.Logger
+module Logger = Ox_observability.Logger
 module Tabs = Leash.Tabs
 
 let obj xs = `Assoc xs
@@ -92,7 +92,7 @@ let owner_of tabs handle =
 let handle_new tabs = handle_of (result (request tabs "alice" (P.New { url = None })))
 let reply = function None -> Alcotest.fail "no reply" | Some reply -> reply
 let answered cell = match !cell with Some _ -> true | None -> false
-let advance env seconds = Eta_test.advance env#clock (Eta.Duration.seconds seconds)
+let advance env seconds = Ox_test.advance env#clock (Ox.Duration.seconds seconds)
 
 let rec until n what check =
   if check () then ()
@@ -103,12 +103,12 @@ let rec until n what check =
 
 (* hand-phof: a scripted child's stdout, one chunk written [after] the spawn on the mock
    clock. A real notification's Done action reaches the service exactly this way. *)
-let out ?(after = Eta.Duration.zero) data : Eta_test.Process.chunk =
-  { stream = Eta_test.Process.Stdout; data; after }
+let out ?(after = Ox.Duration.zero) data : Ox_test.Process.chunk =
+  { stream = Ox_test.Process.Stdout; data; after }
 
-let output chunks rest = Eta_test.Process.Output (chunks, rest)
-let exit_ok = Eta_test.Process.Exit (`Exited 0)
-let blocked = Eta_test.Process.Block_until_signal
+let output chunks rest = Ox_test.Process.Output (chunks, rest)
+let exit_ok = Ox_test.Process.Exit (`Exited 0)
+let blocked = Ox_test.Process.Block_until_signal
 
 (* Give every other fiber the scheduler several turns: a chunk the mock clock released runs
    through the child's pipe, the runner's reader, the service and its reply in that many
@@ -140,14 +140,14 @@ let failure_warnings = function
    command under test has to name a program that exists — [sh] is the stand-in here, and
    nothing in this file runs a focus command or a notification. *)
 let commands process =
-  match Eta_test.Process.spawns process with
+  match Ox_test.Process.spawns process with
   | [] -> Alcotest.fail "no process was spawned at all"
   | _chrome :: commands ->
-      List.map (fun (spawn : Eta_test.Process.spawn) -> spawn.argv) commands
+      List.map (fun (spawn : Ox_test.Process.spawn) -> spawn.argv) commands
 
 let terminations process =
   List.length
-    (List.filter (fun signal -> signal = Sys.sigterm) (Eta_test.Process.signals process))
+    (List.filter (fun signal -> signal = Sys.sigterm) (Ox_test.Process.signals process))
 
 let default_focus = [ "sh"; "{tab}"; "{reason}" ]
 let default_notify = [ "sh"; "{reason}" ]
@@ -162,16 +162,15 @@ let default_notify = [ "sh"; "{reason}" ]
    handoff had already ended would be caught. *)
 let rig ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
     ?(real = false) f =
-  Eta_test.run (fun env sw ->
-      let process = Eta_test.Process.make ~clock:env#clock (blocked :: scripts) in
+  Ox_test.run (fun env sw ->
+      let process = Ox_test.Process.make ~clock:env#clock (blocked :: scripts) in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock
-            ~mgr:(Eta_test.Process.mgr process)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr process)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -189,7 +188,7 @@ let rig ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
       in
       let desktop =
         Desktop.create ~clock:env#clock
-          ~mgr:(if real then env#process_mgr else Eta_test.Process.mgr process)
+          ~mgr:(if real then env#process_mgr else Ox_test.Process.mgr process)
           { Desktop.focus_command = focus; notify_command = notify }
       in
       let tabs =
@@ -258,7 +257,7 @@ let focus_raises_the_view () =
    again. The test below this one is the same chunk with nobody clicking. *)
 let notification_done_resumes () =
   rig
-    ~scripts:[ exit_ok; output [ out ~after:(Eta.Duration.seconds 2) "done\n" ] blocked ]
+    ~scripts:[ exit_ok; output [ out ~after:(Ox.Duration.seconds 2) "done\n" ] blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
@@ -293,7 +292,7 @@ let notification_done_resumes () =
    a Done action arriving after its handoff ended is reported. *)
 let notifier_stopped_before_printing () =
   rig
-    ~scripts:[ exit_ok; output [ out ~after:(Eta.Duration.seconds 30) "done\n" ] blocked ]
+    ~scripts:[ exit_ok; output [ out ~after:(Ox.Duration.seconds 30) "done\n" ] blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log ->
       let h = handle_new tabs in
       let cell = ref None in
@@ -326,7 +325,7 @@ let notifier_stopped_before_printing () =
 
 let focus_failure_is_a_warning () =
   rig
-    ~scripts:[ Eta_test.Process.Exit (`Exited 2); blocked ]
+    ~scripts:[ Ox_test.Process.Exit (`Exited 2); blocked ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
@@ -352,7 +351,7 @@ let focus_failure_is_a_warning () =
    the handoff and its failure lands after the tab is already the human's. *)
 let notify_failure_is_a_warning () =
   rig
-    ~scripts:[ exit_ok; Eta_test.Process.Exit (`Exited 1) ]
+    ~scripts:[ exit_ok; Ox_test.Process.Exit (`Exited 1) ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log ->
       let h = handle_new tabs in
       let cell = ref None in
@@ -439,7 +438,7 @@ let missing_binary_is_a_warning () =
    [timeout] error carries the same warnings in its detail. *)
 let timeout_carries_the_warnings () =
   rig
-    ~scripts:[ Eta_test.Process.Exit (`Exited 1); blocked ]
+    ~scripts:[ Ox_test.Process.Exit (`Exited 1); blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in

@@ -9,12 +9,12 @@
     is not overrun. Nothing here is a browser concept: this module decides, {!Tabs}
     applies. *)
 
-val interval : Eta.Duration.t
+val interval : Ox.Duration.t
 (** The sweep's period: thirty seconds, which is the cadence both stages run at (own-uo77
     own-hslp). *)
 
 val decide :
-  idle:Eta.Duration.t -> unclaimed:Eta.Duration.t -> Tabs.idleness -> Tabs.sweep_step
+  idle:Ox.Duration.t -> unclaimed:Ox.Duration.t -> Tabs.idleness -> Tabs.sweep_step
 (** own-uo77 own-hslp own-2zpi own-ay3s: the whole policy, pure and clock-free. An owned
     tab idle for [idle] is released; an unowned tab of agent origin unclaimed for
     [unclaimed] is closed; a human-origin tab, and one the human holds, is left alone
@@ -24,11 +24,11 @@ type t
 
 val create :
   sw:Eio.Switch.t ->
-  ?interval:Eta.Duration.t ->
-  idle:Eta.Duration.t ->
-  unclaimed:Eta.Duration.t ->
+  ?interval:Ox.Duration.t ->
+  idle:Ox.Duration.t ->
+  unclaimed:Ox.Duration.t ->
   clock:'clock Eio.Time.clock ->
-  logger:Eta_observability.Logger.t ->
+  logger:Ox_observability.Logger.t ->
   Tabs.t ->
   t
 (** Starts the sweep fiber as a daemon of [sw], so it stops with the switch. [interval]

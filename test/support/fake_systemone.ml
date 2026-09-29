@@ -1,7 +1,7 @@
 (* The local System One server the L19 tests drive (drive-e7oi drive-yqxg drive-kh2u).
 
-   Copied in shape from eta-next's test/ai/fake_server.ml, which is proven against
-   {!Eta_http.Client}: plaintext over a loopback listener on the test's switch, one
+   Copied in shape from ox's test/ai/fake_server.ml, which is proven against
+   {!Ox_http.Client}: plaintext over a loopback listener on the test's switch, one
    complete request read and recorded per connection, the scripted reply written after it,
    then the send side shut down. The accept loop is a daemon, because a plain fork parked
    in [accept] is never woken by the switch's release. *)

@@ -8,9 +8,9 @@
    auto-closed, and a tab the human holds is exempt from stage 1 while the hold lasts. *)
 
 module P = Protocol
-module Logger = Eta_observability.Logger
+module Logger = Ox_observability.Logger
 
-let interval = Eta.Duration.seconds 30
+let interval = Ox.Duration.seconds 30
 
 (* own-uo77 own-hslp own-2zpi own-ay3s: the whole policy, with no registry and no clock in
    it — the registry measures idleness, so both stages are checkable on their own. [Owned]
@@ -18,8 +18,8 @@ let interval = Eta.Duration.seconds 30
    release. Only agent origin reaches stage 2, however the tab became unowned: a human's
    page is never a timer's to take, whatever its ownership history (ADR-0005). *)
 let decide ~idle ~unclaimed (tab : Tabs.idleness) =
-  let idle_s = Eta.Duration.to_seconds_float idle in
-  let unclaimed_s = Eta.Duration.to_seconds_float unclaimed in
+  let idle_s = Ox.Duration.to_seconds_float idle in
+  let unclaimed_s = Ox.Duration.to_seconds_float unclaimed in
   match tab.owner_state with
   | Tabs.Owned _ -> if tab.idle_for_s >= idle_s then Tabs.Release_idle else Tabs.Keep_idle
   | Tabs.Unowned -> (
@@ -32,8 +32,8 @@ let decide ~idle ~unclaimed (tab : Tabs.idleness) =
 
 type t = {
   tabs : Tabs.t;
-  idle : Eta.Duration.t;
-  unclaimed : Eta.Duration.t;
+  idle : Ox.Duration.t;
+  unclaimed : Ox.Duration.t;
   logger : Logger.t;
 }
 
@@ -78,6 +78,6 @@ let create ~sw ?(interval = interval) ~idle ~unclaimed ~clock ~logger tabs =
         ignore (sweep t);
         Ok ()
       in
-      ignore (Eta.Retry.repeat ~clock (Eta.Schedule.spaced interval) pass);
+      ignore (Ox.Retry.repeat ~clock (Ox.Schedule.spaced interval) pass);
       `Stop_daemon);
   t

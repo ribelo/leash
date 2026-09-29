@@ -26,7 +26,7 @@ type context = { tab : Protocol.Handle.t; reason : string; url : string; title :
 type t
 
 val create : clock:'clock Eio.Time.clock -> mgr:'mgr Eio_unix.Process.mgr -> commands -> t
-(** One command's whole life, over {!Eta_process.Child} with a five-second retirement
+(** One command's whole life, over {!Ox_process.Child} with a five-second retirement
     grace: spawned on [sw], its stdout lines handed to the step that asked for it, [Ok]
     for a zero exit and [Error reason] for anything else. A command stopped because [sw]
     was released — the handoff it belonged to ended — is cancelled, not reported:

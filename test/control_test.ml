@@ -44,25 +44,25 @@ let contains text sub =
   search 0
 
 let rig ?reporter ?download_dir f =
-  Eta_test.run (fun env sw ->
-      let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+  Ox_test.run (fun env sw ->
+      let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
       in
       let logger =
-        Eta_observability.Logger.create ~service:"leash-tests" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"leash-tests" ~clock:env#clock
           ~mono_clock:env#mono_clock
           ~reporter:
             (Option.value reporter
-               ~default:(Eta_observability.Logger.Reporter.writer ignore))
+               ~default:(Ox_observability.Logger.Reporter.writer ignore))
           ()
       in
       let chrome =
@@ -333,7 +333,7 @@ let load_timeout () =
           | None ->
               if n = 0 then Alcotest.fail (what ^ " did not time out")
               else (
-                Eta_test.advance env#clock (Eta.Duration.seconds 1);
+                Ox_test.advance env#clock (Ox.Duration.seconds 1);
                 Eio.Fiber.yield ();
                 await (n - 1))
         in
@@ -373,7 +373,7 @@ let budget () =
   in
   let ms command =
     match Leash.Control.budget (Ok P.{ owner = owner "alice"; command }) with
-    | Some duration -> Eta.Duration.to_ms duration
+    | Some duration -> Ox.Duration.to_ms duration
     | None -> Alcotest.fail "no budget"
   in
   Alcotest.(check bool)
@@ -496,9 +496,9 @@ let large_text_over_socket () =
                   net = env#net;
                   clock = env#clock;
                   logger =
-                    Eta_observability.Logger.create ~service:"socket-test"
-                      ~clock:env#clock ~mono_clock:env#mono_clock
-                      ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                    Ox_observability.Logger.create ~service:"socket-test" ~clock:env#clock
+                      ~mono_clock:env#mono_clock
+                      ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                       ();
                 }
             with
@@ -558,9 +558,9 @@ let socket () =
                 net = env#net;
                 clock = env#clock;
                 logger =
-                  Eta_observability.Logger.create ~service:"socket-test" ~clock:env#clock
+                  Ox_observability.Logger.create ~service:"socket-test" ~clock:env#clock
                     ~mono_clock:env#mono_clock
-                    ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                    ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
               }
           in
@@ -610,9 +610,9 @@ let socket () =
                 net = env#net;
                 clock = env#clock;
                 logger =
-                  Eta_observability.Logger.create ~service:"socket-test" ~clock:env#clock
+                  Ox_observability.Logger.create ~service:"socket-test" ~clock:env#clock
                     ~mono_clock:env#mono_clock
-                    ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                    ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
               }
           in
@@ -646,9 +646,9 @@ let socket () =
                 net = env#net;
                 clock = env#clock;
                 logger =
-                  Eta_observability.Logger.create ~service:"socket-test" ~clock:env#clock
+                  Ox_observability.Logger.create ~service:"socket-test" ~clock:env#clock
                     ~mono_clock:env#mono_clock
-                    ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                    ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
               }
           in
@@ -699,9 +699,9 @@ let second_instance () =
                 net = env#net;
                 clock = env#clock;
                 logger =
-                  Eta_observability.Logger.create ~service:"socket-test" ~clock:env#clock
+                  Ox_observability.Logger.create ~service:"socket-test" ~clock:env#clock
                     ~mono_clock:env#mono_clock
-                    ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                    ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
               }
           in
@@ -1235,7 +1235,7 @@ let pseudo_icon_hit () =
 (* svc-p67t svc-qilu: inspect every command anchor and every journal line of a
    scripted owner session; page data and credentials must never become a log line. *)
 let journal_redaction () =
-  let module L = Eta_observability.Logger in
+  let module L = Ox_observability.Logger in
   let memory = L.Memory.create () in
   rig ~reporter:(L.Memory.reporter memory) (fun env _ _ tabs fake ->
       let logger =
@@ -1528,13 +1528,13 @@ let download_events () =
         (request tabs "bob" (P.Downloads { tab = h })))
 
 let optional_otlp () =
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let telemetry =
         Leash.Telemetry.create ~sw ~net:env#net ~clock:env#clock
           ~endpoint:"http://127.0.0.1:4318" ~headers:[]
       in
-      Alcotest.(check int) "enabled reporter" 1 (List.length telemetry.Eta_app.reporters);
-      let id = Option.get telemetry.Eta_app.span_ids () in
+      Alcotest.(check int) "enabled reporter" 1 (List.length telemetry.Ox_app.reporters);
+      let id = Option.get telemetry.Ox_app.span_ids () in
       Alcotest.(check int) "trace id length" 32 (String.length id))
 
 (* ---------- L31: the run over the fake browser ----------
@@ -1692,7 +1692,7 @@ let with_ticking_clock env sw f =
       let rec tick n =
         if n = 0 || !stop then ()
         else (
-          Eta_test.advance env#clock (Eta.Duration.ms 100);
+          Ox_test.advance env#clock (Ox.Duration.ms 100);
           tick (n - 1))
       in
       tick 5_000);
@@ -2276,9 +2276,9 @@ let listener_budget_reply () =
                   net = env#net;
                   clock = env#clock;
                   logger =
-                    Eta_observability.Logger.create ~service:"socket-test"
-                      ~clock:env#clock ~mono_clock:env#mono_clock
-                      ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+                    Ox_observability.Logger.create ~service:"socket-test" ~clock:env#clock
+                      ~mono_clock:env#mono_clock
+                      ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                       ();
                 }
             with
@@ -2300,8 +2300,8 @@ let listener_budget_reply () =
                   |> List.exists (fun call ->
                       field "method" call = Some (str "Target.closeTarget"))
                 then (
-                  Eta_test.advance env#clock (Eta.Duration.seconds 2);
-                  Eta_test.advance env#clock (Eta.Duration.seconds 2))
+                  Ox_test.advance env#clock (Ox.Duration.seconds 2);
+                  Ox_test.advance env#clock (Ox.Duration.seconds 2))
                 else (
                   Eio.Fiber.yield ();
                   wait (n - 1))

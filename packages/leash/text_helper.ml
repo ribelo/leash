@@ -27,10 +27,10 @@ type context = {
 }
 
 type t = {
-  complete : ?deadline:Eta.Duration.t -> context -> (string option, P.error) result;
+  complete : ?deadline:Ox.Duration.t -> context -> (string option, P.error) result;
 }
 
-let default_deadline = Eta.Duration.seconds 30
+let default_deadline = Ox.Duration.seconds 30
 
 (* model.py:157-158 and the drive spec's bound. *)
 let page_bytes = 6000
@@ -109,39 +109,39 @@ let value content =
   | exception Yojson.Json_error _ -> refused nothing_typed
 
 (* drive-7tvn: the helper call's accounting, at info so the operator sees it at the
-   default level — eta's chat client logs the same call at debug. Written for every
+   default level — ox's chat client logs the same call at debug. Written for every
    answered call, before the content is parsed, because the tokens were spent either
    way; a memo reuse makes no call and logs nothing. *)
-let log_usage logger (completion : Eta_ai_chat.Codecs.completion) =
-  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens; cost } =
-    completion.Eta_ai_chat.Codecs.usage
+let log_usage logger (completion : Ox_ai_chat.Codecs.completion) =
+  let Ox_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens; cost } =
+    completion.Ox_ai_chat.Codecs.usage
   in
-  Eta_observability.Logger.info logger
+  Ox_observability.Logger.info logger
     ~fields:
       [
-        ("model", Eta_observability.Logger.String completion.Eta_ai_chat.Codecs.model);
-        ("prompt_tokens", Eta_observability.Logger.Int prompt_tokens);
-        ("completion_tokens", Eta_observability.Logger.Int completion_tokens);
-        ("total_tokens", Eta_observability.Logger.Int total_tokens);
-        ("cost", Eta_observability.Logger.Float (Option.value ~default:0. cost));
+        ("model", Ox_observability.Logger.String completion.Ox_ai_chat.Codecs.model);
+        ("prompt_tokens", Ox_observability.Logger.Int prompt_tokens);
+        ("completion_tokens", Ox_observability.Logger.Int completion_tokens);
+        ("total_tokens", Ox_observability.Logger.Int total_tokens);
+        ("cost", Ox_observability.Logger.Float (Option.value ~default:0. cost));
       ]
     "text helper usage"
 
 let ask client ~model ~logger ?(deadline = default_deadline) json =
-  let open Eta_ai_chat.Types in
+  let open Ox_ai_chat.Types in
   let messages =
     [ { role = System; content = Questions.text_value }; { role = User; content = json } ]
   in
   Model_usage.start "text_helper";
   match
-    Eta_ai_chat.complete client ~deadline ~model ~messages ~max_tokens:1024
+    Ox_ai_chat.complete client ~deadline ~model ~messages ~max_tokens:1024
       ~json_object:true ~reasoning:`Disabled ()
   with
   | Error error -> Error (Model_error.of_eta error)
   | Ok first -> (
       log_usage logger first;
-      Model_usage.report "text_helper" first.Eta_ai_chat.Codecs.usage.cost;
-      let content = first.Eta_ai_chat.Codecs.content in
+      Model_usage.report "text_helper" first.Ox_ai_chat.Codecs.usage.cost;
+      let content = first.Ox_ai_chat.Codecs.content in
       match value content with
       | Ok answer -> Ok answer
       | Error error -> (
@@ -170,16 +170,16 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
             in
             Model_usage.start "text_helper";
             match
-              Eta_ai_chat.complete client
-                ~deadline:(Eta.Duration.min deadline default_deadline)
+              Ox_ai_chat.complete client
+                ~deadline:(Ox.Duration.min deadline default_deadline)
                 ~model ~messages:retry ~max_tokens:1024 ~json_object:true
                 ~reasoning:`Disabled ()
             with
             | Error error -> Error (Model_error.of_eta error)
             | Ok second ->
                 log_usage logger second;
-                Model_usage.report "text_helper" second.Eta_ai_chat.Codecs.usage.cost;
-                value second.Eta_ai_chat.Codecs.content))
+                Model_usage.report "text_helper" second.Ox_ai_chat.Codecs.usage.cost;
+                value second.Ox_ai_chat.Codecs.content))
 
 let create ~client ~model ~logger () =
   (* The one-entry memo of agent.py:110-114, keyed by what the reference compares: the

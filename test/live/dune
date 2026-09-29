@@ -1,4 +1,4 @@
 (executable
  (name live_acceptance)
  (modules live_acceptance)
- (libraries leash eta eta_observability eio eio_main eio.unix unix yojson))
+ (libraries leash ox ox_observability eio eio_main eio.unix unix yojson))

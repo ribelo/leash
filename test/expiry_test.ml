@@ -98,7 +98,7 @@ let closes fake =
 
 (* The sweep is one fiber on the mock clock: moving the clock is the only way time passes,
    and the fiber is a daemon of the test switch. *)
-let advance env seconds = Eta_test.advance env#clock (Eta.Duration.seconds seconds)
+let advance env seconds = Ox_test.advance env#clock (Ox.Duration.seconds seconds)
 
 let rec until n what check =
   if check () then ()
@@ -108,24 +108,24 @@ let rec until n what check =
     until (n - 1) what check)
 
 let rig ?(idle = 30) ?(unclaimed = 60) ?(interval = Expiry.interval) f =
-  Eta_test.run (fun env sw ->
-      let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+  Ox_test.run (fun env sw ->
+      let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
       in
-      let logs = Eta_observability.Logger.Memory.create () in
+      let logs = Ox_observability.Logger.Memory.create () in
       let logger =
-        Eta_observability.Logger.create ~service:"leash-expiry-tests" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"leash-expiry-tests" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Memory.reporter logs)
+          ~reporter:(Ox_observability.Logger.Memory.reporter logs)
           ()
       in
       let chrome =
@@ -134,8 +134,8 @@ let rig ?(idle = 30) ?(unclaimed = 60) ?(interval = Expiry.interval) f =
              ~workspace:"test" ~headless:true ())
           { Chrome.clock = env#clock; mgr = env#process_mgr; logger }
       in
-      let idle = Eta.Duration.seconds idle in
-      let unclaimed = Eta.Duration.seconds unclaimed in
+      let idle = Ox.Duration.seconds idle in
+      let unclaimed = Ox.Duration.seconds unclaimed in
       let tabs =
         Tabs.create ~sw ~cap:128 ~tombstone_s:3600 ~idle ~unclaimed
           { Tabs.chrome; clock = env#clock; logger; desktop = Leash.Desktop.disabled }
@@ -160,8 +160,8 @@ let rig ?(idle = 30) ?(unclaimed = 60) ?(interval = Expiry.interval) f =
 (* own-uo77 own-hslp own-2zpi own-ay3s: the two stages, the human exemption, and the
    handoff exemption, with no clock, no browser, and no registry. *)
 let policy () =
-  let idle = Eta.Duration.seconds 30 in
-  let unclaimed = Eta.Duration.seconds 60 in
+  let idle = Ox.Duration.seconds 30 in
+  let unclaimed = Ox.Duration.seconds 60 in
   let handle =
     match P.Handle.of_string "t_policy" with Ok h -> h | Error e -> Alcotest.fail e
   in
@@ -239,7 +239,7 @@ let two_stages () =
 (* The threshold is exact. The sweep fiber is parked for an hour here, so the passes below
    happen at instants of the test choosing rather than at a tick. *)
 let boundary () =
-  rig ~interval:(Eta.Duration.hours 1) ~idle:60 ~unclaimed:120
+  rig ~interval:(Ox.Duration.hours 1) ~idle:60 ~unclaimed:120
     (fun ~env ~tabs ~expiry ~fake:_ ->
       let h = handle_of (result (request tabs "alice" (P.New { url = None }))) in
       advance env 59;
@@ -405,7 +405,7 @@ text_model = "helper"
 |}
   in
   let config =
-    match Eta_app.Config.decode ~spec:Leash.Config.spec ~getenv:(fun _ -> None) text with
+    match Ox_app.Config.decode ~spec:Leash.Config.spec ~getenv:(fun _ -> None) text with
     | Ok config -> config
     | Error (`Config why) -> Alcotest.fail why
   in
@@ -414,7 +414,7 @@ text_model = "helper"
   Alcotest.(check (pair int int))
     "own-vhqo the file names both durations" (200, 400) (idle, unclaimed);
   (* the fiber is parked, so each pass below happens at an instant of the test choosing *)
-  rig ~idle ~unclaimed ~interval:(Eta.Duration.hours 1) (fun ~env ~tabs ~expiry ~fake:_ ->
+  rig ~idle ~unclaimed ~interval:(Ox.Duration.hours 1) (fun ~env ~tabs ~expiry ~fake:_ ->
       let h = handle_of (result (request tabs "alice" (P.New { url = None }))) in
       Alcotest.(check (pair string int))
         "own-vhqo the configured idle is the countdown" ("release", 200) (expires tabs h);

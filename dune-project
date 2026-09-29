@@ -12,20 +12,20 @@
  (depends
   (ocaml (>= 5.4.0))
   (dune (>= 3.21))
-  eta
-  eta_app
-  eta_process
-  eta_ipc
-  eta_rpc
-  eta_json
-  eta_observability
-  eta_otel
-  eta_http
-  eta_ai
-  eta_ai_chat
-  eta_ai_systemone
+  ox
+  ox_app
+  ox_process
+  ox_ipc
+  ox_rpc
+  ox_json
+  ox_observability
+  ox_otel
+  ox_http
+  ox_ai
+  ox_ai_chat
+  ox_ai_systemone
   ppx_yojson_minimal
-  (eta_test :with-test)
+  (ox_test :with-test)
   (eio (>= 1.0))
   eio_main
   cmdliner

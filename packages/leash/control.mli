@@ -3,20 +3,20 @@ type t
 
 type ('clock, 'net) deps = {
   tabs : Tabs.t;
-  status_query : unit -> Eta_app.Status.t list;
+  status_query : unit -> Ox_app.Status.t list;
   models_status : unit -> Protocol.models_status;
       (** L19: the models section [status] reports, read live from the models service. *)
   fs : Eio.Fs.dir_ty Eio.Path.t;
   net : 'net Eio.Net.ty Eio.Resource.t;
   clock : 'clock Eio.Time.clock;
-  logger : Eta_observability.Logger.t;
+  logger : Ox_observability.Logger.t;
 }
 
 val create :
   ?model:string ->
   ?levels:Run.levels ->
   ?decide:
-    (deadline:Eta.Duration.t ->
+    (deadline:Ox.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
@@ -24,7 +24,7 @@ val create :
   sw:Eio.Switch.t ->
   path:string ->
   ('clock, 'net) deps ->
-  (t, Eta_ipc.Listener.error) result
+  (t, Ox_ipc.Listener.error) result
 (** svc-o4wt: [path] is the configured control socket — [control.socket], default
     ["$XDG_RUNTIME_DIR/leash/control.sock"] — and the listener verifies the directory it
     sits in and refuses a second instance on the same path.
@@ -43,12 +43,12 @@ val create :
     the operator's XDG configuration; production leaves it [None] and the run loads them.
 *)
 
-val policy : Eta_ipc.Listener.policy
+val policy : Ox_ipc.Listener.policy
 (** The listener's policy: 1 MiB request lines, 8 MiB replies (a 1 MiB response body,
-    escaped), and 64 concurrent requests (hard-b1na) — up from eta_ipc's default of 16, so
+    escaped), and 64 concurrent requests (hard-b1na) — up from ox_ipc's default of 16, so
     that long waits on many tabs never queue anyone else. *)
 
-val budget : (Protocol.request, string) result -> Eta.Duration.t option
+val budget : (Protocol.request, string) result -> Ox.Duration.t option
 (** The handler budget per decoded command. [new] with a url and [nav] outlast the
     registry's 30-second load wait (chrome-qnul, chrome-1yn9); a [handoff] outlasts its
     own deadline, {!Tabs.handoff_timeout}, plus a margin, so the listener never cancels
@@ -56,7 +56,7 @@ val budget : (Protocol.request, string) result -> Eta.Duration.t option
     [wait] gets its own [timeout_ms] — up to an hour — plus a second (hard-sr9v);
     everything else stays at one second. *)
 
-val status : t -> Eta_app.Status.t
+val status : t -> Ox_app.Status.t
 
 val report :
   ?models_status:(unit -> Protocol.models_status) -> Tabs.t -> Protocol.status_result
@@ -67,7 +67,7 @@ val dispatch :
   ?model:string ->
   ?levels:Run.levels ->
   ?decide:
-    (deadline:Eta.Duration.t ->
+    (deadline:Ox.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
@@ -83,13 +83,13 @@ val handle :
   ?model:string ->
   ?levels:Run.levels ->
   ?decide:
-    (deadline:Eta.Duration.t ->
+    (deadline:Ox.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
   ?installed:Playbook.loaded list ->
   ?models_status:(unit -> Protocol.models_status) ->
-  ?logger:Eta_observability.Logger.t ->
+  ?logger:Ox_observability.Logger.t ->
   Tabs.t ->
   string ->
   string

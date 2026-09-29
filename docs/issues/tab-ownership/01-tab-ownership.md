@@ -39,7 +39,7 @@ Every tab has an origin and an owner state; every request carries the caller's o
 - The registry holds per tab: handle, target id, generation, origin, owner state, owner, last-activity instant, and the current snapshot. Owner state is a closed variant: `Unowned`, `Owned of owner`, `With_human of owner`.
 - Authorization is one function applied before any tab command: it maps (command, caller owner, tab state) to allow or a typed refusal. `--force` is a protocol flag honoured only for `release` and `close`, intended for humans; it is logged.
 - Origin for discovered targets: a target whose opener is an agent-owned tab inherits agent origin and that owner (wiser's adopted popup); any other discovered target is human origin, unowned.
-- Expiry runs as one sweep fiber on an Eta schedule every 30 seconds using the Eta clock, so tests drive it with a test clock. Stage 1 releases; stage 2 closes agent-origin unowned tabs whose unowned-since instant is older than the unclaimed duration. Handoff sets no last-activity and is excluded from stage 1.
+- Expiry runs as one sweep fiber on an Ox schedule every 30 seconds using the Ox clock, so tests drive it with a test clock. Stage 1 releases; stage 2 closes agent-origin unowned tabs whose unowned-since instant is older than the unclaimed duration. Handoff sets no last-activity and is excluded from stage 1.
 - Tombstones: on any target destroyed event the registry records disposition `Closed_externally` unless it issued the close itself (`Closed_by_owner` or `Closed_by_ttl`); generation bump records `Browser_lost` for every live tab. Tombstones live one hour.
 - Nothing is persisted; the profile is the only state that survives.
 

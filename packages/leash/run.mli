@@ -135,13 +135,13 @@ val trigger_name : plan_trigger -> string
     ["failed"] or ["arguments"]. *)
 
 type levels = {
-  choose : deadline:Eta.Duration.t -> question -> (choice, Protocol.error) result;
+  choose : deadline:Ox.Duration.t -> question -> (choice, Protocol.error) result;
   score :
-    deadline:Eta.Duration.t ->
+    deadline:Ox.Duration.t ->
     sentence:string ->
     state:Yojson.Safe.t ->
     (float, Protocol.error) result;
-  plan : deadline:Eta.Duration.t -> plan_request -> (plan_reply, Protocol.error) result;
+  plan : deadline:Ox.Duration.t -> plan_request -> (plan_reply, Protocol.error) result;
 }
 (** run-7blx: the upper levels as one seam over one models service — the two choice
     questions, the score question a judgment checker asks ("how well does the current page

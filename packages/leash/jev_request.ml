@@ -8,7 +8,7 @@
    no clock, no configuration beyond the model id the caller passes. *)
 
 module P = Protocol
-module E = Eta_json
+module E = Ox_json
 
 (* model.py:44 — the one sentence the reference answers an invalid response with. *)
 let invalid = "Invalid TypeSafe response; no action executed."

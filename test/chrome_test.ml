@@ -7,19 +7,18 @@ module Fake = Leash_test_support.Fake_browser
 module Chrome = Leash.Chrome
 module Cdp = Leash.Cdp
 
-type rig = { mgr : Eta_test.Process.t; mutable browsers : (Fake.t * Fake.client) list }
+type rig = { mgr : Ox_test.Process.t; mutable browsers : (Fake.t * Fake.client) list }
 
 let launch rig ~sw ~clock ~mgr:_ config =
   let fake, client = Fake.create ~sw () in
   rig.browsers <- (fake, client) :: rig.browsers;
   match
-    Eta_process.Child.spawn ~sw ~clock
-      ~mgr:(Eta_test.Process.mgr rig.mgr)
-      ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~stderr:Pipe ~fds:[] ()
+    Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr rig.mgr)
+      ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~stderr:Pipe ~fds:[] ()
   with
   | Error error -> Error error
   | Ok child ->
-      assert (Option.is_some (Eta_process.Child.stderr child));
+      assert (Option.is_some (Ox_process.Child.stderr child));
       let transport : Cdp.transport = { read = client.read; write = client.write } in
       Ok (child, transport)
 
@@ -32,22 +31,22 @@ let deps env : _ Chrome.deps =
     clock = env#clock;
     mgr = env#process_mgr;
     logger =
-      Eta_observability.Logger.create ~service:"leash-test" ~clock:env#clock
+      Ox_observability.Logger.create ~service:"leash-test" ~clock:env#clock
         ~mono_clock:env#mono_clock
-        ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+        ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
         ();
   }
 
 (* The mock clock only moves when the test moves it, so every wait steps it until the
    lifecycle event it expects arrives; nothing here waits on real time. *)
-let next_event ?(step = Eta.Duration.ms 100) ?(budget = 500) env chrome =
+let next_event ?(step = Ox.Duration.ms 100) ?(budget = 500) env chrome =
   let rec loop remaining =
     match Eio.Stream.take_nonblocking (Chrome.events chrome) with
     | Some event -> event
     | None when remaining <= 0 ->
         Alcotest.fail "no lifecycle event within the test's virtual budget"
     | None ->
-        Eta_test.advance env#clock step;
+        Ox_test.advance env#clock step;
         Eio.Fiber.yield ();
         loop (remaining - 1)
   in
@@ -120,10 +119,10 @@ let argv_flags () =
 
 let pipe_launch () =
   (* launch_pipe maps the pipe pair onto the child's descriptors 3 and 4 *)
-  Eta_test.run (fun env sw ->
-      let fake = Eta_test.Process.make [ Block_until_signal ] in
+  Ox_test.run (fun env sw ->
+      let fake = Ox_test.Process.make [ Block_until_signal ] in
       match
-        Chrome.launch_pipe ~sw ~clock:env#clock ~mgr:(Eta_test.Process.mgr fake)
+        Chrome.launch_pipe ~sw ~clock:env#clock ~mgr:(Ox_test.Process.mgr fake)
           (config ())
       with
       | Error _ -> Alcotest.fail "the pipe launch failed"
@@ -131,19 +130,18 @@ let pipe_launch () =
           let targets =
             List.map
               (fun (target, _, _) -> target)
-              (List.hd (Eta_test.Process.spawns fake)).fds
+              (List.hd (Ox_test.Process.spawns fake)).fds
           in
           ignore transport;
           Alcotest.(check (list int)) "child descriptors" [ 0; 1; 2; 3; 4 ] targets)
 
 let restart () =
   (* chrome-qo4q *)
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let rig =
         {
           mgr =
-            Eta_test.Process.make
-              [ Eta_test.Process.Exit (`Exited 1); Block_until_signal ];
+            Ox_test.Process.make [ Ox_test.Process.Exit (`Exited 1); Block_until_signal ];
           browsers = [];
         }
       in
@@ -159,7 +157,7 @@ let restart () =
       (match Chrome.connection chrome with
       | Ok _ -> ()
       | Error `Browser_unavailable -> Alcotest.fail "generation 2 must be reachable");
-      let spawns = Eta_test.Process.spawns rig.mgr in
+      let spawns = Ox_test.Process.spawns rig.mgr in
       Alcotest.(check int) "one spawn per generation" 2 (List.length spawns);
       Alcotest.(check (list string))
         "argv"
@@ -168,10 +166,10 @@ let restart () =
 
 let transport_loss () =
   (* chrome-2z2z *)
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let rig =
         {
-          mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ];
+          mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ];
           browsers = [];
         }
       in
@@ -197,10 +195,10 @@ let transport_loss () =
 
 let unavailable_during_restart () =
   (* chrome-6lfk *)
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let rig =
         {
-          mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ];
+          mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ];
           browsers = [];
         }
       in
@@ -221,14 +219,14 @@ let unavailable_during_restart () =
       | Error `Browser_unavailable -> Alcotest.fail "the retry must succeed")
 
 let gave_up () =
-  Eta_test.run (fun env sw ->
-      let scripts = List.init 12 (fun _ -> Eta_test.Process.Exit (`Exited 1)) in
-      let rig = { mgr = Eta_test.Process.make scripts; browsers = [] } in
+  Ox_test.run (fun env sw ->
+      let scripts = List.init 12 (fun _ -> Ox_test.Process.Exit (`Exited 1)) in
+      let rig = { mgr = Ox_test.Process.make scripts; browsers = [] } in
       let chrome = Chrome.create ~sw ~launch:(launch rig) (config ()) (deps env) in
       let rec drain remaining gave_up =
         if remaining = 0 then Alcotest.fail "the supervisor never gave up"
         else
-          match next_event ~step:(Eta.Duration.seconds 30) ~budget:4 env chrome with
+          match next_event ~step:(Ox.Duration.seconds 30) ~budget:4 env chrome with
           | Chrome.Stopped -> gave_up
           | Chrome.Gave_up _ -> drain (remaining - 1) true
           | _ -> drain (remaining - 1) gave_up
@@ -244,15 +242,15 @@ let gave_up () =
 
 let orderly_stop () =
   (* chrome-b288 *)
-  Eta_test.run (fun env sw ->
-      let rig = { mgr = Eta_test.Process.make [ Block_until_signal ]; browsers = [] } in
+  Ox_test.run (fun env sw ->
+      let rig = { mgr = Ox_test.Process.make [ Block_until_signal ]; browsers = [] } in
       let chrome = Chrome.create ~sw ~launch:(launch rig) (config ()) (deps env) in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       Chrome.stop chrome;
       expect_event "Stopped" env chrome Chrome.Stopped;
       Alcotest.(check (list int))
         "SIGTERM, no SIGKILL" [ Sys.sigterm ]
-        (Eta_test.Process.signals rig.mgr);
+        (Ox_test.Process.signals rig.mgr);
       Alcotest.(check int) "no restart after stop" 1 (Chrome.generation chrome);
       Alcotest.(check bool) "stopped" true ((Chrome.status chrome).phase = `Stopped);
       match Chrome.connection chrome with
@@ -261,28 +259,28 @@ let orderly_stop () =
 
 let stderr_tail () =
   (* svc-qrmc: an actual Child stderr pipe, not a synthetic ring insertion. *)
-  Eta_test.run (fun env sw ->
-      let memory = Eta_observability.Logger.Memory.create () in
+  Ox_test.run (fun env sw ->
+      let memory = Ox_observability.Logger.Memory.create () in
       let logger =
-        Eta_observability.Logger.create ~service:"leash-test" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"leash-test" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Memory.reporter memory)
+          ~reporter:(Ox_observability.Logger.Memory.reporter memory)
           ()
       in
       let lines = List.init 25 (fun i -> Printf.sprintf "chrome diagnostic %02d" i) in
       let text = String.concat "\n" lines ^ "\n" ^ String.make 1300 'x' in
       let mgr =
-        Eta_test.Process.make
+        Ox_test.Process.make
           [
-            Eta_test.Process.Output
+            Ox_test.Process.Output
               ( [
                   {
-                    Eta_test.Process.stream = Stderr;
+                    Ox_test.Process.stream = Stderr;
                     data = text;
-                    after = Eta.Duration.zero;
+                    after = Ox.Duration.zero;
                   };
                 ],
-                Eta_test.Process.Exit (`Exited 1) );
+                Ox_test.Process.Exit (`Exited 1) );
             Block_until_signal;
           ]
       in
@@ -292,11 +290,11 @@ let stderr_tail () =
       in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       expect_event "Lost 1" env chrome (Chrome.Lost 1);
-      let records = Eta_observability.Logger.Memory.records memory in
+      let records = Ox_observability.Logger.Memory.records memory in
       let lost =
         match
           List.find_opt
-            (fun record -> record.Eta_observability.Logger.msg = "chrome generation lost")
+            (fun record -> record.Ox_observability.Logger.msg = "chrome generation lost")
             records
         with
         | Some record -> record
@@ -304,7 +302,7 @@ let stderr_tail () =
       in
       let stderr =
         match List.assoc_opt "stderr" lost.fields with
-        | Some (Eta_observability.Logger.Json (`List xs)) ->
+        | Some (Ox_observability.Logger.Json (`List xs)) ->
             List.map
               (function `String s -> s | _ -> Alcotest.fail "stderr must be strings")
               xs

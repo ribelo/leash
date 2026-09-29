@@ -70,7 +70,7 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 
 ### Architecture and tests
 
-37. As a kernel-minded maintainer, I want the run loop written as a computation performing `Select_playbook`, `Select_procedure`, `Fill_args`, `Execute_step`, `Verify` and `Plan` through a local handler token (eta-next ADR-0006), with production, scripted-test, dry-run and discovery handlers, so that swapping a model or a level is a handler, not a rewrite. ^run-vj48
+37. As a kernel-minded maintainer, I want the run loop written as a computation performing `Select_playbook`, `Select_procedure`, `Fill_args`, `Execute_step`, `Verify` and `Plan` through a local handler token (ox ADR-0006), with production, scripted-test, dry-run and discovery handlers, so that swapping a model or a level is a handler, not a rewrite. ^run-vj48
 38. As a test author, I want the whole loop testable offline with scripted handlers and the fake browser, and each level testable in isolation with recorded JEV answers, so that the loop's logic is proven without models. ^run-4mzm
 39. As a maintainer, I want the playbook loader, checker resolution and the page-kind matcher to be pure functions with table tests, so that authoring mistakes are caught by tests before a run. ^run-i89r
 40. As a maintainer, I want the state sent to each JEV level measured before the shape is pinned — three state sizes on real playbook page states (title+URL; plus page kind and recent procedures; plus page text), recording which chooses correctly and the transfer limit if Allegro is unavailable — so that story 18's shape is evidence, not belief. ^run-snk4
@@ -85,7 +85,7 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 - **Checker resolution** is a small grammar over the expectation sentence, tried in order: page kind (`pages` names), "shows"/"contains" text, "downloaded" (+ optional mime word), "no dialog", "<role> named <text>". Anything else → JEV score. Resolution happens at load; the playbook's `check` output shows which checker each sentence got, so an author sees when they fell through to judgment.
 - **Page kinds** are the semantic summary's key. A kind matches by URL pattern or by a text marker; the runner labels the current page with the first matching kind or `unknown`. Page text is never sent to the upper levels (story 18); the operator level keeps jev-ultrafast's contract untouched.
 - **Questions to JEV** at the upper levels use the same System One client and the same instruction style as the operator level; instruction texts are versioned in `questions.ml` next to jev's, with the 255-option ceiling asserted in code.
-- **Planner** through `Eta_ai_chat` with `json_object`, reasoning effort configurable (default `high` for Luna), output decoded into the playbook's procedure type fail-closed; a decode failure counts as a turn and is retried once with the error shown.
+- **Planner** through `Ox_ai_chat` with `json_object`, reasoning effort configurable (default `high` for Luna), output decoded into the playbook's procedure type fail-closed; a decode failure counts as a turn and is retried once with the error shown.
 - **Downloads**: one `Browser.setDownloadBehavior` per browser generation; events attributed to tabs by `frameId`; inventory kept for the tab's life; `downloads` command and `DownloadInfo` added to `docs/protocol.md`.
 - **Discovery** is the run loop with a handler whose `Select_procedure` asks the planner first and JEV only to choose among what the planner has written so far; its `expect` for a drafted procedure must come from the planner too.
 - **Storage**: playbooks under XDG config; proposals under XDG state; a run's trace to XDG state as JSON when `--save-trace` is set.
@@ -143,14 +143,14 @@ Conditional branching in playbooks; parallel tabs in one run; playbook sharing o
   stopped run ends `blocked` (a BLOCKED answer or an unfillable argument) or `failed` (a
   procedure that failed twice). `Run.plan_answer` is the seam L32 fills.
 - **CLI naming**: `leash run "<mission>"` is the mission command, so the Door's start
-  subcommand is `serve` from L31 on (Eta_app's new `?service_command`, eta-next
+  subcommand is `serve` from L31 on (Ox_app's new `?service_command`, ox
   napp-d5e4); `packaging/leash-unit.nix`, `docs/install.md` and `scripts/unit-acceptance`
   moved with it, and the milestone-6 spec carries a note under svc-dit8.
 - Gates `dune build @install`, `dune test` and `dune build @fmt` are green (18 suites).
   L34's live acceptance (real JEV and Luna, Allegro's DataDome 403 included) remains the
   milestone's own row.
 - **L32 status: delivered, 2026-09-28.** The planner is `Planner` (`packages/leash/planner.ml`):
-  one `Eta_ai_chat.complete` call to the configured planner route with `json_object` on and
+  one `Ox_ai_chat.complete` call to the configured planner route with `json_object` on and
   reasoning at `planner_reasoning` (default `high`, `none` disables), whose system message is
   the new `Questions.planner` and whose user message is the plan request as JSON — the
   mission, the current playbook in its own schema, the trace, the arguments known and the
@@ -180,7 +180,7 @@ Conditional branching in playbooks; parallel tabs in one run; playbook sharing o
   is the proposal path (not `proposals/`), and the planner's configuration is the three flat
   `[models]` keys `planner_model`, `planner_reasoning` and `planner_endpoint` beside
   `jev_model` and `text_model` — story 33's "its reasoning effort and its endpoint
-  configurable" as the section's own shape. A planner turn's `usage.cost` now carries Eta's provider-reported chat cost
+  configurable" as the section's own shape. A planner turn's `usage.cost` now carries Ox's provider-reported chat cost
   (nchat-qu3j); absent provider cost contributes zero.
 - **L34 live acceptance, 2026-09-28 (completed).** The isolated
   `scripts/live-acceptance-m7` gate starts real `--headless=new` Chrome with a fresh

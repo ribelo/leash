@@ -5,7 +5,7 @@
     [--remote-debugging-pipe]. Each message is one UTF-8 JSON object followed by a NUL
     byte. Requests carry a numeric [id] and, in flatten mode, a [sessionId]; the reply
     echoes both. This module owns the framing and delegates correlation to
-    {!Eta_rpc.Correlator}, so events and late replies surface as notifications. *)
+    {!Ox_rpc.Correlator}, so events and late replies surface as notifications. *)
 
 type transport = {
   read : Eio_unix.source_ty Eio.Resource.t;
@@ -38,7 +38,7 @@ end
 
 type t
 
-type error = Eta_rpc.Correlator.error
+type error = Ox_rpc.Correlator.error
 (** [`Transport_closed reason], [`Write_failed exn], [`Timeout] or [`Id_exhausted]. *)
 
 val create :
@@ -54,7 +54,7 @@ val create :
 val call :
   t ->
   ?session:string ->
-  ?deadline:Eta.Duration.t ->
+  ?deadline:Ox.Duration.t ->
   string ->
   Yojson.Safe.t ->
   (Yojson.Safe.t, error) result
@@ -62,11 +62,11 @@ val call :
     [session] adds [sessionId] to the outgoing message and matches the reply in that flat
     session. [deadline] covers the write and the wait, on the clock given to {!create}. *)
 
-val events : t -> Yojson.Safe.t Eta_rpc.Correlator.notification Eio.Stream.t
+val events : t -> Yojson.Safe.t Ox_rpc.Correlator.notification Eio.Stream.t
 (** CDP events, unmatched and late messages, ending with [Closed reason] exactly once,
     last. One consumer; a second reader steals from the first. *)
 
-val closed : t -> Eta_rpc.Correlator.close_reason Eio.Promise.t
+val closed : t -> Ox_rpc.Correlator.close_reason Eio.Promise.t
 (** Resolves at end of input, on a read failure, or on {!close}. It stays pending when
     [sw] is released first, so a waiter is cancelled with the transport's scope instead.
 *)
@@ -77,7 +77,7 @@ val result : Yojson.Safe.t -> Yojson.Safe.t option
 val error_of_reply : Yojson.Safe.t -> (int * string) option
 (** The [code] and [message] of a reply's [error] member, when it has one. *)
 
-val stats : t -> Eta_rpc.Correlator.stats
+val stats : t -> Ox_rpc.Correlator.stats
 
 val close : t -> unit
 (** Rejects further calls, settles pending ones with [`Transport_closed `Closed], joins

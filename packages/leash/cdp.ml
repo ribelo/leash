@@ -33,12 +33,12 @@ let set_id message id =
   | `Assoc fields -> `Assoc (("id", `Int id) :: List.remove_assoc "id" fields)
   | other -> other
 
-type error = Eta_rpc.Correlator.error
+type error = Ox_rpc.Correlator.error
 
 type t = {
-  correlator : Yojson.Safe.t Eta_rpc.Correlator.t;
-  closed : Eta_rpc.Correlator.close_reason Eio.Promise.t;
-  closed_u : Eta_rpc.Correlator.close_reason Eio.Promise.u;
+  correlator : Yojson.Safe.t Ox_rpc.Correlator.t;
+  closed : Ox_rpc.Correlator.close_reason Eio.Promise.t;
+  closed_u : Ox_rpc.Correlator.close_reason Eio.Promise.u;
 }
 
 let create ~sw ~clock ?(max_size = 28_000_000) ?max_notifications transport =
@@ -57,7 +57,7 @@ let create ~sw ~clock ?(max_size = 28_000_000) ?max_notifications transport =
   in
   let write message = Frame.write frame message in
   let correlator =
-    Eta_rpc.Correlator.create ~sw ~clock ?max_notifications ~read ~write ~id ~set_id
+    Ox_rpc.Correlator.create ~sw ~clock ?max_notifications ~read ~write ~id ~set_id
       ~session ()
   in
   { correlator; closed; closed_u }
@@ -71,11 +71,11 @@ let call t ?session ?deadline method_ params =
       | None -> []
       | Some session -> [ ("sessionId", `String session) ])
   in
-  Eta_rpc.Correlator.call t.correlator ?session ?deadline message
+  Ox_rpc.Correlator.call t.correlator ?session ?deadline message
 
-let events t = Eta_rpc.Correlator.notifications t.correlator
+let events t = Ox_rpc.Correlator.notifications t.correlator
 let closed t = t.closed
-let stats t = Eta_rpc.Correlator.stats t.correlator
+let stats t = Ox_rpc.Correlator.stats t.correlator
 let result message = member "result" message
 
 let error_of_reply message =
@@ -87,5 +87,5 @@ let error_of_reply message =
   | None -> None
 
 let close t =
-  Eta_rpc.Correlator.close t.correlator;
+  Ox_rpc.Correlator.close t.correlator;
   ignore (Eio.Promise.try_resolve t.closed_u `Closed)

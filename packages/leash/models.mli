@@ -1,10 +1,10 @@
 (** The models the drive talks to (L19; drive-e7oi drive-yqxg drive-ls3c).
 
-    One service owns every model client over one {!Eta_http.Client.t} — the client is
+    One service owns every model client over one {!Ox_http.Client.t} — the client is
     created with TLS here, on the service's switch, and every endpoint goes through it —
     and the drive's production [Decide] is {!decide}: {!Jev_request.body} shapes the
-    request, {!Eta_ai_systemone.Client.evaluate} performs it, and {!Jev_request.decide}
-    validates what came back. The text helper step's completion ({!Eta_ai_chat}) is the
+    request, {!Ox_ai_systemone.Client.evaluate} performs it, and {!Jev_request.decide}
+    validates what came back. The text helper step's completion ({!Ox_ai_chat}) is the
     second client on the same transport; {!text_helper} hands it out. L32 adds the
     planner's own chat client on that same transport, whose model, reasoning and endpoint
     are the models section's to configure (run-d99l); {!levels} is what the run uses.
@@ -20,7 +20,7 @@ val create :
   sw:Eio.Switch.t ->
   net:_ Eio.Net.t ->
   clock:_ Eio.Time.clock ->
-  logger:Eta_observability.Logger.t ->
+  logger:Ox_observability.Logger.t ->
   Config.models ->
   t
 (** [create ~sw ~net ~clock ~logger models] is the models service: one TLS HTTP client on
@@ -29,10 +29,10 @@ val create :
     the text helper step pointed at [models.chat_base_url] (L22) and the planner's chat
     client, pointed at [models.planner_endpoint] when the operator set one and at the same
     chat route otherwise (run-d99l). Without a key there is no client at all and {!decide}
-    refuses before anything is sent. The API key travels as a
-    {!Eta_observability.Redact.t} and only {!Eta_ai.Bearer.header} reveals it, on the
-    request path; the chat client is pure and synchronous, so it is built here beside the
-    System One one and shares the transport. *)
+    refuses before anything is sent. The API key travels as a {!Ox_observability.Redact.t}
+    and only {!Ox_ai.Bearer.header} reveals it, on the request path; the chat client is
+    pure and synchronous, so it is built here beside the System One one and shares the
+    transport. *)
 
 val status : t -> Protocol.models_status
 (** What [leash status] reports: [configured] is whether an API key is present, and the
@@ -40,7 +40,7 @@ val status : t -> Protocol.models_status
     never read here. *)
 
 val decide :
-  ?deadline:Eta.Duration.t ->
+  ?deadline:Ox.Duration.t ->
   t ->
   Jev_request.request ->
   (Jev_request.decision, Protocol.error) result
@@ -49,7 +49,7 @@ val decide :
     - no key: [model-unavailable] with [detail.code = "missing-key"] at once, nothing
       sent.
     - the System One reply names another model than the configured one, or fails in any of
-      {!Eta_ai.Error}'s ways: [model-unavailable] with [detail.code] one of
+      {!Ox_ai.Error}'s ways: [model-unavailable] with [detail.code] one of
       ["unavailable"], ["timeout"], ["authentication"], ["invalid-response"],
       ["input-too-large"], ["model-mismatch"], and the provider's own sentence as the
       message.
@@ -73,7 +73,7 @@ val text_helper : t -> Text_helper.t
 (* ---------- L31: the run's upper levels (run-7blx run-vj48) ---------- *)
 
 val choose :
-  ?deadline:Eta.Duration.t -> t -> Run.question -> (Run.choice, Protocol.error) result
+  ?deadline:Ox.Duration.t -> t -> Run.question -> (Run.choice, Protocol.error) result
 (** [choose ?deadline t question] is one upper-level choice question — the playbook
     level's or the procedure level's — through the same System One client, the same model
     and the same transport the operator level uses (run-7blx). The answer is validated
@@ -94,7 +94,7 @@ val choose :
     capped at 30 seconds and the remaining caller budget, with no correction call. *)
 
 val score :
-  ?deadline:Eta.Duration.t ->
+  ?deadline:Ox.Duration.t ->
   t ->
   sentence:string ->
   state:Yojson.Safe.t ->

@@ -4,8 +4,8 @@
 
 (* hand-rg9h: five seconds is both a command's deadline for the steps a handoff waits on
    and the retirement grace of every child it starts. *)
-let step_timeout = Eta.Duration.seconds 5
-let retirement_grace = Eta.Duration.seconds 5
+let step_timeout = Ox.Duration.seconds 5
+let retirement_grace = Ox.Duration.seconds 5
 
 (* hand-phof hand-rg9h: one command's whole life, as a real child. It is spawned on the
    switch the caller gives — the handoff's own switch for a notification — with a
@@ -15,15 +15,15 @@ let retirement_grace = Eta.Duration.seconds 5
 let run_command ~clock ~mgr ~sw ~argv ~on_line =
   try
     match
-      Eta_process.Child.spawn ~sw ~clock ~mgr ~argv ~grace:retirement_grace
-        ~stdout:Eta_process.Child.Pipe ~fds:[] ()
+      Ox_process.Child.spawn ~sw ~clock ~mgr ~argv ~grace:retirement_grace
+        ~stdout:Ox_process.Child.Pipe ~fds:[] ()
     with
     | Error (`Invalid_fd descriptor) ->
         Error (Printf.sprintf "invalid descriptor %d" descriptor)
     | Error (`Duplicate_fd descriptor) ->
         Error (Printf.sprintf "duplicate descriptor %d" descriptor)
     | Ok child -> (
-        (match Eta_process.Child.stdout child with
+        (match Ox_process.Child.stdout child with
         | None -> ()
         | Some source -> (
             let lines = Eio.Buf_read.of_flow ~max_size:(64 * 1024) source in
@@ -34,7 +34,7 @@ let run_command ~clock ~mgr ~sw ~argv ~on_line =
               in
               read ()
             with End_of_file -> ()));
-        match Eta_process.Child.await child with
+        match Ox_process.Child.await child with
         | Exited 0 -> Ok ()
         | Exited status -> Error (Printf.sprintf "exited %d" status)
         | Signaled signal -> Error (Printf.sprintf "killed by signal %d" signal))
@@ -144,7 +144,7 @@ let chrome_window = function
 let create ~clock ~mgr commands =
   let run_bounded argv ~on_line =
     match
-      Eta.Timeout.timeout ~clock step_timeout (fun () ->
+      Ox.Timeout.timeout ~clock step_timeout (fun () ->
           Eio.Switch.run (fun sw -> run_command ~clock ~mgr ~sw ~argv ~on_line)
           |> Result.map_error (fun message -> `Failed message))
     with

@@ -14,7 +14,7 @@ unit="$(nix build .#leash-unit --print-out-paths --no-link)/leash.service"
 cat "$unit"
 ```
 
-`.#leash` is the flake's package with Eta pinned (svc-46f0); `.#leash-unit` is the unit
+`.#leash` is the flake's package with Ox pinned (svc-46f0); `.#leash-unit` is the unit
 whose `ExecStart` names that package's binary. The store path changes whenever the
 source does, so read it from a fresh build instead of copying it.
 
@@ -43,7 +43,7 @@ WantedBy=graphical-session.target
 - `Environment=XDG_RUNTIME_DIR=%t` — the control socket's default lives in the user
   manager's runtime directory (`control.socket`, docs/config.md).
 - `Environment=EIO_BACKEND=posix` — the backend the sibling services' units use.
-- `ExecStart=… serve` — the Door's start subcommand (Eta_app), named `serve` because
+- `ExecStart=… serve` — the Door's start subcommand (Ox_app), named `serve` because
   `leash run "<mission>"` runs a mission over the playbooks (run-9ypy); a bare `leash`
   starts the same program.
 - `Restart=on-failure`, `RestartSec=2` — a crashed service comes back on its own

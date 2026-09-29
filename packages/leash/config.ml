@@ -1,8 +1,8 @@
 (** The service configuration: one plain record with derived codecs, secret fields typed
-    {!Eta_observability.Redact.t}, and constrained values in small modules with smart
+    {!Ox_observability.Redact.t}, and constrained values in small modules with smart
     constructors and their own codecs (ADR-0009). *)
 
-module Redact = Eta_observability.Redact
+module Redact = Ox_observability.Redact
 
 (** The tab cap: a positive whole number of tabs. *)
 module Tab_cap = struct
@@ -345,7 +345,7 @@ let env ~getenv config =
     control = { socket = path config.control.socket };
   }
 
-let spec : t Eta_app.Config.t = { of_yojson = t_of_yojson; yojson_of_t; env }
+let spec : t Ox_app.Config.t = { of_yojson = t_of_yojson; yojson_of_t; env }
 
 let chrome_config (chrome : chrome) =
   Chrome.make
@@ -357,7 +357,7 @@ let chrome_config (chrome : chrome) =
     ()
 
 let validate_otlp config =
-  let error pointer message = Error [ { Eta_app.Config.pointer; message } ] in
+  let error pointer message = Error [ { Ox_app.Config.pointer; message } ] in
   let ( let* ) = Result.bind in
   let* () =
     match config.otlp.endpoint with
@@ -365,10 +365,9 @@ let validate_otlp config =
         error "/otlp/headers" "headers require an endpoint"
     | None -> Ok ()
     | Some endpoint -> (
-        match Eta_http.Url.parse (Text.to_string endpoint) with
+        match Ox_http.Url.parse (Text.to_string endpoint) with
         | Error _ -> error "/otlp/endpoint" "must be an http(s) URL without userinfo"
-        | Ok url when Eta_http.Url.query url <> None || Eta_http.Url.fragment url <> None
-          ->
+        | Ok url when Ox_http.Url.query url <> None || Ox_http.Url.fragment url <> None ->
             error "/otlp/endpoint" "query and fragment are not allowed"
         | Ok _ -> Ok ())
   in
@@ -389,7 +388,7 @@ let validate_otlp config =
   headers 0 config.otlp.headers
 
 let validate_paths ?(getenv = Sys.getenv_opt) ~fs config =
-  let error pointer message = Error [ { Eta_app.Config.pointer; message } ] in
+  let error pointer message = Error [ { Ox_app.Config.pointer; message } ] in
   let check pointer path expected permissions =
     let path = Eio.Path.(fs / path) in
     try
@@ -459,7 +458,7 @@ let validate_paths ?(getenv = Sys.getenv_opt) ~fs config =
       check "/chrome/profile_dir" (nearest profile) `Directory 0o300
   | _ -> error "/chrome/profile_dir" "not a directory"
 
-let validate (env : Eio_unix.Stdenv.base Eta_app.Env.t) config =
+let validate (env : Eio_unix.Stdenv.base Ox_app.Env.t) config =
   validate_paths ~fs:env.base#fs config
 
 type init_error = [ `Exists of string | `Write of string ]

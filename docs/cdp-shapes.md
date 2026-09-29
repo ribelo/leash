@@ -47,7 +47,7 @@ The live gate launches Chrome through `Leash.Chrome` on a temporary profile, hea
 was recorded from that run, not from documentation.
 
 - **Descriptors 3 and 4 must be blocking.** Chrome reads its commands with a blocking
-  read: an `EAGAIN` ends the pipe connection. `Eta_process.Child.spawn` maps child
+  read: an `EAGAIN` ends the pipe connection. `Ox_process.Child.spawn` maps child
   descriptors 3 and 4 in blocking mode while leaving the Eio parent ends non-blocking.
   The fake browser is unaffected: it speaks the framing itself.
 - **The configured binary is usually a launcher script.** On NixOS
@@ -81,7 +81,7 @@ Why pipes rather than `Eio_mock.Flow` pairs: the installed mock supports scripte
 `on_read` but only traces sink writes; it has no write-to-peer-read routing or
 peer close. Two switch-owned Eio pipes give full-duplex bytes and observable EOF
 without using Chrome, any socket path, or the network. They are scoped to
-`Eta_test.run` in tests.
+`Ox_test.run` in tests.
 
 
 ## L6 snapshot guards (Chrome/152.0.7977.64, real headless pipe)

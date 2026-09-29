@@ -35,7 +35,7 @@ let browser ?(reply = fun _ _ -> obj []) ?(row = fun _ -> None) ?(dialog = fun (
     dialog_race =
       { Leash__Dialog_race.current = dialog; subscribe = (fun _ -> fun () -> ()) };
     (* No registry here, so this acknowledgement is never resolved and no event can end a
-       call; [eval] still races it (tab-gjo0), which is why its cases run under Eta. *)
+       call; [eval] still races it (tab-gjo0), which is why its cases run under Ox. *)
     acknowledge = (fun () -> fst (Leash__Dispatch.make ()));
     row;
     snapshot_current = (fun _ -> false);
@@ -55,7 +55,7 @@ let stub name _ =
 (* tab-a33o tab-gjo0: [eval] races its call against the tab's acknowledgement, so it
    runs where Eio does. *)
 let eval_bounds () =
-  Eta_test.run (fun _env _sw ->
+  Ox_test.run (fun _env _sw ->
       let b = browser ~reply:stub () in
       let arg expression argument =
         P.{ tab = handle; expression; argument; index = None; snapshot = None }
@@ -302,23 +302,23 @@ let debug_ring () =
 (* The control seam: the service in-process, the fake browser under it, and the commands
    the CLI would send. [fake] is the scripted Chrome, driven directly by the tests below. *)
 let rig f =
-  Eta_test.run (fun env sw ->
-      let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+  Ox_test.run (fun env sw ->
+      let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
       in
       let logger =
-        Eta_observability.Logger.create ~service:"reading-tests" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"reading-tests" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+          ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
           ()
       in
       let chrome =
@@ -591,9 +591,9 @@ let () =
         [
           Alcotest.test_case "eval limits" `Quick eval_bounds;
           Alcotest.test_case "text and AND wait" `Quick (fun () ->
-              Eta_test.run (fun _ _ -> text_and_wait ()));
+              Ox_test.run (fun _ _ -> text_and_wait ()));
           Alcotest.test_case "indexed text and disappearance" `Quick (fun () ->
-              Eta_test.run (fun _ _ -> indexed_text_and_disappearance ()));
+              Ox_test.run (fun _ _ -> indexed_text_and_disappearance ()));
           Alcotest.test_case "dialog and PNG" `Quick dialog_and_shot;
           Alcotest.test_case "debug ring" `Quick debug_ring;
           Alcotest.test_case "control seam" `Quick protocol_smoke;

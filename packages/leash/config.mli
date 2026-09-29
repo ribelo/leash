@@ -1,6 +1,6 @@
 (** The service configuration, decoded and validated by the Door. *)
 
-module Redact = Eta_observability.Redact
+module Redact = Ox_observability.Redact
 (** Secrets travel wrapped: a config file's [api_key] encodes as ["<redacted>"] on every
     rendering path. *)
 
@@ -83,7 +83,7 @@ type models = {
 }
 (** drive-e7oi drive-yqxg: the models section. [api_key] is absent when the file does not
     carry one and the environment does not either; {!env} fills it from
-    [OPENROUTER_API_KEY], and nothing but {!Eta_ai.Bearer.header} ever reveals it.
+    [OPENROUTER_API_KEY], and nothing but {!Ox_ai.Bearer.header} ever reveals it.
 
     [systemone_endpoint] and [chat_base_url] default to OpenRouter's
     [https://openrouter.ai/api/v1/systemone] and [https://openrouter.ai/api/v1];
@@ -161,24 +161,24 @@ val env : getenv:(string -> string option) -> t -> t
     the XDG placeholders in [chrome.profile_dir] and [control.socket] are expanded — a
     variable that is unset leaves its placeholder for {!validate_paths} to refuse. *)
 
-val spec : t Eta_app.Config.t
+val spec : t Ox_app.Config.t
 (** The Door's bundle: the derived codec above plus {!env}. *)
 
 val chrome_config : chrome -> Chrome.config
 (** The [chrome] section as {!Chrome.config}, for the program that creates the service. *)
 
-val validate_otlp : t -> (unit, Eta_app.validation_error list) result
+val validate_otlp : t -> (unit, Ox_app.validation_error list) result
 (** Check the optional endpoint and collector headers without filesystem access. *)
 
 val validate_paths :
   ?getenv:(string -> string option) ->
   fs:_ Eio.Path.t ->
   t ->
-  (unit, Eta_app.validation_error list) result
+  (unit, Ox_app.validation_error list) result
 (** Non-mutating filesystem validation with the filesystem passed explicitly, and the
     environment for a bare [chrome.binary] name's [PATH] lookup ([Sys.getenv_opt] when the
     caller does not say). Errors carry JSON pointers and messages. *)
 
 val validate :
-  Eio_unix.Stdenv.base Eta_app.Env.t -> t -> (unit, Eta_app.validation_error list) result
+  Eio_unix.Stdenv.base Ox_app.Env.t -> t -> (unit, Ox_app.validation_error list) result
 (** The Door's validator: {!validate_paths} against the environment's filesystem. *)

@@ -26,7 +26,7 @@
  (libraries
   leash
   leash_test_support
-  eta_observability
+  ox_observability
   eio
   eio_main
   yojson
@@ -38,7 +38,7 @@
  (libraries
   leash
   leash_test_support
-  eta_observability
+  ox_observability
   eio
   eio_main
   yojson
@@ -54,16 +54,16 @@
 (test
  (name fake_browser_test)
  (modules fake_browser_test)
- (libraries leash leash_test_support eta_test eio eio.unix yojson alcotest))
+ (libraries leash leash_test_support ox_test eio eio.unix yojson alcotest))
 
 (test
  (name config_protocol_test)
  (modules config_protocol_test)
  (libraries
   leash
-  eta_app
-  eta_observability
-  eta_test
+  ox_app
+  ox_observability
+  ox_test
   eio
   eio_main
   unix
@@ -74,15 +74,7 @@
 (test
  (name cdp_test)
  (modules cdp_test)
- (libraries
-  leash
-  leash_test_support
-  eta_test
-  eta
-  eio
-  eio.unix
-  yojson
-  alcotest))
+ (libraries leash leash_test_support ox_test ox eio eio.unix yojson alcotest))
 
 (test
  (name control_test)
@@ -95,10 +87,10 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_process
+  ox_observability
   eio
   eio.unix
   unix
@@ -111,10 +103,10 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_process
+  ox_observability
   eio
   eio.unix
   yojson
@@ -126,11 +118,11 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
-  eta_app
+  ox_test
+  ox
+  ox_process
+  ox_observability
+  ox_app
   eio
   eio.unix
   yojson
@@ -142,10 +134,10 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_process
+  ox_observability
   eio
   eio.unix
   yojson
@@ -158,10 +150,10 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_process
+  ox_observability
   eio
   eio.unix
   yojson
@@ -173,10 +165,10 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_process
+  ox_observability
   eio
   eio.mock
   eio.unix
@@ -189,10 +181,10 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_process
+  ox_observability
   eio
   eio.unix
   yojson
@@ -204,10 +196,10 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_process
+  ox_observability
   eio
   eio.unix
   yojson
@@ -219,10 +211,10 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_process
+  ox_observability
   eio
   eio.unix
   yojson
@@ -245,13 +237,13 @@
  (libraries
   leash
   leash_test_support
-  eta
-  eta_app
-  eta_test
-  eta_process
-  eta_observability
-  eta_http
-  eta_ai_chat
+  ox
+  ox_app
+  ox_test
+  ox_process
+  ox_observability
+  ox_http
+  ox_ai_chat
   eio
   eio.unix
   eio_main
@@ -265,11 +257,11 @@
  (libraries
   leash
   leash_test_support
-  eta
-  eta_app
-  eta_test
-  eta_process
-  eta_observability
+  ox
+  ox_app
+  ox_test
+  ox_process
+  ox_observability
   eio
   eio.unix
   eio_main
@@ -282,9 +274,9 @@
  (libraries
   leash
   leash_test_support
-  eta
-  eta_test
-  eta_observability
+  ox
+  ox_test
+  ox_observability
   eio
   eio.unix
   eio_main
@@ -299,11 +291,11 @@
  (libraries
   leash
   leash_test_support
-  eta_test
-  eta
-  eta_ipc
-  eta_process
-  eta_observability
+  ox_test
+  ox
+  ox_ipc
+  ox_process
+  ox_observability
   eio
   eio.unix
   unix

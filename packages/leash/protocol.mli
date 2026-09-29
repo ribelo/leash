@@ -465,7 +465,7 @@ type models_status = {
     API key is present, the pinned JEV model, the text helper's model, and the two
     endpoints. It is the configuration and nothing else: it is read from the live config
     without a probe, so nothing here touches the network at boot or at [status], and the
-    key itself is not a field — a {!Eta_observability.Redact.t} renders as ["<redacted>"]
+    key itself is not a field — a {!Ox_observability.Redact.t} renders as ["<redacted>"]
     on every path, so no status reply can carry one. *)
 
 val models_status_of_yojson : Yojson.Safe.t -> (models_status, string) result

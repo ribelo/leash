@@ -19,7 +19,7 @@ let assert_member label expected message name =
     (Option.map json (member name message))
 
 let frame_round_trip () =
-  Eta_test.run (fun _env sw ->
+  Ox_test.run (fun _env sw ->
       let a_read, a_write = Eio_unix.pipe sw in
       let b_read, b_write = Eio_unix.pipe sw in
       let a = Cdp.Frame.of_flows ~read:b_read ~write:a_write () in
@@ -48,7 +48,7 @@ let frame_round_trip () =
         (Option.map json (Cdp.Frame.read b)))
 
 let frame_errors () =
-  Eta_test.run (fun _env sw ->
+  Ox_test.run (fun _env sw ->
       let a_read, a_write = Eio_unix.pipe sw in
       let _b_read, b_write = Eio_unix.pipe sw in
       let b = Cdp.Frame.of_flows ~read:a_read ~write:b_write () in
@@ -65,7 +65,7 @@ let frame_errors () =
       | exception Yojson.Json_error _ -> ())
 
 let call_round_trip () =
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let fake, client = Fake.create ~sw () in
       let cdp = Cdp.create ~sw ~clock:env#clock (transport client) in
       (match Cdp.call cdp "Target.getTargets" (obj []) with
@@ -79,7 +79,7 @@ let call_round_trip () =
       | requests -> Alcotest.failf "expected one request, got %d" (List.length requests))
 
 let session_call () =
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let fake, client = Fake.create ~sw () in
       let cdp = Cdp.create ~sw ~clock:env#clock (transport client) in
       (match Cdp.call cdp ~session:"session-1" "Page.enable" (obj []) with
@@ -89,13 +89,13 @@ let session_call () =
       assert_member "request session" (str "session-1") request "sessionId";
       (* a deadline the reply beats is still a reply *)
       match
-        Cdp.call cdp ~deadline:(Eta.Duration.seconds 5) "Target.getTargets" (obj [])
+        Cdp.call cdp ~deadline:(Ox.Duration.seconds 5) "Target.getTargets" (obj [])
       with
       | Ok _ -> ()
       | Error _ -> Alcotest.fail "call with a deadline did not round-trip")
 
 let method_error () =
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let _fake, client = Fake.create ~sw () in
       let cdp = Cdp.create ~sw ~clock:env#clock (transport client) in
       match Cdp.call cdp "No.suchMethod" (obj []) with
@@ -107,7 +107,7 @@ let method_error () =
             (Cdp.error_of_reply reply))
 
 let events_beside_calls () =
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let fake, client = Fake.create ~sw () in
       let cdp = Cdp.create ~sw ~clock:env#clock (transport client) in
       Fake.emit fake ~method_:"Target.targetCreated"
@@ -116,12 +116,12 @@ let events_beside_calls () =
       | Error _ -> Alcotest.fail "a pending event must not break a call"
       | Ok _ -> ());
       match Eio.Stream.take (Cdp.events cdp) with
-      | Eta_rpc.Correlator.Message message ->
+      | Ox_rpc.Correlator.Message message ->
           assert_member "event method" (str "Target.targetCreated") message "method"
-      | Eta_rpc.Correlator.Closed _ -> Alcotest.fail "the transport closed early")
+      | Ox_rpc.Correlator.Closed _ -> Alcotest.fail "the transport closed early")
 
 let transport_close () =
-  Eta_test.run (fun env sw ->
+  Ox_test.run (fun env sw ->
       let fake, client = Fake.create ~sw () in
       let cdp = Cdp.create ~sw ~clock:env#clock (transport client) in
       (match Cdp.call cdp "Target.getTargets" (obj []) with
@@ -137,8 +137,8 @@ let transport_close () =
       | Error _ -> Alcotest.fail "expected a transport-closed error"
       | Ok _ -> Alcotest.fail "a closed transport must not answer");
       match Eio.Stream.take (Cdp.events cdp) with
-      | Eta_rpc.Correlator.Closed _ -> ()
-      | Eta_rpc.Correlator.Message _ -> Alcotest.fail "expected the closing notification")
+      | Ox_rpc.Correlator.Closed _ -> ()
+      | Ox_rpc.Correlator.Message _ -> Alcotest.fail "expected the closing notification")
 
 let () =
   Alcotest.run "L2 CDP"

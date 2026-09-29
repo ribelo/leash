@@ -427,7 +427,7 @@ Rules:
   httpOnly ones included with their flags. `storage` reads `DOMStorage.getDOMStorageItems` for the page's
   security origin (an opaque origin such as about:blank is `invalid-request`); `items` is an object of key to
   value, at most 1000 items and 1 MiB (`truncated`). Nothing writes.
-- **Concurrency** (hard-b1na). The listener admits 64 concurrent requests, not eta_ipc's default 16, and replies of
+- **Concurrency** (hard-b1na). The listener admits 64 concurrent requests, not ox_ipc's default 16, and replies of
   up to 8 MiB (a 1 MiB body, escaped). Ten agents may run at once — five blocked in hour-long `wait`s on five
   tabs while five act — with nobody queued: a wait holds a connection and a fiber and takes no tab lock. `net`,
   `net_body`, `net_request`, `cookies`, `storage`, `debug` and `dialog` take none either; the actions,

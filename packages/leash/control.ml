@@ -2,14 +2,14 @@ module P = Protocol
 
 type ('clock, 'net) deps = {
   tabs : Tabs.t;
-  status_query : unit -> Eta_app.Status.t list;
+  status_query : unit -> Ox_app.Status.t list;
   models_status : unit -> P.models_status;
       (** L19: what [status] reports about the models section. The thunk reads the live
           configuration and never the key. *)
   fs : Eio.Fs.dir_ty Eio.Path.t;
   net : 'net Eio.Net.ty Eio.Resource.t;
   clock : 'clock Eio.Time.clock;
-  logger : Eta_observability.Logger.t;
+  logger : Ox_observability.Logger.t;
 }
 
 let success json = P.Success json
@@ -209,7 +209,7 @@ let command_tab = function
   | P.Discover _ -> "-"
 
 let with_command ?logger (request : P.request) f =
-  Eta_observability.Context.with_fields
+  Ox_observability.Context.with_fields
     [
       ("tab", command_tab request.command);
       ("owner", P.Owner.to_string request.owner);
@@ -217,7 +217,7 @@ let with_command ?logger (request : P.request) f =
     ]
     (fun () ->
       Option.iter
-        (fun logger -> Eta_observability.Logger.info logger "control command")
+        (fun logger -> Ox_observability.Logger.info logger "control command")
         logger;
       f ())
 
@@ -238,14 +238,14 @@ type t = { path : string }
 (* The registry bounds a url load at 30 seconds (chrome-1yn9 on [nav], chrome-qnul on
    [new]); the handler budget must outlast it plus the CDP calls around it, or a slow
    page's reply never reaches the client and its connection simply closes. *)
-let load_budget = Eta.Duration.seconds 35
+let load_budget = Ox.Duration.seconds 35
 
 (* tab-0ohq tab-1lhx: a trusted input is settled by its own reply or by the popup it
    opened, so a dispatch whose reply Chrome withholds waits out the 30-second CDP deadline
    and the probes after it before it can report [browser-unavailable]. A row action gets
    the same headroom a load does; anything less and a wedged page's reply never reaches the
    client at all. *)
-let cdp_budget = Eta.Duration.seconds 35
+let cdp_budget = Ox.Duration.seconds 35
 
 (* hand-lmd5 hand-04rb hand-phof: a handoff's budget is its own deadline plus a margin,
    never less. The listener's timeout cancels the handler it bounds, so a budget equal to
@@ -254,10 +254,10 @@ let cdp_budget = Eta.Duration.seconds 35
    is the human-facing side's, which a handoff whose deadline has already passed still has
    to finish: up to five seconds each for [Target.activateTarget], the Chrome-window lookup
    and the focus command (hand-rg9h), plus the reply's own egress. *)
-let handoff_margin = Eta.Duration.seconds 20
+let handoff_margin = Ox.Duration.seconds 20
 
 let budget (request : (P.request, string) result) =
-  let seconds n = Eta.Duration.seconds n in
+  let seconds n = Ox.Duration.seconds n in
   match request with
   | Error _ -> Some (seconds 1)
   | Ok { command = P.Wait args; _ } ->
@@ -265,11 +265,11 @@ let budget (request : (P.request, string) result) =
          wait's own bound plus a second for the reply, so the listener never cancels a
          wait at the instant it is due to answer [timeout]. *)
       Some
-        (Eta.Duration.ms
+        (Ox.Duration.ms
            (min Reading.max_wait_ms (max 1 (Option.value ~default:30_000 args.timeout_ms))
            + 1000))
   | Ok { command = P.Handoff args; _ } ->
-      Some (Eta.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
+      Some (Ox.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
   | Ok { command = P.Discover args; _ } ->
       Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 75))
   | Ok { command = P.Drive args; _ } ->
@@ -296,7 +296,7 @@ let budget (request : (P.request, string) result) =
       Some cdp_budget
   | Ok _ -> Some (seconds 1)
 
-(* hard-yi0a: Eta_ipc cancels the handler at this budget, then sends this reply
+(* hard-yi0a: Ox_ipc cancels the handler at this budget, then sends this reply
    through ordinary encode/egress. The request was already decoded, so its command
    and configured budget can be given to the caller without replaying any action. *)
 let budget_exceeded (request : (P.request, string) result) budget =
@@ -305,7 +305,7 @@ let budget_exceeded (request : (P.request, string) result) budget =
     | Ok request -> P.command_name request.command
     | Error _ -> "invalid-request"
   in
-  let budget_ms = Eta.Duration.to_ms budget in
+  let budget_ms = Ox.Duration.to_ms budget in
   failure
     P.
       {
@@ -323,12 +323,12 @@ let budget_exceeded (request : (P.request, string) result) budget =
 (* hard-ovbx: a response body is bounded to 1 MiB, and JSON escaping can make a body that
    size several times larger on the wire, so a reply may be up to 8 MiB.
 
-   hard-b1na: sixty-four requests may be in flight at once, not eta_ipc's default sixteen.
+   hard-b1na: sixty-four requests may be in flight at once, not ox_ipc's default sixteen.
    A long `wait` holds its connection for as long as an hour, so ten agents with half
    their tabs waiting must not queue the other half behind them — and a wait is cheap: it
    takes no tab lock and one fiber. *)
-let policy : Eta_ipc.Listener.policy =
-  let open Eta_ipc.Listener in
+let policy : Ox_ipc.Listener.policy =
+  let open Ox_ipc.Listener in
   {
     default_policy with
     peers = 64;
@@ -354,10 +354,10 @@ let on_peer_error logger error =
     | `Egress_closed -> ("egress_closed", true)
     | `Disconnected -> ("disconnected", true)
   in
-  let fields = [ ("code", Eta_observability.Logger.String code) ] in
-  if routine then Eta_observability.Logger.debug logger ~fields "control client went away"
+  let fields = [ ("code", Ox_observability.Logger.String code) ] in
+  if routine then Ox_observability.Logger.debug logger ~fields "control client went away"
   else
-    Eta_observability.Logger.warn logger ~fields
+    Ox_observability.Logger.warn logger ~fields
       "control dropped a request without a reply"
 
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
@@ -380,7 +380,7 @@ let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ~sw
     Ok reply
   in
   match
-    Eta_ipc.Listener.run ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock ~path ~policy
+    Ox_ipc.Listener.run ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock ~path ~policy
       ~decode
       ~encode:(fun reply -> Yojson.Safe.to_string (P.encode_reply reply))
       ~budget ~on_budget_exceeded:budget_exceeded ~handler
@@ -390,4 +390,4 @@ let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ~sw
   | Error error -> Error error
 
 let status t =
-  Eta_app.Status.make ~details:[ ("socket", t.path) ] "control" Eta_app.Status.Ok
+  Ox_app.Status.make ~details:[ ("socket", t.path) ] "control" Ox_app.Status.Ok

@@ -11,7 +11,7 @@
 #   svc-x8rp  a first run with no file at $XDG_CONFIG_HOME/leash/config.toml starts the
 #             service on the defaults alone
 #   svc-f4op  with OTLP enabled the last record logged before SIGTERM reaches a local
-#             collector: Leash calls no shutdown, eta_otel drains its queue on its own
+#             collector: Leash calls no shutdown, ox_otel drains its queue on its own
 #             switch release (notel-1stb)
 #
 # The niri window rule is documented in docs/install.md and never applied by this

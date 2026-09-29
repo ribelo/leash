@@ -4,7 +4,7 @@
     The planner is the level above JEV, and only that: the run asks it where JEV stopped —
     a BLOCKED answer, a procedure that failed its expectations twice, an argument the text
     helper could not fill (run-w7ke) — and never for the work itself. One turn is one
-    {!Eta_ai_chat.complete} call with [json_object] on and reasoning at the configured
+    {!Ox_ai_chat.complete} call with [json_object] on and reasoning at the configured
     effort: the system message is {!Questions.planner}, the user message is the
     {!Run.plan_request} as JSON — the mission, the playbook in its own schema, the trace,
     the arguments known and the observed page with its text bounded — and the reply must
@@ -21,13 +21,11 @@
     accounting. Nothing here reads a clock or a file. *)
 
 type t = {
-  choose : deadline:Eta.Duration.t -> Run.question -> Protocol.playbook_choice;
+  choose : deadline:Ox.Duration.t -> Run.question -> Protocol.playbook_choice;
       (** One bounded choice-only call. Invalid answers are recorded with no key; the
           caller retains JEV's argmax. No correction call or procedure generation. *)
   plan :
-    ?deadline:Eta.Duration.t ->
-    Run.plan_request ->
-    (Run.plan_reply, Protocol.error) result;
+    ?deadline:Ox.Duration.t -> Run.plan_request -> (Run.plan_reply, Protocol.error) result;
 }
 (** One configured planner. [plan] answers one turn: the run's request in, an answer the
     loop can execute or report out, never raw model output. [deadline] (30 seconds by
@@ -40,10 +38,10 @@ type t = {
     cost summed over the calls the turn took; absent cost contributes zero. *)
 
 val create :
-  client:Eta_ai_chat.t ->
+  client:Ox_ai_chat.t ->
   model:string ->
   reasoning:string ->
-  logger:Eta_observability.Logger.t ->
+  logger:Ox_observability.Logger.t ->
   unit ->
   t
 (** [create ~client ~model ~reasoning ~logger ()] is the planner over one chat client, for

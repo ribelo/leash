@@ -27,7 +27,7 @@ Six additions, each a thin client of existing CDP domains and existing service p
 10. As an agent, I want `leash cookies <tab>` (read-only, for the tab's URL, including httpOnly with its flags) and `leash storage <tab> local|session` (read-only), with values returned to the owner and never logged, so that I can debug authentication. ^hard-ufb7
 11. As a maintainer, I want every addition in `docs/protocol.md`, the fake browser scripting the new CDP methods, and one live check per addition in `scripts/live-acceptance-m8`, so that the surface is pinned. ^hard-wk6q
 12. As an agent, I want the `leash` skill to cover `net`, the long `wait`, `upload`, `hover`, `eval --index`, `cookies` and `storage` in its minimize-output style, so that I use them instead of reaching for chrome-cdp. ^hard-2cal
-13. As an operator, I want ten agents working at once — five blocked in long `wait`s on five different tabs while five others act — to be served without queuing or refusal: `wait` never takes the tab's action lock, the control socket admits 64 concurrent requests (up from eta_ipc's default 16), and a test runs ten concurrent clients over the socket to prove it, so that long waits are cheap for everyone else. ^hard-b1na
+13. As an operator, I want ten agents working at once — five blocked in long `wait`s on five different tabs while five others act — to be served without queuing or refusal: `wait` never takes the tab's action lock, the control socket admits 64 concurrent requests (up from ox_ipc's default 16), and a test runs ten concurrent clients over the socket to prove it, so that long waits are cheap for everyone else. ^hard-b1na
 
 ## Implementation Decisions
 

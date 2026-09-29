@@ -1,11 +1,11 @@
 (* L19 — models wiring (docs/issues/drive/01-drive.md, milestone 5).
 
    drive-e7oi drive-yqxg: the config's models section becomes one service: a single
-   {!Eta_http.Client.t} created with TLS on the service's switch, the System One client
+   {!Ox_http.Client.t} created with TLS on the service's switch, the System One client
    pinned to the configured model and endpoint, and the production Decide the drive runs.
-   eta-next's clients own the retry policy, the bounds and the typed failures; this module
+   ox's clients own the retry policy, the bounds and the typed failures; this module
    owns the configuration, the request shaping and the one mapping from an
-   {!Eta_ai.Error.t} to the protocol's [model-unavailable]. *)
+   {!Ox_ai.Error.t} to the protocol's [model-unavailable]. *)
 
 module P = Protocol
 module J = Jev_request
@@ -13,16 +13,16 @@ module J = Jev_request
 type t = {
   now : unit -> float;
   config : Config.models;
-  logger : Eta_observability.Logger.t;
-  http : Eta_http.Client.t;
+  logger : Ox_observability.Logger.t;
+  http : Ox_http.Client.t;
       (** One client for every endpoint: the System One client and L22's chat client, so
           the service owns one transport and one TLS configuration. *)
-  systemone : Eta_ai_systemone.Client.t option;
+  systemone : Ox_ai_systemone.Client.t option;
       (** [None] without a key: {!decide} refuses before anything is sent. *)
-  chat : Eta_ai_chat.t option;
+  chat : Ox_ai_chat.t option;
       (** The text helper's chat client, [None] for the same missing key; {!text_helper}
           is the helper a drive takes over it. *)
-  planner_chat : Eta_ai_chat.t option;
+  planner_chat : Ox_ai_chat.t option;
       (** L32 run-d99l: the planner's chat client. Same key, same transport, and the same
           route as [chat] unless [models.planner_endpoint] names another one, so the
           fallback's model, endpoint and reasoning are all the operator's to change. *)
@@ -43,11 +43,11 @@ let planner_endpoint (config : Config.models) =
   | None -> chat_endpoint config
 
 let create ~sw ~net ~clock ~logger (config : Config.models) =
-  let http = Eta_http.Client.create ~sw ~net ~clock ~tls:(Eta_http.Client.tls ()) () in
+  let http = Ox_http.Client.create ~sw ~net ~clock ~tls:(Ox_http.Client.tls ()) () in
   let with_key f = Option.map f config.api_key in
   let systemone =
     with_key (fun api_key ->
-        Eta_ai_systemone.Client.create ~http ~clock ~logger
+        Ox_ai_systemone.Client.create ~http ~clock ~logger
           ~endpoint:(Config.Text.to_string config.systemone_endpoint)
           ~api_key
           ~model:(Config.Text.to_string config.jev_model)
@@ -57,12 +57,12 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
      is built beside the System One client and shared by every drive's helper. *)
   let chat =
     with_key (fun api_key ->
-        Eta_ai_chat.create ~http ~clock ~logger ~endpoint:(chat_endpoint config) ~api_key
+        Ox_ai_chat.create ~http ~clock ~logger ~endpoint:(chat_endpoint config) ~api_key
           ())
   in
   let planner_chat =
     with_key (fun api_key ->
-        Eta_ai_chat.create ~http ~clock ~logger ~endpoint:(planner_endpoint config)
+        Ox_ai_chat.create ~http ~clock ~logger ~endpoint:(planner_endpoint config)
           ~api_key ())
   in
   {
@@ -94,7 +94,7 @@ let status (t : t) : P.models_status =
 let error_code name =
   match P.Error_code.of_string name with Ok code -> code | Error _ -> assert false
 
-(* {!Jev_request.body} writes the two members eta-next's client takes apart again: the
+(* {!Jev_request.body} writes the two members ox's client takes apart again: the
    state it posts untouched and the named questions it re-encodes, each read back
    fail-closed. Both are built here, so a failure is a defect in this tree, not a provider
    failure: it is [internal], and the drive reports it as one. *)
@@ -107,7 +107,7 @@ let parts body =
       let rec read acc = function
         | [] -> Ok (List.rev acc)
         | (name, json) :: rest -> (
-            match Eta_ai_systemone.Codecs.t_of_question json with
+            match Ox_ai_systemone.Codecs.t_of_question json with
             | Ok question -> read ((name, question) :: acc) rest
             | Error why -> Error (Printf.sprintf "questions.%s: %s" name why))
       in
@@ -115,23 +115,23 @@ let parts body =
   | _ -> Error "the drive request has no state or questions"
 
 (* drive-7tvn: the provider's own accounting, at info so the operator sees it at the
-   default level — eta's clients log the same call at debug. Written for every answered
+   default level — ox's clients log the same call at debug. Written for every answered
    call, before the answers are validated, because the tokens were spent either way. *)
-let log_usage logger (response : Eta_ai_systemone.Codecs.response) =
-  let Eta_ai_systemone.Types.{ input_tokens; output_tokens; cost } =
-    response.Eta_ai_systemone.Codecs.usage
+let log_usage logger (response : Ox_ai_systemone.Codecs.response) =
+  let Ox_ai_systemone.Types.{ input_tokens; output_tokens; cost } =
+    response.Ox_ai_systemone.Codecs.usage
   in
-  Eta_observability.Logger.info logger
+  Ox_observability.Logger.info logger
     ~fields:
       [
-        ("model", Eta_observability.Logger.String response.Eta_ai_systemone.Codecs.model);
-        ("input_tokens", Eta_observability.Logger.Int input_tokens);
-        ("output_tokens", Eta_observability.Logger.Int output_tokens);
-        ("cost", Eta_observability.Logger.Float cost);
+        ("model", Ox_observability.Logger.String response.Ox_ai_systemone.Codecs.model);
+        ("input_tokens", Ox_observability.Logger.Int input_tokens);
+        ("output_tokens", Ox_observability.Logger.Int output_tokens);
+        ("cost", Ox_observability.Logger.Float cost);
       ]
     "systemone usage"
 
-let default_deadline = Eta.Duration.seconds 30
+let default_deadline = Ox.Duration.seconds 30
 
 let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
   match t.systemone with
@@ -151,20 +151,20 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
               }
       | Ok (state, questions) -> (
           Model_usage.start "operator";
-          match Eta_ai_systemone.Client.evaluate client ~deadline ~state ~questions with
+          match Ox_ai_systemone.Client.evaluate client ~deadline ~state ~questions with
           | Error error -> Error (Model_error.of_eta error)
           | Ok response -> (
               log_usage t.logger response;
               Model_usage.report "operator"
-                (Some response.Eta_ai_systemone.Codecs.usage.cost);
+                (Some response.Ox_ai_systemone.Codecs.usage.cost);
               (* The reply's answers object is what {!Jev_request.decide} reads; the
                  client decoded the envelope, the model check included. *)
               let answers =
                 `Assoc
                   (List.map
                      (fun (name, answer) ->
-                       (name, Eta_ai_systemone.Codecs.yojson_of_answer answer))
-                     response.Eta_ai_systemone.Codecs.answers)
+                       (name, Ox_ai_systemone.Codecs.yojson_of_answer answer))
+                     response.Ox_ai_systemone.Codecs.answers)
               in
               match J.decide request ~answers with
               | Ok decision -> Ok decision
@@ -190,12 +190,12 @@ let text_helper (t : t) : Text_helper.t =
 let wire_probabilities probabilities =
   `Assoc (List.map (fun (key, value) -> (key, `Float value)) probabilities)
 
-let usage_of (usage : Eta_ai_systemone.Types.usage) : P.run_usage =
+let usage_of (usage : Ox_ai_systemone.Types.usage) : P.run_usage =
   P.
     {
-      input_tokens = usage.Eta_ai_systemone.Types.input_tokens;
-      output_tokens = usage.Eta_ai_systemone.Types.output_tokens;
-      cost = usage.Eta_ai_systemone.Types.cost;
+      input_tokens = usage.Ox_ai_systemone.Types.input_tokens;
+      output_tokens = usage.Ox_ai_systemone.Types.output_tokens;
+      cost = usage.Ox_ai_systemone.Types.cost;
     }
 
 let invalid_response message = Model_error.unavailable ~code:"invalid-response" message
@@ -218,7 +218,7 @@ let choose_jev ~deadline (t : t) (question : Run.question) =
           question.Run.criteria
       in
       let wire =
-        Eta_ai_systemone.Codecs.choice ~instructions:(`String question.Run.instructions)
+        Ox_ai_systemone.Codecs.choice ~instructions:(`String question.Run.instructions)
           ~criteria
       in
       let kind =
@@ -226,22 +226,22 @@ let choose_jev ~deadline (t : t) (question : Run.question) =
       in
       Model_usage.start kind;
       match
-        Eta_ai_systemone.Client.evaluate client ~deadline ~state:question.Run.state
+        Ox_ai_systemone.Client.evaluate client ~deadline ~state:question.Run.state
           ~questions:[ (question.Run.name, wire) ]
       with
       | Error error -> Error (Model_error.of_eta error)
       | Ok response -> (
           log_usage t.logger response;
-          Model_usage.report kind (Some response.Eta_ai_systemone.Codecs.usage.cost);
-          match Eta_ai_systemone.Client.answer question.Run.name response with
-          | Some (Eta_ai_systemone.Codecs.Choice answer) ->
-              let chosen = answer.Eta_ai_systemone.Types.choice in
+          Model_usage.report kind (Some response.Ox_ai_systemone.Codecs.usage.cost);
+          match Ox_ai_systemone.Client.answer question.Run.name response with
+          | Some (Ox_ai_systemone.Codecs.Choice answer) ->
+              let chosen = answer.Ox_ai_systemone.Types.choice in
               if not (List.mem_assoc chosen question.Run.criteria) then
                 Error
                   (invalid_response
                      (Printf.sprintf "the answer %S is not one of the offered criteria"
                         chosen))
-              else if not (Eta_ai_systemone.Codecs.choice_answer_valid answer) then
+              else if not (Ox_ai_systemone.Codecs.choice_answer_valid answer) then
                 Error
                   (invalid_response
                      (Printf.sprintf "the distribution behind %S is not a valid choice"
@@ -252,9 +252,9 @@ let choose_jev ~deadline (t : t) (question : Run.question) =
                     {
                       key = chosen;
                       probabilities =
-                        wire_probabilities answer.Eta_ai_systemone.Types.probabilities;
-                      confidence = answer.Eta_ai_systemone.Types.confidence;
-                      usage = Some (usage_of response.Eta_ai_systemone.Codecs.usage);
+                        wire_probabilities answer.Ox_ai_systemone.Types.probabilities;
+                      confidence = answer.Ox_ai_systemone.Types.confidence;
+                      usage = Some (usage_of response.Ox_ai_systemone.Codecs.usage);
                       judgments = [];
                     }
           | _ ->
@@ -298,7 +298,7 @@ let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
               note = None;
             }
         in
-        let remaining = Eta.Duration.to_seconds_float deadline -. (t.now () -. started) in
+        let remaining = Ox.Duration.to_seconds_float deadline -. (t.now () -. started) in
         let unavailable note =
           P.
             {
@@ -325,7 +325,7 @@ let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
               in
               planner.Planner.choose
                 ~deadline:
-                  (Eta.Duration.ms (max 1 (int_of_float (min 30. remaining *. 1000.))))
+                  (Ox.Duration.ms (max 1 (int_of_float (min 30. remaining *. 1000.))))
                 question
         in
         Ok
@@ -343,22 +343,22 @@ let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
   | None -> Error missing_key
   | Some client -> (
       let wire =
-        Eta_ai_systemone.Codecs.score
+        Ox_ai_systemone.Codecs.score
           ~instructions:(`String (Questions.score sentence))
           ~criteria:Questions.score_levels
       in
       Model_usage.start "verifier";
       match
-        Eta_ai_systemone.Client.evaluate client ~deadline ~state
+        Ox_ai_systemone.Client.evaluate client ~deadline ~state
           ~questions:[ ("score", wire) ]
       with
       | Error error -> Error (Model_error.of_eta error)
       | Ok response -> (
           log_usage t.logger response;
-          Model_usage.report "verifier" (Some response.Eta_ai_systemone.Codecs.usage.cost);
-          match Eta_ai_systemone.Client.answer "score" response with
-          | Some (Eta_ai_systemone.Codecs.Score answer) ->
-              let value = answer.Eta_ai_systemone.Types.score in
+          Model_usage.report "verifier" (Some response.Ox_ai_systemone.Codecs.usage.cost);
+          match Ox_ai_systemone.Client.answer "score" response with
+          | Some (Ox_ai_systemone.Codecs.Score answer) ->
+              let value = answer.Ox_ai_systemone.Types.score in
               if Float.is_finite value && value >= 0. && value <= 1. then Ok value
               else
                 Error

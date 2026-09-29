@@ -15,7 +15,7 @@ module P = Leash.Protocol
 module Fake = Leash_test_support.Fake_systemone
 module Config = Leash.Config
 module Models = Leash.Models
-module Logger = Eta_observability.Logger
+module Logger = Ox_observability.Logger
 
 let ok = function Ok x -> x | Error why -> Alcotest.fail why
 
@@ -264,7 +264,7 @@ let handler ~(models : Models.t) (h : harness) : R.handler =
         (fun request ->
           h.plans <- h.plans @ [ request ];
           let levels = Models.levels models in
-          levels.R.plan ~deadline:(Eta.Duration.seconds 30) request);
+          levels.R.plan ~deadline:(Ox.Duration.seconds 30) request);
       propose =
         (fun ~site proc ->
           match B.propose ~site proc with
@@ -292,7 +292,7 @@ let check_status label expected (result : P.run_result) =
 let planner_model = "openai/gpt-6-luna"
 let key = "test-key"
 
-let models_config ?(api_key = Some (Eta_observability.Redact.make key))
+let models_config ?(api_key = Some (Ox_observability.Redact.make key))
     ?(planner_model = planner_model) ?(planner_reasoning = "high") ?planner_endpoint
     ~chat_base_url () : Config.models =
   {
@@ -346,7 +346,7 @@ let chat_server ~sw ~net contents =
           reply
       | [] -> Fake.failure 500 "the chat script is exhausted")
 
-let rig ?(contents = []) ?(api_key = Some (Eta_observability.Redact.make key))
+let rig ?(contents = []) ?(api_key = Some (Ox_observability.Redact.make key))
     ?(planner_model = planner_model) ?(planner_reasoning = "high") f =
   Eio_main.run (fun env ->
       Eio.Switch.run (fun sw ->
@@ -1123,7 +1123,7 @@ let missing_key () =
   rig ~api_key:None (fun _env _sw models server _memory ->
       let levels = Models.levels models in
       let error =
-        failed (levels.R.plan ~deadline:(Eta.Duration.seconds 30) (plan_request ()))
+        failed (levels.R.plan ~deadline:(Ox.Duration.seconds 30) (plan_request ()))
       in
       Alcotest.(check string)
         "run-d99l a keyless planner is missing-key" "missing-key" (detail_code error);

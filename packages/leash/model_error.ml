@@ -2,7 +2,7 @@
    (docs/issues/drive/01-drive.md, milestone 5; drive-kh2u drive-ls3c).
 
    L19 mapped System One's failures inside [Models]. L22 gives the chat text helper the
-   same closed set of {!Eta_ai.Error.t}, so the table moves here and both callers share
+   same closed set of {!Ox_ai.Error.t}, so the table moves here and both callers share
    it: docs/protocol.md lists the kinds, and a caller reads [detail.code] rather than the
    sentence, which is the provider's own. *)
 
@@ -19,7 +19,7 @@ let unavailable ?(code = "unavailable") message =
       detail = Some (`Assoc [ ("code", `String code) ]);
     }
 
-let of_eta (error : Eta_ai.Error.t) =
+let of_eta (error : Ox_ai.Error.t) =
   let code =
     match error with
     | `Unavailable _ -> "unavailable"
@@ -29,4 +29,4 @@ let of_eta (error : Eta_ai.Error.t) =
     | `Input_too_large _ -> "input-too-large"
     | `Model_mismatch _ -> "model-mismatch"
   in
-  unavailable ~code (Eta_ai.Error.to_string error)
+  unavailable ~code (Ox_ai.Error.to_string error)

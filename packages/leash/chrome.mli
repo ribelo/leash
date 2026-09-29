@@ -1,24 +1,24 @@
 (** Managed Chrome: one browser process under a restart schedule, and one CDP connection
     per browser generation.
 
-    [create] owns an {!Eta_process.Supervised} over a spawn that builds Chrome's
+    [create] owns an {!Ox_process.Supervised} over a spawn that builds Chrome's
     [--remote-debugging-pipe] pair, hands the child ends to descriptors 3 and 4 and speaks
     CDP over the parents' ends. A generation ends when its process exits or its transport
     closes; the supervisor then restarts it under the configured backoff. Losing the
     browser is an event on {!events}, never a failure of this service: the tab registry
     answers it by tombstoning its tabs. *)
 
-type spawn_error = Eta_process.Child.error
-(** [`Invalid_fd] or [`Duplicate_fd] from {!Eta_process.Child.spawn}. *)
+type spawn_error = Ox_process.Child.error
+(** [`Invalid_fd] or [`Duplicate_fd] from {!Ox_process.Child.spawn}. *)
 
-type reason = [ `Spawn of spawn_error | `Schedule_exhausted of Eta_process.Child.exit ]
+type reason = [ `Spawn of spawn_error | `Schedule_exhausted of Ox_process.Child.exit ]
 (** Why the supervisor gave up: a spawn that failed, or a schedule that ran out of
     attempts after the last exit. *)
 
 type event =
   | Started of int
   | Lost of int
-  | Gave_up of reason Eta.Cause.t
+  | Gave_up of reason Ox.Cause.t
   | Stopped
       (** The lifecycle a consumer such as the tab registry subscribes to. [Started g]
           follows each successful spawn; [Lost g] says generation [g] is gone, whether its
@@ -33,8 +33,8 @@ type status = { generation : int; phase : phase; failure : string option }
     Chrome is running or restarting, and, after a give-up, why. *)
 
 type backoff = {
-  initial : Eta.Duration.t;
-  cap : Eta.Duration.t;
+  initial : Ox.Duration.t;
+  cap : Ox.Duration.t;
   factor : float;
   attempts : int;
 }
@@ -46,7 +46,7 @@ type config = {
   binary : string;
   profile_dir : string;
   workspace : string;
-  grace : Eta.Duration.t;
+  grace : Ox.Duration.t;
   backoff : backoff;
   headless : bool;
   window_size : string;
@@ -56,7 +56,7 @@ val make :
   binary:string ->
   profile_dir:string ->
   workspace:string ->
-  ?grace:Eta.Duration.t ->
+  ?grace:Ox.Duration.t ->
   ?backoff:backoff ->
   ?headless:bool ->
   ?window_size:string ->
@@ -75,7 +75,7 @@ val argv : config -> string list
 type 'clock deps = {
   clock : 'clock Eio.Time.clock;
   mgr : Eio_unix.Process.mgr_ty Eio.Resource.t;
-  logger : Eta_observability.Logger.t;
+  logger : Ox_observability.Logger.t;
 }
 
 type 'clock launch =
@@ -83,7 +83,7 @@ type 'clock launch =
   clock:'clock Eio.Time.clock ->
   mgr:Eio_unix.Process.mgr_ty Eio.Resource.t ->
   config ->
-  (Eta_process.Child.t * Cdp.transport, spawn_error) result
+  (Ox_process.Child.t * Cdp.transport, spawn_error) result
 (** How one generation's process and transport are created, on the child switch that the
     supervisor releases when the generation ends. *)
 

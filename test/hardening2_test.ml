@@ -59,23 +59,23 @@ let contains haystack needle =
   n = 0 || scan 0
 
 let rig ?(cap = 14) f =
-  Eta_test.run (fun env sw ->
-      let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+  Ox_test.run (fun env sw ->
+      let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
       in
       let logger =
-        Eta_observability.Logger.create ~service:"leash-hardening-2" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"leash-hardening-2" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+          ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
           ()
       in
       let chrome =
@@ -709,7 +709,7 @@ let pump env cell =
         if n = 0 then Alcotest.fail "the request never replied"
         else (
           Eio.Fiber.yield ();
-          Eta_test.advance env#clock (Eta.Duration.ms 300);
+          Ox_test.advance env#clock (Ox.Duration.ms 300);
           loop (n - 1))
   in
   loop 5_000
@@ -717,7 +717,7 @@ let pump env cell =
 let quiet env cell rounds =
   for _ = 1 to rounds do
     Eio.Fiber.yield ();
-    Eta_test.advance env#clock (Eta.Duration.ms 300)
+    Ox_test.advance env#clock (Ox.Duration.ms 300)
   done;
   Alcotest.(check bool) "still waiting" true (!cell = None)
 
@@ -741,7 +741,7 @@ let long_wait () =
   (* hard-sr9v: an hour is the bound, and the listener's budget follows it. *)
   let budget command =
     match Leash.Control.budget (Ok P.{ owner = owner "alice"; command }) with
-    | Some d -> Eta.Duration.to_ms d
+    | Some d -> Ox.Duration.to_ms d
     | None -> Alcotest.fail "no budget"
   in
   let handle =
@@ -808,7 +808,7 @@ let long_wait () =
         for _ = 1 to 12 do
           Eio.Fiber.yield ()
         done;
-        Eta_test.advance env#clock (Eta.Duration.seconds 60)
+        Ox_test.advance env#clock (Ox.Duration.seconds 60)
       done;
       let info =
         List.hd
@@ -1349,9 +1349,9 @@ let listen ~runtime env sw tabs =
         net = env#net;
         clock = env#clock;
         logger =
-          Eta_observability.Logger.create ~service:"h2-socket" ~clock:env#clock
+          Ox_observability.Logger.create ~service:"h2-socket" ~clock:env#clock
             ~mono_clock:env#mono_clock
-            ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+            ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
             ();
       }
   with
@@ -1373,7 +1373,7 @@ let read_reply reader =
 let policy_peers () =
   Alcotest.(check int)
     "hard-b1na sixty-four concurrent requests" 64
-    Leash.Control.policy.Eta_ipc.Listener.peers
+    Leash.Control.policy.Ox_ipc.Listener.peers
 
 let ten_clients () =
   with_runtime (fun runtime ->
@@ -1483,7 +1483,7 @@ let many_waiters () =
                   changed_since = None;
                 }
           in
-          (* Twenty connections held open at once is more than eta_ipc's default sixteen. *)
+          (* Twenty connections held open at once is more than ox_ipc's default sixteen. *)
           let flows =
             List.init 20 (fun _ ->
                 let flow = connect env sw path in
@@ -1512,12 +1512,12 @@ let many_waiters () =
           List.iter Eio.Flow.close flows;
           for _ = 1 to 6 do
             Eio.Fiber.yield ();
-            Eta_test.advance env#clock (Eta.Duration.ms 300)
+            Ox_test.advance env#clock (Ox.Duration.ms 300)
           done;
           let settled = polls () in
           for _ = 1 to 8 do
             Eio.Fiber.yield ();
-            Eta_test.advance env#clock (Eta.Duration.ms 300)
+            Ox_test.advance env#clock (Ox.Duration.ms 300)
           done;
           Alcotest.(check int)
             "hard-sr9v a disconnect cancels the wait" settled (polls ())))

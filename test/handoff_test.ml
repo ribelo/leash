@@ -105,7 +105,7 @@ let answered cell = match !cell with Some _ -> true | None -> false
 
 (* The sweep is one fiber on the mock clock, parked for an hour here, and time passes
    only when a test moves the clock. *)
-let advance env seconds = Eta_test.advance env#clock (Eta.Duration.seconds seconds)
+let advance env seconds = Ox_test.advance env#clock (Ox.Duration.seconds seconds)
 
 let rec until n what check =
   if check () then ()
@@ -115,23 +115,23 @@ let rec until n what check =
     until (n - 1) what check)
 
 let rig ?(idle = 30) ?(unclaimed = 60) f =
-  Eta_test.run (fun env sw ->
-      let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+  Ox_test.run (fun env sw ->
+      let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
       in
       let logger =
-        Eta_observability.Logger.create ~service:"leash-handoff-tests" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"leash-handoff-tests" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Reporter.writer ignore)
+          ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
           ()
       in
       let chrome =
@@ -140,8 +140,8 @@ let rig ?(idle = 30) ?(unclaimed = 60) f =
              ~workspace:"test" ~headless:true ())
           { Chrome.clock = env#clock; mgr = env#process_mgr; logger }
       in
-      let idle = Eta.Duration.seconds idle in
-      let unclaimed = Eta.Duration.seconds unclaimed in
+      let idle = Ox.Duration.seconds idle in
+      let unclaimed = Ox.Duration.seconds unclaimed in
       let tabs =
         Tabs.create ~sw ~cap:128 ~tombstone_s:3600 ~idle ~unclaimed
           { Tabs.chrome; clock = env#clock; logger; desktop = Leash.Desktop.disabled }
@@ -157,7 +157,7 @@ let rig ?(idle = 30) ?(unclaimed = 60) f =
         match !current with Some fake -> fake | None -> Alcotest.fail "no fake browser"
       in
       let expiry =
-        Expiry.create ~sw ~interval:(Eta.Duration.hours 1) ~idle ~unclaimed
+        Expiry.create ~sw ~interval:(Ox.Duration.hours 1) ~idle ~unclaimed
           ~clock:env#clock ~logger tabs
       in
       f ~env ~sw ~tabs ~expiry ~fake)
@@ -266,10 +266,10 @@ let timeout_restores_the_owner () =
 let defaults_and_budget () =
   Alcotest.(check int)
     "hand-lmd5 fifteen minutes when the caller names no deadline" 900_000
-    (Eta.Duration.to_ms (Tabs.handoff_timeout None));
+    (Ox.Duration.to_ms (Tabs.handoff_timeout None));
   Alcotest.(check int)
     "hand-lmd5 the caller's deadline otherwise" 60_000
-    (Eta.Duration.to_ms (Tabs.handoff_timeout (Some 60)));
+    (Ox.Duration.to_ms (Tabs.handoff_timeout (Some 60)));
   let budget timeout_s =
     match
       Leash.Control.budget
@@ -280,15 +280,15 @@ let defaults_and_budget () =
                P.Handoff { tab = handle "t_budget"; reason = "captcha"; timeout_s };
            })
     with
-    | Some budget -> Eta.Duration.to_ms budget
+    | Some budget -> Ox.Duration.to_ms budget
     | None -> Alcotest.fail "a handoff has no handler budget"
   in
   Alcotest.(check bool)
     "hand-lmd5 the handler outlives the default deadline" true
-    (budget None > Eta.Duration.to_ms (Tabs.handoff_timeout None));
+    (budget None > Ox.Duration.to_ms (Tabs.handoff_timeout None));
   Alcotest.(check bool)
     "hand-lmd5 and the caller's" true
-    (budget (Some 60) > Eta.Duration.to_ms (Tabs.handoff_timeout (Some 60)))
+    (budget (Some 60) > Ox.Duration.to_ms (Tabs.handoff_timeout (Some 60)))
 
 (* hand-len8 hand-0sja: the sweep leaves the tab the human holds alone however long the
    human takes, and the resume restarts the idle clock, so the work the human just did

@@ -31,11 +31,11 @@ type reply = {
 [@@deriving yojson]
 
 type t = {
-  choose : deadline:Eta.Duration.t -> Run.question -> P.playbook_choice;
-  plan : ?deadline:Eta.Duration.t -> Run.plan_request -> (Run.plan_reply, P.error) result;
+  choose : deadline:Ox.Duration.t -> Run.question -> P.playbook_choice;
+  plan : ?deadline:Ox.Duration.t -> Run.plan_request -> (Run.plan_reply, P.error) result;
 }
 
-let default_deadline = Eta.Duration.seconds 30
+let default_deadline = Ox.Duration.seconds 30
 
 (* The reply holds a whole procedure: its steps, their goals and its expectations. The
    text helper's 1024 is a value; this is a plan. *)
@@ -58,9 +58,9 @@ let bounded limit text =
 let trim = String.trim
 
 (* run-obtt: each answered chat call carries provider-reported cost when available. *)
-let usage_of (completion : Eta_ai_chat.Codecs.completion) : P.run_usage =
-  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; cost; total_tokens = _ } =
-    completion.Eta_ai_chat.Codecs.usage
+let usage_of (completion : Ox_ai_chat.Codecs.completion) : P.run_usage =
+  let Ox_ai_chat.Types.{ prompt_tokens; completion_tokens; cost; total_tokens = _ } =
+    completion.Ox_ai_chat.Codecs.usage
   in
   P.
     {
@@ -80,18 +80,18 @@ let add_usage (a : P.run_usage) (b : P.run_usage) : P.run_usage =
 (* run-obtt: the provider's accounting at info, as the text helper and the drive log
    theirs — one line per call, before the reply is judged, because it was paid for either
    way. *)
-let log_usage logger (completion : Eta_ai_chat.Codecs.completion) =
-  let Eta_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens; cost } =
-    completion.Eta_ai_chat.Codecs.usage
+let log_usage logger (completion : Ox_ai_chat.Codecs.completion) =
+  let Ox_ai_chat.Types.{ prompt_tokens; completion_tokens; total_tokens; cost } =
+    completion.Ox_ai_chat.Codecs.usage
   in
-  Eta_observability.Logger.info logger
+  Ox_observability.Logger.info logger
     ~fields:
       [
-        ("model", Eta_observability.Logger.String completion.Eta_ai_chat.Codecs.model);
-        ("prompt_tokens", Eta_observability.Logger.Int prompt_tokens);
-        ("completion_tokens", Eta_observability.Logger.Int completion_tokens);
-        ("total_tokens", Eta_observability.Logger.Int total_tokens);
-        ("cost", Eta_observability.Logger.Float (Option.value ~default:0. cost));
+        ("model", Ox_observability.Logger.String completion.Ox_ai_chat.Codecs.model);
+        ("prompt_tokens", Ox_observability.Logger.Int prompt_tokens);
+        ("completion_tokens", Ox_observability.Logger.Int completion_tokens);
+        ("total_tokens", Ox_observability.Logger.Int total_tokens);
+        ("cost", Ox_observability.Logger.Float (Option.value ~default:0. cost));
       ]
     "planner usage"
 
@@ -260,24 +260,24 @@ let create ~client ~model ~reasoning ~logger () =
   let ask ~deadline messages =
     Model_usage.start "planner";
     match
-      Eta_ai_chat.complete client ~deadline ~model ~messages ~max_tokens ~json_object:true
+      Ox_ai_chat.complete client ~deadline ~model ~messages ~max_tokens ~json_object:true
         ~reasoning ()
     with
     | Error error -> Error (Model_error.of_eta error)
     | Ok completion ->
         log_usage logger completion;
-        Model_usage.report "planner" completion.Eta_ai_chat.Codecs.usage.cost;
+        Model_usage.report "planner" completion.Ox_ai_chat.Codecs.usage.cost;
         Ok completion
   in
   (* run-obtt: the correction call is bounded by the planner's own default deadline as
      well as by what the caller gave, so a turn can never outlast the listener budget the
      run answers within: the first call already has whatever is left of the run, and the
      retry is small by construction. *)
-  let retry_deadline (deadline : Eta.Duration.t) =
-    Eta.Duration.min deadline default_deadline
+  let retry_deadline (deadline : Ox.Duration.t) =
+    Ox.Duration.min deadline default_deadline
   in
   let plan ?(deadline = default_deadline) (request : Run.plan_request) =
-    let open Eta_ai_chat.Types in
+    let open Ox_ai_chat.Types in
     let messages =
       [
         { role = System; content = Questions.planner };
@@ -287,20 +287,20 @@ let create ~client ~model ~reasoning ~logger () =
     match ask ~deadline messages with
     | Error error -> Error error
     | Ok first -> (
-        match decode request first.Eta_ai_chat.Codecs.content with
+        match decode request first.Ox_ai_chat.Codecs.content with
         | Ok reply -> Ok { reply with Run.usage = Some (usage_of first) }
         | Error why -> (
             let retry =
               messages
               @ [
-                  { role = Assistant; content = first.Eta_ai_chat.Codecs.content };
+                  { role = Assistant; content = first.Ox_ai_chat.Codecs.content };
                   { role = User; content = Questions.planner_retry why };
                 ]
             in
             match ask ~deadline:(retry_deadline deadline) retry with
             | Error error -> Error error
             | Ok second -> (
-                match decode request second.Eta_ai_chat.Codecs.content with
+                match decode request second.Ox_ai_chat.Codecs.content with
                 | Ok reply ->
                     Ok
                       {
@@ -311,7 +311,7 @@ let create ~client ~model ~reasoning ~logger () =
                     Error (Model_error.unavailable ~code:"invalid-response" why))))
   in
   let choose ~deadline (question : Run.question) =
-    let open Eta_ai_chat.Types in
+    let open Ox_ai_chat.Types in
     let record ?key ?usage ?note () =
       P.{ source = "planner"; key; probabilities = `Null; confidence = None; usage; note }
     in
@@ -343,8 +343,8 @@ let create ~client ~model ~reasoning ~logger () =
     in
     Model_usage.start "planner";
     match
-      Eta_ai_chat.complete client
-        ~deadline:(Eta.Duration.min deadline default_deadline)
+      Ox_ai_chat.complete client
+        ~deadline:(Ox.Duration.min deadline default_deadline)
         ~model ~messages ~max_tokens:1024 ~json_object:true ~reasoning ()
     with
     | Error error ->
@@ -355,10 +355,10 @@ let create ~client ~model ~reasoning ~logger () =
           ()
     | Ok completion -> (
         log_usage logger completion;
-        Model_usage.report "planner" completion.Eta_ai_chat.Codecs.usage.cost;
+        Model_usage.report "planner" completion.Ox_ai_chat.Codecs.usage.cost;
         let usage = usage_of completion in
         let decoded =
-          try Some (Yojson.Safe.from_string completion.Eta_ai_chat.Codecs.content)
+          try Some (Yojson.Safe.from_string completion.Ox_ai_chat.Codecs.content)
           with Yojson.Json_error _ -> None
         in
         match decoded with

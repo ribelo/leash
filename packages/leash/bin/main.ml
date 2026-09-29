@@ -79,7 +79,7 @@ let service_socket ~config ~socket =
   match socket with
   | Some path -> Ok path
   | None -> (
-      let source = Eta_app.Config.resolve ~name:"leash" ~config ~getenv:Sys.getenv_opt in
+      let source = Ox_app.Config.resolve ~name:"leash" ~config ~getenv:Sys.getenv_opt in
       (* The Door's read outcome, not a message: a path with nothing at it is [`Missing],
          which is only an error where --config named it. *)
       let read path =
@@ -89,7 +89,7 @@ let service_socket ~config ~socket =
           with Sys_error message -> Error (`Unreadable message)
       in
       match
-        Eta_app.Config.load ~spec:Leash.Config.spec ~getenv:Sys.getenv_opt ~read ~source
+        Ox_app.Config.load ~spec:Leash.Config.spec ~getenv:Sys.getenv_opt ~read ~source
       with
       | Error (`Config message) ->
           let file = match source with `Explicit path | `Default path -> path in
@@ -752,7 +752,7 @@ let commands =
 let ( let* ) = Result.bind
 
 let program env (config : Leash.Config.t) sw =
-  let base = env.Eta_app.Env.base in
+  let base = env.Ox_app.Env.base in
   (* Test-only: the live-acceptance gate shortens the sweep period through
      LEASH_SWEEP_INTERVAL_S so stage 1 then stage 2 are observable on a real clock in
      seconds; production always uses the 30 s contract default. A bad value fails fast,
@@ -762,7 +762,7 @@ let program env (config : Leash.Config.t) sw =
     | None | Some "" -> Ok None
     | Some text -> (
         match int_of_string_opt (String.trim text) with
-        | Some n when n > 0 -> Ok (Some (Eta.Duration.seconds n))
+        | Some n when n > 0 -> Ok (Some (Ox.Duration.seconds n))
         | Some _ | None ->
             Error (`Service "LEASH_SWEEP_INTERVAL_S must be a positive integer"))
   in
@@ -784,11 +784,11 @@ let program env (config : Leash.Config.t) sw =
   in
   (* own-vhqo: the two expiry durations are config. The registry counts every tab down
      to them and the sweep applies them. *)
-  let seconds duration = Eta.Duration.seconds (Leash.Config.Seconds.to_int duration) in
+  let seconds duration = Ox.Duration.seconds (Leash.Config.Seconds.to_int duration) in
   let idle = seconds config.expiry.idle_s in
   let unclaimed = seconds config.expiry.unclaimed_s in
   (* hand-04rb hand-phof hand-rg9h: the two human-facing commands a handoff runs go through
-     Eta's child process, and the registry turns whatever they report into warnings. *)
+     Ox's child process, and the registry turns whatever they report into warnings. *)
   let desktop =
     Leash.Desktop.create ~clock:base#clock ~mgr:base#process_mgr
       {
@@ -825,7 +825,7 @@ let program env (config : Leash.Config.t) sw =
       config.models
   in
   Eio.Switch.on_release sw (fun () -> Leash.Tabs.stop tabs);
-  let status_query = Eta_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in
+  let status_query = Ox_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in
   (* svc-o4wt: the listener owns the configured socket path; validation refused anything
      that is not a real absolute path, so the variable is resolved by now. *)
   let socket = Leash.Config.Text.to_string config.control.socket in
@@ -852,7 +852,7 @@ let program env (config : Leash.Config.t) sw =
       }
     |> Result.map_error (fun _ -> `Service "control socket acquisition failed")
   in
-  Eta_app.serve ~sw ()
+  Ox_app.serve ~sw ()
 
 (* svc-x8rp: `leash config init` writes the commented default file. It is a Door subcommand
    of `config` (napp-wf22), not an ordinary command: it needs no service and sends no
@@ -868,7 +868,7 @@ let init_command =
   let force = Arg.(value & flag & info [ "force" ] ~doc:"Overwrite an existing file.") in
   let run config_file force () =
     let path =
-      Eta_app.Config.path ~name:"leash" ~config:config_file ~getenv:Sys.getenv_opt
+      Ox_app.Config.path ~name:"leash" ~config:config_file ~getenv:Sys.getenv_opt
     in
     match Leash.Config.init ~force ~path () with
     | Ok path ->
@@ -884,10 +884,10 @@ let init_command =
 
 let telemetry ~sw env config =
   match config.Leash.Config.otlp.endpoint with
-  | None -> { Eta_app.reporters = []; span_ids = None }
+  | None -> { Ox_app.reporters = []; span_ids = None }
   | Some endpoint ->
-      Leash.Telemetry.create ~sw ~net:env.Eta_app.Env.base#net
-        ~clock:env.Eta_app.Env.base#clock
+      Leash.Telemetry.create ~sw ~net:env.Ox_app.Env.base#net
+        ~clock:env.Ox_app.Env.base#clock
         ~endpoint:(Leash.Config.Text.to_string endpoint)
         ~headers:
           (List.map
@@ -898,8 +898,7 @@ let telemetry ~sw env config =
 
 let () =
   exit
-    (Eta_app.run ~name:"leash" ~service_command:"serve" ~config:Leash.Config.spec
-       ~commands ~telemetry ~config_commands:[ init_command ]
-       ~validate:Leash.Config.validate
+    (Ox_app.run ~name:"leash" ~service_command:"serve" ~config:Leash.Config.spec ~commands
+       ~telemetry ~config_commands:[ init_command ] ~validate:Leash.Config.validate
        ~pp_err:(fun fmt (`Service msg) -> Format.pp_print_string fmt msg)
        program)

@@ -20,7 +20,7 @@ let reply input =
   Yojson.Safe.from_string body
 
 let request_reply () =
-  Eta_test.run (fun _env sw ->
+  Ox_test.run (fun _env sw ->
       let _fake, client = Fake.create ~sw () in
       let input = reader client.read in
       List.iteri
@@ -52,7 +52,7 @@ let request_reply () =
         (reply input))
 
 let session_echo () =
-  Eta_test.run (fun _env sw ->
+  Ox_test.run (fun _env sw ->
       let _fake, client = Fake.create ~sw () in
       let input = reader client.read in
       request client
@@ -67,7 +67,7 @@ let session_echo () =
         (reply input))
 
 let event_on_cue () =
-  Eta_test.run (fun _env sw ->
+  Ox_test.run (fun _env sw ->
       let fake, client = Fake.create ~sw () in
       let input = reader client.read in
       List.iter
@@ -96,7 +96,7 @@ let event_on_cue () =
         | _ -> None))
 
 let records_and_override () =
-  Eta_test.run (fun _env sw ->
+  Ox_test.run (fun _env sw ->
       let fake, client = Fake.create ~sw () in
       Fake.on_method fake "Target.getTargets" (fun request ->
           obj
@@ -120,7 +120,7 @@ let records_and_override () =
       assert_json "record exact frame" sent (List.hd (Fake.received fake)))
 
 let drop_pipe () =
-  Eta_test.run (fun _env sw ->
+  Ox_test.run (fun _env sw ->
       let fake, client = Fake.create ~sw () in
       let input = reader client.read in
       Fake.drop fake;
@@ -129,7 +129,7 @@ let drop_pipe () =
           ignore (Eio.Buf_read.any_char input)))
 
 let placeholder () =
-  Eta_test.run (fun _env _sw -> Alcotest.(check bool) "L0 placeholder" true true)
+  Ox_test.run (fun _env _sw -> Alcotest.(check bool) "L0 placeholder" true true)
 
 let () =
   Alcotest.run "L0 fake browser"

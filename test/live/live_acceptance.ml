@@ -127,7 +127,7 @@ let await_started ~clock chrome =
     | Chrome.Started generation -> Ok generation
     | event -> Error (`Unexpected (show_event event))
   in
-  match Eta.Timeout.timeout ~clock (Eta.Duration.seconds 30) started with
+  match Ox.Timeout.timeout ~clock (Ox.Duration.seconds 30) started with
   | Ok generation -> generation
   | Error `Timeout -> fail "Chrome did not start within 30 seconds"
   | Error (`Unexpected event) -> fail "expected Started, got %s" event
@@ -135,18 +135,18 @@ let await_started ~clock chrome =
 let run env ~binary ~profile =
   let clock = Eio.Stdenv.clock env in
   let logger =
-    Eta_observability.Logger.create ~service:"leash-live" ~clock
+    Ox_observability.Logger.create ~service:"leash-live" ~clock
       ~mono_clock:(Eio.Stdenv.mono_clock env)
-      ~reporter:(Eta_observability.Logger.Reporter.journal (Eio.Stdenv.stderr env))
+      ~reporter:(Ox_observability.Logger.Reporter.journal (Eio.Stdenv.stderr env))
       ()
   in
   (* Headless: the gate is about the pipe, the profile and the flags, and a headed
      window steals the operator's focus for no evidence. *)
   let config =
     Chrome.make ~binary ~profile_dir:profile ~workspace:"dev"
-      ~grace:(Eta.Duration.seconds 10) ~headless:true ()
+      ~grace:(Ox.Duration.seconds 10) ~headless:true ()
   in
-  let grace = Eta.Duration.to_seconds_float config.Chrome.grace in
+  let grace = Ox.Duration.to_seconds_float config.Chrome.grace in
   note "L2 live acceptance: real Chrome over a private CDP pipe";
   note "  binary  %s" binary;
   note "  profile %s" profile;
@@ -165,7 +165,7 @@ let run env ~binary ~profile =
             fail "no CDP connection for generation %d" generation
       in
       let call method_ params =
-        match Cdp.call connection ~deadline:(Eta.Duration.seconds 15) method_ params with
+        match Cdp.call connection ~deadline:(Ox.Duration.seconds 15) method_ params with
         | Ok reply -> reply
         | Error `Timeout -> fail "%s timed out" method_
         | Error (`Transport_closed _) -> fail "%s: the transport closed" method_

@@ -8,7 +8,7 @@
 
    The model client is served by a local plaintext System One server
    (leash_test_support.Fake_systemone) and the browser by the scripted CDP peer, so nothing
-   here touches the network or a real browser. The clock is Eio's real one, as eta-next's
+   here touches the network or a real browser. The clock is Eio's real one, as ox's
    AI tests explain: the client's socket wait and a mock clock cannot both make progress in
    one domain. *)
 
@@ -18,7 +18,7 @@ module Server = Leash_test_support.Fake_systemone
 module Chrome = Leash.Chrome
 module Config = Leash.Config
 module Models = Leash.Models
-module Logger = Eta_observability.Logger
+module Logger = Ox_observability.Logger
 
 let obj fields = `Assoc fields
 let str value = `String value
@@ -144,14 +144,14 @@ let script_page fake =
 let rig f =
   Eio_main.run (fun env ->
       Eio.Switch.run (fun sw ->
-          let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+          let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
           let current = ref None in
           let launch ~sw ~clock ~mgr:_ config =
             let fake, client = Fake.create ~sw () in
             current := Some fake;
             match
-              Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-                ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+              Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+                ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
             with
             | Error error -> Error error
             | Ok child ->
@@ -201,7 +201,7 @@ let models_config ?(api_key = Some key)
     ?(endpoint = "https://openrouter.ai/api/v1/systemone") () : Config.models =
   {
     Config.default.models with
-    api_key = Option.map Eta_observability.Redact.make api_key;
+    api_key = Option.map Ox_observability.Redact.make api_key;
     systemone_endpoint = text_value endpoint;
     jev_model = text_value jev_model;
     chat_base_url = text_value "https://openrouter.ai/api/v1";
@@ -565,7 +565,7 @@ let missing_key () =
 
 let endpoints () =
   let decode text =
-    match Eta_app.Config.decode ~spec:Config.spec ~getenv:(fun _ -> None) text with
+    match Ox_app.Config.decode ~spec:Config.spec ~getenv:(fun _ -> None) text with
     | Ok config -> config
     | Error (`Config why) -> Alcotest.fail why
   in
@@ -604,7 +604,7 @@ tombstone_s = 3600
      and the endpoints and model ids are still the defaults. *)
   let from_env =
     match
-      Eta_app.Config.decode ~spec:Config.spec
+      Ox_app.Config.decode ~spec:Config.spec
         ~getenv:(fun name -> if name = "OPENROUTER_API_KEY" then Some key else None)
         base
     with
@@ -641,7 +641,7 @@ jev_model = "jev-latest"
   (* The models service reports exactly what the file said, and the key stays a Redact. *)
   rig (fun env sw _ _ logger _ ->
       let config =
-        { typesafe.models with api_key = Some (Eta_observability.Redact.make key) }
+        { typesafe.models with api_key = Some (Ox_observability.Redact.make key) }
       in
       let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
       let status = Models.status models in

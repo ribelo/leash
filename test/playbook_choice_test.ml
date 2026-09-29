@@ -5,7 +5,7 @@ module R = Leash.Run
 module B = Leash.Playbook
 module P = Leash.Protocol
 module Server = Leash_test_support.Fake_systemone
-module Logger = Eta_observability.Logger
+module Logger = Ox_observability.Logger
 
 let ok = function Ok value -> value | Error why -> Alcotest.fail why
 
@@ -115,7 +115,7 @@ let question_on_wire ~url () =
           let config =
             {
               Leash.Config.default.models with
-              api_key = Some (Eta_observability.Redact.make "test-key");
+              api_key = Some (Ox_observability.Redact.make "test-key");
               systemone_endpoint =
                 ok (Leash.Config.Text.of_string (Server.url server "/systemone"));
             }

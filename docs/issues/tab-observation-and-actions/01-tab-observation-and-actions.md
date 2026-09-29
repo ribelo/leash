@@ -53,7 +53,7 @@ One snapshot per observation: url, title, and a numbered element table. Every ac
 - A snapshot records a freshness fingerprint: the frame's loader id plus a digest of the table. `stale-snapshot` is raised when the loader id changed, when the targeted row's node no longer resolves, or when its role/name differ from the snapshot. Animation alone does not make a snapshot stale.
 - Click resolves current geometry at action time, rejects a covered click point, and dispatches trusted CDP mouse events. Fill focuses the node, selects its content, and inserts text through `Input.insertText`, then dispatches change semantics by blur; it never assigns `value` directly. Press uses `Input.dispatchKeyEvent` with a small key-name table.
 - Post-action settle is bounded as in jev-ultrafast: after typing into a combobox wait for visible suggestions up to 200 ms; otherwise two animation frames or 50 ms. The action reply's fresh snapshot id is set only when a snapshot was taken as part of settling.
-- Per-tab serialization is a per-tab `Eta.Semaphore` of one; the registry runs each tab's queue in its own fiber.
+- Per-tab serialization is a per-tab `Ox.Semaphore` of one; the registry runs each tab's queue in its own fiber.
 - Dialogs: `Page.javascriptDialogOpening` sets the tab's dialog; the dialog action calls `Page.handleJavaScriptDialog`. `beforeunload` is a dialog like any other.
 - Debug log is a bounded ring of 200 entries per tab fed by `Runtime.consoleAPICalled`, `Runtime.exceptionThrown`, and `Network.loadingFailed` plus 4xx/5xx responses.
 - Screenshots use `Page.captureScreenshot`; full-page captures use `captureBeyondViewport` with the content size; the file is written by the service at the absolute path given, 20 MiB bound.

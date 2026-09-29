@@ -53,24 +53,24 @@ let enum of_string value =
   match of_string value with Ok v -> v | Error e -> Alcotest.fail e
 
 let rig f =
-  Eta_test.run (fun env sw ->
-      let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+  Ox_test.run (fun env sw ->
+      let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
       in
-      let logs = Eta_observability.Logger.Memory.create () in
+      let logs = Ox_observability.Logger.Memory.create () in
       let logger =
-        Eta_observability.Logger.create ~service:"leash-ownership-tests" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"leash-ownership-tests" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Memory.reporter logs)
+          ~reporter:(Ox_observability.Logger.Memory.reporter logs)
           ()
       in
       let chrome =
@@ -414,7 +414,7 @@ let force () =
         (get "closed"
            (result (request tabs "bob" (P.Close { tab = other; force = Some true })))
         = `Bool true);
-      let module Log = Eta_observability.Logger in
+      let module Log = Ox_observability.Logger in
       let forced cmd = Log.Memory.find ~level:Log.Warn ~field:("cmd", cmd) logs in
       Alcotest.(check bool)
         "own-0pnk a forced release is logged" true

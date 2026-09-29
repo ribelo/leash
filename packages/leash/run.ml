@@ -2,7 +2,7 @@
    one mission over the installed playbooks.
 
    The loop is an effect computation over a local handler token, exactly as the drive is
-   (drive-8n2z, eta-next ADR-0006): Select_playbook, Select_procedure, Fill_args,
+   (drive-8n2z, ox ADR-0006): Select_playbook, Select_procedure, Fill_args,
    Execute_step, Verify and Plan are the six judgments of story 37, performed through a
    token that cannot escape this module; Observe, Navigate and Hand_off are the loop's own
    perception, its playbook switch and the ending a planner's handoff asks for. Production
@@ -119,11 +119,11 @@ type plan_request = {
 
 type levels = {
   choose :
-    deadline:Eta.Duration.t -> question -> (choice, P.error) result;
+    deadline:Ox.Duration.t -> question -> (choice, P.error) result;
   score :
-    deadline:Eta.Duration.t -> sentence:string -> state:Yojson.Safe.t -> (float, P.error) result;
+    deadline:Ox.Duration.t -> sentence:string -> state:Yojson.Safe.t -> (float, P.error) result;
   plan :
-    deadline:Eta.Duration.t -> plan_request -> (plan_reply, P.error) result;
+    deadline:Ox.Duration.t -> plan_request -> (plan_reply, P.error) result;
 }
 (** run-7blx: the three upper-level calls as one seam over one models service, so a
     scripted test replaces the model with a function and production passes

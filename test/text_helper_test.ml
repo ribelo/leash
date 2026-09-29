@@ -4,7 +4,7 @@
    The chat helper is served by a local plaintext HTTP server
    (leash_test_support.Fake_systemone) and the browser by the scripted CDP peer over the
    page recorded in test/fixtures/unlabelled-controls-chrome.json, so nothing here touches
-   the network or a real browser. The clock is Eio's real one, as eta-next's AI tests
+   the network or a real browser. The clock is Eio's real one, as ox's AI tests
    explain: a client's socket wait and a mock clock cannot both make progress in one
    domain. *)
 
@@ -14,7 +14,7 @@ module Chat = Leash_test_support.Fake_systemone
 module Chrome = Leash.Chrome
 module Config = Leash.Config
 module Models = Leash.Models
-module Logger = Eta_observability.Logger
+module Logger = Ox_observability.Logger
 
 let obj fields = `Assoc fields
 let str value = `String value
@@ -306,7 +306,7 @@ let chat_server ~sw ~net replies =
 let models_config ~systemone_endpoint ~chat_base_url : Config.models =
   {
     Config.default.models with
-    api_key = Some (Eta_observability.Redact.make key);
+    api_key = Some (Ox_observability.Redact.make key);
     systemone_endpoint = text_value systemone_endpoint;
     jev_model = text_value jev_model;
     chat_base_url = text_value chat_base_url;
@@ -320,14 +320,14 @@ let models_config ~systemone_endpoint ~chat_base_url : Config.models =
 let rig f =
   Eio_main.run (fun env ->
       Eio.Switch.run (fun sw ->
-          let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+          let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
           let current = ref None in
           let launch ~sw ~clock ~mgr:_ config =
             let fake, client = Fake.create ~sw () in
             current := Some fake;
             match
-              Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-                ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+              Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+                ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
             with
             | Error error -> Error error
             | Ok child ->
@@ -381,13 +381,13 @@ let helper_rig ?(replies = [ chat_reply (`String "hello") ]) f =
           in
           let server = chat_server ~sw ~net:env#net replies in
           let http =
-            Eta_http.Client.create ~sw ~net:env#net ~clock:env#clock
-              ~tls:(Eta_http.Client.tls ()) ()
+            Ox_http.Client.create ~sw ~net:env#net ~clock:env#clock
+              ~tls:(Ox_http.Client.tls ()) ()
           in
           let client =
-            Eta_ai_chat.create ~http ~clock:env#clock ~logger
+            Ox_ai_chat.create ~http ~clock:env#clock ~logger
               ~endpoint:(Chat.url server "/chat/completions")
-              ~api_key:(Eta_observability.Redact.make key)
+              ~api_key:(Ox_observability.Redact.make key)
               ()
           in
           let helper = Leash.Text_helper.create ~client ~model:text_model ~logger () in

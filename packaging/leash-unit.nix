@@ -5,7 +5,7 @@
 #
 # ExecStart is the `nix build .#leash` binary with the Door's start subcommand, named
 # `serve` because `run` is the mission command (run-9ypy, L31: `leash run "<mission>"`
-# runs a mission over the playbooks). Eta_app adds it under that name; a bare invocation
+# runs a mission over the playbooks). Ox_app adds it under that name; a bare invocation
 # starts the same program. The unit belongs to the
 # graphical session: After/PartOf graphical-session.target, installed into
 # graphical-session.target, `Restart=on-failure` with a two-second delay. The session

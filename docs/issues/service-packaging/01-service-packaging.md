@@ -21,7 +21,7 @@ A systemd user unit in the desktop session, a TOML config with fail-fast validat
 4. As an operator, I want logs in the journal with the tab handle, owner, and command on each line, so that I can follow an agent's session. ^svc-p67t
 5. As an operator, I want page content, typed text, and urls with credentials kept out of logs, so that the journal is not a transcript of my logins. ^svc-qilu
 6. As an operator, I want `scripts/live-acceptance` to run the real-Chrome checks the specs mark live-only and print a pass/fail report, so that a change is proven against the real thing before I trust it. ^svc-xafg
-7. As an operator, I want the Nix flake to build the service and CLI with Eta pinned, exactly like Pie, so that the two services share one build story. ^svc-46f0
+7. As an operator, I want the Nix flake to build the service and CLI with Ox pinned, exactly like Pie, so that the two services share one build story. ^svc-46f0
 8. As an agent, I want the chrome-cdp skill rewritten to use `leash`, with the same minimize-output guidance, so that I do not have to learn a new workflow. ^svc-itcb
 9. As an operator, I want `leash status` to be the health check and the unit to restart the service on failure, so that a crashed service does not need me. ^svc-gxhu
 10. As an operator, I want the service to refuse to start if another instance owns the control socket, so that two services never fight over one profile. ^svc-5wm8
@@ -34,10 +34,10 @@ A systemd user unit in the desktop session, a TOML config with fail-fast validat
 
 ## Implementation Decisions
 
-- Unit is installed by the flake or home-manager as Pie's is; `After=graphical-session.target`, `Restart=on-failure`, `SuccessExitStatus=130` (Eta's process door returns 130 on SIGTERM interruption, which is a clean stop), environment imported from the session for `WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR`.
-- Defects at the process door are printed only once Eta ticket `main-door-cause-diagnostics` lands; until then the service owner wraps its main effect and renders the full cause with `Eta.Cause.pp` itself, recorded as an `etagap-*` workaround, so a crash never leaves an empty journal.
+- Unit is installed by the flake or home-manager as Pie's is; `After=graphical-session.target`, `Restart=on-failure`, `SuccessExitStatus=130` (Ox's process door returns 130 on SIGTERM interruption, which is a clean stop), environment imported from the session for `WAYLAND_DISPLAY` and `XDG_RUNTIME_DIR`.
+- Defects at the process door are printed only once Ox ticket `main-door-cause-diagnostics` lands; until then the service owner wraps its main effect and renders the full cause with `Ox.Cause.pp` itself, recorded as an `etagap-*` workaround, so a crash never leaves an empty journal.
 - Config schema in one module with a typed record; unknown keys are errors; defaults are documented in `docs/config.md` generated from the same record.
-- Logging through Eta observability with a journal reporter; a redaction rule set keeps `fill` text, `text` results, and userinfo out of records.
+- Logging through Ox observability with a journal reporter; a redaction rule set keeps `fill` text, `text` results, and userinfo out of records.
 - The chrome-cdp skill is replaced in the dotfiles skills library (`/home/ribelo/.dotfiles/skills/engineering/debugging/`) by a `leash` skill written in the same minimize-output style: `snap --match`, `--limit`, `text`, never a full table when a row will do; the old script remains until the replacement has passed live acceptance with an agent completing the same workflow.
 - The niri window rule (`match app-id="^leash$"` → `open-on-workspace "leash"`, `open-focused false`) is documented for the operator to add; Leash does not edit the niri config.
 - The systemd unit: `Restart=on-failure`, `SuccessExitStatus=0` (the Door exits 0 on SIGTERM), `After=graphical-session.target`, `PartOf=graphical-session.target`, environment imported from the session (`WAYLAND_DISPLAY`, `XDG_RUNTIME_DIR`, `DISPLAY`); installed by home-manager like Pie's, or by a `scripts/install-user-unit` if Pie's is installed by hand.
@@ -59,7 +59,7 @@ Packaging for anyone but this machine, CI, an HTTP adapter.
 - Whether the unit is home-manager managed or a flake output installed by hand follows whatever Pie does today.
 - **svc-dit8 note, 2026-09-28 (L31):** the Door's start subcommand is named `serve`, not
   `run`. L31's story run-9ypy gives `leash run "<mission>"` to the mission command, so
-  Eta_app grew `?service_command` (eta-next napp-d5e4) and Leash passes `"serve"`:
+  Ox_app grew `?service_command` (ox napp-d5e4) and Leash passes `"serve"`:
   `ExecStart` is `…/bin/leash serve`, and `docs/install.md`, `packaging/leash-unit.nix`
   and `scripts/unit-acceptance` were moved with it. A bare `leash` still starts the
   same program.

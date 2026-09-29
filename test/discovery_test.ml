@@ -120,24 +120,24 @@ let check_disposition label expected reply =
   | P.Success _ -> Alcotest.failf "%s: expected tab-gone" label
 
 let rig f =
-  Eta_test.run (fun env sw ->
-      let mgr = Eta_test.Process.make [ Block_until_signal; Block_until_signal ] in
+  Ox_test.run (fun env sw ->
+      let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let launch ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Eta_process.Child.spawn ~sw ~clock ~mgr:(Eta_test.Process.mgr mgr)
-            ~argv:(Chrome.argv config) ~grace:(Eta.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
       in
-      let logs = Eta_observability.Logger.Memory.create () in
+      let logs = Ox_observability.Logger.Memory.create () in
       let logger =
-        Eta_observability.Logger.create ~service:"leash-discovery-tests" ~clock:env#clock
+        Ox_observability.Logger.create ~service:"leash-discovery-tests" ~clock:env#clock
           ~mono_clock:env#mono_clock
-          ~reporter:(Eta_observability.Logger.Memory.reporter logs)
+          ~reporter:(Ox_observability.Logger.Memory.reporter logs)
           ()
       in
       let chrome =

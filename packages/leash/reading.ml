@@ -1,5 +1,5 @@
 module P = Protocol
-module D = Eta_json.Of_json
+module D = Ox_json.Of_json
 
 type page_state = { loader : string; guard : (string * int) option }
 
@@ -118,7 +118,7 @@ let eval browser (args : P.eval_args) =
   if String.length args.expression > cap then Error (too_large "expression")
   else
     let argument = Option.value ~default:`Null args.argument in
-    if String.length (Eta_json.to_string argument) > cap then Error (too_large "argument")
+    if String.length (Ox_json.to_string argument) > cap then Error (too_large "argument")
     else
       let* element =
         match (args.index, args.snapshot) with
@@ -145,7 +145,7 @@ let eval browser (args : P.eval_args) =
               ~arguments:
                 [ obj [ ("value", argument) ]; obj [ ("objectId", str element) ] ]
       in
-      if String.length (Eta_json.to_string value) > cap then Error (too_large "result")
+      if String.length (Ox_json.to_string value) > cap then Error (too_large "result")
       else Ok P.{ value }
 
 (* extr-8o1h extr-vgir extr-k40c: running a playbook script. This is the one function that
@@ -201,7 +201,7 @@ let script_args_cap = 65_536
 
 let script browser (script : Playbook.script) ~args =
   let arguments = `Assoc (List.map (fun (name, value) -> (name, `String value)) args) in
-  if String.length (Eta_json.to_string arguments) > script_args_cap then
+  if String.length (Ox_json.to_string arguments) > script_args_cap then
     Error (too_large "script arguments")
   else
     let started = browser.now () in
@@ -212,7 +212,7 @@ let script browser (script : Playbook.script) ~args =
         ~arguments:[ obj [ ("value", arguments) ] ]
     in
     let elapsed_ms = int_of_float ((browser.now () -. started) *. 1000.) in
-    let bytes = String.length (Eta_json.to_string value) in
+    let bytes = String.length (Ox_json.to_string value) in
     if bytes > script.Playbook.max_bytes then
       Error
         (error "too-large"
@@ -531,7 +531,7 @@ let observe t ~at json =
           (fun arg ->
             match field "value" (fun x -> Ok x) arg with
             | Some (`String s) -> Some s
-            | Some value -> Some (Eta_json.to_string value)
+            | Some value -> Some (Ox_json.to_string value)
             | None -> field "description" D.string arg)
           args
       in

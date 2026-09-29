@@ -45,7 +45,7 @@ val authorize :
 type 'clock deps = {
   chrome : Chrome.t;
   clock : 'clock Eio.Time.clock;
-  logger : Eta_observability.Logger.t;
+  logger : Ox_observability.Logger.t;
   desktop : Desktop.t;
       (** The human-facing steps {!handoff} runs (hand-04rb hand-phof). *)
 }
@@ -55,15 +55,15 @@ val create :
   cap:int ->
   tombstone_s:int ->
   ?download_dir:string ->
-  ?idle:Eta.Duration.t ->
-  ?unclaimed:Eta.Duration.t ->
+  ?idle:Ox.Duration.t ->
+  ?unclaimed:Ox.Duration.t ->
   'clock deps ->
   t
 (** [idle] and [unclaimed] are the two expiry durations (own-vhqo). They default to the
     ADR's thirty minutes and one hour, and they are what the [expires] of every
     {!Protocol.tab_info} this registry reports counts down to. *)
 
-val status : t -> Eta_app.Status.t
+val status : t -> Ox_app.Status.t
 
 val report : t -> Protocol.status_result
 (** [report.models] is [None]: the models section is the models service's and the control
@@ -146,7 +146,7 @@ val handoff :
     [warnings], and an unanswered handoff carries them in the [timeout] error's
     [detail.warnings]. None of them fails the handoff. *)
 
-val handoff_timeout : int option -> Eta.Duration.t
+val handoff_timeout : int option -> Ox.Duration.t
 (** hand-lmd5: the deadline a handoff runs on: the caller's [timeout_s], or the contract's
     fifteen minutes when it names none. [Control.budget] derives the handler's budget from
     this same function. *)
@@ -201,7 +201,7 @@ val snap :
 
 val drive :
   ?decide:
-    (deadline:Eta.Duration.t ->
+    (deadline:Ox.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
@@ -228,7 +228,7 @@ val run :
   ?levels:Run.levels ->
   ?model:string ->
   ?decide:
-    (deadline:Eta.Duration.t ->
+    (deadline:Ox.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->

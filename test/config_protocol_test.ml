@@ -794,7 +794,7 @@ let config_decode
       | "XDG_DATA_HOME" -> Some "/tmp/leash-xdg-data"
       | "XDG_RUNTIME_DIR" -> Some "/tmp/leash-xdg-runtime"
       | _ -> None) text =
-  Eta_app.Config.decode ~spec:C.spec ~getenv text
+  Ox_app.Config.decode ~spec:C.spec ~getenv text
 
 let expect_config_error name needles = function
   | Ok _ -> Alcotest.fail (name ^ ": expected an error")
@@ -1217,7 +1217,7 @@ let otlp_config () =
     | Ok () -> Alcotest.fail ("expected invalid " ^ expected)
     | Error issues ->
         Alcotest.(check string)
-          "error pointer" expected (List.hd issues).Eta_app.Config.pointer
+          "error pointer" expected (List.hd issues).Ox_app.Config.pointer
   in
   error_pointer "/otlp/headers"
     { enabled with otlp = { endpoint = None; headers = enabled.otlp.headers } };
@@ -1354,7 +1354,7 @@ let binary_on_path () =
         | _ -> None
       in
       let decode path text =
-        match Eta_app.Config.decode ~spec:C.spec ~getenv:(environment path) text with
+        match Ox_app.Config.decode ~spec:C.spec ~getenv:(environment path) text with
         | Ok value -> value
         | Error (`Config message) -> Alcotest.fail message
       in
@@ -1372,10 +1372,10 @@ let binary_on_path () =
           let issues = refusal env#fs "missing binary" missing in
           Alcotest.(check string)
             "svc-x8rp a bare name nothing provides is refused by pointer" "/chrome/binary"
-            (List.hd issues).Eta_app.Config.pointer;
+            (List.hd issues).Ox_app.Config.pointer;
           Alcotest.(check bool)
             "svc-x8rp and the message says PATH" true
-            (contains "PATH" (List.hd issues).Eta_app.Config.message)))
+            (contains "PATH" (List.hd issues).Ox_app.Config.message)))
 
 (* svc-o4wt svc-x8rp: a variable that is unset leaves its placeholder in the path, and
    validation names that field instead of letting the service write a directory called
@@ -1386,14 +1386,14 @@ let unset_xdg_paths () =
       close_out (open_out stub);
       Unix.chmod stub 0o700;
       let decode text =
-        match Eta_app.Config.decode ~spec:C.spec ~getenv:(fun _ -> None) text with
+        match Ox_app.Config.decode ~spec:C.spec ~getenv:(fun _ -> None) text with
         | Ok value -> value
         | Error (`Config message) -> Alcotest.fail message
       in
       let pointer ~fs label config =
         match C.validate_paths ~fs config with
         | Ok () -> Alcotest.fail (label ^ ": expected a refusal")
-        | Error issues -> (List.hd issues).Eta_app.Config.pointer
+        | Error issues -> (List.hd issues).Ox_app.Config.pointer
       in
       let chrome = Printf.sprintf "[chrome]\nbinary = %S\n" stub in
       Eio_main.run (fun env ->
@@ -1418,7 +1418,7 @@ let config_defaults () =
   in
   let default = C.env ~getenv C.default in
   let decode name text =
-    match Eta_app.Config.decode ~spec:C.spec ~getenv text with
+    match Ox_app.Config.decode ~spec:C.spec ~getenv text with
     | Ok value -> value
     | Error (`Config message) -> Alcotest.fail (name ^ ": " ^ message)
   in
@@ -1548,7 +1548,7 @@ let service_starts_without_config () =
       let default_path =
         Filename.concat (Filename.concat config_home "leash") "config.toml"
       in
-      Eta_test.run (fun env _sw ->
+      Ox_test.run (fun env _sw ->
           let entered = ref None in
           let read_paths = ref [] in
           let read path =
@@ -1559,8 +1559,8 @@ let service_starts_without_config () =
             let stderr = Buffer.create 256 in
             let stdout = Buffer.create 256 in
             let code =
-              Eta_app.run_for_test ~env
-                ~journal:(Eta_observability.Logger.Reporter.writer ignore)
+              Ox_app.run_for_test ~env
+                ~journal:(Ox_observability.Logger.Reporter.writer ignore)
                 ~name:"leash" ~config:C.spec
                 ~pp_err:(fun fmt (`Service message) -> Format.pp_print_string fmt message)
                 ~getenv ~read

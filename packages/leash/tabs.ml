@@ -3,7 +3,7 @@ module P = Protocol
 type 'clock deps = {
   chrome : Chrome.t;
   clock : 'clock Eio.Time.clock;
-  logger : Eta_observability.Logger.t;
+  logger : Ox_observability.Logger.t;
   desktop : Desktop.t;
 }
 
@@ -258,9 +258,9 @@ type t = {
   now : unit -> float;
   sleep : float -> unit;
   await_load : unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
-  await_handoff : Eta.Duration.t -> unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
+  await_handoff : Ox.Duration.t -> unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   desktop : Desktop.t;
-  logger : Eta_observability.Logger.t;
+  logger : Ox_observability.Logger.t;
   download_dir : string option;
   downloads_by_guid : (string, string) Hashtbl.t;
   cap : int;
@@ -357,13 +357,13 @@ let disappear t tab disposition =
    command, the caller, the tab and the state it overrode. *)
 let permitted t ~access ~force ~caller handle state =
   if force && forceable access then
-    Eta_observability.Logger.warn t.logger
+    Ox_observability.Logger.warn t.logger
       ~fields:
         [
-          ("cmd", Eta_observability.Logger.String (access_name access));
-          ("owner", Eta_observability.Logger.String (P.Owner.to_string caller));
-          ("tab", Eta_observability.Logger.String (key handle));
-          ("state", Eta_observability.Logger.String (state_name state));
+          ("cmd", Ox_observability.Logger.String (access_name access));
+          ("owner", Ox_observability.Logger.String (P.Owner.to_string caller));
+          ("tab", Ox_observability.Logger.String (key handle));
+          ("state", Ox_observability.Logger.String (state_name state));
         ]
       "ownership forced";
   authorize ~force access ~caller state
@@ -395,7 +395,7 @@ let locate t ~access ?(force = false) ~owner handle =
       | Some tomb -> Error (P.tab_gone tomb.disposition)
       | None -> Error (error "unknown-tab" "unknown tab handle"))
 
-let cdp_call ?(deadline = Eta.Duration.seconds 30) ?session cdp meth params =
+let cdp_call ?(deadline = Ox.Duration.seconds 30) ?session cdp meth params =
   match Cdp.call cdp ?session ~deadline meth params with
   | Error `Timeout -> Error (error "timeout" "browser operation timed out")
   | Error _ -> Error (unavailable ())
@@ -859,8 +859,8 @@ let close t ~owner ?(force = false) handle =
    same question, so the handler's budget and the request's own deadline cannot drift
    apart. *)
 let handoff_timeout = function
-  | Some seconds when seconds > 0 -> Eta.Duration.seconds seconds
-  | Some _ | None -> Eta.Duration.minutes 15
+  | Some seconds when seconds > 0 -> Ox.Duration.seconds seconds
+  | Some _ | None -> Ox.Duration.minutes 15
 
 (* hand-nisr own-pmr7 hand-lz3p: the state transition a handoff is. It lands in the
    registry here because [With_human] is part of the owner state and the [with-human]
@@ -919,7 +919,7 @@ let resume t ~owner handle =
 (* hand-04rb: every human-facing step a handoff waits on is bounded by five seconds — the
    browser call that raises the view here, and the window lookup and focus command inside
    {!Desktop} — so a desktop that has stopped answering cannot hold the handler. *)
-let step_deadline = Eta.Duration.seconds 5
+let step_deadline = Ox.Duration.seconds 5
 
 (* hand-0sja: the notification's action return is the human resuming, from a terminal that
    is not the owner's, so it arrives as the same request a person types. *)
@@ -974,8 +974,8 @@ let announce t ~sw ~tab ~reason ~warn =
               match resume t ~owner:human_owner tab.handle with
               | Ok _ -> ()
               | Error error ->
-                  Eta_observability.Logger.info t.logger
-                    ~fields:[ ("tab", Eta_observability.Logger.String (key tab.handle)) ]
+                  Ox_observability.Logger.info t.logger
+                    ~fields:[ ("tab", Ox_observability.Logger.String (key tab.handle)) ]
                     ("the notification answered a handoff that had already ended: "
                    ^ error.P.message)));
       `Stop_daemon)
@@ -1005,11 +1005,11 @@ let handoff t ~owner ~reason ~timeout_s handle =
   let warn step message =
     let warning = step ^ ": " ^ message in
     warnings := warning :: !warnings;
-    Eta_observability.Logger.warn t.logger
+    Ox_observability.Logger.warn t.logger
       ~fields:
         [
-          ("tab", Eta_observability.Logger.String (key tab.handle));
-          ("reason", Eta_observability.Logger.String reason);
+          ("tab", Ox_observability.Logger.String (key tab.handle));
+          ("reason", Ox_observability.Logger.String reason);
         ]
       ("handoff warning: " ^ warning)
   in
@@ -1052,9 +1052,9 @@ let handoff t ~owner ~reason ~timeout_s handle =
      before the wait count against it — a handoff never outlives the deadline its caller
      gave it — and a deadline already spent answers at once. *)
   let remaining () =
-    let spent = Eta.Duration.ms (int_of_float ((now t -. started) *. 1000.)) in
-    Eta.Duration.max Eta.Duration.zero
-      (Eta.Duration.subtract (handoff_timeout timeout_s) spent)
+    let spent = Ox.Duration.ms (int_of_float ((now t -. started) *. 1000.)) in
+    Ox.Duration.max Ox.Duration.zero
+      (Ox.Duration.subtract (handoff_timeout timeout_s) spent)
   in
   Fun.protect ~finally:release (fun () ->
       Eio.Switch.run (fun human ->
@@ -1062,7 +1062,7 @@ let handoff t ~owner ~reason ~timeout_s handle =
              the notifier is stopped when the request ends however it ends. *)
           announce t ~sw:human ~tab ~reason ~warn;
           let left = remaining () in
-          if not (Eta.Duration.is_zero left) then
+          if not (Ox.Duration.is_zero left) then
             ignore (t.await_handoff left waiting.promise);
           answer ()))
 
@@ -1474,7 +1474,7 @@ let drive_locked
   let started = now t in
   let budget = float_of_int (Option.value ~default:120 args.deadline_s) in
   let remaining () =
-    Eta.Duration.ms (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
+    Ox.Duration.ms (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
   in
   let decide request = decide ~deadline:(remaining ()) request in
   (* drive-ls3c: one helper per drive. It carries the one-entry memo that reuses an
@@ -1682,7 +1682,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
           in
           let budget = float_of_int run_args.Run.deadline_s in
           let remaining () =
-            Eta.Duration.ms
+            Ox.Duration.ms
               (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
           in
           let bounded limit text =
@@ -2092,10 +2092,10 @@ let report t : P.status_result =
 let status t =
   let state =
     match (Chrome.status t.chrome).phase with
-    | `Running -> Eta_app.Status.Ok
-    | _ -> Eta_app.Status.Degraded "Chrome restarting"
+    | `Running -> Ox_app.Status.Ok
+    | _ -> Ox_app.Status.Degraded "Chrome restarting"
   in
-  Eta_app.Status.make
+  Ox_app.Status.make
     ~details:
       [ ("open", string_of_int (Hashtbl.length t.tabs)); ("cap", string_of_int t.cap) ]
     "tabs" state
@@ -2283,8 +2283,8 @@ let inspect t json =
             t.tabs)
   | _ -> ()
 
-let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Eta.Duration.minutes 30)
-    ?(unclaimed = Eta.Duration.hours 1) (deps : 'clock deps) =
+let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Ox.Duration.minutes 30)
+    ?(unclaimed = Ox.Duration.hours 1) (deps : 'clock deps) =
   let t =
     {
       chrome = deps.chrome;
@@ -2292,14 +2292,14 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Eta.Duration.minutes 30)
       sleep = (fun seconds -> Eio.Time.sleep deps.clock seconds);
       await_load =
         (fun promise ->
-          Eta.Timeout.timeout ~clock:deps.clock (Eta.Duration.seconds 30) (fun () ->
+          Ox.Timeout.timeout ~clock:deps.clock (Ox.Duration.seconds 30) (fun () ->
               Eio.Promise.await promise;
               Ok ()));
       (* hand-lmd5: the handoff deadline, measured by the service clock and cancelled —
          not raced — when it runs out, so the restore of {!handoff} still runs. *)
       await_handoff =
         (fun timeout promise ->
-          Eta.Timeout.timeout ~clock:deps.clock timeout (fun () ->
+          Ox.Timeout.timeout ~clock:deps.clock timeout (fun () ->
               Eio.Promise.await promise;
               Ok ()));
       desktop = deps.desktop;
@@ -2310,8 +2310,8 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Eta.Duration.minutes 30)
       tombstone_s;
       (* own-vhqo: the two expiry durations are config; the ADR's defaults stand in when a
          caller does not name them, which is what a test registry gets. *)
-      idle = Eta.Duration.to_seconds_float idle;
-      unclaimed = Eta.Duration.to_seconds_float unclaimed;
+      idle = Ox.Duration.to_seconds_float idle;
+      unclaimed = Ox.Duration.to_seconds_float unclaimed;
       started = Eio.Time.now deps.clock;
       tabs = Hashtbl.create 32;
       targets = Hashtbl.create 32;
@@ -2330,10 +2330,10 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Eta.Duration.minutes 30)
                 Eio.Fiber.fork_daemon ~sw (fun () ->
                     let rec notifications () : [ `Stop_daemon ] =
                       match Eio.Stream.take (Cdp.events cdp) with
-                      | Eta_rpc.Correlator.Message json ->
+                      | Ox_rpc.Correlator.Message json ->
                           inspect t json;
                           notifications ()
-                      | Eta_rpc.Correlator.Closed _ -> `Stop_daemon
+                      | Ox_rpc.Correlator.Closed _ -> `Stop_daemon
                     in
                     notifications ());
                 Option.iter
@@ -2349,7 +2349,7 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Eta.Duration.minutes 30)
                     with
                     | Ok _ -> ()
                     | Error _ ->
-                        Eta_observability.Logger.warn t.logger
+                        Ox_observability.Logger.warn t.logger
                           "run-ykq4: Browser.setDownloadBehavior failed; downloads \
                            unavailable")
                   t.download_dir;

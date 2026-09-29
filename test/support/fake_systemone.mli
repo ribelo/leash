@@ -1,7 +1,7 @@
 (* The local System One server the L19 tests drive (drive-e7oi drive-yqxg drive-kh2u).
 
     Plaintext HTTP/1.1 over a loopback listener on the test's own switch, shaped after
-    eta-next's [test/ai/fake_server.ml]: the accept loop is a daemon of the caller's
+    ox's [test/ai/fake_server.ml]: the accept loop is a daemon of the caller's
     switch, each connection reads one complete request, records it, and answers with what
     the test's [answer] returns. Nothing here reaches the network, and the server answers
     as soon as it has read the request, on the caller's real clock — the tests that use it

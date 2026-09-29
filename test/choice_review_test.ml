@@ -5,7 +5,7 @@ module P = Leash.Protocol
 module C = Leash.Config
 module B = Leash.Playbook
 module Server = Leash_test_support.Fake_systemone
-module Logger = Eta_observability.Logger
+module Logger = Ox_observability.Logger
 
 let ok = function Ok x -> x | Error why -> Alcotest.fail why
 
@@ -94,7 +94,7 @@ let review ~probability ~threshold ~content ~consulted ~valid () =
           let config =
             {
               C.default.models with
-              api_key = Some (Eta_observability.Redact.make "test-key");
+              api_key = Some (Ox_observability.Redact.make "test-key");
               choice_confidence = ok (C.Probability.of_float threshold);
               systemone_endpoint = ok (C.Text.of_string (Server.url server "/systemone"));
               planner_endpoint = Some (ok (C.Text.of_string (Server.url server "/chat")));
