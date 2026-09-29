@@ -84,7 +84,7 @@ let schedule backoff =
   Eta.Schedule.both
     (Eta.Schedule.exponential ~factor:backoff.factor backoff.initial)
     (Eta.Schedule.recurs backoff.attempts)
-  |> Eta.Schedule.modify_delay (fun _ delay -> Eta.Duration.min delay backoff.cap)
+  |> Eta.Schedule.max_interval backoff.cap
 
 let pp_reason ppf = function
   | `Spawn (`Invalid_fd fd) -> Format.fprintf ppf "invalid fd %d" fd
