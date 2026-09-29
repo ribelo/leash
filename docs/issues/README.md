@@ -112,6 +112,8 @@ L29 first; L30 needs only L29's loader and the models service; L31–L34 in orde
 | L38 | **`drive` is the one entry point.** Fold `run` into `drive` (playbook or none), argument filling for query parameters, records bypass the models, `repeat`, `data` summary and `--out` JSONL, cost reporting, trace. | extr-andy, extr-mq0e, extr-ve3k, extr-mfmf, extr-b3u0, extr-p7sj, extr-5x9e, extr-p152 | L37 | [x] |
 | L39 | **Example and live acceptance.** books.toscrape.com playbook directory, fetch-based test script, skill update, live missions (whole category; filtered by price). Marks the spec completed. | extr-tkco, extr-oaci, extr-8ubt | L38 | [x] |
 
+| L40 | **Playbook robustness.** The L39 example was tuned to JEV's quirks and a variant failed on an 8-page category. Collect three categories of different sizes (one ≥ 8 pages) with plain wording; diagnose each failure to its cause and fix it there — not by rephrasing to suit the model. Record the diagnosis in the spec. | extr-uhnc | L39 | [ ] |
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.

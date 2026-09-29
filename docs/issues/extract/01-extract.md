@@ -1,5 +1,5 @@
 ---
-status: completed
+status: completed-with-followups
 milestone: 9
 ---
 
@@ -37,6 +37,7 @@ The operator's most valuable browser automation is batch collection — "fetch t
 16. As a maintainer, I want a shipped example playbook for books.toscrape.com (a site made for scraping practice) with a category procedure, a list script in its own file, a next-page procedure and a `repeat`, plus a fetch-based script against a local JSON endpoint in tests, so that both kinds of script have a worked example. ^extr-tkco
 17. As an agent, I want the `leash` skill to say when to use `drive` with a playbook (anything asked twice), `drive` without one (a one-off task needing judgment), and `eval` (a one-off look), and how to write a playbook script with `playbook test`, so that the cheap tool is picked first and I can write playbooks for the operator. ^extr-oaci
 18. As a maintainer, I want a live gate: `leash drive "collect every book title and price in the Mystery category"` on books.toscrape.com returning all of them to JSONL with the model calls counted, and a filtered mission ("books under £20") proving argument filling, so that the design is proven end to end. ^extr-8ubt
+19. As the playbook author, I want the books.toscrape.com playbook to collect three categories of different sizes — including one with 8 or more pages — without wording tuned to one model run, and any failure to be diagnosed to its cause (runner, repeat termination, expectation, page kind, or the model's choice) and fixed at that cause, so that playbooks are robust to phrasing rather than tuned to quirks. ^extr-uhnc
 
 ## Implementation Decisions
 
