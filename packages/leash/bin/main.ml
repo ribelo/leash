@@ -871,6 +871,7 @@ let program env (config : Leash.Config.t) sw =
         net = base#net;
         clock = base#clock;
         logger = env.logger;
+        caps = (env.caps :> Leash.Control.caps);
       }
     |> Result.map_error (fun _ -> `Service "control socket acquisition failed")
   in
@@ -909,7 +910,7 @@ let telemetry ~sw env config =
   match config.Leash.Config.otlp.endpoint with
   | None -> { Ox_app.reporters = []; span_ids = None }
   | Some endpoint ->
-      Leash.Telemetry.create ~sw ~net:env.Ox_app.Env.base#net
+      Leash.Telemetry.create ~caps:env.Ox_app.Env.caps ~sw ~net:env.Ox_app.Env.base#net
         ~clock:env.Ox_app.Env.base#clock
         ~endpoint:(Leash.Config.Text.to_string endpoint)
         ~headers:

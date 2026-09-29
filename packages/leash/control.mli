@@ -1,6 +1,8 @@
 type t
 (** One-request private control socket. *)
 
+type caps = < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network >
+
 type ('clock, 'net) deps = {
   tabs : Tabs.t;
   status_query : unit -> Ox_app.Status.t list;
@@ -10,6 +12,7 @@ type ('clock, 'net) deps = {
   net : 'net Eio.Net.ty Eio.Resource.t;
   clock : 'clock Eio.Time.clock;
   logger : Ox_observability.Logger.t;
+  caps : caps;
 }
 
 val create :

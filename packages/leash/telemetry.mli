@@ -1,4 +1,5 @@
 val create :
+  caps:< Ox_caps.Cap.random ; .. > ->
   sw:Eio.Switch.t ->
   net:_ Eio.Net.t ->
   clock:_ Eio.Time.clock ->

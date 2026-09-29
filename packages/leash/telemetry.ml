@@ -1,10 +1,10 @@
 (* svc-f4op: optional OTLP exporter shares the Door's one logger. The exporter's
    reporter is added before that logger is built; never create another logger here. *)
-let create ~sw ~net ~clock ~endpoint ~headers : Ox_app.telemetry =
+let create ~caps ~sw ~net ~clock ~endpoint ~headers : Ox_app.telemetry =
   let http = Ox_http.Client.create ~sw ~net ~clock ~tls:(Ox_http.Client.tls ()) () in
   match
-    Ox_otel.create ~sw ~clock ~http_client:http ~endpoint ~service_name:"leash" ~headers
-      ()
+    Ox_otel.create ~caps ~sw ~clock ~http_client:http ~endpoint ~service_name:"leash"
+      ~headers ()
   with
   | Error error ->
       invalid_arg (Format.asprintf "OTLP configuration: %a" Ox_otel.pp_error error)

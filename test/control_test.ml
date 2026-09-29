@@ -507,6 +507,7 @@ let large_text_over_socket () =
                       ~mono_clock:env#mono_clock
                       ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                       ();
+                  caps = (Ox_test.powerbox () :> Leash.Control.caps);
                 }
             with
             | Ok control -> control
@@ -569,6 +570,7 @@ let socket () =
                     ~mono_clock:env#mono_clock
                     ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
+                caps = (Ox_test.powerbox () :> Leash.Control.caps);
               }
           in
           (match make () with
@@ -621,6 +623,7 @@ let socket () =
                     ~mono_clock:env#mono_clock
                     ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
+                caps = (Ox_test.powerbox () :> Leash.Control.caps);
               }
           in
           (match create () with
@@ -657,6 +660,7 @@ let socket () =
                     ~mono_clock:env#mono_clock
                     ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
+                caps = (Ox_test.powerbox () :> Leash.Control.caps);
               }
           in
           let verdict =
@@ -710,6 +714,7 @@ let second_instance () =
                     ~mono_clock:env#mono_clock
                     ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
+                caps = (Ox_test.powerbox () :> Leash.Control.caps);
               }
           in
           (match create () with
@@ -1537,8 +1542,8 @@ let download_events () =
 let optional_otlp () =
   Ox_test.run (fun env sw ->
       let telemetry =
-        Leash.Telemetry.create ~sw ~net:env#net ~clock:env#clock
-          ~endpoint:"http://127.0.0.1:4318" ~headers:[]
+        Leash.Telemetry.create ~caps:(Ox_test.powerbox ()) ~sw ~net:env#net
+          ~clock:env#clock ~endpoint:"http://127.0.0.1:4318" ~headers:[]
       in
       Alcotest.(check int) "enabled reporter" 1 (List.length telemetry.Ox_app.reporters);
       let id = Option.get telemetry.Ox_app.span_ids () in
@@ -2296,6 +2301,7 @@ let listener_budget_reply () =
                       ~mono_clock:env#mono_clock
                       ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                       ();
+                  caps = (Ox_test.powerbox () :> Leash.Control.caps);
                 }
             with
             | Ok control -> control

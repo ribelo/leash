@@ -1360,6 +1360,7 @@ let listen ~runtime env sw tabs =
             ~mono_clock:env#mono_clock
             ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
             ();
+        caps = (Ox_test.powerbox () :> Leash.Control.caps);
       }
   with
   | Ok _ -> Filename.concat (Filename.concat runtime "leash") "control.sock"

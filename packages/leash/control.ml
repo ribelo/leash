@@ -1,5 +1,7 @@
 module P = Protocol
 
+type caps = < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network >
+
 type ('clock, 'net) deps = {
   tabs : Tabs.t;
   status_query : unit -> Ox_app.Status.t list;
@@ -10,6 +12,7 @@ type ('clock, 'net) deps = {
   net : 'net Eio.Net.ty Eio.Resource.t;
   clock : 'clock Eio.Time.clock;
   logger : Ox_observability.Logger.t;
+  caps : caps;
 }
 
 let success json = P.Success json
@@ -380,8 +383,8 @@ let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ~sw
     Ok reply
   in
   match
-    Ox_ipc.Listener.run ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock ~path ~policy
-      ~decode
+    Ox_ipc.Listener.run ~caps:deps.caps ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock
+      ~path ~policy ~decode
       ~encode:(fun reply -> Yojson.Safe.to_string (P.encode_reply reply))
       ~budget ~on_budget_exceeded:budget_exceeded ~handler
       ~on_peer_error:(on_peer_error deps.logger) ()
