@@ -3,7 +3,7 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.eta = {
-    url = "git+file:///home/ribelo/projects/ribelo/ocaml/Eta?ref=eta-next";
+    url = "git+file:///home/ribelo/projects/ribelo/ocaml/Eta?ref=master";
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.opam-nix.follows = "opam-nix";
     inputs.opam-repository.follows = "opam-repository";
@@ -240,7 +240,7 @@
               eval "$(opam env --switch "$switch_name" --set-switch)"
 
               # etabuild-e0gr: install committed Eta master for development.
-              eta_path="''${ETA_PATH:-$repo_root/../ocaml/eta-next}"
+              eta_path="''${ETA_PATH:-$repo_root/../ocaml/Eta}"
               export ETA_OPAM_PACKAGES="''${ETA_OPAM_PACKAGES:-eta eta_app eta_process eta_ipc eta_rpc eta_json eta_observability eta_test}"
               if command -v eta-opam-install-ox >/dev/null 2>&1; then
                 ETA_REPO_ROOT="$eta_path" eta-opam-install-ox
