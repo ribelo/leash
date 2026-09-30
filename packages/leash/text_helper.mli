@@ -32,15 +32,16 @@ type t = {
 (** One configured text helper. [complete] answers the value to type, [Ok None] when the
     model answered [null] — the value is missing, and the drive ends [blocked] naming the
     field — and [Error] with [model-unavailable] when the helper failed or answered
-    something that cannot be typed (drive-ls3c). The 4 KiB bound and the parse belong to
-    the implementation: a caller sees a value it may type or a refusal, never raw model
-    output.
+    something that cannot be typed (drive-ls3c). The nonempty 2,000-character bound and
+    the parse belong to the implementation: a caller sees a value it may type or a
+    refusal, never raw model output.
 
     [deadline] bounds the whole call, the client's retries and backoff included (30
     seconds by default); the drive passes what is left of its own deadline, so a slow
     helper cannot outlast the reply the client waits for (drive-ix5t). *)
 
 val create :
+  ?on_usage:(Yojson.Safe.t -> unit) ->
   client:Ox_ai_chat.t ->
   now:(unit -> float) ->
   model:string ->

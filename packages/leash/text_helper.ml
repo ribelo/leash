@@ -5,11 +5,11 @@
    adapted: one OpenAI-compatible chat completion whose system message is questions.py's
    TEXT_VALUE and whose user message is json.dumps of field_context — the goal verbatim,
    the field's label, role and value, the page's title and its text bounded at 6000
-   bytes on a character boundary, and the last six actions with only their action and text
+   Unicode characters, and the last six actions with only their action and text
    (model.py:154-159).
    The reply must parse as exactly {"text": string | null}: null is the model saying the
    value is missing, and the drive ends blocked naming the field; a string is the value
-   that goes to the browser, refused over 4 KiB. An answer is remembered and reused when
+   that goes to the browser, refused over 2000 Unicode characters. An answer is remembered and reused when
    the identical context comes back, which is what a stale-page retry is
    (agent.py:105-115). *)
 
@@ -33,21 +33,22 @@ type t = {
 let default_deadline = Ox.Duration.seconds 30
 
 (* model.py:157-158 and the drive spec's bound. *)
-let page_bytes = 6000
+let page_characters = 6000
 let window = 6
-let text_bound = 4096
+let text_bound = 2000
 
-(* The reference slices Python strings; this truncates bytes and backs off to the last
-   whole character, so what is written as a JSON string is always valid UTF-8. *)
-let bounded limit text =
-  if String.length text <= limit then text
-  else begin
-    let at = ref limit in
-    while !at > 0 && Char.code text.[!at] land 0xc0 = 0x80 do
-      decr at
-    done;
-    String.sub text 0 !at
-  end
+(* fly-gysl: the reference bounds Unicode characters, not UTF-8 bytes. *)
+let prefix_length limit text =
+  let at = ref 0 and characters = ref 0 in
+  while !at < String.length text && !characters < limit do
+    let decoded = String.get_utf_8_uchar text !at in
+    at := !at + Uchar.utf_decode_length decoded;
+    incr characters
+  done;
+  !at
+
+let bounded limit text = String.sub text 0 (prefix_length limit text)
+let valid_text text = text <> "" && prefix_length text_bound text = String.length text
 
 let last n list =
   let rec drop count list =
@@ -84,7 +85,7 @@ let field_context (context : context) =
         `Assoc
           [
             ("title", `String context.page_title);
-            ("text", `String (bounded page_bytes context.page_text));
+            ("text", `String (bounded page_characters context.page_text));
           ] );
       ("recent_actions", `List recent);
     ]
@@ -98,11 +99,11 @@ let refused why = Error (Model_error.unavailable ~code:"invalid-response" why)
    refusal, and nothing is typed. *)
 let value content =
   match Yojson.Safe.from_string content with
-  | `Assoc [ ("text", `String text) ] when String.length text <= text_bound ->
-      Ok (Some text)
+  | `Assoc [ ("text", `String text) ] when valid_text text -> Ok (Some text)
   | `Assoc [ ("text", `String _) ] ->
       refused
-        (Printf.sprintf "the text helper answered a text over %d bytes; nothing typed"
+        (Printf.sprintf
+           "the text helper answered empty text or more than %d characters; nothing typed"
            text_bound)
   | `Assoc [ ("text", `Null) ] -> Ok None
   | _ -> refused nothing_typed
@@ -127,7 +128,18 @@ let log_usage logger (completion : Ox_ai_chat.Codecs.completion) =
       ]
     "text helper usage"
 
-let ask client ~now ~model ~logger ?(deadline = default_deadline) json =
+let report_usage on_usage (completion : Ox_ai_chat.Codecs.completion) =
+  let Ox_ai_chat.Types.{ prompt_tokens; completion_tokens; cost; _ } = completion.usage in
+  on_usage
+    (`Assoc
+       [
+         ("input_tokens", `Int prompt_tokens);
+         ("output_tokens", `Int completion_tokens);
+         ("cost", match cost with None -> `Null | Some n -> `Float n);
+         ("retries", `Null);
+       ])
+
+let ask client ~now ~model ~logger ~on_usage ?(deadline = default_deadline) json =
   let started = now () in
   let open Ox_ai_chat.Types in
   let messages =
@@ -141,6 +153,7 @@ let ask client ~now ~model ~logger ?(deadline = default_deadline) json =
   | Error error -> Error (Model_error.of_eta error)
   | Ok first -> (
       log_usage logger first;
+      report_usage on_usage first;
       Model_usage.report "text_helper" first.Ox_ai_chat.Codecs.usage.cost;
       let content = first.Ox_ai_chat.Codecs.content in
       match value content with
@@ -150,7 +163,7 @@ let ask client ~now ~model ~logger ?(deadline = default_deadline) json =
              never a permissive extraction. Overlong typed values are terminal. *)
           let overlong =
             match Yojson.Safe.from_string content with
-            | `Assoc [ ("text", `String text) ] -> String.length text > text_bound
+            | `Assoc [ ("text", `String text) ] -> not (valid_text text)
             | _ -> false
             | exception Yojson.Json_error _ -> false
           in
@@ -184,10 +197,11 @@ let ask client ~now ~model ~logger ?(deadline = default_deadline) json =
             | Error error -> Error (Model_error.of_eta error)
             | Ok second ->
                 log_usage logger second;
+                report_usage on_usage second;
                 Model_usage.report "text_helper" second.Ox_ai_chat.Codecs.usage.cost;
                 value second.Ox_ai_chat.Codecs.content))
 
-let create ~client ~now ~model ~logger () =
+let create ?(on_usage = fun _ -> ()) ~client ~now ~model ~logger () =
   (* The one-entry memo of agent.py:110-114, keyed by what the reference compares: the
      field context as it is written to the wire, so a reuse needs the whole helper input
      to be unchanged. A refusal is not remembered. *)
@@ -199,7 +213,7 @@ let create ~client ~now ~model ~logger () =
         match !last with
         | Some (previous, answer) when previous = json -> answer
         | _ ->
-            let answer = ask client ~now ~model ~logger ?deadline json in
+            let answer = ask client ~now ~model ~logger ~on_usage ?deadline json in
             (match answer with Ok (Some _) -> last := Some (json, answer) | _ -> ());
             answer);
   }

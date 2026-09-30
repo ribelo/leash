@@ -241,6 +241,77 @@ let status_skill state stdout stderr =
   Printf.printf "status: skill %s, running version and commit, service fields retained\n"
     state
 
+let capture path request_file ready =
+  let socket = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+  Fun.protect
+    ~finally:(fun () ->
+      Unix.close socket;
+      Unix.unlink path)
+    (fun () ->
+      Unix.bind socket (Unix.ADDR_UNIX path);
+      Unix.listen socket 1;
+      Out_channel.with_open_bin ready (fun out -> output_string out "ready");
+      let client, _ = Unix.accept socket in
+      let input = Unix.in_channel_of_descr client in
+      let output = Unix.out_channel_of_descr client in
+      let request = input_line input in
+      Out_channel.with_open_bin request_file (fun out ->
+          output_string out request;
+          output_char out '\n');
+      let response =
+        Yojson.Safe.to_string
+          (P.encode_reply (P.Success (`Assoc [ ("captured", `Bool true) ])))
+      in
+      output_string output (response ^ "\n");
+      flush output;
+      Unix.close client)
+
+let drive_help path =
+  let text = read_file path in
+  List.iter
+    (fun fragment ->
+      if not (contains text fragment) then failwith ("drive help missing " ^ fragment))
+    [
+      "--url";
+      "--max-steps";
+      "default 60";
+      "operator-state";
+      "script-record";
+      "https://books.toscrape.com/";
+      "--max-steps 60";
+      "--deadline-s 300";
+      "no-playbooks";
+      "one-book";
+      "many-books";
+      "none-matching";
+      "NONE";
+      "EXAMPLES";
+    ];
+  print_endline "drive help: both routes, four playbook cases, operator-state example"
+
+let drive_request path =
+  let json = Yojson.Safe.from_string (String.trim (read_file path)) in
+  if field "cmd" json <> `String "drive" then failwith "not a drive request";
+  let args = field "args" json in
+  let fields = match args with `Assoc fields -> fields | _ -> failwith "args" in
+  if List.mem_assoc "url" fields then
+    failwith "wire key url was not remapped to start_url";
+  let show name =
+    match List.assoc_opt name fields with
+    | None -> "absent"
+    | Some (`String text) -> text
+    | Some (`Int n) -> string_of_int n
+    | Some other -> Yojson.Safe.to_string other
+  in
+  let out =
+    match List.assoc_opt "out" fields with
+    | None -> "absent"
+    | Some (`String text) when String.ends_with ~suffix:"out.jsonl" text -> "present"
+    | Some _ -> "unexpected"
+  in
+  Printf.printf "mission=%s start_url=%s max_steps=%s tab=%s out=%s\n" (show "mission")
+    (show "start_url") (show "max_steps") (show "tab") out
+
 let () =
   match Array.to_list Sys.argv with
   | [ _; "serve"; path; code; ready ] -> serve path code ready
@@ -254,6 +325,9 @@ let () =
       if not (contains text "unowned") then failwith "daily-9ggi list help omits scope";
       print_endline "daily-9ggi list --all includes unowned and other owners"
   | [ _; "error-help"; path ] -> error_help path
+  | [ _; "drive-help"; path ] -> drive_help path
+  | [ _; "capture"; path; request_file; ready ] -> capture path request_file ready
+  | [ _; "drive-request"; path ] -> drive_request path
   | [ _; "inspect-init"; path; stdout; stderr ] -> inspect_init path stdout stderr
   | [ _; "skill-outcome"; action; path; stdout; stderr ] ->
       skill_outcome action path stdout stderr

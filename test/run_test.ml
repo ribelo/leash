@@ -107,12 +107,14 @@ let field_string key = function
 let expectation ?score ?(passed = true) sentence checker =
   P.{ sentence; checker; passed; score }
 
-let drive ?(status = "done") ?reason ?(url = "https://site-a.example/") () =
+let drive ?(status = "done") ?reason ?(url = "https://site-a.example/") ?operator_state
+    ?(steps = []) () =
   P.
     {
       status = ok (P.Drive_status.of_string status);
-      steps = [];
+      steps;
       final = snapshot ~url ();
+      operator_state;
       reason;
     }
 
@@ -214,6 +216,19 @@ let next_observation (h : harness) =
       h.observations <- rest;
       one
 
+let offered_book_key (question : R.question) key =
+  let stable = "book:" ^ key ^ ".json" in
+  if List.mem_assoc key question.criteria then key
+  else if List.mem_assoc stable question.criteria then stable
+  else
+    match
+      List.find_opt
+        (fun (_, description) -> List.mem key (String.split_on_char ' ' description))
+        question.criteria
+    with
+    | Some (identity, _) -> identity
+    | None -> key
+
 let handler (h : harness) : R.handler =
   let tick () = h.clock <- h.clock +. h.tick in
   R.
@@ -237,7 +252,8 @@ let handler (h : harness) : R.handler =
           | "select_playbook" ->
               Ok
                 (choice
-                   (pop "playbook answers" (fun () -> h.books) (fun x -> h.books <- x)))
+                   (offered_book_key question
+                      (pop "playbook answers" (fun () -> h.books) (fun x -> h.books <- x))))
           | "select_procedure" ->
               Ok
                 (choice
@@ -297,8 +313,18 @@ let handler (h : harness) : R.handler =
     }
 
 let args ?(mission = "buy the thing") ?(max_procedures = 40) ?(deadline_s = 900)
-    ?(dry_run = false) ?(max_plans = 3) ?(expect = []) () =
-  R.{ mission; max_procedures; deadline_s; dry_run; max_plans; expect }
+    ?(dry_run = false) ?(max_plans = 3) ?(expect = []) ?(max_steps = 60) ?start_url () =
+  R.
+    {
+      mission;
+      max_procedures;
+      deadline_s;
+      dry_run;
+      max_plans;
+      expect;
+      max_steps;
+      start_url;
+    }
 
 let run ?(installed = []) ?discovery h run_args =
   R.loop ~handler:(handler h) ~now:(fun () -> h.clock) ~installed ?discovery run_args
@@ -367,12 +393,12 @@ let levels () =
   let playbook_question = List.hd h.questions in
   Alcotest.(check (list string))
     "run-kli0 the playbooks and none are the criteria"
-    [ "site-a.example"; "site-b.example"; "none" ]
+    [ "book:site-a.example.json"; "book:site-b.example.json"; "none" ]
     (List.map fst playbook_question.R.criteria);
   let procedure_question = List.nth h.questions 1 in
   Alcotest.(check (list string))
     "run-qq3o the procedures plus DONE and BLOCKED are the criteria"
-    [ "step"; "DONE"; "BLOCKED" ]
+    [ "step"; "DONE"; "NONE" ]
     (List.map fst procedure_question.R.criteria);
   let state = procedure_question.R.state in
   Alcotest.(check (list string))
@@ -934,10 +960,11 @@ let endings () =
       ()
   in
   let ended = ran (run ~installed:[ site_a ] handoff (args ())) in
-  check_status "run-klp9 a planner handoff ends the run" "handoff" ended;
-  Alcotest.(check (list string))
-    "run-klp9 the handoff reason reached the registry" [ "the captcha needs you" ]
-    handoff.handoffs
+  check_status "fly-2akp BLOCKED continues through operator" "done" ended;
+  Alcotest.(check int)
+    "fly-2akp BLOCKED never invokes planner" 0
+    (List.length handoff.plan_requests);
+  Alcotest.(check (list string)) "no unsolicited handoff" [] handoff.handoffs
 
 (* run-vj48 run-7blx: the six judgments of the loop go through one handler token — one
    handler, one place where a model or a level is swapped — and the run performs all six. *)
@@ -1705,13 +1732,205 @@ let repeat_next_not_selectable () =
     List.find (fun (q : R.question) -> q.R.name = "select_procedure") h.questions
   in
   Alcotest.(check (list string))
-    "extr-ve3k next is absent from model choices"
-    [ "collect"; "DONE"; "BLOCKED" ]
+    "extr-ve3k next is absent from model choices" [ "collect"; "DONE"; "NONE" ]
     (List.map fst question.R.criteria)
+
+(* L45: routing retains identities, partial progress, and distinct output kinds. *)
+let terminal_state =
+  `Assoc
+    [
+      ("status", `String "done"); ("page", `Assoc [ ("text", `String "visible result") ]);
+    ]
+
+let l45_none_routes () =
+  List.iter
+    (fun installed ->
+      let h =
+        harness ~books:[ "none" ] ~drives:[ drive ~operator_state:terminal_state () ] ()
+      in
+      let result =
+        ran
+          (run ~installed h
+             (args ~max_plans:0 ~max_steps:17 ~mission:"finish the whole mission" ()))
+      in
+      check_status "NONE directly uses operator" "done" result;
+      Alcotest.(check int) "no planner" 0 (List.length h.plan_requests);
+      Alcotest.(check int) "one operator" 1 (List.length h.steps);
+      let request = List.hd h.steps in
+      Alcotest.(check string) "full mission" "finish the whole mission" request.R.goal;
+      Alcotest.(check int) "configured action cap" 17 request.max_steps;
+      Alcotest.(check (option string))
+        "terminal operator state"
+        (Some (Yojson.Safe.to_string terminal_state))
+        (Option.map Yojson.Safe.to_string result.operator_state);
+      Alcotest.(check (list string))
+        "zero-book skips selection"
+        (if installed = [] then [] else [ "select_playbook" ])
+        h.asked)
+    [ []; [ site_a ]; [ site_a; site_b ] ]
+
+let l45_same_site_identity () =
+  let other = { site_a with B.file = "alternate.json" } in
+  let h = harness ~books:[ "book:alternate.json" ] ~procs:[ "NONE" ] () in
+  ignore (ran (run ~installed:[ site_a; other ] h (args ())));
+  let choices = (List.hd h.questions).R.criteria in
+  Alcotest.(check int)
+    "same-site books remain two choices plus NONE" 3 (List.length choices);
+  Alcotest.(check bool)
+    "alternate identity selectable" true
+    (List.mem_assoc "book:alternate.json" choices);
+  Alcotest.(check int)
+    "procedure NONE never invokes planner" 0 (List.length h.plan_requests)
+
+let l45_candidates size () =
+  let installed =
+    List.init size (fun i -> { site_a with B.file = Printf.sprintf "b%04d.json" i })
+  in
+  let h =
+    harness
+      ~books:
+        (if size > 254 then [ "group:1"; "book:b0000.json" ] else [ "book:b0000.json" ])
+      ~procs:[ "NONE" ] ()
+  in
+  ignore (ran (run ~installed h (args ())));
+  let questions =
+    List.filter (fun (q : R.question) -> q.name = "select_playbook") h.questions
+  in
+  Alcotest.(check int)
+    "bounded hierarchy"
+    (if size > 254 then 2 else 1)
+    (List.length questions);
+  List.iter
+    (fun (q : R.question) ->
+      Alcotest.(check bool) "at most 255 options" true (List.length q.criteria <= 255);
+      Alcotest.(check bool) "NONE on every level" true (List.mem_assoc "none" q.criteria))
+    questions;
+  let descriptions =
+    String.concat "\n"
+      (List.map
+         (fun (key, description) -> key ^ " " ^ description)
+         (List.hd questions).criteria)
+  in
+  List.iter
+    (fun (book : B.loaded) ->
+      Alcotest.(check bool)
+        "every installed identity remains represented" true
+        (contains_text ("book:" ^ book.file) descriptions))
+    installed
+
+let l45_progress () =
+  let prior =
+    P.
+      {
+        n = 1;
+        snapshot = snapshot_id;
+        operation = ok (Operation.of_string "click");
+        index = Some 0;
+        text = None;
+        elapsed_ms = 0;
+        after = { url = "https://site-a.example/"; title = "A page" };
+        probabilities = { op = `Assoc []; target = `Assoc [] };
+      }
+  in
+  let h =
+    harness ~procs:[ "step"; "NONE" ]
+      ~drives:[ drive ~steps:[ prior ] (); drive ~operator_state:terminal_state () ]
+      ()
+  in
+  ignore (ran (run ~installed:[ site_a ] h (args ~mission:"open and finish" ())));
+  let request = List.nth h.steps 1 in
+  Alcotest.(check string) "fallback sees full mission" "open and finish" request.goal;
+  Alcotest.(check int) "history retains prior action" 1 (List.length request.recent);
+  Alcotest.(check int) "fallback preserves remaining action budget" 59 request.max_steps;
+  Alcotest.(check string) "prior action retained" "click" (List.hd request.recent).action;
+  Alcotest.(check int) "no planner after procedure NONE" 0 (List.length h.plan_requests);
+  let h = harness ~procs:[ "step"; "NONE" ] ~drives:[ drive ~steps:[ prior ] () ] () in
+  let result = ran (run ~installed:[ site_a ] h (args ~max_steps:1 ())) in
+  check_status "authored work exhausts mission budget" "limit" result;
+  Alcotest.(check int) "authored goal uses remaining cap" 1 (List.hd h.steps).max_steps;
+  Alcotest.(check int) "exhausted fallback does not dispatch" 1 (List.length h.steps);
+  Alcotest.(check int) "exhausted fallback never plans" 0 (List.length h.plan_requests)
+
+let l45_bootstrap () =
+  let blank = observation ~url:"about:blank" () in
+  List.iter
+    (fun mission ->
+      let h = harness ~observations:[ blank ] () in
+      let result = ran (run h (args ~mission ())) in
+      check_status "no deterministic URL" "blocked" result;
+      Alcotest.(check int)
+        "no model or navigation" 0
+        (List.length h.asked + List.length h.navigations + List.length h.steps))
+    [ "do something"; "compare https://a.example/ with https://b.example/" ];
+  List.iter
+    (fun start_url ->
+      let h = harness ~observations:[ blank ] () in
+      match run h (args ~start_url ()) with
+      | Error _ ->
+          Alcotest.(check int) "unsafe URL has no side effects" 0 (List.length h.ops)
+      | Ok _ -> Alcotest.fail "unsafe URL accepted")
+    [ "javascript:alert(1)"; "file:///etc/passwd"; "https://user:pass@a.example/" ];
+  let h = harness ~observations:[ blank ] () in
+  ignore (ran (run h (args ~mission:"visit https://a.example/path" ())));
+  Alcotest.(check (list string))
+    "single mission URL used" [ "https://a.example/path" ] h.navigations;
+  let h = harness () in
+  ignore (ran (run h (args ~start_url:"https://explicit.example/" ())));
+  Alcotest.(check (list string)) "populated current page is preserved" [] h.navigations;
+  let h = harness ~observations:[ blank ] () in
+  ignore (ran (run h (args ~start_url:"https://a.example/" ~dry_run:true ())));
+  Alcotest.(check int) "dry-run has no navigation" 0 (List.length h.navigations);
+  Alcotest.(check bool)
+    "dry-run delegates prediction without input" true
+    (List.for_all (fun (request : R.step_request) -> request.dry_run) h.steps)
+
+let l45_mixed_output () =
+  let h =
+    harness ~books:[ "book:site-a.json" ] ~procs:[ "collect"; "NONE" ]
+      ~drives:[ drive ~operator_state:terminal_state () ]
+      ()
+  in
+  h.scripts <- [ Ok (collected ()) ];
+  let records = ref [] in
+  let result =
+    ran
+      (R.loop ~handler:(handler h)
+         ~now:(fun () -> h.clock)
+         ~installed:[ script_book () ]
+         ~on_record:(fun record ->
+           records := !records @ [ record ];
+           Ok ())
+         (args ()))
+  in
+  check_status "mixed route completes" "done" result;
+  Alcotest.(check (list string))
+    "output tags"
+    [ "script-record"; "script-record"; "operator-state" ]
+    (List.map (fun item -> field_string "kind" item) !records);
+  Alcotest.(check (list string))
+    "reported output kinds"
+    [ "script-record"; "operator-state" ]
+    result.output_kinds;
+  Alcotest.(check int)
+    "operator state is not a normalized script record" 2 result.collected
 
 let () =
   Alcotest.run "L31 run"
     [
+      ( "L45",
+        [
+          Alcotest.test_case "fly-2akp zero/one/many NONE operator routes" `Quick
+            l45_none_routes;
+          Alcotest.test_case "fly-2akp distinct same-site identities" `Quick
+            l45_same_site_identity;
+          Alcotest.test_case "fly-2akp 254 books plus NONE" `Quick (l45_candidates 254);
+          Alcotest.test_case "fly-2akp 255 books use groups" `Quick (l45_candidates 255);
+          Alcotest.test_case "fly-2akp 600 books all represented" `Quick
+            (l45_candidates 600);
+          Alcotest.test_case "fly-2akp retains progress" `Quick l45_progress;
+          Alcotest.test_case "fly-2akp deterministic safe bootstrap" `Quick l45_bootstrap;
+          Alcotest.test_case "fly-kx45 mixed tagged output" `Quick l45_mixed_output;
+        ] );
       ( "L37",
         [
           Alcotest.test_case "extr-ve3k extr-p7sj repeat dedup" `Quick

@@ -228,10 +228,28 @@ type request = {
   can_scroll_down : bool;
   can_scroll_up : bool;
   elements : element list;
+  coverage : Yojson.Safe.t;
 }
 
+(* fly-iodm, fly-crcc: enforce the Unicode viewport bound at the request boundary. *)
+let bounded_text text =
+  let at = ref 0 and count = ref 0 in
+  while !at < String.length text && !count < 6000 do
+    at := !at + Uchar.utf_decode_length (String.get_utf_8_uchar text !at);
+    incr count
+  done;
+  (String.sub text 0 !at, !at < String.length text)
+
 let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
+  let text, text_truncated = bounded_text text in
   {
+    coverage =
+      `Assoc
+        [
+          ("text_truncated", `Bool text_truncated);
+          ("omitted_elements", `Int (max 0 (snapshot.P.total - List.length snapshot.rows)));
+          ("scope", `String "visible viewport; offscreen and other pages unobserved");
+        ];
     model;
     goal;
     snapshot;
@@ -241,6 +259,13 @@ let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
     can_scroll_up;
     elements = elements snapshot;
   }
+
+let with_coverage request coverage =
+  match (request.coverage, coverage) with
+  | `Assoc original, `Assoc exact ->
+      let kept = List.filter (fun (key, _) -> not (List.mem_assoc key exact)) original in
+      { request with coverage = `Assoc (kept @ exact) }
+  | _, _ -> { request with coverage }
 
 let checked_json = function
   | Checked -> E.string "true"
@@ -401,6 +426,10 @@ let body request =
         Some
           (E.object_
              [
+               ("goal", Some (E.string request.goal));
+               ("can_scroll_down", Some (E.bool request.can_scroll_down));
+               ("can_scroll_up", Some (E.bool request.can_scroll_up));
+               ("coverage", Some request.coverage);
                ( "page",
                  Some
                    (yojson_of_page

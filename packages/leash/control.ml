@@ -47,9 +47,24 @@ let report ?models_status ?chrome_pid tabs =
     key_present = (match models with Some models -> models.configured | None -> false);
   }
 
-let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
+let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
     ?models_status ?chrome_pid tabs (request : P.request) =
   let owner = request.owner in
+  let meter = Tabs.meter () in
+  let decide, text_helper =
+    match models with
+    | None -> (decide, text_helper)
+    | Some models ->
+        ( Some
+            (fun ~deadline request ->
+              Models.decide ~deadline
+                ~on_usage:(Tabs.note_usage meter "operator")
+                models request),
+          Some
+            (fun () ->
+              Models.text_helper ~on_usage:(Tabs.note_usage meter "text_helper") models)
+        )
+  in
   let lift encode = function
     | Ok result -> success (encode result)
     | Error error -> failure error
@@ -155,6 +170,8 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
                       {
                         tab = Some info.tab;
                         mission = Option.value ~default:("Explore " ^ host) args.goal;
+                        max_steps = Some steps;
+                        start_url = None;
                         max_procedures = Some turns;
                         deadline_s = Some deadline_s;
                         dry_run = Some false;
@@ -163,7 +180,7 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
                       }
                   in
                   lift P.yojson_of_run_result
-                    (Tabs.run ?levels ~model ?decide ?text_helper ?installed
+                    (Tabs.run ~meter ?levels ~model ?decide ?text_helper ?installed
                        ~discovery:(Run.{ book; max_steps = steps; max_cost = cost }, turns)
                        tabs ~owner ~tab:info.tab run_args)))
   | P.Drive args -> (
@@ -190,8 +207,8 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
           in
           let outcome =
             match
-              Tabs.run ?levels ~model ?decide ?text_helper ?installed tabs ~owner ~tab
-                args
+              Tabs.run ~meter ?levels ~model ?decide ?text_helper ?installed tabs ~owner
+                ~tab args
             with
             | outcome -> outcome
             | exception exn ->
@@ -253,14 +270,14 @@ let with_command ?logger (request : P.request) f =
         logger;
       f ())
 
-let handle ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
+let handle ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
     ?models_status ?chrome_pid ?logger tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
-            dispatch ~model ?levels ?decide ?text_helper ?installed ?models_status
+            dispatch ~model ?models ?levels ?decide ?text_helper ?installed ?models_status
               ?chrome_pid tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
@@ -392,8 +409,8 @@ let on_peer_error logger error =
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
-let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ?chrome_pid
-    ~sw ~path deps =
+let create ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
+    ?chrome_pid ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -402,7 +419,7 @@ let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ?ch
       match request with
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
-              dispatch ~model ?levels ?decide ?text_helper ?installed
+              dispatch ~model ?models ?levels ?decide ?text_helper ?installed
                 ~models_status:deps.models_status ?chrome_pid deps.tabs request)
       | Error why -> invalid why
     in

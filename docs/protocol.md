@@ -107,13 +107,55 @@ Human handoff:
 | `handoff` | `{tab, reason, timeout_s?}` | `{resumed: true, url, title, warnings?: string[]}` |
 | `resume` | `{tab}` | `{resumed: true}` |
 
-Drive (milestone 9): one mission over installed playbooks. `leash drive "<mission>"` selects a playbook or `none`; `none` uses the single-goal operator. `--tab` supplies the tab and `--expect` repeats a mission expectation. There is no `run` protocol verb or mission CLI alias.
+Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [--url URL] [--max-steps N] [--deadline-s S] [--max-procedures N] [--expect SENTENCE]... [--out FILE] [--dry-run]` may select an installed playbook or enter the operator with the whole mission. A playbook is optional routing knowledge, not permission to work. There is no `run` protocol verb.
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab, mission, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, data: {count, first: record[<=5], pages, scripts: {name, calls, records}[], model_calls_by_kind: {playbook?, procedure?, operator?, verifier?, text_helper?, planner?}, cost_unreported: int}, model_calls: int, model_cost: number, operator_steps: Step[], final: Snapshot, reason?: string}` |
+| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string}` |
 
-`model_calls` counts actual attempted provider requests, including retries and failed attempts. `model_calls_by_kind` gives the same count by provider role; absent roles made no calls. `model_cost` sums costs returned by providers, including answers later rejected by validation. `data.cost_unreported` counts requests with no returned cost (including failed requests); a positive value means the cost is partial, not zero. Text-helper memo hits and deterministic checks make no model call.
+`--url` is `start_url`: an optional explicit `http://` or `https://` URL with no userinfo. It opens a drive-owned tab; it does not replace an already populated `--tab`. The CLI rejects a bad scheme, `about:blank`, userinfo, or a non-positive `--max-steps` before it connects, as `usage` (64), and the message names a correct example. `--max-steps` is the on-the-fly executed-action cap (default 60, omitted on the wire when the caller accepts the default); the prediction cap is twice that value, including discarded stale decisions. `--max-procedures` is the playbook-lane cap (default 40). `--deadline-s` is the whole-mission budget (default 900). All three must be positive when present.
+
+Routing (fly-8xiq fly-mepw fly-yolk fly-2akp): no installed books means no playbook question and no planner call. One book is offered with `NONE` and is never forced. Many books are distinct identities plus `NONE`; an identity is `book:<loaded file>`, so two books for one site stay distinct. Books are never merged. A question holds at most 255 choices including `NONE`; a larger library uses bounded hierarchical choices and still offers `NONE`. Selecting `NONE`, or a procedure-level `NONE` or `BLOCKED`, enters the operator on the current page with the whole mission and retained progress. That is a successful route, not `BLOCKED`, not discovery, and not a planner review. No confidence-triggered planner reinterprets `NONE`.
+
+`output_kinds` is always present. It lists `script-record` when a prepared script produced records, then `operator-state` when the reply carries `operator_state`. `operator_state` is `key?`: omitted when the operator lane did not run. It is the bounded observed page, not validated script records, and the reply carries it without `--out`. On the fly, `data` is not a synthesized record list.
+
+`--out` is JSONL. Each line is one object with `kind` and `source`. Script records stream as pages complete. The operator line is one terminal object, written only when the run is not a dry run:
+
+```
+{"kind":"script-record","source":"playbook","playbook":"book:<file>","procedure":string,"script":string,"record":object}
+{"kind":"operator-state","source":"operator","state":OperatorState}
+```
+
+A dry run does not create or append the file. Untagged lines are not written. A mixed run that collects by script and then enters the operator writes both kinds, in that order, and lists both in `output_kinds`.
+
+```
+OperatorState = {status: string, reason: string|null, error: Error|null,
+                 initial_recent_actions: RecentAction[],
+                 page: OperatorPage, history: ActionLog[], predictions: Prediction[],
+                 text_calls: TextCall[], metrics: OperatorMetrics}
+OperatorPage  = {snapshot: Snapshot, url, title, text,
+                 text_truncated: bool, omitted_elements: int,
+                 can_scroll_up: bool, can_scroll_down: bool,
+                 coverage: Coverage, bounds: CoverageBounds}
+CoverageBounds = {text_truncated: bool, omitted_elements: int,
+                  can_scroll_up: bool, can_scroll_down: bool, coverage: Coverage}
+Coverage      = "viewport" plus, in this order, only the flags that hold, joined by "+":
+                truncated (viewport text cut at 6000 characters),
+                omitted (omitted_elements > 0; candidates beyond 250),
+                above (can_scroll_up), below (can_scroll_down).
+                Examples: "viewport", "viewport+below",
+                "viewport+truncated+omitted+above+below".
+                page.coverage and bounds.coverage are that same string, not a sentence.
+OperatorMetrics = {actions, predictions, text_calls, observation_calls,
+                   observation_retries, stale_decisions, bootstrap_ms, observation_ms,
+                   prediction_ms, text_helper_ms, input_ms, settle_ms, elapsed_ms}
+```
+
+`page.text` is viewport text, at most 6000 characters, including visible titles, prices and records. `omitted_elements` counts action candidates beyond the 250 offered. This is the observation JEV used. It is not a normalized schema, not proof of exhaustive collection across pagination or offscreen content, and not a prepared script result. Prepared script payloads still bypass every model. `history` records executed input, including an uncertain mutation that must not be replayed. `predictions` includes discarded stale decisions. `usage` on a prediction or text call is the provider object, or null when that call reported none.
+
+`model_calls` counts actual attempted provider requests, including retries and failed attempts. `data.model_calls_by_kind` gives the same count by provider role; absent roles made no calls. `data.reported_cost` is the sum of costs providers returned, including answers later rejected. `data.cost_unreported` counts requests with no returned cost. `model_cost` is that sum when `cost_unreported` is 0, and `null` when any counted call is unpriced. `null` is unknown, not zero. Text-helper memo hits and deterministic checks make no model call.
+
+A successful control reply is not proof the mission succeeded. Read `status`, `reason`, `operator_state` and, when present, the tagged file.
 
 ## Types
 
@@ -151,7 +193,10 @@ Step         = {n: int, snapshot: id, operation: Operation, index: int|null, pro
                 text?: string, after: {url, title}, elapsed_ms: int}
 Operation    = "click"|"type_text"|"select"|"scroll_up"|"scroll_down"|"wait"|"done"|"blocked"
 status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
-                 max_steps defaults to 30; deadline_s defaults to 120; both must be positive.
+                 The operator action cap is the mission max_steps (default 60); the
+                 prediction cap is twice that. The operator uses the remaining mission
+                 deadline_s (default 900), not a hidden 120 s cap. A present max_steps
+                 or deadline_s must be positive.
 RunProcedure = {slug, site, planned: bool, attempts: int,
                 choice: {key: string, probabilities: {..}, confidence: float, usage: Usage|null},
                 drives: [{goal, status (drive), steps: Step[], reason?: string}],
@@ -160,16 +205,16 @@ RunProcedure = {slug, site, planned: bool, attempts: int,
                 outcome: "verified"|"failed"|"skipped"|"planned", elapsed_ms: int, reason?: string}
                 drives is empty for "planned" (a dry run executed nothing); attempts is 2 when the
                 retry-once rule replayed the procedure; planned is true when a planner turn wrote it
-PlaybookChoice = {source: "jev"|"planner", key: string|null, probabilities: {..}|null, confidence: float|null,
+PlaybookChoice = {source: "jev"|"planner"|"route", key: string|null, probabilities: {..}|null, confidence: float|null,
                   usage: Usage|null, note: string|null}
-                 drive replies retain playbook_choices in decision order, including JEV none answers
-                 and any confidence-triggered planner arbitration; model-error details retain them too.
-                 JEV preserves its own distribution/confidence; planner probabilities/confidence are null.
-                 A refused planner review has key:null and a note; JEV argmax remains selected.
-                 models.choice_confidence defaults to 0.7 and compares the top probability (not confidence);
-                 one review uses the same options/descriptions, at most 30s within the remaining deadline.
-                 Actual planner calls and reported cost are included in the run totals.
-                 No unvalidated planner text is executable.
+                 drive replies retain playbook_choices in decision order, including a JEV NONE
+                 and the route note when the operator is entered directly. NONE is the route:
+                 it is not BLOCKED, and no planner review reinterprets it (fly-yolk; the
+                 extr-uhnc confidence review does not gate this lane). JEV preserves its own
+                 distribution and confidence. A route entry has source "route", key "operator",
+                 and a note; its probabilities are empty and its confidence is null.
+                 Planner turns remain for explicit discovery and applicable playbook repair,
+                 not for on-the-fly execution or NONE review. No unvalidated planner text is executable.
 RunScript   = {script, url, records: int, bytes: int, elapsed_ms: int, error?: string}
                  one script call of a procedure's `script:` step (extr-8o1h): the page it ran on, the records it produced,
                  the size of its result, and — when the call was rejected — why; empty for a procedure with no script step
@@ -180,7 +225,8 @@ PlannerTurn = {n: int, trigger: "blocked"|"failed"|"arguments",
                answer: "procedure"|"handoff"|"fail", reason?: string, usage: Usage|null}
 Usage       = {input_tokens: int, output_tokens: int, cost: float}
 status (run) = "done"|"blocked"|"failed"|"handoff"|"limit"|"deadline"|"error"
-               max_procedures defaults to 40; deadline_s defaults to 900; both must be positive.
+               max_steps defaults to 60; max_procedures defaults to 40; deadline_s defaults to 900;
+               each must be positive when present. model_cost is number|null.
 Models       = {configured: bool, jev_model: string, text_model: string,
                 systemone_endpoint: string, chat_base_url: string}
                  the models section as configured; configured is whether an API key is present,
@@ -220,26 +266,34 @@ Rules:
   `<operation>_target` head per offered operation, and only the head the chosen
   operation selects is validated. A distribution that does not answer the offered
   criteria is `model-unavailable` with `code: "invalid-response"`.
-- `drive` reuses the tab it is given and opens one when the request names none (`tab` is
-  `key?`; the tab it opened is the one `final` names, and it is left open). It checks
-  ownership and then holds the tab action lock for the whole run, so no other tab command
-  interleaves while it works; every step of it is one `drive` call with the
-  procedure's `max_steps` and `deadline_s` (the operator's defaults of 30 and 120 s
-  otherwise), bounded by what is left of the run. It is refused before it starts on a tab
-  the caller does not own (`not-owner`), one the human holds (`with-human`), or one with a
-  dialog open (`dialog-open`).
-- The playbook level is asked at the start, after a procedure whose description or the
-  mission names another installed site the run has not served yet, and once more when the
-  procedure level answers BLOCKED. Its criteria are the installed playbooks by `site` and
-  `description` plus `none` — playbooks are selected, never merged, and one choice never
-  carries more than 255 options. A playbook other than the current one is switched to by
-  navigating the same tab to its `entry` URL, so the shared profile's logins carry over.
+- `drive` reuses a supplied tab and does not overwrite an already populated page with
+  `start_url`. With no tab it opens one (`tab` is `key?`; the tab it opened is the one
+  `final` names). `start_url`, when present, is the explicit http(s) page that tab opens
+  before the operator starts. On a blank tab with no `start_url`, one unambiguous http(s)
+  URL in the mission is the bootstrap; none or several is `blocked` with the missing-start
+  reason, not a playbook failure and not a model call. It checks ownership and then holds
+  the tab action lock for the whole run. A playbook step is one operator call bounded by
+  the procedure and by what is left of the mission. The on-the-fly operator uses
+  `max_steps` (default 60 executed actions; prediction cap twice that) and the remaining
+  mission deadline. It is refused before it starts on a tab the caller does not own
+  (`not-owner`), one the human holds (`with-human`), or one with a dialog open
+  (`dialog-open`).
+- The playbook level is asked when at least one book is installed: at the start, after a
+  procedure whose description or the mission names another installed site the run has not
+  served yet, and once more when the procedure level answers BLOCKED. An empty library
+  skips the question and enters the operator (fly-8xiq). Criteria are book identities
+  (`book:<loaded file>`) plus NONE; even one book competes with NONE and is never forced
+  (fly-mepw). Books are never merged. A question holds at most 255 choices including NONE;
+  a larger library uses bounded hierarchical choices and still offers NONE (fly-95bw).
+  Selecting NONE, or a procedure-level NONE or BLOCKED, enters the operator on the current
+  page and does not call the planner (fly-yolk). A playbook other than the current one is
+  switched to by navigating the same tab to its `entry` URL, so the shared profile's logins
+  carry over.
 - The procedure level is asked every turn: the current playbook's procedures (slug and
   description) plus `DONE` and `BLOCKED`. The state it and the playbook level are asked
   over is small and semantic — the mission, the site, the page kind (from the playbook's
   `pages`), the page title and URL, the last five procedures with their outcomes, and the
-  arguments already known — and, once a script has collected anything, `collected` (the count), `pages` (pages read) and `collection_complete` (the last pagination ran out: its `until` held or its next page did not exist, not `max` or a limit), so that the mission level can tell a finished collection from an unfinished one (extr-b3u0, found by the L39 live gate: told only a count, JEV chose the collection again and never DONE). **Page text and records never reach the upper levels**; it is the
-  operator level's and the checkers'.
+  arguments already known — and, once a script has collected anything, `collected` (the count), `pages` (pages read) and `collection_complete` (the last pagination ran out: its `until` held or its next page did not exist, not `max` or a limit), so that the mission level can tell a finished collection from an unfinished one (extr-b3u0, found by the L39 live gate: told only a count, JEV chose the collection again and never DONE). **Prepared script records never reach any model, and page text does not reach the playbook or procedure levels**; those levels see summaries and counts. The operator sends the mission, URL, title, at most 6000 characters of viewport text (including visible titles, prices and records), indexed elements and the last ten actions to JEV. The text helper may see that page text when filling a field (fly-g0uh fly-iodm).
 - `{name}` placeholders in a goal or an expectation sentence are substituted from the
   run's arguments; an argument the mission does not supply is asked of the text helper
   once, and the value is reused for the rest of the run.
@@ -281,7 +335,7 @@ Rules:
   `too-large`) fails that attempt of the procedure — nothing is verified, the whole procedure is replayed once, and a second
   rejection fails it (`outcome: "failed"`) and asks the planner, like a failed expectation; the call is in the procedure's
   `scripts` with its error. A browser failure ends the run, and a dialog the script opened ends it `error` as a drive's
-  does. The runner streams validated records to `--out` JSONL as pages complete; it keeps only five bounded samples in memory and `collected` is the count. No model sees a record. A dry run
+  does. The runner streams each validated record to `--out` as a tagged `script-record` line (`kind`, `source: "playbook"`, playbook identity, procedure, script, record) as pages complete; it keeps only five bounded samples in memory and `collected` is the count. No model sees a prepared script record. A terminal `operator-state` line is separate and is not a script record. A dry run
   runs no script. A procedure may declare `repeat: {next, max, until, delay_ms?, key}`: after its body the runner executes the named next-page procedure up to `max` pages, checks `until` and the next procedure’s expectations, waits `delay_ms` (default 500 ms), and streams each record once by `key` — the key de-duplicates for the rest of the run, so a page read twice (a replayed procedure, a next-page step the mission level chooses itself) never streams a record twice.
 - `playbook_test` runs one script of an installed playbook on the tab's page and answers its validated output, so that writing
   a script is a fast loop; it is owner-bound and takes the tab's action lock. The script is looked up by name in the

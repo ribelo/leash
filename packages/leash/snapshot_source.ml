@@ -8,7 +8,7 @@ let number = function `Int n -> float n | `Float x -> x | _ -> 0.
 let text = function `String s -> s | _ -> ""
 let value json = get "value" json
 
-(* Run in the main world before page scripts on each new document. A new epoch catches
+(* Run in the isolated world before page scripts on each new document. A new epoch catches
    reloads even if a loader id is unavailable; same-document history retains the observer. *)
 let world_name = "leash"
 
@@ -452,3 +452,362 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
   List.mapi
     (fun index ((row : P.row), backend) -> ({ row with index = index + 1 }, backend))
     raw
+
+let text_limit = 6000
+let element_limit = 250
+let scroll_delta = 560
+let wait_s = 0.1
+let observe_attempts = 10
+let observe_retry_s = 0.02
+let operator_mark = "leash-operator-read"
+let settle_mark = "leash-operator-settle"
+
+type unsupported_state = Iframe | Shadow_root | Canvas | Nested_scroll_container
+
+type coverage = {
+  text_truncated : bool;
+  omitted_elements : int;
+  can_scroll_up : bool;
+  can_scroll_down : bool;
+  coverage : string;
+  unsupported_states : unsupported_state list;
+}
+
+let coverage_string ~text_truncated ~omitted_elements ~can_scroll_up ~can_scroll_down =
+  let add flag token acc = if flag then acc ^ "+" ^ token else acc in
+  "viewport"
+  |> add text_truncated "truncated"
+  |> add (omitted_elements > 0) "omitted"
+  |> add can_scroll_up "above" |> add can_scroll_down "below"
+
+let coverage_of ~unsupported_states ~text_truncated ~omitted_elements ~can_scroll_up
+    ~can_scroll_down =
+  {
+    unsupported_states;
+    text_truncated;
+    omitted_elements;
+    can_scroll_up;
+    can_scroll_down;
+    coverage =
+      coverage_string ~text_truncated ~omitted_elements ~can_scroll_up ~can_scroll_down;
+  }
+
+let unsupported_name = function
+  | Iframe -> "iframe"
+  | Shadow_root -> "shadow-root"
+  | Canvas -> "canvas"
+  | Nested_scroll_container -> "nested-scroll-container"
+
+let coverage_json coverage =
+  `Assoc
+    [
+      ("text_truncated", `Bool coverage.text_truncated);
+      ("omitted_elements", `Int coverage.omitted_elements);
+      ("can_scroll_up", `Bool coverage.can_scroll_up);
+      ("can_scroll_down", `Bool coverage.can_scroll_down);
+      ("coverage", `String coverage.coverage);
+      ( "unsupported_states",
+        `List
+          (List.map
+             (fun state -> `String (unsupported_name state))
+             coverage.unsupported_states) );
+    ]
+
+(* jev-ultrafast snapshot.js at 1231850a, one evaluation. Geometry is omitted from the
+   marker: it is resolved and hit-tested at execution, and animation is not staleness
+   (fly-4lmg). Password, file and hidden inputs are not candidates (fly-eoqg). *)
+let operator_script =
+  {|(() => {
+  if (!document.body) return null;
+  const safe = e => !['password','file','hidden'].includes(e.type);
+  const identities = window.__leashOperatorIds ||= {nodes: new WeakMap(), next: 1};
+  const identity = e => {
+    if (!identities.nodes.has(e)) identities.nodes.set(e, identities.next++);
+    return identities.nodes.get(e);
+  };
+  const visible = e => {
+    try {
+      if (e.closest('[aria-hidden="true"],[inert]')) return false;
+      return e.checkVisibility
+        ? e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})
+        : true;
+    } catch (err) { return false; }
+  };
+  const name = (e, seen=new Set()) => {
+    if (!e || seen.has(e)) return '';
+    seen.add(e);
+    const referenced = (e.getAttribute('aria-labelledby') || '').split(/\s+/)
+      .map(id => name(document.getElementById(id), seen)).filter(Boolean).join(' ');
+    return referenced || e.getAttribute('aria-label') ||
+      [...(e.labels || [])].map(l => name(l, seen)).filter(Boolean).join(' ') ||
+      (['button','submit','reset'].includes(e.type) ? e.value : '') || e.getAttribute('alt') ||
+      (e.tagName === 'INPUT' ? '' : [...e.childNodes].map(n => n.nodeType === 3 ? n.textContent :
+        n.nodeType === 1 && n.getAttribute('aria-hidden') !== 'true' ? name(n, seen) : '').join(' ').trim()) ||
+      e.getAttribute('title') || e.getAttribute('placeholder') || '';
+  };
+  const roles = ['button','link','checkbox','radio','switch','tab','menuitem','menuitemradio',
+    'option','gridcell','combobox','textbox','searchbox','spinbutton'];
+  const selector = 'a[href],button,input,textarea,select,summary,[contenteditable="true"],' +
+    roles.map(role => '[role="' + role + '"]').join(',');
+  const role = e => {
+    const explicit = e.getAttribute('role');
+    if (roles.includes(explicit)) return explicit;
+    if (e.tagName === 'BUTTON' || e.tagName === 'SUMMARY') return 'button';
+    if (e.tagName === 'A') return 'link';
+    if (e.tagName === 'SELECT') return 'combobox';
+    if (e.tagName === 'TEXTAREA' || e.isContentEditable) return 'textbox';
+    if (e.tagName === 'INPUT') {
+      if (['checkbox','radio'].includes(e.type)) return e.type;
+      if (['button','submit','reset','image'].includes(e.type)) return 'button';
+      if (e.type === 'search') return 'searchbox';
+      if (e.type === 'number') return 'spinbutton';
+      if (['text','email','url','tel'].includes(e.type)) return 'textbox';
+    }
+    return null;
+  };
+  const actions = [];
+  const forms = [...document.querySelectorAll('input,textarea,select')].filter(safe)
+    .map(e => [identity(e),e.value,e.checked,e.selectedIndex,e.disabled,e.readOnly]);
+  for (const e of document.querySelectorAll(selector)) {
+    if (!safe(e) || !visible(e) || e.matches(':disabled') || e.closest('[aria-disabled="true"]')) continue;
+    const r = e.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2, rname = role(e);
+    if (!rname || r.width <= 0 || r.height <= 0 || x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+    if (rname === 'gridcell' && e.querySelector('button,[role="button"]')) continue;
+    const scope = e.closest('form,dialog,[role="dialog"],article,li,tr,[role="row"]') || e.parentElement;
+    const value = 'value' in e ? String(e.value) :
+      e.isContentEditable || rname === 'combobox' ? e.innerText.trim() : '';
+    actions.push({
+      identity: identity(e),
+      role: rname,
+      label: name(e) || rname,
+      value,
+      checked: ['checkbox','radio'].includes(e.type) ? String(e.checked) : e.getAttribute('aria-checked'),
+      readOnly: !!(e.readOnly || e.getAttribute('aria-readonly') === 'true'),
+      href: e.getAttribute('href'),
+      expanded: e.getAttribute('aria-expanded'),
+      selected: e.getAttribute('aria-selected'),
+      selectedIndex: e.selectedIndex ?? null,
+      context: (scope && scope.innerText ? scope.innerText : '').slice(0, 6000)
+    });
+  }
+  const words = [], walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  let node, length = 0, truncated = false;
+  while ((node = walker.nextNode())) {
+    const value = node.textContent.trim(), parent = node.parentElement;
+    if (!value || !parent || parent.closest('script,style,noscript,template') || !visible(parent)) continue;
+    range.selectNodeContents(node);
+    const box = range.getBoundingClientRect();
+    if (!(box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight && box.right > 0 && box.left < innerWidth)) continue;
+    if (length >= 6000) { truncated = true; break; }
+    words.push(value);
+    length += value.length;
+  }
+  const joined = words.join('\n');
+  if (joined.length > 6000) truncated = true;
+  const height = Math.max(document.documentElement?.scrollHeight || 0, document.body?.scrollHeight || 0);
+  const unsupported = new Set();
+  for (const e of document.querySelectorAll('*')) {
+    if (!visible(e)) continue;
+    const r = e.getBoundingClientRect();
+    if (!(r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth)) continue;
+    if (e.tagName === 'IFRAME' || e.tagName === 'FRAME') unsupported.add('iframe');
+    if (e.shadowRoot) unsupported.add('shadow-root');
+    if (e.tagName === 'CANVAS') unsupported.add('canvas');
+    if (e !== document.body && e !== document.documentElement) {
+      const css = getComputedStyle(e);
+      if ((/(auto|scroll)/.test(css.overflowY) && e.scrollHeight > e.clientHeight + 2) ||
+          (/(auto|scroll)/.test(css.overflowX) && e.scrollWidth > e.clientWidth + 2))
+        unsupported.add('nested-scroll-container');
+    }
+  }
+  return {
+    unsupported_states: [...unsupported].sort(),
+    kind: 'leash-operator',
+    url: location.href,
+    title: document.title,
+    timeOrigin: performance.timeOrigin,
+    text: joined.slice(0, 6000),
+    truncated,
+    omitted: Math.max(0, actions.length - 250),
+    scroll: { x: scrollX, y: scrollY, height, viewport: innerHeight, width: innerWidth },
+    semantics: actions.slice(0, 250),
+    guard: { forms, actions }
+  };
+})()|}
+
+let operator_expression = "/* " ^ operator_mark ^ " */\n" ^ operator_script
+
+let settle_expression ~autocomplete =
+  Printf.sprintf
+    "/* %s */ new Promise(resolve => { const autocomplete = %s; let frames = 0, stopped \
+     = false;      const finish = () => { stopped = true; resolve(true); }; \
+     setTimeout(finish, autocomplete ? 200 : 50);      const ready = () => { if \
+     (stopped) return; const field = document.activeElement; const ids = \
+     (field?.getAttribute('aria-controls') || field?.getAttribute('aria-owns') || '') \
+     .split(/\\s+/).filter(Boolean); const roots = ids.length ? ids.map(id => \
+     document.getElementById(id)).filter(Boolean) : [document]; const options = \
+     roots.flatMap(root => [...root.querySelectorAll('[role=\"option\"]')]); const shown \
+     = options.some(e => { const r = e.getBoundingClientRect(); return r.width && \
+     r.height && r.bottom > 0 && r.top < innerHeight &&      (e.checkVisibility ? \
+     e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}) : true); });      if \
+     (++frames >= 2 && (!autocomplete || shown)) finish(); else \
+     requestAnimationFrame(ready); };      requestAnimationFrame(ready); })"
+    settle_mark
+    (if autocomplete then "true" else "false")
+
+type semantics = {
+  role : string;
+  label : string;
+  value : string;
+  checked : string option;
+  read_only : bool;
+  href : string option;
+  context : string;
+}
+
+type operator_read = {
+  url : string;
+  title : string;
+  text : string;
+  time_origin : float;
+  scroll_x : float;
+  scroll_y : float;
+  scroll_height : float;
+  viewport_width : float;
+  viewport_height : float;
+  can_scroll_up : bool;
+  can_scroll_down : bool;
+  semantics : semantics list;
+  marker : string;
+  coverage : coverage;
+}
+
+type operator_reply = Payload of operator_read | Navigating | Foreign
+
+let float_field key json =
+  match get key json with `Int n -> float n | `Float x -> x | _ -> 0.
+
+let opt_string json = match json with `String s when s <> "" -> Some s | _ -> None
+let bool_field key json = match get key json with `Bool b -> b | _ -> false
+
+let semantics_of json =
+  list json
+  |> List.filter_map (fun item ->
+      match item with
+      | `Assoc _ ->
+          let checked =
+            match get "checked" item with
+            | `String s -> Some s
+            | `Bool b -> Some (if b then "true" else "false")
+            | _ -> None
+          in
+          Some
+            {
+              role = text (get "role" item);
+              label = text (get "label" item);
+              value = text (get "value" item);
+              checked;
+              read_only = bool_field "readOnly" item;
+              href = opt_string (get "href" item);
+              context = text (get "context" item);
+            }
+      | _ -> None)
+
+let semantics_json (item : semantics) =
+  `Assoc
+    [
+      ("role", `String item.role);
+      ("label", `String item.label);
+      ("value", `String item.value);
+      ( "checked",
+        match item.checked with None -> `Null | Some checked -> `String checked );
+      ("readOnly", `Bool item.read_only);
+      ("href", match item.href with None -> `Null | Some href -> `String href);
+      ("context", `String item.context);
+    ]
+
+let marker_of ~url ~title ~time_origin ~text ~scroll_x ~scroll_y ~scroll_height
+    ~viewport_width ~viewport_height ~semantics =
+  Yojson.Safe.to_string
+    (`List
+       [
+         `Float time_origin;
+         `String url;
+         `String title;
+         `Float scroll_x;
+         `Float scroll_y;
+         `Float scroll_height;
+         `Float viewport_width;
+         `Float viewport_height;
+         `String text;
+         `List (List.map semantics_json semantics);
+       ])
+
+(* CDP strings are UTF-8; a character bound must never split a codepoint or
+   truncate non-ASCII text at 6,000 bytes (fly-iodm). *)
+let bounded_text raw =
+  let rec end_at offset remaining =
+    if offset >= String.length raw || remaining = 0 then offset
+    else
+      let decoded = String.get_utf_8_uchar raw offset in
+      end_at (offset + Uchar.utf_decode_length decoded) (remaining - 1)
+  in
+  let stop = end_at 0 text_limit in
+  (String.sub raw 0 stop, stop < String.length raw)
+
+let parse_operator json =
+  match json with
+  | `Null -> Navigating
+  | _ when text (get "kind" json) <> "leash-operator" -> Foreign
+  | _ ->
+      let scroll = get "scroll" json in
+      let scroll_x = float_field "x" scroll in
+      let scroll_y = float_field "y" scroll in
+      let scroll_height = float_field "height" scroll in
+      let viewport_height = float_field "viewport" scroll in
+      let viewport_width = float_field "width" scroll in
+      let raw = text (get "text" json) in
+      let page_text, cut = bounded_text raw in
+      let text_truncated = bool_field "truncated" json || cut in
+      let omitted_elements = max 0 (integer (get "omitted" json)) in
+      let can_scroll_down = scroll_y +. viewport_height < scroll_height -. 2. in
+      let can_scroll_up = scroll_y > 0. in
+      let semantics = semantics_of (get "semantics" json) in
+      let url = text (get "url" json) in
+      let title = text (get "title" json) in
+      let time_origin = float_field "timeOrigin" json in
+      let unsupported_states =
+        list (get "unsupported_states" json)
+        |> List.filter_map (function
+          | `String "iframe" -> Some Iframe
+          | `String "shadow-root" -> Some Shadow_root
+          | `String "canvas" -> Some Canvas
+          | `String "nested-scroll-container" -> Some Nested_scroll_container
+          | _ -> None)
+      in
+      let coverage =
+        coverage_of ~unsupported_states ~text_truncated ~omitted_elements ~can_scroll_up
+          ~can_scroll_down
+      in
+      Payload
+        {
+          url;
+          title;
+          text = page_text;
+          time_origin;
+          scroll_x;
+          scroll_y;
+          scroll_height;
+          viewport_width;
+          viewport_height;
+          can_scroll_up;
+          can_scroll_down;
+          semantics;
+          marker =
+            marker_of ~url ~title ~time_origin ~text:page_text ~scroll_x ~scroll_y
+              ~scroll_height ~viewport_width ~viewport_height ~semantics
+            ^ Yojson.Safe.to_string (get "guard" json)
+            ^ Yojson.Safe.to_string (get "unsupported_states" json);
+          coverage;
+        }

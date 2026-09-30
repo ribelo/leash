@@ -67,16 +67,24 @@ type tab = {
 }
 
 val click :
+  ?settle_after:bool ->
   cdp:Cdp.t ->
   tab ->
   Protocol.click_args ->
   (Protocol.action_result, Protocol.error) result
+(** [settle_after] defaults to true. The operator path settles with {!operator_settle}
+    instead, so autocomplete and ordinary input keep the reference bounds (fly-2pn7). *)
 
 val fill :
+  ?settle_after:bool ->
+  ?check_hit:bool ->
+  ?blur_after:bool ->
   cdp:Cdp.t ->
   tab ->
   Protocol.fill_args ->
   (Protocol.action_result, Protocol.error) result
+(** [check_hit] additionally resolves and hit-tests the current target before input. The
+    operator enables it for fill and select (fly-4lmg). *)
 
 val press :
   cdp:Cdp.t ->
@@ -87,6 +95,8 @@ val press :
     the page, and only the snapshot's currency and the loader id are checked. *)
 
 val select :
+  ?settle_after:bool ->
+  ?check_hit:bool ->
   cdp:Cdp.t ->
   tab ->
   Protocol.select_args ->
@@ -126,3 +136,14 @@ val scroll :
     revalidated and the wheel is aimed at the row, which is what scrolls its nearest
     scrollable ancestor. [scroll] carries no snapshot id in [docs/protocol.md], so an
     indexed scroll revalidates against the tab's current snapshot. *)
+
+val operator_scroll :
+  cdp:Cdp.t -> tab -> down:bool -> (Protocol.action_result, Protocol.error) result
+(** fly-2pn7: the operator's page scroll. A wheel of {!Snapshot_source.scroll_delta} CSS
+    pixels at (550, 650), the reference's point, not one viewport. *)
+
+val operator_settle :
+  cdp:Cdp.t -> tab -> autocomplete:bool -> (unit, Protocol.error) result
+(** fly-2pn7: after confirmed input. Autocomplete waits up to 200 ms for a visible option;
+    other input waits two frames or 50 ms. A page that stops answering ends the wait, not
+    the action. *)

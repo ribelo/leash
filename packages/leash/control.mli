@@ -17,6 +17,7 @@ type ('clock, 'net) deps = {
 
 val create :
   ?model:string ->
+  ?models:Models.t ->
   ?levels:Run.levels ->
   ?decide:
     (deadline:Ox.Duration.t ->
@@ -73,6 +74,7 @@ val report :
 
 val dispatch :
   ?model:string ->
+  ?models:Models.t ->
   ?levels:Run.levels ->
   ?decide:
     (deadline:Ox.Duration.t ->
@@ -90,6 +92,7 @@ val decode : string -> (Protocol.request, string) result
 
 val handle :
   ?model:string ->
+  ?models:Models.t ->
   ?levels:Run.levels ->
   ?decide:
     (deadline:Ox.Duration.t ->

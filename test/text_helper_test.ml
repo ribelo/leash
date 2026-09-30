@@ -146,20 +146,76 @@ let script_page ?(stale_row = false) fake =
       Fake.emit ~session fake ~method_:"Page.loadEventFired"
         ~params:(Fake.event "Page.loadEventFired");
       obj []);
+  let aimed = ref 0 in
+  let operator_observation =
+    obj
+      [
+        ("kind", str "leash-operator");
+        ("url", str "https://example.com/");
+        ("title", str "Example");
+        ("timeOrigin", `Int 1);
+        ("text", str "Example content");
+        ("truncated", `Bool false);
+        ("omitted", `Int 0);
+        ( "scroll",
+          obj
+            [
+              ("x", `Int 0);
+              ("y", `Int 0);
+              ("height", `Int 1000);
+              ("viewport", `Int 600);
+              ("width", `Int 800);
+            ] );
+        ("semantics", `List []);
+        ("guard", obj []);
+      ]
+  in
   Fake.on_method fake "Runtime.evaluate" (fun request ->
-      let params = get "params" request in
-      let expression = get "expression" params in
-      let value =
-        match expression with
-        | `String expression
-          when String.starts_with ~prefix:"Array.from(document.body?.innerText" expression
-          ->
-            str "Example content"
-        | _ -> get "guard" fixture
-      in
-      if expression = str "globalThis" then
-        obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
-      else obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]);
+      let expression = get "expression" (get "params" request) in
+      match expression with
+      | `String "globalThis" ->
+          obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
+      | `String expression when contains expression "leash-operator-read" ->
+          obj
+            [
+              ("result", obj [ ("type", str "object"); ("value", operator_observation) ]);
+            ]
+      | `String expression
+        when String.starts_with ~prefix:"Array.from(document.body?.innerText" expression
+        ->
+          obj
+            [
+              ("result", obj [ ("type", str "object"); ("value", str "Example content") ]);
+            ]
+      | _ ->
+          obj
+            [ ("result", obj [ ("type", str "object"); ("value", get "guard" fixture) ]) ]);
+  (* fly-4lmg: operator TYPE_TEXT and SELECT hit-test. The aimed backend is the node
+     just measured, so the point hits the row rather than an overlay. *)
+  Fake.on_method fake "DOM.getContentQuads" (fun request ->
+      (match field "backendNodeId" (get "params" request) with
+      | Some (`Int backend) -> aimed := backend
+      | _ -> ());
+      obj
+        [
+          ( "quads",
+            `List
+              [
+                `List
+                  [
+                    `Float 10.;
+                    `Float 10.;
+                    `Float 30.;
+                    `Float 10.;
+                    `Float 30.;
+                    `Float 30.;
+                    `Float 10.;
+                    `Float 30.;
+                  ];
+              ] );
+        ]);
+  Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+      obj [ ("backendNodeId", `Int !aimed); ("nodeId", `Int !aimed) ]);
   Fake.on_method fake "Runtime.callFunctionOn" (fun _ ->
       obj
         [
@@ -376,7 +432,7 @@ let rig f =
 
 (* The chat client alone, over the fake chat server: the helper's own tests need no
    browser. *)
-let helper_rig ?(replies = [ chat_reply (`String "hello") ]) f =
+let helper_rig ?(on_usage = fun _ -> ()) ?(replies = [ chat_reply (`String "hello") ]) f =
   Eio_main.run (fun env ->
       Eio.Switch.run (fun sw ->
           let memory = Logger.Memory.create () in
@@ -398,7 +454,7 @@ let helper_rig ?(replies = [ chat_reply (`String "hello") ]) f =
               ()
           in
           let helper =
-            Leash.Text_helper.create ~client
+            Leash.Text_helper.create ~on_usage ~client
               ~now:(fun () -> Eio.Time.now env#clock)
               ~model:text_model ~logger ()
           in
@@ -435,6 +491,8 @@ let drive models tabs handle goal =
          dry_run = None;
          expect = None;
          out = None;
+         max_steps = None;
+         start_url = None;
        })
 
 (* ---------- drive-ls3c drive-fh1h: the value the helper answers is typed ---------- *)
@@ -584,7 +642,7 @@ let null_is_blocked () =
         "drive-ls3c the blocked step" "type_text"
         (text "operation" (List.hd steps)))
 
-(* drive-ls3c: the text is bounded at 4 KiB — 4096 bytes are typed, 4097 are refused and
+(* drive-ls3c: the text is bounded at 2000 characters — 2000 bytes are typed, 2001 are refused and
    nothing is typed. *)
 let bound () =
   rig (fun env sw tabs fake logger _ ->
@@ -597,7 +655,7 @@ let bound () =
             (fun body -> Chat.ok (answer ~choice:"TYPE_TEXT" ~label:"Search terms" body));
           ]
       in
-      let at_bound = String.make 4096 'x' and over = String.make 4097 'x' in
+      let at_bound = String.make 2000 'x' and over = String.make 2001 'x' in
       let chat =
         chat_server ~sw ~net:env#net
           [ chat_reply (`String at_bound); chat_reply (`String over) ]
@@ -614,17 +672,21 @@ let bound () =
       let inserted = calls fake "Input.insertText" in
       Alcotest.(check int) "drive-ls3c one fill" 1 (List.length inserted);
       Alcotest.(check int)
-        "drive-ls3c 4 KiB is typed" 4096
+        "drive-ls3c 2000 characters is typed" 2000
         (String.length (text "text" (params (List.hd inserted))));
       (* the same drive, one byte over *)
-      let error = failure (drive models tabs handle goal) in
-      check_code "drive-ls3c over 4 KiB is refused" "model-unavailable" error;
+      let reply = result (drive models tabs handle goal) in
       Alcotest.(check string)
-        "drive-ls3c the refusal is a reply that cannot be typed" "invalid-response"
-        (detail_code error);
-      Alcotest.(check bool)
-        "drive-ls3c the sentence names the bound" true
-        (contains error.message "4096");
+        "fly-8fgl overlong helper is terminal" "error" (text "status" reply);
+      let operator = get "operator_state" reply in
+      let error =
+        match P.error_of_yojson (get "error" operator) with
+        | Ok error -> error
+        | Error message -> Alcotest.fail message
+      in
+      check_code "fly-qr70 over 2000 characters is refused" "model-unavailable" error;
+      Alcotest.(check string)
+        "fly-qr70 invalid text is not corrected" "invalid-response" (detail_code error);
       Alcotest.(check int)
         "drive-ls3c the over-long text is not typed" 1
         (List.length (calls fake "Input.insertText")))
@@ -691,17 +753,22 @@ let chat_failure () =
              ~chat_base_url:(Chat.url chat ""))
       in
       let handle = new_tab tabs in
-      let error = failure (drive models tabs handle goal) in
-      check_code "drive-kh2u the chat failure" "model-unavailable" error;
+      let reply = result (drive models tabs handle goal) in
       Alcotest.(check string)
-        "drive-kh2u the provider's kind" "unavailable" (detail_code error);
-      Alcotest.(check bool)
-        "drive-kh2u the message names the provider failure" true
-        (contains error.message "HTTP 500");
-      let steps = detail_steps error in
-      Alcotest.(check int) "drive-kh2u one completed step" 1 (List.length steps);
+        "fly-8fgl chat failure retains terminal evidence" "error" (text "status" reply);
+      let operator = get "operator_state" reply in
+      let error =
+        match P.error_of_yojson (get "error" operator) with
+        | Ok error -> error
+        | Error message -> Alcotest.fail message
+      in
+      check_code "fly-8fgl provider failure" "model-unavailable" error;
       Alcotest.(check string)
-        "drive-kh2u the step that completed" "scroll_down"
+        "fly-8fgl provider subtype" "unavailable" (detail_code error);
+      let steps = list (get "operator_steps" reply) in
+      Alcotest.(check int) "fly-4mio completed action retained" 1 (List.length steps);
+      Alcotest.(check string)
+        "fly-4mio completed scroll" "scroll_down"
         (text "operation" (List.hd steps));
       Alcotest.(check int)
         "drive-ls3c nothing is typed" 0
@@ -831,11 +898,11 @@ let corrective_retry () =
         (contains correction "Markdown fences"))
 
 (* drive-ls3c: the answer must be exactly {"text": string|null}; anything else, and a
-   text over 4 KiB, is a refusal with nothing typed. *)
+   text over 2000 characters, is a refusal with nothing typed. *)
 let answer_shape () =
   let replies =
     [
-      chat_reply (`String (String.make 4096 'y'));
+      chat_reply (`String (String.make 2000 'y'));
       chat_reply `Null;
       chat_reply (`Assoc [ ("text", `String "hello"); ("other", `Int 1) ]);
       chat_reply (`Assoc [ ("text", `String "hello"); ("other", `Int 1) ]);
@@ -851,8 +918,8 @@ let answer_shape () =
         helper.Leash.Text_helper.complete { context with Leash.Text_helper.goal = label }
       in
       Alcotest.(check (option string))
-        "drive-ls3c 4 KiB is accepted"
-        (Some (String.make 4096 'y'))
+        "drive-ls3c 2000 characters is accepted"
+        (Some (String.make 2000 'y'))
         (match ask "at the bound" with
         | Ok value -> value
         | Error error -> Alcotest.fail error.Leash.Protocol.message);
@@ -923,15 +990,64 @@ let usage_is_logged () =
         "drive-7tvn provider cost" 0.00042
         (match field "cost" with Float n -> n | _ -> Alcotest.fail "cost"))
 
+(* fly-gysl fly-qr70 fly-9e0f: strict Unicode length, no empty value, actual usage. *)
+let unicode_and_usage () =
+  let emoji = "😀" in
+  let repeat n = String.concat "" (List.init n (fun _ -> emoji)) in
+  let reported = ref [] in
+  helper_rig
+    ~on_usage:(fun json -> reported := json :: !reported)
+    ~replies:
+      [
+        chat_reply (`String (repeat 2000));
+        chat_reply (`String (repeat 2001));
+        chat_reply (`String "");
+      ]
+    (fun _ _ helper server _ ->
+      let ask goal =
+        helper.Leash.Text_helper.complete { context with goal; page_text = repeat 6001 }
+      in
+      Alcotest.(check (option string))
+        "fly-gysl 2000 Unicode characters accepted"
+        (Some (repeat 2000))
+        (match ask "bound" with
+        | Ok value -> value
+        | Error error -> Alcotest.fail error.message);
+      let page = get "page" (user_context server) in
+      Alcotest.(check string)
+        "fly-gysl viewport bounded by characters" (repeat 6000) (text "text" page);
+      ignore (ask "bound");
+      Alcotest.(check int)
+        "fly-gysl unchanged memo makes no model call" 1 (Chat.connections server);
+      List.iter
+        (fun goal ->
+          match ask goal with
+          | Error _ -> ()
+          | Ok _ -> Alcotest.fail "fly-qr70 unsafe helper value")
+        [ "over"; "empty" ];
+      Alcotest.(check int)
+        "fly-qr70 invalid text is not corrected" 3 (Chat.connections server);
+      Alcotest.(check int)
+        "fly-9e0f callback records answered calls, not memo" 3 (List.length !reported);
+      let usage = List.hd !reported in
+      Alcotest.(check int)
+        "fly-9e0f token count" 10
+        (match get "input_tokens" usage with `Int n -> n | _ -> 0);
+      Alcotest.(check bool)
+        "fly-9e0f retry uncertainty explicit" true
+        (get "retries" usage = `Null))
+
 let () =
   Alcotest.run "L22 text helper"
     [
       ( "text helper",
         [
+          Alcotest.test_case "fly-gysl fly-qr70 fly-9e0f Unicode and usage" `Quick
+            unicode_and_usage;
           Alcotest.test_case "drive-ls3c type_text fills the value" `Quick fills;
           Alcotest.test_case "drive-ls3c null blocks naming the field" `Quick
             null_is_blocked;
-          Alcotest.test_case "drive-ls3c the 4 KiB bound" `Quick bound;
+          Alcotest.test_case "drive-ls3c the 2000 characters bound" `Quick bound;
           Alcotest.test_case "drive-ls3c reuse on unchanged input" `Quick reuse;
           Alcotest.test_case "drive-kh2u chat failure with steps" `Quick chat_failure;
           Alcotest.test_case "drive-ls3c jev's field_context" `Quick field_context;

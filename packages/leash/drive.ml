@@ -46,9 +46,6 @@ let internal message =
   in
   P.make_error code ~message
 let ms seconds = max 0 (int_of_float (seconds *. 1000.))
-let result ?reason status steps (final : observation) =
-  P.{ status; steps = List.rev steps; final = final.snapshot; reason }
-
 (* drive-y7v8: an error names its cause, so the agent reading the trace knows whether
    to hand off, retry, or give up. *)
 let failed what (error : P.error) =
@@ -72,137 +69,283 @@ let history (step : P.step) changed =
                    else op_name step.operation);
       text = step.text; page_changed = Some changed }
 
-let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run =
+(* fly-hc3l, fly-4mio, fly-9e0f: predictions and executed input have separate
+   budgets. A decision is consumed exactly once; stale input is not an action. *)
+let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
+    ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent =
   let started = now () in
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
-  let cap = Option.value ~default:30 args.P.max_steps in
-  let with_steps steps error =
-    if not (List.mem (P.Error_code.to_string error.P.code) ["model-unavailable"; "model-timeout"])
-    then error
-    else let fields = match error.detail with
-      | Some (`Assoc fields) -> fields
-      | _ -> ["code", `String "unavailable"] in
-      { error with detail = Some (`Assoc (("steps", `List (List.map P.yojson_of_step (List.rev steps))) :: List.remove_assoc "steps" fields)) }
+  let cap = Option.value ~default:60 args.P.max_steps in
+  let actions = ref 0 and predictions = ref 0 and text_calls = ref 0 in
+  let observations = ref 0 and observation_retries = ref 0 and stale = ref 0 in
+  let observation_ms = ref 0 and prediction_ms = ref 0 and helper_ms = ref 0 and input_ms = ref 0 in
+  let prediction_log = ref [] and text_log = ref [] and action_log = ref [] in
+  let pending_text = ref None in
+  (* fly-vnf1: BLOCKED cannot certify an unseen scroll frontier. This deliberate
+     deviation from jev-ultrafast is bounded to three exploration inputs per URL. *)
+  let frontiers = Hashtbl.create 8 in
+  let integer n = `Int n and string s = `String s in
+  let optional_string = function None -> `Null | Some s -> string s in
+  let optional_int = function None -> `Null | Some n -> integer n in
+  let member key = function `Assoc fields -> List.assoc_opt key fields | _ -> None in
+  let measured total fn =
+    let at = now () in
+    let answer = fn () in
+    total := !total + ms (now () -. at);
+    answer
   in
-  (* drive-ls3c drive-fh1h: the context a type_text decision is asked from, built from
-     the element JEV chose — the same row the request offered — and the drive's own
-     history, oldest first. jev's field_context is this, bounded by the text helper when
-     it writes the request. *)
+  let observe_page () =
+    let rec attempt left =
+      incr observations;
+      match measured observation_ms (fun () -> observe t ()) with
+      | Error error when P.Error_code.to_string error.code = "stale-snapshot" && left > 1 && now () < deadline ->
+          incr observation_retries; attempt (left - 1)
+      | answer -> answer
+    in
+    attempt observe_attempts
+  in
+  let finish ?reason ?error name steps (page : observation) =
+    let status = status name in
+    let extra = telemetry () in
+    let metric key fallback = Option.value ~default:(integer fallback) (member key extra) in
+    let bounds = coverage page in
+    let text_truncated = Option.value ~default:(`Bool (String.length page.text >= 6000)) (member "text_truncated" bounds) in
+    let omitted_elements = Option.value
+      ~default:(integer (max 0 (page.snapshot.total - List.length page.snapshot.rows)))
+      (member "omitted_elements" bounds) in
+    let metrics = `Assoc [
+      "actions", integer !actions; "predictions", integer !predictions;
+      "text_calls", integer !text_calls; "observation_calls", metric "observation_calls" !observations;
+      "observation_retries", metric "observation_retries" !observation_retries;
+      "stale_decisions", integer !stale; "bootstrap_ms", metric "bootstrap_ms" 0;
+      "observation_ms", integer !observation_ms; "prediction_ms", integer !prediction_ms;
+      "text_helper_ms", integer !helper_ms; "input_ms", metric "input_ms" !input_ms;
+      "settle_ms", metric "settle_ms" 0; "elapsed_ms", integer (ms (now () -. started)) ] in
+    let state = `Assoc [
+      "status", string name; "reason", optional_string reason;
+      "error", (match error with None -> `Null | Some error -> P.yojson_of_error error);
+      "initial_recent_actions", `List (List.map J.yojson_of_recent_action initial_recent);
+      "page", `Assoc [ "snapshot", P.yojson_of_snapshot page.snapshot;
+        "url", string page.snapshot.url; "title", string page.snapshot.title;
+        "text", string page.text; "text_truncated", text_truncated;
+        "omitted_elements", omitted_elements;
+        "unsupported_states", Option.value ~default:(`List []) (member "unsupported_states" bounds);
+        "can_scroll_down", `Bool page.can_scroll_down; "can_scroll_up", `Bool page.can_scroll_up;
+        "coverage", Option.value ~default:(string "viewport") (member "coverage" bounds);
+        "bounds", bounds ];
+      "history", `List (List.rev !action_log);
+      "predictions", `List (List.rev !prediction_log);
+      "text_calls", `List (List.rev !text_log); "metrics", metrics ] in
+    Ok P.{ status; steps = List.rev steps; final = page.snapshot; reason; operator_state = Some state }
+  in
   let context page choice recent =
     match choice.J.index with
     | None -> Error (internal "a type_text decision names no field")
     | Some index ->
-      (match List.find_opt (fun (element : J.element) -> element.row = index)
-               (J.elements page.snapshot) with
-       | None -> Error (internal (Printf.sprintf "row %d is not in the snapshot of a type_text decision" index))
-       | Some element ->
-         Ok Text_helper.{ goal = args.P.goal;
-           field = { label = element.label; role = element.role; value = element.value };
-           page_title = page.snapshot.title; page_text = page.text;
-           recent = List.rev recent })
+        (match List.find_opt (fun (element : J.element) ->
+             element.row = index && List.mem (operation "type_text") element.operations)
+           (J.elements page.snapshot) with
+         | None -> Error (internal (Printf.sprintf "row %d is not a compatible text field" index))
+         | Some element -> Ok Text_helper.{ goal = args.P.goal;
+             field = { label = element.label; role = element.role; value = element.value };
+             page_title = page.snapshot.title; page_text = page.text; recent = List.rev recent })
   in
-  (* A dry run and every operation that is not type_text ask nothing; a terminal one has
-     already decided. A null answer ends the drive [blocked] with the field named, before
-     anything reaches the browser. *)
-  let ask_text page choice recent ~terminal =
-    if dry_run || terminal || choice.J.operation <> operation "type_text" then Ok Nothing
-    else match context page choice recent with
-      | Error error -> Error error
-      | Ok context ->
-        (match text_value t context with
-         | Ok (Some value) -> Ok (Value value)
-         | Ok None -> Ok (Missing context.Text_helper.field.label)
-         | Error error -> Error error)
+  let stale_error error = P.Error_code.to_string error.P.code = "stale-snapshot" in
+  let update_prediction outcome =
+    match !prediction_log with
+    | `Assoc fields :: rest -> prediction_log := `Assoc (("outcome", string outcome) :: List.remove_assoc "outcome" fields) :: rest
+    | _ -> ()
   in
-  match observe t () with
-  | Error e -> Error (with_steps [] e)
+  let record_step (page : observation) (next : observation) choice text steps =
+    P.{ n = List.length steps + 1; snapshot = page.snapshot.snapshot;
+        operation = choice.J.operation; index = choice.index;
+        probabilities = J.trace_probabilities choice; text;
+        after = { url = next.snapshot.url; title = next.snapshot.title };
+        elapsed_ms = ms (now () -. started) }
+  in
+  match observe_page () with
+  | Error error -> Error error
   | Ok first ->
-    let rec go n page steps recent =
-      if now () >= deadline then Ok (result (status "deadline") steps page)
-      else if n >= cap then Ok (result (status "step-cap") steps page)
-      else if page.snapshot.dialog <> None then
-        let reason = Option.map dialog_reason page.snapshot.dialog in
-        Ok (result ?reason (status "error") steps page)
-      else
-        let request = J.make ~model ~goal:args.goal ~snapshot:page.snapshot ~text:page.text
-          ~recent:(List.rev recent) ~can_scroll_down:page.can_scroll_down ~can_scroll_up:page.can_scroll_up in
-        match decide t request with
-        | Error error -> Error (with_steps steps error)
-        | Ok choice ->
-          let op = choice.operation in
-          let terminal = op = operation "done" || op = operation "blocked" in
-          let record text (next : observation) steps =
-            let step = P.{ n = n + 1; snapshot = page.snapshot.snapshot;
-              operation = op; index = choice.index;
-              probabilities = J.trace_probabilities choice; text;
-              after = { url = next.snapshot.url; title = next.snapshot.title };
-              elapsed_ms = ms (now () -. started) } in
-            (step :: steps, history step (page.fingerprint <> next.fingerprint)) in
-          let step text =
-            let outcome = if dry_run || terminal then Ok None
-              else Result.map (fun a -> Some a) (act t page choice text) in
-            match outcome with
-            | Error error when P.Error_code.to_string error.code = "stale-snapshot" ->
-                (match observe t () with Error e -> Error (with_steps steps e)
-                 | Ok refreshed -> go (n + 1) refreshed steps recent)
-            | Error act_error ->
-              let steps, _ = record text page steps in
-              let reason = failed ("the " ^ op_name op ^ " action") act_error in
-              Ok (result ~reason (status "error") steps page)
-            | Ok action ->
-              let next = if dry_run || terminal then Ok page else observe t () in
-              (match next with
-               | Error observe_error ->
-                 let steps, _ = record text page steps in
-                 let reason = failed "observe after the action" observe_error in
-                 Ok (result ~reason (status "error") steps page)
-               | Ok next ->
-                 let steps, entry = record text next steps in
-                 let recent = entry :: recent in
-                 let interrupted =
-                   match action with
-                   | Some acted -> (
-                       match (acted.dialog, acted.popups) with
-                       | Some dialog, _ -> Some (dialog_reason dialog)
-                       | None, _ :: _ -> Some (popup_reason acted.popups)
-                       | None, [] -> None)
-                   | None -> None
-                 in
-                 (match interrupted with
-                  | Some reason -> Ok (result ~reason (status "error") steps next)
-                  | None when op = operation "done" ->
-                      Ok (result (status "done") steps next)
-                  | None when op = operation "blocked" || dry_run || J.stalled (List.rev recent) ->
-                    let reason =
-                      if dry_run then "dry run: the proposed action was not dispatched"
-                      else if op = operation "blocked" then
-                        "the operator found no available action toward the goal; inspect the final page and revise the goal or use raw commands"
-                      else "the operator repeated actions without changing the page"
+      let rec go page steps recent =
+        let rescue_count, seen_top, seen_bottom =
+          Option.value ~default:(0, false, false) (Hashtbl.find_opt frontiers page.snapshot.url) in
+        let seen_top = seen_top || not page.can_scroll_up in
+        let seen_bottom = seen_bottom || not page.can_scroll_down in
+        Hashtbl.replace frontiers page.snapshot.url (rescue_count, seen_top, seen_bottom);
+        if now () >= deadline then finish ~reason:"caller deadline exhausted" "deadline" steps page
+        else if !predictions >= 2 * cap then
+          finish ~reason:(Printf.sprintf "prediction budget exhausted (%d predictions)" (2 * cap)) "step-cap" steps page
+        else if page.snapshot.dialog <> None then
+          finish ?reason:(Option.map dialog_reason page.snapshot.dialog) "error" steps page
+        else
+          let request = J.make ~model ~goal:args.goal ~snapshot:page.snapshot ~text:page.text
+            ~recent:(List.rev recent) ~can_scroll_down:page.can_scroll_down ~can_scroll_up:page.can_scroll_up
+            |> fun request -> J.with_coverage request (coverage page) in
+          let at = now () in
+          incr predictions;
+          match measured prediction_ms (fun () -> decide t request) with
+          | Error error ->
+              prediction_log := `Assoc [ "n", integer !predictions;
+                "snapshot", string (P.Snapshot_id.to_string page.snapshot.snapshot);
+                "operation", `Null; "index", `Null; "option", `Null;
+                "probabilities", `Null; "confidence", `Null;
+                "outcome", string "provider-error"; "error", P.yojson_of_error error;
+                "usage", Option.value ~default:`Null (usage "operator");
+                "elapsed_ms", integer (ms (now () -. at)) ] :: !prediction_log;
+              finish ~error ~reason:(failed "JEV prediction" error) "error" steps page
+          | Ok choice ->
+              let op = choice.J.operation in
+              let model_operation = op_name op in
+              let offered name = List.exists (fun (key, _) -> String.uppercase_ascii key = name) choice.operation_probabilities in
+              let rescue =
+                if op <> operation "blocked" || rescue_count >= 3 || !actions >= cap then None
+                else if not seen_bottom && page.can_scroll_down && offered "SCROLL_DOWN" then Some (operation "scroll_down")
+                else if not seen_top && page.can_scroll_up && offered "SCROLL_UP" then Some (operation "scroll_up")
+                else None in
+              prediction_log := `Assoc [ "n", integer !predictions;
+                "snapshot", string (P.Snapshot_id.to_string page.snapshot.snapshot);
+                "operation", string (op_name op); "index", optional_int choice.index;
+                "option", optional_int choice.option;
+                "probabilities", P.yojson_of_probabilities (J.trace_probabilities choice);
+                "confidence", `Float choice.confidence; "outcome", string "predicted";
+                "rescued_operation", (match rescue with None -> `Null | Some op -> string (op_name op));
+                "usage", Option.value ~default:`Null (usage "operator");
+                "elapsed_ms", integer (ms (now () -. at)) ] :: !prediction_log;
+              let choice = match rescue with None -> choice | Some operation ->
+                { choice with J.operation; index = None; option = None; target_confidence = None;
+                  target_probabilities = []; targets = [] } in
+              let op = choice.J.operation in
+              let terminal = op = operation "done" || op = operation "blocked" in
+              let refresh () =
+                incr stale;
+                update_prediction "stale; no input";
+                match observe_page () with
+                | Error error -> finish ~error ~reason:(failed "refresh stale observation" error) "error" steps page
+                | Ok next -> go next steps recent
+              in
+              if now () >= deadline then finish ~reason:"caller deadline exhausted after prediction; no input" "deadline" steps page
+              else if dry_run then
+                let step = record_step page page choice None steps in
+                update_prediction "dry-run; no input";
+                finish ~reason:"dry run: the proposed action was not dispatched" "blocked" (step :: steps) page
+              else if not terminal && !actions >= cap then (
+                update_prediction "action budget; no input";
+                finish ~reason:(Printf.sprintf "action budget exhausted (%d executed actions)" cap) "step-cap" steps page)
+              else
+                let checked = if terminal || op = operation "type_text" then validate page else Ok () in
+                match checked with
+                | Error error when stale_error error -> refresh ()
+                | Error error -> finish ~error ~reason:(failed "validate observation" error) "error" steps page
+                | Ok () when terminal ->
+                    (* fly-vzzw: never accept an old terminal opinion, even after the last action. *)
+                    (match observe_page () with
+                     | Error error -> finish ~error ~reason:(failed "fresh terminal observation" error) "error" steps page
+                     | Ok next when page.fingerprint <> next.fingerprint ->
+                         incr stale; update_prediction "stale terminal; re-decide"; go next steps recent
+                     | Ok next ->
+                         update_prediction "terminal";
+                         let step = record_step page next choice None steps in
+                         if op = operation "done" then finish "done" (step :: steps) next
+                         else
+                            let reason = match member "unsupported_states" (coverage next) with
+                              | Some (`List (_ :: _ as states)) ->
+                                  "the operator found no available action; unsupported visible UI: " ^
+                                  String.concat ", " (List.filter_map (function `String name -> Some name | _ -> None) states)
+                              | _ -> "the operator found no available action toward the goal" in
+                            finish ~reason "blocked" (step :: steps) next)
+                | Ok () ->
+                    let wanted =
+                      if op <> operation "type_text" then Ok Nothing
+                      else match context page choice recent with
+                        | Error error -> Error error
+                        | Ok context ->
+                            let at = now () in
+                            let answer, called = match !pending_text with
+                              | Some (old_context, value) when old_context = context -> Ok (Some value), false
+                              | _ ->
+                                  incr text_calls;
+                                  let answer = measured helper_ms (fun () -> text_value t context) in
+                                  (match answer with Ok (Some value) -> pending_text := Some (context, value) | _ -> ());
+                                  answer, true in
+                            if called then text_log := `Assoc [ "field", string context.Text_helper.field.label;
+                              "value", (match answer with Ok value -> optional_string value | Error _ -> `Null);
+                              "outcome", string (match answer with Ok (Some _) -> "value" | Ok None -> "missing value" | Error _ -> "provider-error");
+                              "usage", Option.value ~default:`Null (usage "text_helper");
+                              "elapsed_ms", integer (ms (now () -. at)) ] :: !text_log;
+                            match answer with
+                            | Ok (Some text) -> Ok (Value text)
+                            | Ok None -> Ok (Missing context.field.label)
+                            | Error error -> Error error
                     in
-                    Ok (result ~reason (status "blocked") steps next)
-                  | None -> go (n + 1) next steps recent))
-          in
-          match ask_text page choice recent ~terminal with
-          | Error error -> Error (with_steps steps error)
-          | Ok (Missing field) ->
-            (* drive-ls3c: the model answered null — the value is missing — so the drive
-               ends blocked with the field named and the decision in the trace. *)
-            let steps, _ = record None page steps in
-            Ok (result ~reason:(Printf.sprintf "no value for field %S" field)
-                  (status "blocked") steps page)
-          | Ok (Value value) -> step (Some value)
-          | Ok Nothing -> step None
-    in go 0 first [] []
+                    match wanted with
+                    | Error error -> finish ~error ~reason:(failed "TYPE_TEXT helper" error) "error" steps page
+                    | Ok (Missing field) ->
+                        update_prediction "missing field; no input";
+                        let step = record_step page page choice None steps in
+                        finish ~reason:(Printf.sprintf "no value for field %S" field) "blocked" (step :: steps) page
+                    | Ok wanted ->
+                        let text = match wanted with Value text -> Some text | Nothing -> None | Missing _ -> assert false in
+                        if now () >= deadline then finish ~reason:"caller deadline exhausted after helper; no input" "deadline" steps page
+                        else
+                          let before_telemetry = telemetry () in
+                          let at = now () in
+                          let answer = measured input_ms (fun () -> act t page choice text) in
+                          match answer with
+                          | Error error when stale_error error -> refresh ()
+                          | Error error ->
+                              update_prediction "input outcome uncertain; not replayed";
+                              let step = record_step page page choice text steps in
+                              action_log := `Assoc [ "step", P.yojson_of_step step;
+                                "option", optional_int choice.option; "outcome", string "uncertain; not replayed";
+                                "page_changed", `Null; "input_ms", integer (ms (now () -. at));
+                                "settle_ms", integer 0 ] :: !action_log;
+                              finish ~error ~reason:(failed ("the " ^ op_name op ^ " action (outcome uncertain; not replayed)") error) "error" (step :: steps) page
+                          | Ok acted ->
+                              incr actions; pending_text := None; update_prediction "executed";
+                              if rescue <> None then
+                                Hashtbl.replace frontiers page.snapshot.url (rescue_count + 1, seen_top, seen_bottom);
+                              (* fly-4mio: record confirmed execution before a fallible observation. *)
+                              let step = record_step page page choice text steps in
+                              let acknowledged_ms = ms (now () -. at) in
+                              let action_fields () =
+                              let after_telemetry = telemetry () in
+                              let delta key fallback = match member key before_telemetry, member key after_telemetry with
+                                | Some (`Int before), Some (`Int after) -> integer (max 0 (after - before))
+                                | _ -> integer fallback in
+                              [ "option", optional_int choice.option; "outcome", string "executed";
+                                "model_operation", string model_operation; "rescue", `Bool (rescue <> None);
+                                "input_ms", delta "input_ms" acknowledged_ms; "settle_ms", delta "settle_ms" 0 ] in
+                              action_log := `Assoc (("step", P.yojson_of_step step) :: ("page_changed", `Null) :: action_fields ()) :: !action_log;
+                              (match observe_page () with
+                               | Error error ->
+                                    action_log := `Assoc (("step", P.yojson_of_step step) :: ("page_changed", `Null) :: action_fields ()) :: List.tl !action_log;
+                                    finish ~error ~reason:(failed "observe after executed action; not replayed" error) "error" (step :: steps) page
+                               | Ok next ->
+                                   let step = record_step page next choice text steps in
+                                   let changed = page.fingerprint <> next.fingerprint in
+                                   action_log := `Assoc (("step", P.yojson_of_step step) :: ("page_changed", `Bool changed) :: action_fields ()) :: List.tl !action_log;
+                                   let steps = step :: steps in
+                                   let recent = history step changed :: recent in
+                                   match acted.dialog, acted.popups with
+                                   | Some dialog, _ -> finish ~reason:(dialog_reason dialog) "error" steps next
+                                   | None, _ :: _ -> finish ~reason:(popup_reason acted.popups) "error" steps next
+                                   | None, [] when J.stalled (List.rev recent) ->
+                                       finish ~reason:"the operator repeated three non-WAIT actions without changing the page" "blocked" steps next
+                                   | None, [] -> go next steps recent)
+      in
+      go first [] (List.rev initial_recent)
 
-let run ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run =
-  if Option.value ~default:30 args.P.max_steps < 1 ||
-     Option.value ~default:120 args.deadline_s < 1 then
+let run ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
+    ?(usage = fun _ -> None) ?(telemetry = fun () -> `Assoc []) ?(observe_attempts = 10) ?(recent = [])
+    ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run () =
+  if Option.value ~default:60 args.P.max_steps < 1 ||
+     Option.value ~default:120 args.deadline_s < 1 || observe_attempts < 1 || observe_attempts > 10 then
     Error
       (P.make_error
          (match P.Error_code.of_string "invalid-request" with
          | Ok x -> x
          | Error _ -> assert false)
-         ~message:"drive max_steps and deadline_s must be positive")
+         ~message:"drive max_steps and deadline_s must be positive; observe_attempts must be 1..10")
   else
     let module M = struct
       type _ Effect.t += Observe : (observation, P.error) result Effect.t
@@ -216,7 +359,7 @@ let run ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run =
       text_value = (fun context -> Effect.perform (M.Text context));
       act = (fun page choice text -> Effect.perform (M.Act (page, choice, text)));
     } in
-    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run) ()
+    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent) ()
       { retc = Fun.id; exnc = raise;
         effc = (fun (type a) (eff : a Effect.t) -> match eff with
           | M.Observe -> Some (fun (k : (a, (P.drive_result, P.error) result) Effect.Deep.continuation) -> Effect.Deep.continue k (handler.observe ()))

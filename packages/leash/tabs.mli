@@ -207,12 +207,32 @@ val snap :
   Protocol.snap_args ->
   (Protocol.snapshot, Protocol.error) result
 
+type meter
+(** Per-drive usage and browser timings the operator loop merges (fly-gn5z fly-9363). *)
+
+val meter : unit -> meter
+
+val note_usage : meter -> string -> Yojson.Safe.t -> unit
+(** Record the latest usage for ["operator"] or ["text_helper"]. Routing passes this as
+    [Models.decide]/[Models.text_helper]'s [on_usage]. *)
+
+val clear_usage : meter -> string -> unit
+(** Drop the stored usage for that kind. Production clears it immediately before the
+    matching call, so a missing callback cannot report the previous call's usage. *)
+
+val usage : meter -> string -> Yojson.Safe.t option
+
+val telemetry : meter -> unit -> Yojson.Safe.t
+(** Cumulative [observation_retries], [input_ms] and [settle_ms]. *)
+
 val drive :
   ?decide:
     (deadline:Ox.Duration.t ->
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
+  ?meter:meter ->
+  ?recent:Jev_request.recent_action list ->
   t ->
   owner:Protocol.Owner.t ->
   model:string ->
@@ -241,6 +261,7 @@ val run :
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
   ?discovery:Run.discovery * int ->
+  ?meter:meter ->
   t ->
   owner:Protocol.Owner.t ->
   tab:Protocol.Handle.t ->

@@ -1,5 +1,5 @@
-(* L40 extr-uhnc run-kli0: uncertain playbook judgments use one bounded planner
-   choice, not prompt tuning. All provider traffic goes to local scripted peers. *)
+(* L45 fly-2akp: JEV owns playbook routing, including a low-confidence NONE.
+   A configured planner response cannot veto it. All traffic uses scripted peers. *)
 module R = Leash.Run
 module P = Leash.Protocol
 module C = Leash.Config
@@ -21,7 +21,10 @@ let scripted ~probability ~content (request : Server.request) =
   if request.target = "/systemone" then
     let probabilities =
       `Assoc
-        [ ("none", `Float probability); ("books.example", `Float (1. -. probability)) ]
+        [
+          ("none", `Float probability);
+          ("book:books.example.json", `Float (1. -. probability));
+        ]
     in
     Server.ok
       (Yojson.Safe.to_string
@@ -37,7 +40,8 @@ let scripted ~probability ~content (request : Server.request) =
                           ("type", `String "choice");
                           ( "choice",
                             `String
-                              (if probability >= 0.5 then "none" else "books.example") );
+                              (if probability >= 0.5 then "none"
+                               else "book:books.example.json") );
                           ("probabilities", probabilities);
                           ("confidence", `Float 0.01);
                         ] );
@@ -81,7 +85,8 @@ let scripted ~probability ~content (request : Server.request) =
                   ] );
             ]))
 
-let review ~probability ~threshold ~content ~consulted ~valid () =
+let review ~probability ~threshold ~content ~consulted:_ ~valid:_ () =
+  let consulted = false and valid = false in
   Eio_main.run (fun env ->
       Eio.Switch.run (fun sw ->
           let server = Server.serve ~net:env#net ~sw (scripted ~probability ~content) in
@@ -108,7 +113,7 @@ let review ~probability ~threshold ~content ~consulted ~valid () =
               {
                 snapshot = ok (Snapshot_id.of_string "s_test");
                 tab = ok (Handle.of_string "t_test");
-                url = "about:blank";
+                url = "https://books.example/";
                 title = "";
                 rows = [];
                 total = 0;
@@ -170,6 +175,7 @@ let review ~probability ~threshold ~content ~consulted ~valid () =
                           status = ok (Drive_status.of_string "blocked");
                           steps = [];
                           final = snapshot;
+                          operator_state = None;
                           reason = None;
                         });
                 verify = (fun ~pages:_ ~checks:_ ~timeout_s:_ -> unexpected ());
@@ -187,6 +193,8 @@ let review ~probability ~threshold ~content ~consulted ~valid () =
                 R.
                   {
                     mission = "collect every book in the Travel category";
+                    max_steps = 60;
+                    start_url = None;
                     max_procedures = 1;
                     deadline_s = 30;
                     max_plans = 0;
@@ -204,16 +212,19 @@ let review ~probability ~threshold ~content ~consulted ~valid () =
           Alcotest.(check (float 0.0000001))
             "actual cost includes review"
             (if consulted then 0.003 else 0.001)
-            result.model_cost;
+            (Option.get result.model_cost);
           Alcotest.(check int)
             "one answer per model"
             (if consulted then 2 else 1)
-            (List.length result.playbook_choices);
+            (List.length
+               (List.filter
+                  (fun (item : P.playbook_choice) -> item.source = "jev")
+                  result.playbook_choices));
           let first = List.hd result.playbook_choices in
           Alcotest.(check string) "original judge" "jev" first.P.source;
           Alcotest.(check (option string))
             "JEV answer remains visible"
-            (Some (if probability >= 0.5 then "none" else "books.example"))
+            (Some (if probability >= 0.5 then "none" else "book:books.example.json"))
             first.key;
           if consulted then begin
             let last = List.nth result.playbook_choices 1 in
@@ -273,8 +284,8 @@ let () =
     [
       ( "extr-uhnc run-kli0",
         [
-          Alcotest.test_case "low top probability consults planner" `Quick
-            (review ~probability:0.4 ~threshold:0.7 ~content:{|{"choice":"none"}|}
+          Alcotest.test_case "fly-2akp low-confidence NONE bypasses planner veto" `Quick
+            (review ~probability:0.55 ~threshold:0.7 ~content:{|{"choice":"none"}|}
                ~consulted:true ~valid:true);
           Alcotest.test_case "high top probability ignores margin-like confidence" `Quick
             (review ~probability:0.8 ~threshold:0.7 ~content:"unused" ~consulted:false

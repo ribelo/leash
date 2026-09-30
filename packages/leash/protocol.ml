@@ -777,6 +777,8 @@ type drive_args = {
 type run_args = {
   tab : Handle.t option;
   mission : string;
+  max_steps : int option;
+  start_url : string option;
   max_procedures : int option;
   deadline_s : int option;
   dry_run : bool option;
@@ -941,9 +943,13 @@ type handoff_result = {
 }
 [@@deriving yojson]
 
+(* fly-9e0f fly-9363: bounded reference-like state, never validated script records. *)
+type operator_state = Yojson.Safe.t [@@deriving yojson]
+
 type drive_result = {
   status : Drive_status.t;
   steps : step list;
+  operator_state : operator_state option;
   final : snapshot;
   reason : string option;
 }
@@ -1060,8 +1066,10 @@ type run_result = {
   collected : int;
   data : Yojson.Safe.t;
   model_calls : int;
-  model_cost : float;
+  model_cost : float option; [@json.null]
   operator_steps : step list;
+  operator_state : operator_state option;
+  output_kinds : string list;
   final : snapshot;
   reason : string option;
 }

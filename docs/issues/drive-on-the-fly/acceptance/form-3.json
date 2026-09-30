@@ -1,0 +1,63 @@
+{
+  "case": "form",
+  "attempt": 3,
+  "mission": "On this form, type leash-l45 into Text input, type on-the-fly into Textarea, and choose Two from Dropdown (select). Then submit the form. Do not change Password, Disabled input, or Readonly input. Stop when the page shows Form submitted.",
+  "start_url": "https://www.selenium.dev/selenium/web/web-form.html",
+  "playbooks": [],
+  "exit_code": 0,
+  "status": "done",
+  "reason": null,
+  "elapsed_s": 6.774,
+  "operator_elapsed_ms": 5582,
+  "steps": 5,
+  "history_steps": 4,
+  "operations": [
+    "type_text",
+    "type_text",
+    "select",
+    "click"
+  ],
+  "model_calls": 7,
+  "model_cost": 0.00073678,
+  "model_calls_by_kind": {
+    "text_helper": 2,
+    "operator": 5
+  },
+  "planner_turns": 0,
+  "procedures": [],
+  "playbook_choices": [
+    {
+      "source": "route",
+      "key": "operator",
+      "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+    }
+  ],
+  "collected": 0,
+  "output_kinds": [
+    "operator-state"
+  ],
+  "rescues": [],
+  "checks": {
+    "submitted_page": true,
+    "text_value": true,
+    "textarea_value": true,
+    "select_value": true,
+    "no_planner": true,
+    "on_the_fly": true
+  },
+  "passed": true,
+  "evidence": {
+    "final_url": "https://www.selenium.dev/selenium/web/submitted-form.html?my-text=leash-l45&my-password=&my-textarea=on-the-fly&my-readonly=Readonly+input&my-select=2&my-datalist=&my-file=&my-check=on&my-radio=on&my-colors=%23563d7c&my-date=&my-range=5&my-hidden="
+  },
+  "isolation": {
+    "runtime_mode": "0o700",
+    "socket_dir_mode": "0o700",
+    "socket_mode": "0o600",
+    "profile_mode": "0o700",
+    "socket": "/tmp/leash-l45-yN1Gqa/runtime/leash/control.sock",
+    "profile": "/tmp/leash-l45-yN1Gqa/profile",
+    "config": "/tmp/leash-l45-yN1Gqa/config/leash/config.toml",
+    "chrome_left": []
+  },
+  "stderr_tail": ""
+}

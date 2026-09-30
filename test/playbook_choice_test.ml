@@ -143,6 +143,7 @@ let question_on_wire ~url () =
                           status = ok (Drive_status.of_string "blocked");
                           steps = [];
                           final = observed.snapshot;
+                          operator_state = None;
                           reason = None;
                         });
                 verify = (fun ~pages:_ ~checks:_ ~timeout_s:_ -> unexpected ());
@@ -162,6 +163,8 @@ let question_on_wire ~url () =
               R.
                 {
                   mission = "collect every book in the Travel category";
+                  max_steps = 60;
+                  start_url = None;
                   max_procedures = 1;
                   deadline_s = 30;
                   dry_run = false;
@@ -174,15 +177,15 @@ let question_on_wire ~url () =
           | Ok result -> (
               let choices = get "playbook_choices" (P.yojson_of_run_result result) in
               match choices with
-              | `List [ choice ] ->
+              | `List (choice :: _) ->
                   check_json "none choice is recorded" (`String "none") (get "key" choice);
                   let probabilities = get "probabilities" choice in
                   check_json "none probability survives in reply" (`Float 1.)
                     (get "none" probabilities);
                   check_json "book probability survives in reply" (`Float 0.)
-                    (get "books.example" probabilities);
+                    (get "book:books.example.json" probabilities);
                   check_json "other candidate probability survives in reply" (`Float 0.)
-                    (get "rail.example" probabilities)
+                    (get "book:rail.example.json" probabilities)
               | _ -> Alcotest.fail "expected one recorded playbook choice"));
           Alcotest.(check int)
             "one model request" 1
@@ -190,10 +193,18 @@ let question_on_wire ~url () =
           let sent = Yojson.Safe.from_string (Server.body server) in
           let question = get "select_playbook" (get "questions" sent) in
           let criteria = get "criteria" question in
-          check_json "book content, not just its host" (`String books)
-            (get "books.example" criteria);
-          check_json "each authored description survives" (`String trains)
-            (get "rail.example" criteria);
+          List.iter
+            (fun (identity, description) ->
+              let offered =
+                match get identity criteria with
+                | `String text -> text
+                | _ -> Alcotest.fail "description"
+              in
+              Alcotest.(check bool)
+                "authored description and stable identity survive" true
+                (String.ends_with ~suffix:description offered
+                && String.starts_with ~prefix:("identity=" ^ identity) offered))
+            [ ("book:books.example.json", books); ("book:rail.example.json", trains) ];
           check_json "none describes continuing on the current page"
             (`String "Continue on the current page without a playbook.")
             (get "none" criteria);
@@ -229,8 +240,9 @@ let () =
     [
       ( "extr-uhnc run-kli0 run-pvmc",
         [
-          Alcotest.test_case "blank page preserves authored options on wire" `Quick
-            (question_on_wire ~url:"about:blank");
+          Alcotest.test_case "current-page choice preserves authored options on wire"
+            `Quick
+            (question_on_wire ~url:"https://books.example/");
           Alcotest.test_case "loaded page preserves authored options without blank fact"
             `Quick
             (question_on_wire ~url:"https://other.example/");

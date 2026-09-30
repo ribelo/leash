@@ -317,6 +317,47 @@ let owner_of ~caps ~owner =
       Option.bind (Cap_sys.getenv_opt ~caps "DSH_SESSION_ID") (fun id ->
           if id = "" then None else Some ("dsh:" ^ id))
 
+(* fly-nolf fly-hc3l: --url is an explicit http(s) start; --max-steps is a positive
+   executed-action cap. Both fail here, before a socket connect, as the L41 usage record.
+   The host check matches the service: scheme, no userinfo, no control characters. *)
+let http_start_url url =
+  let start =
+    if String.starts_with ~prefix:"https://" url then 8
+    else if String.starts_with ~prefix:"http://" url then 7
+    else String.length url
+  in
+  let rec stop i =
+    if i = String.length url || String.contains "/?#" url.[i] then i else stop (i + 1)
+  in
+  let last = stop start in
+  last > start
+  && (not (String.contains (String.sub url start (last - start)) '@'))
+  && not (String.exists (fun c -> Char.code c <= 32 || Char.code c = 127) url)
+
+let url_usage =
+  "--url must be an http:// or https:// URL with no userinfo. Example: leash drive 'Open \
+   Travel and return the visible titles and prices' --url https://books.toscrape.com/"
+
+let max_steps_usage =
+  "--max-steps must be a positive integer (default 60). Example: leash drive 'Complete \
+   this page search and open the matching result' --tab TAB --max-steps 60"
+
+let drive_request_options options =
+  let options =
+    match List.assoc_opt "url" options with
+    | None -> Ok options
+    | Some (`String url) when http_start_url url ->
+        Ok (("start_url", `String url) :: List.remove_assoc "url" options)
+    | Some _ -> Error url_usage
+  in
+  match options with
+  | Error _ as error -> error
+  | Ok options -> (
+      match List.assoc_opt "max_steps" options with
+      | None -> Ok options
+      | Some (`Int n) when n > 0 -> Ok options
+      | Some _ -> Error max_steps_usage)
+
 let rec perform ~caps ~send ~base command fields positionals options =
   match (command, positionals) with
   (* hard-xg6y hard-ovbx hard-vq5s: `net TAB` lists; `net TAB body ID` and `net TAB request
@@ -415,53 +456,62 @@ and perform_wire ~caps ~send ~base command fields positionals options =
                     let rest = List.remove_assoc "timeout" rest in
                     (("until", obj (conditions @ previous)) :: timeout) @ rest
                 in
-                let args = obj (fields @ options) in
-                match P.command_of_args ~cmd:command args with
+                let prepared =
+                  if command <> "drive" then Ok options else drive_request_options options
+                in
+                match prepared with
                 | Error why -> usage ~caps why
-                | Ok decoded -> (
-                    match P.Owner.of_string owner with
+                | Ok options -> (
+                    let args = obj (fields @ options) in
+                    match P.command_of_args ~cmd:command args with
                     | Error why -> usage ~caps why
-                    | Ok owner -> (
-                        let request = P.encode_request P.{ owner; command = decoded } in
-                        match
-                          exchange ~caps ~send ~base ~config:(text "config")
-                            ~socket:(text "socket") request
-                        with
-                        | Error status -> status
-                        | Ok (P.Failure error) -> emit_error ~caps error
-                        | Ok (P.Success body) -> (
-                            let roots =
-                              if command <> "status" then Ok []
-                              else
-                                Result.map configured_roots
-                                  (load_config ~caps ~config:(text "config"))
+                    | Ok decoded -> (
+                        match P.Owner.of_string owner with
+                        | Error why -> usage ~caps why
+                        | Ok owner -> (
+                            let request =
+                              P.encode_request P.{ owner; command = decoded }
                             in
-                            match roots with
-                            | Error message -> report ~caps "config-invalid" message
-                            | Ok roots ->
-                                let body =
-                                  if command <> "status" then body
-                                  else enrich_status ~caps ~roots body
-                                in
-                                if
-                                  command = "status"
-                                  && assoc_field "chrome" body
-                                     = Some (`String "restarting")
-                                then
-                                  let body =
-                                    match body with
-                                    | `Assoc fields -> obj (put "pid" `Null fields)
-                                    | other -> other
-                                  in
-                                  report ~caps ~detail:body "service-restarting"
-                                    "Chrome is restarting"
-                                else (
-                                  if use_table then table ~caps command body
+                            match
+                              exchange ~caps ~send ~base ~config:(text "config")
+                                ~socket:(text "socket") request
+                            with
+                            | Error status -> status
+                            | Ok (P.Failure error) -> emit_error ~caps error
+                            | Ok (P.Success body) -> (
+                                let roots =
+                                  if command <> "status" then Ok []
                                   else
-                                    Cap_stdlib.print_endline ~caps
-                                      (if pretty then Yojson.Safe.pretty_to_string body
-                                       else Yojson.Safe.to_string body);
-                                  0)))))))
+                                    Result.map configured_roots
+                                      (load_config ~caps ~config:(text "config"))
+                                in
+                                match roots with
+                                | Error message -> report ~caps "config-invalid" message
+                                | Ok roots ->
+                                    let body =
+                                      if command <> "status" then body
+                                      else enrich_status ~caps ~roots body
+                                    in
+                                    if
+                                      command = "status"
+                                      && assoc_field "chrome" body
+                                         = Some (`String "restarting")
+                                    then
+                                      let body =
+                                        match body with
+                                        | `Assoc fields -> obj (put "pid" `Null fields)
+                                        | other -> other
+                                      in
+                                      report ~caps ~detail:body "service-restarting"
+                                        "Chrome is restarting"
+                                    else (
+                                      if use_table then table ~caps command body
+                                      else
+                                        Cap_stdlib.print_endline ~caps
+                                          (if pretty then
+                                             Yojson.Safe.pretty_to_string body
+                                           else Yojson.Safe.to_string body);
+                                      0))))))))
 
 (* svc-hi4f: the table is the CLI's contract. Every command names its positionals in the
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
@@ -557,7 +607,8 @@ let positional_term positionals =
     (Term.const [])
     (List.mapi (fun index spec -> (index, spec)) positionals)
 
-let command ~caps ~send ~base ~run_owned ?wire name doc positionals options examples =
+let command ~caps ~send ~base ~run_owned ?wire ?(man = []) name doc positionals options
+    examples =
   let wire = Option.value ~default:name wire in
   let fields = List.map (fun spec -> spec.field) positionals in
   let collected =
@@ -566,7 +617,7 @@ let command ~caps ~send ~base ~run_owned ?wire name doc positionals options exam
       (Term.const []) options
   in
   Cmd.v
-    (Cli_help.command_info name ~doc ~examples)
+    (Cli_help.command_info ~man name ~doc ~examples)
     Term.(
       const (fun args opts () ->
           run_owned (fun _sw ->
@@ -943,22 +994,6 @@ let commands ~caps ~send ~base ~run_owned =
         [ pos "tab" "TAB" ],
         [],
         [ "leash resume t_9xk" ] );
-      ( "drive",
-        "Drive MISSION through a playbook, or the single-goal operator when none fits.",
-        [ pos "mission" "MISSION" ],
-        [
-          opt "tab" Str "TAB" "Reuse TAB instead of opening one.";
-          opt "max_procedures" Int "N" "At most N procedures (default 40).";
-          opt "out" Str "FILE" "Stream collected records to FILE as JSONL.";
-          opt "deadline_s" Int "S" "Seconds for the whole run (default 900).";
-          opt "dry_run" Bool "" "Ask the two levels and report; never act.";
-          opt_list "expect" Strings "SENTENCE"
-            "Mission expectation the DONE guard verifies (repeatable).";
-        ],
-        [
-          "leash drive 'Read the heading on https://example.com' --deadline-s 300";
-          "leash drive 'Add Blue Top to the cart' --expect 'the page is cart' --dry-run";
-        ] );
       ( "discover",
         "Explore SITE with the planner; write a proposed playbook without applying it.",
         [ pos "site" "SITE-OR-URL" ],
@@ -971,7 +1006,66 @@ let commands ~caps ~send ~base ~run_owned =
         ],
         [ "leash discover https://example.com --goal 'Find the documentation'" ] );
     ]
-  @ [ playbook_command ~caps ~send ~base ~run_owned ]
+  @ [
+      command ~caps ~send ~base ~run_owned
+        ~man:
+          [
+            `S "ROUTING";
+            `P "max-steps default 60.";
+            `P
+              "Playbooks are optional. no-playbooks: no playbook question and no \
+               planner; the operator runs the whole mission. one-book: that book is \
+               offered with NONE and is never forced. many-books: JEV chooses one book \
+               identity or NONE; books are not merged. none-matching: NONE enters the \
+               operator on the current page. NONE is not BLOCKED and is not a planner \
+               review. A procedure NONE or BLOCKED also falls through to the operator.";
+            `P
+              "--out JSONL is tagged. script-record, source playbook, is a validated \
+               script record. operator-state, source operator, is one terminal bounded \
+               page observation, not a record list. The Travel example writes \
+               operator-state. output_kinds names the kinds in the reply. A successful \
+               reply is not proof the mission succeeded. model_cost is null when any \
+               call is unpriced; data.reported_cost is the known subtotal.";
+          ]
+        "drive"
+        "Drive MISSION on the fly, or through a fitting playbook when JEV chooses one."
+        [ pos "mission" "MISSION" ]
+        ([
+           opt "tab" Str "TAB"
+             "Reuse TAB instead of opening one. Does not replace a populated page.";
+           opt "url" Str "URL"
+             "Explicit http(s) start (start_url). Not a model navigation target.";
+           opt "max_steps" Int "N"
+             "On-the-fly executed-action cap (default 60). Must be positive. Prediction \
+              cap is twice N.";
+           opt "max_procedures" Int "N"
+             "Playbook-lane procedure cap (default 40), not the operator action cap.";
+           opt "out" Str "FILE"
+             "Append tagged JSONL: script-record from a playbook, operator-state from \
+              the operator.";
+           opt "deadline_s" Int "S" "Seconds for the whole mission (default 900).";
+           opt "dry_run" Bool ""
+             "Observe and decide once; never navigate, act, type, or write --out.";
+           opt_list "expect" Strings "SENTENCE"
+             "Mission expectation the DONE guard verifies (repeatable).";
+         ]
+        @ shared_options)
+        [
+          "leash drive 'Open Travel and return the visible titles and prices' --url \
+           https://books.toscrape.com/ --out travel-state.jsonl";
+          "leash drive 'Complete this page search and open the matching result' --tab \
+           TAB --max-steps 60 --deadline-s 300";
+          "no-playbooks: leash drive 'Open Travel and return the visible titles and \
+           prices' --url https://books.toscrape.com/ --max-steps 60";
+          "one-book: leash drive 'Collect the supported category' --url \
+           https://books.toscrape.com/ --out books.jsonl";
+          "many-books: leash drive 'Collect the supported category' --tab TAB \
+           --max-steps 60";
+          "none-matching: leash drive 'Search one-way and stop at the visible options' \
+           --url https://www.google.com/travel/flights --max-steps 60 --deadline-s 300";
+        ];
+      playbook_command ~caps ~send ~base ~run_owned;
+    ]
 
 let ( let* ) = Result.bind
 
@@ -1071,6 +1165,7 @@ let program env (config : Leash.Config.t) sw =
   let* _control =
     Leash.Control.create
       ~chrome_pid:(fun () -> (Leash.Chrome.status chrome).pid)
+      ~models
       ~model:(Leash.Config.Text.to_string config.models.jev_model)
         (* run-7blx: the run's three upper levels over the same one models service — the
            playbook question, the procedure question and the judgment score — and L31's

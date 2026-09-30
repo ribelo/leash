@@ -33,14 +33,32 @@ type handler = {
 }
 
 val run :
+  ?validate:(observation -> (unit, Protocol.error) result) ->
+  ?coverage:(observation -> Yojson.Safe.t) ->
+  ?usage:(string -> Yojson.Safe.t option) ->
+  ?telemetry:(unit -> Yojson.Safe.t) ->
+  ?observe_attempts:int ->
+  ?recent:Jev_request.recent_action list ->
   handler:handler ->
   now:(unit -> float) ->
   model:string ->
   args:Protocol.drive_args ->
   dry_run:bool ->
+  unit ->
   (Protocol.drive_result, Protocol.error) result
 (** Scripted tests provide [handler] closures; production uses the same computation under
     a tab's action lock. A dry run observes and decides once: it never asks the text
     helper and never invokes Act. A [text_value] success is recorded as the step's [text]
     (drive-xjh6), and a value the helper answers for an unchanged context is reused
-    (drive-ls3c). *)
+    (drive-ls3c).
+
+    L45: [max_steps] defaults to 60 executed actions; at most twice that many predictions
+    may be made. Stale decisions consume predictions only. DONE/BLOCKED is still allowed
+    after the final permitted action. [validate] runs before helper and terminal
+    decisions; terminal decisions also require a fresh observation. [observe_attempts] is
+    ten by default; production passes one because its atomic observation already owns ten
+    retries. [recent] is chronological executed history inherited from prepared
+    procedures. [coverage], [usage] and [telemetry] attach guarded bounds, reported model
+    usage (unknown costs remain null), and input/settle timing to the structured operator
+    state. Once a valid page exists, provider/browser failures return terminal evidence
+    rather than discarding it. *)

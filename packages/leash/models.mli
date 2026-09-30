@@ -47,6 +47,7 @@ val status : t -> Protocol.models_status
 
 val decide :
   ?deadline:Ox.Duration.t ->
+  ?on_usage:(Yojson.Safe.t -> unit) ->
   t ->
   Jev_request.request ->
   (Jev_request.decision, Protocol.error) result
@@ -69,7 +70,7 @@ val decide :
     counts and the cost the provider reported (drive-7tvn), before the answers are
     validated: the tokens were spent either way. Refusals and failures log nothing. *)
 
-val text_helper : t -> Text_helper.t
+val text_helper : ?on_usage:(Yojson.Safe.t -> unit) -> t -> Text_helper.t
 (** The text helper over this service's chat client and [models.text_model] (drive-ls3c).
     Every call is a fresh helper: the one-entry memo that reuses an answer when the whole
     helper input is unchanged is a drive's business and must not outlive it, while the

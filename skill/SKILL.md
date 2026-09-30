@@ -32,7 +32,7 @@ Read only the reference needed for the current task; resolve these paths relativ
 
 - **Service, tabs, or skill installation:** [lifecycle](references/lifecycle.md). Covers systemd, headed/headless Chrome, ownership, expiry, and `skill install` / `skill show` / skill currency in `status`.
 - **Read or act on a page, debug, wait, or ask the human to take over:** [browser](references/browser.md). Covers snapshots, all reading/action commands, and handoff/resume.
-- **Delegate a bounded mission or collect structured data:** [missions and playbooks](references/missions.md). Structured records/JSONL require an installed, tested collection playbook; without one, `drive` is only a single-goal UI operator, not a collection planner. Check `leash playbook list` first. No site playbooks are installed automatically; this reference includes a small example, and the source checkout has `examples/playbooks/` (including books.toscrape.com). Review, install and test a suitable example only when authorized.
+- **Delegate a bounded mission:** [missions and playbooks](references/missions.md). `drive` works with no playbooks, one, many, or only unrelated books. `NONE` is not a block and is not a planner review. On-the-fly `--out` is tagged `operator-state` (bounded observed page). Validated records are tagged `script-record` and need a tested playbook. No site playbooks are installed automatically.
 - **A command failed:** [errors and recovery](references/errors.md). Covers exit classes and recovery without repeating uncertain actions.
 
 ## Observe, act, verify

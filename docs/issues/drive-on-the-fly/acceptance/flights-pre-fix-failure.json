@@ -1,0 +1,26 @@
+{
+  "case": "flights",
+  "attempt": "before-load-wait",
+  "kept": true,
+  "note": "First no-book Flights attempt, before the click-navigation load wait. Rescue fired on consent.google.com, then Accept navigated and the post-click observation aborted after the 10x20ms stale budget. Kept, not discarded. The mission text was not changed.",
+  "status": "error",
+  "reason": "observe after executed action; not replayed failed (timeout): the page did not settle",
+  "elapsed_s": 4.188,
+  "model_calls": 2,
+  "model_cost": 0.000163296,
+  "operations": [
+    "scroll_down",
+    "click"
+  ],
+  "rescues": [
+    {
+      "operation": "scroll_down",
+      "model_operation": "blocked",
+      "blocked_probability": 0.51,
+      "page_changed": true
+    }
+  ],
+  "final_url": "https://consent.google.com/m?continue=https://www.google.com/travel/flights?hl%3Den&gl=PL&m=0&pc=flt&cm=2&hl=en&src=1",
+  "title": "Before you continue",
+  "passed": false
+}

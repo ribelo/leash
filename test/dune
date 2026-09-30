@@ -232,6 +232,21 @@
   alcotest))
 
 (test
+ (name observation_test)
+ (modules observation_test)
+ (libraries
+  leash
+  leash_test_support
+  ox_test
+  ox
+  ox_process
+  ox_observability
+  eio
+  eio.unix
+  yojson
+  alcotest))
+
+(test
  (name handoff_test)
  (modules handoff_test)
  (libraries

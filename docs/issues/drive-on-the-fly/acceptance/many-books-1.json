@@ -1,0 +1,71 @@
+{
+  "case": "many-books",
+  "attempt": 1,
+  "mission": "collect every book in the Travel category",
+  "start_url": "https://books.toscrape.com/",
+  "playbooks": [
+    "books.toscrape.com",
+    "allegro.pl",
+    "www.w3.org"
+  ],
+  "exit_code": 0,
+  "status": "done",
+  "reason": null,
+  "elapsed_s": 5.658,
+  "operator_elapsed_ms": null,
+  "steps": 0,
+  "history_steps": 0,
+  "operations": [],
+  "model_calls": 4,
+  "model_cost": 0.00012892,
+  "model_calls_by_kind": {
+    "text_helper": 1,
+    "playbook": 1,
+    "procedure": 2
+  },
+  "planner_turns": 0,
+  "procedures": [
+    "collect-category"
+  ],
+  "playbook_choices": [
+    {
+      "source": "jev",
+      "key": "book:/tmp/leash-l45-jtwr7W/config/leash/playbooks/books.toscrape.com/playbook.json",
+      "note": null
+    }
+  ],
+  "collected": 11,
+  "output_kinds": [
+    "script-record"
+  ],
+  "rescues": [],
+  "checks": {
+    "status_done": true,
+    "chose_books": true,
+    "not_unrelated": true,
+    "records_match": true,
+    "no_planner": true,
+    "offered_several": true
+  },
+  "passed": true,
+  "evidence": {
+    "chosen": [
+      "book:/tmp/leash-l45-jtwr7W/config/leash/playbooks/books.toscrape.com/playbook.json"
+    ],
+    "collected": 11,
+    "record_count": 11,
+    "missing": [],
+    "extra": []
+  },
+  "isolation": {
+    "runtime_mode": "0o700",
+    "socket_dir_mode": "0o700",
+    "socket_mode": "0o600",
+    "profile_mode": "0o700",
+    "socket": "/tmp/leash-l45-jtwr7W/runtime/leash/control.sock",
+    "profile": "/tmp/leash-l45-jtwr7W/profile",
+    "config": "/tmp/leash-l45-jtwr7W/config/leash/config.toml",
+    "chrome_left": []
+  },
+  "stderr_tail": ""
+}

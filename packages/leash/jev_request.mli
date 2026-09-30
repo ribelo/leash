@@ -104,6 +104,9 @@ val make :
     [can_scroll_up] is [scrollY > 0]. The drive states them, so the request offers only
     the controls that apply. *)
 
+val with_coverage : request -> Yojson.Safe.t -> request
+(** fly-crcc: attach exact guarded observation bounds and omissions. *)
+
 val body : request -> Yojson.Safe.t
 (** The wire document:
     [{"model": ..., "state": {"page": ..., "elements": ..., "recent_actions": ...},

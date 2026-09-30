@@ -631,7 +631,7 @@ let guarded tab dispatch =
   | Some _ -> fail "dialog-open" "a dialog blocks the page; answer it first"
   | None -> dispatch ()
 
-let click ~cdp tab (args : P.click_args) =
+let click ?(settle_after = true) ~cdp tab (args : P.click_args) =
   guarded tab (fun () ->
       with_result tab (fun () ->
           let* target =
@@ -640,7 +640,7 @@ let click ~cdp tab (args : P.click_args) =
           let* x, y = aim cdp tab target in
           let* () = mouse cdp tab ~type_:"mousePressed" ~x ~y ~buttons:1 in
           let* () = mouse cdp tab ~type_:"mouseReleased" ~x ~y ~buttons:0 in
-          settle cdp tab ~combobox:false))
+          if settle_after then settle cdp tab ~combobox:false else Ok ()))
 
 let text_controls = [ "textbox"; "searchbox"; "combobox"; "spinbutton" ]
 
@@ -701,7 +701,8 @@ let fill_temporal cdp tab backend text =
       fail "invalid-request" "the temporal input did not accept that date/time value"
   | _ -> fail "internal" "the temporal input fill did not return a result"
 
-let fill ~cdp tab (args : P.fill_args) =
+let fill ?(settle_after = true) ?(check_hit = false) ?(blur_after = true) ~cdp tab
+    (args : P.fill_args) =
   if String.length args.text > 65_536 then fail "too-large" "fill text is over 64 KiB"
   else
     guarded tab (fun () ->
@@ -712,6 +713,9 @@ let fill ~cdp tab (args : P.fill_args) =
             if not (List.mem target.row.role text_controls) then
               fail "row-not-actionable" "the row is not a text control"
             else
+              let* () =
+                if check_hit then Result.map (fun _ -> ()) (aim cdp tab target) else Ok ()
+              in
               let* temporal = temporal_input cdp tab target.backend in
               let* () = focus_row cdp tab target.backend in
               let* () =
@@ -720,8 +724,9 @@ let fill ~cdp tab (args : P.fill_args) =
                   let* () = select_content cdp tab in
                   insert_text cdp tab args.text
               in
-              let* () = blur cdp tab in
-              settle cdp tab ~combobox:(target.row.role = "combobox")))
+              let* () = if blur_after then blur cdp tab else Ok () in
+              if settle_after then settle cdp tab ~combobox:(target.row.role = "combobox")
+              else Ok ()))
 
 let press ~cdp tab (args : P.press_args) =
   guarded tab (fun () ->
@@ -737,7 +742,7 @@ let press ~cdp tab (args : P.press_args) =
           in
           press_key cdp tab args.key))
 
-let select ~cdp tab (args : P.select_args) =
+let select ?(settle_after = true) ?(check_hit = false) ~cdp tab (args : P.select_args) =
   guarded tab (fun () ->
       with_result tab (fun () ->
           let* target =
@@ -746,9 +751,12 @@ let select ~cdp tab (args : P.select_args) =
           if not (List.mem target.row.role [ "combobox"; "listbox" ]) then
             fail "row-not-actionable" "the row is not a native select"
           else
+            let* () =
+              if check_hit then Result.map (fun _ -> ()) (aim cdp tab target) else Ok ()
+            in
             let* object_id = resolve_node cdp tab target.backend in
             let* () = choose cdp tab object_id args.option in
-            settle cdp tab ~combobox:false))
+            if settle_after then settle cdp tab ~combobox:false else Ok ()))
 
 (* hard-v1gs: the mouse moves to the row's revalidated point, after the same hit test a
    click makes — a covered row would not receive the hover — and settles two frames, so a
@@ -902,3 +910,37 @@ let scroll ~cdp tab (args : P.scroll_args) =
                  ])
           in
           settle cdp tab ~combobox:false))
+
+(* fly-2pn7: the reference dispatches the wheel at a fixed viewport point, 560 CSS pixels,
+   and does not treat that as a row action. *)
+let operator_scroll ~cdp tab ~down =
+  guarded tab (fun () ->
+      with_result tab (fun () ->
+          let delta =
+            if down then Snapshot_source.scroll_delta else -Snapshot_source.scroll_delta
+          in
+          let* width, height = viewport cdp tab in
+          let x, y = clamp ~width ~height (550., 650.) in
+          let () = tab.engage () in
+          let* _ =
+            call cdp ~session:tab.session "Input.dispatchMouseEvent"
+              (E.object_
+                 [
+                   ("type", Some (E.string "mouseWheel"));
+                   ("x", E.float x);
+                   ("y", E.float y);
+                   ("deltaX", Some (E.int 0));
+                   ("deltaY", Some (E.int delta));
+                   ("pointerType", Some (E.string "mouse"));
+                 ])
+          in
+          Ok ()))
+
+let operator_settle ~cdp tab ~autocomplete =
+  let bound = if autocomplete then 200 else 50 in
+  match
+    evaluate ~deadline:(Ox.Duration.ms bound) cdp tab
+      (Snapshot_source.settle_expression ~autocomplete)
+  with
+  | Error _ -> Ok ()
+  | Ok _ -> Ok ()

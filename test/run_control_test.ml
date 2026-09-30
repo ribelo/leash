@@ -20,7 +20,9 @@ let book =
 
 let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2")
     ?(malformed_done = false) ?(rejected = false) () =
-  let url = ref "about:blank" and page = ref 0 and asked = ref 0 in
+  (* fly-xger: a blank tab with no URL is missing-start, not a playbook question.
+     These controls start on an open page so the playbook switch is what navigates. *)
+  let url = ref "https://start.example/" and page = ref 0 and asked = ref 0 in
   let navigations = ref [] and streamed = ref [] and questions = ref [] in
   let observe () =
     let snapshot =
@@ -63,7 +65,14 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
           (fun q ->
             questions := q :: !questions;
             let key =
-              if q.name = "select_playbook" then "example.com"
+              if q.name = "select_playbook" then
+                match
+                  List.find_opt
+                    (fun (key, _) -> String.starts_with ~prefix:"book:" key)
+                    q.criteria
+                with
+                | Some (key, _) -> key
+                | None -> "example.com"
               else (
                 incr asked;
                 if !asked = 1 then "collect" else "DONE")
@@ -127,6 +136,8 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
         R.
           {
             mission = "collect every book";
+            max_steps = 60;
+            start_url = None;
             max_procedures = 10;
             deadline_s = 60;
             dry_run = false;
@@ -155,10 +166,10 @@ let native_repeat () =
     (List.length result.playbook_choices);
   let first = List.hd questions in
   Alcotest.(check bool)
-    "factual blank state" true
+    "an open tab is not reported as a blank start" false
     (match first.state with
     | `Assoc fields -> List.mem_assoc "current_page" fields
-    | _ -> false)
+    | _ -> true)
 
 let refuses_control () =
   List.iter

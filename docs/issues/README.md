@@ -137,9 +137,9 @@ Playbooks are optional knowledge, never permission to work. The operator decisio
 
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
-| L45 | **On-the-fly drive.** All four playbook-availability routes; whole-mission link/form operation; coherent bounded page observation and returned operator state; reference action/prediction budgets; no planner veto of NONE; visible records may reach models; tagged operator/prepared output; preserved indexed-action/ownership boundaries; offline gates and real-site no-book form/collection, one/many-book and no-match acceptance with cost/latency evidence. | fly-b6yt, fly-8xiq, fly-mepw, fly-yolk, fly-2akp, fly-95bw, fly-nolf, fly-xger, fly-iodm, fly-crcc, fly-fl7u, fly-gysl, fly-qr70, fly-4mio, fly-4lmg, fly-2pn7, fly-hc3l, fly-vzzw, fly-8fgl, fly-9e0f, fly-g0uh, fly-9363, fly-mqkr, fly-v0fi, fly-gn5z, fly-u9eg, fly-eoqg, fly-spgh, fly-m9zv, fly-vnf1 | L40; L44 drive repairs only (not operator cut-over) | [ ] |
+| L45 | **On-the-fly drive.** All four playbook-availability routes; whole-mission link/form operation; coherent bounded page observation and returned operator state; reference action/prediction budgets; no planner veto of NONE; visible records may reach models; tagged operator/prepared output; preserved indexed-action/ownership boundaries; offline gates and real-site no-book form/collection, one/many-book and no-match acceptance with cost/latency evidence. | fly-b6yt, fly-8xiq, fly-mepw, fly-yolk, fly-2akp, fly-95bw, fly-nolf, fly-xger, fly-iodm, fly-crcc, fly-fl7u, fly-gysl, fly-qr70, fly-4mio, fly-4lmg, fly-2pn7, fly-hc3l, fly-vzzw, fly-8fgl, fly-9e0f, fly-g0uh, fly-9363, fly-mqkr, fly-v0fi, fly-gn5z, fly-u9eg, fly-eoqg, fly-spgh, fly-m9zv, fly-vnf1 | L40; L44 drive repairs only (not operator cut-over) | [x] |
 
-This is a ready-for-agent design, not delivered implementation or a completed live gate. The spec names the exact superseded ADR/spec/story clauses and the reference's real limits; it does not claim normalized all-pages extraction from a browser snapshot.
+L45 is delivered. The spec names the exact superseded ADR/spec/story clauses, the unseen-page BLOCKED rescue, and the 2026-09-30 live gate. It does not claim normalized all-pages extraction from a browser snapshot.
 
 ## Later milestones
 

@@ -127,6 +127,7 @@ let drive ?(status = "done") ?reason () =
       status = ok (P.Drive_status.of_string status);
       steps = [];
       final = snapshot ();
+      operator_state = None;
       reason;
     }
 
@@ -218,11 +219,25 @@ let choice key =
 
 let args ?(mission = "buy a Blue Top on site-a.example") ?(max_plans = 3) ?(expect = [])
     () =
-  R.{ mission; max_procedures = 40; deadline_s = 900; dry_run = false; max_plans; expect }
+  R.
+    {
+      mission;
+      max_procedures = 40;
+      deadline_s = 900;
+      dry_run = false;
+      max_plans;
+      expect;
+      max_steps = 60;
+      start_url = None;
+    }
 
 (* run-vj48: the loop reaches its one planner through the handler, and here that handler's
    planner is the production plan call over the fake chat server. Every other level is
    scripted, so a test says exactly where the run stops. *)
+let offered_book_key (question : R.question) key =
+  let stable = "book:" ^ key ^ ".json" in
+  if List.exists (fun (key, _) -> key = stable) question.criteria then stable else key
+
 let handler ~(models : Models.t) (h : harness) : R.handler =
   R.
     {
@@ -238,7 +253,10 @@ let handler ~(models : Models.t) (h : harness) : R.handler =
           | "select_playbook" ->
               Ok
                 (choice
-                   (spread "playbook answers" (fun () -> h.books) (fun x -> h.books <- x)))
+                   (offered_book_key question
+                      (spread "playbook answers"
+                         (fun () -> h.books)
+                         (fun x -> h.books <- x))))
           | "select_procedure" ->
               Ok
                 (choice
@@ -565,33 +583,27 @@ let trigger_of (request : R.plan_request) = R.trigger_name request.R.trigger
 (* ---------- run-w7ke: the three triggers ---------- *)
 
 let triggers () =
-  (* run-w7ke: a BLOCKED procedure answer. *)
+  (* fly-yolk: a procedure BLOCKED is the operator, not a planner turn.
+     The request shape of a real planner turn is checked in [prompt]. *)
   rig
     ~contents:[ fail_answer () ]
     (fun _env _sw models server _memory ->
       let h = harness ~procs:[ "BLOCKED" ] () in
       let result = ran (run h models (args ())) in
-      check_status "run-w7ke a BLOCKED answer asks the planner" "blocked" result;
-      Alcotest.(check int) "run-w7ke one turn" 1 (List.length result.P.planner_turns);
-      Alcotest.(check string)
-        "run-w7ke the trigger in the trace" "blocked"
-        (List.hd result.P.planner_turns).P.trigger;
-      Alcotest.(check (list string))
-        "run-w7ke the trigger in the request" [ "blocked" ] (List.map trigger_of h.plans);
-      Alcotest.(check int) "run-w7ke one chat call" 1 (List.length (Fake.requests server));
-      let request = List.hd h.plans in
-      Alcotest.(check string)
-        "run-rq6i the request carries the mission" "buy a Blue Top on site-a.example"
-        request.R.mission;
+      check_status "fly-yolk a BLOCKED procedure answer enters the operator" "done" result;
+      Alcotest.(check int)
+        "fly-yolk no planner turn" 0
+        (List.length result.P.planner_turns);
+      Alcotest.(check int)
+        "fly-yolk no planner call" 0
+        (List.length (Fake.requests server));
       Alcotest.(check bool)
-        "run-rq6i the request carries the playbook" true (request.R.playbook <> None);
-      Alcotest.(check (option string))
-        "run-rq6i the request carries the page kind" (Some "home") request.R.page_kind;
-      Alcotest.(check string)
-        "run-rq6i the request carries the page text" home_text request.R.text;
-      Alcotest.(check (list string))
-        "run-rq6i the request carries the trace" []
-        (List.map fst request.R.recent));
+        "fly-yolk the route is the operator" true
+        (List.exists
+           (fun (choice : P.playbook_choice) ->
+             choice.source = "route" && choice.key = Some "operator")
+           result.P.playbook_choices);
+      Alcotest.(check bool) "fly-yolk the operator ran" true (h.steps <> []));
   (* run-w7ke: a procedure that failed its expectations twice. *)
   rig
     ~contents:[ fail_answer () ]
@@ -642,7 +654,7 @@ let answers () =
     ~contents:[ procedure_answer () ]
     (fun _env _sw models _server _memory ->
       let h =
-        harness ~procs:[ "BLOCKED"; "DONE" ]
+        harness ~procs:[ "DONE" ]
           ~drives:[ drive () ]
           ~verifies:
             [
@@ -668,7 +680,7 @@ let answers () =
   rig
     ~contents:[ handoff_answer () ]
     (fun _env _sw models _server _memory ->
-      let h = harness ~procs:[ "BLOCKED" ] () in
+      let h = harness ~procs:[ "DONE" ] () in
       let result = ran (run h models (args ())) in
       check_status "run-klp9 a handoff ends the run" "handoff" result;
       Alcotest.(check (list string))
@@ -683,7 +695,7 @@ let answers () =
   rig
     ~contents:[ fail_answer ~reason:"the offer is gone" () ]
     (fun _env _sw models _server _memory ->
-      let h = harness ~procs:[ "BLOCKED" ] () in
+      let h = harness ~procs:[ "DONE" ] () in
       let result = ran (run h models (args ())) in
       check_status "run-rq6i a fail ends the run" "blocked" result;
       Alcotest.(check bool)
@@ -700,7 +712,7 @@ let malformed () =
   rig
     ~contents:[ "I cannot do that."; fail_answer () ]
     (fun _env _sw models server _memory ->
-      let h = harness ~procs:[ "BLOCKED" ] () in
+      let h = harness ~procs:[ "DONE" ] () in
       let result = ran (run h models (args ())) in
       check_status "run-rq6i the retried turn ends the run" "blocked" result;
       Alcotest.(check int)
@@ -721,7 +733,7 @@ let malformed () =
       | None -> Alcotest.fail "run-obtt the turn carries no usage");
   (* run-rq6i: a second refusal ends the turn as a model failure. *)
   rig ~contents:[ "not json"; "still not json" ] (fun _env _sw models _server _memory ->
-      let h = harness ~procs:[ "BLOCKED" ] () in
+      let h = harness ~procs:[ "DONE" ] () in
       let error = failed (run h models (args ())) in
       Alcotest.(check string)
         "run-rq6i a twice-refused reply is a model failure" "model-unavailable"
@@ -767,7 +779,7 @@ let malformed () =
   List.iter
     (fun (label, content) ->
       rig ~contents:[ content; content ] (fun _env _sw models _server _memory ->
-          let h = harness ~procs:[ "BLOCKED" ] () in
+          let h = harness ~procs:[ "DONE" ] () in
           let error = failed (run h models (args ())) in
           Alcotest.(check string)
             ("run-rq6i refused: " ^ label)
@@ -784,7 +796,7 @@ let prompt () =
   rig
     ~contents:[ fail_answer () ]
     (fun _env _sw models server _memory ->
-      let h = harness ~procs:[ "BLOCKED" ] () in
+      let h = harness ~procs:[ "DONE" ] () in
       ignore (ran (run h models (args ())));
       let request = List.hd (Fake.requests server) in
       Alcotest.(check string)
@@ -829,10 +841,12 @@ let cap () =
         procedure_answer (); procedure_answer (); procedure_answer (); procedure_answer ();
       ]
     (fun _env _sw models server _memory ->
+      let pass = [ expectation "the page is cart" "page_kind" ] in
+      let fail = [ expectation "the page is cart" "page_kind" ~passed:false ] in
       let h =
-        harness ~procs:[ "BLOCKED" ]
+        harness ~procs:[ "DONE" ]
           ~drives:[ drive () ]
-          ~verifies:[ [ expectation "the page is cart" "page_kind" ] ]
+          ~verifies:[ pass; fail; pass; fail; pass; fail ]
           ()
       in
       let result = ran (run h models (args ())) in
@@ -856,9 +870,13 @@ let cap () =
     ~contents:[ procedure_answer (); procedure_answer () ]
     (fun _env _sw models server _memory ->
       let h =
-        harness ~procs:[ "BLOCKED" ]
+        harness ~procs:[ "DONE" ]
           ~drives:[ drive () ]
-          ~verifies:[ [ expectation "the page is cart" "page_kind" ] ]
+          ~verifies:
+            [
+              [ expectation "the page is cart" "page_kind" ];
+              [ expectation "the page is cart" "page_kind" ~passed:false ];
+            ]
           ()
       in
       let result = ran (run h models (args ~max_plans:1 ())) in
@@ -871,7 +889,7 @@ let usage () =
   rig
     ~contents:[ fail_answer () ]
     (fun _env _sw models _server memory ->
-      let h = harness ~procs:[ "BLOCKED" ] () in
+      let h = harness ~procs:[ "DONE" ] () in
       let result = ran (run h models (args ())) in
       (match (List.hd result.P.planner_turns).P.usage with
       | Some usage ->
@@ -914,7 +932,7 @@ let expectations () =
     ~contents:[ procedure_answer ~expect:[ "the page is cart" ] () ]
     (fun _env _sw models _server _memory ->
       let h =
-        harness ~procs:[ "BLOCKED"; "DONE" ]
+        harness ~procs:[ "DONE" ]
           ~drives:[ drive () ]
           ~verifies:
             [
@@ -942,7 +960,7 @@ let expectations () =
       ]
     (fun _env _sw models _server _memory ->
       let h =
-        harness ~procs:[ "BLOCKED"; "DONE" ]
+        harness ~procs:[ "DONE" ]
           ~drives:[ drive () ]
           ~verifies:
             [
@@ -965,12 +983,12 @@ let expectations () =
   rig
     ~contents:[ procedure_answer (); procedure_answer ~expect:[ "the page is cart" ] () ]
     (fun _env _sw models _server _memory ->
+      let pass = [ expectation "the page is cart" "page_kind" ] in
+      let fail = [ expectation "the page is cart" "page_kind" ~passed:false ] in
       let h =
-        harness
-          ~procs:[ "BLOCKED"; "BLOCKED"; "BLOCKED"; "BLOCKED"; "DONE" ]
+        harness ~procs:[ "DONE" ]
           ~drives:[ drive () ]
-          ~verifies:[ [ expectation "the page is cart" "page_kind" ] ]
-          ()
+          ~verifies:[ pass; fail; pass; pass ] ()
       in
       let result = ran (run h models (args ())) in
       check_status "run-2tt3 a later turn's attachment is ignored" "done" result;
@@ -997,7 +1015,7 @@ let proposals () =
         ~contents:[ procedure_answer () ]
         (fun _env _sw models _server _memory ->
           let h =
-            harness ~procs:[ "BLOCKED"; "DONE" ]
+            harness ~procs:[ "DONE" ]
               ~drives:[ drive () ]
               ~verifies:
                 [
@@ -1131,7 +1149,7 @@ let config_test () =
     ~contents:[ fail_answer () ]
     ~planner_model:"openai/gpt-6-luna-preview" ~planner_reasoning:"low"
     (fun _env _sw models planner helper _memory ->
-      let h = harness ~procs:[ "BLOCKED" ] () in
+      let h = harness ~procs:[ "DONE" ] () in
       ignore (ran (run h models (args ())));
       Alcotest.(check int)
         "run-d99l the planner went to its configured endpoint" 1
@@ -1153,7 +1171,7 @@ let config_test () =
     ~contents:[ fail_answer () ]
     ~planner_reasoning:"none"
     (fun _env _sw models server _memory ->
-      let h = harness ~procs:[ "BLOCKED" ] () in
+      let h = harness ~procs:[ "DONE" ] () in
       ignore (ran (run h models (args ())));
       let body = Yojson.Safe.from_string (List.hd (Fake.requests server)).Fake.body in
       Alcotest.(check bool)

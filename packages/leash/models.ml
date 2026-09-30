@@ -137,7 +137,8 @@ let log_usage logger (response : Ox_ai_systemone.Codecs.response) =
 
 let default_deadline = Ox.Duration.seconds 30
 
-let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
+let decide ?(deadline = default_deadline) ?(on_usage = fun _ -> ()) (t : t)
+    (request : J.request) =
   match t.systemone with
   | None ->
       Error
@@ -155,6 +156,15 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
           | Error error -> Error (Model_error.of_eta ~kind:"jev" error)
           | Ok response -> (
               log_usage t.logger response;
+              let usage = response.Ox_ai_systemone.Codecs.usage in
+              on_usage
+                (`Assoc
+                   [
+                     ("input_tokens", `Int usage.input_tokens);
+                     ("output_tokens", `Int usage.output_tokens);
+                     ("cost", `Float usage.cost);
+                     ("retries", `Int 0);
+                   ]);
               Model_usage.report "operator"
                 (Some response.Ox_ai_systemone.Codecs.usage.cost);
               (* The reply's answers object is what {!Jev_request.decide} reads; the
@@ -174,12 +184,12 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
 (* drive-ls3c: a fresh helper per call. The helper carries the one-entry memo the
    stale-page reuse rule needs, so it must not outlive the drive it serves; without a key
    there is no chat client and every call refuses before anything is sent. *)
-let text_helper (t : t) : Text_helper.t =
+let text_helper ?on_usage (t : t) : Text_helper.t =
   match t.chat with
   | None -> Text_helper.missing_key
   | Some client ->
       let helper =
-        Text_helper.create ~client ~now:t.now
+        Text_helper.create ?on_usage ~client ~now:t.now
           ~model:(Config.Text.to_string t.config.text_model)
           ~logger:t.logger ()
       in
@@ -274,75 +284,9 @@ let choose_jev ~deadline (t : t) (question : Run.question) =
 
 (* extr-uhnc: review uncertainty at the playbook boundary, not by tuning the JEV
    instruction. Threshold the top probability, never JEV's margin-like confidence. *)
+(* fly-2akp: the original JEV choice is authoritative, including NONE. *)
 let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
-  let started = t.now () in
-  match choose_jev ~deadline t question with
-  | Error _ as error -> error
-  | Ok choice ->
-      let top =
-        match choice.Run.probabilities with
-        | `Assoc fields ->
-            List.fold_left
-              (fun acc (_, value) ->
-                match value with
-                | `Float p -> max acc p
-                | `Int p -> max acc (float_of_int p)
-                | _ -> acc)
-              0. fields
-        | _ -> 0.
-      in
-      if
-        question.name <> "select_playbook"
-        || top >= Config.Probability.to_float t.config.choice_confidence
-      then Ok choice
-      else
-        let initial =
-          P.
-            {
-              source = "jev";
-              key = Some choice.key;
-              probabilities = choice.probabilities;
-              confidence = Some choice.confidence;
-              usage = choice.usage;
-              note = None;
-            }
-        in
-        let remaining = Ox.Duration.to_seconds_float deadline -. (t.now () -. started) in
-        let unavailable note =
-          P.
-            {
-              source = "planner";
-              key = None;
-              probabilities = `Null;
-              confidence = None;
-              usage = None;
-              note = Some note;
-            }
-        in
-        let review =
-          match t.planner_chat with
-          | None ->
-              unavailable "choice review unavailable: no planner key; using JEV argmax"
-          | Some _ when remaining <= 0. ->
-              unavailable "choice review skipped: deadline exhausted; using JEV argmax"
-          | Some client ->
-              let planner =
-                Planner.create ~client ~now:t.now
-                  ~model:(Config.Text.to_string t.config.planner_model)
-                  ~reasoning:(Config.Text.to_string t.config.planner_reasoning)
-                  ~logger:t.logger ()
-              in
-              planner.Planner.choose
-                ~deadline:
-                  (Ox.Duration.ms (max 1 (int_of_float (min 30. remaining *. 1000.))))
-                question
-        in
-        Ok
-          {
-            choice with
-            Run.key = Option.value ~default:choice.key review.key;
-            judgments = [ initial; review ];
-          }
+  choose_jev ~deadline t question
 
 (* run-vbys: the score question a judgment expectation asks, over the page summary the
    registry builds. Its two levels make the answer's position the [0, 1] score the wait's

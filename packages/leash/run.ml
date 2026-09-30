@@ -58,6 +58,7 @@ type question = {
 type step_request = {
   goal : string;
   hint : string option;
+  recent : Jev_request.recent_action list;
   max_steps : int;
   deadline_s : int;
   dry_run : bool;
@@ -164,6 +165,8 @@ type handler = {
 
 type args = {
   mission : string;
+  max_steps : int;
+  start_url : string option;
   max_procedures : int;
   deadline_s : int;
   dry_run : bool;
@@ -177,6 +180,8 @@ type args = {
 let of_args (args : P.run_args) : args =
   {
     mission = args.P.mission;
+    max_steps = Option.value ~default:60 args.P.max_steps;
+    start_url = args.P.start_url;
     max_procedures = Option.value ~default:40 args.P.max_procedures;
     deadline_s = Option.value ~default:900 args.P.deadline_s;
     dry_run = Option.value ~default:false args.P.dry_run;
@@ -192,6 +197,39 @@ let status name = match P.Run_status.of_string name with Ok x -> x | Error _ -> 
 let invalid message = P.make_error (code "invalid-request") ~message
 let internal message = P.make_error (code "internal") ~message
 let ms seconds = max 0 (int_of_float (seconds *. 1000.))
+
+let starting_urls mission =
+  String.map (function '\n' | '\r' | '\t' | '\'' | '"' | '<' | '>' | '(' | ')' -> ' ' | c -> c) mission
+  |> String.split_on_char ' '
+  |> List.filter (fun word -> String.starts_with ~prefix:"https://" word || String.starts_with ~prefix:"http://" word)
+  |> List.sort_uniq String.compare
+
+let valid_start_url url =
+  let start = if String.starts_with ~prefix:"https://" url then 8
+    else if String.starts_with ~prefix:"http://" url then 7 else String.length url in
+  let rec stop i = if i = String.length url || String.contains "/?#" url.[i]
+    then i else stop (i + 1) in
+  let last = stop start in
+  last > start && not (String.contains (String.sub url start (last - start)) '@')
+    && not (String.exists (fun c -> Char.code c <= 32 || Char.code c = 127) url)
+
+let drive_recent (steps : P.step list) =
+  List.filter_map (fun (step : P.step) ->
+    let operation = P.Operation.to_string step.operation in
+    let kind = match operation with "click" -> Some "click" | "type_text" -> Some "fill"
+      | "select" -> Some "select" | "scroll_up" | "scroll_down" -> Some "scroll"
+      | "wait" -> Some "wait" | _ -> None in
+    Option.map (fun kind -> Jev_request.{action = operation;
+      kind = Some kind; text = step.text; page_changed = None}) kind) steps
+let drive_actions (drive : P.drive_result) =
+  match drive.operator_state with
+  | Some (`Assoc state) -> (match List.assoc_opt "metrics" state with
+      | Some (`Assoc metrics) -> (match List.assoc_opt "actions" metrics with
+          | Some (`Int actions) -> actions
+          | _ -> List.length (drive_recent drive.steps))
+      | _ -> List.length (drive_recent drive.steps))
+  | _ -> List.length (drive_recent drive.steps)
+
 let lower = String.lowercase_ascii
 
 (* run-tt9z: fail closed on action intent, including synonyms rather than only exact labels.
@@ -227,17 +265,11 @@ let last n xs =
   in
   drop (max 0 (List.length xs - n)) xs
 
-(* The first installed playbook for a site serves it; a second file for the same site is
-   not a second criterion (the choice keys are sites). *)
+(* fly-mepw: file identity, not hostname, keeps same-site knowledge distinct. *)
+let book_id (book : Playbook.loaded) = "book:" ^ book.file
+
 let installed_playbooks books =
-  let rec go seen acc = function
-    | [] -> List.rev acc
-    | (book : Playbook.loaded) :: rest ->
-        let site = book.Playbook.playbook.Playbook.site in
-        if List.mem site seen then go seen acc rest
-        else go (site :: seen) (book :: acc) rest
-  in
-  go [] [] books
+  List.sort_uniq (fun a b -> String.compare (book_id a) (book_id b)) books
 
 (* The drive's status is a closed wire string in the protocol's interface, so the loop
    compares it by name rather than by constructor. *)
@@ -304,6 +336,8 @@ type state = {
           trace entry when it is recorded. *)
   switch : bool;  (** The next turn asks the playbook level. *)
   asked_switch : bool;  (** A switch was already asked since the last procedure. *)
+  operator_state : P.operator_state option;
+  operator_history : Jev_request.recent_action list;
   observation : observation;
 }
 
@@ -329,8 +363,11 @@ let finish (st : state) status ?reason () =
       collected = st.collected_count;
       data = `Assoc [ ("count", `Int st.collected_count); ("first", `List (List.rev st.records)); ("pages", `Int st.pages); ("scripts", `List scripts) ];
       model_calls = 0;
-      model_cost = 0.;
+      model_cost = Some 0.;
       operator_steps = [];
+      operator_state = st.operator_state;
+      output_kinds = (if st.collected_count > 0 then ["script-record"] else [])
+        @ (if st.operator_state <> None then ["operator-state"] else []);
       final = st.observation.snapshot;
       reason;
     }
@@ -455,14 +492,20 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         pending_scripts = [];
       switch = false;
       asked_switch = false;
+      operator_state = None;
+      operator_history = [];
       observation;
     }
   in
   let dedupe_key = ref None in
   let seen = Hashtbl.create 128 in
-  let accept_record item =
+  let accept_record ~book ~procedure ~script item =
+    let emit item = on_record (`Assoc [
+      ("kind", `String "script-record"); ("source", `String "playbook");
+      ("playbook", `String (book_id book)); ("procedure", `String procedure);
+      ("script", `String script); ("record", item) ]) in
     match !dedupe_key with
-    | None -> Result.map (fun () -> true) (on_record item)
+    | None -> Result.map (fun () -> true) (emit item)
     | Some key -> (
         match item with
         | `Assoc fields -> (
@@ -472,7 +515,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                 let identity = key ^ "=" ^ Yojson.Safe.to_string identity in
                 if Hashtbl.mem seen identity then Ok false
                 else
-                  match on_record item with
+                  match emit item with
                   | Error error -> Error error
                   | Ok () -> Hashtbl.add seen identity (); Ok true)
         | _ -> Error (invalid "repeat key requires object records"))
@@ -517,23 +560,54 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
   (* run-kli0 run-qq3o: the playbook question's criteria are the installed playbooks by
      site and description plus none; playbooks are selected, never merged, so no choice
      ever carries more than 255 options. *)
-  let playbook_question (st : state) =
-    let criteria =
-      List.map
-        (fun (book : Playbook.loaded) -> (book.Playbook.playbook.site, book.Playbook.playbook.description))
-        installed
-      @ [ ("none", "Continue on the current page without a playbook.") ]
-    in
-    if List.length criteria > 255 then
-      Error (invalid "more than 255 playbooks are installed; one choice is bounded at 255")
-    else
-      Ok
-        {
-          name = "select_playbook";
-          instructions = Questions.select_playbook;
-          criteria;
-          state = state_json st;
-        }
+  let remember_choice st (choice : choice) =
+    let judgments = match choice.judgments with
+      | [] -> [P.{ source = "jev"; key = Some choice.key;
+          probabilities = choice.probabilities; confidence = Some choice.confidence;
+          usage = choice.usage; note = None }]
+      | judgments -> judgments in
+    { st with playbook_choices = List.rev_append judgments st.playbook_choices }
+  in
+  let describe_book (book : Playbook.loaded) =
+    Printf.sprintf "identity=%s | site %s | entry %s | %s" (book_id book)
+      book.playbook.site book.playbook.entry book.playbook.description
+  in
+  (* fly-95bw: every leaf is retained, NONE is present at every bounded level.
+     Balanced groups expose all members rather than silently taking the first 254. *)
+  let rec choose_books st books =
+    if books = [] then Ok (st, None) else
+    let size = List.length books in
+    let group_size = max 1 ((size + 253) / 254) in
+    let rec take n acc rest = match n, rest with
+      | 0, _ | _, [] -> (List.rev acc, rest)
+      | n, head :: tail -> take (n - 1) (head :: acc) tail in
+    let rec groups n acc = function
+      | [] -> List.rev acc
+      | remaining -> let members, rest = take group_size [] remaining in
+          groups (n + 1) (("group:" ^ string_of_int n, members) :: acc) rest in
+    let grouped = groups 1 [] books in
+    let candidates = if size <= 254 then
+        List.map (fun book -> (book_id book, describe_book book)) books
+      else List.map (fun (key, members) -> (key,
+        "Choose within these distinct playbooks: " ^
+        String.concat "\n" (List.map describe_book members))) grouped in
+    let question = { name = "select_playbook";
+      instructions = Questions.select_playbook ^
+        " Choose a book or group only when it fits the entire mission and current page. NONE means operate directly without a playbook.";
+      criteria = candidates @ [("none", "Continue on the current page without a playbook.")];
+      state = state_json st } in
+    match select_playbook t question with
+    | Error error -> Error (with_trace st error)
+    | Ok choice ->
+        let st = remember_choice st choice in
+        if choice.key = "none" then Ok (st, None)
+        else if size <= 254 then
+          (match List.find_opt (fun book -> book_id book = choice.key) books with
+           | Some book -> Ok (st, Some book)
+           | None -> Error (internal ("playbook answer names no offered identity: " ^ choice.key)))
+        else match List.assoc_opt choice.key grouped with
+          | Some members -> choose_books st members
+          | None -> Error (internal ("playbook answer names no offered group: " ^ choice.key))
   in
 
   (* extr-ve3k: next-page procedures belong to their repeats, not to the mission's
@@ -558,7 +632,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         (selectable_procedures book)
       @ [
           ("DONE", "the mission is visibly complete");
-          ("BLOCKED", "no offered procedure can progress");
+          ("NONE", "No offered procedure fits; continue this mission directly on the current page.");
         ]
     in
     if List.length criteria > 255 then
@@ -819,18 +893,23 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
           let deadline_s =
             min (remaining ()) (Option.value ~default:120 proc.Playbook.deadline_s)
           in
+          let cap = min cap (args.max_steps - st.steps_used) in
           let cap = match discovery with None -> cap | Some d -> min cap (d.max_steps - st.steps_used) in
           let request =
-            { goal = goal_text; hint = goal.Playbook.hint; max_steps = cap; deadline_s; dry_run = false }
+            { goal = goal_text; hint = goal.Playbook.hint; recent = st.operator_history; max_steps = cap; deadline_s; dry_run = false }
           in
-          (match (match discovery with None -> None | Some _ -> unsafe_action goal_text) with
+          (if cap <= 0 then
+             Ok (Steps_finish (finish st (status "limit") ~reason:"the mission action budget was exhausted" ()))
+           else match (match discovery with None -> None | Some _ -> unsafe_action goal_text) with
           | Some kind -> Ok (Steps_finish (finish st (status "blocked") ~reason:("discovery stopped before " ^ kind ^ " action") ()))
           | None -> match execute_step t request with
           | Error error when discovery <> None && String.starts_with ~prefix:"discovery stopped before " error.P.message ->
               Ok (Steps_finish (finish st (status "blocked") ~reason:error.P.message ()))
           | Error error -> Error error
           | Ok drive ->
-              let st = { st with steps_used = st.steps_used + List.length drive.P.steps } in
+              let st = { st with steps_used = st.steps_used + drive_actions drive;
+                operator_state = drive.operator_state;
+                operator_history = st.operator_history @ drive_recent drive.steps } in
               let entry =
                 P.{ goal = goal_text; status = drive.P.status; steps = drive.P.steps; reason = drive.P.reason }
               in
@@ -944,7 +1023,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                   let rec collect st = function
                     | [] -> Ok st
                     | item :: rest -> (
-                        match accept_record item with
+                        match accept_record ~book ~procedure:proc.Playbook.slug ~script:step.Playbook.script item with
                         | Error error -> Error error
                         | Ok false -> collect st rest
                         | Ok true ->
@@ -1317,54 +1396,36 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
 
   (* extr-andy: a "none" playbook delegates the entire mission to the existing
      operator loop, not to the planner. It uses the same tab and action lock. *)
-  and single_goal (st : state) =
-    (* daily-9ggi: JEV's row-action vocabulary cannot navigate an empty page.
-       Bootstrap only a single explicit HTTP(S) URL, never a model-invented URL
-       or a choice between several sites. Existing tabs keep their current page. *)
-    let urls =
-      String.map (function '\n' | '\r' | '\t' | '\'' | '"' | '<' | '>' | '(' | ')' -> ' ' | c -> c) args.mission
-      |> String.split_on_char ' '
-      |> List.filter (fun word -> String.starts_with ~prefix:"https://" word || String.starts_with ~prefix:"http://" word)
-      |> List.sort_uniq String.compare
-    in
-    if st.observation.url = "about:blank" && not args.dry_run then
-      match urls with
-      | [url] ->
-          Result.bind (navigate t url) (fun () ->
-            Result.bind (observe t ()) (fun observation ->
-              single_goal_operator { st with observation }))
-      | _ -> Ok (Finish (finish st (status "blocked")
-          ~reason:"no starting page: provide one explicit http:// or https:// URL in the mission, or use --tab on an open page" ()))
-    else single_goal_operator st
+  and single_goal (st : state) = single_goal_operator st
 
   and single_goal_operator (st : state) =
-    let request =
-      { goal = args.mission; hint = None; max_steps = 30;
-        deadline_s = remaining (); dry_run = args.dry_run }
-    in
-    match execute_step t request with
-    | Error error -> Error error
+    let route = P.{ source = "route"; key = Some "operator"; probabilities = `Assoc [];
+      confidence = None; usage = None;
+      note = Some "No fitting playbook/procedure; the full mission continues on the current page without a planner." } in
+    let st = { st with book = None; playbook_choices = route :: st.playbook_choices } in
+    let request = { goal = args.mission; hint = None; recent = st.operator_history;
+      max_steps = max 0 (args.max_steps - st.steps_used); deadline_s = remaining (); dry_run = args.dry_run } in
+    if request.max_steps = 0 then
+      Ok (Finish (finish st (status "limit") ~reason:"the mission action budget was exhausted before operator fallback" ()))
+    else match execute_step t request with
+    | Error error -> Error (with_trace st error)
     | Ok drive ->
         let name = P.Drive_status.to_string drive.P.status in
-        let status =
-          match name with
-          | "done" -> status "done"
-          | "step-cap" -> status "limit"
-          | "deadline" -> status "deadline"
-          | "error" -> status "error"
-          | _ -> status "blocked"
-        in
-        if name = "done" && (args.expect <> [] || st.mission_expect <> []) then
-          (* daily-v6ez run-4j1v: fallback DONE must pass the same fresh mission
-             checks as a playbook DONE. No book means no named page kinds. *)
-          Result.map
-            (function
-              | Finish result -> Finish { result with P.operator_steps = drive.P.steps }
-              | Continue st -> Continue st)
-            (done_guard { st with book = None } ~pages:[])
-        else
-          Ok (Finish { (finish { st with book = None } status ?reason:drive.P.reason ()) with
-            P.final = drive.P.final; operator_steps = drive.P.steps })
+        let ending = status (match name with
+          | "done" -> "done" | "step-cap" -> "limit" | "deadline" -> "deadline"
+          | "error" -> "error" | _ -> "blocked") in
+        let st = { st with operator_state = drive.operator_state;
+          observation = {st.observation with snapshot = drive.final;
+            url = drive.final.url; title = drive.final.title; dialog = drive.final.dialog} } in
+        let attach = function
+          | Finish result -> Finish {result with P.operator_steps = drive.steps}
+          | Continue st -> Continue st in
+        if name = "done" && not args.dry_run then
+          (match resolve_mission st [] with
+           | Error error -> Error error
+           | Ok [] -> Ok (attach (Finish (finish st ending ?reason:drive.reason ())))
+           | Ok checks -> Result.map attach (check_done st ~mission:true checks))
+        else Ok (attach (Finish (finish st ending ?reason:drive.reason ())))
 
   (* run-kli0 run-xh5d: asked at the start, after a procedure whose description or the
      mission says the next part is elsewhere, and — through [ask_procedure] — when the
@@ -1372,71 +1433,17 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
      navigates the same tab to the playbook's entry, so the profile's logins carry over. *)
   and ask_playbook (st : state) =
     if st.book <> None && not st.switch then Ok (Continue st)
-    else if installed = [] then
-      (* run-tcuz: nothing to choose from, and a question whose only criterion is [none]
-         is not worth a model call. *)
-      single_goal st
-    else
-      match playbook_question st with
-      | Error error -> Error error
-      | Ok question -> (
-          match select_playbook t question with
-          | Error error -> Error (with_trace st error)
-          | Ok choice -> (
-              let judgments =
-                match choice.judgments with
-                | [] ->
-                    [
-                      P.
-                        {
-                          source = "jev";
-                          key = Some choice.key;
-                          probabilities = choice.probabilities;
-                          confidence = Some choice.confidence;
-                          usage = choice.usage;
-                          note = None;
-                        };
-                    ]
-                | judgments -> judgments
-              in
-              let st =
-                { st with playbook_choices = List.rev_append judgments st.playbook_choices }
-              in
-              if choice.key = "none" then
-                single_goal st
-              else
-                match
-                  List.find_opt
-                    (fun (book : Playbook.loaded) -> book.Playbook.playbook.site = choice.key)
-                    installed
-                with
-                | None ->
-                    Error
-                      (internal
-                         (Printf.sprintf "the playbook answer names no installed playbook: %s"
-                            choice.key))
-                | Some book -> (
-                    let current =
-                      match st.book with
-                      | Some current -> current.Playbook.playbook.site
-                      | None -> ""
-                    in
-                    let st =
-                      {
-                        st with
-                        book = Some book;
-                        switch = false;
-                        visited = book.Playbook.playbook.site :: st.visited;
-                      }
-                    in
-                    if book.Playbook.playbook.site = current then Ok (Continue st)
-                    else
-                      match navigate t book.Playbook.playbook.entry with
-                      | Error error -> Error (with_trace st error)
-                      | Ok _ -> (
-                          match observe t () with
-                          | Error error -> Error (with_trace st error)
-                          | Ok observation -> Ok (Continue { st with observation })))))
+    else match choose_books st installed with
+    | Error error -> Error error
+    | Ok (st, None) -> single_goal st
+    | Ok (st, Some book) ->
+        let current = Option.map book_id st.book in
+        let st = { st with book = Some book; switch = false;
+          visited = book.playbook.site :: st.visited } in
+        if current = Some (book_id book) then Ok (Continue st)
+        else match navigate t book.playbook.entry with
+        | Error error -> Error (with_trace st error)
+        | Ok _ -> Result.map (fun observation -> Continue { st with observation }) (observe t ())
 
   and ask_procedure (st : state) =
     match st.book with
@@ -1450,15 +1457,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
             | Ok choice ->
                 let chosen = choice in
                 if choice.key = "DONE" then done_guard st ~pages:book.Playbook.playbook.pages
-                else if choice.key = "BLOCKED" then
-                  (* run-kli0: the playbook level gets one last look before the planner —
-                     another installed site may serve the next part — and a second BLOCKED
-                     from the same playbook goes to the planner. *)
-                  if not st.asked_switch then
-                    Ok (Continue { st with switch = true; asked_switch = true })
-                  else
-                    planner st ~trigger:Blocked
-                      ~reason:"the procedure level answered BLOCKED"
+                else if choice.key = "NONE" || choice.key = "BLOCKED" then single_goal st
                 else
                   match
                     List.find_opt
@@ -1489,30 +1488,19 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
   (* run-fp7i: the two levels against the models, the chosen playbook and first procedure
      with its resolved checkers, and no action at all — not even the entry navigation. *)
   and dry_run (st : state) =
-    if installed = [] then single_goal st else match playbook_question st with
+    match choose_books st installed with
     | Error error -> Error error
-    | Ok question -> (
-        match select_playbook t question with
-        | Error error -> Error (with_trace st error)
-        | Ok choice ->
-            let book =
-              if choice.key = "none" then None
-              else
-                List.find_opt
-                  (fun (book : Playbook.loaded) -> book.Playbook.playbook.site = choice.key)
-                  installed
-            in
-            let st = { st with book } in
-            (match book with
-            | None -> single_goal st
-            | Some book -> (
-                match procedure_question st book with
+    | Ok (st, None) -> single_goal st
+    | Ok (st, Some book) ->
+        let st = { st with book = Some book } in
+        match procedure_question st book with
                 | Error error -> Error error
                 | Ok question -> (
                     match select_procedure t question with
                     | Error error -> Error (with_trace st error)
                     | Ok choice ->
-                        if choice.key = "DONE" || choice.key = "BLOCKED" then
+                        if choice.key = "NONE" || choice.key = "BLOCKED" then single_goal st
+                        else if choice.key = "DONE" then
                           Ok
                             (Finish
                                (finish st (status "blocked")
@@ -1567,7 +1555,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                               Ok
                                 (Finish
                                    (finish st (status "blocked")
-                                      ~reason:"dry run: nothing was executed" ()))))))
+                                      ~reason:"dry run: nothing was executed" ())))
 
   in
   (* run-fwl8's refusals are the registry's, before this runs; the first observation is the
@@ -1576,7 +1564,21 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
   | Error error -> Error error
   | Ok observation -> (
       let st = empty observation in
-      match (if args.dry_run then dry_run st else next st) with
+      let initial () =
+        if discovery <> None || observation.url <> "about:blank" then
+          if args.dry_run then dry_run st else next st
+        else
+          let urls = match args.start_url with Some url -> [url]
+            | None -> starting_urls args.mission in
+          match urls with
+          | [url] when valid_start_url url ->
+              if args.dry_run then dry_run st
+              else Result.bind (navigate t url) (fun () ->
+                Result.bind (observe t ()) (fun observation -> next {st with observation}))
+          | _ -> Ok (Finish (finish st (status "blocked")
+              ~reason:"no starting page: provide --url with one HTTP(S) URL without userinfo, one unambiguous URL in the mission, or --tab on an open page" ()))
+      in
+      match initial () with
       | Error error -> Error error
       | Ok (Finish result) -> Ok result
       | Ok (Continue _) -> Error (internal "the run loop stopped without an ending"))
@@ -1584,8 +1586,10 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
 (* ---------- The handler ---------- *)
 
 let loop ~(handler : handler) ~now ~installed ?discovery ?(on_record = fun _ -> Ok ()) ?(pause_ms = fun _ -> ()) (args : args) =
-  if args.max_procedures < 1 || args.deadline_s < 1 then
-    Error (invalid "run max_procedures and deadline_s must be positive")
+  if args.max_procedures < 1 || args.deadline_s < 1 || args.max_steps < 1 then
+    Error (invalid "run max_steps, max_procedures and deadline_s must be positive")
+  else if (match args.start_url with Some url -> not (valid_start_url url) | None -> false) then
+    Error (invalid "start_url must be an HTTP(S) URL without userinfo or whitespace")
   else
     let calls = ref 0 and cost = ref 0. in
     let kinds = Hashtbl.create 8 and unreported = ref 0 in
@@ -1733,6 +1737,13 @@ let loop ~(handler : handler) ~now ~installed ?discovery ?(on_record = fun _ -> 
       let models = `Assoc (Hashtbl.fold (fun kind n acc -> (kind, `Int n) :: acc) kinds []) in
       let data = match result.P.data with
         | `Assoc fields -> `Assoc (("model_calls_by_kind", models) ::
-            ("cost_unreported", `Int !unreported) :: fields)
+            ("cost_unreported", `Int !unreported) ::
+            ("reported_cost", `Float !cost) :: fields)
         | other -> other in
-      { result with P.model_calls = !calls; model_cost = !cost; data }) outcome
+      { result with P.model_calls = !calls; model_cost = (if !unreported > 0 then None else Some !cost); data }) outcome
+    |> fun outcome -> Result.bind outcome (fun result ->
+      match result.P.operator_state with
+      | Some state when not args.dry_run ->
+          Result.map (fun () -> result) (on_record (`Assoc [
+            ("kind", `String "operator-state"); ("source", `String "operator"); ("state", state)]))
+      | _ -> Ok result)

@@ -177,6 +177,8 @@ let lifecycle () =
               {
                 tab = Some h;
                 mission = "Do a task";
+                max_steps = None;
+                start_url = None;
                 max_procedures = None;
                 expect = None;
                 out = None;
@@ -405,6 +407,8 @@ let budget () =
           {
             tab = Some handle;
             mission = "do the thing";
+            max_steps = None;
+            start_url = None;
             max_procedures = None;
             deadline_s = Some 900;
             dry_run = None;
@@ -1065,6 +1069,46 @@ let snapshot () =
         "tab-of0i counter installed on attach" true
         (List.mem "Page.addScriptToEvaluateOnNewDocument" methods))
 
+(* fly-iodm: one Runtime.evaluate whose expression contains leash-operator-read.
+   Snap and checker expressions keep the recorded guard and innerText answers. Height is
+   the fixture's old scroll height, so a page that could scroll down still can. *)
+let operator_observation ~text =
+  obj
+    [
+      ("kind", str "leash-operator");
+      ("url", str "https://example.com/");
+      ("title", str "Example");
+      ("timeOrigin", `Int 1);
+      ("text", str text);
+      ("truncated", `Bool false);
+      ("omitted", `Int 0);
+      ( "scroll",
+        obj
+          [
+            ("x", `Int 0);
+            ("y", `Int 0);
+            ("height", `Int 1000);
+            ("viewport", `Int 600);
+            ("width", `Int 800);
+          ] );
+      ("semantics", `List []);
+      ("guard", obj []);
+    ]
+
+let page_evaluate ~text fixture request =
+  let expression = get "expression" (get "params" request) in
+  match expression with
+  | `String "globalThis" -> obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
+  | `String s when contains s "leash-operator-read" ->
+      obj
+        [
+          ("result", obj [ ("type", str "object"); ("value", operator_observation ~text) ]);
+        ]
+  | `String s when String.starts_with ~prefix:"Array.from(document.body?.innerText" s ->
+      obj [ ("result", obj [ ("type", str "object"); ("value", str text) ]) ]
+  | _ ->
+      obj [ ("result", obj [ ("type", str "object"); ("value", get "guard" fixture) ]) ]
+
 (* drive-l7yk drive-8n2z: a real control request, captured headless Chrome
    snapshot replies, scripted decision and no browser mutation. *)
 let drive_dry_run () =
@@ -1074,19 +1118,8 @@ let drive_dry_run () =
       Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
       Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
       Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
-      Fake.on_method fake "Runtime.evaluate" (fun request ->
-          let params = get "params" request in
-          let expression = get "expression" params in
-          let value =
-            match expression with
-            | `String s
-              when String.starts_with ~prefix:"Array.from(document.body?.innerText" s ->
-                str "Example content"
-            | _ -> get "guard" fixture
-          in
-          if expression = str "globalThis" then
-            obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
-          else obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]);
+      Fake.on_method fake "Runtime.evaluate"
+        (page_evaluate ~text:"Example content" fixture);
       Fake.on_method fake "Runtime.callFunctionOn" (fun request ->
           let body = get "functionDeclaration" (get "params" request) in
           Alcotest.(check bool)
@@ -1133,6 +1166,8 @@ let drive_dry_run () =
                 {
                   tab = Some h;
                   mission = "Open a result";
+                  max_steps = None;
+                  start_url = Some "https://example.com/";
                   max_procedures = Some 3;
                   expect = None;
                   out = None;
@@ -1496,6 +1531,8 @@ let journal_redaction () =
               {
                 tab = Some missing;
                 mission = "test";
+                max_steps = None;
+                start_url = None;
                 max_procedures = Some 1;
                 deadline_s = Some 1;
                 dry_run = Some true;
@@ -1708,6 +1745,24 @@ let levels_with
           | [] -> Alcotest.fail "the run asked for more answers than the test scripted"
           | key :: rest ->
               remaining := rest;
+              (* fly-mepw: a scripted site name is the offered book identity, not the
+                 site string. Procedure slugs, DONE and BLOCKED are already criteria. *)
+              let key =
+                if
+                  question.name <> "select_playbook"
+                  || List.exists (fun (offered, _) -> offered = key) question.criteria
+                then key
+                else
+                  match
+                    List.find_opt
+                      (fun (offered, description) ->
+                        String.starts_with ~prefix:"book:" offered
+                        && contains description ("site " ^ key ^ " |"))
+                      question.criteria
+                  with
+                  | Some (offered, _) -> offered
+                  | None -> key
+              in
               Ok
                 Run.
                   {
@@ -1730,6 +1785,8 @@ let run_wire ?(who = "alice") ?expect ?tab mission =
           {
             tab;
             mission;
+            max_steps = None;
+            start_url = None;
             max_procedures = None;
             deadline_s = None;
             dry_run = None;
@@ -1745,18 +1802,7 @@ let page_script fake fixture text =
   Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
   Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
   Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
-  Fake.on_method fake "Runtime.evaluate" (fun request ->
-      let expression = get "expression" (get "params" request) in
-      let value =
-        match expression with
-        | `String s
-          when String.starts_with ~prefix:"Array.from(document.body?.innerText" s ->
-            str text
-        | _ -> get "guard" fixture
-      in
-      if expression = str "globalThis" then
-        obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
-      else obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]);
+  Fake.on_method fake "Runtime.evaluate" (page_evaluate ~text fixture);
   Fake.on_method fake "Runtime.callFunctionOn" (fun _ ->
       obj
         [
@@ -1996,10 +2042,18 @@ let drive_temporary_cleanup () =
             |> Yojson.Safe.from_string |> P.decode_reply |> reply_of
           in
           (match (outcome, reply) with
-          | "model-error", P.Failure e ->
+          | "model-error", P.Success body ->
+              Alcotest.(check string)
+                "fly-8fgl provider failure is terminal evidence" "error"
+                (match get "status" body with `String s -> s | _ -> "");
+              let error =
+                match P.error_of_yojson (get "error" (get "operator_state" body)) with
+                | Ok error -> error
+                | Error why -> Alcotest.fail why
+              in
               Alcotest.(check string)
                 "daily-9ggi original error retained" "model-unavailable"
-                (P.Error_code.to_string e.P.code)
+                (P.Error_code.to_string error.P.code)
           | _, P.Success body ->
               Alcotest.(check string)
                 "daily-9ggi original outcome retained" outcome
@@ -2051,15 +2105,12 @@ let drive_temporary_cleanup () =
             pages = [];
           }
       in
-      let levels =
-        levels_with ~plan
-          [ "automationexercise.com"; "BLOCKED"; "automationexercise.com"; "BLOCKED" ]
-          (ref [])
-      in
+      let levels = levels_with ~plan [ "automationexercise.com"; "DONE" ] (ref []) in
       let body =
         Leash.Control.handle ~model:"fixture-model" ~installed:[ book ] ~levels
           ~decide:decide_done tabs
-          (run_wire "Inspect the catalogue")
+          (run_wire
+             "Inspect the catalogue at https://automationexercise.com/product_details/1")
         |> Yojson.Safe.from_string |> P.decode_reply |> decoded
       in
       Alcotest.(check bool)
@@ -2192,17 +2243,10 @@ let run_proposal () =
             result (request tabs "alice" (P.New { url = Some product_url })) |> tab
           in
           let questions = ref [] in
-          (* run-w7ke: the procedure level answers BLOCKED twice, so the planner is asked
-             once; run-rq6i: it answers with a procedure, which the loop runs and verifies. *)
-          let answers =
-            [
-              "automationexercise.com";
-              "BLOCKED";
-              "automationexercise.com";
-              "BLOCKED";
-              "DONE";
-            ]
-          in
+          (* fly-yolk: procedure BLOCKED enters the operator. A DONE nothing can verify
+             still asks the planner once; run-rq6i: it answers with a procedure, which the
+             loop runs and verifies, and the next DONE accepts that verification. *)
+          let answers = [ "automationexercise.com"; "DONE"; "DONE" ] in
           let planned : Run.plan_answer =
             Run.Procedure
               Leash.Playbook.
@@ -2905,6 +2949,8 @@ let run_scripts ?out hostile =
                      {
                        tab = Some h;
                        mission = "collect the books " ^ hostile;
+                       max_steps = None;
+                       start_url = None;
                        max_procedures = None;
                        deadline_s = None;
                        dry_run = None;
@@ -2929,13 +2975,21 @@ let run_script_step () =
         (get kind billed = `Int expected))
     [ ("playbook", 1); ("procedure", 2); ("text_helper", 1) ];
   Alcotest.(check bool)
-    "extr-5x9e sum of reported costs" true
-    (match get "model_cost" body with
+    "fly-gn5z an unpriced helper makes model_cost unknown" true
+    (get "model_cost" body = `Null);
+  Alcotest.(check bool)
+    "fly-gn5z reported_cost is the known subtotal" true
+    (match get "reported_cost" (get "data" body) with
     | `Float cost -> Float.abs (cost -. 0.5) < 0.00001
     | _ -> false);
   Alcotest.(check bool)
     "extr-5x9e missing helper cost shown" true
     (get "cost_unreported" (get "data" body) = `Int 1);
+  Alcotest.(check bool)
+    "fly-mqkr output_kinds names the script records" true
+    (match get "output_kinds" body with
+    | `List kinds -> List.mem (str "script-record") kinds
+    | _ -> false);
   List.iter
     (fun (question : Run.question) ->
       let text = Yojson.Safe.to_string question.state in
@@ -2960,9 +3014,38 @@ let run_script_step () =
             in
             lines [])
       in
+      let tagged kind =
+        List.filter_map
+          (fun line ->
+            match line with
+            | `Assoc fields when List.assoc_opt "kind" fields = Some (str kind) ->
+                Some fields
+            | _ -> None)
+          rows
+      in
+      let records =
+        List.filter_map
+          (fun fields -> List.assoc_opt "record" fields)
+          (tagged "script-record")
+      in
       Alcotest.(check bool)
-        "extr-b3u0 streamed only validated records" true
-        (rows = match books_rows with `List rows -> rows | _ -> assert false);
+        "fly-mqkr streamed lines are tagged" true
+        (List.length rows
+        = List.length (tagged "script-record") + List.length (tagged "operator-state"));
+      Alcotest.(check bool)
+        "fly-mqkr script-record lines carry the validated records" true
+        (records = match books_rows with `List rows -> rows | _ -> assert false);
+      List.iter
+        (fun fields ->
+          Alcotest.(check bool)
+            "fly-mqkr script records name the playbook lane" true
+            (List.assoc_opt "source" fields = Some (str "playbook")
+            && List.assoc_opt "script" fields = Some (str "list")
+            &&
+            match List.assoc_opt "playbook" fields with
+            | Some (`String id) -> String.starts_with ~prefix:"book:" id
+            | _ -> false))
+        (tagged "script-record");
       Alcotest.(check bool)
         "extr-b3u0 bounded reply count" true
         (get "count" (get "data" streamed) = `Int 2);

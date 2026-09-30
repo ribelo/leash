@@ -138,6 +138,17 @@ let body_document () =
         "state"
         => obj
              [
+               "goal" => str goal;
+               "can_scroll_down" => bool true;
+               "can_scroll_up" => bool true;
+               "coverage"
+               => obj
+                    [
+                      "text_truncated" => bool false;
+                      "omitted_elements" => `Int 0;
+                      "scope"
+                      => str "visible viewport; offscreen and other pages unobserved";
+                    ];
                "page"
                => obj
                     [
@@ -317,6 +328,16 @@ let elements_table () =
   check_json "drive-y37b the element table"
     (obj
        [
+         "goal" => str goal;
+         "can_scroll_down" => bool true;
+         "can_scroll_up" => bool true;
+         "coverage"
+         => obj
+              [
+                "text_truncated" => bool false;
+                "omitted_elements" => `Int 0;
+                "scope" => str "visible viewport; offscreen and other pages unobserved";
+              ];
          "page"
          => obj
               [
@@ -1031,11 +1052,45 @@ let action_cap () =
     "type and click offered" 2
     (List.length (List.hd capped).operations)
 
+(* fly-iodm fly-crcc fly-eoqg fly-spgh: explicit original mission, bounded observation,
+   all compatible target heads in one prediction, and native options count as actions. *)
+let fly_request_bounds () =
+  let emoji = "😀" in
+  let text = String.concat "" (List.init 6001 (fun _ -> emoji)) in
+  let request =
+    J.make ~model ~goal:"the entire mission" ~text
+      ~snapshot:(snapshot [ textbox 1 "Query"; button 2 "Go" ])
+      ~recent:[] ~can_scroll_down:false ~can_scroll_up:false
+  in
+  let body = J.body request in
+  let state = get "state" body in
+  check_json "fly-iodm mission is explicit" (str "the entire mission") (get "goal" state);
+  check_json "fly-crcc text bound"
+    (str (String.concat "" (List.init 6000 (fun _ -> emoji))))
+    (get "text" (get "page" state));
+  check_json "fly-crcc truncation explicit" (bool true)
+    (get "text_truncated" (get "coverage" state));
+  let questions = get "questions" body in
+  Alcotest.(check bool)
+    "fly-eoqg both compatible heads in same request" true
+    (member "type_text_target" questions <> None
+    && member "click_target" questions <> None);
+  let native =
+    select 1 "Country"
+      (List.init 300 (fun i -> option_ i (string_of_int i) (string_of_int i)))
+  in
+  let offered = J.elements (snapshot [ native ]) in
+  Alcotest.(check int)
+    "fly-spgh select options bound at 250" 250
+    (List.length (List.hd offered).options)
+
 let () =
   Alcotest.run "jev_request"
     [
       ( "request",
         [
+          Alcotest.test_case "fly-iodm fly-crcc fly-eoqg fly-spgh bounded state" `Quick
+            fly_request_bounds;
           Alcotest.test_case "drive-y37b drive-zml5 the document" `Quick body_document;
           Alcotest.test_case "drive-y37b the element table" `Quick elements_table;
           Alcotest.test_case "drive-zml5 the operation criteria and controls" `Quick

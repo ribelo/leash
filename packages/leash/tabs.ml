@@ -1602,7 +1602,7 @@ let page_guard call =
 
 (* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8:
    retain the unfiltered node table for later action-time revalidation. *)
-let snap_locked t tab (args : P.snap_args) =
+let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
   let offset = Option.value ~default:0 args.offset in
   let limit = Option.value ~default:120 args.limit in
   if offset < 0 || limit < 0 || limit > 1000 then
@@ -1659,7 +1659,7 @@ let snap_locked t tab (args : P.snap_args) =
       if (not settled) && remaining > 0 && tab.dialog = None then attempt (remaining - 1)
       else Ok (rows, settled, loader_id, guard)
     in
-    let* rows, settled, loader_id, guard = attempt 2 in
+    let* rows, settled, loader_id, guard = attempt (attempts - 1) in
     let snapshot =
       enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ~caps:t.caps))
     in
@@ -1933,11 +1933,92 @@ let upload t ~owner (args : P.upload_args) =
 let hover t ~owner (args : P.hover_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.hover ~cdp view args)
 
-(* drive-8n2z drive-tfqh: keep the lock across observe/decide/act. Never call
-   a public Tabs action here: each would reacquire this very same mutex. The
-   metric expression reads one document state; the fingerprint hashes visible
-   text, URL/title, scroll position and actionable AX rows, not snapshot IDs. *)
-let drive_locked
+type meter = {
+  usage : (string, Yojson.Safe.t) Hashtbl.t;
+  input_ms : int ref;
+  settle_ms : int ref;
+  observation_retries : int ref;
+}
+
+let meter () =
+  {
+    usage = Hashtbl.create 4;
+    input_ms = ref 0;
+    settle_ms = ref 0;
+    observation_retries = ref 0;
+  }
+
+let note_usage meter kind json = Hashtbl.replace meter.usage kind json
+let clear_usage meter kind = Hashtbl.remove meter.usage kind
+let usage meter kind = Hashtbl.find_opt meter.usage kind
+
+let telemetry meter () =
+  obj
+    [
+      ("observation_retries", `Int !(meter.observation_retries));
+      ("input_ms", `Int !(meter.input_ms));
+      ("settle_ms", `Int !(meter.settle_ms));
+    ]
+
+let add_ms cell started ended =
+  cell := !cell + max 0 (int_of_float ((ended -. started) *. 1000.))
+
+type remembered = { marker : string; coverage : Snapshot_source.coverage }
+
+let read_operator cdp ~session =
+  let* context = guard_context (fun meth params -> cdp_call ~session cdp meth params) in
+  let* result =
+    cdp_call ~session cdp "Runtime.evaluate"
+      (obj
+         [
+           ("expression", str Snapshot_source.operator_expression);
+           ("contextId", `Int context);
+           ("returnByValue", `Bool true);
+         ])
+  in
+  match member "exceptionDetails" result with
+  | Some _ -> Ok Snapshot_source.Navigating
+  | None -> (
+      match member "result" result with
+      | None -> Ok Snapshot_source.Foreign
+      | Some inner -> (
+          match text "type" inner with
+          | Some "undefined" -> Ok Snapshot_source.Foreign
+          | _ ->
+              let value = Option.value ~default:`Null (member "value" inner) in
+              Ok (Snapshot_source.parse_operator value)))
+
+let page_fingerprint ~url ~page_text ~rows ~scroll_y ~scroll_height =
+  Digest.to_hex
+    (Digest.string
+       (Yojson.Safe.to_string
+          (obj
+             [
+               ("url", str url);
+               ("text", str page_text);
+               ("scroll_y", `Float scroll_y);
+               ("scroll_height", `Float scroll_height);
+               ("rows", `List (List.map P.yojson_of_row rows));
+             ])))
+
+let observation_of (snapshot : P.snapshot) (read : Snapshot_source.operator_read) =
+  let rows = List.filter (fun (row : P.row) -> row.role <> "file-input") snapshot.rows in
+  let snapshot = { snapshot with P.url = read.url; title = read.title; rows } in
+  Drive.
+    {
+      snapshot;
+      text = read.text;
+      can_scroll_down = read.can_scroll_down;
+      can_scroll_up = read.can_scroll_up;
+      fingerprint =
+        page_fingerprint ~url:snapshot.url ~page_text:read.text ~rows:snapshot.rows
+          ~scroll_y:read.scroll_y ~scroll_height:read.scroll_height;
+    }
+
+(* drive-8n2z drive-tfqh fly-iodm fly-crcc: keep the lock across observe/decide/act.
+   Never call a public Tabs action here: each would reacquire this very same mutex.
+   An invalid operator payload is an observation error, never a weaker legacy read. *)
+let drive_locked ?recent ?(meter = meter ())
     ?(decide =
       fun ~deadline:_ _ ->
         Error
@@ -1955,145 +2036,214 @@ let drive_locked
   let remaining () =
     Ox.Duration.ms (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
   in
-  let decide request = decide ~deadline:(remaining ()) request in
+  let decide request =
+    clear_usage meter "operator";
+    decide ~deadline:(remaining ()) request
+  in
   (* drive-ls3c: one helper per drive. It carries the one-entry memo that reuses an
          answer for an unchanged context — what a stale-row retry is — so it is taken
          here and goes away with the drive. *)
   let helper = text_helper () in
-  let text_value context = helper.Text_helper.complete ~deadline:(remaining ()) context in
+  let text_value context =
+    clear_usage meter "text_helper";
+    helper.Text_helper.complete ~deadline:(remaining ()) context
+  in
   let* cdp = ready t in
   let* session = page_session t cdp tab in
-  let browser = reading_browser t ~session tab cdp in
   with_focus t tab @@ fun engage ->
   let view = { (action_view t ~session ~owner tab cdp) with Actions.engage } in
+  let remembered = Hashtbl.create 8 in
+  let remember (snapshot : P.snapshot) (read : Snapshot_source.operator_read) =
+    let omitted_elements =
+      max read.coverage.omitted_elements (snapshot.total - List.length snapshot.rows)
+    in
+    let coverage =
+      Snapshot_source.coverage_of ~unsupported_states:read.coverage.unsupported_states
+        ~text_truncated:read.coverage.text_truncated ~omitted_elements
+        ~can_scroll_up:read.can_scroll_up ~can_scroll_down:read.can_scroll_down
+    in
+    Hashtbl.replace remembered
+      (P.Snapshot_id.to_string snapshot.snapshot)
+      { marker = read.marker; coverage }
+  in
+  let page_id (page : Drive.observation) =
+    P.Snapshot_id.to_string page.snapshot.snapshot
+  in
+  let coverage page =
+    match Hashtbl.find_opt remembered (page_id page) with
+    | Some saved -> Snapshot_source.coverage_json saved.coverage
+    | None ->
+        Snapshot_source.coverage_json
+          (Snapshot_source.coverage_of ~unsupported_states:[]
+             ~text_truncated:(String.length page.text >= Snapshot_source.text_limit)
+             ~omitted_elements:
+               (max 0 (page.snapshot.total - List.length page.snapshot.rows))
+             ~can_scroll_up:page.can_scroll_up ~can_scroll_down:page.can_scroll_down)
+  in
+  let validate page =
+    match Hashtbl.find_opt remembered (page_id page) with
+    | None -> Ok ()
+    | Some saved -> (
+        match read_operator cdp ~session with
+        | Error error -> Error error
+        | Ok (Snapshot_source.Payload now) when now.marker = saved.marker -> Ok ()
+        | Ok _ -> Error (P.stale_snapshot (Some page.snapshot.snapshot)))
+  in
+  let unsettled () = error "timeout" "the page did not settle" in
+  let retry left =
+    meter.observation_retries := !(meter.observation_retries) + 1;
+    t.sleep Snapshot_source.observe_retry_s;
+    left - 1
+  in
+  (* fly-qr70: a destroyed execution context is a document navigation, not a
+     stale snapshot. The 10 by 20 ms budget is for an inconsistent live document.
+     A click that leaves consent.google.com needs the same bounded load wait as nav. *)
+  let wait_out_navigation () =
+    let started = tab.navigations in
+    let rec notice left =
+      if tab.navigations <> started || tab.page_loading || left = 0 then ()
+      else (
+        t.sleep 0.05;
+        notice (left - 1))
+    in
+    notice 8;
+    if tab.page_loading then (
+      let promise, waiter = Eio.Promise.create () in
+      tab.page_loads <- waiter :: tab.page_loads;
+      if not tab.page_loading then (
+        tab.page_loads <- List.filter (fun pending -> pending != waiter) tab.page_loads;
+        true)
+      else
+        Fun.protect
+          ~finally:(fun () ->
+            tab.page_loads <-
+              List.filter (fun pending -> pending != waiter) tab.page_loads)
+          (fun () ->
+            ignore (t.await_load promise);
+            true))
+    else tab.navigations <> started
+  in
+  let rec acquire ~loads left =
+    match read_operator cdp ~session with
+    | Error error -> Error error
+    | Ok Snapshot_source.Foreign ->
+        Error (error "internal" "browser returned an invalid operator observation")
+    | Ok Snapshot_source.Navigating when loads > 0 && wait_out_navigation () ->
+        acquire ~loads:(loads - 1) left
+    | Ok Snapshot_source.Navigating ->
+        if left > 1 then acquire ~loads (retry left) else Error (unsettled ())
+    | Ok (Snapshot_source.Payload before) -> (
+        let* snapshot =
+          snap_locked ~attempts:1 t tab
+            P.{ tab = args.tab; match_ = None; limit = Some 250; offset = None }
+        in
+        match read_operator cdp ~session with
+        | Error error -> Error error
+        | Ok (Snapshot_source.Payload after)
+          when snapshot.settled && after.marker = before.marker ->
+            remember snapshot after;
+            Ok (observation_of snapshot after)
+        | Ok _ -> if left > 1 then acquire ~loads (retry left) else Error (unsettled ()))
+  in
+  let pending_settle = ref None in
   let observe () =
-    let* snapshot =
-      snap_locked t tab
-        P.{ tab = args.tab; match_ = None; limit = Some 250; offset = None }
+    let* () =
+      match !pending_settle with
+      | None -> Ok ()
+      | Some autocomplete ->
+          pending_settle := None;
+          let at = now t in
+          let* () = Actions.operator_settle ~cdp view ~autocomplete in
+          add_ms meter.settle_ms at (now t);
+          Ok ()
     in
-    let* rendered =
-      Reading.text browser P.{ tab = args.tab; index = None; max_chars = Some 12_000 }
-    in
-    let* metrics =
-      Reading.eval browser
-        P.
-          {
-            tab = args.tab;
-            expression =
-              (* drive-y7v8: the document of a navigation in flight has no
-                     documentElement yet; without the guard the query throws, the
-                     observe fails, and the step after a navigation-ending action
-                     errors instead of observing the new page. *)
-              "return \
-               {y:scrollY,viewport:innerHeight,height:Math.max(document.documentElement?.scrollHeight||0,document.body?.scrollHeight||0)};";
-            argument = None;
-            index = None;
-            snapshot = None;
-          }
-    in
-    let value = metrics.value in
-    let number key =
-      match member key value with
-      | Some (`Int n) -> float_of_int n
-      | Some (`Float n) -> n
-      | _ -> 0.
-    in
-    let y, viewport, height = (number "y", number "viewport", number "height") in
-    let fingerprint =
-      Digest.to_hex
-        (Digest.string
-           (Yojson.Safe.to_string
-              (`List
-                 [
-                   str snapshot.url;
-                   str snapshot.title;
-                   str rendered.text;
-                   value;
-                   `List (List.map P.yojson_of_row snapshot.rows);
-                 ])))
-    in
-    Ok
-      Drive.
-        {
-          snapshot;
-          text = rendered.text;
-          can_scroll_down = y +. viewport < height -. 2.;
-          can_scroll_up = y > 0.;
-          fingerprint;
-        }
+    acquire ~loads:3 Snapshot_source.observe_attempts
+  in
+  let idle () =
+    P.
+      {
+        tab = args.tab;
+        url = tab.url;
+        title = tab.title;
+        snapshot = None;
+        dialog = tab.dialog;
+        popups = [];
+      }
+  in
+  let row_role page index =
+    match
+      List.find_opt (fun (row : P.row) -> row.index = index) page.Drive.snapshot.rows
+    with
+    | Some row -> row.role
+    | None -> ""
   in
   let act (page : Drive.observation) (choice : Jev_request.decision) ~text =
+    let* () = validate page in
     let snapshot = page.snapshot.snapshot in
     let index = Option.value ~default:0 choice.index in
+    let op = P.Operation.to_string choice.operation in
     match guard page.snapshot choice with
     | Some kind ->
         Error (error "invalid-request" ("discovery stopped before " ^ kind ^ " action"))
     | None -> (
-        match P.Operation.to_string choice.operation with
-        | "click" -> Actions.click ~cdp view P.{ tab = args.tab; snapshot; index }
-        | "select" ->
-            Actions.select ~cdp view
-              P.
-                {
-                  tab = args.tab;
-                  snapshot;
-                  index;
-                  option = Option.value ~default:0 choice.option;
-                }
-        | "scroll_down" ->
-            Actions.scroll ~cdp view
-              P.
-                {
-                  tab = args.tab;
-                  direction = enum P.Direction.of_string "down";
-                  index = None;
-                }
-        | "scroll_up" ->
-            Actions.scroll ~cdp view
-              P.
-                {
-                  tab = args.tab;
-                  direction = enum P.Direction.of_string "up";
-                  index = None;
-                }
-        | "wait" ->
-            t.sleep 0.5;
-            Ok
-              P.
-                {
-                  tab = args.tab;
-                  url = tab.url;
-                  title = tab.title;
-                  snapshot = None;
-                  dialog = tab.dialog;
-                  popups = [];
-                }
-        (* drive-ls3c: the helper's value is written with the same fill the [fill] command
-           uses — focus, select, Input.insertText, blur, settle — and the loop never calls
-           an act without one. *)
-        | "type_text" -> (
-            match text with
-            | Some value ->
-                Actions.fill ~cdp view P.{ tab = args.tab; snapshot; index; text = value }
-            | None ->
-                Error
-                  (error "internal" "a type_text step reached the browser without a value")
-            )
-        | _ -> Error (error "invalid-request" "unsupported drive operation"))
+        let started_act = now t in
+        let outcome =
+          match op with
+          | "click" ->
+              Actions.click ~settle_after:false ~cdp view
+                P.{ tab = args.tab; snapshot; index }
+          | "select" ->
+              Actions.select ~settle_after:false ~check_hit:true ~cdp view
+                P.
+                  {
+                    tab = args.tab;
+                    snapshot;
+                    index;
+                    option = Option.value ~default:0 choice.option;
+                  }
+          | "scroll_down" -> Actions.operator_scroll ~cdp view ~down:true
+          | "scroll_up" -> Actions.operator_scroll ~cdp view ~down:false
+          | "wait" ->
+              t.sleep Snapshot_source.wait_s;
+              Ok (idle ())
+          | "type_text" -> (
+              match text with
+              | Some value ->
+                  Actions.fill ~settle_after:false ~check_hit:true ~blur_after:false ~cdp
+                    view
+                    P.{ tab = args.tab; snapshot; index; text = value }
+              | None ->
+                  Error
+                    (error "internal"
+                       "a type_text step reached the browser without a value"))
+          | _ -> Error (error "invalid-request" "unsupported drive operation")
+        in
+        add_ms meter.input_ms started_act (now t);
+        match outcome with
+        | Ok acted when op <> "wait" ->
+            (* Return the acknowledged input before settlement so Drive records it
+               even if the next observation is cancelled or fails (fly-4mio). *)
+            pending_settle := Some (op = "type_text" && row_role page index = "combobox");
+            Ok acted
+        | other -> other)
   in
-  Drive.run
+  (* fly-4mio: acquire already retries ten times at 20 ms. One Drive attempt,
+     or the two loops would nest to a hundred observations. *)
+  Drive.run ~validate ~coverage ~usage:(usage meter) ~telemetry:(telemetry meter)
+    ~observe_attempts:1 ?recent
     ~handler:Drive.{ observe; decide; text_value; act }
     ~now:(fun () -> now t)
     ~model ~args
     ~dry_run:(Option.value ~default:false args.dry_run)
+    ()
 
 (* drive-8n2z: the public drive takes the tab's lock for the whole computation; the body
    above is what a caller that already holds it (the run's every step, run-d82w) uses. *)
-let drive ?decide ?text_helper t ~owner ~model (args : P.drive_args) =
+let drive ?decide ?text_helper ?meter ?recent t ~owner ~model (args : P.drive_args) =
   let* tab = peek t ~access:Act ~owner args.tab in
   with_tab_lock tab (fun () ->
       let* tab = locate t ~access:Act ~owner args.tab in
-      drive_locked ?decide ?text_helper t ~owner ~model tab args)
+      drive_locked ?decide ?text_helper ?meter ?recent t ~owner ~model tab args)
 
 (* L31 run-9ypy run-vj48 run-shgh run-fwl8, L32 run-m0r8: a mission over the installed
    playbooks, with the
@@ -2129,8 +2279,8 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable) ?discovery t ~owner ~tab ?installed
-    (args : P.run_args) =
+    ?(text_helper = fun () -> Text_helper.unavailable) ?discovery ?meter t ~owner ~tab
+    ?installed (args : P.run_args) =
   let handle = tab in
   let* tab = peek t ~access:Act ~owner handle in
   with_tab_lock tab (fun () ->
@@ -2313,6 +2463,9 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                   (fun question -> levels.Run.choose ~deadline:(remaining ()) question);
                 text_value =
                   (fun context ->
+                    (match meter with
+                    | Some meter -> clear_usage meter "text_helper"
+                    | None -> ());
                     (text_helper ()).Text_helper.complete ~deadline:(remaining ()) context);
                 step =
                   (fun request ->
@@ -2336,7 +2489,8 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                             | None -> Some "unrecognized target"
                             | Some row -> Run.unsafe_action (row.name ^ " " ^ row.role))
                     in
-                    drive_locked ~decide ~text_helper ~guard t ~owner ~model tab
+                    drive_locked ~recent:request.Run.recent ?meter ~decide ~text_helper
+                      ~guard t ~owner ~model tab
                       P.
                         {
                           tab = handle;

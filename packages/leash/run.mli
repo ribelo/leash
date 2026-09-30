@@ -3,22 +3,20 @@
 
     A mission is one sentence of human language. A playbook is a site's file of named
     procedures written in human language. The loop asks three levels of judgment through
-    JEV (uncertain playbook choices receive one bounded planner review): which playbook
-    serves the current part of the mission (asked at the start and when the site changes,
-    run-kli0), which procedure comes next (asked every turn over the small observed state,
-    run-qq3o run-pvmc), and the operator level that drives each step (run-d82w — exactly
-    the tested {!Drive} loop, one call per playbook step). Expectations are verified by
-    code where a checker applies and by a JEV score where only judgment can (run-tny5
-    run-vbys); DONE is accepted only against a fresh verification of the mission's own
-    expectations or, when the mission carries none, of the last verified procedure's
-    (run-4j1v, the guard L30's measurement demanded). When JEV stops — a BLOCKED answer, a
-    procedure that failed twice, an argument the mission does not supply — one planner
-    turn is asked (run-w7ke), up to a cap of three per run (run-obtt), whose answer is a
-    procedure to run now, a handoff, or a failure with its reason (run-rq6i); on its first
-    turn it may also attach the mission's own expectations, which the DONE guard then
-    verifies when the caller stated none (run-2tt3). A procedure the planner wrote that
-    ran and passed its expectations is proposed as a file under XDG state and reported,
-    never merged into a playbook (run-m0r8).
+    JEV with an authoritative NONE candidate (L45 fly-ab3f): which playbook serves the
+    current part of the mission (asked at the start and when the site changes, run-kli0),
+    which procedure comes next (asked every turn over the small observed state, run-qq3o
+    run-pvmc), and the operator level that drives each step (run-d82w — exactly the tested
+    {!Drive} loop, one call per playbook step). Expectations are verified by code where a
+    checker applies and by a JEV score where only judgment can (run-tny5 run-vbys); DONE
+    is accepted only against a fresh verification of the mission's own expectations or,
+    when the mission carries none, of the last verified procedure's (run-4j1v, the guard
+    L30's measurement demanded). No books, NONE, or a BLOCKED procedure choice continues
+    the full original mission on the current page through {!Drive}, preserving prior
+    actions and the remaining mission budget, without a planner (L45 fly-fu94 fly-prli).
+    Legacy authored-procedure failure recovery remains bounded; a verified recovery
+    proposal is reported, never merged into a book. Operator results are bounded page
+    evidence, not normalized script records.
 
     Everything is a handler: production ({!Tabs.run}), a scripted test and a dry run are
     this same computation with different handlers, and the run itself touches no browser,
@@ -66,6 +64,7 @@ type question = {
 type step_request = {
   goal : string;
   hint : string option;
+  recent : Jev_request.recent_action list;
   max_steps : int;
   deadline_s : int;
   dry_run : bool;
@@ -193,6 +192,8 @@ type handler = {
 
 type args = {
   mission : string;
+  max_steps : int;
+  start_url : string option;
   max_procedures : int;  (** Default 40 (run-vspj). *)
   deadline_s : int;  (** Default 900 (run-vspj). *)
   dry_run : bool;

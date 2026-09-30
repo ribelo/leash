@@ -2,34 +2,52 @@
 
 ## Choose drive for bounded browser work
 
-`leash drive MISSION` is the single mission entrypoint. It selects an installed site playbook, or falls back to the single-goal operator when none fits. There is **no `run` command**, and the current CLI is not `drive TAB GOAL`. Include the intended site, concrete result, and any needed values in the mission; do not delegate a broader action than the user authorized.
+`leash drive MISSION` is the single mission entrypoint. It works with no playbooks, one playbook, many playbooks, and only unrelated playbooks. There is **no `run` command**, and the CLI is not `drive TAB GOAL`. Include the concrete result and any needed values in the mission; do not delegate a broader action than the user authorized.
 
 ```sh
-leash drive 'Open https://example.com and show the Example Domain page'   --expect 'the page contains documentation examples'   --deadline-s 60 --max-procedures 3 --owner browser-example
+leash drive 'Open Travel and return the visible titles and prices' \
+  --url https://books.toscrape.com/ --out travel-state.jsonl --owner browser-example
+leash drive 'Complete this page search and open the matching result' \
+  --tab TAB --max-steps 60 --deadline-s 300 --owner browser-example
 ```
 
 | Option | Meaning |
 | --- | --- |
+| `--url URL` | Explicit `http://` or `https://` start, no userinfo. Opens a drive-owned tab. Does not replace an already populated `--tab`. A bad URL is `usage` and names this example; it does not wait for a prompt. |
 | `--tab TAB` | Reuse your owned tab and leave it open. Without it Leash opens a temporary tab and closes it when the mission ends, including errors; a human handoff keeps it open. `final` is the last snapshot, not a promise that its tab still exists. |
+| `--max-steps N` | On-the-fly executed-action cap, default 60. Must be a positive integer; 0 and negative are `usage`. The prediction cap is twice N. Not the playbook procedure cap. |
 | `--expect SENTENCE` | Repeatable expectations for the mission DONE guard, with or without a playbook. Prefer concrete, verifiable results. |
-| `--max-procedures N` | Mission procedure cap, default 40; not an operator step count. |
+| `--max-procedures N` | Playbook-lane procedure cap, default 40; not the operator action cap. |
 | `--deadline-s S` | Whole mission budget, default 900 seconds. |
-| `--out FILE` | Stream validated collected records as JSONL. Use a deliberate writable output path, not an existing valuable file. |
-| `--dry-run` | Ask the decision levels and show the choice/trace without navigation, actions, or scripts. Still makes billable model calls and may allocate a blank tab. |
+| `--out FILE` | Append tagged JSONL. `script-record` / `source: playbook` is a validated script record. `operator-state` / `source: operator` is one terminal bounded page observation. Use a deliberate writable path, not an existing valuable file. |
+| `--dry-run` | Observe and decide once. No navigation, input, text helper, or `--out` write. Still makes billable model calls and may allocate a blank tab. |
 
 `drive` holds the tab's action slot for the run; the CLI connection stays open until it returns. In a harness, use a tracked background job for a long mission, collect its result, and do independent work on other tabs in the meantime. Do not start another action/read on that tab while it is working. A missing model key or provider failure is `model-unavailable`; inspect its `detail.code` and partial trace before any retry. The service needs its own `OPENROUTER_API_KEY` or configured model credentials: setting a client shell variable does not update an already running systemd service. Do not print keys or change service credentials without authorization.
 
-Without a playbook, drive is a **single-goal UI operator**, not a collection planner. On a blank tab include exactly one explicit `http://` or `https://` URL; Leash opens that page before asking the operator. With `--tab`, it works from the current page. No URL or several URLs on a blank tab returns `blocked` with guidance rather than guessing a site. The operator can use visible controls and links but does not author extraction scripts or produce structured records for `--out`: install and test a collection playbook for that, or use `text`/bounded `eval` yourself.
+Playbook availability never blocks a usable browser task and never requires authoring a playbook first.
 
-A dry run is a plan check, not evidence that the page works. The no-playbook fallback also verifies supplied mission expectations on a fresh observation before accepting DONE; named page kinds require a playbook, so use concrete text, row, download or dialog expectations without one. After a live run inspect `status`, `reason`, `procedures` and their expectations, `mission_expectations`, and `final`. Protocol success/exit 0 can still contain `blocked`, `failed`, `handoff`, `limit`, `deadline`, or `error` rather than a completed mission. A fallback operator step cap is reported as `limit`. Even `done` needs an independent check of the requested outcome, especially an external submission or a collected dataset. Do not rerun a mission blindly after an uncertain dispatch.
+| Installed books | What happens |
+| --- | --- |
+| no-playbooks | No playbook question and no planner. The operator runs the whole mission. |
+| one-book | JEV is offered that book and `NONE`. A lone book is never forced. |
+| many-books | JEV chooses one book identity (`book:<file>`) or `NONE`. Unrelated procedures are not merged. |
+| none-matching | `NONE` enters the operator on the current page. It is not `BLOCKED`, not discovery, and not a planner review. A procedure-level `NONE` or `BLOCKED` falls through the same way. |
 
-An unmet expectation in the no-playbook operator returns `blocked` with the failed check; it does not call the planner or transfer ownership. In a playbook mission the planner may ask for the human; use the live headed tab, communicate what is needed, and follow [handoff/resume](browser.md). A dialog must be answered deliberately. A procedure's failed expectations or rejected script can cause the **whole procedure to replay once**; keep payment, messaging, deletion, and other non-idempotent submissions out of a retryable procedure unless their repetition is explicitly safe and authorized.
+On a blank tab pass `--url`, or include exactly one explicit `http://` or `https://` URL in the mission. Leash opens that page before the operator starts. With `--tab`, it works from the current page and does not replace an already populated page with `--url`. No URL or several URLs on a blank tab, and no `--url`, returns `blocked` with the missing-start reason. That is not a missing playbook and it makes no model call. Do not invent a search engine or ask JEV to navigate from `about:blank`.
+
+On the fly, the result is the operator's observed page state: URL, title, at most 6000 characters of viewport text, indexed elements and values, scroll and coverage bounds, action history, predictions and timings. `page.coverage` is a `+`-joined string, always starting with `viewport`, then only the flags that hold: `truncated`, `omitted`, `above`, `below`. That state is bounded. It is not every record across pagination or offscreen content, and it is not a validated script dataset. Visible titles and prices in that viewport do reach JEV and, on `TYPE_TEXT`, the text helper. Prepared script payloads still bypass every model.
+
+`--out` does not require a playbook. An on-the-fly file contains one `{"kind":"operator-state","source":"operator","state":...}` line. A playbook collector streams `{"kind":"script-record","source":"playbook",...}` lines. A mixed run writes both and lists both in `output_kinds`. Do not treat operator-state prose as normalized records. A dry run writes neither.
+
+A dry run is a plan check, not evidence that the page works. Supplied mission expectations are verified on a fresh observation before DONE is accepted; named page kinds require a playbook, so use concrete text, row, download or dialog expectations without one. After a live run inspect `status`, `reason`, `operator_state` (coverage included), `output_kinds`, `procedures` and their expectations, `mission_expectations`, and `final`. Protocol success/exit 0 can still contain `blocked`, `failed`, `handoff`, `limit`, `deadline`, or `error`. An operator action cap is `limit`. Even `done` is JEV's opinion unless expectations passed; check the requested outcome independently, especially an external submission. Repeating a form-submit mission is not idempotent: keep executed-input evidence and do not automatically rerun an uncertain mutation.
+
+An unmet expectation in the operator lane returns `blocked` with the failed check. It does not call the planner or transfer ownership. In a playbook mission the planner may still ask for the human when a selected procedure fails twice or an argument cannot be filled; use the live headed tab, communicate what is needed, and follow [handoff/resume](browser.md). A dialog must be answered deliberately. A procedure's failed expectations or rejected script can cause the **whole procedure to replay once**; keep payment, messaging, deletion, and other non-idempotent submissions out of a retryable procedure unless their repetition is explicitly safe and authorized.
 
 ## Inspect and test a playbook before relying on it
 
 Playbooks are installed at `$XDG_CONFIG_HOME/leash/playbooks/NAME/playbook.json` (normally `~/.config/leash/playbooks/NAME/playbook.json`), with their script files beside them. A standalone JSON file in the playbooks root is not the current format. Examples in this reference must be installed by the operator/agent when the task authorizes that configuration change; they are not guaranteed to ship on this machine.
 
-For structured collection, check `leash playbook list` before promising records: the no-playbook operator cannot collect JSONL. No site playbooks are installed automatically. Start with the complete example below, a trusted site playbook from the source checkout’s `examples/playbooks/` (for example `books.toscrape.com/` for catalogue collection), or a reviewed discovery proposal. Copy the whole example directory, including scripts, into the configured playbooks root only when authorized; run local validation and test its extraction on a permitted page before using `drive --out`.
+For validated, reusable records, check `leash playbook list` first. The on-the-fly operator can still return bounded page state without a book; it does not emit `script-record` lines. No site playbooks are installed automatically. Start with the complete example below, a trusted site playbook from the source checkout’s `examples/playbooks/` (for example `books.toscrape.com/` for catalogue collection), or a reviewed discovery proposal. Copy the whole example directory, including scripts, into the configured playbooks root only when authorized; run local validation and test its extraction on a permitted page before using playbook `drive --out`.
 
 | Command | What it does |
 | --- | --- |
@@ -110,15 +128,16 @@ Use native `navigate` plus extraction for pages that require browser navigation,
 
 ## Read data and cost evidence
 
-With `--out`, validated records stream as JSONL as collection completes. The reply keeps only up to five bounded samples, not the entire dataset. On failure the output may contain valid **partial** data; preserve it and report the incomplete run rather than presenting it as complete. Verify file records, uniqueness, expected bounds, and completeness against the task.
+With `--out`, read `kind` before interpreting a line. `script-record` lines stream as prepared collection completes. `operator-state` is one terminal object. The reply keeps only up to five bounded script samples, not the entire dataset, and always carries `operator_state` when the operator ran. On failure the file may contain valid **partial** script records or the last operator state; preserve it and report the incomplete run. Do not present a bounded viewport as a complete catalogue.
 
-- `collected` / `data.count`: collected record count; `data.first`: bounded sample.
+- `collected` / `data.count`: prepared script record count; `data.first`: bounded sample. Not a count invented from page prose.
 - `data.pages`: runner repeat pages, **not** internal fetch count. A one-shot fetch collector can correctly have zero repeat pages.
 - `data.scripts`: script names, calls, and record counts; procedure script traces include URL, bytes, elapsed time, and any error.
+- `output_kinds`: `script-record`, `operator-state`, both, or neither.
 - `model_calls`: actual attempted provider requests, including retries/failed attempts; `data.model_calls_by_kind` breaks them down by role.
-- `model_cost`: sum of costs **reported by providers**; `data.cost_unreported > 0` means a partial total, not free calls.
+- `data.reported_cost`: sum of costs providers returned. `model_cost` is that sum only when every counted call was priced; otherwise `model_cost` is `null`. `data.cost_unreported` counts the unpriced calls. `null` is unknown, not zero.
 
-Leash does not send collected script records to its models. Selection uses bounded semantic state and counts; prepared code does extraction. Report count, output location, verification, model-call count, and reported cost with the missing-cost caveat when relevant. `drive` has no `--max-cost` flag.
+Leash does not send prepared script records to its models. Viewport text, including visible records, does reach the operator and the text helper. Selection uses bounded semantic state and counts; prepared code does extraction. Report count or coverage, output location, verification, model-call count, and `model_cost` with the null caveat when relevant. `drive` has no `--max-cost` flag.
 
 ## Discover and review reusable procedures
 

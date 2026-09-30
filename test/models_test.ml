@@ -69,6 +69,21 @@ let detail_code (error : P.error) =
       match List.assoc_opt "code" fields with Some (`String code) -> code | _ -> "")
   | _ -> ""
 
+(* fly-8fgl: once a page exists, a provider failure is terminal evidence, not a
+   discarded protocol error. *)
+let evidence reply =
+  match reply with
+  | P.Failure error ->
+      Alcotest.failf "fly-8fgl discarded terminal evidence: %s" error.message
+  | P.Success json ->
+      let error =
+        match P.error_of_yojson (get "error" (get "operator_state" json)) with
+        | Ok error -> error
+        | Error why -> Alcotest.fail why
+      in
+      let steps = match get "operator_steps" json with `List steps -> steps | _ -> [] in
+      (json, error, steps)
+
 let detail_steps (error : P.error) =
   match error.detail with
   | Some (`Assoc fields) -> (
@@ -98,8 +113,9 @@ let document ~title ~url =
     ]
 
 (* The fixture is the recorded headless Chrome shape of a page with an unlabelled select,
-   a bare text input and a button (tab-zc36); the metric body is the one control_test's dry
-   run uses, so the drive observes a page it can scroll down. *)
+   a bare text input and a button (tab-zc36). The operator read is the Runtime.evaluate
+   whose expression contains leash-operator-read; its scroll height is the old metric
+   fixture, so the drive still observes a page it can scroll down. *)
 let script_page fake =
   let fixture = fixture "unlabelled-controls-chrome.json" in
   Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
@@ -114,20 +130,49 @@ let script_page fake =
       Fake.emit ~session fake ~method_:"Page.loadEventFired"
         ~params:(Fake.event "Page.loadEventFired");
       obj []);
+  let operator_observation =
+    obj
+      [
+        ("kind", str "leash-operator");
+        ("url", str "https://example.com/");
+        ("title", str "Example");
+        ("timeOrigin", `Int 1);
+        ("text", str "Example content");
+        ("truncated", `Bool false);
+        ("omitted", `Int 0);
+        ( "scroll",
+          obj
+            [
+              ("x", `Int 0);
+              ("y", `Int 0);
+              ("height", `Int 1000);
+              ("viewport", `Int 600);
+              ("width", `Int 800);
+            ] );
+        ("semantics", `List []);
+        ("guard", obj []);
+      ]
+  in
   Fake.on_method fake "Runtime.evaluate" (fun request ->
-      let params = get "params" request in
-      let expression = get "expression" params in
-      let value =
-        match expression with
-        | `String expression
-          when String.starts_with ~prefix:"Array.from(document.body?.innerText" expression
-          ->
-            str "Example content"
-        | _ -> get "guard" fixture
-      in
-      if expression = str "globalThis" then
-        obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
-      else obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]);
+      let expression = get "expression" (get "params" request) in
+      match expression with
+      | `String "globalThis" ->
+          obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
+      | `String expression when contains expression "leash-operator-read" ->
+          obj
+            [
+              ("result", obj [ ("type", str "object"); ("value", operator_observation) ]);
+            ]
+      | `String expression
+        when String.starts_with ~prefix:"Array.from(document.body?.innerText" expression
+        ->
+          obj
+            [
+              ("result", obj [ ("type", str "object"); ("value", str "Example content") ]);
+            ]
+      | _ ->
+          obj
+            [ ("result", obj [ ("type", str "object"); ("value", get "guard" fixture) ]) ]);
   Fake.on_method fake "Runtime.callFunctionOn" (fun _ ->
       obj
         [
@@ -304,6 +349,8 @@ let drive models tabs handle goal =
        {
          tab = Some handle;
          mission = goal;
+         max_steps = None;
+         start_url = None;
          max_procedures = Some 4;
          deadline_s = Some 30;
          dry_run = None;
@@ -415,20 +462,22 @@ let drive_to_done () =
       Alcotest.(check bool)
         "the key never reaches a log line" false
         (List.exists (fun line -> contains line key) logged);
-      (* drive-y7v8: the scroll-metrics query the drive observes with must not throw
-         on a document mid-navigation — one without a documentElement — or the step
-         after a navigation-ending action errors instead of observing the new page. *)
+      (* drive-y7v8 fly-iodm: scroll metrics now travel in the operator read, not a
+         separate callFunctionOn. The expression must still survive a document with no
+         documentElement, or the step after a navigation errors instead of observing. *)
       let metrics =
         Fake.received fake
         |> List.filter_map (fun call ->
             match field "method" call with
-            | Some (`String "Runtime.callFunctionOn") -> (
+            | Some (`String "Runtime.evaluate") -> (
                 match field "params" call with
-                | Some params -> field "functionDeclaration" params
+                | Some params -> field "expression" params
                 | None -> None)
             | _ -> None)
         |> List.filter (fun body ->
-            contains (match body with `String body -> body | _ -> "") "scrollHeight")
+            contains
+              (match body with `String body -> body | _ -> "")
+              "leash-operator-read")
       in
       Alcotest.(check bool)
         "drive-y7v8 the drive takes scroll metrics" true (metrics <> []);
@@ -495,14 +544,16 @@ let model_error () =
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
       let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
       let handle = new_tab tabs in
-      let error = failure (drive models tabs handle "Open the Wikipedia article") in
+      let json, error, steps =
+        evidence (drive models tabs handle "Open the Wikipedia article")
+      in
+      Alcotest.(check string) "fly-8fgl terminal status" "error" (text "status" json);
       check_code "drive-kh2u model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-kh2u the provider's kind" "unavailable" (detail_code error);
       Alcotest.(check bool)
         "drive-kh2u the message names the provider failure" true
         (contains error.message "HTTP 500");
-      let steps = detail_steps error in
       Alcotest.(check int) "drive-kh2u one completed step" 1 (List.length steps);
       Alcotest.(check string)
         "drive-kh2u the step that completed" "scroll_down"
@@ -521,7 +572,10 @@ let model_mismatch () =
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
       let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
       let handle = new_tab tabs in
-      let error = failure (drive models tabs handle "Open the Wikipedia article") in
+      let json, error, steps =
+        evidence (drive models tabs handle "Open the Wikipedia article")
+      in
+      Alcotest.(check string) "fly-8fgl terminal status" "error" (text "status" json);
       check_code "drive-e7oi model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-e7oi the substituted model" "model-mismatch" (detail_code error);
@@ -530,9 +584,7 @@ let model_mismatch () =
         (contains error.message "someone/else" && contains error.message jev_model);
       Alcotest.(check int)
         "drive-e7oi a substitution is not retried" 1 (Server.connections server);
-      Alcotest.(check int)
-        "drive-e7oi no step completed" 0
-        (List.length (detail_steps error)))
+      Alcotest.(check int) "drive-e7oi no step completed" 0 (List.length steps))
 
 (* ---------- drive-kh2u: a missing key fails fast, and status says so ---------- *)
 
@@ -559,13 +611,14 @@ let missing_key () =
         "the key is not in the status reply" false
         (contains (Yojson.Safe.to_string status) key);
       let handle = new_tab tabs in
-      let error = failure (drive models tabs handle "Open the Wikipedia article") in
+      let json, error, steps =
+        evidence (drive models tabs handle "Open the Wikipedia article")
+      in
+      Alcotest.(check string) "fly-8fgl terminal status" "error" (text "status" json);
       check_code "drive-kh2u model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-kh2u the reason is the missing key" "missing-key" (detail_code error);
-      Alcotest.(check int)
-        "drive-kh2u no step completed" 0
-        (List.length (detail_steps error));
+      Alcotest.(check int) "drive-kh2u no step completed" 0 (List.length steps);
       Alcotest.(check int) "drive-kh2u nothing was sent" 0 (Server.connections server))
 
 (* ---------- drive-yqxg: the endpoints are configurable and default to OpenRouter ---- *)
@@ -698,6 +751,8 @@ let provider_timeout ~attempt ~deadline ~succeeds () =
              {
                tab = Some handle;
                mission = "Finish";
+               max_steps = None;
+               start_url = None;
                max_procedures = Some 1;
                deadline_s = Some 30;
                dry_run = None;
@@ -707,7 +762,8 @@ let provider_timeout ~attempt ~deadline ~succeeds () =
       in
       if succeeds then ignore (result reply)
       else begin
-        let error = failure reply in
+        let json, error, _steps = evidence reply in
+        Alcotest.(check string) "fly-8fgl terminal status" "error" (text "status" json);
         check_code "daily-6pde retryable provider timeout" "model-timeout" error;
         Alcotest.(check string) "daily-9ggi timeout kind" "timeout" (detail_code error);
         Alcotest.(check string)

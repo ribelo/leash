@@ -103,7 +103,7 @@ let run ?(clock_step = 0.) ?(max_steps = 30) ?(deadline_s = 120) ?(dry_run = fal
       ~now:(fun () -> !time)
       ~model:"test-model"
       ~args:(args ~max_steps ~deadline_s ())
-      ~dry_run
+      ~dry_run ()
   in
   match reply with
   | Ok r -> (r, !actions, !calls)
@@ -137,7 +137,7 @@ let stall () =
 
 let cap () =
   let r, acts, _ = run ~max_steps:2 [ "click"; "click"; "done" ] in
-  check "drive-ix5t cap" "step-cap" (status r);
+  check "fly-vzzw DONE after last action" "done" (status r);
   Alcotest.(check int) "two actions" 2 acts
 
 let deadline () =
@@ -202,7 +202,7 @@ let with_text ?(rows = []) ?(refuse = fun _ -> false) operations answers =
     D.run
       ~handler:D.{ observe; decide; text_value; act }
       ~now:(fun () -> 0.)
-      ~model:"test-model" ~args:(args ()) ~dry_run:false
+      ~model:"test-model" ~args:(args ()) ~dry_run:false ()
   in
   (reply, List.rev !typed, List.rev !contexts, !actions)
 
@@ -283,17 +283,13 @@ let text_error () =
       [ Error failure ]
   in
   match reply with
-  | Ok _ -> Alcotest.fail "drive-ls3c a helper failure must be a protocol error"
-  | Error error ->
-      Alcotest.(check string)
-        "drive-ls3c the code" "model-unavailable"
-        (P.Error_code.to_string error.code);
-      let field key =
-        match error.detail with Some (`Assoc xs) -> List.assoc_opt key xs | _ -> None
-      in
-      Alcotest.(check int)
-        "drive-kh2u the completed step travels" 1
-        (match field "steps" with Some (`List xs) -> List.length xs | _ -> 0)
+  | Error error -> Alcotest.failf "fly-8fgl expected partial result: %s" error.message
+  | Ok result ->
+      check "fly-8fgl helper provider error" "error" (status result);
+      Alcotest.(check int) "fly-4mio completed step retained" 1 (List.length result.steps);
+      Alcotest.(check bool)
+        "fly-9e0f partial state retained" true
+        (Option.is_some result.operator_state)
 
 (* drive-ls3c: a refused (stale) act asks the helper again, and the loop hands it the same
    context — the helper is what reuses the answer, not the loop. *)
@@ -312,12 +308,12 @@ let type_text_stale () =
       Alcotest.(check int) "drive-ls3c two acts attempted" 2 actions;
       Alcotest.(check (list (option string)))
         "drive-ls3c the value is typed once" [ Some "alice" ] typed;
-      Alcotest.(check int) "drive-ls3c the helper is asked again" 2 (List.length contexts);
+      Alcotest.(check int)
+        "fly-gysl unchanged stale context is memoized" 1 (List.length contexts);
       (match contexts with
-      | [ first; second ] ->
-          Alcotest.(check bool)
-            "drive-ls3c the retry's context is unchanged" true (first = second)
-      | _ -> ());
+      | [ context ] ->
+          check "fly-gysl memo uses original mission" (args ()).goal context.goal
+      | _ -> Alcotest.fail "fly-gysl expected exactly one helper context");
       Alcotest.(check int)
         "drive-9y2s the stale decision is not a trace step" 2 (List.length r.steps)
 
@@ -354,24 +350,19 @@ let model_error ?(code = "model-unavailable") () =
       }
   in
   match
-    D.run ~handler ~now:(fun () -> 0.) ~model:"test-model" ~args:(args ()) ~dry_run:false
+    D.run ~handler
+      ~now:(fun () -> 0.)
+      ~model:"test-model" ~args:(args ()) ~dry_run:false ()
   with
-  | Ok _ -> Alcotest.fail "drive-kh2u must return protocol error"
-  | Error got ->
-      check "model error code" code (P.Error_code.to_string got.code);
-      let field k =
-        match got.detail with Some (`Assoc xs) -> List.assoc_opt k xs | _ -> None
-      in
-      Alcotest.(check (option string))
-        "daily-9ggi diagnostic call kind" (Some "jev")
-        (match field "model_kind" with Some (`String s) -> Some s | _ -> None);
-      Alcotest.(check (option string))
-        "error subtype" (Some "offline")
-        (match field "code" with Some (`String s) -> Some s | _ -> None);
+  | Error error -> Alcotest.failf "fly-8fgl expected terminal evidence: %s" error.message
+  | Ok result ->
+      check "fly-8fgl provider failure is distinct" "error" (status result);
       Alcotest.(check int)
-        "one completed step in detail" 1
-        (match field "steps" with Some (`List xs) -> List.length xs | _ -> 0);
-      Alcotest.(check int) "one action" 1 !actions
+        "fly-4mio one completed step retained" 1 (List.length result.steps);
+      Alcotest.(check bool)
+        "fly-9e0f terminal state" true
+        (Option.is_some result.operator_state);
+      Alcotest.(check int) "fly-4mio one action" 1 !actions
 
 let step_failure () =
   let internal =
@@ -411,7 +402,7 @@ let step_failure () =
       match
         D.run ~handler
           ~now:(fun () -> 0.)
-          ~model:"test-model" ~args:(args ()) ~dry_run:false
+          ~model:"test-model" ~args:(args ()) ~dry_run:false ()
       with
       | Error _ -> Alcotest.fail (label ^ " must return a drive status")
       | Ok r ->
@@ -426,8 +417,9 @@ let step_failure () =
             (label ^ " reason names the phase")
             true
             (contains reason
-               (if act_fails then "the click action failed"
-                else "observe after the action failed"));
+               (if act_fails then
+                  "the click action (outcome uncertain; not replayed) failed"
+                else "observe after executed action; not replayed failed"));
           Alcotest.(check bool)
             (label ^ " reason names the code")
             true (contains reason "internal"))
@@ -486,7 +478,7 @@ let dialog_popup_error () =
       match
         D.run ~handler
           ~now:(fun () -> 0.)
-          ~model:"test-model" ~args:(args ()) ~dry_run:false
+          ~model:"test-model" ~args:(args ()) ~dry_run:false ()
       with
       | Error e -> Alcotest.failf "%s: %s" label (P.Error_code.to_string e.code)
       | Ok r ->
@@ -497,6 +489,292 @@ let dialog_popup_error () =
       ("popup", None, [ popup ], "1 popup opened");
     ]
 
+(* L45 deterministic operator regressions. These use no model or browser service. *)
+let json_member key = function
+  | `Assoc fields -> List.assoc key fields
+  | _ -> Alcotest.fail key
+
+let state (result : P.drive_result) =
+  match result.operator_state with
+  | Some state -> state
+  | None -> Alcotest.fail "fly-9e0f missing state"
+
+let metric result key =
+  match json_member key (json_member "metrics" (state result)) with
+  | `Int value -> value
+  | _ -> Alcotest.fail key
+
+let fly_run ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
+    ?(usage = fun _ -> None) ?(dry_run = false) ?(max_steps = None)
+    ?(observe = fun () -> Ok (observation "Initial"))
+    ?(text_value = fun _ -> Alcotest.fail "unexpected helper") ~decide ~act () =
+  let handler = D.{ observe; decide; text_value; act } in
+  match
+    D.run ~validate ~coverage ~usage ~handler
+      ~now:(fun () -> 0.)
+      ~model:"test"
+      ~args:{ (args ()) with P.max_steps }
+      ~dry_run ()
+  with
+  | Ok result -> result
+  | Error error -> Alcotest.fail error.message
+
+let performed () =
+  P.
+    {
+      tab = handle;
+      url = "https://example.org";
+      title = "Initial";
+      snapshot = None;
+      dialog = None;
+      popups = [];
+    }
+
+let stale_error =
+  P.make_error
+    (match P.Error_code.of_string "stale-snapshot" with
+    | Ok code -> code
+    | Error _ -> assert false)
+    ~message:"changed"
+
+let fly_budgets () =
+  let calls = ref 0 in
+  let result =
+    fly_run
+      ~decide:(fun _ ->
+        incr calls;
+        Ok (decision (if !calls <= 60 then "wait" else "done")))
+      ~act:(fun _ _ ~text:_ -> Ok (performed ()))
+      ()
+  in
+  check "fly-hc3l default actions" "done" (status result);
+  Alcotest.(check int) "fly-hc3l sixty actual actions" 60 (metric result "actions");
+  Alcotest.(check int) "fly-vzzw one terminal after cap" 61 (metric result "predictions");
+  let result =
+    fly_run
+      ~decide:(fun _ -> Ok (decision "click"))
+      ~act:(fun _ _ ~text:_ -> Error stale_error)
+      ()
+  in
+  check "fly-fl7u stale predictions terminate" "step-cap" (status result);
+  Alcotest.(check int) "fly-fl7u default predictions" 120 (metric result "predictions");
+  Alcotest.(check int) "fly-hc3l stale is never executed" 0 (metric result "actions")
+
+let fly_helper_guard () =
+  let checks = ref 0 and helpers = ref 0 and calls = ref 0 in
+  let result =
+    fly_run
+      ~observe:(fun () -> Ok (observation ~rows:[ row 1 "Search" ] "Initial"))
+      ~validate:(fun _ ->
+        incr checks;
+        if !checks = 1 then Error stale_error else Ok ())
+      ~text_value:(fun _ ->
+        incr helpers;
+        Ok (Some "alice"))
+      ~decide:(fun _ ->
+        incr calls;
+        Ok
+          (decision
+             ?index:(if !calls <= 2 then Some 1 else None)
+             (if !calls <= 2 then "type_text" else "done")))
+      ~act:(fun _ _ ~text:_ -> Ok (performed ()))
+      ()
+  in
+  check "fly-gysl fresh helper" "done" (status result);
+  Alcotest.(check int) "fly-gysl no helper for stale decision" 1 !helpers;
+  Alcotest.(check int)
+    "fly-qr70 only TYPE_TEXT calls helper" 1 (metric result "text_calls");
+  let result =
+    fly_run ~dry_run:true
+      ~observe:(fun () -> Ok (observation ~rows:[ row 1 "Search" ] "Initial"))
+      ~decide:(fun _ -> Ok (decision ~index:1 "type_text"))
+      ~act:(fun _ _ ~text:_ -> Alcotest.fail "fly-9363 dry run dispatched")
+      ()
+  in
+  Alcotest.(check int)
+    "fly-9363 dry run never calls helper" 0 (metric result "text_calls")
+
+let fly_terminal_refresh () =
+  let observations = ref 0 and calls = ref 0 in
+  let result =
+    fly_run
+      ~observe:(fun () ->
+        incr observations;
+        Ok (observation (if !observations = 1 then "Initial" else "Changed")))
+      ~decide:(fun _ ->
+        incr calls;
+        Ok (decision "done"))
+      ~act:(fun _ _ ~text:_ -> Alcotest.fail "terminal input")
+      ()
+  in
+  Alcotest.(check int) "fly-vzzw stale terminal opinion re-decided" 2 !calls;
+  check "fly-vzzw final fresh evidence" "Changed" result.final.title;
+  Alcotest.(check int)
+    "fly-8fgl stale terminal is not an action" 0 (metric result "actions")
+
+let fly_observation_bound () =
+  let calls = ref 0 in
+  let result =
+    fly_run
+      ~observe:(fun () ->
+        incr calls;
+        if !calls > 1 then Error stale_error else Ok (observation "Initial"))
+      ~decide:(fun _ -> Ok (decision "click"))
+      ~act:(fun _ _ ~text:_ -> Ok (performed ()))
+      ()
+  in
+  Alcotest.(check int) "fly-4lmg ten attempts per acquisition" 11 !calls;
+  Alcotest.(check int)
+    "fly-4mio executed action survives observation failure" 1 (metric result "actions");
+  Alcotest.(check int) "fly-2pn7 action not duplicated" 1 (List.length result.steps);
+  check "fly-9e0f last valid page retained" "Initial" result.final.title
+
+let fly_structured_state () =
+  let result =
+    fly_run
+      ~coverage:(fun _ ->
+        `Assoc
+          [
+            ("coverage", `String "viewport+below");
+            ("omitted_elements", `Int 9);
+            ("text_truncated", `Bool true);
+          ])
+      ~usage:(fun kind ->
+        if kind = "operator" then
+          Some
+            (`Assoc
+               [
+                 ("input_tokens", `Int 4);
+                 ("output_tokens", `Int 2);
+                 ("cost", `Null);
+                 ("retries", `Int 1);
+               ])
+        else None)
+      ~decide:(fun _ -> Ok (decision "blocked"))
+      ~act:(fun _ _ ~text:_ -> Alcotest.fail "terminal input")
+      ()
+  in
+  let state = state result in
+  Alcotest.(check string)
+    "fly-g0uh explicit coverage" "viewport+below"
+    (match json_member "coverage" (json_member "page" state) with
+    | `String s -> s
+    | _ -> "");
+  let prediction =
+    match json_member "predictions" state with
+    | `List [ prediction ] -> prediction
+    | _ -> Alcotest.fail "prediction"
+  in
+  Alcotest.(check bool)
+    "fly-9e0f unknown cost is null" true
+    (json_member "cost" (json_member "usage" prediction) = `Null);
+  Alcotest.(check int)
+    "fly-u9eg prediction count retained" 1 (metric result "predictions");
+  Alcotest.(check int)
+    "fly-gn5z terminal state has no fake input" 0 (metric result "actions")
+
+let fly_blocked_frontier () =
+  let blocked =
+    {
+      (decision "blocked") with
+      J.operation_probabilities =
+        [ ("BLOCKED", 0.7); ("SCROLL_DOWN", 0.2); ("SCROLL_UP", 0.1) ];
+    }
+  in
+  let exercise ~start ~bottom ~max_steps ~dry_run =
+    let actions = ref 0 in
+    let result =
+      fly_run ~max_steps ~dry_run
+        ~observe:(fun () ->
+          Ok
+            {
+              (observation (string_of_int !actions)) with
+              D.can_scroll_down = (not bottom) || !actions = 0 || (start && !actions >= 2);
+              can_scroll_up =
+                (start && !actions = 0) || !actions = 1 || ((not bottom) && !actions > 0);
+            })
+        ~decide:(fun _ -> Ok blocked)
+        ~act:(fun _ choice ~text:_ ->
+          let expected = if bottom && !actions > 0 then "scroll_up" else "scroll_down" in
+          Alcotest.(check string)
+            "rescues only offered scroll" expected
+            (P.Operation.to_string choice.J.operation);
+          incr actions;
+          Ok (performed ()))
+        ()
+    in
+    (result, !actions)
+  in
+  let result, actions =
+    exercise ~start:false ~bottom:true ~max_steps:(Some 60) ~dry_run:false
+  in
+  check "seen page BLOCKED stands" "blocked" (P.Drive_status.to_string result.status);
+  Alcotest.(check int) "one unseen bottom rescue" 1 actions;
+  let first = List.hd result.steps in
+  Alcotest.(check (float 0.0001))
+    "original BLOCKED probability retained" 0.7
+    (match json_member "BLOCKED" first.P.probabilities.op with `Float p -> p | _ -> 0.);
+  let predictions =
+    match json_member "predictions" (state result) with `List xs -> xs | _ -> []
+  in
+  Alcotest.(check bool)
+    "raw BLOCKED prediction and rescue logged" true
+    (json_member "operation" (List.hd predictions) = `String "blocked"
+    && json_member "rescued_operation" (List.hd predictions) = `String "scroll_down");
+  let history =
+    match json_member "history" (state result) with `List xs -> xs | _ -> []
+  in
+  let rescue_entry = match history with entry :: _ -> entry | [] -> `Null in
+  Alcotest.(check bool)
+    "history keeps the rescue and the original BLOCKED probability" true
+    (json_member "model_operation" rescue_entry = `String "blocked"
+    && json_member "rescue" rescue_entry = `Bool true
+    && json_member "BLOCKED"
+         (json_member "op"
+            (json_member "probabilities" (json_member "step" rescue_entry)))
+       = `Float 0.7);
+  let _, actions =
+    exercise ~start:true ~bottom:true ~max_steps:(Some 60) ~dry_run:false
+  in
+  Alcotest.(check int) "unseen top follows unseen bottom" 2 actions;
+  let result, actions =
+    exercise ~start:false ~bottom:false ~max_steps:(Some 60) ~dry_run:false
+  in
+  Alcotest.(check int) "per-URL rescue budget" 3 actions;
+  check "bounded rescue terminates BLOCKED" "blocked"
+    (P.Drive_status.to_string result.status);
+  let _, actions =
+    exercise ~start:false ~bottom:false ~max_steps:(Some 1) ~dry_run:false
+  in
+  Alcotest.(check int) "rescues respect mission action cap" 1 actions;
+  let _, actions =
+    exercise ~start:false ~bottom:true ~max_steps:(Some 60) ~dry_run:true
+  in
+  Alcotest.(check int) "dry-run never rescues input" 0 actions
+
+let fly_unsupported () =
+  let unsupported = `List [ `String "iframe"; `String "canvas" ] in
+  let result =
+    fly_run
+      ~coverage:(fun _ -> `Assoc [ ("unsupported_states", unsupported) ])
+      ~decide:(fun request ->
+        Alcotest.(check bool)
+          "unsupported coverage reaches JEV" true
+          (json_member "unsupported_states"
+             (json_member "coverage" (json_member "state" (J.body request)))
+          = unsupported);
+        Ok (decision "blocked"))
+      ~act:(fun _ _ ~text:_ -> Alcotest.fail "terminal unsupported input")
+      ()
+  in
+  Alcotest.(check bool)
+    "terminal page reports unsupported states" true
+    (json_member "unsupported_states" (json_member "page" (state result)) = unsupported);
+  Alcotest.(check (option string))
+    "unsupported reason is explicit"
+    (Some "the operator found no available action; unsupported visible UI: iframe, canvas")
+    result.reason
+
 let () =
   Alcotest.run "drive"
     [
@@ -504,6 +782,13 @@ let () =
         List.map
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
+            ("fly-hc3l fly-fl7u fly-vzzw budgets", fly_budgets);
+            ("fly-vnf1 bounded BLOCKED frontier rescue", fly_blocked_frontier);
+            ("fly-g0uh unsupported partial evidence", fly_unsupported);
+            ("fly-gysl fly-qr70 fly-9363 helper guard", fly_helper_guard);
+            ("fly-vzzw fresh terminal", fly_terminal_refresh);
+            ("fly-4lmg fly-4mio fly-2pn7 observation bound", fly_observation_bound);
+            ("fly-g0uh fly-9e0f fly-u9eg fly-gn5z state", fly_structured_state);
             ("done", done_path);
             ("daily-9ggi blocked reasons", blocked_reasons);
             ("stall", stall);

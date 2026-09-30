@@ -1,0 +1,90 @@
+{
+  "case": "flights",
+  "attempt": 2,
+  "mission": "Find one-way flights from Zurich to London on Wednesday, November 18, 2026, for one adult in economy. If a consent page is in the way, accept it so the search can continue. Use the route fields, the one-way control, and the date picker, then search. Stop when matching flight options are visible. Do not select or book a flight.",
+  "start_url": "https://www.google.com/travel/flights?hl=en",
+  "playbooks": [],
+  "exit_code": 0,
+  "status": "done",
+  "reason": null,
+  "elapsed_s": 28.238,
+  "operator_elapsed_ms": 26440,
+  "steps": 13,
+  "history_steps": 12,
+  "operations": [
+    "scroll_down",
+    "click",
+    "type_text",
+    "click",
+    "type_text",
+    "click",
+    "click",
+    "click",
+    "click",
+    "click",
+    "click",
+    "click"
+  ],
+  "model_calls": 25,
+  "model_cost": 0.005384133999999999,
+  "model_calls_by_kind": {
+    "text_helper": 3,
+    "operator": 22
+  },
+  "planner_turns": 0,
+  "procedures": [],
+  "playbook_choices": [
+    {
+      "source": "route",
+      "key": "operator",
+      "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+    }
+  ],
+  "collected": 0,
+  "output_kinds": [
+    "operator-state"
+  ],
+  "rescues": [
+    {
+      "operation": "scroll_down",
+      "model_operation": "blocked",
+      "blocked_probability": 0.5,
+      "page_changed": true
+    }
+  ],
+  "checks": {
+    "search_page": true,
+    "one_way": true,
+    "origin": true,
+    "destination": true,
+    "date": true,
+    "results": true,
+    "not_booked": true,
+    "no_planner": true,
+    "no_book_route": true
+  },
+  "passed": true,
+  "evidence": {
+    "final_url": "https://www.google.com/travel/flights/search?tfs=CBwQAhooEgoyMDI2LTExLTE4agwIAxIIL20vMDg5NjZyDAgDEggvbS8wNGpwbEABSAFwAYIBCwj___________8BmAEC&hl=en",
+    "rescues": [
+      {
+        "operation": "scroll_down",
+        "model_operation": "blocked",
+        "blocked_probability": 0.5,
+        "page_changed": true
+      }
+    ],
+    "title": "Zürich to London | Google Flights"
+  },
+  "isolation": {
+    "runtime_mode": "0o700",
+    "socket_dir_mode": "0o700",
+    "socket_mode": "0o600",
+    "profile_mode": "0o700",
+    "socket": "/tmp/leash-l45-GF0fCE/runtime/leash/control.sock",
+    "profile": "/tmp/leash-l45-GF0fCE/profile",
+    "config": "/tmp/leash-l45-GF0fCE/config/leash/config.toml",
+    "chrome_left": []
+  },
+  "stderr_tail": ""
+}
