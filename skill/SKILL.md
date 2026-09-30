@@ -11,7 +11,7 @@ This skill supplies operating guidance, not permission to submit forms, buy, sen
 
 ## Start with a stable owner
 
-Run `leash status`, then open your own tab or identify a permitted existing one. Commands use `--owner NAME`; when omitted, `DSH_SESSION_ID` supplies `dsh:<session-id>`. Keep the same owner across calls. Without either, service commands fail. Use a distinct explicit name outside DSH; do not borrow another agent's owner.
+Run `leash status`, then open your own tab or identify a permitted existing one. Commands use `--owner NAME`; when omitted, `DSH_SESSION_ID` supplies `dsh:<session-id>`. Keep the same owner across calls. If `list --all` shows someone else owns the tab, open your own with `leash new URL` or ask that owner to release it; do not impersonate them. Without either, service commands fail. Use a distinct explicit name outside DSH; do not borrow another agent's owner.
 
 For example, with an explicit owner (replace this name for your session):
 
@@ -37,7 +37,7 @@ Read only the reference needed for the current task; resolve these paths relativ
 
 ## Observe, act, verify
 
-Use `snap` to obtain the current `snapshot` ID and actual row indices. Match role, name, value, and state to the intended control. Targeted input takes that snapshot ID; selectors, guessed indices, and coordinates are not substitutes. After navigation, input, or human intervention, take a fresh snapshot before the next row action. Action replies do not contain a fresh snapshot.
+Use `snap` to obtain the current `snapshot` ID and actual row indices. Match role, name, value, and state to the intended control. Targeted input takes that snapshot ID; selectors, guessed indices, and coordinates are not substitutes. After navigation, input, or human intervention, take a fresh snapshot before the next row action. Action replies do not contain a fresh snapshot. `stale-snapshot` also covers a changed, removed, or navigated-away target row; refresh both the ID and the observed row index.
 
 Prefer `text` for reading, `shot` for visual evidence, and `net` / `debug` for browser failures. Use `eval` for a necessary one-off DOM query; its argument is a **function body**, such as `return document.title`. Indexed eval needs both `--index` and `--snapshot`. For repeated collection, use a validated playbook script instead.
 

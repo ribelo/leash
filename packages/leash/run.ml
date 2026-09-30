@@ -338,21 +338,19 @@ let finish (st : state) status ?reason () =
 (* drive-y7v8's rule for a run: a model failure carries the work it had done when it
    failed, so a failed mission is auditable. *)
 let with_trace (st : state) (error : P.error) =
-  if P.Error_code.to_string error.P.code <> "model-unavailable" then error
+  if not (List.mem (P.Error_code.to_string error.P.code) ["model-unavailable"; "model-timeout"]) then error
   else
-    let kind =
+    let fields =
       match error.P.detail with
-      | Some (`Assoc fields) -> (
-          match List.assoc_opt "code" fields with Some json -> json | None -> `String "unavailable")
-      | _ -> `String "unavailable"
+      | Some (`Assoc fields) -> fields
+      | _ -> ["code", `String "unavailable"]
     in
     {
       error with
       P.detail =
         Some
           (`Assoc
-            [
-              ("code", kind);
+            ([
               ( "site",
                 match st.book with
                 | Some book -> `String book.Playbook.playbook.Playbook.site
@@ -363,7 +361,7 @@ let with_trace (st : state) (error : P.error) =
               ( "playbook_choices",
                 `List
                   (List.map P.yojson_of_playbook_choice (List.rev st.playbook_choices)) );
-            ]);
+            ] @ fields));
     }
 
 type step_result = Continue of state | Finish of P.run_result
@@ -1262,6 +1260,11 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
         if List.for_all (fun (result : P.run_expectation) -> result.P.passed) results then
           Ok (Finish (finish st (status "done") ()))
         else if auto then Ok (Continue st)
+        else if st.book = None then
+          (* daily-9ggi: no-playbook verification is not a planning problem or
+             a request for a human. Return control without changing ownership. *)
+          Ok (Finish (finish st (status "blocked")
+            ~reason:(Printf.sprintf "DONE was refused: %s" (failures results)) ()))
         else
           planner st ~trigger:Blocked
             ~reason:(Printf.sprintf "DONE was refused: %s" (failures results))
@@ -1315,6 +1318,26 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
   (* extr-andy: a "none" playbook delegates the entire mission to the existing
      operator loop, not to the planner. It uses the same tab and action lock. *)
   and single_goal (st : state) =
+    (* daily-9ggi: JEV's row-action vocabulary cannot navigate an empty page.
+       Bootstrap only a single explicit HTTP(S) URL, never a model-invented URL
+       or a choice between several sites. Existing tabs keep their current page. *)
+    let urls =
+      String.map (function '\n' | '\r' | '\t' | '\'' | '"' | '<' | '>' | '(' | ')' -> ' ' | c -> c) args.mission
+      |> String.split_on_char ' '
+      |> List.filter (fun word -> String.starts_with ~prefix:"https://" word || String.starts_with ~prefix:"http://" word)
+      |> List.sort_uniq String.compare
+    in
+    if st.observation.url = "about:blank" && not args.dry_run then
+      match urls with
+      | [url] ->
+          Result.bind (navigate t url) (fun () ->
+            Result.bind (observe t ()) (fun observation ->
+              single_goal_operator { st with observation }))
+      | _ -> Ok (Finish (finish st (status "blocked")
+          ~reason:"no starting page: provide one explicit http:// or https:// URL in the mission, or use --tab on an open page" ()))
+    else single_goal_operator st
+
+  and single_goal_operator (st : state) =
     let request =
       { goal = args.mission; hint = None; max_steps = 30;
         deadline_s = remaining (); dry_run = args.dry_run }

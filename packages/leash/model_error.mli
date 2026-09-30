@@ -11,8 +11,13 @@ val unavailable : ?code:string -> string -> Protocol.error
     (["unavailable"] by default). It is how a refusal that no provider produced is
     reported — a missing key, a reply that did not shape, a text that cannot be typed. *)
 
-val of_eta : Ox_ai.Error.t -> Protocol.error
-(** [of_eta error] is the protocol's [model-unavailable] for an AI client failure:
-    [detail.code] is [error]'s kind (["unavailable"], ["timeout"], ["authentication"],
+val with_kind : string -> Protocol.error -> Protocol.error
+(** Add [detail.model_kind] at the model wiring boundary (daily-6pde). *)
+
+val of_eta : ?kind:string -> Ox_ai.Error.t -> Protocol.error
+(** [of_eta error] is the protocol's [model-unavailable] for an AI client failure: A
+    timeout is [model-timeout] (retryable, exit 75); other failures remain
+    [model-unavailable]. [kind], when supplied, adds [detail.model_kind]. [detail.code] is
+    [error]'s kind (["unavailable"], ["timeout"], ["authentication"],
     ["invalid-response"], ["input-too-large"] or ["model-mismatch"]) and the message is
     {!Ox_ai.Error.to_string}'s provider sentence. *)

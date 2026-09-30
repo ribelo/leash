@@ -116,6 +116,20 @@ let done_path () =
   Alcotest.(check int) "drive-4zlp action" 1 acts;
   check "final" "Changed1" r.final.title
 
+let blocked_reasons () =
+  List.iter
+    (fun (choices, dry_run, fragment) ->
+      let result, _, _ = run ~dry_run choices in
+      check "daily-9ggi blocked status" "blocked" (status result);
+      Alcotest.(check bool)
+        "daily-9ggi blocked reason identifies cause" true
+        (contains (Option.value ~default:"" result.P.reason) fragment))
+    [
+      ([ "blocked" ], false, "no available action");
+      ([ "click"; "click"; "click" ], false, "without changing");
+      ([ "click" ], true, "dry run");
+    ]
+
 let stall () =
   let r, acts, _ = run [ "click"; "click"; "click"; "done" ] in
   check "drive-4bhg stall" "blocked" (status r);
@@ -307,14 +321,12 @@ let type_text_stale () =
       Alcotest.(check int)
         "drive-9y2s the stale decision is not a trace step" 2 (List.length r.steps)
 
-let model_error () =
+let model_error ?(code = "model-unavailable") () =
   let count = ref 0 and actions = ref 0 in
   let error =
     P.make_error
-      ~detail:(`Assoc [ ("code", `String "offline") ])
-      (match P.Error_code.of_string "model-unavailable" with
-      | Ok x -> x
-      | Error _ -> assert false)
+      ~detail:(`Assoc [ ("code", `String "offline"); ("model_kind", `String "jev") ])
+      (match P.Error_code.of_string code with Ok x -> x | Error _ -> assert false)
       ~message:"model offline"
   in
   let handler =
@@ -346,10 +358,13 @@ let model_error () =
   with
   | Ok _ -> Alcotest.fail "drive-kh2u must return protocol error"
   | Error got ->
-      check "model error code" "model-unavailable" (P.Error_code.to_string got.code);
+      check "model error code" code (P.Error_code.to_string got.code);
       let field k =
         match got.detail with Some (`Assoc xs) -> List.assoc_opt k xs | _ -> None
       in
+      Alcotest.(check (option string))
+        "daily-9ggi diagnostic call kind" (Some "jev")
+        (match field "model_kind" with Some (`String s) -> Some s | _ -> None);
       Alcotest.(check (option string))
         "error subtype" (Some "offline")
         (match field "code" with Some (`String s) -> Some s | _ -> None);
@@ -490,6 +505,7 @@ let () =
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
             ("done", done_path);
+            ("daily-9ggi blocked reasons", blocked_reasons);
             ("stall", stall);
             ("cap", cap);
             ("deadline", deadline);
@@ -498,7 +514,9 @@ let () =
             ("drive-ls3c type-text missing", type_text_missing);
             ("drive-kh2u type-text error", text_error);
             ("drive-ls3c type-text stale", type_text_stale);
-            ("drive-kh2u model-error", model_error);
+            ("drive-kh2u model-error", fun () -> model_error ());
+            ( "daily-9ggi timeout retains trace",
+              fun () -> model_error ~code:"model-timeout" () );
             ("drive-y7v8 step-error", step_failure);
             ("drive-n3ld dialog and popup name the cause", dialog_popup_error);
           ] );

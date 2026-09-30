@@ -41,14 +41,20 @@ type t = {
     helper cannot outlast the reply the client waits for (drive-ix5t). *)
 
 val create :
-  client:Ox_ai_chat.t -> model:string -> logger:Ox_observability.Logger.t -> unit -> t
-(** [create ~client ~model ~logger ()] is the helper over the service's one chat client,
-    for the configured [model]. One instance serves one drive: it remembers the context it
-    last answered and reuses that answer when the identical context comes back — what a
-    stale-page retry is (drive-ls3c) — so an instance must not outlive the drive it
-    served. Cheap and synchronous: no I/O, no socket, nothing to release. Every answered
-    call is logged at info with the model, tokens and reported cost (drive-7tvn); a memo
-    reuse makes no call and logs nothing. *)
+  client:Ox_ai_chat.t ->
+  now:(unit -> float) ->
+  model:string ->
+  logger:Ox_observability.Logger.t ->
+  unit ->
+  t
+(** [create ~client ~now ~model ~logger ()] is the helper over the service's one chat
+    client, for the configured [model]. One instance serves one drive: it remembers the
+    context it last answered and reuses that answer when the identical context comes back
+    — what a stale-page retry is (drive-ls3c) — so an instance must not outlive the drive
+    it served. Cheap and synchronous: no I/O, no socket, nothing to release. Every
+    answered call is logged at info with the model, tokens and reported cost (drive-7tvn);
+    a memo reuse makes no call and logs nothing. [now] is the client clock; correction
+    calls receive only the remaining caller budget (daily-9ggi). *)
 
 val unavailable : t
 (** The L19 refusal for a drive that was given no text helper at all: every call is

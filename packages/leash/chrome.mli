@@ -33,7 +33,13 @@ type event =
 
 type phase = [ `Running | `Restarting | `Gave_up | `Stopped ]
 
-type status = { generation : int; phase : phase; failure : string option; headed : bool }
+type status = {
+  generation : int;
+  phase : phase;
+  failure : string option;
+  headed : bool;
+  pid : int option;
+}
 (** What [leash status] reports: the last generation counted by the supervisor, whether
     Chrome is running or restarting, after a give-up why, and whether this service
     launched a headed browser (daily-a341 daily-smli). *)

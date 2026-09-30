@@ -715,6 +715,104 @@ let fill () =
         (request tabs "alice"
            (P.Fill { tab = handle; snapshot = id; index = 1; text = "x" })))
 
+(* daily-9ggi: native temporal inputs need their value setter, not insertText. *)
+let temporal_fill () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let time_ax =
+        o
+          [
+            ( "nodes",
+              E.array
+                (List.map
+                   (fun node ->
+                     if integer "backendDOMNodeId" node = 12 then
+                       match node with
+                       | `Assoc fields ->
+                           `Assoc
+                             (("role", o [ ("value", s "InputTime") ])
+                             :: List.remove_assoc "role" fields)
+                       | _ -> node
+                     else node)
+                   (list (member "nodes" ax_page))) );
+          ]
+      in
+      Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> time_ax);
+      Fake.on_method fake "Accessibility.getPartialAXTree" (fun _ ->
+          o
+            [
+              ( "nodes",
+                E.array
+                  [
+                    o
+                      [
+                        ("role", o [ ("value", s "InputTime") ]);
+                        ("name", o [ ("value", s "Name") ]);
+                      ];
+                  ] );
+            ]);
+      Fake.on_method fake "DOM.describeNode" (fun _ ->
+          o
+            [
+              ( "node",
+                o
+                  [
+                    ("nodeId", i 102);
+                    ("backendNodeId", i 12);
+                    ("nodeName", s "INPUT");
+                    ("attributes", E.array [ s "type"; s "time" ]);
+                  ] );
+            ]);
+      Fake.on_method fake "DOM.resolveNode" (fun request ->
+          Alcotest.(check int)
+            "daily-9ggi resolves the time row backend" 12
+            (integer "backendNodeId" (params request));
+          o [ ("object", o [ ("objectId", s "temporal-12") ]) ]);
+      let outcome = ref "ok" in
+      Fake.on_method fake "Runtime.callFunctionOn" (fun request ->
+          let p = params request in
+          Alcotest.(check string)
+            "daily-9ggi acts on resolved temporal element" "temporal-12"
+            (text "objectId" p);
+          let fn = text "functionDeclaration" p in
+          List.iter
+            (fun needle ->
+              Alcotest.(check bool)
+                ("daily-9ggi temporal setter " ^ needle)
+                true (contains fn needle))
+            [
+              "setter.call(this, probe.value)";
+              "new Event('input'";
+              "new Event('change'";
+              "text !== '' && probe.value === ''";
+              "this.value === probe.value";
+            ];
+          o [ ("result", o [ ("value", s !outcome) ]) ]);
+      let handle = new_tab tabs in
+      let fill value =
+        let id = snapshot_id (snap tabs handle) in
+        request tabs "alice"
+          (P.Fill { tab = handle; snapshot = id; index = 2; text = value })
+      in
+      ignore (result (fill "12:30"));
+      Alcotest.(check int)
+        "daily-9ggi segmented input bypasses insertText" 0
+        (List.length (calls fake "Input.insertText"));
+      let invocation = List.hd (calls fake "Runtime.callFunctionOn") |> params in
+      Alcotest.(check string)
+        "daily-9ggi caller value stays a CDP argument" "12:30"
+        (text "value" (List.hd (list (member "arguments" invocation))));
+      outcome := "invalid";
+      check_code "daily-9ggi invalid temporal value is not false success"
+        "invalid-request" (fill "not a time");
+      outcome := "readonly";
+      check_code "daily-9ggi readonly temporal input is refused" "row-not-actionable"
+        (fill "12:30");
+      outcome := "rejected";
+      check_code "daily-9ggi rejected value is not false success" "invalid-request"
+        (fill "12:30"))
+
 (* tab-luo5 *)
 let press () =
   rig (fun _ _ _ tabs fake ->
@@ -1543,6 +1641,7 @@ let () =
           Alcotest.test_case "tab-bw4j scrolled document hit" `Quick scrolled_click;
           Alcotest.test_case "tab-1lhx" `Quick never_retried;
           Alcotest.test_case "tab-p3x1 0lax" `Quick fill;
+          Alcotest.test_case "daily-9ggi native temporal fill" `Quick temporal_fill;
           Alcotest.test_case "tab-luo5" `Quick press;
           Alcotest.test_case "tab-5deq" `Quick select;
           Alcotest.test_case "tab-5deq tab-zc36 the observed options" `Quick

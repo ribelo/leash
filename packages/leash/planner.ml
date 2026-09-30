@@ -251,7 +251,7 @@ let decode (request : Run.plan_request) content : (Run.plan_reply, string) resul
 (* run-rq6i: one turn is at most two calls — the answer, and, when it did not decode, the
    same conversation with the reply and its refusal shown back. What the turn cost is the
    sum of what its calls cost (run-obtt). *)
-let create ~client ~model ~reasoning ~logger () =
+let create ~now ~client ~model ~reasoning ~logger () =
   let reasoning =
     match String.lowercase_ascii (trim reasoning) with
     | "none" | "off" | "disabled" -> `Disabled
@@ -269,14 +269,13 @@ let create ~client ~model ~reasoning ~logger () =
         Model_usage.report "planner" completion.Ox_ai_chat.Codecs.usage.cost;
         Ok completion
   in
-  (* run-obtt: the correction call is bounded by the planner's own default deadline as
-     well as by what the caller gave, so a turn can never outlast the listener budget the
-     run answers within: the first call already has whatever is left of the run, and the
-     retry is small by construction. *)
-  let retry_deadline (deadline : Ox.Duration.t) =
-    Ox.Duration.min deadline default_deadline
-  in
   let plan ?(deadline = default_deadline) (request : Run.plan_request) =
+    (* daily-9ggi: a correction spends the same turn budget, not a fresh one. *)
+    let expires = now () +. Ox.Duration.to_seconds deadline in
+    let retry_deadline () =
+      Ox.Duration.min default_deadline
+        (Ox.Duration.of_seconds (max 0. (expires -. now ())))
+    in
     let open Ox_ai_chat.Types in
     let messages =
       [
@@ -297,7 +296,11 @@ let create ~client ~model ~reasoning ~logger () =
                   { role = User; content = Questions.planner_retry why };
                 ]
             in
-            match ask ~deadline:(retry_deadline deadline) retry with
+            let remaining = retry_deadline () in
+            match
+              if Ox.Duration.is_zero remaining then Error (Model_error.of_eta `Timeout)
+              else ask ~deadline:remaining retry
+            with
             | Error error -> Error error
             | Ok second -> (
                 match decode request second.Ox_ai_chat.Codecs.content with

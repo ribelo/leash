@@ -665,6 +665,237 @@ jev_model = "jev-latest"
         "the key is not in the models status" false
         (contains (Yojson.Safe.to_string (P.yojson_of_models_status status)) key))
 
+(* daily-9ggi daily-6pde: per-attempt timeouts are not the mission budget. A
+   healthy slow reply must survive raising only the relevant model timeout; a
+   short caller deadline still bounds both attempts and backoff. *)
+let seconds n =
+  match Config.Seconds.of_int n with Ok n -> n | Error why -> Alcotest.fail why
+
+let provider_timeout ~attempt ~deadline ~succeeds () =
+  rig (fun env sw tabs fake logger _ ->
+      script_page fake;
+      let server =
+        Server.serve ~net:env#net ~sw (fun request ->
+            Eio.Time.sleep env#clock 1.3;
+            Server.ok
+              (answer ~model:jev_model ~choice:"DONE"
+                 (Yojson.Safe.from_string request.Server.body)))
+      in
+      let config =
+        {
+          (models_config ~endpoint:(Server.url server "/systemone") ()) with
+          jev_timeout = seconds attempt;
+        }
+      in
+      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let handle = new_tab tabs in
+      let started = Eio.Time.now env#clock in
+      let reply =
+        raw ~model:jev_model
+          ~decide:(fun ~deadline:_ request -> Models.decide ~deadline models request)
+          tabs
+          (P.Drive
+             {
+               tab = Some handle;
+               mission = "Finish";
+               max_procedures = Some 1;
+               deadline_s = Some 30;
+               dry_run = None;
+               expect = None;
+               out = None;
+             })
+      in
+      if succeeds then ignore (result reply)
+      else begin
+        let error = failure reply in
+        check_code "daily-6pde retryable provider timeout" "model-timeout" error;
+        Alcotest.(check string) "daily-9ggi timeout kind" "timeout" (detail_code error);
+        Alcotest.(check string)
+          "daily-9ggi timed-out model" "jev"
+          (text "model_kind" (Option.get error.detail));
+        Alcotest.(check bool)
+          "daily-6pde timeout does not blame the key" false
+          (contains error.hint "API_KEY");
+        Alcotest.(check bool)
+          "daily-9ggi total deadline bounds retries" true
+          (Eio.Time.now env#clock -. started < Ox.Duration.to_seconds_float deadline +. 1.);
+        Alcotest.(check int)
+          "daily-9ggi bounded attempts"
+          (if attempt = 1 then 2 else 1)
+          (Server.connections server)
+      end)
+
+let chat_timeout ~kind ~attempt ~expected () =
+  rig (fun env sw _ _ logger _ ->
+      let server =
+        Server.serve ~net:env#net ~sw (fun _ ->
+            Eio.Time.sleep env#clock 1.3;
+            Server.failure 401 "invalid test key")
+      in
+      let config =
+        {
+          (models_config ()) with
+          chat_base_url = text_value (Server.url server "");
+          planner_endpoint = Some (text_value (Server.url server "/planner"));
+          jev_timeout = seconds 1;
+          text_timeout = seconds (if kind = "text" then attempt else 1);
+          planner_timeout = seconds (if kind = "planner" then attempt else 1);
+        }
+      in
+      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let deadline = Ox.Duration.seconds 5 in
+      let reply =
+        if kind = "text" then
+          Result.map
+            (fun _ -> ())
+            ((Models.text_helper models).complete ~deadline
+               {
+                 Leash.Text_helper.goal = "fill";
+                 field = { label = "Name"; role = "textbox"; value = "" };
+                 page_title = "Form";
+                 page_text = "Name";
+                 recent = [];
+               })
+        else
+          Result.map
+            (fun _ -> ())
+            ((Models.levels models).plan ~deadline
+               {
+                 Leash.Run.trigger = Blocked;
+                 reason = "blocked";
+                 mission = "collect";
+                 site = None;
+                 playbook = None;
+                 recent = [];
+                 arguments = [];
+                 page_kind = None;
+                 title = "Books";
+                 url = "https://example.com";
+                 text = "Books";
+               })
+      in
+      let error =
+        match reply with Error error -> error | Ok _ -> Alcotest.fail "expected failure"
+      in
+      Alcotest.(check string)
+        "daily-9ggi independent client budget" expected (detail_code error);
+      Alcotest.(check string)
+        "daily-9ggi identifies client kind" kind
+        (text "model_kind" (Option.get error.detail));
+      Alcotest.(check int)
+        "daily-9ggi bounded retries; no auth retry"
+        (if expected = "timeout" then 2 else 1)
+        (Server.connections server))
+
+(* daily-9ggi: a formatting correction shares the original total budget. *)
+let text_correction_budget ~deadline ~succeeds () =
+  rig (fun env sw _ _ logger _ ->
+      let calls = ref 0 in
+      let server =
+        Server.serve ~net:env#net ~sw (fun _ ->
+            incr calls;
+            Eio.Time.sleep env#clock 0.25;
+            let content = if !calls = 1 then "not json" else {|{"text":"hello"}|} in
+            Server.ok
+              (Yojson.Safe.to_string
+                 (obj
+                    [
+                      ("id", str "test");
+                      ("model", str text_model);
+                      ( "choices",
+                        `List
+                          [
+                            obj
+                              [
+                                ("index", `Int 0);
+                                ("finish_reason", str "stop");
+                                ( "message",
+                                  obj
+                                    [
+                                      ("role", str "assistant"); ("content", str content);
+                                    ] );
+                              ];
+                          ] );
+                      ( "usage",
+                        obj
+                          [
+                            ("prompt_tokens", `Int 1);
+                            ("completion_tokens", `Int 1);
+                            ("total_tokens", `Int 2);
+                          ] );
+                    ])))
+      in
+      let config =
+        { (models_config ()) with chat_base_url = text_value (Server.url server "") }
+      in
+      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let reply =
+        (Models.text_helper models).complete ~deadline
+          {
+            Leash.Text_helper.goal = "fill";
+            field = { label = "Name"; role = "textbox"; value = "" };
+            page_title = "Form";
+            page_text = "Name";
+            recent = [];
+          }
+      in
+      (match reply with
+      | Ok value when succeeds ->
+          Alcotest.(check (option string)) "corrected" (Some "hello") value
+      | Error error when not succeeds ->
+          check_code "daily-9ggi correction cannot refresh deadline" "model-timeout" error
+      | _ -> Alcotest.fail "unexpected correction outcome");
+      Alcotest.(check int) "daily-9ggi one bounded correction" 2 !calls)
+
+let timeout_config () =
+  let json =
+    obj
+      [
+        ( "models",
+          obj
+            [
+              ("jev_timeout", `Int 4);
+              ("text_timeout", `Int 7);
+              ("planner_timeout", `Int 90);
+            ] );
+      ]
+  in
+  let config =
+    match Config.t_of_yojson json with Ok c -> c | Error e -> Alcotest.fail e
+  in
+  Alcotest.(check (list int))
+    "daily-9ggi independent budgets" [ 4; 7; 90 ]
+    (List.map Config.Seconds.to_int
+       [
+         config.models.jev_timeout;
+         config.models.text_timeout;
+         config.models.planner_timeout;
+       ]);
+  List.iter
+    (fun name ->
+      let json = obj [ ("models", obj [ (name, `Int 0) ]) ] in
+      Alcotest.(check bool)
+        "daily-9ggi rejects nonpositive timeout" true
+        (Result.is_error (Config.t_of_yojson json));
+      match Config.decode_all json with
+      | Ok _ -> Alcotest.fail "daily-9ggi aggregate decoder accepted zero"
+      | Error errors ->
+          Alcotest.(check bool)
+            "daily-9ggi precise config pointer" true
+            (List.exists (fun e -> e.Ox_app.Config.pointer = "/models/" ^ name) errors))
+    [ "jev_timeout"; "text_timeout"; "planner_timeout" ];
+  Alcotest.(check bool)
+    "daily-9ggi unknown models setting rejected" true
+    (Result.is_error (Config.t_of_yojson (obj [ ("models", obj [ ("typo", `Int 1) ]) ])));
+  let decoded =
+    match Config.t_of_yojson (Config.yojson_of_t config) with
+    | Ok c -> c
+    | Error e -> Alcotest.fail e
+  in
+  Alcotest.(check int)
+    "daily-9ggi config roundtrip" 90
+    (Config.Seconds.to_int decoded.models.planner_timeout)
+
 let () =
   Alcotest.run "L19 models"
     [
@@ -677,5 +908,25 @@ let () =
           Alcotest.test_case "drive-kh2u missing key" `Quick missing_key;
           Alcotest.test_case "drive-yqxg endpoints" `Quick endpoints;
           Alcotest.test_case "drive-7tvn usage is logged" `Quick usage_is_logged;
+          Alcotest.test_case "daily-9ggi configured provider timeout retries" `Quick
+            (provider_timeout ~attempt:1 ~deadline:(Ox.Duration.seconds 5) ~succeeds:false);
+          Alcotest.test_case "daily-9ggi slow provider succeeds with raised timeout"
+            `Quick
+            (provider_timeout ~attempt:3 ~deadline:(Ox.Duration.seconds 5) ~succeeds:true);
+          Alcotest.test_case "daily-9ggi caller budget bounds retries" `Quick
+            (provider_timeout ~attempt:3 ~deadline:(Ox.Duration.ms 100) ~succeeds:false);
+          Alcotest.test_case "daily-9ggi model timeout config" `Quick timeout_config;
+          Alcotest.test_case "daily-9ggi text correction shares deadline" `Quick
+            (text_correction_budget ~deadline:(Ox.Duration.ms 400) ~succeeds:false);
+          Alcotest.test_case "daily-9ggi text correction within budget succeeds" `Quick
+            (text_correction_budget ~deadline:(Ox.Duration.seconds 2) ~succeeds:true);
+          Alcotest.test_case "daily-9ggi text attempt timeout" `Quick
+            (chat_timeout ~kind:"text" ~attempt:1 ~expected:"timeout");
+          Alcotest.test_case "daily-9ggi text uses own budget" `Quick
+            (chat_timeout ~kind:"text" ~attempt:3 ~expected:"authentication");
+          Alcotest.test_case "daily-9ggi planner attempt timeout" `Quick
+            (chat_timeout ~kind:"planner" ~attempt:1 ~expected:"timeout");
+          Alcotest.test_case "daily-9ggi planner uses own budget" `Quick
+            (chat_timeout ~kind:"planner" ~attempt:3 ~expected:"authentication");
         ] );
     ]

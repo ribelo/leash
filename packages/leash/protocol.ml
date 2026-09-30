@@ -332,6 +332,7 @@ type error_code =
   | Timeout [@json.name "timeout"]
   | Browser_unavailable [@json.name "browser-unavailable"]
   | Model_unavailable [@json.name "model-unavailable"]
+  | Model_timeout [@json.name "model-timeout"]
   | Too_large [@json.name "too-large"]
   | Script_failed [@json.name "script-failed"]
   | Script_invalid [@json.name "script-invalid"]
@@ -370,11 +371,14 @@ module Error_code = struct
     | Not_owner ->
         info 77
           "the tab is owned by another caller, or unowned and the command needs an owner"
-          "run `leash list --all` to see the owner; `leash claim TAB` takes an unowned \
-           tab"
+          "run `leash list --all` to see the owner; if this is your tab, pass its \
+           --owner (without --owner, DSH_SESSION_ID selects dsh:<DSH_SESSION_ID>); claim \
+           only an unowned tab. If someone else owns it, use your own tab with `leash \
+           new` or ask the owner to release it"
     | Already_owned ->
         info 77 "claim on a tab that is not unowned"
-          "the tab is already claimed; `leash list --all` shows its owner"
+          "`leash list --all` shows its owner; use your own tab with `leash new` or ask \
+           the owner to release it"
     | With_human ->
         info 77 "the tab is handed to the human; commands are refused until resume"
           "the human holds this tab; wait, or return it with `leash resume TAB`"
@@ -388,7 +392,7 @@ module Error_code = struct
         info 66 "no tab and no tombstone for the handle"
           "that handle is not a tab; `leash list --all` shows live handles"
     | Stale_snapshot ->
-        info 65 "the targeted snapshot is not current"
+        info 65 "the snapshot id or target row no longer matches the current page"
           "run `leash snap TAB` again and use its snapshot id"
     | No_such_row ->
         info 66 "the index is not in the snapshot"
@@ -431,6 +435,9 @@ module Error_code = struct
     | Browser_unavailable ->
         info 69 "Chrome is restarting"
           "Chrome is restarting; retry `leash status` in a few seconds"
+    | Model_timeout ->
+        info 75 "a model call exceeded its per-call deadline"
+          "the model provider timed out; retry, or raise models.<kind>_timeout"
     | Model_unavailable ->
         info 69
           "System One or the text helper failed, or no API key is configured; \
@@ -512,6 +519,7 @@ module Error_code = struct
       Timeout;
       Browser_unavailable;
       Model_unavailable;
+      Model_timeout;
       Too_large;
       Script_failed;
       Script_invalid;
@@ -823,6 +831,8 @@ type download_info = {
   suggested_name : string;
   mime : string;
   state : string;
+  received_bytes : int;
+  total_bytes : int;
   path : string option; [@json.null]
 }
 [@@deriving yojson]

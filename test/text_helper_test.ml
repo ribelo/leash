@@ -397,7 +397,11 @@ let helper_rig ?(replies = [ chat_reply (`String "hello") ]) f =
               ~api_key:(Ox_observability.Redact.make key)
               ()
           in
-          let helper = Leash.Text_helper.create ~client ~model:text_model ~logger () in
+          let helper =
+            Leash.Text_helper.create ~client
+              ~now:(fun () -> Eio.Time.now env#clock)
+              ~model:text_model ~logger ()
+          in
           f env sw helper server memory))
 
 (* ---------- The control seam ---------- *)

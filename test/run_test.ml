@@ -1010,9 +1010,7 @@ let fallback_mission_expectations () =
               ~verifies:[ [ expectation ~passed sentence "text" ] ]
               ~verification_observations:[ fresh ] ()
           in
-          let result =
-            ran (run ~installed h (args ~expect:[ sentence ] ~max_plans:0 ()))
-          in
+          let result = ran (run ~installed h (args ~expect:[ sentence ] ())) in
           check_status "fallback expectations decide DONE"
             (if passed then "done" else "blocked")
             result;
@@ -1029,7 +1027,9 @@ let fallback_mission_expectations () =
           Alcotest.(check string)
             "fresh final, not the operator's old snapshot" "Fresh verification"
             result.P.final.title;
-          Alcotest.(check int) "no additional model turn" 0 (List.length h.plan_requests);
+          Alcotest.(check int)
+            "daily-9ggi no planner self-note" 0 (List.length h.plan_requests);
+          Alcotest.(check (list string)) "daily-9ggi no human involved" [] h.handoffs;
           if not passed then
             Alcotest.(check bool)
               "unmet DONE refused" true
@@ -1041,6 +1041,35 @@ let fallback_mission_expectations () =
 (* daily-v6ez: a blocked/limited/error operator did not answer DONE. Do not hide
    its stop by checking expectations or changing its status. A named page kind
    without a playbook is invalid rather than guessed by the verifier. *)
+(* daily-9ggi: an empty page needs an explicit, unambiguous starting URL. *)
+let fallback_starting_page () =
+  List.iter
+    (fun (mission, dry_run, expected_urls, expected_status) ->
+      let h = harness ~observations:[ observation ~url:"about:blank" () ] () in
+      let result = ran (run h (args ~mission ~dry_run ())) in
+      check_status "daily-9ggi starting page status" expected_status result;
+      Alcotest.(check (list string))
+        "daily-9ggi requested navigation" expected_urls h.navigations;
+      if expected_status = "blocked" then (
+        Alcotest.(check int) "daily-9ggi no pointless model call" 0 (List.length h.steps);
+        Alcotest.(check bool)
+          "daily-9ggi actionable reason" true
+          (Option.is_some result.P.reason)))
+    [
+      ( "Open https://example.com and show Example Domain",
+        false,
+        [ "https://example.com" ],
+        "done" );
+      ("Open https://example.com", true, [], "done");
+      ("Show a page", false, [], "blocked");
+      ("Open javascript:alert(1)", false, [], "blocked");
+      ("Compare https://example.com and https://example.org", false, [], "blocked");
+    ];
+  let h = harness () in
+  ignore (ran (run h (args ~mission:"Inspect https://example.com" ())));
+  Alcotest.(check (list string))
+    "daily-9ggi supplied page is not replaced" [] h.navigations
+
 let fallback_mission_stops () =
   List.iter
     (fun (operator_status, expected) ->
@@ -1728,6 +1757,8 @@ let () =
           Alcotest.test_case "run-9ypy no playbook" `Quick no_playbook;
           Alcotest.test_case "daily-v6ez fallback DONE verifies expectations" `Quick
             fallback_mission_expectations;
+          Alcotest.test_case "daily-9ggi fallback starting URL" `Quick
+            fallback_starting_page;
           Alcotest.test_case "daily-v6ez fallback stops and unknown page kinds" `Quick
             fallback_mission_stops;
           Alcotest.test_case "run-3vat run-xda7 discovery planner" `Quick

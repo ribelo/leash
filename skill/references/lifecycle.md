@@ -7,7 +7,7 @@ leash status --owner browser-example
 systemctl --user status leash
 ```
 
-`status` reports Chrome health (`running` or `restarting`), browser generation, uptime, open-tab count/cap, model configuration, and installed-skill currency. It does not print API keys. `models.configured` is relevant to `drive` and `discover`; manual browsing needs no model key.
+`status` reports Chrome health (`running` or `restarting`), browser generation, its real managed process `pid` (null during restart), uptime, open-tab count/cap, model configuration, and installed-skill currency. It does not print API keys. `models.configured` is relevant to `drive` and `discover`; manual browsing needs no model key.
 
 If the service is down, start the installed user unit when authorized:
 
@@ -18,7 +18,7 @@ leash status --owner browser-example
 
 For setup problems, `leash config check` reports all problems with the configuration path. `leash config init` writes the default configuration; inspect its help before using it on an existing setup. The default file is `${XDG_CONFIG_HOME:-$HOME/.config}/leash/config.toml`. An absent default file means defaults; an explicitly named missing `--config FILE` is an error. `--config FILE` selects configuration, and `--socket PATH` overrides the control socket for one client call. The default socket is `$XDG_RUNTIME_DIR/leash/control.sock`; it is private to the user's account. Do not weaken its permissions.
 
-`leash serve` runs the service in the foreground. Normally systemd owns it; do not start a competing instance or a second Chrome against the same profile. Stop/restart with `systemctl --user stop leash` / `systemctl --user restart leash` only when the task authorizes interruption: restarting loses live handles and may disrupt other agents. For logs, use `journalctl --user -u leash -n 50 --no-pager`, keeping private page data out of reports.
+`leash serve` runs the service in the foreground. Normally systemd owns it; do not start a competing instance or a second Chrome against the same profile. Stop/restart with `systemctl --user stop leash` / `systemctl --user restart leash` only when the task authorizes interruption: restarting loses live handles and may disrupt other agents. Generation-loss origins render OS-facing signals such as `SIGKILL / 9`, not OCaml's portable negative constants. For logs, use `journalctl --user -u leash -n 50 --no-pager`, keeping private page data out of reports.
 
 ### Headed versus headless
 
@@ -58,7 +58,14 @@ leash skill install --dry-run
 
 `skill show` prints the raw stamped entrypoint Markdown, **not JSON**. `skill install [PATH] [--dry-run] [--force]` installs the embedded entrypoint and references. `PATH` is a **skills root**: installation writes `PATH/leash/`, not directly into `PATH`. No checkout or network download is needed.
 
-Without `PATH`, installation discovers existing agent homes: `~/.claude/skills`, `~/.codex/skills`, `~/.pi/agent/skills`, and `~/.agents/skills`. Canonical duplicate paths are installed only once. For another harness, supply its registered skills root explicitly. Do not guess its discovery configuration or create an unrelated agent home.
+Without `PATH`, `skill.roots` from the selected configuration is used by both installation and status. For example:
+
+```toml
+[skill]
+roots = ["~/.dotfiles/skills/engineering/debugging"]
+```
+
+`~` and leading environment variables (such as `$HOME`) expand before use; roots must then be absolute, and an unset variable is a `config-invalid` error at its `/skill/roots/N` pointer. `--config FILE` on install/status selects the same roots; an explicit install `PATH` overrides them. Configured roots remain consent-protected: preview with `--dry-run`, then use `--force --no-input` only for an authorized installation. With empty/unset `skill.roots`, installation discovers existing agent homes: `~/.claude/skills`, `~/.codex/skills`, `~/.pi/agent/skills`, and `~/.agents/skills`. Canonical duplicate paths are installed only once. For another harness, supply its registered skills root explicitly. Do not guess its discovery configuration or create an unrelated agent home.
 
 For an explicitly requested new installation into an existing Codex setup, for example:
 
@@ -73,4 +80,4 @@ The dry run never writes or prompts. Its JSON action is `planned-install`, `plan
 leash skill install ~/.codex/skills --force --no-input
 ```
 
-`leash status` includes `skill.state: missing|stale|current`, the binary's `version` and `commit`, and `installs` with each discovered path, state, installed version, and commit. All discovered installs must match the binary's content as well as version/revision to be `current`; a locally edited reference makes an install stale. A custom root outside discovery is not proof that these standard installs are current. Refresh the intended roots, then check status again. Do not hand-edit stamped version/commit metadata to make a stale install appear current.
+`leash status` includes `skill.state: missing|stale|current`, the binary's `version` and `commit`, and `installs` with each discovered path, state, installed version, and commit. An existing install must match the binary's content as well as version/revision to be `current`; any locally edited reference makes the overall skill state stale. Absent roots are listed as missing; overall state is current when at least one install is current and none is stale. With configured roots, status checks those same roots, including custom nested skill libraries; an explicit one-off install path is not added to configuration. Refresh the intended roots, then check status again. Do not hand-edit stamped version/commit metadata to make a stale install appear current.

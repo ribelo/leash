@@ -15,7 +15,7 @@ All commands below act on your owned tab. Pass `--owner NAME` on every service c
 | `leash net TAB request ID` | Request method, URL, headers, and any post data; check `base64` and `truncated`. |
 | `leash cookies TAB` | Cookies, including HttpOnly values. Read only when necessary; do not paste secrets into reports. |
 | `leash storage TAB local` / `leash storage TAB session` | Read-only storage for this origin; check `truncated`. |
-| `leash downloads TAB` | This tab's downloads: suggested name, MIME, state, and completed path when Chrome supplies it. |
+| `leash downloads TAB` | This tab's downloads: suggested name, MIME, state, `received_bytes`, `total_bytes`, and completed path when Chrome supplies it. |
 
 Dialogs are **state** in snapshots, tab info, and action replies. `leash dialog` answers one; it is not a read command. Downloads stay under the managed profile's downloads directory; a pending download has no usable completed path. Verify `state: completed` before using it. Network/debug rings are bounded and begin when the tab is created or attached/claimed; they are not a full browser history.
 
@@ -32,6 +32,8 @@ leash net "$TAB" --owner "$OWNER" --type document --limit 5
 leash debug "$TAB" --owner "$OWNER" --limit 10
 leash close "$TAB" --owner "$OWNER"
 ```
+
+`net` is asynchronous: entries arrive from Chrome events and can lag a navigation/action reply. A first empty ring is not proof that no request happened. Wait for a concrete page condition (`leash wait TAB --text TEXT --timeout-ms 5000`) and read `net` again; if needed, retry this read for a bounded interval. Completion-only fields such as size/duration can remain null while the request is pending.
 
 For a network failure, list metadata first, choose an actual returned `id`, then read its body or request. The ring is per tab; never reuse an ID from another tab. `body-unavailable` may mean Chrome evicted it or there was no body, not that the request failed. Bodies, headers, cookies, storage, screenshots, and console output can contain private data; expose only the evidence needed for the requested diagnosis.
 
@@ -50,6 +52,8 @@ Take a fresh JSON snapshot, choose the row by its observed role/name/value/state
 | `leash upload TAB SNAPSHOT INDEX PATH...` | Set local files on the observed `file-input` row, including a hidden one. Do not try to click/fill the file input. |
 | `leash nav TAB URL` | Navigate to http, https, or `about:blank`; credentialed userinfo and other schemes are refused. |
 | `leash dialog TAB accept [--text TEXT]` / `leash dialog TAB dismiss` | Deliberately answer the reported dialog; `--text` supplies a prompt response. |
+
+Accepted `press` keys: Enter, Tab, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown, Escape/Esc, Space, lowercase a-z, digits 0-9, and the single punctuation characters `- = [ ] ; , . / '`. Unsupported names return `invalid-request` with this accepted set.
 
 A successful action returns URL/title, `dialog`, and any owned `popups`; its `snapshot` is null. Observe again before the next row action. Check dialogs/popups rather than assuming the original page is still the only relevant tab. Disabled, covered, or wrong-kind rows can be `row-not-actionable` even with a current snapshot.
 

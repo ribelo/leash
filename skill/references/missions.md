@@ -5,12 +5,12 @@
 `leash drive MISSION` is the single mission entrypoint. It selects an installed site playbook, or falls back to the single-goal operator when none fits. There is **no `run` command**, and the current CLI is not `drive TAB GOAL`. Include the intended site, concrete result, and any needed values in the mission; do not delegate a broader action than the user authorized.
 
 ```sh
-leash drive 'Open https://example.com and show the Example Domain page'   --expect 'the page shows Example Domain'   --deadline-s 60 --max-procedures 3 --owner browser-example
+leash drive 'Open https://example.com and show the Example Domain page'   --expect 'the page contains documentation examples'   --deadline-s 60 --max-procedures 3 --owner browser-example
 ```
 
 | Option | Meaning |
 | --- | --- |
-| `--tab TAB` | Reuse your owned tab. Without it Leash opens one and leaves it open; use `final.tab` to find it. |
+| `--tab TAB` | Reuse your owned tab and leave it open. Without it Leash opens a temporary tab and closes it when the mission ends, including errors; a human handoff keeps it open. `final` is the last snapshot, not a promise that its tab still exists. |
 | `--expect SENTENCE` | Repeatable expectations for the mission DONE guard, with or without a playbook. Prefer concrete, verifiable results. |
 | `--max-procedures N` | Mission procedure cap, default 40; not an operator step count. |
 | `--deadline-s S` | Whole mission budget, default 900 seconds. |
@@ -19,9 +19,11 @@ leash drive 'Open https://example.com and show the Example Domain page'   --expe
 
 `drive` holds the tab's action slot for the run; the CLI connection stays open until it returns. In a harness, use a tracked background job for a long mission, collect its result, and do independent work on other tabs in the meantime. Do not start another action/read on that tab while it is working. A missing model key or provider failure is `model-unavailable`; inspect its `detail.code` and partial trace before any retry. The service needs its own `OPENROUTER_API_KEY` or configured model credentials: setting a client shell variable does not update an already running systemd service. Do not print keys or change service credentials without authorization.
 
+Without a playbook, drive is a **single-goal UI operator**, not a collection planner. On a blank tab include exactly one explicit `http://` or `https://` URL; Leash opens that page before asking the operator. With `--tab`, it works from the current page. No URL or several URLs on a blank tab returns `blocked` with guidance rather than guessing a site. The operator can use visible controls and links but does not author extraction scripts or produce structured records for `--out`: install and test a collection playbook for that, or use `text`/bounded `eval` yourself.
+
 A dry run is a plan check, not evidence that the page works. The no-playbook fallback also verifies supplied mission expectations on a fresh observation before accepting DONE; named page kinds require a playbook, so use concrete text, row, download or dialog expectations without one. After a live run inspect `status`, `reason`, `procedures` and their expectations, `mission_expectations`, and `final`. Protocol success/exit 0 can still contain `blocked`, `failed`, `handoff`, `limit`, `deadline`, or `error` rather than a completed mission. A fallback operator step cap is reported as `limit`. Even `done` needs an independent check of the requested outcome, especially an external submission or a collected dataset. Do not rerun a mission blindly after an uncertain dispatch.
 
-The planner may ask for the human; use the live headed tab, communicate what is needed, and follow [handoff/resume](browser.md). A dialog must be answered deliberately. A procedure's failed expectations or rejected script can cause the **whole procedure to replay once**; keep payment, messaging, deletion, and other non-idempotent submissions out of a retryable procedure unless their repetition is explicitly safe and authorized.
+An unmet expectation in the no-playbook operator returns `blocked` with the failed check; it does not call the planner or transfer ownership. In a playbook mission the planner may ask for the human; use the live headed tab, communicate what is needed, and follow [handoff/resume](browser.md). A dialog must be answered deliberately. A procedure's failed expectations or rejected script can cause the **whole procedure to replay once**; keep payment, messaging, deletion, and other non-idempotent submissions out of a retryable procedure unless their repetition is explicitly safe and authorized.
 
 ## Inspect and test a playbook before relying on it
 

@@ -12,7 +12,13 @@
     Cancellation and finalizers: {!create} acquires the HTTP client against [sw] and
     registers nothing else; every call runs in the calling fiber, opens and closes its own
     socket, and is bounded by its deadline. Nothing here probes the network at creation or
-    for {!status}: a missing key is a refusal at the call, not a boot failure. *)
+    for {!status}: a missing key is a refusal at the call, not a boot failure.
+
+    daily-9ggi: [models.jev_timeout], [models.text_timeout] and [models.planner_timeout]
+    bound individual provider attempts (seconds), not the mission. Ox retains its
+    two-attempt retry policy inside the caller deadline. Provider timeouts report
+    [model-timeout] with [detail.code = "timeout"] and [detail.model_kind] identifying
+    [jev], [text] or [planner]. *)
 
 type t
 

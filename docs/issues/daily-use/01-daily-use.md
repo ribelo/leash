@@ -58,6 +58,8 @@ Install Leash through nixos-config like Pie and nema. Give every failure a stabl
 23. As an agent, I want `leash` with no arguments to print a short orientation (is the service running, how to start, the three commands to begin with) rather than the full manual, so that the first contact is useful. ^daily-k9cs
 24. As the operator, I want milestone 10 closed only when every tree it touched is clean, Leash is pushed, and chrome-cdp is gone, so that there is no half-cut-over state. ^daily-l082
 
+25. As the operator, I want `skill.roots` to name custom nested skill-library directories, with tilde/environment expansion, install and status inspecting the same roots, and explicit install PATH retaining precedence and consent, so that the bundled skill reaches my actual dotfiles library instead of only conventional agent homes. ^daily-c4cl
+
 ## Implementation Decisions
 
 - Exit codes follow sysexits where one fits. The mapping is a single table in the protocol module used by the CLI, `help errors`, and the table test.
@@ -171,9 +173,166 @@ not cheap (42 derivations, including the compiler) and was not run.
 **Scope boundary:** the operator rebuilds, then the lead checks daily-9zvz on the
 installed service. No Leash commit was made in this delivery.
 
+## L44 acceptance repairs — 2026-09-30
+
+### B: single-goal drive and tab lifetime (daily-9ggi, daily-v6ez)
+
+- **Finding → cause → fix:** no-playbook drive stayed on about:blank → the
+  operator only chooses row actions, not navigation → bootstrap one explicit
+  HTTP(S) mission URL on a blank page before entering the same operator loop.
+  Missing or ambiguous starting URLs stop with actionable guidance, without a
+  pointless model call. An existing supplied page is not replaced; dry runs
+  never navigate. This fallback is for one UI goal, not structured collection:
+  collecting records still requires a prepared script/playbook (or caller-owned
+  bounded eval/text). The drive reference now makes that distinction explicit.
+- **Finding → cause → fix:** blocked replies lacked a reason → terminal operator
+  decisions, stalls and dry runs shared a bare blocked return → each now names
+  its cause and the caller's next action where relevant.
+- **Finding → cause → fix:** a failed fallback expectation produced a planner
+  self-note handoff and locked the tab → the shared DONE guard invoked the
+  playbook planner even though no playbook was selected → unmet fallback
+  expectations now return blocked with their fresh check results, retaining
+  ownership and never invoking the planner or human-handoff handler.
+- **Finding → cause → fix:** drive-created tabs leaked on every terminal outcome
+  → the control dispatcher allocated a tab but never owned its release → the
+  dispatcher closes its temporary tab after success, blocked/error replies and
+  exception/cancellation; supplied tabs and actual handoffs remain open. The
+  final snapshot is retained after closure.
+- **Regressions:** daily-9ggi cases in run_test cover blank-page URL bootstrap,
+  missing/ambiguous/unsafe URLs, dry-run non-navigation, supplied-page reuse and
+  failed expectations with the normal planner budget (not the old zero-budget
+  test loophole). drive_test checks all three blocked reasons. control_test
+  checks done/blocked/model-error/exception temporary-tab cleanup and preservation
+  of caller-supplied tabs and genuine human handoffs. Model timeout trace enrichment
+  preserves detail fields, including the call kind, rather than replacing provider
+  diagnostics. Planner corrections share the original turn's remaining budget via
+  an injected clock; planner_test proves an expired turn makes no correction call.
+- **Live evidence:** a private headless Chrome (PID 4051222, private profile/socket
+  under /tmp/leash-b-l44-pnucxhr0) and real models via secret-env ai passed: blank
+  mission without URL blocked in 0.10 s with its reason and zero model calls; the
+  documented Open https://example.com mission with a true body expectation finished
+  done in 1.12 s / one model call and its tab was closed; an impossible expectation
+  on a supplied Example Domain tab returned blocked in 5.77 s / one model call,
+  no planner turns, and the tab remained owned until explicitly closed. Service
+  shutdown exited 0. Example Domain is now title-only on the redesigned website;
+  the skill example's body expectation now checks “documentation examples” rather
+  than asserting absent heading text. Body text was separately observed intact.
+- **Gates:** isolated capped @install passed; run (35), drive (14), planner (13)
+  and control (31) cases all passed. Full dune test and @fmt were run, with only
+  other slices' in-flight error-table/help/formatting differences still failing.
+  caps-gate passed. No installed binary, service or Chrome was touched.
+
+### C: CLI/protocol/skill recovery and diagnostics (daily-9ggi, daily-c4cl)
+
+| Finding | Cause | Fix |
+| --- | --- | --- |
+| `press` key names required trial and error; `Return` looked plausible. | Help omitted the accepted vocabulary; refusal hid it. | Exact named/lowercase/digit/punctuation vocabulary in help, skill and protocol; `invalid-request` hint and `detail.accepted_keys` enumerate accepted keys. |
+| Tab/network and playbook clients called a missing service merely unreachable. | Only status consulted the unit/binary state. | All exchange callers share the same classification: not installed, stopped, restarting, or active-but-unreachable. |
+| Error recovery reference was a partial summary. | The skill had no exhaustive canonical error catalog. | Every protocol code has its exact exit/meaning/hint in the skill and protocol; a regression compares every row, including `model-timeout` (75). |
+| Not-owner and stale-snapshot hints encouraged ineffective retries. | They omitted caller ownership and row identity rules. | Own the newly opened tab, retain explicit owner or `dsh:<DSH_SESSION_ID>`, release only one's own tab, and re-snapshot both ID and index. Stale means document or row-role/name mismatch; native temporal AX roles use the same normalization as snapshots. |
+| `playbook list --owner` failed unlike surrounding commands. | The local list term lacked the harmless shared convention. | Accept and ignore `--owner`; output remains unchanged and no service is needed. |
+| Download progress omitted byte counts. | The registry discarded CDP progress fields. | Initialize and retain `received_bytes`/`total_bytes`, including completed downloads; both are required protocol fields. |
+| Popup replies exposed an empty URL. | Target-created can precede navigated target metadata. | Boundedly refresh newly owned children only while their URL is empty; preserve valid `about:blank` and already-known URLs. |
+| Root help suggested buying on Allegro. | A purchase mission was used as a first-contact example. | Replace it with reading the heading on example.com. |
+| Immediate `net` polls were empty after page settlement. | CDP response events arrive asynchronously, later than DOM/load settlement. | State the observation-not-barrier contract; wait for a concrete outcome and boundedly retry observations, never repeat a side-effect merely to obtain its network body. |
+| Status guessed a Chrome PID; SIGKILL appeared as a negative signal number. | PID came from a profile search, and OCaml portable `Sys.sig*` encodings were printed directly. | Expose the actual supervised child's PID only while running; Chrome-loss failure/log fields show OS names/numbers such as `SIGKILL / 9`. |
+| Skill install/status ignored the nested dotfiles library. | Roots were hard-coded to discovery defaults. | Add `skill.roots`; expand tilde/leading environment variables, aggregate indexed config errors for relative/unresolved paths, deduplicate roots, and share configured roots across install/status. Explicit PATH wins; empty roots retain discovery; consent is unchanged. |
+
+**Regressions:** `daily_acceptance_test` cites daily-c4cl/daily-9ggi and covers keys,
+native temporal identity and role/name staleness, delayed popup metadata,
+download byte progress, the supervised PID and SIGKILL failure/journal fields,
+root expansion/type/path/error aggregation, and every canonical skill error row.
+The existing `actions_test` popup case 10 also passes, proving known popup URLs
+are not overwritten. `daily_acceptance.t` checks exact help, all four client routes
+under five unit/binary fixtures, owner-compatible playbook list, and custom-root
+dry-run/consent/install/status/explicit-path precedence without touching the
+installed service. Gates are recorded by the lead after integration.
+
+### D: model latency and recovery (daily-9ggi, daily-6pde)
+
+- **Finding → cause → fix:** the Books Travel collection attempt timed out in about
+  26 seconds with a real key → the failing no-playbook DONE expectation entered
+  **Luna**, whose healthy 12.159–19.069 second replies were abandoned by Ox's inherited
+  10-second per-attempt cap (two attempts); JEV answered in 0.580–0.792 seconds, and
+  no text-helper call occurred → expose independent positive-second
+  models.jev_timeout / text_timeout / planner_timeout defaults of **10 / 10 / 60**.
+  The caller's total deadline still bounds retries. Text-helper and planner
+  corrections now consume its remaining budget, not a fresh one.
+- A historical private headless comparison reproduced the original error in
+  25.792 and 25.968 seconds. With a raised cap and the same JEV answer replayed,
+  real Luna replies at 12.003 and 8.942 seconds no longer timed out; the old path
+  instead reported the unsupported no-playbook procedure. Slice B removes that
+  accidental planner path. This is not a claim that collection succeeded.
+- Timeout failures are now model-timeout (exit 75) with detail.code=timeout and
+  detail.model_kind=jev/text/planner. The canonical hint names provider latency and
+  models.<kind>_timeout rather than blaming the key. Other failures keep their kinds.
+- Adding the fields exposed exponential default-field expansion in Ox's minimal
+  JSON deriver (6.0 MiB generated config, roughly 94 GiB native compiler RSS).
+  A temporary sequential models codec preserves the flat schema and validation;
+  generated config fell to 211 KiB and compiled under an 8 GiB memory cap.
+- **Regression:** 10 daily-9ggi/daily-6pde cases added to models_test cover independent
+  per-kind budgets, two-attempt bounds, caller total deadline, authentication without
+  retries, correction deadline sharing, successful slow replies, and config validation.
+  The 16-case model suite passes; the existing text-helper suite also passes.
+- **Evidence:** [private headless latency measurements](acceptance/2026-09-30-l44-model-latency.md).
+  No installed service, Chrome or binary was changed. All private services exited 0.
+
 ## Out of Scope
 
 The niri window rule; making the repository public; new browser capabilities (iframes, raw CDP).
+
+## L44 acceptance repairs — snapshot / reading (daily-9ggi)
+
+- **Finding:** httpbin's visible time input, Comments textarea and Submit button were
+  missing; example.com's visible Learn more link was missing. **Cause:** Chrome's
+  DOMSnapshot bounds are device-scaled document coordinates, but the snapshot guard
+  supplied CSS viewport dimensions and scroll offsets. At 2× scale the viewport join
+  discarded the lower controls. Separately, Chrome reports a native time input as
+  `InputTime`, outside the role allowlist; textarea and submit already had correct AX
+  roles. **Fix:** sample `devicePixelRatio` with the guard and scale both viewport and
+  scroll coordinates before clipping; normalize native temporal roles to textbox with
+  a shared role mapper for action revalidation. Viewport clipping remains in place:
+  genuinely offscreen controls are not presented as visible.
+- **Finding:** example.com produced 784 single-character paragraph rows. **Cause:**
+  its new multilingual layout wraps each character in a span; every AX StaticText child
+  was promoted to a separate paragraph row with the same parent backend. **Fix:** build
+  one paragraph row from its descendant text in reading order, preserving whitespace
+  and Unicode and retaining independently actionable descendant controls. The six
+  language paragraphs remain six rows, not 784 characters; Learn more remains a link.
+- **Finding (exposed by the restored time row):** filling a time input returned
+  success without changing its value. **Cause:** Chrome's segmented native temporal
+  editor ignores `Input.insertText`. **Fix:** detect native temporal inputs from their
+  DOM type; validate the supplied value on a detached input, set the target through the
+  native value setter, dispatch bubbling input/change events, and verify the resulting
+  value. Malformed values leave the old value intact; readonly controls and rejected
+  values return errors. Ordinary text controls retain the trusted keyboard path.
+  `temporal_fill` in `test/actions_test.ml` cites daily-9ggi and exercises the native
+  role, backend resolution, CDP text argument, events and invalid/readonly/rejected
+  outcomes. The lead authorized this narrow extension into actions.
+- **Regression:** `daily_snapshot` in `test/control_test.ml` cites daily-9ggi and
+  replays real Chrome 152 AX/DOMSnapshot replies captured on a private headless service
+  at device scale 2 (`test/fixtures/daily-snapshot-chrome.json`). It asserts all 13
+  form controls, the time/textarea/submit roles and names, device-scaled scroll clipping,
+  six coherent language paragraphs and the actionable Learn more link. The fixture
+  removes unused AX inline boxes/name provenance and unused DOM metadata only.
+- **Evidence:** unpatched private headless Chrome at scale 1 exposed textarea/submit
+  and Learn more but still lost the time input and split paragraphs; scale 2 lost the
+  lower controls and reproduced exactly 784 character rows without Learn more.
+  Patched private Chrome at scale 2 now exposes all 13 controls (18 rows with labels)
+  and seven example.com rows (six paragraphs and Learn more). Indexed textarea fill
+  changes Comments; indexed time fill sets delivery.value to "12:30" and emits exactly
+  input/change. An invalid time returns invalid-request, preserving both value and event
+  count. Clicking Learn more and waiting for its canonical www.iana.org URL succeeds.
+  CDP quads/hit-test/mouse dispatch already use correct CSS coordinates: the apparent
+  click failure was a wait for the noncanonical host, not a pointer bug; no pointer
+  geometry or settlement code changed. Every private service stopped with exit 0.
+  Installed binary, service and Chrome were not touched. @install, caps-gate, the
+  recorded-page regression, ordinary/temporal fill regressions and existing snapshot
+  tests pass. Full dune test and @fmt await only other workers' remaining integration
+  repairs (latest: not-owner error-table documentation and unrelated formatting). An
+  additional direct full actions run passed cases 0–9, then hung in the unchanged popup
+  case; it was stopped and reported to the lead rather than counted as a pass. Private
+  profiles, diagnostic scripts and `_build_l44a` were removed after verification.
 
 ## Further Notes
 

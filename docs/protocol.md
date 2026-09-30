@@ -35,6 +35,15 @@ Tab lifecycle:
 | `close` | `{tab, force?}` | `{closed: true}` |
 | `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` |
 
+`pid` is the actual managed Chrome child PID, not the Leash service PID or a
+`/proc` profile search. It is null whenever that child is not running, including
+restarts. Chrome-loss logs and failure text name portable signals using the
+OS-facing name and number (for example `SIGKILL / 9`), not OCaml’s internal
+negative `Sys.sig*` encoding. The CLI enriches status with skill installation
+state; install and status use configured `skill.roots`, expanding `~` and a leading
+environment variable. Empty/unset roots retain default agent-home discovery.
+An explicit `skill install PATH` overrides the roots for that install only.
+
 Observation:
 
 | cmd | args | result |
@@ -50,6 +59,12 @@ Observation:
 | `net_request` | `{tab, id}` | `{id, method, url, headers, post_data?, base64, truncated}` |
 | `cookies` | `{tab}` | `{cookies: Cookie[]}` |
 | `storage` | `{tab, area: "local"\|"session"}` | `{origin, area, items, truncated}` |
+
+`net` observes events collected so far; it is not a barrier for pending requests.
+DOM/load settlement can precede response events, so a first poll may be empty.
+Wait for a concrete page outcome, then retry `net` with bounded polls and a caller
+deadline. `net_body` may report `network-unavailable` before completion; retry
+after the request completes rather than rerunning a side-effecting action.
 
 Actions (serialized per tab; each returns `ActionResult`):
 
@@ -120,14 +135,16 @@ Row          = {index: int, role: string, name: string, value?: string, state?: 
 Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string, default_prompt: string|null}
 ActionResult = {tab, url, title, snapshot: null, dialog: Dialog|null, popups: TabInfo[]}
                  snapshot is always null in this version: no snapshot is taken while an action settles; call snap
-                 popups lists only tabs opened by the acted-on tab (opener), owned by the caller
+                 popups lists only tabs opened by the acted-on tab (opener), owned by the caller; newly opened target metadata is refreshed after a bounded wait for its URL (daily-c4cl)
 NetEntry     = {id: string, method, url, status: int|null, type: string, mime: string|null, size: int|null,
                 duration_ms: int|null, from_cache: bool, error?: string}
                  one request of the tab's own ring (see the net rules below); type is Chrome's resource type
                  lower-cased (document, xhr, fetch, script, image, ...); size is the encoded size on the wire
 Cookie       = {name, value, domain, path, expires: number|null, http_only: bool, secure: bool, same_site: string|null}
                  expires is null for a session cookie, otherwise epoch seconds
-Download     = {id: string, suggested_name: string, mime: string, state: "in_progress"|"completed"|"canceled", path: string|null}
+Download     = {id: string, suggested_name: string, mime: string, state: "in_progress"|"completed"|"canceled",
+                received_bytes: int, total_bytes: int, path: string|null}
+                 byte counts begin at zero and follow Chrome downloadProgress receivedBytes/totalBytes (daily-c4cl)
                  path is null until Chrome reports a completed filePath; MIME is inferred from the extension when Chrome does not report one
 DebugEntry   = {at: iso8601, kind: "console"|"exception"|"request-failed", level?: string, text: string}
 Step         = {n: int, snapshot: id, operation: Operation, index: int|null, probabilities: {op: {..}, target: {..}},
@@ -390,7 +407,7 @@ Rules:
 - A row action also refuses with `row-not-actionable` when the row is disabled, has no layout box, cannot take focus, or is covered at its click point (a hit test that answers with another node than the row or one of its descendants). Clicking reads the row's geometry at that moment; scrolling and animation are never staleness.
 - An action whose handler closes its own tab (a click on `window.close()`) reports `tab-gone` with `closed_externally` when the browser no longer knows the target; if the reply wins the race the action succeeds and the next command on the handle reports `tab-gone`.
 - A trusted input or an `eval` whose handler opens a popup is settled by the popup itself: Chrome withholds the reply of the call whose handler opened it, so Leash waits — with no bound of its own beyond the CDP call's deadline — for whichever comes first: the call's reply, a target Chrome reports with this tab as its `openerId` (an action then lists it in `popups`, and `eval` answers `{value: null}`), or the destruction of this tab's own target (`tab-gone` with `closed_externally`). Nothing is ever dispatched twice.
-- `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked).
+- `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked). Accepted named keys are `Enter`, `Escape`/`Esc`, `Tab`, `Backspace`, `Delete`, `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Home`, `End`, `PageUp`, `PageDown`, and `Space`. Single lowercase `a`–`z`, digits `0`–`9`, and punctuation `- = [ ] ; , . / '` are also accepted. `Return`, uppercase letters, chords, and other names are rejected with `invalid-request`; its hint and `detail.accepted_keys` enumerate the vocabulary.
 - `select` targets a native `<select>` row (role `combobox` or `listbox`); `option` is its index in the select's observed option order, and an index the select does not have is `invalid-request`. A row that is not a native select is `row-not-actionable`. The observed order is the row's `options`, read from the accessibility tree even while the select is closed — a closed select's options have no layout box and are never rows of their own (tab-5deq): each carries the `index` the action takes, its `label`, the `value` it holds, its label when it holds none, and whether it is `selected` or `disabled`.
 - `ActionResult.snapshot` is null unless a snapshot was taken as part of settling; actions do not observe the page again on their own, so a caller that wants a fresh table asks for one.
 - An action reply's `url` and `title` come from `Target.getTargetInfo` read after the action settled. When the action navigated the tab, that read waits — bounded like a load — for the new document to finish, so the reply, a drive step's `after`, and `list` carry the document title rather than the tab strip's formatted URL (chrome-qnul, svc-hi4f).
@@ -508,12 +525,12 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | code | exit | meaning | hint |
 | --- | --- | --- | --- |
 | `invalid-request` | 64 | malformed JSON, unknown command, or bad arguments | fix the request; `leash <command> --help` names the arguments and one example |
-| `not-owner` | 77 | the tab is owned by another caller, or unowned and the command needs an owner | run `leash list --all` to see the owner; `leash claim TAB` takes an unowned tab |
-| `already-owned` | 77 | claim on a tab that is not unowned | the tab is already claimed; `leash list --all` shows its owner |
+| `not-owner` | 77 | the tab is owned by another caller, or unowned and the command needs an owner | run `leash list --all` to see the owner; if this is your tab, pass its --owner (without --owner, DSH_SESSION_ID selects dsh:<DSH_SESSION_ID>); claim only an unowned tab. If someone else owns it, use your own tab with `leash new` or ask the owner to release it |
+| `already-owned` | 77 | claim on a tab that is not unowned | `leash list --all` shows its owner; use your own tab with `leash new` or ask the owner to release it |
 | `with-human` | 77 | the tab is handed to the human; commands are refused until resume | the human holds this tab; wait, or return it with `leash resume TAB` |
 | `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_owner, closed_by_ttl, closed_externally, or browser_lost | the handle is dead; read detail.disposition, then open a new tab with `leash new` |
 | `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; `leash list --all` shows live handles |
-| `stale-snapshot` | 65 | the targeted snapshot is not current | run `leash snap TAB` again and use its snapshot id |
+| `stale-snapshot` | 65 | the snapshot id or target row no longer matches the current page | run `leash snap TAB` again and use its snapshot id |
 | `no-such-row` | 66 | the index is not in the snapshot | that index is not in the snapshot; `leash snap TAB` and use a listed index |
 | `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
 | `unknown-request` | 66 | the tab's ring holds no request with that id | that id is not in the tab's ring; `leash net TAB` and use a listed id |
@@ -526,6 +543,7 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `timeout` | 75 | wait, handoff, or a bounded operation ran out of time; a handoff's detail.warnings lists the steps that failed | retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB` |
 | `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds |
 | `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry |
+| `model-timeout` | 75 | a model call exceeded its per-call deadline | the model provider timed out; retry, or raise models.<kind>_timeout |
 | `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry |
 | `script-failed` | 65 | a playbook script threw, rejected, or could not be compiled; message carries what it threw | read message; fix the script or the page, then `leash playbook test` |
 | `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |

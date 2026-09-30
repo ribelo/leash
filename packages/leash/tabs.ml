@@ -1737,6 +1737,16 @@ let wait t ~owner (args : P.wait_args) =
    lock; Actions owns revalidation, dispatch, and settlement. The lock is what makes one
    tab's actions run one at a time in arrival order while another tab's proceed. *)
 let action_view t ~session ~owner tab cdp : Actions.tab =
+  let observed = ref None in
+  let refresh_popup popup =
+    let rec refresh attempts =
+      refresh_from_target cdp popup;
+      if attempts > 0 && popup.url = "" then (
+        t.sleep 0.01;
+        refresh (attempts - 1))
+    in
+    refresh 100
+  in
   {
     Actions.session;
     target = tab.id;
@@ -1750,9 +1760,24 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
     acknowledge = (fun () -> acknowledge tab);
     all_tabs =
       (fun () ->
+        let entries = (snapshot t).entries in
+        (* daily-c4cl: targetCreated can precede navigation. Refresh only newly
+           opened, caller-owned children before returning action metadata. *)
+        (match !observed with
+        | None -> observed := Some entries
+        | Some before ->
+            Keys.iter
+              (fun id (entry : entry) ->
+                if
+                  entry.tab.url = ""
+                  && (not (Keys.mem id before))
+                  && entry.tab.opener = Some tab.id
+                  && (info_of t entry).owner = Some owner
+                then refresh_popup entry.tab)
+              entries);
         Keys.fold
           (fun _ (entry : entry) acc -> (info_of t entry, entry.tab.opener) :: acc)
-          (snapshot t).entries []
+          entries []
         |> List.sort (fun ((a : P.tab_info), _) ((b : P.tab_info), _) ->
             String.compare (key a.tab) (key b.tab)));
   }
@@ -2440,6 +2465,14 @@ let status t =
 
 (* run-ykq4: browser-level events carry the main frame id; page-level legacy
    events carry a session. Never credit an unattributed download to another tab. *)
+let progress_bytes key params previous =
+  match member key params with
+  | Some (`Int bytes) when bytes >= 0 -> bytes
+  | Some (`Float bytes)
+    when Float.is_finite bytes && bytes >= 0. && bytes < float_of_int max_int ->
+      int_of_float bytes
+  | _ -> previous
+
 let download_event t json method_ params =
   let session = text "sessionId" json in
   match method_ with
@@ -2472,7 +2505,16 @@ let download_event t json method_ params =
                      tab.downloads)
               then (
                 tab.downloads <-
-                  P.{ id; suggested_name; mime; state = "in_progress"; path = None }
+                  P.
+                    {
+                      id;
+                      suggested_name;
+                      mime;
+                      state = "in_progress";
+                      received_bytes = 0;
+                      total_bytes = 0;
+                      path = None;
+                    }
                   :: tab.downloads;
                 Hashtbl.replace t.downloads_by_guid id (key tab.handle)))
             target
@@ -2495,6 +2537,11 @@ let download_event t json method_ params =
                           {
                             download with
                             state;
+                            received_bytes =
+                              progress_bytes "receivedBytes" params
+                                download.received_bytes;
+                            total_bytes =
+                              progress_bytes "totalBytes" params download.total_bytes;
                             path =
                               (if state = "completed" then text "filePath" params
                                else None);

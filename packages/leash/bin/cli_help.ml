@@ -87,8 +87,9 @@ let top_man =
     `S "SKILL";
     `P
       "$(b,leash skill show) prints the bundled entrypoint. $(b,leash skill install \
-       --dry-run) previews discovered skills roots; --force authorizes installation or \
-       replacement. PATH means a skills root, with the bundle at PATH/leash/.";
+       --dry-run) previews configured skill.roots (or discovered skills roots when \
+       unset); --force authorizes installation or replacement. PATH means a skills root, \
+       with the bundle at PATH/leash/.";
     `S "EXAMPLES";
     `P "leash click --help; leash help errors";
     `P "leash config init; leash config check; leash serve";

@@ -51,6 +51,7 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
           ~endpoint:(Config.Text.to_string config.systemone_endpoint)
           ~api_key
           ~model:(Config.Text.to_string config.jev_model)
+          ~timeout:(Ox.Duration.seconds (Config.Seconds.to_int config.jev_timeout))
           ())
   in
   (* L22: the chat client is pure and synchronous — no socket, nothing to release — so it
@@ -58,12 +59,15 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
   let chat =
     with_key (fun api_key ->
         Ox_ai_chat.create ~http ~clock ~logger ~endpoint:(chat_endpoint config) ~api_key
+          ~timeout:(Ox.Duration.seconds (Config.Seconds.to_int config.text_timeout))
           ())
   in
   let planner_chat =
     with_key (fun api_key ->
         Ox_ai_chat.create ~http ~clock ~logger ~endpoint:(planner_endpoint config)
-          ~api_key ())
+          ~api_key
+          ~timeout:(Ox.Duration.seconds (Config.Seconds.to_int config.planner_timeout))
+          ())
   in
   {
     now = (fun () -> Eio.Time.now clock);
@@ -148,7 +152,7 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
       | Ok (state, questions) -> (
           Model_usage.start "operator";
           match Ox_ai_systemone.Client.evaluate client ~deadline ~state ~questions with
-          | Error error -> Error (Model_error.of_eta error)
+          | Error error -> Error (Model_error.of_eta ~kind:"jev" error)
           | Ok response -> (
               log_usage t.logger response;
               Model_usage.report "operator"
@@ -174,9 +178,18 @@ let text_helper (t : t) : Text_helper.t =
   match t.chat with
   | None -> Text_helper.missing_key
   | Some client ->
-      Text_helper.create ~client
-        ~model:(Config.Text.to_string t.config.text_model)
-        ~logger:t.logger ()
+      let helper =
+        Text_helper.create ~client ~now:t.now
+          ~model:(Config.Text.to_string t.config.text_model)
+          ~logger:t.logger ()
+      in
+      {
+        Text_helper.complete =
+          (fun ?deadline context ->
+            Result.map_error
+              (Model_error.with_kind "text")
+              (helper.complete ?deadline context));
+      }
 
 (* ---------- L31: the run's upper levels ---------- *)
 
@@ -225,7 +238,7 @@ let choose_jev ~deadline (t : t) (question : Run.question) =
         Ox_ai_systemone.Client.evaluate client ~deadline ~state:question.Run.state
           ~questions:[ (question.Run.name, wire) ]
       with
-      | Error error -> Error (Model_error.of_eta error)
+      | Error error -> Error (Model_error.of_eta ~kind:"jev" error)
       | Ok response -> (
           log_usage t.logger response;
           Model_usage.report kind (Some response.Ox_ai_systemone.Codecs.usage.cost);
@@ -314,7 +327,7 @@ let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
               unavailable "choice review skipped: deadline exhausted; using JEV argmax"
           | Some client ->
               let planner =
-                Planner.create ~client
+                Planner.create ~client ~now:t.now
                   ~model:(Config.Text.to_string t.config.planner_model)
                   ~reasoning:(Config.Text.to_string t.config.planner_reasoning)
                   ~logger:t.logger ()
@@ -348,7 +361,7 @@ let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
         Ox_ai_systemone.Client.evaluate client ~deadline ~state
           ~questions:[ ("score", wire) ]
       with
-      | Error error -> Error (Model_error.of_eta error)
+      | Error error -> Error (Model_error.of_eta ~kind:"jev" error)
       | Ok response -> (
           log_usage t.logger response;
           Model_usage.report "verifier" (Some response.Ox_ai_systemone.Codecs.usage.cost);
@@ -377,10 +390,12 @@ let levels (t : t) : Run.levels =
           | None -> Error missing_key
           | Some client ->
               let planner =
-                Planner.create ~client
+                Planner.create ~client ~now:t.now
                   ~model:(Config.Text.to_string t.config.planner_model)
                   ~reasoning:(Config.Text.to_string t.config.planner_reasoning)
                   ~logger:t.logger ()
               in
-              planner.Planner.plan ~deadline request);
+              Result.map_error
+                (Model_error.with_kind "planner")
+                (planner.Planner.plan ~deadline request));
     }

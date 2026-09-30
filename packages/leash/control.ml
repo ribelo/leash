@@ -171,8 +171,8 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
          {!Models.levels} — one System One client for all three levels (run-7blx) — and
          scripted tests their own; [installed] hands a test its playbooks.
 
-         run-9ypy: a mission with no tab opens one the way the [new] command does and the
-         run reuses it; the [final] snapshot names it and the run never closes it. *)
+         daily-9ggi: a mission owns the lifetime of a tab it creates. The final
+         snapshot survives cleanup; supplied tabs and human handoffs stay open. *)
       let tab =
         match args.P.tab with
         | Some tab -> Ok tab
@@ -183,10 +183,30 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
       in
       match tab with
       | Error error -> failure error
-      | Ok tab ->
-          lift P.yojson_of_run_result
-            (Tabs.run ?levels ~model ?decide ?text_helper ?installed tabs ~owner ~tab args)
-      )
+      | Ok tab -> (
+          let cleanup () =
+            if args.P.tab = None then
+              Eio.Cancel.protect (fun () -> ignore (Tabs.close tabs ~owner tab))
+          in
+          let outcome =
+            match
+              Tabs.run ?levels ~model ?decide ?text_helper ?installed tabs ~owner ~tab
+                args
+            with
+            | outcome -> outcome
+            | exception exn ->
+                cleanup ();
+                raise exn
+          in
+          match outcome with
+          | Ok result when P.Run_status.to_string result.P.status = "handoff" ->
+              success (P.yojson_of_run_result result)
+          | outcome -> (
+              if args.P.tab <> None then lift P.yojson_of_run_result outcome
+              else
+                match Eio.Cancel.protect (fun () -> Tabs.close tabs ~owner tab) with
+                | Ok _ -> lift P.yojson_of_run_result outcome
+                | Error error -> failure error)))
 
 (* svc-p67t: a command's journal anchor contains only identifiers, never args or
    results. Commands without a tab use "-"; new does not have a handle yet. *)

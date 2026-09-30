@@ -18,7 +18,7 @@
 
     The chat client is the models service's — one transport for every model, as with
     {!Text_helper} — and this module owns the prompt, the fail-closed decode and the
-    accounting. Nothing here reads a clock or a file. *)
+    accounting. The caller supplies its clock as a thunk to bound correction calls. *)
 
 type t = {
   choose : deadline:Ox.Duration.t -> Run.question -> Protocol.playbook_choice;
@@ -30,14 +30,15 @@ type t = {
 (** One configured planner. [plan] answers one turn: the run's request in, an answer the
     loop can execute or report out, never raw model output. [deadline] (30 seconds by
     default) is what the run passes of its own budget: a turn is at most two calls, the
-    first bounded by [deadline] and the correction call by the smaller of [deadline] and
-    30 seconds, so a retry that hangs cannot outlast the budget the run answers the
-    listener within.
+    first bounded by [deadline] and the correction call by the smaller of the remaining
+    turn budget and 30 seconds, so a retry that hangs cannot outlast the budget the run
+    answers the listener within.
 
     The cost of a turn rides on the reply (run-obtt): the tokens and provider-reported
     cost summed over the calls the turn took; absent cost contributes zero. *)
 
 val create :
+  now:(unit -> float) ->
   client:Ox_ai_chat.t ->
   model:string ->
   reasoning:string ->

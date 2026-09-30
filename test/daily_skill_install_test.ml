@@ -48,7 +48,7 @@ let error_message error =
 let test_explicit_root_installs_complete_skill () =
   with_temp_dir @@ fun root ->
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
       ~force:false ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "new explicit target must not prompt")
   with
@@ -89,7 +89,7 @@ let test_discovery_deduplicates_linked_roots () =
   Unix.symlink shared (Filename.concat pi_agent "skills");
   let prompts = ref [] in
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
       ~no_input:false ~dry_run:false ~stdin_is_tty:true ~confirm:(fun action path ->
         prompts := (action, path) :: !prompts;
         true)
@@ -106,7 +106,7 @@ let test_discovery_deduplicates_linked_roots () =
 let test_identical_explicit_target_is_current () =
   with_temp_dir @@ fun root ->
   let run () =
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
       ~force:false ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "identical target must not prompt")
   in
@@ -121,8 +121,9 @@ let test_empty_explicit_path_is_rejected () =
   with_temp_dir @@ fun root ->
   with_cwd root @@ fun () ->
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home:"" ~path:(Some "") ~force:true
-      ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ -> true)
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home:"" ~path:(Some "")
+      ~force:true ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
+        true)
   with
   | Ok _ -> Alcotest.fail "expected empty PATH failure"
   | Error error ->
@@ -135,8 +136,8 @@ let test_empty_explicit_path_is_rejected () =
 let test_unexpected_nodes_require_and_allow_replacement () =
   with_temp_dir @@ fun root ->
   let run ~force ~dry_run =
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root) ~force
-      ~no_input:true ~dry_run ~stdin_is_tty:false ~confirm:(fun _ _ ->
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
+      ~force ~no_input:true ~dry_run ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "force and dry-run must not prompt")
   in
   (match run ~force:false ~dry_run:false with
@@ -167,8 +168,8 @@ let test_cleanup_failure_reports_completed_replacement () =
   with_temp_dir @@ fun root ->
   let destination = Filename.concat root "leash" in
   let install force confirm =
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root) ~force
-      ~no_input:false ~dry_run:false ~stdin_is_tty:true ~confirm
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
+      ~force ~no_input:false ~dry_run:false ~stdin_is_tty:true ~confirm
   in
   (match install false (fun _ _ -> true) with
   | Ok _ -> ()
@@ -210,8 +211,8 @@ let test_cleanup_failure_reports_completed_replacement () =
 let test_inspection_failure_is_permission_and_non_mutating () =
   with_temp_dir @@ fun root ->
   let run ~force ~dry_run =
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root) ~force
-      ~no_input:false ~dry_run ~stdin_is_tty:false ~confirm:(fun _ _ ->
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
+      ~force ~no_input:false ~dry_run ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "inspection failure must not prompt")
   in
   (match run ~force:false ~dry_run:false with
@@ -247,7 +248,7 @@ let test_replacement_requires_consent_and_replaces_tree () =
       output_string channel "remove me");
   let prompts = ref 0 in
   let run answer =
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
       ~force:false ~no_input:false ~dry_run:false ~stdin_is_tty:true
       ~confirm:(fun action path ->
         incr prompts;
@@ -283,8 +284,8 @@ let test_non_tty_replacement_requires_force () =
   Out_channel.with_open_bin (Filename.concat destination "SKILL.md") (fun channel ->
       output_string channel "stale");
   let run force =
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root) ~force
-      ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home:root ~path:(Some root)
+      ~force ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "non-TTY operation must not prompt")
   in
   (match run false with
@@ -308,7 +309,7 @@ let test_no_input_discovery_requires_force () =
   let agents = Filename.concat home ".agents" in
   mkdir_p agents;
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
       ~no_input:true ~dry_run:false ~stdin_is_tty:true ~confirm:(fun _ _ ->
         Alcotest.fail "--no-input must not prompt")
   with
@@ -332,7 +333,7 @@ let test_dry_run_reports_without_prompting_or_writing () =
   Out_channel.with_open_bin (Filename.concat agents_skill "SKILL.md") (fun channel ->
       output_string channel "stale");
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
       ~no_input:true ~dry_run:true ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "dry run must not prompt")
   with
@@ -363,7 +364,7 @@ let test_dry_run_reports_without_prompting_or_writing () =
 let test_missing_discovery_reports_checked_locations () =
   with_temp_dir @@ fun home ->
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
       ~no_input:false ~dry_run:false ~stdin_is_tty:true ~confirm:(fun _ _ -> true)
   with
   | Ok _ -> Alcotest.fail "expected no-target failure"
@@ -380,8 +381,9 @@ let test_discovery_rejects_invalid_home () =
   [ ""; "relative/home" ]
   |> List.iter (fun home ->
       match
-        Skill_install.run ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:true
-          ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ -> true)
+        Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home ~path:None
+          ~force:true ~no_input:false ~dry_run:false ~stdin_is_tty:false
+          ~confirm:(fun _ _ -> true)
       with
       | Ok _ -> Alcotest.fail "expected invalid HOME failure"
       | Error error ->
@@ -403,7 +405,7 @@ let test_forced_discovery_reports_failure_and_continues () =
   Out_channel.with_open_bin (Filename.concat codex "skills") (fun channel ->
       output_string channel "not a directory");
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:true
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:true
       ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "force must not prompt")
   with
@@ -431,7 +433,7 @@ let test_invalid_discovery_root_does_not_block_later_root () =
   Out_channel.with_open_bin claude (fun channel -> output_string channel "bad");
   mkdir_p agents;
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:true
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:true
       ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "force must not prompt")
   with
@@ -461,7 +463,7 @@ let test_declined_discovery_continues () =
     | [] -> Alcotest.fail "unexpected extra confirmation"
   in
   match
-    Skill_install.run ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
+    Skill_install.run ~roots:[] ~caps:(Ox_test.powerbox ()) ~home ~path:None ~force:false
       ~no_input:false ~dry_run:false ~stdin_is_tty:true ~confirm
   with
   | Error error -> Alcotest.fail (error_message error)

@@ -7,7 +7,14 @@ val counter_script : string
     (tab-zc36). A row that is only informative still needs a name. *)
 
 val guard_expression : string
+
 val guard : Yojson.Safe.t -> (string * int * float * float * float * float) option
+(** Epoch, mutation count, and device-scaled viewport width, height and scroll offsets, in
+    the same coordinates as Chrome DOMSnapshot bounds (daily-9ggi). *)
+
+val row_role : string -> string
+(** Normalize Chrome AX roles identically for snapshot rows and action revalidation
+    (daily-9ggi). *)
 
 val rows :
   ax:Yojson.Safe.t ->

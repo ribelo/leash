@@ -233,7 +233,8 @@ let revalidate cdp tab ?snapshot_id ~index () =
     let* () = loader_unchanged cdp tab loader in
     match accessed cdp tab backend with
     | None -> fail_stale tab "the row no longer resolves; snap again"
-    | Some (role, name) when role <> row.role || name <> row.name ->
+    | Some (role, name) when Snapshot_source.row_role role <> row.role || name <> row.name
+      ->
         fail_stale tab "the row changed since the snapshot; snap again"
     | Some _ -> (
         match described cdp tab backend with
@@ -501,7 +502,19 @@ let key_event ?(modifiers = 0) cdp tab ~type_ spec =
 
 let press_key cdp tab name =
   match key_spec name with
-  | None -> fail "invalid-request" (Printf.sprintf "unknown key name %s" name)
+  | None ->
+      let accepted =
+        "Enter, Tab, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, \
+         End, PageUp, PageDown, Escape/Esc, Space, lowercase a-z, digits 0-9, and single \
+         punctuation characters - = [ ] ; , . / '"
+      in
+      let error = error "invalid-request" (Printf.sprintf "unknown key name %S" name) in
+      Error
+        {
+          error with
+          hint = "use one accepted key: " ^ accepted;
+          detail = Some (`Assoc [ ("accepted_keys", `String accepted) ]);
+        }
   | Some spec ->
       let* () = key_event cdp tab ~type_:"keyDown" spec in
       key_event cdp tab ~type_:"keyUp" spec
@@ -629,6 +642,63 @@ let click ~cdp tab (args : P.click_args) =
 
 let text_controls = [ "textbox"; "searchbox"; "combobox"; "spinbutton" ]
 
+(* daily-9ggi: Chrome's segmented date/time editors ignore Input.insertText. Detect
+   the native input, not an ARIA role, and keep the ordinary trusted text path intact. *)
+let temporal_input cdp tab backend =
+  let* json =
+    call cdp ~session:tab.session "DOM.describeNode"
+      (E.object_ [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
+  in
+  let attributes =
+    match E.Of_json.(at [ "node"; "attributes" ] (list string)) json with
+    | Ok attributes -> attributes
+    | Error _ -> []
+  in
+  let rec kind = function
+    | "type" :: value :: _ ->
+        List.mem
+          (String.lowercase_ascii value)
+          [ "time"; "date"; "datetime-local"; "month"; "week" ]
+    | _ :: _ :: rest -> kind rest
+    | _ -> false
+  in
+  Ok (E.Of_json.(at [ "node"; "nodeName" ] string) json = Ok "INPUT" && kind attributes)
+
+let temporal_expression =
+  {|function (text) {
+    if (this.disabled || this.readOnly) return 'readonly';
+    const probe = this.ownerDocument.createElement('input');
+    probe.type = this.type;
+    probe.value = text;
+    if (text !== '' && probe.value === '') return 'invalid';
+    const setter = Object.getOwnPropertyDescriptor(
+      this.ownerDocument.defaultView.HTMLInputElement.prototype, 'value').set;
+    setter.call(this, probe.value);
+    this.dispatchEvent(new Event('input', {bubbles:true}));
+    this.dispatchEvent(new Event('change', {bubbles:true}));
+    return this.value === probe.value ? 'ok' : 'rejected';
+  }|}
+
+let fill_temporal cdp tab backend text =
+  let* object_id = resolve_node cdp tab backend in
+  let* json =
+    call cdp ~session:tab.session "Runtime.callFunctionOn"
+      (E.object_
+         [
+           ("objectId", Some (E.string object_id));
+           ("functionDeclaration", Some (E.string temporal_expression));
+           ("arguments", Some (E.array [ E.object_ [ ("value", Some (E.string text)) ] ]));
+           ("returnByValue", Some (E.bool true));
+         ])
+  in
+  match E.Of_json.(at [ "result"; "value" ] string) json with
+  | Ok "ok" -> Ok ()
+  | Ok "readonly" ->
+      fail "row-not-actionable" "the temporal input is readonly or disabled"
+  | Ok ("invalid" | "rejected") ->
+      fail "invalid-request" "the temporal input did not accept that date/time value"
+  | _ -> fail "internal" "the temporal input fill did not return a result"
+
 let fill ~cdp tab (args : P.fill_args) =
   if String.length args.text > 65_536 then fail "too-large" "fill text is over 64 KiB"
   else
@@ -640,9 +710,14 @@ let fill ~cdp tab (args : P.fill_args) =
             if not (List.mem target.row.role text_controls) then
               fail "row-not-actionable" "the row is not a text control"
             else
+              let* temporal = temporal_input cdp tab target.backend in
               let* () = focus_row cdp tab target.backend in
-              let* () = select_content cdp tab in
-              let* () = insert_text cdp tab args.text in
+              let* () =
+                if temporal then fill_temporal cdp tab target.backend args.text
+                else
+                  let* () = select_content cdp tab in
+                  insert_text cdp tab args.text
+              in
               let* () = blur cdp tab in
               settle cdp tab ~combobox:(target.row.role = "combobox")))
 

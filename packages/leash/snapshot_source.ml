@@ -19,7 +19,7 @@ let counter_script =
     {subtree:true, childList:true, attributes:true, characterData:true});
   Object.defineProperty(window, '__leashSnapshotGuard', {
     value: () => ({epoch, count, width: innerWidth, height: innerHeight,
-                   scrollX, scrollY}),
+                   scrollX, scrollY, devicePixelRatio}),
     configurable:false, writable:false
   });
 })()|}
@@ -29,17 +29,16 @@ let guard_expression = "window.__leashSnapshotGuard?.()"
 let guard json =
   match (get "epoch" json, get "count" json) with
   | `String epoch, `Int count when epoch <> "" ->
+      let scale = number (get "devicePixelRatio" json) in
+      let scale = if scale > 0. then scale else 1. in
+      let scaled key = number (get key json) *. scale in
       Some
-        ( epoch,
-          count,
-          number (get "width" json),
-          number (get "height" json),
-          number (get "scrollX" json),
-          number (get "scrollY" json) )
+        (epoch, count, scaled "width", scaled "height", scaled "scrollX", scaled "scrollY")
   | _ -> None
 
-(* DOMSnapshot bounds are in document CSS coordinates, not viewport coordinates.
-   Clip against the viewport translated by the guard's scroll position (tab-tmoc). *)
+(* Chrome DOMSnapshot bounds are device-scaled document coordinates (daily-9ggi),
+   unlike getBoundingClientRect. The guard scales the CSS viewport and scroll together;
+   clipping stays correct on HiDPI displays and after scrolling (tab-tmoc). *)
 let visible dom ~width ~height ~scroll_x ~scroll_y =
   let result = Hashtbl.create 128 in
   (match list (get "documents" dom) with
@@ -144,6 +143,12 @@ let dom_node_names dom =
 (* A row whose role is only informative still needs a name, or the table fills with
    unnamed decoration; a control is worth a row either way (tab-zc36). *)
 let informative = [ "heading"; "paragraph"; "img"; "status"; "alert" ]
+
+let row_role = function
+  | "DisclosureTriangle" -> "button"
+  | "InputTime" | "Date" | "DateTime" -> "textbox"
+  | role -> role
+
 let role n = text (value (get "role" n))
 let name n = text (value (get "name" n))
 
@@ -298,7 +303,6 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
   let nodes = list (get "nodes" ax) in
   let by_id = Hashtbl.create 128 in
   List.iter (fun n -> Hashtbl.replace by_id (text (get "nodeId" n)) n) nodes;
-  let parent n = Hashtbl.find_opt by_id (text (get "parentId" n)) in
   (* snapshot.js:68 branches on the DOM tag, so a row carries options exactly when it is a
      native [<select>]: every other combobox — an input with a datalist, an ARIA combobox —
      carries none, and the request reads it as the text control it is. *)
@@ -334,6 +338,18 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
       "treeitem";
     ]
   in
+  let children n =
+    list (get "childIds" n)
+    |> List.filter_map (fun id -> Hashtbl.find_opt by_id (text id))
+  in
+  (* daily-9ggi: a paragraph may contain a span per character. Aggregate its text once,
+     without swallowing separately actionable descendants or duplicating nested rows. *)
+  let rec paragraph_text n =
+    if role n = "StaticText" then name n
+    else if role n = "LineBreak" then "\n"
+    else if List.mem (row_role (role n)) included then ""
+    else String.concat "" (List.map paragraph_text (children n))
+  in
   let seen = Hashtbl.create 128 in
   let rec walk n =
     let id = text (get "nodeId" n) in
@@ -341,16 +357,13 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
     else (
       Hashtbl.add seen id ();
       let r = role n in
-      let effective_role, effective_node =
-        if r = "StaticText" then
-          match parent n with
-          | Some p when role p = "paragraph" -> ("paragraph", p)
-          | _ -> ("", n)
-        else if r = "DisclosureTriangle" then ("button", n)
-        else (r, n)
+      let effective_role = row_role r in
+      let backend = integer (get "backendDOMNodeId" n) in
+      let label =
+        if r = "paragraph" && name n = "" then
+          String.concat "" (List.map paragraph_text (children n))
+        else name n
       in
-      let backend = integer (get "backendDOMNodeId" effective_node) in
-      let label = name n in
       (* tab-zc36: an empty-name control keeps its row, with the value it holds now or,
          when it holds none, the placeholder that is the only other thing telling an agent
          what it is. *)
@@ -393,11 +406,7 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
           ]
         else []
       in
-      let children =
-        list (get "childIds" n)
-        |> List.filter_map (fun id -> Hashtbl.find_opt by_id (text id))
-      in
-      here @ List.concat_map walk children)
+      here @ List.concat_map walk (children n))
   in
   let roots = List.filter (fun n -> field "parentId" n = None) nodes in
   let raw = List.concat_map walk roots in

@@ -16,6 +16,7 @@ type error = { completed : outcome list; failures : failure list }
 val run :
   caps:< Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
   home:string ->
+  roots:string list ->
   path:string option ->
   force:bool ->
   no_input:bool ->
@@ -27,6 +28,8 @@ val run :
 val show : string
 (** The stamped entrypoint, exactly as installed. *)
 
-val status : caps:< Ox_caps.Cap.fs_read ; .. > -> home:string -> Yojson.Safe.t
-(** Inspect the discovered default installs without creating directories. A stale stamp,
-    modified content or unreadable install is stale; absent installs are missing. *)
+val status :
+  caps:< Ox_caps.Cap.fs_read ; .. > -> home:string -> roots:string list -> Yojson.Safe.t
+(** Inspect configured [roots], or discovered defaults when the list is empty, without
+    creating directories. A stale stamp, modified content or unreadable install is stale;
+    absent installs are missing. *)

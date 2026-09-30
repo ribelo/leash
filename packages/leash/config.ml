@@ -140,18 +140,116 @@ let default_text_model = "inception/mercury-2.5"
 let default_planner_model = "openai/gpt-6-luna"
 let default_planner_reasoning = "high"
 
+(* daily-9ggi: per-attempt provider budgets, independent of the mission deadline. *)
+let default_jev_timeout = 10
+let default_text_timeout = 10
+let default_planner_timeout = 60
+
 type models = {
   api_key : Redact.t option;
-  systemone_endpoint : Text.t; [@json.default default_systemone_endpoint]
-  jev_model : Text.t; [@json.default default_jev_model]
-  chat_base_url : Text.t; [@json.default default_chat_base_url]
-  text_model : Text.t; [@json.default default_text_model]
-  planner_model : Text.t; [@json.default default_planner_model]
-  planner_reasoning : Text.t; [@json.default default_planner_reasoning]
+  systemone_endpoint : Text.t;
+  jev_model : Text.t;
+  chat_base_url : Text.t;
+  text_model : Text.t;
+  planner_model : Text.t;
+  planner_reasoning : Text.t;
   planner_endpoint : Text.t option;
-  choice_confidence : Probability.t; [@json.default 0.7]
+  jev_timeout : Seconds.t;
+  text_timeout : Seconds.t;
+  planner_timeout : Seconds.t;
+  choice_confidence : Probability.t;
 }
-[@@deriving yojson]
+
+(* daily-9ggi: the minimal deriver duplicates the remaining decoder for every
+   defaulted field (exponential generated code). Keep this wide flat record's
+   codec sequential until that upstream defect is fixed. *)
+let yojson_of_models (value : models) =
+  let optional name encode = function
+    | None -> []
+    | Some value -> [ (name, encode value) ]
+  in
+  `Assoc
+    (optional "api_key" Redact.yojson_of_t value.api_key
+    @ optional "planner_endpoint" Text.yojson_of_t value.planner_endpoint
+    @ [
+        ("systemone_endpoint", Text.yojson_of_t value.systemone_endpoint);
+        ("jev_model", Text.yojson_of_t value.jev_model);
+        ("chat_base_url", Text.yojson_of_t value.chat_base_url);
+        ("text_model", Text.yojson_of_t value.text_model);
+        ("planner_model", Text.yojson_of_t value.planner_model);
+        ("planner_reasoning", Text.yojson_of_t value.planner_reasoning);
+        ("jev_timeout", Seconds.yojson_of_t value.jev_timeout);
+        ("text_timeout", Seconds.yojson_of_t value.text_timeout);
+        ("planner_timeout", Seconds.yojson_of_t value.planner_timeout);
+        ("choice_confidence", Probability.yojson_of_t value.choice_confidence);
+      ])
+
+let models_of_yojson = function
+  | `Assoc fields -> (
+      let ( let* ) = Result.bind in
+      let field name decode default =
+        match List.assoc_opt name fields with
+        | None -> Ok default
+        | Some json ->
+            Result.map_error (fun why -> "models." ^ name ^ ": " ^ why) (decode json)
+      in
+      let optional decode = function
+        | `Null -> Ok None
+        | json -> Result.map Option.some (decode json)
+      in
+      let* api_key = field "api_key" (optional Redact.t_of_yojson) None in
+      let* systemone_endpoint =
+        field "systemone_endpoint" Text.t_of_yojson default_systemone_endpoint
+      in
+      let* jev_model = field "jev_model" Text.t_of_yojson default_jev_model in
+      let* chat_base_url = field "chat_base_url" Text.t_of_yojson default_chat_base_url in
+      let* text_model = field "text_model" Text.t_of_yojson default_text_model in
+      let* planner_model = field "planner_model" Text.t_of_yojson default_planner_model in
+      let* planner_reasoning =
+        field "planner_reasoning" Text.t_of_yojson default_planner_reasoning
+      in
+      let* planner_endpoint = field "planner_endpoint" (optional Text.t_of_yojson) None in
+      let* jev_timeout = field "jev_timeout" Seconds.t_of_yojson default_jev_timeout in
+      let* text_timeout = field "text_timeout" Seconds.t_of_yojson default_text_timeout in
+      let* planner_timeout =
+        field "planner_timeout" Seconds.t_of_yojson default_planner_timeout
+      in
+      let* choice_confidence = field "choice_confidence" Probability.t_of_yojson 0.7 in
+      let known =
+        [
+          "api_key";
+          "systemone_endpoint";
+          "jev_model";
+          "chat_base_url";
+          "text_model";
+          "planner_model";
+          "planner_reasoning";
+          "planner_endpoint";
+          "jev_timeout";
+          "text_timeout";
+          "planner_timeout";
+          "choice_confidence";
+        ]
+      in
+      match List.find_opt (fun (name, _) -> not (List.mem name known)) fields with
+      | Some (name, _) -> Error ("models: unknown field " ^ name)
+      | None ->
+          Ok
+            {
+              api_key;
+              systemone_endpoint;
+              jev_model;
+              chat_base_url;
+              text_model;
+              planner_model;
+              planner_reasoning;
+              planner_endpoint;
+              jev_timeout;
+              text_timeout;
+              planner_timeout;
+              choice_confidence;
+            })
+  | _ -> Error "models: expected an object"
 
 (* hand-04rb hand-phof hand-rg9h: the two desktop commands a handoff runs, with the spec's
    defaults — niri's window focus for the managed Chrome's window, and notify-send's Done
@@ -171,6 +269,9 @@ let default_models =
     planner_reasoning = default_planner_reasoning;
     planner_endpoint = None;
     choice_confidence = 0.7;
+    jev_timeout = default_jev_timeout;
+    text_timeout = default_text_timeout;
+    planner_timeout = default_planner_timeout;
   }
 
 let default_focus_command =
@@ -207,6 +308,11 @@ let default_expiry =
 
 let default_control = { socket = default_socket }
 
+(* daily-c4cl: configured roots replace automatic agent-directory discovery. *)
+type skill = { roots : Text.t list [@json.default []] } [@@deriving yojson]
+
+let default_skill = { roots = [] }
+
 (* svc-f4op: no exporter is acquired when endpoint is absent. Header values are
    secret-wrapped from decode onward, including config check rendering. *)
 type otlp_header = { name : Text.t; value : Redact.t } [@@deriving yojson]
@@ -224,6 +330,7 @@ type t = {
   otlp : otlp; [@json.default default_otlp]
   models : models; [@json.default default_models]
   handoff : handoff; [@json.default default_handoff]
+  skill : skill; [@json.default default_skill]
 }
 [@@deriving yojson]
 
@@ -236,6 +343,7 @@ let default : t =
     otlp = default_otlp;
     models = default_models;
     handoff = default_handoff;
+    skill = default_skill;
   }
 
 let toml_array values =
@@ -282,8 +390,15 @@ let default_toml =
 # planner_model = %S          # the fallback planner (Luna)
 # planner_reasoning = %S      # OpenRouter effort; "none" turns reasoning off
 # choice_confidence = 0.7     # review a playbook choice below this top probability
+# jev_timeout = %d           # seconds per attempt; caller deadline still bounds all retries
+# text_timeout = %d
+# planner_timeout = %d
 # planner_endpoint = "https://openrouter.ai/api/v1/chat/completions"
 #                             # default: chat_base_url + /chat/completions
+#
+# [skill]
+# roots = ["$HOME/.dotfiles/skills/engineering/debugging"]
+#                             # empty by default: discover supported agent directories
 #
 # [handoff]
 # focus_command = %s
@@ -292,7 +407,8 @@ let default_toml =
     default_binary default_profile_dir default_workspace default_cap default_idle_s
     default_unclaimed_s default_tombstone_s default_socket default_systemone_endpoint
     default_jev_model default_chat_base_url default_text_model default_planner_model
-    default_planner_reasoning
+    default_planner_reasoning default_jev_timeout default_text_timeout
+    default_planner_timeout
     (toml_array default_focus_command)
     (toml_array default_notify_command)
 
@@ -324,6 +440,10 @@ let expand ~getenv text =
       match value with
       | Some base -> Filename.concat base (String.concat "/" rest)
       | None -> text)
+  | "~" :: rest -> (
+      match nonempty (getenv "HOME") with
+      | Some home -> Filename.concat home (String.concat "/" rest)
+      | None -> text)
   | _ -> text
 
 let env ~getenv config =
@@ -343,6 +463,7 @@ let env ~getenv config =
     models;
     chrome = { config.chrome with profile_dir = path config.chrome.profile_dir };
     control = { socket = path config.control.socket };
+    skill = { roots = List.map path config.skill.roots };
   }
 
 let spec : t Ox_app.Config.t = { of_yojson = t_of_yojson; yojson_of_t; env }
@@ -495,6 +616,21 @@ let profile_issues ~check_unset ~fs profile =
             stat_issues "/chrome/profile_dir" (nearest profile) `Directory 0o300 fs
         | _ -> [ issue "/chrome/profile_dir" "not a directory" ])
 
+let skill_path_issues ~check_unset index path =
+  let pointer = Printf.sprintf "/skill/roots/%d" index in
+  let unexpanded = String.contains path '$' || String.starts_with ~prefix:"~" path in
+  if check_unset && unexpanded then
+    [ issue pointer "the environment variable in this path is unset" ]
+  else if Filename.is_relative path && not unexpanded then
+    [ issue pointer "must be an absolute path" ]
+  else []
+
+let skill_root_issues roots =
+  List.concat
+    (List.mapi
+       (fun index root -> skill_path_issues ~check_unset:true index (Text.to_string root))
+       roots)
+
 let validate_paths ~getenv ~fs config =
   (* Order is the old short-circuit order, so a caller that reads the first issue still
      sees the refusal it saw before aggregation: OTLP, binary, socket, profile. *)
@@ -504,6 +640,7 @@ let validate_paths ~getenv ~fs config =
     @ socket_issues ~check_unset:true (Text.to_string config.control.socket)
     @ profile_issues ~check_unset:true ~fs:(Some fs)
         (Text.to_string config.chrome.profile_dir)
+    @ skill_root_issues config.skill.roots
   with
   | [] -> Ok ()
   | errors -> Error errors
@@ -602,6 +739,7 @@ type collected = {
   endpoint : Text.t option;
   headers : (int * otlp_header) list;
   headers_nonempty : bool;
+  skill_roots : (int * Text.t) list;
 }
 
 let collect_chrome pointer json =
@@ -678,7 +816,10 @@ let collect json =
   | `Assoc fields ->
       let unknown =
         unknown_issues ""
-          ~known:[ "chrome"; "tabs"; "expiry"; "control"; "otlp"; "models"; "handoff" ]
+          ~known:
+            [
+              "chrome"; "tabs"; "expiry"; "control"; "otlp"; "models"; "handoff"; "skill";
+            ]
           fields
       in
       let binary, profile_dir, chrome_errors =
@@ -745,6 +886,9 @@ let collect json =
                   "planner_reasoning";
                   "planner_endpoint";
                   "choice_confidence";
+                  "jev_timeout";
+                  "text_timeout";
+                  "planner_timeout";
                 ] (fun section ->
                 let text pointer json = decode_with pointer Text.t_of_yojson json in
                 field_errors pointer "api_key" section (fun pointer json ->
@@ -757,8 +901,44 @@ let collect json =
                 @ field_errors pointer "planner_reasoning" section text
                 @ field_errors pointer "planner_endpoint" section (fun pointer json ->
                     decode_option pointer Text.t_of_yojson json)
+                @ List.concat_map
+                    (fun name ->
+                      field_errors pointer name section (fun pointer json ->
+                          decode_with pointer Seconds.t_of_yojson json))
+                    [ "jev_timeout"; "text_timeout"; "planner_timeout" ]
                 @ field_errors pointer "choice_confidence" section (fun pointer json ->
                     decode_with pointer Probability.t_of_yojson json))
+      in
+      let skill_roots, skill_errors =
+        let pointer = child "" "skill" in
+        match List.assoc_opt "skill" fields with
+        | None -> ([], [])
+        | Some json -> (
+            match expect_object pointer json with
+            | Error errors -> ([], errors)
+            | Ok section -> (
+                let unknown = unknown_issues pointer ~known:[ "roots" ] section in
+                let pointer = child pointer "roots" in
+                match List.assoc_opt "roots" section with
+                | None -> ([], unknown)
+                | Some (`List roots) ->
+                    let roots, errors =
+                      List.fold_right
+                        (fun (index, json) (roots, errors) ->
+                          match
+                            decode_with (pointer_index pointer index) Text.t_of_yojson
+                              json
+                          with
+                          | Ok root -> ((index, root) :: roots, errors)
+                          | Error problems -> (roots, problems @ errors))
+                        (List.mapi (fun index json -> (index, json)) roots)
+                        ([], [])
+                    in
+                    (roots, unknown @ errors)
+                | Some json ->
+                    ( [],
+                      unknown
+                      @ [ issue pointer ("expected an array, got " ^ show_json json) ] )))
       in
       let handoff_errors =
         match List.assoc_opt "handoff" fields with
@@ -773,7 +953,7 @@ let collect json =
       {
         errors =
           unknown @ chrome_errors @ tabs_errors @ expiry_errors @ control_errors
-          @ otlp_errors @ models_errors @ handoff_errors;
+          @ otlp_errors @ models_errors @ handoff_errors @ skill_errors;
         binary;
         profile_dir;
         socket;
@@ -781,6 +961,7 @@ let collect json =
         endpoint;
         headers;
         headers_nonempty;
+        skill_roots;
       }
   | json ->
       {
@@ -792,6 +973,7 @@ let collect json =
         endpoint = None;
         headers = [];
         headers_nonempty = false;
+        skill_roots = [];
       }
 
 let expand_text ~getenv text =
@@ -847,7 +1029,14 @@ let validation ~getenv ~fs collected =
         profile_issues ~check_unset:(checking_machine getenv fs) ~fs
           (Text.to_string (prepared ~getenv ~fs text))
   in
-  otlp @ binary @ socket @ profile
+  let skill =
+    List.concat_map
+      (fun (index, root) ->
+        skill_path_issues ~check_unset:(checking_machine getenv fs) index
+          (Text.to_string (prepared ~getenv ~fs root)))
+      collected.skill_roots
+  in
+  otlp @ binary @ socket @ profile @ skill
 
 let decode_all ?getenv ?fs json =
   let collected = collect json in

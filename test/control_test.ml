@@ -854,6 +854,83 @@ let fixture name =
 
 let snapshot_fixture () = fixture "snapshot-chrome.json"
 
+(* daily-9ggi: real Chrome 152 replies, private headless service, device scale 2. *)
+let daily_snapshot () =
+  List.iter
+    (fun site ->
+      rig (fun _ _ _ tabs fake ->
+          let fake = fake () in
+          let captured = get site (fixture "daily-snapshot-chrome.json") in
+          Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" captured);
+          Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" captured);
+          Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" captured);
+          let scroll_y = ref 0 in
+          Fake.on_method fake "Runtime.evaluate" (fun _ ->
+              obj
+                [
+                  ( "result",
+                    obj
+                      [
+                        ( "value",
+                          obj
+                            [
+                              ("epoch", str "daily-9ggi");
+                              ("count", `Int 1);
+                              ("width", `Int 1366);
+                              ("height", `Int 813);
+                              ("scrollY", `Int !scroll_y);
+                              ("devicePixelRatio", `Int 2);
+                            ] );
+                      ] );
+                ]);
+          let tab = result (request tabs "alice" (P.New { url = None })) |> tab in
+          let snap () =
+            result
+              (request tabs "alice"
+                 (P.Snap { tab; match_ = None; limit = None; offset = None }))
+          in
+          let rows json = match get "rows" json with `List xs -> xs | _ -> [] in
+          let observed = rows (snap ()) in
+          let has role name =
+            List.exists
+              (fun row -> get "role" row = str role && get "name" row = str name)
+              observed
+          in
+          if site = "httpbin" then (
+            List.iter
+              (fun (role, name) ->
+                Alcotest.(check bool) ("daily-9ggi visible " ^ name) true (has role name))
+              [
+                ("textbox", "Preferred delivery time: ");
+                ("textbox", "Delivery instructions: ");
+                ("button", "Submit order");
+              ];
+            Alcotest.(check int)
+              "daily-9ggi all thirteen form controls" 13
+              (List.length
+                 (List.filter (fun row -> get "role" row <> str "paragraph") observed));
+            scroll_y := 650;
+            Alcotest.(check int)
+              "daily-9ggi device-scaled scroll clips the form" 0
+              (List.length (rows (snap ()))))
+          else (
+            Alcotest.(check bool)
+              "daily-9ggi Learn more remains actionable" true (has "link" "Learn more");
+            let paragraphs =
+              List.filter (fun row -> get "role" row = str "paragraph") observed
+            in
+            Alcotest.(check int)
+              "daily-9ggi one row per language paragraph" 6 (List.length paragraphs);
+            Alcotest.(check string)
+              "daily-9ggi complete English text, not characters"
+              "This domain is for use in documentation examples without needing \
+               permission. This is not a service, avoid relying on it for testing and \
+               monitoring purposes."
+              (match paragraphs with
+              | row :: _ -> ( match get "name" row with `String s -> s | _ -> "")
+              | [] -> ""))))
+    [ "httpbin"; "example" ]
+
 let snapshot () =
   rig (fun _ _ _ tabs fake ->
       let fake = fake () in
@@ -1862,6 +1939,109 @@ let run_mission () =
         (List.mem "Input.dispatchMouseEvent" methods))
 
 (* run-fwl8: a run starts from a state it can act in. *)
+let drive_temporary_cleanup () =
+  List.iter
+    (fun outcome ->
+      rig (fun _ _ _ tabs fake ->
+          let f = fake () in
+          page_script f (fixture "unlabelled-controls-chrome.json") "Example content";
+          document_at ~title:"Example Domain" ~url:"https://example.com/" f;
+          let decide ~deadline request =
+            if outcome = "model-error" then
+              Error
+                (P.make_error
+                   (Result.get_ok (P.Error_code.of_string "model-unavailable"))
+                   ~message:"scripted provider failure")
+            else
+              Result.map
+                (fun (d : Leash__Jev_request.decision) ->
+                  { d with operation = Result.get_ok (P.Operation.of_string outcome) })
+                (decide_done ~deadline request)
+          in
+          let reply =
+            Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide tabs
+              (run_wire "Open https://example.com and inspect the page")
+            |> Yojson.Safe.from_string |> P.decode_reply |> reply_of
+          in
+          (match (outcome, reply) with
+          | "model-error", P.Failure e ->
+              Alcotest.(check string)
+                "daily-9ggi original error retained" "model-unavailable"
+                (P.Error_code.to_string e.P.code)
+          | _, P.Success body ->
+              Alcotest.(check string)
+                "daily-9ggi original outcome retained" outcome
+                (match get "status" body with `String s -> s | _ -> "")
+          | _ -> Alcotest.fail "daily-9ggi unexpected drive reply");
+          let listed =
+            result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
+          in
+          Alcotest.(check bool)
+            "daily-9ggi temporary tab closed on every outcome" true
+            (listed = `List [])))
+    [ "done"; "blocked"; "model-error" ];
+  rig (fun _ _ _ tabs fake ->
+      let f = fake () in
+      page_script f (fixture "unlabelled-controls-chrome.json") "Example content";
+      document_at ~title:"Example Domain" ~url:"https://example.com/" f;
+      (match
+         Leash.Control.handle ~model:"fixture-model" ~installed:[]
+           ~decide:(fun ~deadline:_ _ -> raise Exit)
+           tabs
+           (run_wire "Open https://example.com")
+       with
+      | exception Exit -> ()
+      | _ -> Alcotest.fail "daily-9ggi expected scripted exception");
+      let listed =
+        result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
+      in
+      Alcotest.(check bool)
+        "daily-9ggi exception closes temporary tab" true
+        (listed = `List []));
+  rig (fun _ _ _ tabs fake ->
+      let f = fake () in
+      page_script f (fixture "unlabelled-controls-chrome.json") "Sign in";
+      document_at ~title:"Sign in" ~url:product_url f;
+      let book =
+        match
+          Leash.Playbook.load ~caps:(Ox_test.powerbox ())
+            "../examples/playbooks/automationexercise.com"
+        with
+        | Ok book -> book
+        | Error why -> Alcotest.fail why
+      in
+      let plan =
+        Run.
+          {
+            answer = Handoff "Please sign in with your credentials";
+            expect = [];
+            usage = None;
+            pages = [];
+          }
+      in
+      let levels =
+        levels_with ~plan
+          [ "automationexercise.com"; "BLOCKED"; "automationexercise.com"; "BLOCKED" ]
+          (ref [])
+      in
+      let body =
+        Leash.Control.handle ~model:"fixture-model" ~installed:[ book ] ~levels
+          ~decide:decide_done tabs
+          (run_wire "Inspect the catalogue")
+        |> Yojson.Safe.from_string |> P.decode_reply |> decoded
+      in
+      Alcotest.(check bool)
+        "daily-9ggi genuine handoff returned" true
+        (get "status" body = str "handoff");
+      let listed =
+        result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
+      in
+      Alcotest.(check bool)
+        "daily-9ggi human tab preserved" true
+        (match listed with
+        | `List [ tab ] -> get "state" tab = str "with_human"
+        | _ -> false))
+
 let run_refusals () =
   rig (fun _ _ _ tabs fake ->
       let f = fake () in
@@ -1913,8 +2093,7 @@ let run_refusals () =
       in
       wait_dialog 100;
       check_code "run-fwl8 dialog-open" "dialog-open" (run "alice");
-      (* run-9ypy: a mission with no tab opens one of its own — listed for its owner, and
-         left open for the next call. *)
+      (* daily-9ggi: a mission closes its own tab but preserves a supplied tab. *)
       let opened =
         reply_of
           (P.decode_reply
@@ -1926,13 +2105,13 @@ let run_refusals () =
       | P.Failure error -> Alcotest.fail error.P.message
       | P.Success body ->
           Alcotest.(check string)
-            "extr-andy a mission with no playbook uses the operator" "done"
+            "daily-9ggi blank mission without URL is explained" "blocked"
             (match get "status" body with `String s -> s | _ -> ""));
       let tabs_now =
         result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
       in
       Alcotest.(check int)
-        "run-9ypy the run opened a tab" 2
+        "daily-9ggi the run cleaned its tab, supplied tab remains" 1
         (match tabs_now with `List xs -> List.length xs | _ -> 0))
 
 (* L32 run-m0r8 run-rq6i: a planner turn through the control seam — the production handler
@@ -2817,6 +2996,8 @@ let () =
       ( "lifecycle",
         [
           Alcotest.test_case "tab-of0i tmoc 1r34 hyap 1rx9 0vh8" `Quick snapshot;
+          Alcotest.test_case "daily-9ggi HiDPI controls and paragraph text" `Quick
+            daily_snapshot;
           Alcotest.test_case "chrome-qnul hjw9 fuao 2n8n" `Quick lifecycle;
           Alcotest.test_case "svc-p67t qilu journal and redaction" `Quick
             journal_redaction;
@@ -2843,6 +3024,8 @@ let () =
           Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;
           Alcotest.test_case "run-9ypy run-4j1v run-snk4 run-shgh run-7blx" `Quick
             run_mission;
+          Alcotest.test_case "daily-9ggi temporary drive tabs" `Quick
+            drive_temporary_cleanup;
           Alcotest.test_case "run-fwl8 run refusals" `Quick run_refusals;
           Alcotest.test_case "run-rq6i run-m0r8 planner proposal" `Quick run_proposal;
           Alcotest.test_case "run-3vat run-xda7 discover proposal" `Quick

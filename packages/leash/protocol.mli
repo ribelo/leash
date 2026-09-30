@@ -522,6 +522,8 @@ type download_info = {
   suggested_name : string;
   mime : string;
   state : string;
+  received_bytes : int;
+  total_bytes : int;
   path : string option; [@json.null]
 }
 

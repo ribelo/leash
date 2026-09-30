@@ -10,22 +10,52 @@ Every failed CLI invocation writes **one compact JSON record** on stderr, includ
 
 The shape is `{code,message,hint,detail?}`. `hint` is always present; `detail` is optional. There is no stdout protocol-error envelope to unwrap. `--pretty` does not pretty-print errors. Preserve the exit code, parse stderr if needed, and **follow the hint** within the task's authorization. Run `leash help errors` for every code, exit, meaning, and exact hint; `leash COMMAND --help` gives the accepted form. Do not classify failures by matching English message text.
 
-| Exit | Class | Codes |
-| --- | --- | --- |
-| 64 | Usage / invalid request | `invalid-request`, `usage`, `no-dialog`, `no-handoff`, `url-refused` |
-| 65 | Invalid configuration / page or script data | `config-invalid`, `stale-snapshot`, `row-not-actionable`, `dialog-open`, `too-large`, `script-failed`, `script-invalid` |
-| 66 | Unknown / gone resource | `tab-gone`, `unknown-tab`, `no-such-row`, `body-unavailable`, `unknown-request` |
-| 69 | Unavailable | `service-unreachable`, `browser-unavailable`, `model-unavailable` |
-| 70 | Internal / invalid service reply | `internal`, `invalid-response` |
-| 75 | Retryable condition | `timeout`, `tab-cap` |
-| 77 | Permission / ownership | `not-owner`, `already-owned`, `with-human`, `socket-permission`, `permission-denied` |
-| 124 | CLI parsing; command did not run | `cli-parse` |
+This table matches `leash help errors` (daily-c4cl, daily-9ggi).
+
+| code | exit | meaning | hint |
+| --- | --- | --- | --- |
+| `invalid-request` | 64 | malformed JSON, unknown command, or bad arguments | fix the request; `leash <command> --help` names the arguments and one example |
+| `not-owner` | 77 | the tab is owned by another caller, or unowned and the command needs an owner | run `leash list --all` to see the owner; if this is your tab, pass its --owner (without --owner, DSH_SESSION_ID selects dsh:<DSH_SESSION_ID>); claim only an unowned tab. If someone else owns it, use your own tab with `leash new` or ask the owner to release it |
+| `already-owned` | 77 | claim on a tab that is not unowned | `leash list --all` shows its owner; use your own tab with `leash new` or ask the owner to release it |
+| `with-human` | 77 | the tab is handed to the human; commands are refused until resume | the human holds this tab; wait, or return it with `leash resume TAB` |
+| `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_owner, closed_by_ttl, closed_externally, or browser_lost | the handle is dead; read detail.disposition, then open a new tab with `leash new` |
+| `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; `leash list --all` shows live handles |
+| `stale-snapshot` | 65 | the snapshot id or target row no longer matches the current page | run `leash snap TAB` again and use its snapshot id |
+| `no-such-row` | 66 | the index is not in the snapshot | that index is not in the snapshot; `leash snap TAB` and use a listed index |
+| `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
+| `unknown-request` | 66 | the tab's ring holds no request with that id | that id is not in the tab's ring; `leash net TAB` and use a listed id |
+| `row-not-actionable` | 65 | the row is not visible, is disabled, is covered, or is the wrong kind of control | pick another row, or `leash snap TAB` if the page moved; a file input takes `leash upload` |
+| `dialog-open` | 65 | a dialog blocks the page; answer it before the action | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry |
+| `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown |
+| `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it |
+| `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank |
+| `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` |
+| `timeout` | 75 | wait, handoff, or a bounded operation ran out of time; a handoff's detail.warnings lists the steps that failed | retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB` |
+| `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds |
+| `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry |
+| `model-timeout` | 75 | a model call exceeded its per-call deadline | the model provider timed out; retry, or raise models.<kind>_timeout |
+| `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry |
+| `script-failed` | 65 | a playbook script threw, rejected, or could not be compiled; message carries what it threw | read message; fix the script or the page, then `leash playbook test` |
+| `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |
+| `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message |
+| `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket |
+| `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |
+| `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash` |
+| `service-restarting` | 75 | the leash unit is activating or auto-restarting, or Chrome's generation is being relaunched | Leash is restarting; retry `leash status` in a few seconds |
+| `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its owner and mode, or pass --socket |
+| `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's owner and mode, or pass another path |
+| `config-invalid` | 65 | the configuration file is missing, unreadable, or invalid | fix the reported problems; `leash config check` lists every one with the config path |
+| `usage` | 64 | the command was invoked wrongly; the arguments do not match its synopsis | `leash <command> --help` shows the arguments and an example |
+| `cli-parse` | 124 | Cmdliner rejected the command line; the command did not run | the command line did not parse; `leash <command> --help` shows the accepted form |
+| `invalid-response` | 70 | the service reply was not a protocol object the CLI could decode | the service reply was not a protocol object; check `leash status` and retry |
 
 Exit 75 is **not** permission to replay any action. A timeout, connection loss, or tab disappearance can follow a dispatched click, fill, press, upload, submission, or mission. Inspect the page, result, partial trace, downloads, or other task evidence first. If the outcome remains uncertain and repeating could cause harm, stop and ask the user. `drive` may also return a non-completion status inside a successful JSON reply; inspect that status even when the CLI exits 0.
 
 ## Common recovery recipes
 
-### Service down: service-unreachable (69)
+### Service connection failures
+
+All commands classify a missing socket using the same systemd observation: `not-installed` (69) means no user unit, `service-stopped` (69) means an installed inactive unit, `service-restarting` (75) means activating/auto-restarting, and `service-unreachable` (69) means the active or unknown service still has no usable socket. Follow that code's hint; an absent unit needs installation, not repeated start attempts.
 
 1. Read `detail.socket` and check the intended endpoint/configuration. Do not redirect to another browser or create a parallel service against the same profile.
 2. Check `systemctl --user status leash`. If starting the installed service is authorized, run `systemctl --user start leash`, then `leash status` with your owner.
@@ -36,7 +66,7 @@ For `browser-unavailable`, Chrome is restarting: check status again after a shor
 
 ### Stale snapshot (65) or no-such-row (66)
 
-Run `leash snap TAB` again using the same owner. Choose the intended row from the new role/name/value/state and use its actual `index` with the **new `snapshot` ID**. Do not merely substitute a new ID into an old guessed index. Filtering/pagination does not renumber rows. For indexed eval, refresh both `--snapshot` and `--index`. Indexed scroll/text use the current table rather than accepting a snapshot argument.
+The snapshot ID can be stale, or the target row may have changed role/name, disappeared, or belong to a previous document. Run `leash snap TAB` again using the same owner. Choose the intended row from the new role/name/value/state and use its actual `index` with the **new `snapshot` ID**. Do not merely substitute a new ID into an old guessed index. Filtering/pagination does not renumber rows. For indexed eval, refresh both `--snapshot` and `--index`. Indexed scroll/text use the current table rather than accepting a snapshot argument.
 
 If the page keeps moving, narrow the snapshot or wait for a concrete stable condition. `row-not-actionable` means disabled, covered, invisible, or wrong-kind input: inspect the obstruction/control, scroll if needed, and use `upload` for a file input. Do not bypass it with synthetic eval clicks.
 
@@ -48,7 +78,7 @@ For `unknown-tab`, obtain a real live handle from `list --all` or `new`; do not 
 
 ### Not owner / already-owned (77)
 
-Verify that your `--owner` or `DSH_SESSION_ID` has not changed, then run `leash list --all`. If the intended tab is unowned and the task permits it, `leash claim TAB` takes it. If another caller owns it, ask them to release it or open your own tab. `already-owned` on claim is a state refusal, not an invitation to impersonate the owner. Never use force-close/release to steal the tab.
+Verify that your `--owner` or `DSH_SESSION_ID` has not changed, then run `leash list --all`. If the intended tab is unowned and the task permits it, `leash claim TAB` takes it. If another caller owns it, ask them to run `leash release TAB` or open your own tab with `leash new URL`. The omitted-owner default is `dsh:<DSH_SESSION_ID>`. `already-owned` on claim is a state refusal, not an invitation to impersonate the owner. Never use force-close/release to steal the tab.
 
 ### With the human (77)
 
@@ -65,6 +95,7 @@ Check `leash status` and `leash list`. Close only your own unneeded disposable t
 - **`timeout`:** inspect completion first. For a genuinely unfinished wait, use a bounded larger `--timeout-ms`; for handoff, inspect warnings and coordinate with the human. Seconds flags (`--timeout-s` for handoff, `--deadline-s` for drive) are different from wait's milliseconds.
 - **`unknown-request` / `body-unavailable`:** list `net TAB` again and choose an actual retained request ID. Bodies may be absent or evicted; do not treat missing history as proof that no request occurred.
 - **`config-invalid`:** run `leash config check`, fix the named problems/path when authorized, then recheck. Do not overwrite the whole configuration to bypass one error.
+- **`model-timeout` (75):** a model call exceeded its per-call deadline. Inspect the partial trace/page before retrying; when authorized, raise `models.<kind>_timeout` (`jev_timeout`, `text_timeout`, or `planner_timeout`).
 - **`model-unavailable`:** inspect `detail.code` and the partial drive trace (`steps` or `procedures` when present). Possible provider detail codes include `missing-key`, `unavailable`, `timeout`, `authentication`, `invalid-response`, `input-too-large`, `model-mismatch`, and `text-helper-unavailable`. Fix credentials/model configuration or stop; no keys in reports. Provider retries are already bounded inside Leash.
 - **`script-failed` / `script-invalid`:** read the message and first mismatched data path, repair the authored script/declared `returns` or page assumption, then run `playbook check` and `playbook test` as appropriate. A script test executes code; do not repeat a mutating script blindly.
 - **`too-large`:** narrow text, rows, input, expression, argument, files, or script output. Do not discard the declared output shape or size bound.

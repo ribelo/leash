@@ -2,7 +2,14 @@ type spawn_error = Ox_process.Child.error
 type reason = [ `Spawn of spawn_error | `Schedule_exhausted of Ox_process.Child.exit ]
 type event = Started of int | Lost of int | Gave_up of reason Ox.Cause.t | Stopped
 type phase = [ `Running | `Restarting | `Gave_up | `Stopped ]
-type status = { generation : int; phase : phase; failure : string option; headed : bool }
+
+type status = {
+  generation : int;
+  phase : phase;
+  failure : string option;
+  headed : bool;
+  pid : int option;
+}
 
 type backoff = {
   initial : Ox.Duration.t;
@@ -89,13 +96,53 @@ let schedule backoff =
     (Ox.Schedule.recurs backoff.attempts)
   |> Ox.Schedule.max_interval backoff.cap
 
+let signal_description signal =
+  (* daily-c4cl: OCaml waitpid uses negative portable constants; kill(1) uses
+     OS numbers. Leash runs on Linux. *)
+  let signals =
+    [
+      (Sys.sighup, "SIGHUP", 1);
+      (Sys.sigint, "SIGINT", 2);
+      (Sys.sigquit, "SIGQUIT", 3);
+      (Sys.sigill, "SIGILL", 4);
+      (Sys.sigtrap, "SIGTRAP", 5);
+      (Sys.sigabrt, "SIGABRT", 6);
+      (Sys.sigbus, "SIGBUS", 7);
+      (Sys.sigfpe, "SIGFPE", 8);
+      (Sys.sigkill, "SIGKILL", 9);
+      (Sys.sigusr1, "SIGUSR1", 10);
+      (Sys.sigsegv, "SIGSEGV", 11);
+      (Sys.sigusr2, "SIGUSR2", 12);
+      (Sys.sigpipe, "SIGPIPE", 13);
+      (Sys.sigalrm, "SIGALRM", 14);
+      (Sys.sigterm, "SIGTERM", 15);
+      (Sys.sigchld, "SIGCHLD", 17);
+      (Sys.sigcont, "SIGCONT", 18);
+      (Sys.sigstop, "SIGSTOP", 19);
+      (Sys.sigtstp, "SIGTSTP", 20);
+      (Sys.sigttin, "SIGTTIN", 21);
+      (Sys.sigttou, "SIGTTOU", 22);
+      (Sys.sigurg, "SIGURG", 23);
+      (Sys.sigxcpu, "SIGXCPU", 24);
+      (Sys.sigxfsz, "SIGXFSZ", 25);
+      (Sys.sigvtalrm, "SIGVTALRM", 26);
+      (Sys.sigprof, "SIGPROF", 27);
+      (Sys.sigwinch, "SIGWINCH", 28);
+      (Sys.sigio, "SIGIO", 29);
+      (Sys.sigsys, "SIGSYS", 31);
+    ]
+  in
+  match List.find_opt (fun (portable, _, _) -> portable = signal) signals with
+  | Some (_, name, number) -> Printf.sprintf "%s / %d" name number
+  | None -> Printf.sprintf "unknown signal %d" signal
+
 let pp_reason ppf = function
   | `Spawn (`Invalid_fd fd) -> Format.fprintf ppf "invalid fd %d" fd
   | `Spawn (`Duplicate_fd fd) -> Format.fprintf ppf "duplicate fd %d" fd
   | `Schedule_exhausted (Ox_process.Child.Exited status) ->
       Format.fprintf ppf "chrome exited with status %d" status
   | `Schedule_exhausted (Ox_process.Child.Signaled signal) ->
-      Format.fprintf ppf "chrome was killed by signal %d" signal
+      Format.fprintf ppf "chrome was killed by %s" (signal_description signal)
 
 let render cause = Format.asprintf "%a" (Ox.Cause.pp_compact pp_reason) cause
 
@@ -125,6 +172,7 @@ type state = {
   mutable failure : string option;
   headed : bool;
   mutable pending : Cdp.t option;
+  mutable pid : int option;
   mutable closed_before_start : int option;
   mutable spawns : int;
   mutable abandoned : reason Ox.Cause.t option;
@@ -195,7 +243,7 @@ let on_exited state generation exit =
     let origin =
       match exit with
       | Ox_process.Child.Exited status -> "exit " ^ string_of_int status
-      | Signaled signal -> "signal " ^ string_of_int signal
+      | Signaled signal -> signal_description signal
     in
     lost state generation ~origin
 
@@ -288,6 +336,7 @@ let create ~sw ?launch config (deps : 'clock deps) =
       failure = None;
       headed = not config.headless;
       pending = None;
+      pid = None;
       closed_before_start = None;
       spawns = 0;
       abandoned = None;
@@ -348,6 +397,7 @@ let create ~sw ?launch config (deps : 'clock deps) =
                         ~finally:(fun () -> Eio.Promise.resolve resolve ())
                         (fun () -> Chrome_stderr.read tail source)));
               state.pending <- Some cdp;
+              state.pid <- Some (Ox_process.Child.pid child);
               Eio.Fiber.fork_daemon ~sw:child_sw (fun () ->
                   let _reason = Eio.Promise.await (Cdp.closed cdp) in
                   push (`Transport_closed generation);
@@ -461,6 +511,7 @@ let status t =
     phase = t.state.phase;
     failure = t.state.failure;
     headed = t.state.headed;
+    pid = (if t.state.phase = `Running then t.state.pid else None);
   }
 
 let connection t =

@@ -77,12 +77,12 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run =
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
   let cap = Option.value ~default:30 args.P.max_steps in
   let with_steps steps error =
-    if error.P.code <> (match P.Error_code.of_string "model-unavailable" with Ok x -> x | Error _ -> assert false)
+    if not (List.mem (P.Error_code.to_string error.P.code) ["model-unavailable"; "model-timeout"])
     then error
-    else let code = match error.detail with
-      | Some (`Assoc fields) -> (match List.assoc_opt "code" fields with Some x -> x | None -> `String "unavailable")
-      | _ -> `String "unavailable" in
-      { error with detail = Some (`Assoc ["code", code; "steps", `List (List.map P.yojson_of_step (List.rev steps))]) }
+    else let fields = match error.detail with
+      | Some (`Assoc fields) -> fields
+      | _ -> ["code", `String "unavailable"] in
+      { error with detail = Some (`Assoc (("steps", `List (List.map P.yojson_of_step (List.rev steps))) :: List.remove_assoc "steps" fields)) }
   in
   (* drive-ls3c drive-fh1h: the context a type_text decision is asked from, built from
      the element JEV chose — the same row the request offered — and the drive's own
@@ -172,8 +172,14 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run =
                   | Some reason -> Ok (result ~reason (status "error") steps next)
                   | None when op = operation "done" ->
                       Ok (result (status "done") steps next)
-                  | None when op = operation "blocked" || dry_run || J.stalled (List.rev recent)
-                    -> Ok (result (status "blocked") steps next)
+                  | None when op = operation "blocked" || dry_run || J.stalled (List.rev recent) ->
+                    let reason =
+                      if dry_run then "dry run: the proposed action was not dispatched"
+                      else if op = operation "blocked" then
+                        "the operator found no available action toward the goal; inspect the final page and revise the goal or use raw commands"
+                      else "the operator repeated actions without changing the page"
+                    in
+                    Ok (result ~reason (status "blocked") steps next)
                   | None -> go (n + 1) next steps recent))
           in
           match ask_text page choice recent ~terminal with

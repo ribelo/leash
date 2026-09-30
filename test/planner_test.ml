@@ -296,7 +296,8 @@ let models_config ?(api_key = Some (Ox_observability.Redact.make key))
     ?(planner_model = planner_model) ?(planner_reasoning = "high") ?planner_endpoint
     ~chat_base_url () : Config.models =
   {
-    Config.api_key;
+    Config.default.models with
+    api_key;
     systemone_endpoint = text_value "http://127.0.0.1:1/api/v1/systemone";
     jev_model = text_value "typesafe/jev-1.13-20260917";
     chat_base_url = text_value chat_base_url;
@@ -304,7 +305,6 @@ let models_config ?(api_key = Some (Ox_observability.Redact.make key))
     planner_model = text_value planner_model;
     planner_reasoning = text_value planner_reasoning;
     planner_endpoint = Option.map text_value planner_endpoint;
-    choice_confidence = Config.default.models.choice_confidence;
   }
 
 let chat_content ?(model = planner_model) content =
@@ -458,6 +458,42 @@ let plan_request ?(trigger = R.Blocked) ?(reason = "the procedure level answered
       url = home_url;
       text = home_text;
     }
+
+(* daily-9ggi: formatting correction cannot obtain another full turn budget. *)
+let correction_budget () =
+  Eio_main.run (fun env ->
+      Eio.Switch.run (fun sw ->
+          let now = ref 0. and calls = ref 0 in
+          let server =
+            Fake.serve ~net:env#net ~sw (fun _ ->
+                incr calls;
+                now := 1.;
+                chat_content "not JSON")
+          in
+          let logger =
+            Logger.create ~level:Logger.Info ~service:"planner-budget" ~clock:env#clock
+              ~mono_clock:env#mono_clock
+              ~reporter:(Logger.Memory.reporter (Logger.Memory.create ()))
+              ()
+          in
+          let http = Ox_http.Client.create ~sw ~net:env#net ~clock:env#clock () in
+          let client =
+            Ox_ai_chat.create ~http ~clock:env#clock ~logger
+              ~endpoint:(Fake.url server "/chat/completions")
+              ~api_key:(Ox_observability.Redact.make key)
+              ()
+          in
+          let planner =
+            Leash__Planner.create
+              ~now:(fun () -> !now)
+              ~client ~model:planner_model ~reasoning:"none" ~logger ()
+          in
+          let error =
+            failed (planner.plan ~deadline:(Ox.Duration.ms 100) (plan_request ()))
+          in
+          Alcotest.(check string)
+            "daily-9ggi elapsed correction times out" "timeout" (detail_code error);
+          Alcotest.(check int) "daily-9ggi no correction after expiry" 1 !calls))
 
 (* ---------- Proposals on disk ---------- *)
 
@@ -1200,6 +1236,7 @@ let () =
     [
       ( "L32",
         [
+          Alcotest.test_case "daily-9ggi correction budget" `Quick correction_budget;
           Alcotest.test_case "run-w7ke triggers" `Quick triggers;
           Alcotest.test_case "run-rq6i answers" `Quick answers;
           Alcotest.test_case "run-rq6i malformed replies" `Quick malformed;

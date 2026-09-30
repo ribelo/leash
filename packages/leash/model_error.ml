@@ -14,10 +14,19 @@ let error_code name =
 let unavailable ?(code = "unavailable") message =
   Protocol.make_error
     ~detail:(`Assoc [ ("code", `String code) ])
-    (error_code "model-unavailable")
+    (error_code (if code = "timeout" then "model-timeout" else "model-unavailable"))
     ~message
 
-let of_eta (error : Ox_ai.Error.t) =
+let with_kind kind (error : Protocol.error) =
+  let fields = match error.detail with Some (`Assoc fields) -> fields | _ -> [] in
+  {
+    error with
+    detail =
+      Some
+        (`Assoc (("model_kind", `String kind) :: List.remove_assoc "model_kind" fields));
+  }
+
+let of_eta ?kind (error : Ox_ai.Error.t) =
   let code =
     match error with
     | `Unavailable _ -> "unavailable"
@@ -27,4 +36,5 @@ let of_eta (error : Ox_ai.Error.t) =
     | `Input_too_large _ -> "input-too-large"
     | `Model_mismatch _ -> "model-mismatch"
   in
-  unavailable ~code (Ox_ai.Error.to_string error)
+  let error = unavailable ~code (Ox_ai.Error.to_string error) in
+  match kind with None -> error | Some kind -> with_kind kind error

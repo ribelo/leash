@@ -81,6 +81,7 @@
  (modules control_test)
  (deps
   fixtures/snapshot-chrome.json
+  fixtures/daily-snapshot-chrome.json
   fixtures/unlabelled-controls-chrome.json
   fixtures/download-chrome.json
   (source_tree ../examples/playbooks))
@@ -150,6 +151,22 @@
 
 (cram
  (deps %{bin:leash} daily_cli_fixture.exe))
+
+(test
+ (name daily_acceptance_test)
+ (modules daily_acceptance_test)
+ (deps ../skill/references/errors.md)
+ (libraries
+  leash
+  leash_test_support
+  ox_test
+  ox
+  ox_process
+  ox_observability
+  eio
+  eio.unix
+  yojson
+  alcotest))
 
 (test
  (name daily_error_table_test)

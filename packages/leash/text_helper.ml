@@ -127,7 +127,8 @@ let log_usage logger (completion : Ox_ai_chat.Codecs.completion) =
       ]
     "text helper usage"
 
-let ask client ~model ~logger ?(deadline = default_deadline) json =
+let ask client ~now ~model ~logger ?(deadline = default_deadline) json =
+  let started = now () in
   let open Ox_ai_chat.Types in
   let messages =
     [ { role = System; content = Questions.text_value }; { role = User; content = json } ]
@@ -153,8 +154,13 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
             | _ -> false
             | exception Yojson.Json_error _ -> false
           in
+          let remaining = Ox.Duration.to_seconds_float deadline -. (now () -. started) in
           if overlong then Error error
+          else if remaining <= 0. then Error (Model_error.of_eta `Timeout)
           else
+            let correction_deadline =
+              Ox.Duration.ms (max 1 (int_of_float (remaining *. 1000.)))
+            in
             let retry =
               messages
               @ [
@@ -171,7 +177,7 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
             Model_usage.start "text_helper";
             match
               Ox_ai_chat.complete client
-                ~deadline:(Ox.Duration.min deadline default_deadline)
+                ~deadline:(Ox.Duration.min correction_deadline default_deadline)
                 ~model ~messages:retry ~max_tokens:1024 ~json_object:true
                 ~reasoning:`Disabled ()
             with
@@ -181,7 +187,7 @@ let ask client ~model ~logger ?(deadline = default_deadline) json =
                 Model_usage.report "text_helper" second.Ox_ai_chat.Codecs.usage.cost;
                 value second.Ox_ai_chat.Codecs.content))
 
-let create ~client ~model ~logger () =
+let create ~client ~now ~model ~logger () =
   (* The one-entry memo of agent.py:110-114, keyed by what the reference compares: the
      field context as it is written to the wire, so a reuse needs the whole helper input
      to be unchanged. A refusal is not remembered. *)
@@ -193,7 +199,7 @@ let create ~client ~model ~logger () =
         match !last with
         | Some (previous, answer) when previous = json -> answer
         | _ ->
-            let answer = ask client ~model ~logger ?deadline json in
+            let answer = ask client ~now ~model ~logger ?deadline json in
             (match answer with Ok (Some _) -> last := Some (json, answer) | _ -> ());
             answer);
   }

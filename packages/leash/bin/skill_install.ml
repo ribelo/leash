@@ -254,7 +254,8 @@ let process_target ~caps ~automatic ~force ~no_input ~dry_run ~stdin_is_tty ~con
       in
       Ok ({ path = destination; disposition }, cleanup_failure)
 
-let run ~caps ~home ~path ~force ~no_input ~dry_run ~stdin_is_tty ~confirm =
+let run ~caps ~home ~roots:configured ~path ~force ~no_input ~dry_run ~stdin_is_tty
+    ~confirm =
   let fail failure = Error { completed = []; failures = [ failure ] } in
   let automatic, roots, discovery_failures =
     match path with
@@ -264,6 +265,9 @@ let run ~caps ~home ~path ~force ~no_input ~dry_run ~stdin_is_tty ~confirm =
           if Filename.is_relative root then Filename.concat (Sys.getcwd ()) root else root
         in
         (false, [ root ], [])
+    | None when configured <> [] ->
+        let roots, failures = deduplicate configured in
+        (true, roots, failures)
     | None when home = "" || Filename.is_relative home ->
         ( true,
           [],
@@ -338,9 +342,11 @@ let installed_stamp ~caps destination =
     (value "  leash-version:" lines, value "  leash-commit:" lines)
   with _ -> (None, None)
 
-let status ~caps ~home =
+let status ~caps ~home ~roots:configured =
   let roots, discovery_failures =
-    if home = "" || Filename.is_relative home then ([], []) else discovered_roots ~home
+    if configured <> [] then (configured, [])
+    else if home = "" || Filename.is_relative home then ([], [])
+    else discovered_roots ~home
   in
   let roots, deduplication_failures = deduplicate roots in
   let installed =

@@ -109,42 +109,45 @@ let cli_options = [ "owner"; "pretty"; "table"; "config"; "socket" ]
    default path is the defaults, so the client works before `leash config init` has run,
    while a --config path that is not there is an error naming it, exactly what the service
    reports. A file that is there and wrong is an error either way. *)
+let load_config ~caps ~config =
+  let source =
+    Ox_app.Config.resolve ~name:"leash" ~config ~getenv:(Cap_sys.getenv_opt ~caps)
+  in
+  let read path =
+    if not (Sys.file_exists path) then Error `Missing
+    else
+      try Ok (Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all)
+      with Sys_error _ ->
+        Error (`Unreadable "cannot read the configuration file; check permissions")
+  in
+  match
+    Ox_app.Config.load
+      ~spec:
+        {
+          Leash.Config.spec with
+          of_yojson =
+            (fun json ->
+              match Leash.Config.decode_all ~getenv:(Cap_sys.getenv_opt ~caps) json with
+              | Ok config -> Ok config
+              | Error problems -> Error (Ox_app.Config.render_validation_errors problems));
+        }
+      ~getenv:(Cap_sys.getenv_opt ~caps) ~read ~source
+  with
+  | Ok config -> Ok config
+  | Error (`Config message) ->
+      let file = match source with `Explicit path | `Default path -> path in
+      Error ("invalid configuration in " ^ file ^ ": " ^ message)
+
+let configured_roots (config : Leash.Config.t) =
+  List.map Leash.Config.Text.to_string config.skill.roots
+
 let service_socket ~caps ~config ~socket =
   match socket with
   | Some path -> Ok path
   | None -> (
-      let source =
-        Ox_app.Config.resolve ~name:"leash" ~config ~getenv:(Cap_sys.getenv_opt ~caps)
-      in
-      (* The Door's read outcome, not a message: a path with nothing at it is [`Missing],
-         which is only an error where --config named it. *)
-      let read path =
-        if not (Sys.file_exists path) then Error `Missing
-        else
-          try Ok (Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all)
-          with Sys_error _ ->
-            Error (`Unreadable "cannot read the configuration file; check permissions")
-      in
-      match
-        Ox_app.Config.load
-          ~spec:
-            {
-              Leash.Config.spec with
-              of_yojson =
-                (fun json ->
-                  match
-                    Leash.Config.decode_all ~getenv:(Cap_sys.getenv_opt ~caps) json
-                  with
-                  | Ok config -> Ok config
-                  | Error problems ->
-                      Error (Ox_app.Config.render_validation_errors problems));
-            }
-          ~getenv:(Cap_sys.getenv_opt ~caps) ~read ~source
-      with
-      | Error (`Config message) ->
-          let file = match source with `Explicit path | `Default path -> path in
-          Error ("invalid configuration in " ^ file ^ ": " ^ message)
-      | Ok (config : Leash.Config.t) ->
+      match load_config ~caps ~config with
+      | Error message -> Error message
+      | Ok config ->
           let path = Leash.Config.Text.to_string config.control.socket in
           if String.contains path '$' then
             Error
@@ -174,7 +177,7 @@ let put key value fields = (key, value) :: List.remove_assoc key fields
 (* daily-smli: the printed status never carries a key. Version and commit are the
    running binary's when the service omits them; key_present is a boolean derived from
    the models section, never a string. *)
-let enrich_status ~caps body =
+let enrich_status ~caps ~roots body =
   match strip_secrets body with
   | `Assoc fields ->
       let home = Option.value ~default:"" (Cap_sys.getenv_opt ~caps "HOME") in
@@ -186,7 +189,7 @@ let enrich_status ~caps body =
             | _ -> false)
         | _ -> false
       in
-      let fields = put "skill" (Skill_install.status ~caps ~home) fields in
+      let fields = put "skill" (Skill_install.status ~caps ~home ~roots) fields in
       let fields =
         match List.assoc_opt "version" fields with
         | Some (`String _) -> fields
@@ -246,8 +249,8 @@ let install_observation ~caps ~base =
             (Leash_cli_support.Install_state.of_systemctl
                ~binary_present:(leash_binary_present ~caps) text))
 
-(* daily-lqqn: status names not-installed, stopped and restarting. A fixture file keeps
-   the tests off the real systemd. Other commands keep the generic unreachable error. *)
+(* daily-c4cl: every transport client uses the same install-state diagnosis.
+   A fixture file keeps regression checks off the operator's systemd. *)
 let status_down ~caps ~base path =
   let socket = ("socket", str path) in
   let detail ?obs () =
@@ -277,21 +280,12 @@ let status_down ~caps ~base path =
 
 (* One request to the service and its decoded reply; an error is the exit status to
    return after saying what went wrong. *)
-let exchange ~caps ~send ~config ~socket ?on_unreachable request =
+let exchange ~caps ~send ~base ~config ~socket request =
   match service_socket ~caps ~config ~socket with
   | Error why -> Error (report ~caps "config-invalid" why)
   | Ok path -> (
       let detail = obj [ ("socket", str path) ] in
-      let unreachable () =
-        Error
-          (match on_unreachable with
-          | Some diagnose -> diagnose path
-          | None ->
-              report ~caps
-                ~detail:(obj [ ("socket", str path) ])
-                "service-unreachable"
-                ("cannot reach the Leash service at " ^ path))
-      in
+      let unreachable () = Error (status_down ~caps ~base path) in
       let denied () =
         Error
           (report ~caps ~detail "socket-permission"
@@ -429,43 +423,45 @@ and perform_wire ~caps ~send ~base command fields positionals options =
                     | Error why -> usage ~caps why
                     | Ok owner -> (
                         let request = P.encode_request P.{ owner; command = decoded } in
-                        let on_unreachable path =
-                          if command = "status" then status_down ~caps ~base path
-                          else
-                            report ~caps
-                              ~detail:(obj [ ("socket", str path) ])
-                              "service-unreachable"
-                              ("cannot reach the Leash service at " ^ path)
-                        in
                         match
-                          exchange ~caps ~send ~config:(text "config")
-                            ~socket:(text "socket") ~on_unreachable request
+                          exchange ~caps ~send ~base ~config:(text "config")
+                            ~socket:(text "socket") request
                         with
                         | Error status -> status
                         | Ok (P.Failure error) -> emit_error ~caps error
-                        | Ok (P.Success body) ->
-                            let body =
-                              if command <> "status" then body
-                              else enrich_status ~caps body
-                            in
-                            if
-                              command = "status"
-                              && assoc_field "chrome" body = Some (`String "restarting")
-                            then
-                              let body =
-                                match body with
-                                | `Assoc fields -> obj (put "pid" `Null fields)
-                                | other -> other
-                              in
-                              report ~caps ~detail:body "service-restarting"
-                                "Chrome is restarting"
-                            else (
-                              if use_table then table ~caps command body
+                        | Ok (P.Success body) -> (
+                            let roots =
+                              if command <> "status" then Ok []
                               else
-                                Cap_stdlib.print_endline ~caps
-                                  (if pretty then Yojson.Safe.pretty_to_string body
-                                   else Yojson.Safe.to_string body);
-                              0))))))
+                                Result.map configured_roots
+                                  (load_config ~caps ~config:(text "config"))
+                            in
+                            match roots with
+                            | Error message -> report ~caps "config-invalid" message
+                            | Ok roots ->
+                                let body =
+                                  if command <> "status" then body
+                                  else enrich_status ~caps ~roots body
+                                in
+                                if
+                                  command = "status"
+                                  && assoc_field "chrome" body
+                                     = Some (`String "restarting")
+                                then
+                                  let body =
+                                    match body with
+                                    | `Assoc fields -> obj (put "pid" `Null fields)
+                                    | other -> other
+                                  in
+                                  report ~caps ~detail:body "service-restarting"
+                                    "Chrome is restarting"
+                                else (
+                                  if use_table then table ~caps command body
+                                  else
+                                    Cap_stdlib.print_endline ~caps
+                                      (if pretty then Yojson.Safe.pretty_to_string body
+                                       else Yojson.Safe.to_string body);
+                                  0)))))))
 
 (* svc-hi4f: the table is the CLI's contract. Every command names its positionals in the
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
@@ -594,7 +590,7 @@ let playbook_command ~caps ~send ~base ~run_owned =
       (Cli_help.local_info "list" ~doc:"List validated installed site playbooks."
          ~examples:[ "leash playbook list" ])
       Term.(
-        const (fun () () ->
+        const (fun _owner () () ->
             owned (fun () ->
                 match Leash.Playbook.list ~caps () with
                 | Error message -> invalid_playbook ~caps message
@@ -605,6 +601,13 @@ let playbook_command ~caps ~send ~base ~run_owned =
                           book.playbook.description)
                       books;
                     0))
+        $ Arg.(
+            value
+            & opt (some string) None
+            & info [ "owner" ]
+                ~doc:
+                  "Caller identity (accepted for consistency; local listing needs no \
+                   owner).")
         $ const ())
   in
   let show =
@@ -666,8 +669,8 @@ let playbook_command ~caps ~send ~base ~run_owned =
                         P.{ owner; command = Playbook_check { playbook = target } }
                     in
                     match
-                      exchange ~caps ~send ~config:(text "config") ~socket:(text "socket")
-                        request
+                      exchange ~caps ~send ~base ~config:(text "config")
+                        ~socket:(text "socket") request
                     with
                     | Error status -> status
                     | Ok (P.Failure error) -> emit_error ~caps error
@@ -844,7 +847,10 @@ let commands ~caps ~send ~base ~run_owned =
         [],
         [ "leash fill t_9xk s_3 1 'Ada Lovelace'" ] );
       ( "press",
-        "Press KEY; with --index the row is focused first.",
+        "Press KEY; with --index the row is focused first. Accepted names: Enter, \
+         Escape, Esc, Tab, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, \
+         Home, End, PageUp, PageDown, Space, lowercase a-z, digits 0-9, and single \
+         punctuation characters - = [ ] ; , . / '.",
         [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "key" "KEY" ],
         [ opt "index" Int "N" "Focus the row at index N before the key." ],
         [ "leash press t_9xk s_3 Enter" ] );
@@ -950,7 +956,7 @@ let commands ~caps ~send ~base ~run_owned =
             "Mission expectation the DONE guard verifies (repeatable).";
         ],
         [
-          "leash drive 'Buy a Logitech MX Master 3S on allegro.pl' --deadline-s 300";
+          "leash drive 'Read the heading on https://example.com' --deadline-s 300";
           "leash drive 'Add Blue Top to the cart' --expect 'the page is cart' --dry-run";
         ] );
       ( "discover",
@@ -968,34 +974,6 @@ let commands ~caps ~send ~base ~run_owned =
   @ [ playbook_command ~caps ~send ~base ~run_owned ]
 
 let ( let* ) = Result.bind
-
-let contains_text hay needle =
-  let n = String.length needle in
-  let h = String.length hay in
-  let rec loop i = i + n <= h && (String.sub hay i n = needle || loop (i + 1)) in
-  n > 0 && loop 0
-
-(* daily-smli: the managed Chrome is the process whose command line names this profile
-   and --class=leash. A relaunch reports no pid. Reading /proc is best-effort. *)
-let chrome_pid ~fs profile_dir =
-  let marker = "--user-data-dir=" ^ profile_dir in
-  let proc = Eio.Path.(fs / "/proc") in
-  try
-    let rec find = function
-      | [] -> None
-      | name :: rest -> (
-          match int_of_string_opt name with
-          | None -> find rest
-          | Some pid -> (
-              match Eio.Path.load Eio.Path.(proc / name / "cmdline") with
-              | exception _ -> find rest
-              | cmdline ->
-                  if contains_text cmdline marker && contains_text cmdline "--class=leash"
-                  then Some pid
-                  else find rest))
-    in
-    find (Eio.Path.read_dir proc)
-  with _ -> None
 
 let program env (config : Leash.Config.t) sw =
   let base = env.Ox_app.Env.base in
@@ -1092,8 +1070,7 @@ let program env (config : Leash.Config.t) sw =
   let socket = Leash.Config.Text.to_string config.control.socket in
   let* _control =
     Leash.Control.create
-      ~chrome_pid:(fun () ->
-        chrome_pid ~fs:base#fs (Leash.Config.Text.to_string config.chrome.profile_dir))
+      ~chrome_pid:(fun () -> (Leash.Chrome.status chrome).pid)
       ~model:(Leash.Config.Text.to_string config.models.jev_model)
         (* run-7blx: the run's three upper levels over the same one models service — the
            playbook question, the procedure question and the judgment score — and L31's
@@ -1280,58 +1257,68 @@ let skill_command ~caps ~run_owned =
       (Yojson.Safe.to_string (obj [ ("action", str action); ("path", str outcome.path) ]))
   in
   let install =
-    let run path force no_input dry_run () =
+    let run path force no_input dry_run config_path () =
       owned (fun () ->
           let home = Option.value ~default:"" (Cap_sys.getenv_opt ~caps "HOME") in
-          match
-            Skill_install.run ~caps ~home ~path ~force ~no_input ~dry_run
-              ~stdin_is_tty:(Unix.isatty Unix.stdin) ~confirm
-          with
-          | Ok outcomes ->
-              List.iter show_outcome outcomes;
-              0
-          | Error error ->
-              List.iter show_outcome error.completed;
-              let code =
-                if
-                  List.exists
-                    (fun (failure : Skill_install.failure) ->
-                      failure.kind = Skill_install.Internal)
-                    error.failures
-                then "internal"
-                else if
-                  List.exists
-                    (fun (failure : Skill_install.failure) ->
-                      failure.kind = Skill_install.Permission)
-                    error.failures
-                then "permission-denied"
-                else "usage"
-              in
-              let failure_json (failure : Skill_install.failure) =
-                obj
-                  [
-                    ( "path",
-                      match failure.path with None -> `Null | Some path -> str path );
-                    ("message", str failure.message);
-                  ]
-              in
-              let message =
-                match error.failures with
-                | [ failure ] -> failure.message
-                | failures ->
-                    Printf.sprintf "%d skill targets failed" (List.length failures)
-              in
-              report ~caps
-                ~detail:
-                  (obj [ ("failures", `List (List.map failure_json error.failures)) ])
-                code message)
+          match load_config ~caps ~config:config_path with
+          | Error message -> report ~caps "config-invalid" message
+          | Ok config -> (
+              match
+                Skill_install.run ~caps ~home ~roots:(configured_roots config) ~path
+                  ~force ~no_input ~dry_run ~stdin_is_tty:(Unix.isatty Unix.stdin)
+                  ~confirm
+              with
+              | Ok outcomes ->
+                  List.iter show_outcome outcomes;
+                  0
+              | Error error ->
+                  List.iter show_outcome error.completed;
+                  let code =
+                    if
+                      List.exists
+                        (fun (failure : Skill_install.failure) ->
+                          failure.kind = Skill_install.Internal)
+                        error.failures
+                    then "internal"
+                    else if
+                      List.exists
+                        (fun (failure : Skill_install.failure) ->
+                          failure.kind = Skill_install.Permission)
+                        error.failures
+                    then "permission-denied"
+                    else "usage"
+                  in
+                  let failure_json (failure : Skill_install.failure) =
+                    obj
+                      [
+                        ( "path",
+                          match failure.path with None -> `Null | Some path -> str path );
+                        ("message", str failure.message);
+                      ]
+                  in
+                  let message =
+                    match error.failures with
+                    | [ failure ] -> failure.message
+                    | failures ->
+                        Printf.sprintf "%d skill targets failed" (List.length failures)
+                  in
+                  report ~caps
+                    ~detail:
+                      (obj [ ("failures", `List (List.map failure_json error.failures)) ])
+                    code message))
     in
     Cmd.v
       (Cli_help.local_info "install"
          ~doc:"Install the bundled agent skill into skills roots."
          ~examples:
            [ "leash skill install --dry-run"; "leash skill install /tmp/skills --force" ])
-      Term.(const run $ path $ force $ no_input $ dry_run)
+      Term.(
+        const run $ path $ force $ no_input $ dry_run
+        $ Arg.(
+            value
+            & opt (some string) None
+            & info [ "config" ] ~docv:"FILE"
+                ~doc:"Read skill.roots from this TOML configuration."))
   in
   let show =
     Cmd.v
