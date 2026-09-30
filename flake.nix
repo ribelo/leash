@@ -175,7 +175,10 @@
               yojson = "2.2.2+ox";
             };
 
-          leash = scope.leash;
+          # daily-ulmi: archive builds have no .git; retain their source revision.
+          leash = scope.leash.overrideAttrs (_: {
+            LEASH_COMMIT = self.rev or (self.dirtyRev or "unknown");
+          });
           unit = import ./packaging/leash-unit.nix { lib = pkgs.lib; };
         in
         {

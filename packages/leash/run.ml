@@ -781,7 +781,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                       | Error error -> Error error
                       | Ok question -> (match select_procedure t question with
                           | Error error -> Error (with_trace st error)
-                          | Ok choice when choice.key = "DONE" -> done_guard st book ~choice
+                          | Ok choice when choice.key = "DONE" -> done_guard st ~pages:book.Playbook.playbook.pages
                           | Ok choice when choice.key = "BLOCKED" -> Ok (Finish (finish st (status "blocked") ~reason:"discovery procedure selection was blocked" ()))
                           | Ok choice -> run_choice choice))))
 
@@ -1209,12 +1209,12 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                         page st (index + 1))
     in page st 1
 
-  and resolve_mission (st : state) (book : Playbook.loaded) =
+  and resolve_mission (st : state) pages =
     let rec go acc = function
       | [] -> Ok (List.rev acc)
       | sentence :: rest -> (
           let sentence = Playbook.substitute st.known sentence in
-          match Playbook.resolve book.Playbook.playbook.pages sentence with
+          match Playbook.resolve pages sentence with
           | Ok checker -> go ((sentence, checker) :: acc) rest
           | Error why -> Error (invalid ("expect: " ^ why)))
     in
@@ -1226,11 +1226,11 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
      verified now on a fresh observation, or — when the mission carries none — against the
      expectations of the procedure that ran last, re-verified the same way. A DONE nothing
      can verify is refused to the planner. *)
-  and done_guard (st : state) (book : Playbook.loaded) ~choice =
+  and done_guard (st : state) ~pages =
     if st.collection_pending then
       planner st ~trigger:Blocked
         ~reason:"DONE was refused: the collection is incomplete; pagination has not finished"
-    else match resolve_mission st book with
+    else match resolve_mission st pages with
     | Error error -> Error error
     | Ok [] -> (
         (* The mission carries none: the last verified procedure's expectations are the
@@ -1274,7 +1274,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
     if discovery <> None || st.collection_pending then Ok (Continue st)
     else match (st.trace, st.book) with
     | { P.outcome = "verified"; _ } :: _, Some book -> (
-        match resolve_mission st book with
+        match resolve_mission st book.Playbook.playbook.pages with
         | Ok (_ :: _ as checks) -> check_done st ~mission:true ~auto:true checks
         | Ok [] | Error _ -> Ok (Continue st))
     | _ -> Ok (Continue st)
@@ -1331,8 +1331,17 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
           | "error" -> status "error"
           | _ -> status "blocked"
         in
-        Ok (Finish { (finish { st with book = None } status ?reason:drive.P.reason ()) with
-          P.final = drive.P.final; operator_steps = drive.P.steps })
+        if name = "done" && (args.expect <> [] || st.mission_expect <> []) then
+          (* daily-v6ez run-4j1v: fallback DONE must pass the same fresh mission
+             checks as a playbook DONE. No book means no named page kinds. *)
+          Result.map
+            (function
+              | Finish result -> Finish { result with P.operator_steps = drive.P.steps }
+              | Continue st -> Continue st)
+            (done_guard { st with book = None } ~pages:[])
+        else
+          Ok (Finish { (finish { st with book = None } status ?reason:drive.P.reason ()) with
+            P.final = drive.P.final; operator_steps = drive.P.steps })
 
   (* run-kli0 run-xh5d: asked at the start, after a procedure whose description or the
      mission says the next part is elsewhere, and — through [ask_procedure] — when the
@@ -1417,7 +1426,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
             | Error error -> Error (with_trace st error)
             | Ok choice ->
                 let chosen = choice in
-                if choice.key = "DONE" then done_guard st book ~choice:chosen
+                if choice.key = "DONE" then done_guard st ~pages:book.Playbook.playbook.pages
                 else if choice.key = "BLOCKED" then
                   (* run-kli0: the playbook level gets one last look before the planner —
                      another installed site may serve the next part — and a second BLOCKED
@@ -1449,7 +1458,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                           ~drives:[] ~expectations:[] ~outcome:"skipped" ~attempts:0
                           ~elapsed:0
                           ~reason:(Some "already verified on this page; treating repeated selection as DONE") in
-                        done_guard st book ~choice:chosen
+                        done_guard st ~pages:book.Playbook.playbook.pages
                       else
                         execute st ~book ~proc ~planned:false ~choice:chosen ~optional:false
                           ~values:[]))

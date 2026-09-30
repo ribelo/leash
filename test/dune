@@ -146,7 +146,7 @@
 (executable
  (name daily_cli_fixture)
  (modules daily_cli_fixture)
- (libraries leash unix yojson))
+ (libraries leash leash_cli_support unix yojson))
 
 (cram
  (deps %{bin:leash} daily_cli_fixture.exe))
@@ -320,3 +320,8 @@
   unix
   yojson
   alcotest))
+
+(test
+ (name daily_skill_install_test)
+ (modules daily_skill_install_test)
+ (libraries leash_cli_support ox_test alcotest unix yojson))

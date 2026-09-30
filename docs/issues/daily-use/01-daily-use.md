@@ -87,6 +87,64 @@ All four gates passed in the isolated `_build_l41` directory against pinned ox `
 
 A private service and profile using real Google Chrome 152.0.7977.64 were checked with `--headless=new` confirmed in the Chrome process arguments. With the socket absent, status returned service-unreachable/69; with the service up, status, new, snap and close preserved successful JSON. Deliberate tab-cap/75, unknown-tab/66 and not-owner/77 failures returned the compact canonical records and hints. SIGTERM went to each private Leash process; both stopped with exit 0 and their Chrome children and sockets disappeared. No installed binary or existing service was changed. This is L41 smoke evidence, not the installed-service/skill acceptance reserved for L43–L44.
 
+## L42 repository delivery — 2026-09-30
+
+Delivered daily-fiwd, daily-yd8s, daily-ulmi and daily-v6ez. Dune embeds the complete
+repository skill and references into the executable. Local `skill show` prints the
+exact installed entrypoint with YAML version/commit metadata; `skill install` uses
+Nema's default roots, canonical deduplication, consent/force/no-input rules, truthful
+per-target JSON outcomes and staged replacement/rollback. Dry-run neither writes
+nor prompts. Permission and other installer failures reuse L41's canonical records,
+hints and exits; the closed table remains 30 codes.
+
+Successful CLI `status` preserves service fields and adds local installed-skill
+currency, with the compiled version/commit and per-root missing/stale/current
+states. It compares all bundled contents, not only the stamp. The service wire
+contract is unchanged, and an absent service remains service-unreachable/69.
+
+The standalone entrypoint routes to lifecycle, browser, missions/playbooks and
+error-recovery references. Together they cover the current command surface,
+headed/headless setup, identity, ownership/human holds, expiry, snapshots/actions,
+network/debug observations, handoff, bounded missions, prepared scripts, playbook
+validation, JSONL/cost evidence and concrete recovery. A review found the fallback
+operator's DONE bypassed caller mission expectations: it now uses the same fresh
+DONE guard as the playbook path, records those results, retains the operator trace
+and refuses unmet expectations. Without a playbook, named page kinds remain invalid;
+concrete text/row/download/dialog expectations work. No-expect fallback behavior and
+non-DONE stops are unchanged.
+
+Evidence: 16 temporary-filesystem installer cases; strict CLI cram for raw show,
+full-bundle install, identical/current, consent refusal, forced replacement,
+permission denial, empty path, discovered roots and no-effect dry-run. A private
+protocol peer (not the installed service) checks status missing/current/stale for
+old/missing stamps, modified references, multiple roots and force repair while
+retaining the service result. The 34-test scripted mission suite adds both missing-
+playbook and selected-none DONE cases, passing/failing expectations, fresh final
+observation, retained trace, non-DONE stops and invalid page kinds. No browser or
+model call was needed for this delivery.
+
+All required gates passed with foreground Dune in `_build_l42`:
+
+- `timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l42 dune build @install`
+- `timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l42 dune test`
+- `timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l42 dune build @fmt`
+- `timeout 900 nix develop -c scripts/caps-gate`
+
+`leash skill show` begins with `name: leash` and metadata
+`leash-version: "0.0.0"`,
+`leash-commit: "a18bc9550d6121d2727868ced02dc1c0b24f3fd3"`.
+`leash skill install /tmp/leash-l42-sample-destination --dry-run` returned
+`{"action":"planned-install","path":"/tmp/leash-l42-sample-destination/leash"}`
+without creating that root. A fixture-backed status after a temporary default-root
+install reported `skill.state: "current"` and the same version/commit.
+
+**Scope boundary:** daily-hdex (replacing the dotfiles copy with the installed one)
+was deliberately not performed: this request prohibits editing dotfiles, installed
+binaries and running services. L42's delivery-map check marks the repository/binary
+capability, not that operator cut-over. Actual installation and fresh-agent browser
+acceptance remain L43–L44; chrome-cdp remains untouched. No commit was made, and the
+isolated build and temporary test/sample files were removed after verification.
+
 ## Out of Scope
 
 The niri window rule; making the repository public; new browser capabilities (iframes, raw CDP).

@@ -1,5 +1,6 @@
 open Cmdliner
 module P = Leash.Protocol
+module Skill_install = Leash_cli_support.Skill_install
 module Cap_stdlib = Ox_caps.Cap_stdlib
 module Cap_sys = Ox_caps.Cap_sys
 
@@ -307,6 +308,20 @@ and perform_wire ~caps ~send command fields positionals options =
                         | Error status -> status
                         | Ok (P.Failure error) -> emit_error ~caps error
                         | Ok (P.Success body) ->
+                            let body =
+                              if command <> "status" then body
+                              else
+                                let home =
+                                  Option.value ~default:""
+                                    (Cap_sys.getenv_opt ~caps "HOME")
+                                in
+                                match body with
+                                | `Assoc fields ->
+                                    obj
+                                      (("skill", Skill_install.status ~caps ~home)
+                                      :: List.remove_assoc "skill" fields)
+                                | _ -> body
+                            in
                             if use_table then table ~caps command body
                             else
                               Cap_stdlib.print_endline ~caps
@@ -1044,6 +1059,128 @@ let diagnostic ~config_path ~kind ~message =
   in
   Yojson.Safe.to_string (P.yojson_of_error record) ^ "\n"
 
+(* daily-yd8s daily-ulmi: local bundle operations do not require an owner or service. *)
+let skill_command ~caps ~run_owned =
+  let owned run = run_owned (fun _sw -> protect ~caps run) in
+  let path =
+    Arg.(
+      value
+      & pos 0 (some string) None
+      & info [] ~docv:"PATH" ~doc:"Skills root; installs PATH/leash/.")
+  in
+  let force =
+    Arg.(
+      value & flag
+      & info [ "f"; "force" ]
+          ~doc:"Authorize automatic installation or replacement without confirmation.")
+  in
+  let no_input =
+    Arg.(
+      value & flag
+      & info [ "no-input" ]
+          ~doc:"Never prompt; refuse any consent-required write without --force.")
+  in
+  let dry_run =
+    Arg.(
+      value & flag
+      & info [ "n"; "dry-run" ]
+          ~doc:"Print planned actions without creating directories, writing or prompting.")
+  in
+  let confirm action path =
+    let verb =
+      match action with Skill_install.Install -> "Install" | Replace -> "Replace"
+    in
+    Cap_stdlib.eprintf ~caps "%s Leash skill at %s? [y/N] %!" verb path;
+    match
+      input_line (Cap_stdlib.stdin ~caps) |> String.trim |> String.lowercase_ascii
+    with
+    | "y" | "yes" -> true
+    | _ -> false
+    | exception End_of_file -> false
+  in
+  let show_outcome (outcome : Skill_install.outcome) =
+    let action =
+      match outcome.disposition with
+      | Installed -> "installed"
+      | Replaced -> "replaced"
+      | Current -> "current"
+      | Declined -> "declined"
+      | Planned_install -> "planned-install"
+      | Planned_replace -> "planned-replace"
+    in
+    Cap_stdlib.print_endline ~caps
+      (Yojson.Safe.to_string (obj [ ("action", str action); ("path", str outcome.path) ]))
+  in
+  let install =
+    let run path force no_input dry_run () =
+      owned (fun () ->
+          let home = Option.value ~default:"" (Cap_sys.getenv_opt ~caps "HOME") in
+          match
+            Skill_install.run ~caps ~home ~path ~force ~no_input ~dry_run
+              ~stdin_is_tty:(Unix.isatty Unix.stdin) ~confirm
+          with
+          | Ok outcomes ->
+              List.iter show_outcome outcomes;
+              0
+          | Error error ->
+              List.iter show_outcome error.completed;
+              let code =
+                if
+                  List.exists
+                    (fun (failure : Skill_install.failure) ->
+                      failure.kind = Skill_install.Internal)
+                    error.failures
+                then "internal"
+                else if
+                  List.exists
+                    (fun (failure : Skill_install.failure) ->
+                      failure.kind = Skill_install.Permission)
+                    error.failures
+                then "permission-denied"
+                else "usage"
+              in
+              let failure_json (failure : Skill_install.failure) =
+                obj
+                  [
+                    ( "path",
+                      match failure.path with None -> `Null | Some path -> str path );
+                    ("message", str failure.message);
+                  ]
+              in
+              let message =
+                match error.failures with
+                | [ failure ] -> failure.message
+                | failures ->
+                    Printf.sprintf "%d skill targets failed" (List.length failures)
+              in
+              report ~caps
+                ~detail:
+                  (obj [ ("failures", `List (List.map failure_json error.failures)) ])
+                code message)
+    in
+    Cmd.v
+      (Cli_help.local_info "install"
+         ~doc:"Install the bundled agent skill into skills roots."
+         ~examples:
+           [ "leash skill install --dry-run"; "leash skill install /tmp/skills --force" ])
+      Term.(const run $ path $ force $ no_input $ dry_run)
+  in
+  let show =
+    Cmd.v
+      (Cli_help.local_info "show" ~doc:"Print the bundled, version-stamped SKILL.md."
+         ~examples:[ "leash skill show" ])
+      Term.(
+        const (fun () ->
+            owned (fun () ->
+                Cap_stdlib.printf ~caps "%s" Skill_install.show;
+                0)))
+  in
+  Cmd.group
+    (Cli_help.local_info "skill" ~doc:"Show or install the bundled agent skill."
+       ~docs:"SKILL"
+       ~examples:[ "leash skill show"; "leash skill install --dry-run" ])
+    [ install; show ]
+
 let help_command ~caps =
   let topic = Arg.(value & pos 0 (some string) None & info [] ~docv:"TOPIC") in
   let run topic () =
@@ -1122,7 +1259,8 @@ let () =
        ~commands_with_env_code:(fun env _run_owned run_owned_code ->
          let caps = env.Ox_app.Env.caps in
          let send path request = send ~base:env.Ox_app.Env.base path request in
-         commands ~caps ~send ~run_owned:run_owned_code @ [ help_command ~caps ])
+         commands ~caps ~send ~run_owned:run_owned_code
+         @ [ skill_command ~caps ~run_owned:run_owned_code; help_command ~caps ])
        ~telemetry
        ~config_commands_with_env:(fun env -> [ init_command ~caps:env.Ox_app.Env.caps ])
        ~validate:Leash.Config.validate

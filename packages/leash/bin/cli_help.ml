@@ -56,15 +56,16 @@ let command_info name ~doc ~examples:lines =
              codes and recovery hints.";
         ])
 
-let local_info name ~doc ~examples:lines =
-  Cmd.info name ~doc ~exits:local_exits ~man:(examples lines)
+let local_info ?docs name ~doc ~examples:lines =
+  Cmd.info name ~doc ?docs ~exits:local_exits ~man:(examples lines)
 
 let top_man =
   [
     `S "DESCRIPTION";
     `P
       "One local service owns the managed Chrome. Commands send one JSON request over \
-       its private Unix socket. No command prompts for input.";
+       its private Unix socket. Only skill install may ask for local installation \
+       consent; use --force or --no-input in automation.";
     `P
       "Set --owner NAME, or let DSH_SESSION_ID supply the dsh:SESSION_ID default. \
        Successful JSON goes to stdout; every failure is one compact JSON object on \
@@ -84,8 +85,9 @@ let top_man =
       );
     `S "SKILL";
     `P
-      "Agent skill installation is delivered separately. Command help and leash help \
-       errors are available now.";
+      "$(b,leash skill show) prints the bundled entrypoint. $(b,leash skill install \
+       --dry-run) previews discovered skills roots; --force authorizes installation or \
+       replacement. PATH means a skills root, with the bundle at PATH/leash/.";
     `S "EXAMPLES";
     `P "leash click --help; leash help errors";
     `P "leash config init; leash config check; leash serve";

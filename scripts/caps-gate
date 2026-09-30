@@ -4,9 +4,9 @@
 #   nix develop -c scripts/caps-gate
 # Runs ox's gate script and rules, as installed with the ox_caps Leash builds against
 # (share/ox_caps beside the findlib package), over
-# packages/. Leash has no allow-list: every dangerous call goes through Ox_caps with the
-# capability in its function's signature, and the only raw call left is the entry's
-# exit (Ox_app.run_with_args ...), which the rules allow.
+# packages/. Runtime dangerous calls go through Ox_caps with the capability in
+# their signatures; the entry exit is allowed by the rules. The sole build-only
+# generator exception is explained below.
 set -euo pipefail
 cd "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 
@@ -20,4 +20,7 @@ if [ ! -f "$gate" ]; then
   exit 2
 fi
 
-exec bash "$gate" "$@" packages
+# gen_skill_data is a Dune generator, not a Door program. It runs before the
+# application exists, cannot receive Ox_app.Env.caps, and only reads the source
+# skill tree and emits OCaml to stdout; it is not linked into the CLI.
+exec bash "$gate" --allow packages/leash/bin/gen_skill_data.ml "$@" packages

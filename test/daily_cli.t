@@ -103,6 +103,7 @@ Success still emits its unwrapped compact result, and never writes stderr.
 
   $ rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve "$tmp/control.sock" success "$tmp/ready" & pid=$!
   $ while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || exit 1; sleep 0.01; done
-  $ leash status --owner test --socket "$tmp/control.sock" 2>err
-  {"fixture":true}
+  $ HOME="$tmp/empty-home" leash status --owner test --socket "$tmp/control.sock" >out 2>err
+  $ ./daily_cli_fixture.exe status-skill missing out err
+  status: skill missing, running version and commit, service fields retained
   $ wait "$pid"; test ! -s err

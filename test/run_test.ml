@@ -137,6 +137,7 @@ type harness = {
   mutable books : string list;  (** level 1 answers, in order; the last repeats *)
   mutable procs : string list;  (** level 2 answers, in order; the last repeats *)
   mutable verifies : P.run_expectation list list;
+  mutable verification_checks : (string * B.checker) list list;
   mutable verification_observations : R.observation list;
   mutable drives : P.drive_result list;
   mutable observations : R.observation list;
@@ -172,6 +173,7 @@ let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
     books;
     procs;
     verifies;
+    verification_checks = [];
     verification_observations;
     drives;
     observations;
@@ -257,7 +259,7 @@ let handler (h : harness) : R.handler =
       verify =
         (fun ~pages:_ ~checks ~timeout_s:_ ->
           h.ops <- "verify" :: h.ops;
-          ignore checks;
+          h.verification_checks <- h.verification_checks @ [ checks ];
           let observed =
             match h.verification_observations with
             | [] -> h.last
@@ -978,6 +980,96 @@ let no_playbook () =
   Alcotest.(check int) "extr-andy one operator run" 1 (List.length h.steps);
   Alcotest.(check (list string)) "extr-andy no upper model" [] h.asked
 
+(* daily-v6ez run-4j1v: the operator's DONE cannot bypass --expect when there
+   are no installed playbooks or when the playbook selector chooses none. The
+   verification and the returned final observation are fresh; its failure is an
+   audited blocked mission, never a false DONE or an automatic operator replay. *)
+let fallback_mission_expectations () =
+  let sentence = "the page contains ready" in
+  let operator_step =
+    P.
+      {
+        n = 1;
+        snapshot = snapshot_id;
+        operation = ok (Operation.of_string "click");
+        index = Some 0;
+        probabilities = { op = `Assoc []; target = `Assoc [] };
+        text = None;
+        after = { url = "https://site-a.example/"; title = "A page" };
+        elapsed_ms = 1;
+      }
+  in
+  List.iter
+    (fun installed ->
+      List.iter
+        (fun passed ->
+          let fresh = observation ~title:"Fresh verification" ~text:"ready" () in
+          let h =
+            harness ~books:[ "none" ]
+              ~drives:[ { (drive ()) with P.steps = [ operator_step ] } ]
+              ~verifies:[ [ expectation ~passed sentence "text" ] ]
+              ~verification_observations:[ fresh ] ()
+          in
+          let result =
+            ran (run ~installed h (args ~expect:[ sentence ] ~max_plans:0 ()))
+          in
+          check_status "fallback expectations decide DONE"
+            (if passed then "done" else "blocked")
+            result;
+          Alcotest.(check bool)
+            "resolved standalone checker" true
+            (h.verification_checks = [ [ (sentence, B.Text "ready") ] ]);
+          Alcotest.(check int) "one operator run, no replay" 1 (List.length h.steps);
+          Alcotest.(check int)
+            "operator trace retained" 1
+            (List.length result.P.operator_steps);
+          Alcotest.(check bool)
+            "expectation outcome audited" passed
+            (List.hd result.P.mission_expectations).P.passed;
+          Alcotest.(check string)
+            "fresh final, not the operator's old snapshot" "Fresh verification"
+            result.P.final.title;
+          Alcotest.(check int) "no additional model turn" 0 (List.length h.plan_requests);
+          if not passed then
+            Alcotest.(check bool)
+              "unmet DONE refused" true
+              (String.starts_with ~prefix:"DONE was refused"
+                 (Option.value ~default:"" result.P.reason)))
+        [ true; false ])
+    [ []; [ site_a ] ]
+
+(* daily-v6ez: a blocked/limited/error operator did not answer DONE. Do not hide
+   its stop by checking expectations or changing its status. A named page kind
+   without a playbook is invalid rather than guessed by the verifier. *)
+let fallback_mission_stops () =
+  List.iter
+    (fun (operator_status, expected) ->
+      let h =
+        harness ~drives:[ drive ~status:operator_status ~reason:"operator stopped" () ] ()
+      in
+      let result = ran (run h (args ~expect:[ "the page contains ready" ] ())) in
+      check_status "non-DONE stop preserved" expected result;
+      Alcotest.(check int) "no DONE verification" 0 (List.length h.verification_checks);
+      Alcotest.(check string)
+        "operator stop reason" "operator stopped"
+        (Option.value ~default:"" result.P.reason))
+    [
+      ("blocked", "blocked");
+      ("step-cap", "limit");
+      ("deadline", "deadline");
+      ("error", "error");
+    ];
+  let h = harness () in
+  match run h (args ~expect:[ "the page is nonexistent" ] ()) with
+  | Ok _ -> Alcotest.fail "unknown page kind must not accept fallback DONE"
+  | Error error ->
+      Alcotest.(check string)
+        "normal expectation-resolution error" "invalid-request"
+        (P.Error_code.to_string error.P.code);
+      Alcotest.(check int)
+        "unknown kind not sent to verifier" 0
+        (List.length h.verification_checks)
+
 (* L33 run-3vat run-xda7: the first discovery turn is planner-led and a verified
    draft is reported without installing it. The next turn sees learned page kinds. *)
 let discovery_plans_first () =
@@ -1634,6 +1726,10 @@ let () =
           Alcotest.test_case "run-klp9 endings" `Quick endings;
           Alcotest.test_case "run-vj48 run-7blx operations" `Quick operations;
           Alcotest.test_case "run-9ypy no playbook" `Quick no_playbook;
+          Alcotest.test_case "daily-v6ez fallback DONE verifies expectations" `Quick
+            fallback_mission_expectations;
+          Alcotest.test_case "daily-v6ez fallback stops and unknown page kinds" `Quick
+            fallback_mission_stops;
           Alcotest.test_case "run-3vat run-xda7 discovery planner" `Quick
             discovery_plans_first;
           Alcotest.test_case "run-tt9z run-tpnf discovery stops" `Quick

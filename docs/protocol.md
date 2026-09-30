@@ -439,6 +439,50 @@ Rules:
 - `new` with a url navigates and returns when the document has loaded, exactly like `nav`, so `title` is populated; `new` without a url returns at once with `about:blank`. Both report the URL Chrome committed — after any redirect — and the document title, not the requested URL.
 - The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Every command names its positional arguments in its synopsis — `leash click [OPTION]… TAB SNAPSHOT INDEX` — and accepts only the options it uses, so `leash <command> --help` is the whole call; `--owner`, `--pretty`, `--config` and `--socket` are the client options every command shares. Exit status 0 on `ok:true`. A failure exits with its code's class from the error table below, not 1; command-line parse exits 124. `leash help errors` prints that table.
 
+## Bundled agent skill (CLI-local)
+
+These commands need no service, configuration file or owner. The executable embeds
+all of `skill/`; it never loads the bundle from the caller's checkout or network.
+
+- `leash skill show` prints the complete stamped `SKILL.md` as raw Markdown, not JSON.
+- `leash skill install [PATH] [--dry-run] [--force] [--no-input]` installs the
+  entrypoint and references under `PATH/leash/`; PATH is a skills root. With no
+  PATH it discovers the existing `~/.claude`, `~/.codex`, `~/.pi` and
+  `~/.agents` configuration directories and uses their `skills`, `skills`,
+  `agent/skills` and `skills` roots, respectively, exactly as Nema does.
+  It canonicalizes roots and installs each physical destination only once.
+- Each target prints one compact JSON line `{"action":"installed","path":"…/leash"}`.
+  Actions are `installed`, `replaced`, `current`, `declined`, `planned-install`
+  or `planned-replace`. An exact installed bundle is `current`, without consent.
+  A new explicit target requires no prompt; discovered new targets and replacements
+  require interactive consent or `--force`. Non-TTY / `--no-input` refuses these
+  writes without force. Dry-run neither writes nor prompts, including absent roots.
+- Replacement first writes a complete sibling staging tree, renames the old tree
+  to a backup, and moves the staged tree into place. Failed moves roll back; symlinks
+  in the old tree are removed without following them. Cleanup failures report the
+  completed replacement and retained backup path rather than claiming full success.
+  Targets are independent: completed outcomes stay on stdout, with one canonical
+  combined error on stderr if any target fails. Existing `usage` (64),
+  `permission-denied` (77), `internal` (70) and `cli-parse` (124) apply.
+
+The installed entrypoint's YAML `metadata.leash-version` and
+`metadata.leash-commit` identify the binary that supplied it. The version is
+`Leash.version`; commit is compiled from HEAD for local builds or `LEASH_COMMIT`
+for archive/Nix builds (unknown if neither exists). No runtime Git call is made.
+
+After a successful service response, the CLI adds this local field to `leash status`:
+
+`skill = {state: "missing"|"stale"|"current", version: string, commit: string, installs: [{path: string, state: "missing"|"stale"|"current", version: string|null, commit: string|null}]}`
+
+The installs list describes discovered defaults, not arbitrary explicit PATHs.
+Absent installs are `missing`; an existing unstamped, unreadable or modified bundle
+is `stale`. Any stale existing install makes the overall state stale; otherwise
+at least one current install makes it current, and no installed bundle means
+missing. Currency compares all embedded content as well as the stamp, so an edited
+reference is stale even without a version/commit change. A missing install in
+another harness's root does not invalidate an existing current copy. The service
+wire status is unchanged; a stopped service still returns `service-unreachable`.
+
 ## Error codes
 
 A failed reply, and every failure the CLI prints on stderr, is one object `{code, message, hint, detail?}`. `hint` is always present: one line naming the next action, taken from this table. `detail?` is omitted when the error carries none (for `tab-gone`: `detail.disposition`; for `stale-snapshot`: the current snapshot id; for `model-unavailable`: `detail.code`, and on a drive `detail.steps`; for a handoff `timeout`: `detail.warnings`).

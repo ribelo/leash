@@ -110,6 +110,41 @@ let inspect_init path stdout stderr =
     failwith "config init changed the default file";
   print_endline "config init writes its path and empty stderr"
 
+(* daily-yd8s daily-ulmi: inspect whole streams, not just a selected output line. *)
+let skill_outcome action path stdout stderr =
+  let raw = read_file stdout in
+  let expected = `Assoc [ ("action", `String action); ("path", `String path) ] in
+  if Yojson.Safe.from_string raw <> expected then failwith "wrong skill outcome";
+  if read_file stderr <> "" then failwith "skill success wrote to stderr";
+  Printf.printf "%s: one JSON outcome, empty stderr\n" action
+
+let skill_show stdout stderr =
+  let contents = read_file stdout in
+  if contents <> Leash_cli_support.Skill_install.show then
+    failwith "show is not the exact stamped entrypoint";
+  List.iter
+    (fun marker -> if not (contains contents marker) then failwith ("missing " ^ marker))
+    [ "---\nname: leash\n"; "metadata:\n  leash-version:"; "\n  leash-commit:" ];
+  if read_file stderr <> "" then failwith "show wrote to stderr";
+  print_endline
+    "show: exact bundled entrypoint, YAML version and commit stamp, empty stderr"
+
+let status_skill state stdout stderr =
+  let result = Yojson.Safe.from_string (read_file stdout) in
+  let field key = function
+    | `Assoc fields -> List.assoc key fields
+    | _ -> failwith "expected an object"
+  in
+  let skill = field "skill" result in
+  if field "state" skill <> `String state then failwith "wrong skill state";
+  if field "version" skill <> `String Leash.version then failwith "wrong running version";
+  if field "commit" skill <> `String Leash_cli_support.Leash_build_commit.commit then
+    failwith "wrong running commit";
+  if field "fixture" result <> `Bool true then failwith "lost successful service fields";
+  if read_file stderr <> "" then failwith "status wrote to stderr";
+  Printf.printf "status: skill %s, running version and commit, service fields retained\n"
+    state
+
 let () =
   match Array.to_list Sys.argv with
   | [ _; "serve"; path; code; ready ] -> serve path code ready
@@ -119,4 +154,8 @@ let () =
   | [ _; "top-help"; path ] -> top_help path
   | [ _; "error-help"; path ] -> error_help path
   | [ _; "inspect-init"; path; stdout; stderr ] -> inspect_init path stdout stderr
+  | [ _; "skill-outcome"; action; path; stdout; stderr ] ->
+      skill_outcome action path stdout stderr
+  | [ _; "skill-show"; stdout; stderr ] -> skill_show stdout stderr
+  | [ _; "status-skill"; state; stdout; stderr ] -> status_skill state stdout stderr
   | _ -> failwith "invalid fixture invocation"

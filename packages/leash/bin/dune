@@ -3,4 +3,54 @@
 (executable
  (public_name leash)
  (name main)
- (libraries leash ox ox_app ox_caps eio eio_main yojson unix cmdliner))
+ (modules main cli_help)
+ (libraries
+  leash
+  leash_cli_support
+  ox
+  ox_app
+  ox_caps
+  eio
+  eio_main
+  yojson
+  unix
+  cmdliner))
+
+; daily-fiwd: this executable runs only inside Dune, before the Door exists.
+
+(executable
+ (name gen_skill_data)
+ (modules gen_skill_data))
+
+(rule
+ (target leash_skill_data.ml)
+ (deps
+  gen_skill_data.exe
+  (source_tree ../../../skill))
+ (action
+  (with-stdout-to
+   leash_skill_data.ml
+   (run ./gen_skill_data.exe ../../../skill))))
+
+; Local builds read HEAD; source archives/Nix pass LEASH_COMMIT explicitly. The
+; universe dependency rechecks HEAD on every build without baking a runtime git call.
+
+(rule
+ (target leash_build_commit.ml)
+ (deps
+  (universe)
+  (sandbox none))
+ (action
+  (with-stdout-to
+   leash_build_commit.ml
+   (run
+    bash
+    -c
+    "commit=$1; if [ -z \"$commit\" ]; then commit=$(git rev-parse HEAD 2>/dev/null || printf unknown); fi; case \"$commit\" in ''|*[!a-zA-Z0-9._+-]*) commit=unknown;; esac; printf 'let commit = \"%s\"\\n' \"$commit\""
+    --
+    %{env:LEASH_COMMIT=}))))
+
+(library
+ (name leash_cli_support)
+ (modules skill_install leash_skill_data leash_build_commit)
+ (libraries leash unix ox_caps yojson))
