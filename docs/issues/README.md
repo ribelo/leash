@@ -114,6 +114,19 @@ L29 first; L30 needs only L29's loader and the models service; L31–L34 in orde
 
 | L40 | **Playbook robustness.** The L39 example was tuned to JEV's quirks and a variant failed on an 8-page category. Collect three categories of different sizes (one ≥ 8 pages) with plain wording; diagnose each failure to its cause and fix it there — not by rephrasing to suit the model. Record the diagnosis in the spec. | extr-uhnc | L39 | [x] |
 
+## Milestone 10 — daily use (`daily-use/01-daily-use.md`)
+
+Leash replaces chrome-cdp. Agents are the main user: help, errors and exit codes are part of the product.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L41 | **Errors and help.** JSON error record with hints for every failure including client-side; sysexits exit-code table; per-command help with examples and exit codes; grouped top-level help; `help errors`; no-argument orientation; config check reporting everything; the four-way table test. | daily-azxe, daily-6pde, daily-3bwr, daily-iisr, daily-pb5a, daily-u1k2, daily-9396, daily-k9cs | — | [ ] |
+| L42 | **Bundled skill.** `skill/` in the repository, embedded at build; `leash skill install/show` after nema's; version stamp compared by `status`; skill rewritten for the whole surface; the dotfiles copy replaced by the installed one. | daily-fiwd, daily-yd8s, daily-ulmi, daily-v6ez, daily-hdex | L41 | [ ] |
+| L43 | **Installed.** nixos-config imports and enables Leash with the secret wrapper and OTLP; the operator rebuilds; `status` reports version, Chrome, headed, key, skill; distinguishes not-installed, stopped and restarting; the generation-lost diagnosis checked on the installed service. | daily-0tl4, daily-ki34, daily-a341, daily-smli, daily-lqqn, daily-9zvz | L42 | [ ] |
+| L44 | **Acceptance and cut-over.** A fresh agent that knows only the installed skill runs the workflow and recovers from three failures; the operator's desktop checks (subsumes L18/L28); chrome-cdp deleted and every reference updated; AGENTS.md files name Leash; all trees clean, Leash pushed. | daily-9ggi, daily-n7on, daily-6c5m, daily-mglh, daily-l082 | L43 | [ ] |
+
+L18 and L28 are closed by L44.
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
