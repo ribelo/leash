@@ -143,12 +143,8 @@ let decide ?(deadline = default_deadline) (t : t) (request : J.request) =
       match parts (J.body request) with
       | Error why ->
           Error
-            P.
-              {
-                code = error_code "internal";
-                message = "the System One request did not shape: " ^ why;
-                detail = None;
-              }
+            (P.make_error (error_code "internal")
+               ~message:("the System One request did not shape: " ^ why))
       | Ok (state, questions) -> (
           Model_usage.start "operator";
           match Ox_ai_systemone.Client.evaluate client ~deadline ~state ~questions with

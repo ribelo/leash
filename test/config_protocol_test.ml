@@ -723,6 +723,7 @@ let reply_shapes () =
             [
               ("code", `String "stale-snapshot");
               ("message", `String "snapshot s_3 is stale; snap again");
+              ("hint", `String "run `leash snap TAB` again and use its snapshot id");
               ("detail", assoc [ ("snapshot", `String "s_4") ]);
             ] );
       ]
@@ -755,7 +756,13 @@ let reply_shapes () =
        (assoc
           [
             ("ok", `Bool false);
-            ("error", assoc [ ("code", `String "mystery"); ("message", `String "x") ]);
+            ( "error",
+              assoc
+                [
+                  ("code", `String "mystery");
+                  ("message", `String "x");
+                  ("hint", `String "h");
+                ] );
           ]));
   expect_error "unknown reply field"
     [ "reply"; "unknown field"; "extra" ]
@@ -987,7 +994,8 @@ let config_check_cli () =
         (status, contents output, contents error)
       in
       let status, _, error = check () in
-      Alcotest.(check bool) "missing executable rejected" true (status = Unix.WEXITED 2);
+      Alcotest.(check bool)
+        "missing executable rejected with config-data exit" true (status = Unix.WEXITED 65);
       Alcotest.(check bool)
         "JSON pointer in diagnostic" true
         (List.mem "chrome" (String.split_on_char '/' error));
@@ -999,7 +1007,8 @@ let config_check_cli () =
       Alcotest.(check bool) "secret absent" false (contains "file-secret" output);
       write (config_text binary (Filename.concat dir "profile") ^ "oops = true\n");
       let status, _, error = check () in
-      Alcotest.(check bool) "unknown key exits two" true (status = Unix.WEXITED 2);
+      Alcotest.(check bool)
+        "unknown key exits config-data class" true (status = Unix.WEXITED 65);
       Alcotest.(check bool) "unknown key named" true (contains "oops" error))
 
 let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_status
@@ -1064,7 +1073,9 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
           Alcotest.(check bool)
             "CLI exit code" true
             (status = Unix.WEXITED expected_status);
-          let stream = Unix.in_channel_of_descr out_read in
+          let stream =
+            Unix.in_channel_of_descr (if expected_status = 0 then out_read else err_read)
+          in
           let text = input_line stream in
           Alcotest.(check bool) "prints JSON or table" true (String.length text > 0);
           (match expected_lines with
@@ -1075,7 +1086,8 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
                 (fun expected ->
                   Alcotest.(check string) "table row" expected (input_line stream))
                 rows);
-          Unix.close err_read))
+          close_in stream;
+          Unix.close (if expected_status = 0 then err_read else out_read)))
 
 let socket_cli () =
   socket_cli_case [ "status" ]
@@ -1083,7 +1095,13 @@ let socket_cli () =
     0 "status" "dsh:test-l1";
   socket_cli_case
     [ "new"; "--owner"; "human"; "https://example.com" ]
-    "{\"ok\":false,\"error\":{\"code\":\"tab-cap\",\"message\":\"full\"}}" 1 "new" "human";
+    (Yojson.Safe.to_string
+       (P.encode_reply
+          (P.Failure
+             (P.make_error
+                (assert_ok "tab-cap code" (P.Error_code.of_string "tab-cap"))
+                ~message:"full"))))
+    75 "new" "human";
   socket_cli_case [ "list"; "--table" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list"
     "dsh:test-l1";
   (* tab-ok2i: each observed row is one readable line in --table mode. *)
@@ -1173,7 +1191,8 @@ let cli_usage () =
           (Unix.environment ()) Unix.stdin null null
       in
       let _, status = Unix.waitpid [] pid in
-      Alcotest.(check bool) "CLI usage exits two" true (status = Unix.WEXITED 2))
+      Alcotest.(check bool)
+        "CLI parsing exits Cmdliner class" true (status = Unix.WEXITED 124))
 
 (* svc-f4op: default-off OTLP, enabled endpoint, secret-wrapped headers, bad URLs. *)
 let otlp_config () =
@@ -1492,7 +1511,7 @@ let config_init () =
       | Ok _ -> Alcotest.fail "svc-x8rp init overwrote a file without --force"
       | Error (`Exists refused) ->
           Alcotest.(check string) "svc-x8rp it names what it refused" path refused
-      | Error (`Write message) -> Alcotest.fail ("svc-x8rp init failed: " ^ message));
+      | Error (`Write error) -> Alcotest.fail ("svc-x8rp init failed: " ^ error.message));
       Alcotest.(check string)
         "svc-x8rp the refused file is untouched" C.default_toml (file_contents path);
       let out = open_out path in
@@ -1520,7 +1539,7 @@ let config_init_cli () =
         (file_contents file);
       let status, _, error = run_cli ~env [ "config"; "init" ] in
       Alcotest.(check bool)
-        "svc-x8rp a second init exits two" true (status = Unix.WEXITED 2);
+        "svc-x8rp a second init exits usage class" true (status = Unix.WEXITED 64);
       Alcotest.(check bool)
         "svc-x8rp and says how to overwrite" true (contains "--force" error);
       let status, _, _ = run_cli ~env [ "config"; "init"; "--force" ] in
@@ -1628,7 +1647,8 @@ let config_check_without_file () =
       let missing = Filename.concat root "nowhere.toml" in
       let status, _, error = run_cli ~env [ "config"; "check"; "--config"; missing ] in
       Alcotest.(check bool)
-        "svc-x8rp an absent --config exits two" true (status = Unix.WEXITED 2);
+        "svc-x8rp an absent --config exits config-data class" true
+        (status = Unix.WEXITED 65);
       Alcotest.(check bool) "svc-x8rp and names the path" true (contains missing error))
 
 (* svc-o4wt: the CLI connects where control.socket says — not where XDG_RUNTIME_DIR would
@@ -1777,10 +1797,10 @@ let help_scope () =
     (contains "--index" (help [ "press" ]) && not (contains "--index" (help [ "click" ])));
   let status, _, _ = run_cli [ "new"; "--table" ] in
   Alcotest.(check bool)
-    "svc-hi4f an option a command does not use is refused" true (status = Unix.WEXITED 2);
+    "svc-hi4f an option a command does not use is refused" true (status = Unix.WEXITED 124);
   let status, _, _ = run_cli [ "press"; "t_9xk"; "s_3"; "Enter"; "--force" ] in
   Alcotest.(check bool)
-    "svc-hi4f --force is refused where it means nothing" true (status = Unix.WEXITED 2)
+    "svc-hi4f --force is refused where it means nothing" true (status = Unix.WEXITED 124)
 
 let test name case = Alcotest.test_case name `Quick case
 

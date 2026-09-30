@@ -143,6 +143,25 @@
   yojson
   alcotest))
 
+(executable
+ (name daily_cli_fixture)
+ (modules daily_cli_fixture)
+ (libraries leash unix yojson))
+
+(cram
+ (deps %{bin:leash} daily_cli_fixture.exe))
+
+(test
+ (name daily_error_table_test)
+ (modules daily_error_table_test)
+ (deps ../docs/protocol.md ../packages/leash/protocol.ml)
+ (libraries leash alcotest))
+
+(test
+ (name daily_config_test)
+ (modules daily_config_test)
+ (libraries leash ox_app eio eio_main yojson alcotest))
+
 (test
  (name actions_test)
  (modules actions_test)

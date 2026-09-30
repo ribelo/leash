@@ -25,7 +25,7 @@ let enum of_string value =
 let disposition name : P.Disposition.t = enum P.Disposition.of_string name
 
 let error ?detail code message : P.error =
-  { code = enum P.Error_code.of_string code; message; detail }
+  P.make_error ?detail (enum P.Error_code.of_string code) ~message
 
 let unavailable () = error "browser-unavailable" "Chrome is restarting; try again shortly"
 

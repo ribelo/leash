@@ -21,7 +21,7 @@ let failure error = P.Failure error
 let enum code =
   match P.Error_code.of_string code with Ok v -> v | Error _ -> assert false
 
-let err code message = failure P.{ code = enum code; message; detail = None }
+let err code message = failure (P.make_error (enum code) ~message)
 let invalid why = err "invalid-request" ("invalid request at " ^ why)
 
 let decode line =
@@ -310,14 +310,11 @@ let budget_exceeded (request : (P.request, string) result) budget =
   in
   let budget_ms = Ox.Duration.to_ms budget in
   failure
-    P.
-      {
-        code = enum "timeout";
-        message =
-          Printf.sprintf "%s ran for its full handler budget of %d ms" command budget_ms;
-        detail =
-          Some (`Assoc [ ("command", `String command); ("budget_ms", `Int budget_ms) ]);
-      }
+    (P.make_error
+       ~detail:(`Assoc [ ("command", `String command); ("budget_ms", `Int budget_ms) ])
+       (enum "timeout")
+       ~message:
+         (Printf.sprintf "%s ran for its full handler budget of %d ms" command budget_ms))
 
 (* tab-x4v0 tab-0lax: the listener's 64 KiB default drops this protocol's own
    bounded shapes — a 64K-character text reply, a 64 KiB eval result or argument, a

@@ -16,11 +16,11 @@ Reply, one of:
 
 ```json
 {"ok":true,"result":{…}}
-{"ok":false,"error":{"code":"stale-snapshot","message":"snapshot s_3 is stale; snap again","detail":{…}}}
+{"ok":false,"error":{"code":"stale-snapshot","message":"snapshot s_3 is stale; snap again","hint":"run `leash snap TAB` again and use its snapshot id","detail":{…}}}
 ```
 
 - `owner` is required on every request. The CLI fills it from `DSH_SESSION_ID` (as `dsh:<id>`) or `--owner`; a human uses `--owner human` or whatever they like.
-- `error.code` is from the closed set below. `message` is one short sentence for the agent. `detail?` is optional structured context (for `tab-gone`: the disposition; for `stale-snapshot`: the current snapshot id); it is omitted when the error carries none.
+- `error.code` is from the closed set below. `message` is one short sentence for the agent. `hint` is always present: one line naming the next action, from that table. `detail?` is optional structured context (for `tab-gone`: the disposition; for `stale-snapshot`: the current snapshot id); it is omitted when the error carries none.
 
 ## Commands
 
@@ -437,32 +437,56 @@ Rules:
 - `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful. `settled` is false when the page kept mutating during the observation (retaken twice first); the snapshot is still usable and actions revalidate at dispatch.
 - A row's `name` may be empty: a control with no accessible name (an unlabelled native select, a bare text input, an icon button) is kept with its `role`, an empty `name`, and its `value` or `placeholder`, so it stays addressable by index (tab-zc36). `value` is omitted when the control has neither.
 - `new` with a url navigates and returns when the document has loaded, exactly like `nav`, so `title` is populated; `new` without a url returns at once with `about:blank`. Both report the URL Chrome committed — after any redirect — and the document title, not the requested URL.
-- The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Every command names its positional arguments in its synopsis — `leash click [OPTION]… TAB SNAPSHOT INDEX` — and accepts only the options it uses, so `leash <command> --help` is the whole call; `--owner`, `--pretty`, `--config` and `--socket` are the client options every command shares. Exit status 0 on `ok:true`, 1 on a protocol error, 2 on a CLI usage error.
+- The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Every command names its positional arguments in its synopsis — `leash click [OPTION]… TAB SNAPSHOT INDEX` — and accepts only the options it uses, so `leash <command> --help` is the whole call; `--owner`, `--pretty`, `--config` and `--socket` are the client options every command shares. Exit status 0 on `ok:true`. A failure exits with its code's class from the error table below, not 1; command-line parse exits 124. `leash help errors` prints that table.
 
 ## Error codes
 
-| code | when |
-| --- | --- |
-| `invalid-request` | malformed JSON, unknown cmd, bad args |
-| `not-owner` | the tab is owned by another caller, or unowned and the command needs ownership |
-| `already-owned` | `claim` on a tab that is not unowned |
-| `with-human` | the tab is handed to the human; every command is refused until `resume` |
-| `tab-gone` | the handle names a closed tab; `detail.disposition` is `closed_by_owner`, `closed_by_ttl`, `closed_externally`, or `browser_lost` |
-| `unknown-tab` | no tab and no tombstone for the handle |
-| `stale-snapshot` | the targeted snapshot is not current |
-| `no-such-row` | index not in the snapshot |
-| `body-unavailable` | `net_body` / `net_request`: the request has no body to read, or Chrome has evicted it |
-| `unknown-request` | `net_body` / `net_request`: the tab's ring holds no request with that id |
-| `row-not-actionable` | the row is not visible, is disabled, or is covered at its click point |
-| `dialog-open` | a dialog blocks the page; answer it first |
-| `no-dialog` | `dialog` with nothing to answer |
-| `no-handoff` | `resume` on a tab nobody is waiting on |
-| `url-refused` | scheme not http(s)/about:blank, or userinfo present |
-| `tab-cap` | no capacity for `new` |
-| `timeout` | `wait`, `handoff`, or a bounded operation ran out of time; a handoff's `detail.warnings` lists the human-facing steps that failed |
-| `browser-unavailable` | Chrome is restarting; try again shortly |
-| `model-unavailable` | System One or the text helper failed, or no API key is configured; `detail.code` carries the kind (`missing-key`, `unavailable`, `timeout`, `authentication`, `invalid-response`, `input-too-large`, `model-mismatch`, `text-helper-unavailable`) and a drive's `detail.steps` the completed steps |
-| `too-large` | expression, argument, result, or fill text over its bound; a playbook script's result over its `max_bytes` |
-| `script-failed` | a playbook script threw or rejected, could not be compiled, or the browser could not return its value; `message` carries what it threw |
-| `script-invalid` | a playbook script's result does not fit its `returns`; `message` is the path of the first mismatch |
-| `internal` | a defect; the message carries no page content |
+A failed reply, and every failure the CLI prints on stderr, is one object `{code, message, hint, detail?}`. `hint` is always present: one line naming the next action, taken from this table. `detail?` is omitted when the error carries none (for `tab-gone`: `detail.disposition`; for `stale-snapshot`: the current snapshot id; for `model-unavailable`: `detail.code`, and on a drive `detail.steps`; for a handoff `timeout`: `detail.warnings`).
+
+Client-side codes (`service-unreachable`, `socket-permission`, `permission-denied`, `config-invalid`, `usage`, `cli-parse`, `invalid-response`) are printed by the CLI, not sent by the service. They are in the same closed set so one parser handles both. A model's `detail.code` of `invalid-response` is a kind of `model-unavailable`, not the client-side code of the same name.
+
+Exit status is the class below, not 1. `leash help errors` prints this table. The classes are the ones command `--help` documents; an exit outside this set makes help raise:
+
+| class | exit | sysexits | when |
+| --- | --- | --- | --- |
+| usage | 64 | EX_USAGE | invalid request or invocation |
+| data | 65 | EX_DATAERR | configuration, playbook, or stale or invalid page data |
+| unknown | 66 | EX_NOINPUT | unknown or gone tab, row, or network request |
+| unavailable | 69 | EX_UNAVAILABLE | service, browser, or model cannot be used |
+| internal | 70 | EX_SOFTWARE | a defect, or a reply that is not protocol JSON |
+| retry | 75 | EX_TEMPFAIL | timed out, or the tab cap is full |
+| permission | 77 | EX_NOPERM | filesystem or socket permission, or tab ownership refused |
+| parse | 124 | — | the command line did not parse; the command did not run |
+
+| code | exit | meaning | hint |
+| --- | --- | --- | --- |
+| `invalid-request` | 64 | malformed JSON, unknown command, or bad arguments | fix the request; `leash <command> --help` names the arguments and one example |
+| `not-owner` | 77 | the tab is owned by another caller, or unowned and the command needs an owner | run `leash list --all` to see the owner; `leash claim TAB` takes an unowned tab |
+| `already-owned` | 77 | claim on a tab that is not unowned | the tab is already claimed; `leash list --all` shows its owner |
+| `with-human` | 77 | the tab is handed to the human; commands are refused until resume | the human holds this tab; wait, or return it with `leash resume TAB` |
+| `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_owner, closed_by_ttl, closed_externally, or browser_lost | the handle is dead; read detail.disposition, then open a new tab with `leash new` |
+| `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; `leash list --all` shows live handles |
+| `stale-snapshot` | 65 | the targeted snapshot is not current | run `leash snap TAB` again and use its snapshot id |
+| `no-such-row` | 66 | the index is not in the snapshot | that index is not in the snapshot; `leash snap TAB` and use a listed index |
+| `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
+| `unknown-request` | 66 | the tab's ring holds no request with that id | that id is not in the tab's ring; `leash net TAB` and use a listed id |
+| `row-not-actionable` | 65 | the row is not visible, is disabled, is covered, or is the wrong kind of control | pick another row, or `leash snap TAB` if the page moved; a file input takes `leash upload` |
+| `dialog-open` | 65 | a dialog blocks the page; answer it before the action | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry |
+| `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown |
+| `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it |
+| `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank |
+| `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` |
+| `timeout` | 75 | wait, handoff, or a bounded operation ran out of time; a handoff's detail.warnings lists the steps that failed | retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB` |
+| `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds |
+| `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry |
+| `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry |
+| `script-failed` | 65 | a playbook script threw, rejected, or could not be compiled; message carries what it threw | read message; fix the script or the page, then `leash playbook test` |
+| `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |
+| `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message |
+| `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket |
+| `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its owner and mode, or pass --socket |
+| `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's owner and mode, or pass another path |
+| `config-invalid` | 65 | the configuration file is missing, unreadable, or invalid | fix the reported problems; `leash config check` lists every one with the config path |
+| `usage` | 64 | the command was invoked wrongly; the arguments do not match its synopsis | `leash <command> --help` shows the arguments and an example |
+| `cli-parse` | 124 | Cmdliner rejected the command line; the command did not run | the command line did not parse; `leash <command> --help` shows the accepted form |
+| `invalid-response` | 70 | the service reply was not a protocol object the CLI could decode | the service reply was not a protocol object; check `leash status` and retry |

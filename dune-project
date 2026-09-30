@@ -2,6 +2,8 @@
 
 (generate_opam_files true)
 
+(cram enable)
+
 (name leash)
 
 (package

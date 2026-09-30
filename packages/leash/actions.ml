@@ -12,7 +12,7 @@ let error ?detail name message : P.error =
   let code =
     match P.Error_code.of_string name with Ok code -> code | Error _ -> assert false
   in
-  { P.code; message; detail }
+  P.make_error ?detail code ~message
 
 let fail ?detail name message = Error (error ?detail name message)
 let issue why = Format.asprintf "%a" E.pp_issue why

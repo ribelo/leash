@@ -336,6 +336,13 @@ type error_code =
   | Script_failed [@json.name "script-failed"]
   | Script_invalid [@json.name "script-invalid"]
   | Internal [@json.name "internal"]
+  | Service_unreachable [@json.name "service-unreachable"]
+  | Socket_permission [@json.name "socket-permission"]
+  | Permission_denied [@json.name "permission-denied"]
+  | Config_invalid [@json.name "config-invalid"]
+  | Usage [@json.name "usage"]
+  | Cli_parse [@json.name "cli-parse"]
+  | Invalid_response [@json.name "invalid-response"]
 [@@deriving yojson]
 
 module Error_code = struct
@@ -345,7 +352,178 @@ module Error_code = struct
   let to_string = wire_string yojson_of_error_code
   let t_of_yojson = error_code_of_yojson
   let yojson_of_t = yojson_of_error_code
+
+  (* Exit classes are the ones packages/leash/bin/cli_help.ml documents. An exit
+     outside that set makes [leash --help] raise. Configuration is 65, not 78:
+     that help text already calls 65 the configuration class. daily-3bwr. *)
+  type info = { exit_code : int; meaning : string; hint : string }
+
+  let info exit_code meaning hint = { exit_code; meaning; hint }
+
+  let meta = function
+    | Invalid_request ->
+        info 64 "malformed JSON, unknown command, or bad arguments"
+          "fix the request; `leash <command> --help` names the arguments and one example"
+    | Not_owner ->
+        info 77
+          "the tab is owned by another caller, or unowned and the command needs an owner"
+          "run `leash list --all` to see the owner; `leash claim TAB` takes an unowned \
+           tab"
+    | Already_owned ->
+        info 77 "claim on a tab that is not unowned"
+          "the tab is already claimed; `leash list --all` shows its owner"
+    | With_human ->
+        info 77 "the tab is handed to the human; commands are refused until resume"
+          "the human holds this tab; wait, or return it with `leash resume TAB`"
+    | Tab_gone ->
+        info 66
+          "the handle names a closed tab; detail.disposition is closed_by_owner, \
+           closed_by_ttl, closed_externally, or browser_lost"
+          "the handle is dead; read detail.disposition, then open a new tab with `leash \
+           new`"
+    | Unknown_tab ->
+        info 66 "no tab and no tombstone for the handle"
+          "that handle is not a tab; `leash list --all` shows live handles"
+    | Stale_snapshot ->
+        info 65 "the targeted snapshot is not current"
+          "run `leash snap TAB` again and use its snapshot id"
+    | No_such_row ->
+        info 66 "the index is not in the snapshot"
+          "that index is not in the snapshot; `leash snap TAB` and use a listed index"
+    | Body_unavailable ->
+        info 66 "net body or request has no body to read, or Chrome has evicted it"
+          "that body is gone; `leash net TAB` and read a request that still has one"
+    | Unknown_request ->
+        info 66 "the tab's ring holds no request with that id"
+          "that id is not in the tab's ring; `leash net TAB` and use a listed id"
+    | Row_not_actionable ->
+        info 65
+          "the row is not visible, is disabled, is covered, or is the wrong kind of \
+           control"
+          "pick another row, or `leash snap TAB` if the page moved; a file input takes \
+           `leash upload`"
+    | Dialog_open ->
+        info 65 "a dialog blocks the page; answer it before the action"
+          "answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then \
+           retry"
+    | No_dialog ->
+        info 64 "dialog was asked with nothing to answer"
+          "nothing is open; `leash snap TAB` and call dialog only when a dialog is shown"
+    | No_handoff ->
+        info 64 "resume on a tab nobody is waiting on"
+          "nobody is waiting; `leash handoff TAB REASON` starts one, and only then does \
+           `leash resume TAB` finish it"
+    | Url_refused ->
+        info 64 "scheme is not http, https, or about:blank, or the URL has userinfo"
+          "use an http or https URL with no userinfo, or about:blank"
+    | Tab_cap ->
+        info 75 "no capacity for a new tab"
+          "close a tab with `leash close TAB`, then retry `leash new`"
+    | Timeout ->
+        info 75
+          "wait, handoff, or a bounded operation ran out of time; a handoff's \
+           detail.warnings lists the steps that failed"
+          "retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or \
+           `leash resume TAB`"
+    | Browser_unavailable ->
+        info 69 "Chrome is restarting"
+          "Chrome is restarting; retry `leash status` in a few seconds"
+    | Model_unavailable ->
+        info 69
+          "System One or the text helper failed, or no API key is configured; \
+           detail.code is missing-key, unavailable, timeout, authentication, \
+           invalid-response, input-too-large, model-mismatch, or text-helper-unavailable"
+          "read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry"
+    | Too_large ->
+        info 65
+          "expression, argument, result, fill text, or a script result is over its bound"
+          "shrink the text, expression, argument, or files under the bound and retry"
+    | Script_failed ->
+        info 65
+          "a playbook script threw, rejected, or could not be compiled; message carries \
+           what it threw"
+          "read message; fix the script or the page, then `leash playbook test`"
+    | Script_invalid ->
+        info 65
+          "a playbook script's result does not fit its returns; message is the first \
+           mismatch"
+          "the result missed its returns shape; message is the first bad path, so fix \
+           the script or the returns"
+    | Internal ->
+        info 70 "a defect; the message carries no page content"
+          "a defect, not a page failure; retry once, then report the message"
+    | Service_unreachable ->
+        info 69 "the CLI could not connect to the control socket"
+          "`systemctl --user start leash`, or pass --socket"
+    | Socket_permission ->
+        info 77 "the CLI was denied access to the control socket"
+          "the control socket is not readable; check its owner and mode, or pass --socket"
+    | Permission_denied ->
+        info 77 "the CLI was denied access to a filesystem path"
+          "check the path's owner and mode, or pass another path"
+    | Config_invalid ->
+        info 65 "the configuration file is missing, unreadable, or invalid"
+          "fix the reported problems; `leash config check` lists every one with the \
+           config path"
+    | Usage ->
+        info 64 "the command was invoked wrongly; the arguments do not match its synopsis"
+          "`leash <command> --help` shows the arguments and an example"
+    | Cli_parse ->
+        info 124 "Cmdliner rejected the command line; the command did not run"
+          "the command line did not parse; `leash <command> --help` shows the accepted \
+           form"
+    | Invalid_response ->
+        info 70 "the service reply was not a protocol object the CLI could decode"
+          "the service reply was not a protocol object; check `leash status` and retry"
+
+  let all =
+    [
+      Invalid_request;
+      Not_owner;
+      Already_owned;
+      With_human;
+      Tab_gone;
+      Unknown_tab;
+      Stale_snapshot;
+      No_such_row;
+      Body_unavailable;
+      Unknown_request;
+      Row_not_actionable;
+      Dialog_open;
+      No_dialog;
+      No_handoff;
+      Url_refused;
+      Tab_cap;
+      Timeout;
+      Browser_unavailable;
+      Model_unavailable;
+      Too_large;
+      Script_failed;
+      Script_invalid;
+      Internal;
+      Service_unreachable;
+      Socket_permission;
+      Permission_denied;
+      Config_invalid;
+      Usage;
+      Cli_parse;
+      Invalid_response;
+    ]
+
+  let exit_code code = (meta code).exit_code
+  let hint code = (meta code).hint
+  let meaning code = (meta code).meaning
+
+  let error_help =
+    let header = "# code\texit\tmeaning\thint" in
+    let line code =
+      Printf.sprintf "%s\t%d\t%s\t%s" (to_string code) (exit_code code) (meaning code)
+        (hint code)
+    in
+    String.concat "\n" (header :: List.map line all) ^ "\n"
 end
+
+let error_help = Error_code.error_help
 
 (* ---------- Tab, snapshot and drive shapes ---------- *)
 
@@ -857,18 +1035,24 @@ type run_result = {
 
 (* ---------- Errors and replies ---------- *)
 
-type error = { code : Error_code.t; message : string; detail : Yojson.Safe.t option }
+type error = {
+  code : Error_code.t;
+  message : string;
+  hint : string;
+  detail : Yojson.Safe.t option;
+}
 [@@deriving yojson]
+
+let make_error ?detail code ~message =
+  { code; message; hint = Error_code.hint code; detail }
 
 (* own-teh1 tab-0ohq: the one [tab-gone], whether it comes from a tombstone, from a
    dispatch the target's death settled (tab-0ohq), or from the browser lookup that probe
    makes. The disposition in [detail] is what tells a client why the tab is gone. *)
 let tab_gone disposition : error =
-  {
-    code = Tab_gone;
-    message = "the tab is gone";
-    detail = Some (`Assoc [ ("disposition", yojson_of_disposition disposition) ]);
-  }
+  make_error
+    ~detail:(`Assoc [ ("disposition", yojson_of_disposition disposition) ])
+    Tab_gone ~message:"the tab is gone"
 
 (** One of the two wire shapes. The result stays raw JSON because the CLI prints it
     without knowing the command's result type; the per-command result records above are

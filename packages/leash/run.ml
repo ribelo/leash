@@ -189,8 +189,8 @@ let of_args (args : P.run_args) : args =
 let code name = match P.Error_code.of_string name with Ok x -> x | Error _ -> assert false
 let status name = match P.Run_status.of_string name with Ok x -> x | Error _ -> assert false
 
-let invalid message = P.{ code = code "invalid-request"; message; detail = None }
-let internal message = P.{ code = code "internal"; message; detail = None }
+let invalid message = P.make_error (code "invalid-request") ~message
+let internal message = P.make_error (code "internal") ~message
 let ms seconds = max 0 (int_of_float (seconds *. 1000.))
 let lower = String.lowercase_ascii
 

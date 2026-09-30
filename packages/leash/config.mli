@@ -136,9 +136,16 @@ val default_toml : string
     commented out with the default it would set, so the file changes nothing until a line
     is uncommented. *)
 
-type init_error = [ `Exists of string | `Write of string ]
-(** [`Exists path] is a file already there and no [force]; [`Write message] is the
-    operating system refusing the directory or the file. *)
+type write_error = { path : string; permission : bool; message : string }
+(** One operating-system refusal while {!init} creates the file. [path] is the path that
+    call refused — the parent directory when creating it fails, otherwise the file.
+    [permission] is true when the errno is [EACCES], [EPERM], or [EROFS]. [message] is
+    [Unix.error_message] of that errno. *)
+
+type init_error = [ `Exists of string | `Write of write_error ]
+(** [`Exists path] is a file already there and no [force]. [`Write] is the operating
+    system refusing the directory or the file; [permission] distinguishes a permission
+    failure from any other errno. *)
 
 val init :
   caps:< Ox_caps.Cap.fs_write ; .. > ->
@@ -156,7 +163,23 @@ val ensure_dir : caps:< Ox_caps.Cap.fs_write ; .. > -> string -> (unit, string) 
 
 val t_of_yojson : Yojson.Safe.t -> (t, string) result
 (** The derived decoder: an unknown key or a bad value is reported with its dotted path.
-*)
+    It stops at the first problem. {!decode_all} is the pass that reports every one. *)
+
+val decode_all :
+  ?getenv:(string -> string option) ->
+  ?fs:_ Eio.Path.t ->
+  Yojson.Safe.t ->
+  (t, Ox_app.validation_error list) result
+(** [decode_all ?getenv ?fs json] is every problem in [json], not the first. ^daily-9396
+
+    The list holds field decode failures (an unknown key, a wrong type, a missing required
+    member, a smart-constructor refusal), {!validate_otlp}, and path checks. A relative
+    [control.socket] is reported without [getenv]. [getenv] expands the XDG placeholders
+    as {!env} does and refuses a placeholder an unset variable left behind. [fs] adds the
+    filesystem checks {!validate_paths} makes; when [fs] is passed without [getenv], the
+    environment is treated as empty. [Ok] is {!t_of_yojson}'s value, before {!env}, so a
+    successful decode is unchanged. Apply {!env} before printing the effective
+    configuration. *)
 
 val yojson_of_t : t -> Yojson.Safe.t
 (** The derived encoder [config check] prints; the API key renders as ["<redacted>"]. *)
@@ -173,7 +196,8 @@ val chrome_config : chrome -> Chrome.config
 (** The [chrome] section as {!Chrome.config}, for the program that creates the service. *)
 
 val validate_otlp : t -> (unit, Ox_app.validation_error list) result
-(** Check the optional endpoint and collector headers without filesystem access. *)
+(** Check the optional endpoint and every collector header, without filesystem access. A
+    bad endpoint does not hide a bad header. *)
 
 val validate_paths :
   getenv:(string -> string option) ->
@@ -182,8 +206,9 @@ val validate_paths :
   (unit, Ox_app.validation_error list) result
 (** Non-mutating filesystem validation with the filesystem passed explicitly, and the
     environment for a bare [chrome.binary] name's [PATH] lookup ({!validate} passes
-    [Cap_sys.getenv_opt] over the Door's powerbox, ^ncaps-4tjy). Errors carry JSON
-    pointers and messages. *)
+    [Cap_sys.getenv_opt] over the Door's powerbox, ^ncaps-4tjy). Every problem is reported
+    — {!validate_otlp}, the binary, the socket, then the profile — not only the first.
+    Errors carry JSON pointers and messages. *)
 
 val validate :
   Eio_unix.Stdenv.base Ox_app.Env.t -> t -> (unit, Ox_app.validation_error list) result

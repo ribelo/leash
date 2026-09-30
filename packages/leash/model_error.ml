@@ -12,12 +12,10 @@ let error_code name =
   | Error _ -> assert false
 
 let unavailable ?(code = "unavailable") message =
-  Protocol.
-    {
-      code = error_code "model-unavailable";
-      message;
-      detail = Some (`Assoc [ ("code", `String code) ]);
-    }
+  Protocol.make_error
+    ~detail:(`Assoc [ ("code", `String code) ])
+    (error_code "model-unavailable")
+    ~message
 
 let of_eta (error : Ox_ai.Error.t) =
   let code =

@@ -10,22 +10,49 @@ module Cap_sys = Ox_caps.Cap_sys
 let obj fields = `Assoc fields
 let str s = `String s
 
-let usage ~caps msg =
-  Cap_stdlib.prerr_endline ~caps ("leash: " ^ msg);
-  2
+(* daily-azxe daily-6pde daily-3bwr: the same record and code table on both sides
+   of the socket. Errors are always one compact JSON line, never affected by --pretty. *)
+let make_error ?detail name message : P.error =
+  let code =
+    match P.Error_code.of_string name with
+    | Ok code -> code
+    | Error _ -> invalid_arg "unknown CLI error code"
+  in
+  P.make_error ?detail code ~message
 
-let failure ~caps msg =
-  Cap_stdlib.prerr_endline ~caps ("leash: " ^ msg);
-  1
+let emit_error ~caps (error : P.error) =
+  Cap_stdlib.prerr_endline ~caps (Yojson.Safe.to_string (P.yojson_of_error error));
+  P.Error_code.exit_code error.code
 
-let send path request =
-  Eio_main.run (fun env ->
-      Eio.Switch.run (fun sw ->
-          let socket = Eio.Net.connect ~sw env#net (`Unix path) in
-          let data = Yojson.Safe.to_string request ^ "\n" in
-          Eio.Flow.copy_string data socket;
-          let reader = Eio.Buf_read.of_flow ~max_size:8_388_608 socket in
-          Eio.Buf_read.line reader))
+let report ~caps ?detail code message = emit_error ~caps (make_error ?detail code message)
+let usage ~caps message = report ~caps "usage" message
+let failure ~caps message = report ~caps "internal" message
+let invalid_playbook ~caps message = report ~caps "script-invalid" message
+
+let protect ~caps run =
+  try run () with
+  | Eio.Cancel.Cancelled _ as exn -> raise exn
+  | Unix.Unix_error ((Unix.EACCES | Unix.EPERM | Unix.EROFS), _, _) ->
+      report ~caps "permission-denied"
+        "permission denied while accessing a local resource"
+  | Eio.Io (Eio.Fs.E (Eio.Fs.Permission_denied _), _) ->
+      report ~caps "permission-denied"
+        "permission denied while accessing a local resource"
+  | _ ->
+      failure ~caps "the command failed unexpectedly; no successful result was produced"
+
+let send ?timeout_s ~base path request =
+  let run () =
+    Eio.Switch.run (fun sw ->
+        let socket = Eio.Net.connect ~sw base#net (`Unix path) in
+        let data = Yojson.Safe.to_string request ^ "\n" in
+        Eio.Flow.copy_string data socket;
+        let reader = Eio.Buf_read.of_flow ~max_size:8_388_608 socket in
+        Eio.Buf_read.line reader)
+  in
+  match timeout_s with
+  | None -> run ()
+  | Some seconds -> Eio.Time.with_timeout_exn base#clock seconds run
 
 let field key = function
   | `Assoc fields -> ( match List.assoc_opt key fields with Some x -> x | None -> `Null)
@@ -94,11 +121,24 @@ let service_socket ~caps ~config ~socket =
         if not (Sys.file_exists path) then Error `Missing
         else
           try Ok (Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all)
-          with Sys_error message -> Error (`Unreadable message)
+          with Sys_error _ ->
+            Error (`Unreadable "cannot read the configuration file; check permissions")
       in
       match
-        Ox_app.Config.load ~spec:Leash.Config.spec ~getenv:(Cap_sys.getenv_opt ~caps)
-          ~read ~source
+        Ox_app.Config.load
+          ~spec:
+            {
+              Leash.Config.spec with
+              of_yojson =
+                (fun json ->
+                  match
+                    Leash.Config.decode_all ~getenv:(Cap_sys.getenv_opt ~caps) json
+                  with
+                  | Ok config -> Ok config
+                  | Error problems ->
+                      Error (Ox_app.Config.render_validation_errors problems));
+            }
+          ~getenv:(Cap_sys.getenv_opt ~caps) ~read ~source
       with
       | Error (`Config message) ->
           let file = match source with `Explicit path | `Default path -> path in
@@ -113,20 +153,39 @@ let service_socket ~caps ~config ~socket =
 
 (* One request to the service and its decoded reply; an error is the exit status to
    return after saying what went wrong. *)
-let exchange ~caps ~config ~socket request =
+let exchange ~caps ~send ~config ~socket request =
   match service_socket ~caps ~config ~socket with
-  | Error why -> Error (usage ~caps why)
+  | Error why -> Error (report ~caps "config-invalid" why)
   | Ok path -> (
+      let detail = obj [ ("socket", str path) ] in
+      let unreachable () =
+        Error
+          (report ~caps ~detail "service-unreachable"
+             ("cannot reach the Leash service at " ^ path))
+      in
+      let denied () =
+        Error
+          (report ~caps ~detail "socket-permission"
+             ("cannot access the control socket at " ^ path))
+      in
       try
         let raw = Yojson.Safe.from_string (send path request) in
         match P.decode_reply raw with
-        | Error why -> Error (failure ~caps ("invalid service reply: " ^ why))
+        | Error _ ->
+            Error
+              (report ~caps ~detail "invalid-response"
+                 "the service returned an invalid reply")
         | Ok reply -> Ok reply
       with
-      | Unix.Unix_error (code, _, _) -> Error (failure ~caps (Unix.error_message code))
-      | Eio.Io _ as err -> Error (failure ~caps (Printexc.to_string err))
-      | Yojson.Json_error msg -> Error (failure ~caps ("invalid JSON reply: " ^ msg))
-      | End_of_file -> Error (failure ~caps "service closed without a reply"))
+      | Unix.Unix_error ((Unix.EACCES | Unix.EPERM), _, _) -> denied ()
+      | Eio.Io (Eio.Fs.E (Eio.Fs.Permission_denied _), _) -> denied ()
+      | Unix.Unix_error _ | Eio.Io _ | End_of_file -> unreachable ()
+      | Eio.Time.Timeout ->
+          Error (report ~caps ~detail "timeout" "the service request timed out")
+      | Yojson.Json_error _ | Eio.Buf_read.Buffer_limit_exceeded ->
+          Error
+            (report ~caps ~detail "invalid-response"
+               "the service returned unreadable JSON"))
 
 let owner_of ~caps ~owner =
   match owner with
@@ -135,25 +194,25 @@ let owner_of ~caps ~owner =
       Option.bind (Cap_sys.getenv_opt ~caps "DSH_SESSION_ID") (fun id ->
           if id = "" then None else Some ("dsh:" ^ id))
 
-let rec perform ~caps command fields positionals options =
+let rec perform ~caps ~send command fields positionals options =
   match (command, positionals) with
   (* hard-xg6y hard-ovbx hard-vq5s: `net TAB` lists; `net TAB body ID` and `net TAB request
      ID` are commands of their own on the wire. *)
   | "net", [ tab; (("body" | "request") as part); id ] ->
-      perform ~caps ("net_" ^ part) [ "tab"; "id" ] [ tab; id ] options
+      perform ~caps ~send ("net_" ^ part) [ "tab"; "id" ] [ tab; id ] options
   | "net", [ _; verb; _ ] -> usage ~caps ("net takes body or request, not " ^ verb)
   | "net", [ _; _ ] -> usage ~caps "net takes body ID or request ID after the tab"
   | "net", _ :: _ :: _ :: _ ->
       usage ~caps "net takes a tab, and optionally body or request with an ID"
   (* hard-o3za: the files are the trailing positionals. *)
   | "upload", tab :: snapshot :: index :: (_ :: _ as paths) ->
-      perform_wire ~caps command
+      perform_wire ~caps ~send command
         [ "tab"; "snapshot"; "index" ]
         [ tab; snapshot; index ]
         (Some ("paths", `List (List.map str paths)) :: options)
-  | _ -> perform_wire ~caps command fields positionals options
+  | _ -> perform_wire ~caps ~send command fields positionals options
 
-and perform_wire ~caps command fields positionals options =
+and perform_wire ~caps ~send command fields positionals options =
   let actual = List.length positionals in
   let options = List.filter_map Fun.id options in
   let cli = List.filter (fun (name, _) -> List.mem name cli_options) options in
@@ -242,27 +301,18 @@ and perform_wire ~caps command fields positionals options =
                     | Ok owner -> (
                         let request = P.encode_request P.{ owner; command = decoded } in
                         match
-                          exchange ~caps ~config:(text "config") ~socket:(text "socket")
-                            request
+                          exchange ~caps ~send ~config:(text "config")
+                            ~socket:(text "socket") request
                         with
                         | Error status -> status
-                        | Ok reply ->
-                            let body =
-                              match reply with
-                              | P.Success result -> result
-                              | P.Failure error -> P.yojson_of_error error
-                            in
-                            let ok =
-                              match reply with
-                              | P.Success _ -> true
-                              | P.Failure _ -> false
-                            in
-                            if use_table && ok then table ~caps command body
+                        | Ok (P.Failure error) -> emit_error ~caps error
+                        | Ok (P.Success body) ->
+                            if use_table then table ~caps command body
                             else
                               Cap_stdlib.print_endline ~caps
                                 (if pretty then Yojson.Safe.pretty_to_string body
                                  else Yojson.Safe.to_string body);
-                            if ok then 0 else 1)))))
+                            0)))))
 
 (* svc-hi4f: the table is the CLI's contract. Every command names its positionals in the
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
@@ -358,7 +408,7 @@ let positional_term positionals =
     (Term.const [])
     (List.mapi (fun index spec -> (index, spec)) positionals)
 
-let command ~caps ?wire name doc positionals options examples =
+let command ~caps ~send ~run_owned ?wire name doc positionals options examples =
   let wire = Option.value ~default:name wire in
   let fields = List.map (fun spec -> spec.field) positionals in
   let collected =
@@ -366,20 +416,19 @@ let command ~caps ?wire name doc positionals options examples =
       (fun term spec -> Term.(const (fun xs x -> xs @ [ x ]) $ term $ option_term spec))
       (Term.const []) options
   in
-  let man =
-    match examples with
-    | [] -> []
-    | examples -> `S "EXAMPLES" :: List.map (fun example -> `P example) examples
-  in
-  Cmd.v (Cmd.info name ~doc ~man)
+  Cmd.v
+    (Cli_help.command_info name ~doc ~examples)
     Term.(
-      const (fun args opts () -> perform ~caps wire fields args opts)
+      const (fun args opts () ->
+          run_owned (fun _sw ->
+              protect ~caps (fun () -> perform ~caps ~send wire fields args opts)))
       $ positional_term positionals $ collected)
 
 (* run-tcuz run-dbji run-ykq4: these authoring commands need no service. *)
-let playbook_command ~caps =
+let playbook_command ~caps ~send ~run_owned =
+  let owned run = run_owned (fun _sw -> protect ~caps run) in
   let output ?code = function
-    | Error message -> failure ~caps message
+    | Error message -> invalid_playbook ~caps message
     | Ok book ->
         Cap_stdlib.print_endline ~caps
           (Yojson.Safe.pretty_to_string (Leash.Playbook.inspect ?code book));
@@ -389,28 +438,31 @@ let playbook_command ~caps =
   let file = Arg.(required & pos 0 (some string) None & info [] ~docv:"FILE") in
   let list =
     Cmd.v
-      (Cmd.info "list" ~doc:"List validated installed site playbooks.")
+      (Cli_help.local_info "list" ~doc:"List validated installed site playbooks."
+         ~examples:[ "leash playbook list" ])
       Term.(
         const (fun () () ->
-            match Leash.Playbook.list ~caps () with
-            | Error message -> failure ~caps message
-            | Ok books ->
-                List.iter
-                  (fun (book : Leash.Playbook.loaded) ->
-                    Cap_stdlib.printf ~caps "%s\t%s\n" book.playbook.site
-                      book.playbook.description)
-                  books;
-                0)
+            owned (fun () ->
+                match Leash.Playbook.list ~caps () with
+                | Error message -> invalid_playbook ~caps message
+                | Ok books ->
+                    List.iter
+                      (fun (book : Leash.Playbook.loaded) ->
+                        Cap_stdlib.printf ~caps "%s\t%s\n" book.playbook.site
+                          book.playbook.description)
+                      books;
+                    0))
         $ const ())
   in
   let show =
     Cmd.v
-      (Cmd.info "show"
+      (Cli_help.local_info "show"
          ~doc:
-           "Show a named installed playbook: its scripts with their text, and resolved \
-            checkers.")
+           "Show a named installed playbook: scripts, their text and resolved checkers."
+         ~examples:[ "leash playbook show books.toscrape.com" ])
       Term.(
-        const (fun name () () -> output ~code:true (Leash.Playbook.show ~caps name))
+        const (fun name () () ->
+            owned (fun () -> output ~code:true (Leash.Playbook.show ~caps name)))
         $ name $ const ())
   in
   (* extr-lslp: the local checks — the file resolves, no escape, `returns` well formed,
@@ -434,7 +486,7 @@ let playbook_command ~caps =
         if installed then Leash.Playbook.show ~caps target
         else Leash.Playbook.load ~caps target
       with
-      | Error message -> failure ~caps message
+      | Error message -> invalid_playbook ~caps message
       | Ok book -> (
           let local = match Leash.Playbook.inspect book with `Assoc f -> f | _ -> [] in
           let print syntax =
@@ -461,39 +513,40 @@ let playbook_command ~caps =
                         P.{ owner; command = Playbook_check { playbook = target } }
                     in
                     match
-                      exchange ~caps ~config:(text "config") ~socket:(text "socket")
+                      exchange ~caps ~send ~config:(text "config") ~socket:(text "socket")
                         request
                     with
                     | Error status -> status
-                    | Ok (P.Failure error) ->
-                        print (P.yojson_of_error error);
-                        1
+                    | Ok (P.Failure error) -> emit_error ~caps error
                     | Ok (P.Success result) ->
                         let scripts =
                           match field "scripts" result with `List xs -> xs | _ -> []
                         in
-                        print (`List scripts);
-                        if List.for_all (fun s -> field "ok" s = `Bool true) scripts then
-                          0
-                        else 1)))
+                        if List.for_all (fun s -> field "ok" s = `Bool true) scripts then (
+                          print (`List scripts);
+                          0)
+                        else
+                          report ~caps
+                            ~detail:(obj [ ("scripts", `List scripts) ])
+                            "script-invalid"
+                            "one or more playbook scripts did not compile")))
     in
     Cmd.v
-      (Cmd.info "check"
-         ~doc:
-           "Check a playbook: the directory loads, its scripts resolve and their returns \
-            are well formed, and (for an installed NAME) every script compiles."
-         ~man:
+      (Cli_help.command_info "check"
+         ~doc:"Check local playbook data and, for an installed NAME, compile its scripts."
+         ~examples:
            [
-             `S "EXAMPLES";
-             `P "leash playbook check books.toscrape.com";
-             `P "leash playbook check ./my-playbook   (local checks only)";
+             "leash playbook check books.toscrape.com";
+             "leash playbook check ./my-playbook";
            ])
-      Term.(const run $ target $ collected)
+      Term.(
+        const (fun target opts () -> owned (fun () -> run target opts ()))
+        $ target $ collected)
   in
   (* extr-mp5z: runs one script of an installed playbook on a tab's page; the service
      looks the script up by name, and nothing of it travels on the wire. *)
   let test =
-    command ~caps ~wire:"playbook_test" "test"
+    command ~caps ~send ~run_owned ~wire:"playbook_test" "test"
       "Run one playbook script on a tab and print its validated output."
       [ pos "script" "PLAYBOOK/SCRIPT" ]
       ([
@@ -511,26 +564,31 @@ let playbook_command ~caps =
      that accepts one, and it validates the merged playbook before it writes. *)
   let accept =
     Cmd.v
-      (Cmd.info "accept" ~doc:"Merge a proposed procedure into its site's playbook.")
+      (Cli_help.local_info "accept"
+         ~doc:"Merge a proposed procedure into its site's playbook."
+         ~examples:[ "leash playbook accept ~/.local/state/leash/proposed/shop.json" ])
       Term.(
         const (fun file () () ->
-            match Leash.Playbook.accept ~caps file with
-            | Error message -> failure ~caps message
-            | Ok accepted ->
-                Cap_stdlib.print_endline ~caps
-                  (Yojson.Safe.pretty_to_string
-                     (Leash.Playbook.yojson_of_accepted accepted));
-                0)
+            owned (fun () ->
+                match Leash.Playbook.accept ~caps file with
+                | Error message -> invalid_playbook ~caps message
+                | Ok accepted ->
+                    Cap_stdlib.print_endline ~caps
+                      (Yojson.Safe.pretty_to_string
+                         (Leash.Playbook.yojson_of_accepted accepted));
+                    0))
         $ file $ const ())
   in
   Cmd.group
-    (Cmd.info "playbook" ~doc:"Inspect, validate and grow site playbooks.")
+    (Cli_help.command_info "playbook" ~doc:"Inspect, validate and grow site playbooks."
+       ~examples:[ "leash playbook list"; "leash playbook check ./my-playbook" ])
     [ list; show; check; test; accept ]
 
-let commands ~caps =
+let commands ~caps ~send ~run_owned =
   List.map
     (fun (name, doc, positionals, options, examples) ->
-      command ~caps name doc positionals (options @ shared_options) examples)
+      command ~caps ~send ~run_owned name doc positionals (options @ shared_options)
+        examples)
     [
       ( "new",
         "Open an agent-owned tab.",
@@ -754,7 +812,7 @@ let commands ~caps =
         ],
         [ "leash discover https://example.com --goal 'Find the documentation'" ] );
     ]
-  @ [ playbook_command ~caps ]
+  @ [ playbook_command ~caps ~send ~run_owned ]
 
 let ( let* ) = Result.bind
 
@@ -900,11 +958,23 @@ let init_command ~caps =
         0
     | Error (`Exists path) ->
         usage ~caps (path ^ " already exists; pass --force to overwrite it")
-    | Error (`Write message) -> failure ~caps ("cannot write " ^ path ^ ": " ^ message)
+    | Error (`Write error) when error.permission ->
+        report ~caps
+          ~detail:(obj [ ("path", str error.path) ])
+          "permission-denied"
+          ("cannot write configuration to " ^ error.path)
+    | Error (`Write _) ->
+        failure ~caps
+          ("cannot write configuration to " ^ path
+         ^ "; check its parent directory and permissions")
   in
   Cmd.v
-    (Cmd.info "init" ~doc:"Write a commented default configuration file.")
-    Term.(const run $ config_file $ force)
+    (Cli_help.local_info "init" ~doc:"Write a commented default configuration file."
+       ~examples:[ "leash config init"; "leash config init --config /tmp/leash.toml" ])
+    Term.(
+      const (fun config_file force () ->
+          protect ~caps (fun () -> run config_file force ()))
+      $ config_file $ force)
 
 let telemetry ~sw env config =
   match config.Leash.Config.otlp.endpoint with
@@ -920,16 +990,146 @@ let telemetry ~sw env config =
                  Leash.Config.Redact.expose header.value ))
              config.otlp.headers)
 
-(* ^ncaps-4tjy: the Door mints the powerbox; the commands are built from its Env so
-   they receive it, and the program narrows it for each service. The exit around the
-   Door's code is the one raw exit the capability gate allows. *)
+(* daily-azxe: the Door owns parsing, config and defects; it classifies each complete
+   diagnostic before this formatter produces one JSON record. Never expose Cause.pp. *)
+let problem_json (problem : Ox_app.validation_error) =
+  obj [ ("pointer", str problem.pointer); ("message", str problem.message) ]
+
+let decode_config env json =
+  match
+    Leash.Config.decode_all
+      ~getenv:(Cap_sys.getenv_opt ~caps:env.Ox_app.Env.caps)
+      ~fs:env.Ox_app.Env.base#fs json
+  with
+  | Ok config -> Ok config
+  | Error problems ->
+      Error (Yojson.Safe.to_string (`List (List.map problem_json problems)))
+
+let diagnostic ~config_path ~kind ~message =
+  let message = String.trim message in
+  let record =
+    match kind with
+    | `Usage ->
+        make_error
+          ~detail:(obj [ ("diagnostic", str message) ])
+          "cli-parse" "invalid command line; the command did not run"
+    | `Defect ->
+        make_error "internal"
+          "the command failed unexpectedly; no successful result was produced"
+    | `Config | `Validation -> (
+        match
+          try P.error_of_yojson (Yojson.Safe.from_string message)
+          with _ -> Error "not an error record"
+        with
+        | Ok error -> error
+        | Error _ ->
+            let location =
+              match config_path with None -> [] | Some path -> [ ("config", str path) ]
+            in
+            let problems =
+              match try Some (Yojson.Safe.from_string message) with _ -> None with
+              | Some (`List problems) -> [ ("problems", `List problems) ]
+              | _ -> []
+            in
+            let message =
+              if problems = [] then message
+              else "invalid configuration; fix the reported problems"
+            in
+            let message =
+              match config_path with
+              | None -> message
+              | Some path -> path ^ ": " ^ message
+            in
+            make_error ~detail:(obj (location @ problems)) "config-invalid" message)
+  in
+  Yojson.Safe.to_string (P.yojson_of_error record) ^ "\n"
+
+let help_command ~caps =
+  let topic = Arg.(value & pos 0 (some string) None & info [] ~docv:"TOPIC") in
+  let run topic () =
+    match topic with
+    | Some "errors" ->
+        Cap_stdlib.print_endline ~caps P.error_help;
+        0
+    | None ->
+        Cap_stdlib.print_endline ~caps
+          "Use leash --help, leash COMMAND --help, or leash help errors.";
+        0
+    | Some _ ->
+        usage ~caps "unknown help topic; run leash help errors or leash COMMAND --help"
+  in
+  Cmd.v
+    (Cli_help.local_info "help"
+       ~doc:"Discover help topics without contacting the service."
+       ~examples:[ "leash help errors"; "leash click --help" ])
+    Term.(const run $ topic)
+
+(* daily-k9cs: a bounded read-only probe, not config loading followed by service start. *)
+let orientation env () =
+  let caps = env.Ox_app.Env.caps in
+  let state =
+    match service_socket ~caps ~config:None ~socket:None with
+    | Error _ -> "unknown (run leash config check)"
+    | Ok path -> (
+        try
+          let response =
+            send ~timeout_s:0.25 ~base:env.Ox_app.Env.base path
+              (obj
+                 [ ("owner", str "orientation"); ("cmd", str "status"); ("args", obj []) ])
+          in
+          match P.decode_reply (Yojson.Safe.from_string response) with
+          | Ok (P.Success _) -> "running"
+          | Ok (P.Failure _) -> "reachable, but not healthy (run leash status)"
+          | Error _ -> "reachable, but returned an invalid reply"
+        with
+        | Eio.Cancel.Cancelled _ as exn -> raise exn
+        | _ -> "unreachable")
+  in
+  Cap_stdlib.printf ~caps
+    "Leash: local managed Chrome for agents.\n\
+     Service: %s\n\
+     Start: systemctl --user start leash\n\
+     Begin: leash status; leash new https://example.com; leash snap TAB\n\
+     Set --owner NAME or DSH_SESSION_ID. Help: leash --help; leash COMMAND --help; leash \
+     help errors\n"
+    state;
+  0
+
+(* ^ncaps-4tjy: only the Door mints; its owned-code runner preserves each command's
+   classified exit code and owns cancellation and finalizers. *)
 let () =
+  let config_path = ref None in
+  let read_file base path =
+    config_path := Some path;
+    match Ox_app.Config.read_regular ~max_bytes:1_048_576 Eio.Path.(base#fs / path) with
+    | Error (`Unreadable _) ->
+        Error
+          (`Unreadable
+             "cannot read a regular configuration file within the 1 MiB limit; check the \
+              path and permissions")
+    | result -> result
+  in
+  let diagnostic ~kind ~message = diagnostic ~config_path:!config_path ~kind ~message in
   exit
     (Ox_app.run_with_args ~name:"leash" ~service_command:"serve" ~config:Leash.Config.spec
        ~service_args:(Term.const ())
-       ~commands_with_env:(fun env _run_owned -> commands ~caps:env.Ox_app.Env.caps)
+       ~bare:(`Command (fun env -> Term.const (orientation env)))
+       ~doc:"A local managed Chrome for agents." ~man:Cli_help.top_man
+       ~exits:Cli_help.all_exits ~usage_exit:124 ~validation_exit:65 ~defect_exit:70
+       ~exit_code:(fun _ -> 70)
+       ~diagnostic ~read_file ~decode_with_env:decode_config
+       ~journal_level:Ox_observability.Logger.Warn
+       ~commands_with_env_code:(fun env _run_owned run_owned_code ->
+         let caps = env.Ox_app.Env.caps in
+         let send path request = send ~base:env.Ox_app.Env.base path request in
+         commands ~caps ~send ~run_owned:run_owned_code @ [ help_command ~caps ])
        ~telemetry
        ~config_commands_with_env:(fun env -> [ init_command ~caps:env.Ox_app.Env.caps ])
        ~validate:Leash.Config.validate
-       ~pp_err:(fun fmt (`Service msg) -> Format.pp_print_string fmt msg)
+       ~pp_err:(fun fmt (`Service _) ->
+         Format.pp_print_string fmt
+           (Yojson.Safe.to_string
+              (P.yojson_of_error
+                 (make_error "internal"
+                    "the Leash service failed to start or stopped unexpectedly"))))
        (fun env _source config () sw -> program env config sw))

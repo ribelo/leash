@@ -165,15 +165,11 @@ let with_text ?(rows = []) ?(refuse = fun _ -> false) operations answers =
     incr actions;
     if refuse !actions then
       Error
-        P.
-          {
-            code =
-              (match Error_code.of_string "stale-snapshot" with
-              | Ok code -> code
-              | Error _ -> assert false);
-            message = "the row changed since the snapshot; snap again";
-            detail = None;
-          }
+        (P.make_error
+           (match P.Error_code.of_string "stale-snapshot" with
+           | Ok code -> code
+           | Error _ -> assert false)
+           ~message:"the row changed since the snapshot; snap again")
     else begin
       typed := text :: !typed;
       Ok
@@ -259,15 +255,12 @@ let type_text_missing () =
    the completed steps, like a System One failure does. *)
 let text_error () =
   let failure =
-    P.
-      {
-        code =
-          (match Error_code.of_string "model-unavailable" with
-          | Ok code -> code
-          | Error _ -> assert false);
-        message = "chat offline";
-        detail = Some (`Assoc [ ("code", `String "unavailable") ]);
-      }
+    P.make_error
+      ~detail:(`Assoc [ ("code", `String "unavailable") ])
+      (match P.Error_code.of_string "model-unavailable" with
+      | Ok code -> code
+      | Error _ -> assert false)
+      ~message:"chat offline"
   in
   let reply, _, _, _ =
     with_text
@@ -317,15 +310,12 @@ let type_text_stale () =
 let model_error () =
   let count = ref 0 and actions = ref 0 in
   let error =
-    P.
-      {
-        code =
-          (match Error_code.of_string "model-unavailable" with
-          | Ok x -> x
-          | Error _ -> assert false);
-        message = "model offline";
-        detail = Some (`Assoc [ ("code", `String "offline") ]);
-      }
+    P.make_error
+      ~detail:(`Assoc [ ("code", `String "offline") ])
+      (match P.Error_code.of_string "model-unavailable" with
+      | Ok x -> x
+      | Error _ -> assert false)
+      ~message:"model offline"
   in
   let handler =
     D.
@@ -370,15 +360,9 @@ let model_error () =
 
 let step_failure () =
   let internal =
-    P.
-      {
-        code =
-          (match Error_code.of_string "internal" with
-          | Ok x -> x
-          | Error _ -> assert false);
-        message = "browser unavailable";
-        detail = None;
-      }
+    P.make_error
+      (match P.Error_code.of_string "internal" with Ok x -> x | Error _ -> assert false)
+      ~message:"browser unavailable"
   in
   List.iter
     (fun (label, act_fails) ->

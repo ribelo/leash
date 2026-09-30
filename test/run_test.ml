@@ -1391,15 +1391,7 @@ let script_rejected () =
 let script_browser_failure () =
   let h = harness ~procs:[ "collect" ] () in
   h.scripts <-
-    [
-      Error
-        P.
-          {
-            code = ok (P.Error_code.of_string "tab-gone");
-            message = "gone";
-            detail = None;
-          };
-    ];
+    [ Error (P.make_error (ok (P.Error_code.of_string "tab-gone")) ~message:"gone") ];
   match run ~installed:[ script_book () ] h (args ()) with
   | Error error ->
       Alcotest.(check string) "extr-8o1h" "tab-gone" (P.Error_code.to_string error.P.code)

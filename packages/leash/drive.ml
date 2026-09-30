@@ -41,8 +41,10 @@ let operation name = match P.Operation.of_string name with Ok x -> x | Error _ -
 let op_name = P.Operation.to_string
 let status name = match P.Drive_status.of_string name with Ok x -> x | Error _ -> assert false
 let internal message =
-  let code = match P.Error_code.of_string "internal" with Ok x -> x | Error _ -> assert false in
-  P.{ code; message; detail = None }
+  let code =
+    match P.Error_code.of_string "internal" with Ok x -> x | Error _ -> assert false
+  in
+  P.make_error code ~message
 let ms seconds = max 0 (int_of_float (seconds *. 1000.))
 let result ?reason status steps (final : observation) =
   P.{ status; steps = List.rev steps; final = final.snapshot; reason }
@@ -189,8 +191,12 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run =
 let run ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run =
   if Option.value ~default:30 args.P.max_steps < 1 ||
      Option.value ~default:120 args.deadline_s < 1 then
-    Error P.{code=(match Error_code.of_string "invalid-request" with Ok x -> x | Error _ -> assert false);
-      message="drive max_steps and deadline_s must be positive";detail=None}
+    Error
+      (P.make_error
+         (match P.Error_code.of_string "invalid-request" with
+         | Ok x -> x
+         | Error _ -> assert false)
+         ~message:"drive max_steps and deadline_s must be positive")
   else
     let module M = struct
       type _ Effect.t += Observe : (observation, P.error) result Effect.t

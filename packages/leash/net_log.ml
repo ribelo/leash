@@ -220,15 +220,11 @@ let list t (args : P.net_args) =
   let limit = Option.value ~default:100 args.limit in
   if limit < 0 || limit > capacity then
     Error
-      P.
-        {
-          code =
-            (match Error_code.of_string "invalid-request" with
-            | Ok c -> c
-            | Error _ -> assert false);
-          message = Printf.sprintf "net limit must be 0..%d" capacity;
-          detail = None;
-        }
+      (P.make_error
+         (match P.Error_code.of_string "invalid-request" with
+         | Ok c -> c
+         | Error _ -> assert false)
+         ~message:(Printf.sprintf "net limit must be 0..%d" capacity))
   else
     let wanted_type = Option.map String.lowercase_ascii args.type_ in
     let matching =

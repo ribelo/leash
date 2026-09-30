@@ -70,6 +70,23 @@ Install Leash through nixos-config like Pie and nema. Give every failure a stabl
 - Control-protocol seam: status fields, error records and hints. CLI tests: exit codes per error class and JSON-only stderr (story 10). Installer: dispositions against a temporary directory, as nema's test does.
 - Live: story 16 is an agent-run acceptance recorded in the spec; story 17 is the operator's; story 22 is on the installed service.
 
+## L41 delivery — 2026-09-30
+
+Delivered daily-azxe, daily-6pde, daily-3bwr, daily-iisr, daily-pb5a, daily-u1k2, daily-9396 and daily-k9cs. CLI failures use one compact JSON record on stderr with the canonical code, message and recovery hint, including connection, config, local playbook, permission, parsing and invalid-response failures. Successful JSON and table output are unchanged. The closed table has 30 codes and the agreed exits 64, 65, 66, 69, 70, 75, 77 and 124.
+
+Every command has argument help, examples and applicable exit classes. Top-level help groups the surface, `leash help errors` exposes the complete table, and bare `leash` gives a bounded, read-only orientation. Config checks aggregate structural, semantic, environment and filesystem problems with the config path; config init preserves its success output and classifies permission refusals.
+
+The four-way table test independently scans the declared constructors, so omitting a new code from the iterable table fails too. Strict cram checks parse the entire stderr as exactly one JSON line, exercise every exit class (including `--pretty` failures), verify config aggregation and check successful output and offline help. Existing CLI tests were migrated from the old 0/1/2 contract to these exits and stderr.
+
+All four gates passed in the isolated `_build_l41` directory against pinned ox `76d2596d` (door-5):
+
+- `timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l41 dune build @install`
+- `timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l41 dune test`
+- `timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l41 dune build @fmt`
+- `timeout 900 nix develop -c scripts/caps-gate`
+
+A private service and profile using real Google Chrome 152.0.7977.64 were checked with `--headless=new` confirmed in the Chrome process arguments. With the socket absent, status returned service-unreachable/69; with the service up, status, new, snap and close preserved successful JSON. Deliberate tab-cap/75, unknown-tab/66 and not-owner/77 failures returned the compact canonical records and hints. SIGTERM went to each private Leash process; both stopped with exit 0 and their Chrome children and sockets disappeared. No installed binary or existing service was changed. This is L41 smoke evidence, not the installed-service/skill acceptance reserved for L43–L44.
+
 ## Out of Scope
 
 The niri window rule; making the repository public; new browser capabilities (iframes, raw CDP).

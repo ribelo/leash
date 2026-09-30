@@ -180,8 +180,10 @@ module Disposition : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
-(** The closed error-code set of [docs/protocol.md]: [no-handoff] is what [resume] answers
-    on a tab nobody is waiting on (hand-szz7). *)
+(** The closed error-code set of [docs/protocol.md], service codes and the client-side
+    codes the CLI prints ([service-unreachable], [socket-permission], [permission-denied],
+    [config-invalid], [usage], [cli-parse], [invalid-response]). [no-handoff] is what
+    [resume] answers on a tab nobody is waiting on (hand-szz7). *)
 module Error_code : sig
   type t
 
@@ -189,6 +191,26 @@ module Error_code : sig
   val to_string : t -> string
   val t_of_yojson : Yojson.Safe.t -> (t, string) result
   val yojson_of_t : t -> Yojson.Safe.t
+
+  val all : t list
+  (** Every code. The table test compares this list to the declared wire constructors,
+      then checks each exit, hint, documentation row and help line (daily-u1k2). *)
+
+  val exit_code : t -> int
+  (** Sysexits class, one per class, the set [cli_help] documents: 64 usage, 65 stale or
+      invalid data (including configuration and playbook), 66 unknown or gone tab, row, or
+      request, 69 unavailable, 70 internal, 75 retryable, 77 permission, 124 command-line
+      parse. *)
+
+  val hint : t -> string
+  (** One line naming the next action. No tab and no newline (daily-6pde). *)
+
+  val meaning : t -> string
+  (** One line: when this code is used. *)
+
+  val error_help : string
+  (** The [leash help errors] table: a [# code exit meaning hint] header, then one
+      tab-separated line per {!all} (daily-pb5a). *)
 end
 
 type expires = { stage : Stage.t; in_s : int }
@@ -787,12 +809,25 @@ type run_result = {
 val run_result_of_yojson : Yojson.Safe.t -> (run_result, string) result
 val yojson_of_run_result : run_result -> Yojson.Safe.t
 
-type error = { code : Error_code.t; message : string; detail : Yojson.Safe.t option }
-(** What a failed reply carries: a closed code, one sentence, and optional structured
-    context ([key?]: omitted when there is none). *)
+type error = {
+  code : Error_code.t;
+  message : string;
+  hint : string;
+  detail : Yojson.Safe.t option;
+}
+(** What a failed reply carries: a closed code, one sentence, the code's one-line hint,
+    and optional structured context ([key?]: omitted when there is none). The CLI prints
+    the same object for a client-side failure (daily-azxe). *)
 
 val error_of_yojson : Yojson.Safe.t -> (error, string) result
 val yojson_of_error : error -> Yojson.Safe.t
+
+val make_error : ?detail:Yojson.Safe.t -> Error_code.t -> message:string -> error
+(** Build an error. [hint] is {!Error_code.hint} of the code, so a constructed error
+    cannot carry a different hint. *)
+
+val error_help : string
+(** Same text as {!Error_code.error_help}. *)
 
 val tab_gone : Disposition.t -> error
 (** own-teh1: the one [tab-gone] error, carrying the disposition that closed the tab in

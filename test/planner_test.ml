@@ -271,7 +271,7 @@ let handler ~(models : Models.t) (h : harness) : R.handler =
           | Ok path ->
               h.proposed <- h.proposed @ [ path ];
               Ok path
-          | Error why -> Error P.{ code = code "internal"; message = why; detail = None });
+          | Error why -> Error (P.make_error (code "internal") ~message:why));
       hand_off =
         (fun ~reason ->
           h.handoffs <- h.handoffs @ [ reason ];

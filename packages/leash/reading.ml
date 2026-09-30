@@ -26,7 +26,7 @@ let nested names decoder json = value (D.at names decoder) json
 let enum decode text = match decode text with Ok v -> v | Error _ -> assert false
 
 let error code message : P.error =
-  { code = enum P.Error_code.of_string code; message; detail = None }
+  P.make_error (enum P.Error_code.of_string code) ~message
 
 let too_large what = error "too-large" (what ^ " exceeds its size limit")
 let invalid why = error "invalid-request" why

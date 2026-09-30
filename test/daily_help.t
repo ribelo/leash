@@ -1,0 +1,23 @@
+Help is offline and short first contact is not the full manual.
+
+  $ unset DSH_SESSION_ID
+  $ export XDG_CONFIG_HOME="$PWD/config" XDG_RUNTIME_DIR="$PWD/runtime" XDG_DATA_HOME="$PWD/data" XDG_STATE_HOME="$PWD/state"
+  $ mkdir -p "$XDG_CONFIG_HOME" "$XDG_RUNTIME_DIR" "$XDG_DATA_HOME" "$XDG_STATE_HOME"
+  $ leash 2>err
+  Leash: local managed Chrome for agents.
+  Service: unreachable
+  Start: systemctl --user start leash
+  Begin: leash status; leash new https://example.com; leash snap TAB
+  Set --owner NAME or DSH_SESSION_ID. Help: leash --help; leash COMMAND --help; leash help errors
+  $ test ! -s err
+  $ leash --help=plain >help 2>err
+  $ ./daily_cli_fixture.exe top-help help; test ! -s err
+  top-level help groups tabs, observe, act, network/debug, missions, playbooks, service and skill
+  $ for cmd in new downloads list claim release close status snap text shot debug eval nav click fill press select scroll wait upload hover net cookies storage dialog handoff resume drive discover playbook serve config help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
+  $ for cmd in list show check test accept; do leash playbook "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
+  $ for cmd in init check; do leash config "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
+  $ printf 'every command has examples and exit-status help\n'
+  every command has examples and exit-status help
+  $ leash help errors >errors 2>err
+  $ ./daily_cli_fixture.exe error-help errors; test ! -s err
+  all 30 error codes, exit classes, meanings and hints are discoverable
