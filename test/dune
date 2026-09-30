@@ -6,7 +6,9 @@
 (env
  (_
   (env-vars
-   (EIO_BACKEND posix))))
+   (EIO_BACKEND posix)
+   ; Tests never see the operator's installed playbooks or config.
+   (XDG_CONFIG_HOME /nonexistent/leash-test-config))))
 
 (test
  (name run_control_test)

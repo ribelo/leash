@@ -1884,6 +1884,81 @@ let l45_bootstrap () =
     "dry-run delegates prediction without input" true
     (List.for_all (fun (request : R.step_request) -> request.dry_run) h.steps)
 
+(* fly-b6yt fly-xger fly-nolf: a blank tab offers installed books before refusing
+   a start. A chosen book's entry is the page. NONE, or no books and no URL, keeps
+   the missing-start reason. One mission URL with no books is still on the fly. *)
+let missing_start =
+  "no starting page: provide --url with one HTTP(S) URL without userinfo, one \
+   unambiguous URL in the mission, or --tab on an open page"
+
+let choice_keys (result : P.run_result) =
+  List.filter_map (fun (choice : P.playbook_choice) -> choice.key) result.playbook_choices
+
+let l45_blank_entry () =
+  let blank = observation ~url:"about:blank" ~title:"" () in
+  let landed = observation ~url:"https://site-a.example/" () in
+  let mission = "collect every book title and price in the Mystery category" in
+  let h =
+    harness ~books:[ "site-a.example" ] ~procs:[ "step"; "DONE" ]
+      ~observations:[ blank; landed ]
+      ~verifies:
+        [
+          [ expectation "the page is a" "page_kind" ];
+          [ expectation "the page is a" "page_kind" ];
+        ]
+      ()
+  in
+  let chosen = ran (run ~installed:[ site_a ] h (args ~mission ())) in
+  check_status "fly-b6yt blank book continues" "done" chosen;
+  Alcotest.(check (list string))
+    "fly-b6yt entry navigated, not a mission URL" [ "https://site-a.example/" ]
+    h.navigations;
+  Alcotest.(check (list string))
+    "fly-b6yt book chosen before the procedure"
+    [ "select_playbook"; "select_procedure" ]
+    (List.filteri (fun i _ -> i < 2) h.asked);
+  Alcotest.(check (list string))
+    "fly-b6yt chosen identity"
+    [ "book:site-a.example.json" ]
+    (List.filteri (fun i _ -> i < 1) (choice_keys chosen));
+  Alcotest.(check int) "fly-b6yt no planner" 0 (List.length h.plan_requests);
+  let h = harness ~books:[ "none" ] ~observations:[ blank ] () in
+  let refused = ran (run ~installed:[ site_a; site_b ] h (args ~mission ())) in
+  check_status "fly-xger NONE on blank is missing start" "blocked" refused;
+  Alcotest.(check (option string))
+    "fly-xger reason kept" (Some missing_start) refused.reason;
+  Alcotest.(check (list string)) "fly-xger no entry opened" [] h.navigations;
+  Alcotest.(check (list string)) "fly-xger choice ran" [ "select_playbook" ] h.asked;
+  Alcotest.(check (list string)) "fly-xger NONE recorded" [ "none" ] (choice_keys refused);
+  Alcotest.(check int) "fly-xger operator not entered" 0 (List.length h.steps);
+  Alcotest.(check bool)
+    "fly-xger both books were offered" true
+    (List.length (List.hd h.questions).criteria = 3);
+  let h =
+    harness ~observations:[ blank ]
+      ~drives:
+        [ drive ~operator_state:terminal_state ~url:"https://example.com/catalogue" () ]
+      ()
+  in
+  let flown =
+    ran
+      (run h
+         (args ~mission:"open https://example.com/catalogue and collect the titles" ()))
+  in
+  check_status "fly-nolf mission URL is on the fly" "done" flown;
+  Alcotest.(check (list string))
+    "fly-nolf the mission URL, not a book entry"
+    [ "https://example.com/catalogue" ]
+    h.navigations;
+  Alcotest.(check (list string)) "fly-8xiq no playbook question" [] h.asked;
+  Alcotest.(check int) "fly-8xiq one operator" 1 (List.length h.steps);
+  Alcotest.(check string)
+    "fly-8xiq full mission" "open https://example.com/catalogue and collect the titles"
+    (List.hd h.steps).goal;
+  Alcotest.(check (list string))
+    "fly-8xiq operator route" [ "operator" ] (choice_keys flown);
+  Alcotest.(check int) "fly-8xiq no planner" 0 (List.length h.plan_requests)
+
 let l45_mixed_output () =
   let h =
     harness ~books:[ "book:site-a.json" ] ~procs:[ "collect"; "NONE" ]
@@ -1929,6 +2004,8 @@ let () =
             (l45_candidates 600);
           Alcotest.test_case "fly-2akp retains progress" `Quick l45_progress;
           Alcotest.test_case "fly-2akp deterministic safe bootstrap" `Quick l45_bootstrap;
+          Alcotest.test_case "fly-b6yt fly-xger fly-nolf blank entry" `Quick
+            l45_blank_entry;
           Alcotest.test_case "fly-kx45 mixed tagged output" `Quick l45_mixed_output;
         ] );
       ( "L37",

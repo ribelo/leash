@@ -1427,23 +1427,26 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
            | Ok checks -> Result.map attach (check_done st ~mission:true checks))
         else Ok (attach (Finish (finish st ending ?reason:drive.reason ())))
 
+  (* run-xh5d: a chosen book opens its entry on this tab unless that book is already
+     current. The profile's logins carry over; JEV is not asked to leave about:blank. *)
+  and adopt_book (st : state) (book : Playbook.loaded) =
+    let current = Option.map book_id st.book in
+    let st = { st with book = Some book; switch = false;
+      visited = book.playbook.site :: st.visited } in
+    if current = Some (book_id book) then Ok (Continue st)
+    else match navigate t book.playbook.entry with
+    | Error error -> Error (with_trace st error)
+    | Ok _ -> Result.map (fun observation -> Continue { st with observation }) (observe t ())
+
   (* run-kli0 run-xh5d: asked at the start, after a procedure whose description or the
      mission says the next part is elsewhere, and — through [ask_procedure] — when the
-     procedure level is blocked while the mission still names another site. A switch
-     navigates the same tab to the playbook's entry, so the profile's logins carry over. *)
+     procedure level is blocked while the mission still names another site. *)
   and ask_playbook (st : state) =
     if st.book <> None && not st.switch then Ok (Continue st)
     else match choose_books st installed with
     | Error error -> Error error
     | Ok (st, None) -> single_goal st
-    | Ok (st, Some book) ->
-        let current = Option.map book_id st.book in
-        let st = { st with book = Some book; switch = false;
-          visited = book.playbook.site :: st.visited } in
-        if current = Some (book_id book) then Ok (Continue st)
-        else match navigate t book.playbook.entry with
-        | Error error -> Error (with_trace st error)
-        | Ok _ -> Result.map (fun observation -> Continue { st with observation }) (observe t ())
+    | Ok (st, Some book) -> adopt_book st book
 
   and ask_procedure (st : state) =
     match st.book with
@@ -1564,6 +1567,13 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
   | Error error -> Error error
   | Ok observation -> (
       let st = empty observation in
+      let missing_start st =
+        Ok (Finish (finish st (status "blocked")
+          ~reason:"no starting page: provide --url with one HTTP(S) URL without userinfo, one unambiguous URL in the mission, or --tab on an open page" ()))
+      in
+      (* fly-b6yt fly-xger: a blank tab is not missing a start while an installed book
+         can open its entry. Choice runs first. NONE, or no books, still has no page.
+         A dry run never navigates, so it does not open an entry either. *)
       let initial () =
         if discovery <> None || observation.url <> "about:blank" then
           if args.dry_run then dry_run st else next st
@@ -1575,8 +1585,15 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
               if args.dry_run then dry_run st
               else Result.bind (navigate t url) (fun () ->
                 Result.bind (observe t ()) (fun observation -> next {st with observation}))
-          | _ -> Ok (Finish (finish st (status "blocked")
-              ~reason:"no starting page: provide --url with one HTTP(S) URL without userinfo, one unambiguous URL in the mission, or --tab on an open page" ()))
+          | _ when args.dry_run || installed = [] -> missing_start st
+          | _ ->
+              match choose_books st installed with
+              | Error error -> Error error
+              | Ok (st, None) -> missing_start st
+              | Ok (st, Some book) ->
+                  let* st = adopt_book st book in
+                  let* st = ask_procedure st in
+                  next st
       in
       match initial () with
       | Error error -> Error error
