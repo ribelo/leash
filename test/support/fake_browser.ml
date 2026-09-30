@@ -159,6 +159,8 @@ let defaults replies =
                 ] );
           ] );
       ("Page.addScriptToEvaluateOnNewDocument", obj [ ("identifier", str "1") ]);
+      (* chrome-9ex7: the snapshot guard's isolated world. *)
+      ("Page.createIsolatedWorld", obj [ ("executionContextId", `Int 7) ]);
       ( "Page.getFrameTree",
         obj
           [

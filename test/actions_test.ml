@@ -523,7 +523,14 @@ let click () =
       Alcotest.(check string)
         "tab-bw4j revalidation reads the loader before anything is dispatched"
         "Page.getFrameTree"
-        (Option.value ~default:"" (E.string_member "method" (List.hd during)));
+        (* tab-8la3 chrome-9ex7: focus emulation goes on first; it is not a dispatch. *)
+        (Option.value ~default:""
+           (E.string_member "method"
+              (List.find
+                 (fun json ->
+                   E.string_member "method" json
+                   <> Some "Emulation.setFocusEmulationEnabled")
+                 during)));
       Alcotest.(check bool)
         "tab-p3x1 a two-frame settle follows the click" true
         (List.exists
@@ -1326,29 +1333,76 @@ let serialization () =
         [ "mousePressed"; "mouseReleased" ]
         (kinds events))
 
-(* tab-8la3 *)
+(* tab-8la3 chrome-9ex7: focus emulation is page-visible (document.hasFocus()), so it is
+   on only while an agent operation runs on the tab, and off again once it has its
+   result; opening a tab leaves it off. *)
 let focus_emulation () =
   rig (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
-      ignore (new_tab tabs);
-      let focused =
-        List.filter
-          (fun json ->
-            E.string_member "method" json = Some "Emulation.setFocusEmulationEnabled")
-          (Fake.received fake)
-      in
+      let handle = new_tab tabs in
+      let focus () = calls fake "Emulation.setFocusEmulationEnabled" in
       Alcotest.(check int)
-        "tab-8la3 focus emulation is on for the tab" 1 (List.length focused);
-      Alcotest.(check bool)
-        "tab-8la3 enabled" true
-        (E.member "enabled" (params (List.hd focused)) = Some (b true));
-      Alcotest.(check string)
-        "tab-8la3 in the tab's own session" "session-1"
-        (session (List.hd focused));
+        "chrome-9ex7 opening a tab emulates no focus" 0
+        (List.length (focus ()));
       Alcotest.(check bool)
         "tab-bw4j the DOM agent is enabled for action-time geometry" true
-        (List.mem "DOM.enable" (methods fake)))
+        (List.mem "DOM.enable" (methods fake));
+      ignore (snap tabs handle);
+      let focused = focus () in
+      Alcotest.(check (list bool))
+        "tab-8la3 on for the snapshot, off after it" [ true; false ]
+        (List.map (fun json -> E.member "enabled" (params json) = Some (b true)) focused);
+      Alcotest.(check (list string))
+        "tab-8la3 in the tab's own session" [ "session-1"; "session-1" ]
+        (List.map session focused);
+      let received = Fake.received fake in
+      let index_of predicate =
+        let rec scan i = function
+          | [] -> -1
+          | json :: rest -> if predicate json then i else scan (i + 1) rest
+        in
+        scan 0 received
+      in
+      let last_capture =
+        List.fold_left max (-1)
+          (List.mapi
+             (fun i json ->
+               if E.string_member "method" json = Some "DOMSnapshot.captureSnapshot" then
+                 i
+               else -1)
+             received)
+      in
+      let off =
+        index_of (fun json ->
+            E.string_member "method" json = Some "Emulation.setFocusEmulationEnabled"
+            && E.member "enabled" (params json) = Some (b false))
+      in
+      Alcotest.(check bool)
+        "tab-8la3 off only after the page was read" true
+        (last_capture >= 0 && off > last_capture);
+      (* chrome-9ex7: the snapshot guard is Leash's isolated world's, not a global of the
+         page's main world. *)
+      List.iter
+        (fun json ->
+          Alcotest.(check bool)
+            "chrome-9ex7 guard script in the isolated world" true
+            (E.string_member "worldName" (params json) = Some "leash"))
+        (calls fake "Page.addScriptToEvaluateOnNewDocument");
+      let guards =
+        calls fake "Runtime.evaluate"
+        |> List.filter (fun json ->
+            match E.string_member "expression" (params json) with
+            | Some expression -> contains expression "leashSnapshotGuard"
+            | None -> false)
+      in
+      Alcotest.(check bool) "chrome-9ex7 the guard was read" true (guards <> []);
+      List.iter
+        (fun json ->
+          Alcotest.(check (option int))
+            "chrome-9ex7 guard read in the isolated world's context" (Some 7)
+            (E.int_member "contextId" (params json)))
+        guards)
 
 (* L15 (tab-0ohq tab-1lhx): Chrome withholds the reply of the trusted input whose handler
    opens a popup (docs/cdp-shapes.md, L10), so the input is settled by whichever comes

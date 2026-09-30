@@ -81,8 +81,10 @@ val make :
 
 val argv : config -> string list
 (** The exact command line: the dedicated profile, no first-run or crash-restore prompt,
-    [--remote-debugging-pipe] with no debugging port, [--class=leash], and
-    [--headless=new] and [--window-size=1366,900] only when [headless] is true. *)
+    [--remote-debugging-pipe] with no debugging port,
+    [--disable-blink-features=AutomationControlled] (the pipe would otherwise set
+    [navigator.webdriver] on every page), [--class=leash], and [--headless=new] and
+    [--window-size=1366,900] only when [headless] is true. *)
 
 type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
 (** What Chrome may touch beyond its Eio values: it starts the browser, so it forks and

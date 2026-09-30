@@ -47,7 +47,7 @@ Install Leash through nixos-config like Pie and nema. Give every failure a stabl
 
 16. As the operator, I want an acceptance run in which a fresh agent session that knows only the installed skill works against the installed systemd service and completes: open, snap, fill and click a form; read with `text` and bounded `eval`; find an API call in `net` and read its body; handle a dialog and a popup; download a file; one `drive` mission; and recover from three deliberate failures (service stopped, stale snapshot, not-owner) using only the hints. The transcript and any skill or help changes it forced should be recorded, so that Leash is proven as an agent's tool, not just a test suite. ^daily-9ggi
 17. As the operator, I want L28/L18's desktop checks (the handoff raises the window and notifies; Done returns control) run on the installed headed service, with my observations recorded, so that the handoff is proven on my desktop. ^daily-n7on
-18. As the operator, I want the chrome-cdp skill deleted from dotfiles after acceptance passes, and every reference to it updated: the screenshot skill, the leash skill, the upstream-sync request list (so a sync doesn't bring it back), and any AGENTS.md. So that agents have one browser tool. ^daily-6c5m
+18. (Operator decision 2026-09-30: disable, do not delete — `disable-model-invocation: true`, still `/chrome-cdp` by hand; dotfiles c9c2078.) As the operator, I want the chrome-cdp skill deleted from dotfiles after acceptance passes, and every reference to it updated: the screenshot skill, the leash skill, the upstream-sync request list (so a sync doesn't bring it back), and any AGENTS.md. So that agents have one browser tool. ^daily-6c5m
 19. As the operator, I want the global and project AGENTS.md files that mention browser inspection to name Leash, so that agents reach for it by default. ^daily-mglh
 
 ### Operability
@@ -442,6 +442,65 @@ The repairs below are the non-download slice; X owns the download implementation
   old packets through a same-transport Cookies reply. Its original no-new-polls
   assertion over eight mock-clock ticks remains. Five isolated executions pass;
   no production cancellation behavior changed. The temporary baseline is removed.
+
+## L44 Google sign-in — 2026-09-30 (chrome-9ex7, daily-a341)
+
+The operator uses Leash's Chrome as their own browser, for their own accounts, and
+Google refused to sign them in ("This browser or app may not be secure",
+`accounts.google.com/v3/signin/rejected`). The operator's rule: nothing a page can
+observe may differ from Chrome started by hand.
+
+Method: Google Chrome 152.0.7977.64, headed, fresh `/tmp` profiles only (never the
+installed service or its profile). Baseline = the same binary started normally. A local
+probe page reported page-visible signals and the request headers; the Google check typed a
+made-up `leash.signin.check.<random>@gmail.com` and pressed Next (no password, no real
+account). Rejected page = blocked; "Couldn't find this account" or a password page =
+passed.
+
+| Signal | Baseline | Leash before | Leash after | Port 9339 (chrome-cdp style) |
+| --- | --- | --- | --- | --- |
+| `navigator.webdriver` | false | **true** on every tab, even one Leash never touched | false | false |
+| main-world globals | — | **`__leashSnapshotGuard`** on tabs Leash snapped | none extra | none extra |
+| `hasFocus()` / visibility of a background tab | false / hidden | **true / visible** once Leash used it, forever | false / hidden between operations; true / visible only during one | — |
+| new agent tab in an unfocused window | — | **hasFocus true** (`createTarget` default focus) | false | — |
+| Runtime.enable probes (Error.stack getter, Proxy traps via `console.debug`) | not fired | not fired | not fired | not fired |
+| UA, UA-CH brands and full version list, request headers | Chrome 152 | same | same | same |
+| plugins, mimeTypes, `window.chrome` keys (app/csi/loadTimes, no runtime), permissions, Notification, WebGL vendor/renderer, languages, timezone | — | same | same | same |
+| Google check | — | **/v3/signin/rejected** | "Couldn't find this account" | "Couldn't find this account" |
+
+- **Finding → cause → fix (webdriver):** `navigator.webdriver` was true on every tab
+  → Chrome turns on Blink's AutomationControlled feature in every renderer when it is
+  launched with `--remote-debugging-pipe` (a pipe-only launch outside Leash shows it
+  too; `--remote-debugging-port` does not) → the launch adds
+  `--disable-blink-features=AutomationControlled`, which turns exactly that marker
+  off and adds nothing a page sees. `--enable-automation` was never used. Nothing in
+  Leash reads `navigator.webdriver`.
+- **Finding → cause → fix (global):** a snapped tab had `window.__leashSnapshotGuard`
+  → the snapshot guard was injected into the page's main world → it runs in Leash's
+  isolated world (see the tab-observation spec, chrome-9ex7).
+- **Finding → cause → fix (focus):** background tabs Leash had used reported focus
+  and visibility → focus emulation was enabled once per page session and never turned
+  off, and `Target.createTarget` gives new tabs page focus → emulation is scoped to
+  an agent operation (tab-8la3 refinement, ADR-0003) and tabs are created with
+  `focus: false`. Background rendering during an operation was checked live (30
+  animation frames in 500 ms; screenshot of a background tab correct).
+- **Decision:** option (a), keep the pipe. With the three fixes Google's check passes,
+  so the operator's fallback (b), a localhost debugging port, was not needed and
+  ADR-0003's no-port rule stands.
+- **Not fixed / open:** in the private Leash windows the page area was 4 px shorter
+  (browser chrome 133 px vs 129 px). It is not a launch flag or environment effect:
+  pipe + all Leash flags launched outside Leash, `--class=leash`,
+  `--hide-crash-restore-bubble` and a private `XDG_RUNTIME_DIR` all measured
+  129 px. Remaining suspects are Leash's startup CDP work (download-history bootstrap
+  on `chrome://downloads`, `Browser.setDownloadBehavior`), not verified because the
+  test needs more headed windows on the operator's desktop. Action-time helper
+  scripts (settle frames, blur, select, temporal fill) and `eval`/playbook scripts
+  still run in the main world during an operation; they leave no state behind.
+- **Regressions:** `chrome_test.argv_flags` pins
+  `--disable-blink-features=AutomationControlled` and the absence of
+  `--enable-automation`; `actions_test.focus_emulation` pins no emulation on
+  `new`, on/off around a snapshot in the tab's session with the off after the page
+  read, the guard script's `worldName` and the guard reads' isolated `contextId`.
 
 ## Further Notes
 

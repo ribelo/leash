@@ -40,6 +40,12 @@ let make ~binary ~profile_dir ~workspace ?(grace = Ox.Duration.seconds 5)
     ?(backoff = default_backoff) ?(headless = false) ?(window_size = "1366,900") () =
   { binary; profile_dir; workspace; grace; backoff; headless; window_size }
 
+(* chrome-9ex7 daily-a341: the operator signs in to their own accounts in this browser,
+   so nothing a page can see may differ from Chrome started by hand. The debugging pipe
+   switch alone turns on Blink's AutomationControlled feature in every renderer, which
+   sets navigator.webdriver = true on every tab and makes Google's sign-in refuse the
+   browser ("This browser or app may not be secure", /v3/signin/rejected). Disabling
+   that one feature restores webdriver = false and adds nothing a page can observe. *)
 let argv config =
   [
     config.binary;
@@ -48,6 +54,7 @@ let argv config =
     "--no-default-browser-check";
     "--hide-crash-restore-bubble";
     "--remote-debugging-pipe";
+    "--disable-blink-features=AutomationControlled";
     "--class=leash";
   ]
   @

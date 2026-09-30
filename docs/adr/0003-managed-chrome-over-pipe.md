@@ -12,7 +12,8 @@ The Leash service launches Chrome itself with a dedicated profile directory and 
 ## Consequences
 
 - The service is a systemd user unit that needs the session's Wayland environment; it fails to start without a display, and that is acceptable.
-- CDP focus emulation is enabled per page so background tabs keep rendering and animating (jev-ultrafast relies on this).
+- CDP focus emulation lets a background tab render and animate while Leash works on it (jev-ultrafast relies on this). Refined 2026-09-30 by operator decision: focus emulation is on only during an agent operation on that page — from the moment a valid snapshot, read, eval, shot, action, drive or run starts touching the page until it has its result — and off otherwise, because the page can see it (`document.hasFocus()`, `visibilityState`).
+- The operator uses this browser as their own, for their own accounts, so nothing a page can observe may differ from Chrome started by hand (2026-09-30, Google sign-in). The pipe switch alone turns on Blink's AutomationControlled feature (`navigator.webdriver = true`); the launch disables exactly that feature with `--disable-blink-features=AutomationControlled`. Leash's own page scripts run in an isolated world, never the page's main world. The pipe stays: with those fixes Google's sign-in accepts the browser, so the debugging-port option above remains rejected.
 - Window placement on the niri workspace is best effort: one rule on app id, one on title, and if neither matches the operator moves the window by hand after a start. Not worth more.
 - Chrome must always be able to come back from a SIGKILL without a prompt; graceful shutdown is a courtesy, never a dependency.
 - The profile is the only persistent state. Leash keeps handles, ownership, and snapshots in memory only.

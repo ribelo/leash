@@ -36,6 +36,10 @@ type tab = {
   all_tabs : unit -> (P.tab_info * string option) list;
       (** Every tab in the registry, all owners, ordered by handle, paired with the target
           id of the tab that opened it when Chrome reports one ([openerId]). *)
+  engage : unit -> unit;
+      (** Turn the page's focus emulation on for the rest of this operation (tab-8la3,
+          chrome-9ex7). Called before anything the page sees -- focus, input, the settle
+          -- and never for a request refused before that. *)
 }
 
 (* One CDP call. Only pre-dispatch observation may be repeated inside this module, and
@@ -106,6 +110,7 @@ let tab_gone_externally () = P.tab_gone (disposition "closed_externally")
    page that answers nothing by the deadline is [browser-unavailable]. Nothing is ever sent
    twice: the race settles the call it was given, it never re-issues it. *)
 let dispatch cdp tab method_ params =
+  tab.engage ();
   match
     Dispatch.first (tab.acknowledge ()) (fun () ->
         Cdp.call cdp ~session:tab.session ~deadline:call_deadline method_ params)
@@ -209,6 +214,10 @@ type target = { row : P.row; backend : int; node : int }
 let file_input = "file-input"
 
 let revalidate cdp tab ?snapshot_id ~index () =
+  (* tab-8la3 chrome-9ex7: a page in a background window is hidden and drops input until
+     it renders again, so focus emulation goes on before the action's reads, which give
+     the page its frame before the input arrives. *)
+  tab.engage ();
   let* loader, rows =
     match snapshot_id with Some id -> current tab id | None -> current_any tab
   in
@@ -406,11 +415,13 @@ let settle_suggestions cdp tab =
   poll 10
 
 let settle cdp tab ~combobox =
+  tab.engage ();
   if combobox then settle_suggestions cdp tab
   else ignore (evaluate ~deadline:(Ox.Duration.ms 50) cdp tab frames_expression);
   Ok ()
 
 let focus_row cdp tab backend =
+  tab.engage ();
   match
     attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.focus"
       (E.object_ [ ("backendNodeId", Some (E.int backend)) ])
@@ -852,6 +863,7 @@ let upload ~caps ~cdp tab (args : P.upload_args) =
                   List.length args.paths > 1 && not (List.mem_assoc "multiple" attributes)
                 then fail "invalid-request" "the file input takes one file"
                 else
+                  let () = tab.engage () in
                   let* _ =
                     call cdp ~session:tab.session "DOM.setFileInputFiles"
                       (E.object_
@@ -876,6 +888,7 @@ let scroll ~cdp tab (args : P.scroll_args) =
                 Ok (clamp ~width ~height point)
           in
           let delta = if down then height else -.height in
+          let () = tab.engage () in
           let* _ =
             call cdp ~session:tab.session "Input.dispatchMouseEvent"
               (E.object_

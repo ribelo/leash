@@ -10,6 +10,8 @@ let value json = get "value" json
 
 (* Run in the main world before page scripts on each new document. A new epoch catches
    reloads even if a loader id is unavailable; same-document history retains the observer. *)
+let world_name = "leash"
+
 let counter_script =
   {|(() => {
   if (window.__leashSnapshotGuard) return;

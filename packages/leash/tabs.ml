@@ -243,6 +243,9 @@ type tab = {
   mutable main_frame : string option;
   mutable downloads : P.download_info list;
   mutable counter_installed : bool;
+  mutable focus_holders : int;
+      (** The agent operations running on this tab with focus emulation on (tab-8la3,
+          chrome-9ex7): emulation is on exactly while this is positive. *)
   mutable opener : string option;
       (** The target id of the tab that opened this one, Chrome's [openerId]. *)
   mutable settlements : (Dispatch.outcome -> unit) list;
@@ -546,6 +549,7 @@ let new_record ~fresh ~generation ~id ~session ~origin ~url ~title ~opener =
     main_frame = None;
     downloads = [];
     counter_installed = false;
+    focus_holders = 0;
     opener;
     settlements = [];
     reading = Reading.create ();
@@ -902,8 +906,9 @@ let wake (tab : tab) outcome =
   tab.settlements <- [];
   List.iter (fun resolve -> resolve outcome) waiters
 
-(* tab-bw4j tab-8la3: the domains a page session needs for observation, action-time
-   revalidation, focus emulation, and the debug ring. They are asked for once per session,
+(* tab-bw4j: the domains a page session needs for observation, action-time
+   revalidation, and the debug ring. None of them is visible to the page (chrome-9ex7);
+   focus emulation is, so it is not here but in {!with_focus}. They are asked for once per session,
    when Leash first uses that session: the discovery path itself only records the session,
    so a target Chrome reports is registered without waiting on the browser (own-c0cl), and
    a tab nobody acts on costs nothing. Best effort: a domain the browser refuses is
@@ -916,8 +921,7 @@ let use_session t cdp tab session =
     enable "Page.enable" (obj []);
     enable "Runtime.enable" (obj []);
     enable "Network.enable" (obj []);
-    enable "DOM.enable" (obj []);
-    enable "Emulation.setFocusEmulationEnabled" (obj [ ("enabled", `Bool true) ]))
+    enable "DOM.enable" (obj []))
 
 (* own-c0cl: a discovered target has no page session of its own until Chrome attaches to
    it. The first command that needs the page takes the session Chrome attached under, or
@@ -938,6 +942,42 @@ let page_session t cdp tab =
       | Some session ->
           use_session t cdp tab session;
           Ok session)
+
+(* tab-8la3 chrome-9ex7: Chrome's focus emulation makes a page behave as focused and
+   visible — a background tab keeps rendering and animating, and takes focus events — and
+   the page can see it (document.hasFocus(), visibilityState). So it is on only while an
+   agent operation is working on the page: [f] gets [engage], which the operation calls
+   once its request is valid and it is about to read or act on the page (a refused
+   request, or a read a dialog blocks, never touches the browser). Operations on one tab
+   share one enable: the first engaged turns it on, the last out turns it off, after the
+   operation has its result. Otherwise document.hasFocus() and visibilityState answer
+   what the operator's own Chrome would. Best effort both ways; the disable is bounded and
+   survives cancellation of the operation. *)
+let focus_emulation cdp session enabled =
+  ignore
+    (cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
+       "Emulation.setFocusEmulationEnabled"
+       (obj [ ("enabled", `Bool enabled) ]))
+
+let with_focus t tab f =
+  let engaged = ref None in
+  let engage () =
+    match (!engaged, tab.dialog, ready t, tab.session) with
+    | None, None, Ok cdp, Some session ->
+        engaged := Some (cdp, session);
+        tab.focus_holders <- tab.focus_holders + 1;
+        if tab.focus_holders = 1 then focus_emulation cdp session true
+    | _ -> ()
+  in
+  Fun.protect
+    ~finally:(fun () ->
+      match !engaged with
+      | None -> ()
+      | Some (cdp, session) ->
+          tab.focus_holders <- tab.focus_holders - 1;
+          if tab.focus_holders = 0 then
+            Eio.Cancel.protect (fun () -> focus_emulation cdp session false))
+    (fun () -> f engage)
 
 (* tab-0ohq tab-gjo0: the first report Chrome makes about a target is the acknowledgement
    of the dispatch that opened it -- [Target.targetCreated], or the attachment or the info
@@ -1057,7 +1097,12 @@ let new_tab t ~owner ~url =
           (* Creating directly at [target] can finish a fast local load before
             Page.enable has subscribed to events. Create blank, subscribe, then
             navigate explicitly so the load waiter cannot miss it (chrome-qnul). *)
-          cdp_call cdp "Target.createTarget" (obj [ ("url", str "about:blank") ])
+          (* chrome-9ex7: by default Chrome gives a created tab page focus even when its
+             window has none, so the page would see document.hasFocus() true in a
+             background window. [focus:false] leaves focus to the window, as a tab the
+             operator opens; the tab is still the window's active one. *)
+          cdp_call cdp "Target.createTarget"
+            (obj [ ("url", str "about:blank"); ("focus", `Bool false) ])
         in
         match text "targetId" created with
         | None -> Error (error "internal" "browser omitted targetId")
@@ -1081,7 +1126,11 @@ let new_tab t ~owner ~url =
                    for [about:blank]) there is nothing to await and the reply is immediate. *)
                 let* _ =
                   cdp_call ~session cdp "Page.addScriptToEvaluateOnNewDocument"
-                    (obj [ ("source", str Snapshot_source.counter_script) ])
+                    (obj
+                       [
+                         ("source", str Snapshot_source.counter_script);
+                         ("worldName", str Snapshot_source.world_name);
+                       ])
                 in
                 tab.counter_installed <- true;
                 (* chrome-qnul: Page.enable before the navigate, so the load waiter cannot
@@ -1503,11 +1552,39 @@ let frame_loader call =
       Ok (Option.value ~default:"" (text "loaderId" frame))
   | None -> Error (error "internal" "browser omitted frame tree")
 
+(* chrome-9ex7: the guard lives in Leash's own isolated world, never in the page's main
+   world, so a page cannot see it (no window global, no observer of its own). Chrome keeps
+   one world per frame and name for this session: [Page.createIsolatedWorld] with the name
+   the new-document script uses answers the context that script ran in, and makes it when
+   the document predates the script. *)
+let guard_context call =
+  let* reply = call "Page.getFrameTree" (obj []) in
+  let frame =
+    Option.bind (member "frameTree" reply) (member "frame") |> Option.value ~default:`Null
+  in
+  match text "id" frame with
+  | None -> Error (error "internal" "browser omitted frame tree")
+  | Some frame_id -> (
+      let* world =
+        call "Page.createIsolatedWorld"
+          (obj
+             [ ("frameId", str frame_id); ("worldName", str Snapshot_source.world_name) ])
+      in
+      match member "executionContextId" world with
+      | Some (`Int id) -> Ok id
+      | _ -> Error (error "internal" "browser omitted the isolated world"))
+
 let page_guard call =
+  let* context = guard_context call in
   let evaluate expression =
     let* reply =
       call "Runtime.evaluate"
-        (obj [ ("expression", str expression); ("returnByValue", `Bool true) ])
+        (obj
+           [
+             ("expression", str expression);
+             ("contextId", `Int context);
+             ("returnByValue", `Bool true);
+           ])
     in
     match member "result" reply with
     | Some result -> Ok (Option.value ~default:`Null (member "value" result))
@@ -1533,13 +1610,19 @@ let snap_locked t tab (args : P.snap_args) =
   else
     let* cdp = ready t in
     let* session = page_session t cdp tab in
+    with_focus t tab @@ fun engage ->
+    engage ();
     let call meth params = cdp_call ~session cdp meth params in
     let* () =
       if tab.counter_installed then Ok ()
       else
         let* _ =
           call "Page.addScriptToEvaluateOnNewDocument"
-            (obj [ ("source", str Snapshot_source.counter_script) ])
+            (obj
+               [
+                 ("source", str Snapshot_source.counter_script);
+                 ("worldName", str Snapshot_source.world_name);
+               ])
         in
         tab.counter_installed <- true;
         Ok ()
@@ -1681,7 +1764,16 @@ let with_reading t ~access ~owner handle f =
       let* tab = locate t ~access ~owner handle in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
-      f tab (reading_browser t ~session tab cdp))
+      with_focus t tab (fun engage ->
+          let browser = reading_browser t ~session tab cdp in
+          f tab
+            {
+              browser with
+              call =
+                (fun meth params ->
+                  if meth <> "Page.handleJavaScriptDialog" then engage ();
+                  browser.call meth params);
+            }))
 
 let read_text t ~owner (args : P.text_args) =
   with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.text browser args)
@@ -1785,6 +1877,7 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
     dialog = (fun () -> tab.dialog);
     dialog_race = dialog_race tab;
     acknowledge = (fun () -> acknowledge tab);
+    engage = (fun () -> ());
     all_tabs =
       (fun () ->
         let entries = (snapshot t).entries in
@@ -1815,7 +1908,8 @@ let with_action t ~owner handle f =
       let* tab = locate t ~access:Act ~owner handle in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
-      f cdp (action_view t ~session ~owner tab cdp))
+      with_focus t tab (fun engage ->
+          f cdp { (action_view t ~session ~owner tab cdp) with Actions.engage }))
 
 let click t ~owner (args : P.click_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.click ~cdp view args)
@@ -1870,7 +1964,8 @@ let drive_locked
   let* cdp = ready t in
   let* session = page_session t cdp tab in
   let browser = reading_browser t ~session tab cdp in
-  let view = action_view t ~session ~owner tab cdp in
+  with_focus t tab @@ fun engage ->
+  let view = { (action_view t ~session ~owner tab cdp) with Actions.engage } in
   let observe () =
     let* snapshot =
       snap_locked t tab

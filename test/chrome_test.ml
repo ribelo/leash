@@ -95,6 +95,13 @@ let argv_flags () =
   Alcotest.(check bool) "class=leash" true (has "--class=leash");
   Alcotest.(check bool) "headed by default" false (has "--headless=new");
   Alcotest.(check bool) "no debugging port" false (prefixed "--remote-debugging-port");
+  (* chrome-9ex7 daily-a341: the pipe enables Blink's AutomationControlled feature, so
+     navigator.webdriver is true on every page and Google's sign-in rejects the browser.
+     The launch turns exactly that marker off and never asks for automation mode. *)
+  Alcotest.(check bool)
+    "automation marker off" true
+    (has "--disable-blink-features=AutomationControlled");
+  Alcotest.(check bool) "no automation mode" false (has "--enable-automation");
   (* chrome-p2n4, L34: match a usable desktop viewport in headless mode without
      changing the flags of the headed browser or adding a debugging port. *)
   let headless = Chrome.argv (config ~headless:true ()) in

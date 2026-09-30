@@ -6,6 +6,10 @@ val counter_script : string
     or, when it holds none, the placeholder that is the only other thing naming it
     (tab-zc36). A row that is only informative still needs a name. *)
 
+val world_name : string
+(** The isolated world [counter_script] and [guard_expression] run in (chrome-9ex7): the
+    guard is Leash's, so it never becomes a global the page's own scripts can see. *)
+
 val guard_expression : string
 
 val guard : Yojson.Safe.t -> (string * int * float * float * float * float) option

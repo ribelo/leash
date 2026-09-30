@@ -60,6 +60,10 @@ type tab = {
       (** Every tab in the registry, all owners, ordered by handle, paired with the target
           id of the tab that opened it when Chrome reports one ([openerId]): the action's
           own popups are the fresh entries whose opener is its own target id. *)
+  engage : unit -> unit;
+      (** Turn the page's focus emulation on for the rest of the operation (tab-8la3,
+          chrome-9ex7): called just before the first thing the page can see -- a focus, an
+          input, the settle -- and never for a request refused before that. *)
 }
 
 val click :
