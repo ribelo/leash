@@ -68,7 +68,7 @@ let planner =
   {|You are the planner of a browser mission that the smaller models could not advance.
 You receive the mission, the site's playbook, the run's trace and the current page.
 Answer with exactly one JSON object, nothing else, of one of these three shapes:
-{"answer": "procedure", "procedure": {"slug": "...", "description": "...", "args": ["..."], "steps": [{"goal": "..."}], "expect": ["..."]}}
+{"answer": "procedure", "procedure": {"slug": "...", "description": "...", "args": {"name": {"from": "mission"}}, "steps": [{"goal": "..."}], "expect": ["..."]}}
   a procedure in the playbook's own schema, to run now;
 {"answer": "handoff", "reason": "..."}
   hand the mission to the human, with the reason they are shown;

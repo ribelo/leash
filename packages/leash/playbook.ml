@@ -13,7 +13,12 @@ type page = {
 }
 [@@deriving yojson]
 
-type goal_step = { goal : string; hint : string option } [@@deriving yojson]
+(* pbk-eyya: [until] ends a goal step as soon as every sentence holds after an executed
+   action — code checkers only, plus "the address changed" (relative to the step's start).
+   A relative goal ("open the next page") is not a question a stateless operator can
+   answer from the page it lands on; the author states what reaching it looks like. *)
+type goal_step = { goal : string; hint : string option; until : string list option }
+[@@deriving yojson]
 
 type use_step = { use : string; args : Yojson.Safe.t option; optional : bool option }
 [@@deriving yojson]
@@ -71,10 +76,80 @@ type repeat = {
 }
 [@@deriving yojson]
 
+let arg_form =
+  "declare each source as {\"from\":\"mission\"},    \
+   {\"from\":\"mission\",\"optional\":true}, or {\"const\":<value>}"
+
+let valid_slug s =
+  s <> ""
+  && String.for_all
+       (function 'a' .. 'z' | '0' .. '9' | '-' | '_' -> true | _ -> false)
+       s
+
+type arg_source = From_mission of { optional : bool } | Const of Yojson.Safe.t
+type arg_decl = { name : string; source : arg_source }
+type arg_decls = arg_decl list
+
+let arg_source_of_yojson = function
+  | `Assoc fields -> (
+      let from = List.assoc_opt "from" fields in
+      let const = List.assoc_opt "const" fields in
+      let optional = List.assoc_opt "optional" fields in
+      let extra =
+        List.filter
+          (fun key -> not (List.mem key [ "from"; "const"; "optional" ]))
+          (List.map fst fields)
+      in
+      if extra <> [] then
+        Error ("unknown arg field " ^ String.concat ", " extra ^ "; " ^ arg_form)
+      else
+        match (from, const) with
+        | Some _, Some _ ->
+            Error ("an arg is from the mission or a const, not both; " ^ arg_form)
+        | None, None -> Error ("an arg needs a source; " ^ arg_form)
+        | Some (`String "mission"), None -> (
+            match optional with
+            | None -> Ok (From_mission { optional = false })
+            | Some (`Bool optional) -> Ok (From_mission { optional })
+            | Some _ -> Error "optional must be a boolean")
+        | Some (`String other), None ->
+            Error (Printf.sprintf "unknown arg source %S; %s" other arg_form)
+        | Some _, None -> Error ("from must be \"mission\"; " ^ arg_form)
+        | None, Some value ->
+            if optional <> None then Error ("const does not take optional; " ^ arg_form)
+            else Ok (Const value))
+  | _ -> Error ("an arg source is an object; " ^ arg_form)
+
+let yojson_of_arg_source = function
+  | From_mission { optional = false } -> `Assoc [ ("from", `String "mission") ]
+  | From_mission { optional = true } ->
+      `Assoc [ ("from", `String "mission"); ("optional", `Bool true) ]
+  | Const value -> `Assoc [ ("const", value) ]
+
+let arg_decls_of_yojson = function
+  | `List _ -> Error ("args must " ^ arg_form ^ ", not a list of names")
+  | `Assoc fields ->
+      let rec go seen acc = function
+        | [] -> Ok (List.rev acc)
+        | (name, json) :: rest -> (
+            if not (valid_slug name) then
+              Error ("arg " ^ name ^ " must be a lowercase slug")
+            else if List.mem name seen then Error ("arg " ^ name ^ " is declared twice")
+            else
+              match arg_source_of_yojson json with
+              | Error why -> Error ("arg " ^ name ^ ": " ^ why)
+              | Ok source -> go (name :: seen) ({ name; source } :: acc) rest)
+      in
+      go [] [] fields
+  | _ -> Error ("args must be an object; " ^ arg_form)
+
+let yojson_of_arg_decls decls =
+  `Assoc (List.map (fun decl -> (decl.name, yojson_of_arg_source decl.source)) decls)
+
 type procedure = {
   slug : string;
   description : string;
-  args : string list option;
+  args : arg_decls option;
   steps : step list;
   expect : string list;
   expect_timeout_s : int option;
@@ -88,15 +163,84 @@ type procedure = {
 }
 [@@deriving yojson]
 
-(* extr-plaz extr-zdst: a script as the playbook writes it — a file relative to the
-   playbook directory or a short inline source, and the shape its result must have. *)
+(* extr-plaz extr-zdst pbk-46fr pbk-lvy9: a script as the playbook writes it. The
+   result shape is not an inline object here — that is the old form (pbk-i0zl). *)
 type script_decl = {
   file : string option;
   source : string option;
-  returns : Shape.t;
+  description : string;
+  pages : string list option;
+  args : arg_decl list;
+  returns_json : Yojson.Safe.t option;
   max_bytes : int option;
 }
-[@@deriving yojson]
+
+let returns_form =
+  "a leading /** returns: ... */ block, scripts/<name>.returns.json, or \"returns\":    \
+   \"<shape>\" naming a shape in shapes"
+
+let member key = function `Assoc fields -> List.assoc_opt key fields | _ -> None
+
+let string_field key json =
+  match member key json with
+  | None -> Ok None
+  | Some (`String value) -> Ok (Some value)
+  | Some _ -> Error (key ^ " must be a string")
+
+let script_decl_of_yojson = function
+  | `Assoc _ as json ->
+      let ( let* ) = Result.bind in
+      let* file = string_field "file" json in
+      let* source = string_field "source" json in
+      let* description =
+        match member "description" json with
+        | None -> Ok ""
+        | Some (`String value) -> Ok value
+        | Some _ -> Error "description must be a string"
+      in
+      let* pages =
+        match member "pages" json with
+        | None -> Ok None
+        | Some (`List items) ->
+            let rec names acc = function
+              | [] -> Ok (Some (List.rev acc))
+              | `String name :: rest -> names (name :: acc) rest
+              | _ -> Error "pages must be a list of page-kind names"
+            in
+            names [] items
+        | Some _ -> Error "pages must be a list of page-kind names"
+      in
+      let* args =
+        match member "args" json with
+        | None -> Ok []
+        | Some value -> arg_decls_of_yojson value
+      in
+      let returns_json = member "returns" json in
+      let* max_bytes =
+        match member "max_bytes" json with
+        | None -> Ok None
+        | Some (`Int n) -> Ok (Some n)
+        | Some _ -> Error "max_bytes must be an integer"
+      in
+      Ok { file; source; description; pages; args; returns_json; max_bytes }
+  | _ -> Error "a script declaration must be an object"
+
+let yojson_of_script_decl (decl : script_decl) =
+  let fields =
+    [
+      ("file", Option.map (fun s -> `String s) decl.file);
+      ("source", Option.map (fun s -> `String s) decl.source);
+      ("description", Some (`String decl.description));
+      ( "pages",
+        Option.map (fun names -> `List (List.map (fun s -> `String s) names)) decl.pages
+      );
+      ("args", if decl.args = [] then None else Some (yojson_of_arg_decls decl.args));
+      ("returns", decl.returns_json);
+      ("max_bytes", Option.map (fun n -> `Int n) decl.max_bytes);
+    ]
+  in
+  `Assoc
+    (List.filter_map (fun (key, value) -> Option.map (fun v -> (key, v)) value) fields)
 
 (* The section is an object of script name to declaration; the derived list codec would
    write an array, so the two functions are the object's. *)
@@ -117,12 +261,33 @@ let scripts_of_yojson = function
 let yojson_of_scripts scripts =
   `Assoc (List.map (fun (name, decl) -> (name, yojson_of_script_decl decl)) scripts)
 
+type shapes = (string * Shape.t) list
+
+let shapes_of_yojson = function
+  | `Assoc members ->
+      let rec go acc = function
+        | [] -> Ok (List.rev acc)
+        | (name, json) :: rest -> (
+            if not (valid_slug name) then
+              Error ("shape " ^ name ^ " must be a lowercase slug")
+            else
+              match Shape.t_of_yojson json with
+              | Ok shape -> go ((name, shape) :: acc) rest
+              | Error why -> Error (Printf.sprintf "shape %s: %s" name why))
+      in
+      go [] members
+  | _ -> Error "shapes must be an object of shape name to shape"
+
+let yojson_of_shapes shapes =
+  `Assoc (List.map (fun (name, shape) -> (name, Shape.yojson_of_t shape)) shapes)
+
 type t = {
   site : string;
   entry : string;
   description : string;
   pages : page list;
   procedures : procedure list;
+  shapes : shapes option;
   scripts : scripts option;
 }
 [@@deriving yojson]
@@ -146,6 +311,9 @@ type script = {
   returns : Shape.t;
   max_bytes : int;
   origin : string;
+  description : string;
+  pages : string list option;
+  args : arg_decl list;
 }
 
 type loaded = {
@@ -227,6 +395,10 @@ let resolve pages sentence =
         if name = "" then Ok (Judgment sentence) else Ok (Row (role, name))
     | _ -> Ok (Judgment sentence)
   else Ok (Judgment sentence)
+
+let address_changed sentence =
+  let s = lower (strip_dot sentence) in
+  s = "the address changed" || s = "the url changed"
 
 let wildcard pattern value =
   let pattern = lower pattern and value = lower value in
@@ -316,9 +488,12 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
   in
   let* () =
     require
-      (Option.fold ~none:true
-         ~some:(fun xs -> unique xs && List.for_all valid_name xs)
-         proc.args)
+      (let names =
+         List.map
+           (fun (decl : arg_decl) -> decl.name)
+           (Option.value ~default:[] proc.args)
+       in
+       unique names && List.for_all valid_name names)
       "args must be unique lowercase names"
   in
   let* () =
@@ -365,6 +540,25 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
     | [] -> Ok ()
     | Goal goal :: tail ->
         let* () = require (trim goal.goal <> "") "goal must not be empty" in
+        let* () =
+          match goal.until with
+          | None -> Ok ()
+          | Some [] -> refuse "goal until must not be empty"
+          | Some sentences ->
+              List.fold_left
+                (fun acc sentence ->
+                  let* () = acc in
+                  if address_changed sentence then Ok ()
+                  else
+                    match resolve book.pages sentence with
+                    | Error message -> refuse ("goal until: " ^ message)
+                    | Ok (Judgment _) ->
+                        refuse
+                          ("goal until must be a code checker or \"the address \
+                            changed\": " ^ sentence)
+                    | Ok _ -> Ok ())
+                (Ok ()) sentences
+        in
         steps tail
     | Use use :: tail ->
         let* () =
@@ -460,54 +654,202 @@ let read_script_file ~dir file =
               with Sys_error why -> Error (Printf.sprintf "file %s: %s" file why))
         | _ -> Error (Printf.sprintf "file %s is not a regular file" file))
 
+let script_only_message =
+  "every procedure is a script; use `leash eval` or `playbook test`, or add the goal \
+   steps JEV drives"
+
+let returns_comment code =
+  let trimmed = String.trim code in
+  let prefix = "/** returns:" in
+  if not (String.starts_with ~prefix trimmed) then Ok None
+  else
+    let rest =
+      String.sub trimmed (String.length prefix)
+        (String.length trimmed - String.length prefix)
+    in
+    let rec close i =
+      if i + 1 >= String.length rest then None
+      else if rest.[i] = '*' && rest.[i + 1] = '/' then Some i
+      else close (i + 1)
+    in
+    match close 0 with
+    | None -> Error "returns block is missing */"
+    | Some i -> (
+        let text = String.trim (String.sub rest 0 i) in
+        try Ok (Some (Yojson.Safe.from_string text))
+        with Yojson.Json_error why -> Error ("returns block: " ^ why))
+
+let arg_idents code =
+  let n = String.length code in
+  let ident_start c = match c with 'a' .. 'z' | 'A' .. 'Z' | '_' -> true | _ -> false in
+  let ident c = ident_start c || match c with '0' .. '9' -> true | _ -> false in
+  let rec loop i acc =
+    if i + 5 > n then List.sort_uniq String.compare acc
+    else if String.sub code i 5 = "args." then
+      let start = i + 5 in
+      if start < n && ident_start code.[start] then
+        let rec stop j = if j < n && ident code.[j] then stop (j + 1) else j in
+        let stop = stop start in
+        loop stop (String.sub code start (stop - start) :: acc)
+      else loop (i + 1) acc
+    else loop (i + 1) acc
+  in
+  loop 0 []
+
+let read_sidecar ~dir name =
+  match dir with
+  | None -> Ok None
+  | Some (caps, root) -> (
+      let relative = Filename.concat "scripts" (name ^ ".returns.json") in
+      let path = Filename.concat root relative in
+      if not (Sys.file_exists path) then Ok None
+      else
+        match (Unix.realpath root, Unix.realpath path) with
+        | exception Unix.Unix_error (why, _, _) ->
+            Error (Printf.sprintf "%s: %s" relative (Unix.error_message why))
+        | root, real -> (
+            if not (starts (root ^ "/") real) then
+              Error (Printf.sprintf "%s resolves outside the playbook directory" relative)
+            else
+              try
+                let text =
+                  Cap_stdlib.In_channel.with_open_bin ~caps real In_channel.input_all
+                in
+                try Ok (Some (Yojson.Safe.from_string text))
+                with Yojson.Json_error why -> Error (relative ^ ": " ^ why)
+              with Sys_error why -> Error (Printf.sprintf "%s: %s" relative why)))
+
+let resolve_shape ~shapes json =
+  match json with
+  | `String name -> (
+      match List.assoc_opt name (Option.value ~default:[] shapes) with
+      | Some shape -> Ok shape
+      | None -> Error (Printf.sprintf "unknown shape %S" name))
+  | other -> Shape.t_of_yojson other
+
 let resolve_scripts ~file ~dir (book : t) =
   let decls = Option.value ~default:[] book.scripts in
   let refuse name why = Error (Printf.sprintf "%s: script %s: %s" file name why) in
+  let page_names = List.map (fun (page : page) -> page.name) book.pages in
   let rec go seen acc = function
     | [] -> Ok (List.rev acc)
     | (name, (decl : script_decl)) :: rest -> (
         if not (valid_name name) then refuse name "name must be a lowercase slug"
         else if List.mem name seen then refuse name "declared twice"
         else
-          match Shape.check_returns decl.returns with
+          match
+            Option.fold ~none:(Ok default_max_bytes)
+              ~some:(fun n ->
+                if n >= 1 && n <= ceiling_max_bytes then Ok n
+                else Error (Printf.sprintf "max_bytes must be 1..%d" ceiling_max_bytes))
+              decl.max_bytes
+          with
           | Error why -> refuse name why
-          | Ok () -> (
-              match
-                Option.fold ~none:(Ok default_max_bytes)
-                  ~some:(fun n ->
-                    if n >= 1 && n <= ceiling_max_bytes then Ok n
-                    else
-                      Error (Printf.sprintf "max_bytes must be 1..%d" ceiling_max_bytes))
-                  decl.max_bytes
-              with
+          | Ok max_bytes -> (
+              let code =
+                match (decl.file, decl.source) with
+                | Some path, None ->
+                    Result.map
+                      (fun code -> (code, "file " ^ path))
+                      (read_script_file ~dir path)
+                | None, Some source ->
+                    if String.length source > max_inline_bytes then
+                      Error
+                        (Printf.sprintf "inline source is over %d bytes: put it in a file"
+                           max_inline_bytes)
+                    else Ok (source, "inline")
+                | _ -> Error "declare exactly one of file or source"
+              in
+              match code with
               | Error why -> refuse name why
-              | Ok max_bytes -> (
-                  let code =
-                    match (decl.file, decl.source) with
-                    | Some path, None ->
-                        Result.map
-                          (fun code -> (code, "file " ^ path))
-                          (read_script_file ~dir path)
-                    | None, Some source ->
-                        if String.length source > max_inline_bytes then
-                          Error
-                            (Printf.sprintf
-                               "inline source is over %d bytes: put it in a file"
-                               max_inline_bytes)
-                        else Ok (source, "inline")
-                    | _ -> Error "declare exactly one of file or source"
-                  in
-                  match code with
-                  | Error why -> refuse name why
-                  | Ok (code, origin) ->
-                      if String.trim code = "" then refuse name "the script is empty"
-                      else if String.contains code '\000' then
-                        refuse name "the script contains NUL"
-                      else
-                        go (name :: seen)
-                          ({ name; code; returns = decl.returns; max_bytes; origin }
-                          :: acc)
-                          rest)))
+              | Ok (code, origin) -> (
+                  if String.trim code = "" then refuse name "the script is empty"
+                  else if String.contains code (Char.chr 0) then
+                    refuse name "the script contains NUL"
+                  else if
+                    String.trim decl.description = ""
+                    || String.contains decl.description (Char.chr 10)
+                  then refuse name "description must be one sentence"
+                  else
+                    match decl.pages with
+                    | Some pages
+                      when List.exists (fun page -> not (List.mem page page_names)) pages
+                      ->
+                        let page =
+                          List.find (fun page -> not (List.mem page page_names)) pages
+                        in
+                        refuse name ("pages names unknown page kind " ^ page)
+                    | _ -> (
+                        let declared =
+                          List.map (fun (decl : arg_decl) -> decl.name) decl.args
+                        in
+                        match
+                          List.find_opt
+                            (fun ident -> not (List.mem ident declared))
+                            (arg_idents code)
+                        with
+                        | Some ident ->
+                            refuse name
+                              (Printf.sprintf "args.%s is read but not declared; %s" ident
+                                 arg_form)
+                        | None -> (
+                            match (returns_comment code, read_sidecar ~dir name) with
+                            | Error why, _ | _, Error why -> refuse name why
+                            | Ok comment, Ok sidecar -> (
+                                let declared =
+                                  match decl.returns_json with
+                                  | None -> Ok []
+                                  | Some (`String shape) ->
+                                      Ok [ ("declaration", `String shape) ]
+                                  | Some _ ->
+                                      Error
+                                        ("returns belongs beside the script ("
+                                       ^ returns_form
+                                       ^ "), not an inline shape on the declaration")
+                                in
+                                match declared with
+                                | Error why -> refuse name why
+                                | Ok declared -> (
+                                    let sources =
+                                      declared
+                                      @ (match comment with
+                                        | None -> []
+                                        | Some json -> [ ("comment", json) ])
+                                      @
+                                      match sidecar with
+                                      | None -> []
+                                      | Some json -> [ ("sidecar", json) ]
+                                    in
+                                    match sources with
+                                    | [] ->
+                                        refuse name
+                                          ("returns belongs beside the script ("
+                                         ^ returns_form ^ ")")
+                                    | _ :: _ :: _ ->
+                                        refuse name
+                                          ("returns is declared more than once; "
+                                         ^ returns_form)
+                                    | [ (_, json) ] -> (
+                                        match resolve_shape ~shapes:book.shapes json with
+                                        | Error why -> refuse name why
+                                        | Ok returns -> (
+                                            match Shape.check_returns returns with
+                                            | Error why -> refuse name why
+                                            | Ok () ->
+                                                go (name :: seen)
+                                                  ({
+                                                     name;
+                                                     code;
+                                                     returns;
+                                                     max_bytes;
+                                                     origin;
+                                                     description =
+                                                       String.trim decl.description;
+                                                     pages = decl.pages;
+                                                     args = decl.args;
+                                                   }
+                                                  :: acc)
+                                                  rest)))))))))
   in
   go [] [] decls
 
@@ -609,13 +951,50 @@ let validate ~file ~dir (book : t) =
             p.expect ))
       book.procedures
   in
+  let has_goal (proc : procedure) =
+    List.exists (function Goal _ -> true | _ -> false) proc.steps
+  in
+  let subs =
+    List.concat_map
+      (fun (proc : procedure) ->
+        List.filter_map (function Use step -> Some step.use | _ -> None) proc.steps)
+      book.procedures
+    @ List.filter_map
+        (fun (proc : procedure) ->
+          Option.map (fun (repeat : repeat) -> repeat.next) proc.repeat)
+        book.procedures
+  in
+  let* () =
+    if book.procedures = [] || List.exists has_goal book.procedures then
+      let rec orphan = function
+        | [] -> Ok ()
+        | proc :: rest when has_goal proc || List.mem proc.slug subs -> orphan rest
+        | proc :: _ ->
+            Error
+              (Printf.sprintf
+                 "%s: procedure %s has no goal step; a script-only procedure is \
+                  allowed                   only as a use: sub-procedure"
+                 file proc.slug)
+      in
+      orphan book.procedures
+    else Error (file ^ ": " ^ script_only_message)
+  in
   let* scripts = resolve_scripts ~file ~dir book in
+  let* () =
+    require (List.length scripts <= 246) "more than 246 scripts (255-option JEV ceiling)"
+  in
   Ok { file; dir = Option.map snd dir; playbook = book; checks; scripts }
 
 let of_json ?dir ~file json =
-  match t_of_yojson json with
-  | Error reason -> Error (file ^ ": " ^ reason)
-  | Ok book -> validate ~file ~dir book
+  match json with
+  | `Assoc fields when List.mem_assoc "returns" fields ->
+      Error
+        (file ^ ": returns belongs beside the script (" ^ returns_form
+       ^ "), not at the playbook top level")
+  | _ -> (
+      match t_of_yojson json with
+      | Error reason -> Error (file ^ ": " ^ reason)
+      | Ok book -> validate ~file ~dir book)
 
 (* The playbook as another playbook value, validated in the same directory: what a merge
    or a planner's procedure needs, so a file script is resolved against the directory it
@@ -642,19 +1021,44 @@ let load ~caps dir =
       Error (file ^ ": playbooks use JSON (<name>/playbook.json); YAML is not supported")
     else Error (file ^ ": No such file or directory")
   else
-    try
-      let ch = Cap_stdlib.open_in_bin ~caps file in
-      Fun.protect
-        ~finally:(fun () -> close_in ch)
-        (fun () ->
-          let json = Yojson.Safe.from_channel ch in
-          of_json ~dir:(reads caps, dir) ~file json)
-    with
-    | Sys_error reason -> Error (file ^ ": " ^ reason)
-    | Yojson.Json_error reason -> Error (file ^ ": invalid JSON: " ^ reason)
+    let extra =
+      Sys.readdir dir |> Array.to_list
+      |> List.filter (fun name ->
+          (not (String.starts_with ~prefix:"." name))
+          && String.ends_with ~suffix:".json" name
+          && name <> "playbook.json")
+      |> List.sort String.compare
+    in
+    if extra <> [] then
+      Error
+        (Printf.sprintf
+           "%s: stray JSON beside playbook.json (%s); a playbook directory holds \
+            one             playbook.json"
+           dir (String.concat ", " extra))
+    else
+      try
+        let ch = Cap_stdlib.open_in_bin ~caps file in
+        Fun.protect
+          ~finally:(fun () -> close_in ch)
+          (fun () ->
+            let json = Yojson.Safe.from_channel ch in
+            of_json ~dir:(reads caps, dir) ~file json)
+      with
+      | Sys_error reason -> Error (file ^ ": " ^ reason)
+      | Yojson.Json_error reason -> Error (file ^ ": invalid JSON: " ^ reason)
 
 let script_named (book : loaded) name =
   List.find_opt (fun (script : script) -> script.name = name) book.scripts
+
+let offered_scripts (book : loaded) ~url ~text =
+  let kind = page_kind book.playbook.pages ~url ~text in
+  List.filter
+    (fun (script : script) ->
+      match script.pages with
+      | None -> true
+      | Some pages -> (
+          match kind with None -> false | Some kind -> List.mem kind pages))
+    book.scripts
 
 let directory ~caps () =
   let home =
@@ -1098,6 +1502,20 @@ let await_results ~now ~sleep ~observe ~score ?(threshold = 0.8) ?(timeout_s = 5
       loop ())
   in
   loop ()
+
+(* pbk-eyya: a goal step's [until], decided in code against the page an executed action
+   produced. Sentences were validated at load; one that no longer resolves after
+   substitution does not hold. *)
+let until_holds ?(values = []) (book : t) sentences ~start_url ~url observation =
+  List.for_all
+    (fun sentence ->
+      let sentence = substitute values sentence in
+      if address_changed sentence then url <> start_url
+      else
+        match resolve book.pages sentence with
+        | Ok (Judgment _) | Error _ -> false
+        | Ok checker -> passes checker observation)
+    sentences
 
 let await ~now ~sleep ~observe ~score ?threshold ?timeout_s checks =
   List.for_all

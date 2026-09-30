@@ -49,6 +49,7 @@ let observation ?(rows = []) title =
 let decision ?index name : J.decision =
   {
     operation = op name;
+    script = None;
     index;
     option = None;
     confidence = 1.;
@@ -69,7 +70,7 @@ let args ?(max_steps = 30) ?(deadline_s = 120) () =
     }
 
 let run ?(clock_step = 0.) ?(max_steps = 30) ?(deadline_s = 120) ?(dry_run = false)
-    ?(change = false) choices =
+    ?(change = false) ?reached choices =
   let time = ref 0. and calls = ref 0 and actions = ref 0 and state = ref "Initial" in
   let queue = ref choices in
   let decide _ =
@@ -98,7 +99,7 @@ let run ?(clock_step = 0.) ?(max_steps = 30) ?(deadline_s = 120) ?(dry_run = fal
         }
   in
   let reply =
-    D.run
+    D.run ?reached
       ~handler:D.{ observe; decide; text_value; act }
       ~now:(fun () -> !time)
       ~model:"test-model"
@@ -115,6 +116,30 @@ let done_path () =
   Alcotest.(check int) "drive-xjh6 steps" 2 (List.length r.steps);
   Alcotest.(check int) "drive-4zlp action" 1 acts;
   check "final" "Changed1" r.final.title
+
+(* pbk-eyya: a goal step's until ends the drive done after the action that reached it,
+   without asking JEV to judge the page it landed on; it is never asked before an action. *)
+let until_reached () =
+  let asked = ref [] in
+  let reached ~(start : D.observation) (page : D.observation) =
+    asked := (start.snapshot.title, page.snapshot.title) :: !asked;
+    page.snapshot.title = "Changed1"
+  in
+  let r, acts, calls = run ~change:true ~reached [ "click"; "blocked" ] in
+  check "pbk-eyya until ends the step done" "done" (status r);
+  Alcotest.(check int) "pbk-eyya one action" 1 acts;
+  Alcotest.(check int) "pbk-eyya no prediction after the action" 1 calls;
+  Alcotest.(check (list (pair string string)))
+    "pbk-eyya until sees the step's start and the page the action produced"
+    [ ("Initial", "Changed1") ]
+    !asked;
+  check "pbk-eyya reason" "the step's until checks hold"
+    (Option.value ~default:"" r.reason);
+  let r, acts, _ =
+    run ~change:true ~reached:(fun ~start:_ _ -> false) [ "click"; "done" ]
+  in
+  check "pbk-eyya until unmet leaves JEV to decide" "done" (status r);
+  Alcotest.(check int) "pbk-eyya unmet until" 1 acts
 
 let blocked_reasons () =
   List.iter
@@ -740,7 +765,7 @@ let fly_blocked_frontier () =
   let result, actions =
     exercise ~start:false ~bottom:false ~max_steps:(Some 60) ~dry_run:false
   in
-  Alcotest.(check int) "per-URL rescue budget" 3 actions;
+  Alcotest.(check int) "per-URL rescue budget (pbk-eyya: eight)" 8 actions;
   check "bounded rescue terminates BLOCKED" "blocked"
     (P.Drive_status.to_string result.status);
   let _, actions =
@@ -790,6 +815,7 @@ let () =
             ("fly-4lmg fly-4mio fly-2pn7 observation bound", fly_observation_bound);
             ("fly-g0uh fly-9e0f fly-u9eg fly-gn5z state", fly_structured_state);
             ("done", done_path);
+            ("pbk-eyya goal until", until_reached);
             ("daily-9ggi blocked reasons", blocked_reasons);
             ("stall", stall);
             ("cap", cap);

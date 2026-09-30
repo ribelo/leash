@@ -3,18 +3,18 @@
     "mission": "collect every book in the Travel category",
     "status": "done",
     "reason": null,
-    "elapsed_s": 4.3,
+    "elapsed_s": 3.0,
     "collected": 11,
     "truth": 11,
     "pages": 1,
-    "model_calls": 7,
+    "model_calls": 6,
     "model_calls_by_kind": {
-      "text_helper": 2,
+      "text_helper": 1,
       "operator": 2,
       "playbook": 1,
       "procedure": 2
     },
-    "model_cost": 0.000610004,
+    "model_cost": 0.0005523740000000001,
     "cost_unreported": 0,
     "procedures": [
       [
@@ -44,12 +44,12 @@
     "playbook_choices": [
       {
         "source": "jev",
-        "key": "book:/tmp/nix-shell.S4Ykuo/tmp.e7laJYcuA6/config/leash/playbooks/books.toscrape.com/playbook.json",
+        "key": "book:/tmp/nix-shell.HZKO6p/tmp.32wb66Sjyk/config/leash/playbooks/books.toscrape.com/playbook.json",
         "probabilities": {
-          "book:/tmp/nix-shell.S4Ykuo/tmp.e7laJYcuA6/config/leash/playbooks/books.toscrape.com/playbook.json": 0.9,
+          "book:/tmp/nix-shell.HZKO6p/tmp.32wb66Sjyk/config/leash/playbooks/books.toscrape.com/playbook.json": 0.9,
           "none": 0.1
         },
-        "confidence": 0.79,
+        "confidence": 0.8,
         "usage": {
           "input_tokens": 596,
           "output_tokens": 104,
@@ -79,7 +79,7 @@
             "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
             "records": 11,
             "bytes": 2552,
-            "elapsed_ms": 1
+            "elapsed_ms": 0
           }
         ],
         "expectations": [
@@ -91,7 +91,7 @@
           }
         ],
         "outcome": "verified",
-        "elapsed_ms": 26
+        "elapsed_ms": 23
       },
       {
         "slug": "open-category",
@@ -101,13 +101,13 @@
         "choice": {
           "key": "open-category",
           "probabilities": {
-            "read-page": 0.05,
-            "collect-page": 0.01,
-            "NONE": 0.05,
+            "collect-page": 0.0,
+            "open-category": 0.91,
+            "read-page": 0.04,
             "DONE": 0.0,
-            "open-category": 0.89
+            "NONE": 0.05
           },
-          "confidence": 0.86,
+          "confidence": 0.88,
           "usage": {
             "input_tokens": 560,
             "output_tokens": 59,
@@ -121,16 +121,16 @@
             "steps": [
               {
                 "n": 1,
-                "snapshot": "s_t_c20147ab0a4009c9d31fab0249fe261e",
+                "snapshot": "s_t_d445236ed76e0ac6318b98ef4b53e4d0",
                 "operation": "click",
                 "index": 4,
                 "probabilities": {
                   "op": {
+                    "SCROLL_DOWN": 0.0,
+                    "CLICK": 1.0,
                     "DONE": 0.0,
                     "BLOCKED": 0.0,
-                    "WAIT": 0.0,
-                    "SCROLL_DOWN": 0.0,
-                    "CLICK": 1.0
+                    "WAIT": 0.0
                   },
                   "target": {
                     "1": 0.0,
@@ -181,21 +181,21 @@
                   "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
                   "title": "Travel | Books to Scrape - Sandbox"
                 },
-                "elapsed_ms": 571
+                "elapsed_ms": 595
               },
               {
                 "n": 2,
-                "snapshot": "s_t_9b514cfacb0bc486907baee2674a9888",
+                "snapshot": "s_t_0d7f9002e63045de4ce793df1a75c35c",
                 "operation": "done",
                 "index": null,
                 "probabilities": {
                   "op": {
-                    "WAIT": 0.0,
-                    "DONE": 0.98,
-                    "CLICK": 0.01,
-                    "BLOCKED": 0.01,
+                    "run_script:list-page": 0.0,
                     "SCROLL_DOWN": 0.0,
-                    "run_script:list-page": 0.0
+                    "CLICK": 0.01,
+                    "DONE": 0.98,
+                    "BLOCKED": 0.01,
+                    "WAIT": 0.0
                   },
                   "target": {}
                 },
@@ -203,7 +203,7 @@
                   "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
                   "title": "Travel | Books to Scrape - Sandbox"
                 },
-                "elapsed_ms": 934
+                "elapsed_ms": 1005
               }
             ]
           }
@@ -226,7 +226,7 @@
           }
         ],
         "outcome": "verified",
-        "elapsed_ms": 2896
+        "elapsed_ms": 1840
       }
     ],
     "mission_expectations": [],
@@ -235,13 +235,13 @@
     "collected": 11,
     "data": {
       "model_calls_by_kind": {
-        "text_helper": 2,
+        "text_helper": 1,
         "operator": 2,
         "playbook": 1,
         "procedure": 2
       },
       "cost_unreported": 0,
-      "reported_cost": 0.000610004,
+      "reported_cost": 0.0005523740000000001,
       "count": 11,
       "first": [
         {
@@ -299,8 +299,8 @@
         }
       ]
     },
-    "model_calls": 7,
-    "model_cost": 0.000610004,
+    "model_calls": 6,
+    "model_cost": 0.0005523740000000001,
     "operator_steps": [],
     "operator_state": {
       "status": "done",
@@ -309,8 +309,8 @@
       "initial_recent_actions": [],
       "page": {
         "snapshot": {
-          "snapshot": "s_t_42ecf2d0f7b4e58d2e4ab586614a6591",
-          "tab": "t_14ee0b72225b78716ea71821cf95662c",
+          "snapshot": "s_t_82807f659e7b82dbfbd5fc1d6062193b",
+          "tab": "t_1913f0ba578aade0d17b2309b07785aa",
           "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
           "title": "Travel | Books to Scrape - Sandbox",
           "rows": [
@@ -643,16 +643,16 @@
         {
           "step": {
             "n": 1,
-            "snapshot": "s_t_c20147ab0a4009c9d31fab0249fe261e",
+            "snapshot": "s_t_d445236ed76e0ac6318b98ef4b53e4d0",
             "operation": "click",
             "index": 4,
             "probabilities": {
               "op": {
+                "SCROLL_DOWN": 0.0,
+                "CLICK": 1.0,
                 "DONE": 0.0,
                 "BLOCKED": 0.0,
-                "WAIT": 0.0,
-                "SCROLL_DOWN": 0.0,
-                "CLICK": 1.0
+                "WAIT": 0.0
               },
               "target": {
                 "1": 0.0,
@@ -703,14 +703,14 @@
               "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
               "title": "Travel | Books to Scrape - Sandbox"
             },
-            "elapsed_ms": 571
+            "elapsed_ms": 595
           },
           "page_changed": true,
           "option": null,
           "outcome": "executed",
           "model_operation": "click",
           "rescue": false,
-          "input_ms": 6,
+          "input_ms": 7,
           "settle_ms": 50
         }
       ],
@@ -718,17 +718,17 @@
         {
           "outcome": "executed",
           "n": 1,
-          "snapshot": "s_t_c20147ab0a4009c9d31fab0249fe261e",
+          "snapshot": "s_t_d445236ed76e0ac6318b98ef4b53e4d0",
           "operation": "click",
           "index": 4,
           "option": null,
           "probabilities": {
             "op": {
+              "SCROLL_DOWN": 0.0,
+              "CLICK": 1.0,
               "DONE": 0.0,
               "BLOCKED": 0.0,
-              "WAIT": 0.0,
-              "SCROLL_DOWN": 0.0,
-              "CLICK": 1.0
+              "WAIT": 0.0
             },
             "target": {
               "1": 0.0,
@@ -783,23 +783,23 @@
             "cost": 0.000206598,
             "retries": 0
           },
-          "elapsed_ms": 334
+          "elapsed_ms": 353
         },
         {
           "outcome": "terminal",
           "n": 2,
-          "snapshot": "s_t_9b514cfacb0bc486907baee2674a9888",
+          "snapshot": "s_t_0d7f9002e63045de4ce793df1a75c35c",
           "operation": "done",
           "index": null,
           "option": null,
           "probabilities": {
             "op": {
-              "WAIT": 0.0,
-              "DONE": 0.98,
-              "CLICK": 0.01,
-              "BLOCKED": 0.01,
+              "run_script:list-page": 0.0,
               "SCROLL_DOWN": 0.0,
-              "run_script:list-page": 0.0
+              "CLICK": 0.01,
+              "DONE": 0.98,
+              "BLOCKED": 0.01,
+              "WAIT": 0.0
             },
             "target": {}
           },
@@ -811,7 +811,7 @@
             "cost": 0.000218988,
             "retries": 0
           },
-          "elapsed_ms": 328
+          "elapsed_ms": 372
         }
       ],
       "text_calls": [],
@@ -823,12 +823,12 @@
         "observation_retries": 0,
         "stale_decisions": 0,
         "bootstrap_ms": 0,
-        "observation_ms": 256,
-        "prediction_ms": 662,
+        "observation_ms": 262,
+        "prediction_ms": 725,
         "text_helper_ms": 0,
-        "input_ms": 6,
+        "input_ms": 7,
         "settle_ms": 50,
-        "elapsed_ms": 934
+        "elapsed_ms": 1005
       }
     },
     "output_kinds": [
@@ -836,8 +836,8 @@
       "operator-state"
     ],
     "final": {
-      "snapshot": "s_t_bcc21f9cfade4682d2610d0865aa5fdb",
-      "tab": "t_14ee0b72225b78716ea71821cf95662c",
+      "snapshot": "s_t_7e107e2d8886b897ab8d13d1be8f90a5",
+      "tab": "t_1913f0ba578aade0d17b2309b07785aa",
       "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
       "title": "books.toscrape.com/catalogue/category/books/travel_2/index.html",
       "rows": [

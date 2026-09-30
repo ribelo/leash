@@ -119,9 +119,18 @@ let select_targets index (row : P.row) =
             dom = option_.index;
           })
 
+(* fly-eoqg field-sazr: the operator's table. The agent's snapshot lists password rows
+   (field-8bzc); JEV is never offered one, nor a file input. *)
+let operator_row (row : P.row) =
+  row.role <> "file-input"
+  && not
+       (List.exists
+          (fun state -> P.Row_state.to_string state = "password")
+          (Option.value ~default:[] row.state))
+
 let elements (snapshot : P.snapshot) =
   snapshot.rows
-  |> List.filter (fun (row : P.row) -> operations row <> [])
+  |> List.filter (fun (row : P.row) -> operator_row row && operations row <> [])
   |> List.mapi (fun position (row : P.row) ->
       let index = string_of_int (position + 1) in
       let operations = operations row in
@@ -183,6 +192,20 @@ let scroll_down_label = "Scroll down"
 let scroll_up_label = "Scroll up"
 let wait_label = "Wait for the page to update"
 
+(* pbk-otsl pbk-rai1: pinned verbatim. The operator option key is the prefix plus the
+   script name; the criterion text is the script's one-sentence description. *)
+let run_script_prefix = "run_script:"
+
+let run_script_rule =
+  "run_script:<name> runs that prepared script on the current page. Choose it to \
+   collect    the page; its records are saved and do not need to be clicked."
+
+type offered_script = { name : string; description : string }
+
+type script_effect =
+  | Script_continue of { summary : string }
+  | Script_blocked of { argument : string }
+
 (* snapshot.js:102-103 — a scroll is offered only while the page can still move that way:
    [can_scroll_down] is scrollY + innerHeight < height - 2 and [can_scroll_up] is
    scrollY > 0. Wait is always offered, and snapshot.js pushes the three in this order. *)
@@ -228,6 +251,7 @@ type request = {
   can_scroll_down : bool;
   can_scroll_up : bool;
   elements : element list;
+  scripts : offered_script list;
   coverage : Yojson.Safe.t;
 }
 
@@ -258,7 +282,10 @@ let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
     can_scroll_down;
     can_scroll_up;
     elements = elements snapshot;
+    scripts = [];
   }
+
+let with_scripts request scripts = { request with scripts }
 
 let with_coverage request coverage =
   match (request.coverage, coverage) with
@@ -352,12 +379,32 @@ let target_keys op (element : element) = List.map fst (target_keys_of op element
 (* model.py:88-90 — the criteria of the operation choice: the operations that have targets,
    in the order the elements first carry them, then the controls, then DONE and BLOCKED. The
    same list is what decide validates the answer against. *)
+(* pbk-otsl: the operation choice stays under 255 criteria, scripts included. Element
+   operations, then scroll/wait, then run_script:<name> in offer order, then DONE and
+   BLOCKED. Scripts that would reach 255 are not offered. *)
+let max_operation_options = 254
+
 let operation_criteria request =
-  List.map
-    (fun operation -> (operation_key operation, operation_label operation))
-    (distinct_operations request.elements)
-  @ controls ~can_scroll_down:request.can_scroll_down ~can_scroll_up:request.can_scroll_up
-  @ [ ("DONE", done_label); ("BLOCKED", blocked_label) ]
+  let operations =
+    List.map
+      (fun operation -> (operation_key operation, operation_label operation))
+      (distinct_operations request.elements)
+  in
+  let controls =
+    controls ~can_scroll_down:request.can_scroll_down ~can_scroll_up:request.can_scroll_up
+  in
+  let terminal = [ ("DONE", done_label); ("BLOCKED", blocked_label) ] in
+  let room =
+    max 0
+      (max_operation_options - List.length operations - List.length controls
+     - List.length terminal)
+  in
+  let scripts =
+    request.scripts
+    |> List.filteri (fun i _ -> i < room)
+    |> List.map (fun script -> (run_script_prefix ^ script.name, script.description))
+  in
+  operations @ controls @ scripts @ terminal
 
 let operation_keys request = List.map fst (operation_criteria request)
 
@@ -376,7 +423,16 @@ let operation_question request =
           (E.object_
              [
                ("goal", Some (E.string request.goal));
-               ("rules", Some (E.string Questions.next_action));
+               ( "rules",
+                 Some
+                   (E.string
+                      (if
+                         List.exists
+                           (fun (key, _) ->
+                             String.starts_with ~prefix:run_script_prefix key)
+                           (operation_criteria request)
+                       then Questions.next_action ^ "\n" ^ run_script_rule
+                       else Questions.next_action)) );
              ]) );
     ]
 
@@ -449,6 +505,7 @@ let body request =
 
 type decision = {
   operation : P.Operation.t;
+  script : string option;
   index : int option;
   option : int option;
   confidence : float;
@@ -542,51 +599,74 @@ let decide request ~answers =
     | Some answer -> validated ~keys:(operation_keys request) answer
     | None -> Error invalid
   in
-  let* operation =
-    match operation_of_key chosen_key with
-    | Some operation -> Ok operation
-    | None -> Error invalid
-  in
-  let candidates =
-    List.filter
-      (fun (element : element) -> List.mem operation element.operations)
-      request.elements
-  in
-  if candidates = [] then
-    Ok
-      {
-        operation;
-        index = None;
-        option = None;
-        confidence;
-        target_confidence = None;
-        operation_probabilities;
-        target_probabilities = [];
-        targets = [];
-      }
-  else
-    let keys =
-      List.concat_map (fun element -> target_keys operation element) candidates
+  if String.starts_with ~prefix:run_script_prefix chosen_key then
+    let name =
+      String.sub chosen_key
+        (String.length run_script_prefix)
+        (String.length chosen_key - String.length run_script_prefix)
     in
-    let* target_key, target_probabilities, target_confidence =
-      match member (target_key operation) answers with
-      | Some answer -> validated ~keys answer
+    if List.exists (fun script -> script.name = name) request.scripts then
+      Ok
+        {
+          operation = operation "blocked";
+          script = Some name;
+          index = None;
+          option = None;
+          confidence;
+          target_confidence = None;
+          operation_probabilities;
+          target_probabilities = [];
+          targets = [];
+        }
+    else Error invalid
+  else
+    let* operation =
+      match operation_of_key chosen_key with
+      | Some operation -> Ok operation
       | None -> Error invalid
     in
-    match chosen operation candidates target_key with
-    | None -> Error invalid
-    | Some (element, option_) ->
-        Ok
-          {
-            operation;
-            index = Some element.row;
-            option = Option.map (fun option_ -> option_.dom) option_;
-            confidence;
-            target_confidence = Some target_confidence;
-            operation_probabilities;
-            target_probabilities;
-            targets = targets ~operation candidates target_probabilities;
-          }
+    let candidates =
+      List.filter
+        (fun (element : element) -> List.mem operation element.operations)
+        request.elements
+    in
+    if candidates = [] then
+      Ok
+        {
+          operation;
+          script = None;
+          index = None;
+          option = None;
+          confidence;
+          target_confidence = None;
+          operation_probabilities;
+          target_probabilities = [];
+          targets = [];
+        }
+    else
+      let keys =
+        List.concat_map (fun element -> target_keys operation element) candidates
+      in
+      let* target_key, target_probabilities, target_confidence =
+        match member (target_key operation) answers with
+        | Some answer -> validated ~keys answer
+        | None -> Error invalid
+      in
+      match chosen operation candidates target_key with
+      | None -> Error invalid
+      | Some (element, option_) ->
+          Ok
+            {
+              operation;
+              script = None;
+              index = Some element.row;
+              option = Option.map (fun option_ -> option_.dom) option_;
+              confidence;
+              target_confidence = Some target_confidence;
+              operation_probabilities;
+              target_probabilities;
+              targets = targets ~operation candidates target_probabilities;
+            }
 
 let distribution pairs =
   E.object_ (List.map (fun (key, number) -> (key, E.float number)) pairs)

@@ -14,7 +14,6 @@
     {
       "slug": "verify-example",
       "description": "Verify the Example Domain landing page as the second and final site of the PDF mission.",
-      "args": [],
       "steps": [
         {
           "goal": "Verify this is the Example Domain page without clicking external links.",

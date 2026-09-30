@@ -170,7 +170,9 @@ Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: 
                 dialog: Dialog|null}
 Row          = {index: int, role: string, name: string, value?: string, state?: string[],
                 options?: [{index: int, label: string, value: string, selected: bool, disabled: bool}]}
-                 state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly}
+                 state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly, password}
+                 a password input (field-8bzc) is role textbox with state password and never a value; the operator's
+                 table (what JEV is offered) excludes it, as it excludes file inputs (fly-eoqg)
                  role file-input (hard-2gnf) is an <input type=file>, listed even when the page hides it behind a styled
                  button; only `upload` acts on it
                  options is the option list a select row exposes, in the select's own order, index 0 first

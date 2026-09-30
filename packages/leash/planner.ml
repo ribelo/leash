@@ -175,10 +175,37 @@ let answer_of (request : Run.plan_request) (reply : reply) :
     match playbook with
     | None when pages <> [] -> Error "page kinds require a chosen site"
     | None -> Ok ()
+    | Some _ when pages = [] -> Ok ()
     | Some book ->
-        Result.map
-          (fun _ -> ())
-          (Playbook.of_json ~file:"planner page kinds" (Playbook.yojson_of_t book))
+        (* pbk-eyya: only the page kinds are the planner's to add. A file script cannot be
+           re-resolved without the playbook directory, so the check runs the loader over the
+           pages alone, beside one placeholder goal procedure the loader requires. *)
+        let pages_only =
+          match Playbook.yojson_of_t book with
+          | `Assoc fields ->
+              `Assoc
+                (List.map
+                   (fun (key, value) ->
+                     match key with
+                     | "scripts" | "shapes" -> (key, `Null)
+                     | "procedures" ->
+                         ( key,
+                           `List
+                             [
+                               `Assoc
+                                 [
+                                   ("slug", `String "planner-pages");
+                                   ("description", `String "Page kinds check.");
+                                   ( "steps",
+                                     `List [ `Assoc [ ("goal", `String "Look.") ] ] );
+                                   ("expect", `List [ `String "no dialog is open" ]);
+                                 ];
+                             ] )
+                     | _ -> (key, value))
+                   fields)
+          | other -> other
+        in
+        Result.map (fun _ -> ()) (Playbook.of_json ~file:"planner page kinds" pages_only)
   in
   let one_of_three =
     "answer exactly one of procedure, handoff or fail with the reason it needs"

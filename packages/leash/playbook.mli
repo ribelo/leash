@@ -5,7 +5,10 @@ type page = {
   text_marker : string option;
 }
 
-type goal_step = { goal : string; hint : string option }
+(* pbk-eyya: [until] sentences end the step as soon as all hold after an executed action;
+   each is a code checker or "the address changed" (the URL differs from the step's
+   start). A judgment sentence is refused at load. *)
+type goal_step = { goal : string; hint : string option; until : string list option }
 type use_step = { use : string; args : Yojson.Safe.t option; optional : bool option }
 
 type script_step = { script : string; args : Yojson.Safe.t option }
@@ -28,10 +31,22 @@ type repeat = {
   key : string;
 }
 
+type arg_source =
+  | From_mission of { optional : bool }
+  | Const of Yojson.Safe.t
+      (** pbk-lww9: where a declared argument comes from. [From_mission] is filled by the
+          text helper from the mission sentence ([optional] does not block when the helper
+          has no value). [Const] is the value written in the file. *)
+
+type arg_decl = { name : string; source : arg_source }
+(** One argument and its source. The JSON form is an object of name to
+    [{"from":"mission"}], [{"from":"mission","optional":true}] or [{"const":<value>}]. A
+    list of names is the old form and is refused. *)
+
 type procedure = {
   slug : string;
   description : string;
-  args : string list option;
+  args : arg_decl list option;
   steps : step list;
   expect : string list;
   expect_timeout_s : int option;
@@ -48,16 +63,28 @@ type procedure = {
 type script_decl = {
   file : string option;
   source : string option;
-  returns : Shape.t;
+  description : string;
+  pages : string list option;
+      (** pbk-46fr: page kinds this script applies to. [None] means every page of the
+          site; [Some []] is offered on none. *)
+  args : arg_decl list;
+  returns_json : Yojson.Safe.t option;
+      (** A shape name, or an inline shape. An inline shape is the old form and is refused
+          after the script file resolves (pbk-i0zl). *)
   max_bytes : int option;
 }
-(** extr-plaz extr-zdst: a script as `playbook.json` writes it — exactly one of a [file]
-    relative to the playbook directory and a short inline [source] (at most 4096 bytes),
-    the shape its result must have, and an optional bound on the size of that result
-    ([max_bytes], default 8 MiB, at most 16 MiB). *)
+(** extr-plaz extr-zdst pbk-46fr pbk-lvy9: a script as `playbook.json` writes it — exactly
+    one of a [file] relative to the playbook directory and a short inline [source] (at
+    most 4096 bytes), a one-sentence [description], the page kinds it applies to, and an
+    optional bound on the result ([max_bytes], default 8 MiB, at most 16 MiB). The result
+    shape sits beside the script, not in this object as an inline shape. *)
 
 type scripts = (string * script_decl) list
 (** The [scripts] section: an object of script name to declaration. *)
+
+type shapes = (string * Shape.t) list
+(** pbk-lvy9: named result shapes. A script's [returns] is one of these names, or an
+    inline shape in the script's leading comment or sidecar. *)
 
 type t = {
   site : string;
@@ -65,6 +92,7 @@ type t = {
   description : string;
   pages : page list;
   procedures : procedure list;
+  shapes : shapes option;
   scripts : scripts option;
 }
 
@@ -83,6 +111,9 @@ type script = private {
   returns : Shape.t;
   max_bytes : int;
   origin : string;  (** [file <path>] or [inline]. *)
+  description : string;
+  pages : string list option;
+  args : arg_decl list;
 }
 (** extr-plaz extr-k40c: a resolved script. The type is private — the loader is the only
     thing that makes one, from a playbook directory — and {!Reading.script}, the only
@@ -151,6 +182,13 @@ val load : caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) resul
 
 val script_named : loaded -> string -> script option
 
+val offered_scripts : loaded -> url:string -> text:string -> script list
+(** pbk-rai1: scripts whose [pages] match the current page kind. Absent [pages] matches
+    every page, including a page of no recognised kind; [Some []] matches none. *)
+
+val script_only_message : string
+(** pbk-85m1: the loader's exact refusal when no procedure has a goal step. *)
+
 val directory : caps:< Ox_caps.Cap.env ; .. > -> unit -> string
 (** [$XDG_CONFIG_HOME/leash/playbooks]; each playbook is a subdirectory of it. *)
 
@@ -214,6 +252,17 @@ type observation = {
   rows : (string * string) list;
   downloads : (string * string * string) list;
 }
+
+val until_holds :
+  ?values:(string * string) list ->
+  t ->
+  string list ->
+  start_url:string ->
+  url:string ->
+  observation ->
+  bool
+(** pbk-eyya: whether every [until] sentence of a goal step holds for the page an executed
+    action produced; "the address changed" compares [url] with [start_url]. *)
 
 val substitute : (string * string) list -> string -> string
 (** run-2lei run-84ds run-5rll: a placeholder in braces is replaced by the value the run

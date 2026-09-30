@@ -11,12 +11,14 @@ let book =
        (Yojson.Safe.from_string
           {|{
  "site":"example.com","entry":"https://example.com/","description":"Catalogue","pages":[],
- "scripts":{"list":{"source":"return []","returns":[{"id":"string"}]},
- "next":{"source":"return {url:location.href}","returns":{"url":"url"}},
- "last":{"source":"return {done:true}","returns":{"done":"boolean"}}},
+ "shapes":{"row":[{"id":"string"}],"url":{"url":"url"},"done":{"done":"boolean"}},
+ "scripts":{"list":{"source":"return []","description":"List the page.","returns":"row"},
+ "next":{"source":"return {url:location.href}","description":"The next page URL.","returns":"url"},
+ "last":{"source":"return {done:true}","description":"Whether the listing is finished.","returns":"done"}},
  "procedures":[{"slug":"collect","description":"Collect","steps":[{"script":"list"}],
  "expect":["no dialog is open"],"repeat":{"next":"next-page","max":2,"key":"id","until":{"script":"last"}}},
- {"slug":"next-page","description":"Next","steps":[{"navigate":{"script":"next"}},{"script":"list"}],"expect":["no dialog is open"]}]}|}))
+ {"slug":"next-page","description":"Next","steps":[{"navigate":{"script":"next"}},{"script":"list"}],"expect":["no dialog is open"]},
+ {"slug":"open","description":"Open the catalogue.","steps":[{"goal":"Open the catalogue."},{"use":"collect"}],"expect":["no dialog is open"]}]}|}))
 
 let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2")
     ?(malformed_done = false) ?(rejected = false) () =
@@ -191,10 +193,13 @@ let refuses_control () =
 
 let one_shot () =
   let proc = { (List.hd book.playbook.procedures) with B.repeat = None } in
+  let anchor =
+    List.find (fun (p : B.procedure) -> p.slug = "open") book.playbook.procedures
+  in
   let book =
     ok
       (B.of_json ~file:"one-shot.json"
-         (B.yojson_of_t { book.playbook with B.procedures = [ proc ] }))
+         (B.yojson_of_t { book.playbook with B.procedures = [ proc; anchor ] }))
   in
   List.iter
     (fun empty ->

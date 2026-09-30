@@ -1084,6 +1084,67 @@ let fly_request_bounds () =
     "fly-spgh select options bound at 250" 250
     (List.length (List.hd offered).options)
 
+let script_options () =
+  let many =
+    List.init 300 (fun i ->
+        J.{ name = Printf.sprintf "script-%d" i; description = "Collect this page." })
+  in
+  let crowded =
+    J.body
+      (J.with_scripts
+         (make ~can_scroll_down:true ~can_scroll_up:true [ button 1 "Go" ])
+         many)
+  in
+  let criteria = get "criteria" (get "operation" (get "questions" crowded)) in
+  let count = match criteria with `Assoc fields -> List.length fields | _ -> -1 in
+  Alcotest.(check bool)
+    "pbk-otsl option count stays under 255 including scripts" true (count < 255);
+  Alcotest.(check string)
+    "pbk-otsl the prefix is pinned" "run_script:" J.run_script_prefix;
+  let one =
+    [
+      J.
+        {
+          name = "list-page";
+          description = "Collect every book card on this category page as records.";
+        };
+    ]
+  in
+  let body = J.body (J.with_scripts (make [ button 1 "Go" ]) one) in
+  let offered = get "criteria" (get "operation" (get "questions" body)) in
+  Alcotest.(check (option string))
+    "pbk-rai1 the criterion text is the description"
+    (Some "Collect every book card on this category page as records.")
+    (match member "run_script:list-page" offered with
+    | Some (`String s) -> Some s
+    | _ -> None);
+  let keys = match offered with `Assoc fields -> List.map fst fields | _ -> [] in
+  let probabilities =
+    `Assoc
+      (List.map
+         (fun key -> (key, `Float (if key = "run_script:list-page" then 1. else 0.)))
+         keys)
+  in
+  match
+    J.decide
+      (J.with_scripts (make [ button 1 "Go" ]) one)
+      ~answers:
+        (`Assoc
+           [
+             ( "operation",
+               `Assoc
+                 [
+                   ("choice", `String "run_script:list-page");
+                   ("probabilities", probabilities);
+                   ("confidence", `Float 1.);
+                 ] );
+           ])
+  with
+  | Error why -> Alcotest.fail ("pbk-otsl " ^ why)
+  | Ok decision ->
+      Alcotest.(check (option string))
+        "pbk-rai1 the chosen script" (Some "list-page") decision.J.script
+
 let () =
   Alcotest.run "jev_request"
     [
@@ -1100,6 +1161,8 @@ let () =
           Alcotest.test_case "drive-y37b the recent window" `Quick recent_window;
           Alcotest.test_case "drive-y37b drive-zml5 the instruction texts, verbatim"
             `Quick instruction_texts;
+          Alcotest.test_case "pbk-otsl pbk-rai1 script options stay under 255" `Quick
+            script_options;
         ] );
       ( "decision",
         [

@@ -156,6 +156,7 @@ let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?ins
                 description = "Discovered " ^ host;
                 pages = [];
                 procedures = [];
+                shapes = None;
                 scripts = None;
               }
           in

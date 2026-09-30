@@ -3,18 +3,18 @@
     "mission": "collect every book in the Mystery category",
     "status": "done",
     "reason": null,
-    "elapsed_s": 7.3,
+    "elapsed_s": 7.0,
     "collected": 32,
     "truth": 32,
     "pages": 2,
-    "model_calls": 12,
+    "model_calls": 11,
     "model_calls_by_kind": {
       "text_helper": 1,
-      "operator": 8,
+      "operator": 7,
       "playbook": 1,
       "procedure": 2
     },
-    "model_cost": 0.001933696,
+    "model_cost": 0.0016278920000000001,
     "cost_unreported": 0,
     "procedures": [
       [
@@ -52,12 +52,12 @@
     "playbook_choices": [
       {
         "source": "jev",
-        "key": "book:/tmp/nix-shell.S4Ykuo/tmp.e7laJYcuA6/config/leash/playbooks/books.toscrape.com/playbook.json",
+        "key": "book:/tmp/nix-shell.HZKO6p/tmp.32wb66Sjyk/config/leash/playbooks/books.toscrape.com/playbook.json",
         "probabilities": {
-          "book:/tmp/nix-shell.S4Ykuo/tmp.e7laJYcuA6/config/leash/playbooks/books.toscrape.com/playbook.json": 0.88,
-          "none": 0.12
+          "book:/tmp/nix-shell.HZKO6p/tmp.32wb66Sjyk/config/leash/playbooks/books.toscrape.com/playbook.json": 0.89,
+          "none": 0.11
         },
-        "confidence": 0.75,
+        "confidence": 0.78,
         "usage": {
           "input_tokens": 596,
           "output_tokens": 104,
@@ -87,7 +87,7 @@
             "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
             "records": 20,
             "bytes": 4192,
-            "elapsed_ms": 1
+            "elapsed_ms": 0
           }
         ],
         "expectations": [
@@ -99,7 +99,7 @@
           }
         ],
         "outcome": "verified",
-        "elapsed_ms": 40
+        "elapsed_ms": 33
       },
       {
         "slug": "open-category",
@@ -109,13 +109,13 @@
         "choice": {
           "key": "open-category",
           "probabilities": {
-            "collect-page": 0.0,
-            "open-category": 0.93,
+            "NONE": 0.04,
             "read-page": 0.03,
             "DONE": 0.0,
-            "NONE": 0.04
+            "open-category": 0.93,
+            "collect-page": 0.0
           },
-          "confidence": 0.91,
+          "confidence": 0.92,
           "usage": {
             "input_tokens": 560,
             "output_tokens": 59,
@@ -129,16 +129,16 @@
             "steps": [
               {
                 "n": 1,
-                "snapshot": "s_t_70fb33e5bb8a9f4b104309714ccb6cc6",
+                "snapshot": "s_t_2d8fa1a92e12cd9f6409846078603e1e",
                 "operation": "click",
                 "index": 5,
                 "probabilities": {
                   "op": {
-                    "SCROLL_DOWN": 0.0,
-                    "DONE": 0.0,
                     "WAIT": 0.0,
-                    "CLICK": 1.0,
-                    "BLOCKED": 0.0
+                    "BLOCKED": 0.0,
+                    "DONE": 0.0,
+                    "SCROLL_DOWN": 0.0,
+                    "CLICK": 1.0
                   },
                   "target": {
                     "1": 0.0,
@@ -189,21 +189,21 @@
                   "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
                   "title": "Mystery | Books to Scrape - Sandbox"
                 },
-                "elapsed_ms": 596
+                "elapsed_ms": 547
               },
               {
                 "n": 2,
-                "snapshot": "s_t_fa9c3f965527df8ec4e500b22040b4fa",
+                "snapshot": "s_t_3b98acc88208880980374809ecb9be9c",
                 "operation": "done",
                 "index": null,
                 "probabilities": {
                   "op": {
-                    "BLOCKED": 0.01,
+                    "run_script:list-page": 0.0,
+                    "CLICK": 0.01,
                     "SCROLL_DOWN": 0.0,
-                    "DONE": 0.97,
+                    "BLOCKED": 0.0,
                     "WAIT": 0.0,
-                    "run_script:list-page": 0.01,
-                    "CLICK": 0.01
+                    "DONE": 0.99
                   },
                   "target": {}
                 },
@@ -211,7 +211,7 @@
                   "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
                   "title": "Mystery | Books to Scrape - Sandbox"
                 },
-                "elapsed_ms": 1376
+                "elapsed_ms": 1447
               }
             ]
           }
@@ -234,7 +234,7 @@
           }
         ],
         "outcome": "verified",
-        "elapsed_ms": 2224
+        "elapsed_ms": 2215
       },
       {
         "slug": "collect-page",
@@ -266,7 +266,7 @@
           }
         ],
         "outcome": "verified",
-        "elapsed_ms": 113
+        "elapsed_ms": 106
       },
       {
         "slug": "next-page",
@@ -276,13 +276,13 @@
         "choice": {
           "key": "next-page",
           "probabilities": {
-            "collect-page": 0.0,
-            "open-category": 0.93,
+            "NONE": 0.04,
             "read-page": 0.03,
             "DONE": 0.0,
-            "NONE": 0.04
+            "open-category": 0.93,
+            "collect-page": 0.0
           },
-          "confidence": 0.91,
+          "confidence": 0.92,
           "usage": {
             "input_tokens": 560,
             "output_tokens": 59,
@@ -296,17 +296,17 @@
             "steps": [
               {
                 "n": 1,
-                "snapshot": "s_t_b3db840e2dde02f943e7e2e5b416cfea",
+                "snapshot": "s_t_fcd71f6b3018abf3a53ee5e23769653f",
                 "operation": "scroll_down",
                 "index": null,
                 "probabilities": {
                   "op": {
-                    "run_script:list-page": 0.01,
-                    "WAIT": 0.01,
+                    "BLOCKED": 0.38,
+                    "SCROLL_DOWN": 0.59,
+                    "CLICK": 0.02,
                     "DONE": 0.0,
-                    "CLICK": 0.03,
-                    "BLOCKED": 0.4,
-                    "SCROLL_DOWN": 0.55
+                    "WAIT": 0.0,
+                    "run_script:list-page": 0.01
                   },
                   "target": {}
                 },
@@ -314,22 +314,22 @@
                   "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
                   "title": "Mystery | Books to Scrape - Sandbox"
                 },
-                "elapsed_ms": 1558
+                "elapsed_ms": 1633
               },
               {
                 "n": 2,
-                "snapshot": "s_t_782ea306bff785a5e648809eae96d4a8",
+                "snapshot": "s_t_436b246f06500bb69d42a3038903cfdd",
                 "operation": "scroll_down",
                 "index": null,
                 "probabilities": {
                   "op": {
                     "WAIT": 0.01,
-                    "run_script:list-page": 0.0,
+                    "SCROLL_UP": 0.04,
                     "CLICK": 0.14,
-                    "DONE": 0.03,
-                    "SCROLL_DOWN": 0.45,
-                    "BLOCKED": 0.33,
-                    "SCROLL_UP": 0.04
+                    "DONE": 0.02,
+                    "run_script:list-page": 0.0,
+                    "BLOCKED": 0.4,
+                    "SCROLL_DOWN": 0.39
                   },
                   "target": {}
                 },
@@ -337,22 +337,22 @@
                   "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
                   "title": "Mystery | Books to Scrape - Sandbox"
                 },
-                "elapsed_ms": 2081
+                "elapsed_ms": 2150
               },
               {
                 "n": 3,
-                "snapshot": "s_t_9c471b6f836012e008548e2a4ac15ecf",
+                "snapshot": "s_t_b7244e7b4797312720eaab4c6e5884d5",
                 "operation": "scroll_down",
                 "index": null,
                 "probabilities": {
                   "op": {
-                    "WAIT": 0.01,
-                    "SCROLL_DOWN": 0.35,
                     "run_script:list-page": 0.0,
-                    "DONE": 0.02,
-                    "SCROLL_UP": 0.05,
-                    "CLICK": 0.12,
-                    "BLOCKED": 0.45
+                    "BLOCKED": 0.48,
+                    "SCROLL_UP": 0.06,
+                    "CLICK": 0.1,
+                    "DONE": 0.01,
+                    "WAIT": 0.01,
+                    "SCROLL_DOWN": 0.34
                   },
                   "target": {}
                 },
@@ -360,45 +360,21 @@
                   "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
                   "title": "Mystery | Books to Scrape - Sandbox"
                 },
-                "elapsed_ms": 2582
+                "elapsed_ms": 2714
               },
               {
                 "n": 4,
-                "snapshot": "s_t_2786151aed4adf49732abd58c660413e",
-                "operation": "scroll_down",
-                "index": null,
-                "probabilities": {
-                  "op": {
-                    "SCROLL_DOWN": 0.33,
-                    "WAIT": 0.01,
-                    "BLOCKED": 0.51,
-                    "CLICK": 0.08,
-                    "SCROLL_UP": 0.06,
-                    "DONE": 0.01,
-                    "run_script:list-page": 0.0
-                  },
-                  "target": {}
-                },
-                "after": {
-                  "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
-                  "title": "Mystery | Books to Scrape - Sandbox"
-                },
-                "elapsed_ms": 3078
-              },
-              {
-                "n": 5,
-                "snapshot": "s_t_c541b3b0f0836acc75176d92b222d2bf",
+                "snapshot": "s_t_ecd1cd6f9aa3636c988aa2010e5e2349",
                 "operation": "click",
                 "index": 57,
                 "probabilities": {
                   "op": {
-                    "SCROLL_UP": 0.0,
-                    "SCROLL_DOWN": 0.0,
-                    "DONE": 0.0,
-                    "WAIT": 0.0,
                     "run_script:list-page": 0.0,
+                    "WAIT": 0.0,
                     "CLICK": 1.0,
-                    "BLOCKED": 0.0
+                    "BLOCKED": 0.0,
+                    "SCROLL_UP": 0.0,
+                    "DONE": 0.0
                   },
                   "target": {
                     "1": 0.0,
@@ -432,7 +408,7 @@
                   "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
                   "title": "Mystery | Books to Scrape - Sandbox"
                 },
-                "elapsed_ms": 3584
+                "elapsed_ms": 3242
               }
             ],
             "reason": "the step's until checks hold"
@@ -466,12 +442,12 @@
     "data": {
       "model_calls_by_kind": {
         "text_helper": 1,
-        "operator": 8,
+        "operator": 7,
         "playbook": 1,
         "procedure": 2
       },
       "cost_unreported": 0,
-      "reported_cost": 0.001933696,
+      "reported_cost": 0.0016278920000000001,
       "count": 32,
       "first": [
         {
@@ -529,8 +505,8 @@
         }
       ]
     },
-    "model_calls": 12,
-    "model_cost": 0.001933696,
+    "model_calls": 11,
+    "model_cost": 0.0016278920000000001,
     "operator_steps": [],
     "operator_state": {
       "status": "done",
@@ -546,8 +522,8 @@
       ],
       "page": {
         "snapshot": {
-          "snapshot": "s_t_ecf125c4bad7800728b7b64ed457ee51",
-          "tab": "t_601d40538bb9a230a20bf6dca23b60c0",
+          "snapshot": "s_t_c068009b760f2b37deae099155262be3",
+          "tab": "t_7383ad66502b19e81883c56e1e45713a",
           "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
           "title": "Mystery | Books to Scrape - Sandbox",
           "rows": [
@@ -880,17 +856,17 @@
         {
           "step": {
             "n": 1,
-            "snapshot": "s_t_b3db840e2dde02f943e7e2e5b416cfea",
+            "snapshot": "s_t_fcd71f6b3018abf3a53ee5e23769653f",
             "operation": "scroll_down",
             "index": null,
             "probabilities": {
               "op": {
-                "run_script:list-page": 0.01,
-                "WAIT": 0.01,
+                "BLOCKED": 0.38,
+                "SCROLL_DOWN": 0.59,
+                "CLICK": 0.02,
                 "DONE": 0.0,
-                "CLICK": 0.03,
-                "BLOCKED": 0.4,
-                "SCROLL_DOWN": 0.55
+                "WAIT": 0.0,
+                "run_script:list-page": 0.01
               },
               "target": {}
             },
@@ -898,31 +874,31 @@
               "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
               "title": "Mystery | Books to Scrape - Sandbox"
             },
-            "elapsed_ms": 1558
+            "elapsed_ms": 1633
           },
           "page_changed": true,
           "option": null,
           "outcome": "executed",
           "model_operation": "scroll_down",
           "rescue": false,
-          "input_ms": 1007,
+          "input_ms": 1144,
           "settle_ms": 50
         },
         {
           "step": {
             "n": 2,
-            "snapshot": "s_t_782ea306bff785a5e648809eae96d4a8",
+            "snapshot": "s_t_436b246f06500bb69d42a3038903cfdd",
             "operation": "scroll_down",
             "index": null,
             "probabilities": {
               "op": {
                 "WAIT": 0.01,
-                "run_script:list-page": 0.0,
+                "SCROLL_UP": 0.04,
                 "CLICK": 0.14,
-                "DONE": 0.03,
-                "SCROLL_DOWN": 0.45,
-                "BLOCKED": 0.33,
-                "SCROLL_UP": 0.04
+                "DONE": 0.02,
+                "run_script:list-page": 0.0,
+                "BLOCKED": 0.4,
+                "SCROLL_DOWN": 0.39
               },
               "target": {}
             },
@@ -930,31 +906,31 @@
               "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
               "title": "Mystery | Books to Scrape - Sandbox"
             },
-            "elapsed_ms": 2081
+            "elapsed_ms": 2150
           },
-          "page_changed": false,
+          "page_changed": true,
           "option": null,
           "outcome": "executed",
-          "model_operation": "scroll_down",
-          "rescue": false,
-          "input_ms": 37,
+          "model_operation": "blocked",
+          "rescue": true,
+          "input_ms": 82,
           "settle_ms": 50
         },
         {
           "step": {
             "n": 3,
-            "snapshot": "s_t_9c471b6f836012e008548e2a4ac15ecf",
+            "snapshot": "s_t_b7244e7b4797312720eaab4c6e5884d5",
             "operation": "scroll_down",
             "index": null,
             "probabilities": {
               "op": {
-                "WAIT": 0.01,
-                "SCROLL_DOWN": 0.35,
                 "run_script:list-page": 0.0,
-                "DONE": 0.02,
-                "SCROLL_UP": 0.05,
-                "CLICK": 0.12,
-                "BLOCKED": 0.45
+                "BLOCKED": 0.48,
+                "SCROLL_UP": 0.06,
+                "CLICK": 0.1,
+                "DONE": 0.01,
+                "WAIT": 0.01,
+                "SCROLL_DOWN": 0.34
               },
               "target": {}
             },
@@ -962,63 +938,30 @@
               "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
               "title": "Mystery | Books to Scrape - Sandbox"
             },
-            "elapsed_ms": 2582
+            "elapsed_ms": 2714
           },
           "page_changed": true,
           "option": null,
           "outcome": "executed",
           "model_operation": "blocked",
           "rescue": true,
-          "input_ms": 25,
+          "input_ms": 112,
           "settle_ms": 50
         },
         {
           "step": {
             "n": 4,
-            "snapshot": "s_t_2786151aed4adf49732abd58c660413e",
-            "operation": "scroll_down",
-            "index": null,
-            "probabilities": {
-              "op": {
-                "SCROLL_DOWN": 0.33,
-                "WAIT": 0.01,
-                "BLOCKED": 0.51,
-                "CLICK": 0.08,
-                "SCROLL_UP": 0.06,
-                "DONE": 0.01,
-                "run_script:list-page": 0.0
-              },
-              "target": {}
-            },
-            "after": {
-              "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
-              "title": "Mystery | Books to Scrape - Sandbox"
-            },
-            "elapsed_ms": 3078
-          },
-          "page_changed": true,
-          "option": null,
-          "outcome": "executed",
-          "model_operation": "blocked",
-          "rescue": true,
-          "input_ms": 45,
-          "settle_ms": 50
-        },
-        {
-          "step": {
-            "n": 5,
-            "snapshot": "s_t_c541b3b0f0836acc75176d92b222d2bf",
+            "snapshot": "s_t_ecd1cd6f9aa3636c988aa2010e5e2349",
             "operation": "click",
             "index": 57,
             "probabilities": {
               "op": {
-                "SCROLL_UP": 0.0,
-                "SCROLL_DOWN": 0.0,
-                "DONE": 0.0,
-                "WAIT": 0.0,
                 "run_script:list-page": 0.0,
+                "WAIT": 0.0,
                 "CLICK": 1.0,
-                "BLOCKED": 0.0
+                "BLOCKED": 0.0,
+                "SCROLL_UP": 0.0,
+                "DONE": 0.0
               },
               "target": {
                 "1": 0.0,
@@ -1052,7 +995,7 @@
               "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
               "title": "Mystery | Books to Scrape - Sandbox"
             },
-            "elapsed_ms": 3584
+            "elapsed_ms": 3242
           },
           "page_changed": true,
           "option": null,
@@ -1067,22 +1010,22 @@
         {
           "outcome": "executed",
           "n": 1,
-          "snapshot": "s_t_b3db840e2dde02f943e7e2e5b416cfea",
+          "snapshot": "s_t_fcd71f6b3018abf3a53ee5e23769653f",
           "operation": "scroll_down",
           "index": null,
           "option": null,
           "probabilities": {
             "op": {
-              "run_script:list-page": 0.01,
-              "WAIT": 0.01,
+              "BLOCKED": 0.38,
+              "SCROLL_DOWN": 0.59,
+              "CLICK": 0.02,
               "DONE": 0.0,
-              "CLICK": 0.03,
-              "BLOCKED": 0.4,
-              "SCROLL_DOWN": 0.55
+              "WAIT": 0.0,
+              "run_script:list-page": 0.01
             },
             "target": {}
           },
-          "confidence": 0.47,
+          "confidence": 0.49,
           "rescued_operation": null,
           "usage": {
             "input_tokens": 5119,
@@ -1090,111 +1033,81 @@
             "cost": 0.000214998,
             "retries": 0
           },
-          "elapsed_ms": 347
+          "elapsed_ms": 345
         },
         {
           "outcome": "executed",
           "n": 2,
-          "snapshot": "s_t_782ea306bff785a5e648809eae96d4a8",
-          "operation": "scroll_down",
+          "snapshot": "s_t_436b246f06500bb69d42a3038903cfdd",
+          "operation": "blocked",
           "index": null,
           "option": null,
           "probabilities": {
             "op": {
               "WAIT": 0.01,
-              "run_script:list-page": 0.0,
+              "SCROLL_UP": 0.04,
               "CLICK": 0.14,
-              "DONE": 0.03,
-              "SCROLL_DOWN": 0.45,
-              "BLOCKED": 0.33,
-              "SCROLL_UP": 0.04
+              "DONE": 0.02,
+              "run_script:list-page": 0.0,
+              "BLOCKED": 0.4,
+              "SCROLL_DOWN": 0.39
             },
             "target": {}
           },
-          "confidence": 0.34,
-          "rescued_operation": null,
+          "confidence": 0.3,
+          "rescued_operation": "scroll_down",
           "usage": {
             "input_tokens": 7218,
             "output_tokens": 596,
             "cost": 0.000303156,
             "retries": 0
           },
-          "elapsed_ms": 385
+          "elapsed_ms": 334
         },
         {
           "outcome": "executed",
           "n": 3,
-          "snapshot": "s_t_9c471b6f836012e008548e2a4ac15ecf",
+          "snapshot": "s_t_b7244e7b4797312720eaab4c6e5884d5",
           "operation": "blocked",
           "index": null,
           "option": null,
           "probabilities": {
             "op": {
-              "WAIT": 0.01,
-              "SCROLL_DOWN": 0.35,
               "run_script:list-page": 0.0,
-              "DONE": 0.02,
-              "SCROLL_UP": 0.05,
-              "CLICK": 0.12,
-              "BLOCKED": 0.45
+              "BLOCKED": 0.48,
+              "SCROLL_UP": 0.06,
+              "CLICK": 0.1,
+              "DONE": 0.01,
+              "WAIT": 0.01,
+              "SCROLL_DOWN": 0.34
             },
             "target": {}
           },
-          "confidence": 0.37,
+          "confidence": 0.4,
           "rescued_operation": "scroll_down",
           "usage": {
-            "input_tokens": 7250,
-            "output_tokens": 596,
-            "cost": 0.0003045,
+            "input_tokens": 4376,
+            "output_tokens": 340,
+            "cost": 0.000183792,
             "retries": 0
           },
-          "elapsed_ms": 375
+          "elapsed_ms": 352
         },
         {
           "outcome": "executed",
           "n": 4,
-          "snapshot": "s_t_2786151aed4adf49732abd58c660413e",
-          "operation": "blocked",
-          "index": null,
-          "option": null,
-          "probabilities": {
-            "op": {
-              "SCROLL_DOWN": 0.33,
-              "WAIT": 0.01,
-              "BLOCKED": 0.51,
-              "CLICK": 0.08,
-              "SCROLL_UP": 0.06,
-              "DONE": 0.01,
-              "run_script:list-page": 0.0
-            },
-            "target": {}
-          },
-          "confidence": 0.43,
-          "rescued_operation": "scroll_down",
-          "usage": {
-            "input_tokens": 4408,
-            "output_tokens": 340,
-            "cost": 0.000185136,
-            "retries": 0
-          },
-          "elapsed_ms": 356
-        },
-        {
-          "outcome": "executed",
-          "n": 5,
-          "snapshot": "s_t_c541b3b0f0836acc75176d92b222d2bf",
+          "snapshot": "s_t_ecd1cd6f9aa3636c988aa2010e5e2349",
           "operation": "click",
           "index": 57,
           "option": null,
           "probabilities": {
             "op": {
-              "SCROLL_UP": 0.0,
-              "SCROLL_DOWN": 0.0,
-              "DONE": 0.0,
-              "WAIT": 0.0,
               "run_script:list-page": 0.0,
+              "WAIT": 0.0,
               "CLICK": 1.0,
-              "BLOCKED": 0.0
+              "BLOCKED": 0.0,
+              "SCROLL_UP": 0.0,
+              "DONE": 0.0
             },
             "target": {
               "1": 0.0,
@@ -1224,32 +1137,32 @@
               "57": 1.0
             }
           },
-          "confidence": 1.0,
+          "confidence": 0.99,
           "rescued_operation": null,
           "usage": {
-            "input_tokens": 3832,
-            "output_tokens": 282,
-            "cost": 0.000160944,
+            "input_tokens": 3782,
+            "output_tokens": 273,
+            "cost": 0.000158844,
             "retries": 0
           },
-          "elapsed_ms": 330
+          "elapsed_ms": 338
         }
       ],
       "text_calls": [],
       "metrics": {
-        "actions": 5,
-        "predictions": 5,
+        "actions": 4,
+        "predictions": 4,
         "text_calls": 0,
-        "observation_calls": 6,
-        "observation_retries": 1,
+        "observation_calls": 5,
+        "observation_retries": 0,
         "stale_decisions": 0,
         "bootstrap_ms": 0,
-        "observation_ms": 641,
-        "prediction_ms": 1793,
+        "observation_ms": 509,
+        "prediction_ms": 1369,
         "text_helper_ms": 0,
-        "input_ms": 1125,
-        "settle_ms": 300,
-        "elapsed_ms": 3584
+        "input_ms": 1349,
+        "settle_ms": 250,
+        "elapsed_ms": 3242
       }
     },
     "output_kinds": [
@@ -1257,8 +1170,8 @@
       "operator-state"
     ],
     "final": {
-      "snapshot": "s_t_0f2498fab08699a64ea2875e61f2a924",
-      "tab": "t_601d40538bb9a230a20bf6dca23b60c0",
+      "snapshot": "s_t_cf85c5548cba3f07300f621425655cf7",
+      "tab": "t_7383ad66502b19e81883c56e1e45713a",
       "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
       "title": "books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
       "rows": [

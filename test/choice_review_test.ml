@@ -146,6 +146,7 @@ let review ~probability ~threshold ~content ~consulted:_ ~valid:_ () =
                     entry = "https://books.example/";
                     pages = [];
                     procedures = [];
+                    shapes = None;
                     scripts = None;
                   };
                 checks = [];

@@ -62,6 +62,9 @@ type step_request = {
   max_steps : int;
   deadline_s : int;
   dry_run : bool;
+  script_offers : url:string -> text:string -> Jev_request.offered_script list;
+  on_script : url:string -> string -> (Jev_request.script_effect, P.error) result;
+  reached : (start_url:string -> P.snapshot -> text:string -> bool) option;
 }
 (** run-d82w: one playbook step as the operator level receives it — the goal with the
     hint shaping it, and the step's own cap and deadline. *)
@@ -456,6 +459,7 @@ type steps_outcome =
       (** extr-8o1h: a non-done operator step prevented remaining steps, with no
            automatic replay or verification of an unfinished page. *)
   | Steps_failed of state * P.run_drive list * string
+  | Steps_unfilled of state * string
       (** extr-8o1h: a script step was rejected. The procedure's remaining steps do not
           run and, unlike a failed expectation, nothing is verified: the attempt failed
           for the reason given. *)
@@ -463,7 +467,7 @@ type steps_outcome =
       (** The run ended inside a step: a dialog, or a planner turn a called procedure
           asked for. *)
 
-let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : args) : (P.run_result, P.error) result =
+let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~installed ?discovery (args : args) : (P.run_result, P.error) result =
   let installed = installed_playbooks installed in
   let started = now () in
   let deadline = started +. float_of_int args.deadline_s in
@@ -695,9 +699,18 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
      what the caller passed (a [use] step's args), from what the run already knows, or from
      one text-helper call — and the values travel with the steps, so a placeholder is
      substituted or the run blocks asking the planner for the missing fact. *)
-  let fill_arguments (st : state) (proc : Playbook.procedure) ~values =
-    let declared = Option.value ~default:[] proc.Playbook.args in
-    let ask st name =
+  let const_string = function
+    | `String value -> value
+    | `Int n -> string_of_int n
+    | `Intlit value -> value
+    | `Bool value -> string_of_bool value
+    | `Float value ->
+        if Float.is_integer value then string_of_int (int_of_float value)
+        else string_of_float value
+    | other -> Yojson.Safe.to_string other
+  in
+  let fill_declared ?(ask = fun context -> fill_args t context) ?(carry = true) (st : state) declared ~values ~missing =
+    let ask_name st name =
       let context =
         Text_helper.
           {
@@ -708,32 +721,39 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
             recent = [];
           }
       in
-      match fill_args t context with
+      match ask context with
       | Error error -> Error error
-      | Ok None ->
-          Ok
-            (Unfilled
-               ( st,
-                 Printf.sprintf "no value for argument %S of procedure %s" name
-                   proc.Playbook.slug ))
-      | Ok (Some value) -> Ok (Filled ({ st with known = (name, value) :: st.known }, [ (name, value) ]))
+      | Ok None -> Ok (Unfilled (st, missing name))
+      | Ok (Some value) ->
+          Ok (Filled ({ st with known = (name, value) :: st.known }, [ (name, value) ]))
     in
     let rec go st acc = function
-      | [] ->
-          (* The caller's values and the run's known arguments travel with the resolved
-             ones, so a step of a procedure that declares no argument still sees what the
-             mission supplied (run-5rll). *)
-          Ok (Filled (st, acc @ values @ st.known))
-      | name :: rest -> (
-          match (List.assoc_opt name values, List.assoc_opt name st.known) with
-          | Some value, _ | None, Some value -> go st (acc @ [ (name, value) ]) rest
-          | None, None -> (
-              match ask st name with
-              | Error error -> Error error
-              | Ok (Unfilled _ as unfilled) -> Ok unfilled
-              | Ok (Filled (st, answered)) -> go st (acc @ answered) rest))
+      | [] -> Ok (Filled (st, if carry then acc @ values @ st.known else acc))
+      | (decl : Playbook.arg_decl) :: rest -> (
+          let name = decl.name in
+          match decl.source with
+          | Playbook.Const json ->
+              let value = const_string json in
+              let st = { st with known = (name, value) :: List.remove_assoc name st.known } in
+              go st (acc @ [ (name, value) ]) rest
+          | Playbook.From_mission { optional } -> (
+              match (List.assoc_opt name values, List.assoc_opt name st.known) with
+              | Some value, _ | None, Some value -> go st (acc @ [ (name, value) ]) rest
+              | None, None -> (
+                  match ask_name st name with
+                  | Error error -> Error error
+                  | Ok (Unfilled _) when optional -> go st acc rest
+                  | Ok (Unfilled _ as unfilled) -> Ok unfilled
+                  | Ok (Filled (st, answered)) -> go st (acc @ answered) rest)))
     in
     go st [] declared
+  in
+  let fill_arguments (st : state) (proc : Playbook.procedure) ~values =
+    fill_declared st
+      (Option.value ~default:[] proc.Playbook.args)
+      ~values
+      ~missing:(fun name ->
+        Printf.sprintf "no value for argument %S of procedure %s" name proc.Playbook.slug)
   in
 
   let resolved_checks (book : Playbook.loaded) (proc : Playbook.procedure) values =
@@ -895,8 +915,135 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
           in
           let cap = min cap (args.max_steps - st.steps_used) in
           let cap = match discovery with None -> cap | Some d -> min cap (d.max_steps - st.steps_used) in
+          let started_url = st.observation.url in
+          let side = ref st in
+          let first_line text =
+            match String.index_opt text '\n' with None -> text | Some i -> String.sub text 0 i
+          in
+          let summary name value =
+            match value with
+            | `List items -> Printf.sprintf "ran %s: %d records" name (List.length items)
+            | other ->
+                let fields =
+                  match other with
+                  | `Assoc pairs ->
+                      List.filter_map
+                        (fun (key, value) ->
+                          match value with
+                          | `String s -> Some (key ^ "=" ^ s)
+                          | `Int n -> Some (key ^ "=" ^ string_of_int n)
+                          | `Intlit s -> Some (key ^ "=" ^ s)
+                          | `Float f -> Some (key ^ "=" ^ string_of_float f)
+                          | `Bool b -> Some (key ^ "=" ^ string_of_bool b)
+                          | _ -> None)
+                        pairs
+                  | _ -> []
+                in
+                let text =
+                  if fields = [] then Yojson.Safe.to_string other else String.concat ", " fields
+                in
+                let text = if String.length text <= 120 then text else String.sub text 0 120 in
+                Printf.sprintf "ran %s: %s" name text
+          in
+          (* pbk-hcwy: a script JEV already ran on this address in this step is not run
+             again — its records are collected; JEV is told so and can finish. *)
+          let already = ref [] in
+          let on_script ~url name =
+            match Playbook.script_named book name with
+            | None -> Error (internal ("unknown script " ^ name))
+            | Some _ when List.mem_assoc (name, url) !already ->
+                Ok
+                  (Jev_request.Script_continue
+                     {
+                       summary =
+                         Printf.sprintf "ran %s: already collected on this page (%s)" name
+                           (List.assoc (name, url) !already);
+                     })
+            | Some script -> (
+                match
+                  fill_declared ~carry:false ~ask:direct_fill !side script.Playbook.args ~values
+                    ~missing:(fun arg -> Printf.sprintf "no value for argument %S" arg)
+                with
+                | Error error -> Error error
+                | Ok (Unfilled (_, reason)) ->
+                    let argument =
+                      match String.index_opt reason '"' with
+                      | None -> reason
+                      | Some i ->
+                          let rest = String.sub reason (i + 1) (String.length reason - i - 1) in
+                          (match String.index_opt rest '"' with
+                          | None -> reason
+                          | Some j -> String.sub rest 0 j)
+                    in
+                    Ok (Jev_request.Script_blocked { argument })
+                | Ok (Filled (filled, args)) -> (
+                    match direct_script script args with
+                    | Error error -> Error error
+                    | Ok (Rejected { reason; elapsed_ms }) ->
+                        side :=
+                          { filled with
+                            pending_scripts =
+                              P.{ script = name; url; records = 0; bytes = 0; elapsed_ms; error = Some reason }
+                              :: filled.pending_scripts };
+                        Ok (Jev_request.Script_continue { summary = Printf.sprintf "ran %s: failed (%s)" name (first_line reason) })
+                    | Ok (Collected { value; records; bytes; elapsed_ms }) ->
+                        let items = match value with `List items -> items | one -> [ one ] in
+                        let rec collect st = function
+                          | [] -> Ok st
+                          | item :: rest -> (
+                              match accept_record ~book ~procedure:proc.Playbook.slug ~script:name item with
+                              | Error error -> Error error
+                              | Ok false -> collect st rest
+                              | Ok true ->
+                                  let sample =
+                                    if List.length st.records >= 5 then st.records
+                                    else
+                                      let text = Yojson.Safe.to_string item in
+                                      (if String.length text <= 2048 then item
+                                       else `String (String.sub text 0 2048 ^ "..."))
+                                      :: st.records
+                                  in
+                                  collect { st with records = sample; collected_count = st.collected_count + 1 } rest)
+                        in
+                        match collect filled items with
+                        | Error error -> Error error
+                        | Ok collected_st ->
+                            side :=
+                              { collected_st with
+                                pending_scripts =
+                                  P.{ script = name; url; records; bytes; elapsed_ms; error = None }
+                                  :: collected_st.pending_scripts };
+                            let line = summary name value in
+                            let prefix = "ran " ^ name ^ ": " in
+                            already :=
+                              ( (name, url),
+                                String.sub line (String.length prefix)
+                                  (String.length line - String.length prefix) )
+                              :: !already;
+                            Ok (Jev_request.Script_continue { summary = line })))
+          in
           let request =
-            { goal = goal_text; hint = goal.Playbook.hint; recent = st.operator_history; max_steps = cap; deadline_s; dry_run = false }
+            { goal = goal_text; hint = goal.Playbook.hint; recent = st.operator_history; max_steps = cap; deadline_s; dry_run = false;
+              script_offers = (fun ~url ~text ->
+                List.map (fun (script : Playbook.script) -> Jev_request.{ name = script.name; description = script.description })
+                  (Playbook.offered_scripts book ~url ~text));
+              on_script;
+              reached =
+                Option.map
+                  (fun sentences ~start_url (snapshot : P.snapshot) ~text ->
+                    Playbook.until_holds ~values book.Playbook.playbook sentences ~start_url
+                      ~url:snapshot.P.url
+                      Playbook.
+                        {
+                          kind =
+                            page_kind book.Playbook.playbook.pages ~url:snapshot.P.url ~text;
+                          text;
+                          dialog = snapshot.P.dialog <> None;
+                          rows =
+                            List.map (fun (row : P.row) -> (row.P.role, row.P.name)) snapshot.P.rows;
+                          downloads = [];
+                        })
+                  goal.Playbook.until }
           in
           (if cap <= 0 then
              Ok (Steps_finish (finish st (status "limit") ~reason:"the mission action budget was exhausted" ()))
@@ -906,7 +1053,14 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
           | Error error when discovery <> None && String.starts_with ~prefix:"discovery stopped before " error.P.message ->
               Ok (Steps_finish (finish st (status "blocked") ~reason:error.P.message ()))
           | Error error -> Error error
+          | Ok drive when
+              drive_is "blocked" drive.P.status
+              && Option.fold ~none:false
+                   ~some:(fun reason -> String.starts_with ~prefix:"no value for argument " reason)
+                   drive.P.reason ->
+              Ok (Steps_unfilled (!side, Option.value ~default:"no value for argument" drive.P.reason))
           | Ok drive ->
+              let st = !side in
               let st = { st with steps_used = st.steps_used + drive_actions drive;
                 operator_state = drive.operator_state;
                 operator_history = st.operator_history @ drive_recent drive.steps } in
@@ -942,6 +1096,16 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                              (Printf.sprintf "procedure %s was skipped: its first step ended %s"
                                 proc.Playbook.slug (P.Drive_status.to_string drive.P.status)) ))
                   else if drive_is "done" drive.P.status then go st (entry :: drives) rest
+                  else if
+                    rest <> [] && drive_is "blocked" drive.P.status
+                    && drive.P.final.P.url <> started_url
+                  then
+                    (* pbk-eyya: JEV often answers BLOCKED after the navigation it was asked
+                       for, because no further click remains. The page did change, so the
+                       pinned steps that follow — the collector — still run. A blocked goal
+                       that did not move the page still stops, so a failed click cannot skip
+                       a remaining script. *)
+                    go st (entry :: drives) rest
                   else if rest <> [] then
                     let reason =
                       Printf.sprintf "procedure %s stopped at step %S (%s): %s; %d step(s) remain"
@@ -1138,6 +1302,7 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
                   ~reason:(Some reason)
               in
               Ok (Finish (finish st (status "blocked") ~reason ()))
+          | Ok (Steps_unfilled (st, reason)) -> planner st ~trigger:Arguments ~reason
           | Ok (Steps_failed (st, current_drives, why)) ->
               let drives = previous_drives @ current_drives in
               if n < 2 then attempt (n + 1) st drives
@@ -1259,6 +1424,8 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
               else match steps st book next values ~optional:false with
               | Error error -> Error error
               | Ok (Steps_finish result) -> Ok (Finish result)
+              | Ok (Steps_unfilled (st, reason)) ->
+                  Ok (Finish (finish st (status "blocked") ~reason ()))
               | Ok (Steps_interrupted (st, drives, reason))
               | Ok (Steps_failed (st, drives, reason)) ->
                   let st = record st ~book ~proc:next ~planned:false
@@ -1404,7 +1571,10 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
       note = Some "No fitting playbook/procedure; the full mission continues on the current page without a planner." } in
     let st = { st with book = None; playbook_choices = route :: st.playbook_choices } in
     let request = { goal = args.mission; hint = None; recent = st.operator_history;
-      max_steps = max 0 (args.max_steps - st.steps_used); deadline_s = remaining (); dry_run = args.dry_run } in
+      max_steps = max 0 (args.max_steps - st.steps_used); deadline_s = remaining (); dry_run = args.dry_run;
+      script_offers = (fun ~url:_ ~text:_ -> []);
+      on_script = (fun ~url:_ _ -> Error (internal "on-the-fly missions have no scripts"));
+      reached = None } in
     if request.max_steps = 0 then
       Ok (Finish (finish st (status "limit") ~reason:"the mission action budget was exhausted before operator fallback" ()))
     else match execute_step t request with
@@ -1433,7 +1603,29 @@ let compute (t : token) ~on_record ~pause_ms ~now ~installed ?discovery (args : 
     let current = Option.map book_id st.book in
     let st = { st with book = Some book; switch = false;
       visited = book.playbook.site :: st.visited } in
-    if current = Some (book_id book) then Ok (Continue st)
+    (* pbk-eyya: a tab already on the book's site keeps its page — "collect the books on
+       this page" means this page, not the entry. *)
+    let host url =
+      match String.index_opt url ':' with
+      | Some i when i + 3 <= String.length url && String.sub url i 3 = "://" ->
+          let rest = String.sub url (i + 3) (String.length url - i - 3) in
+          let stop =
+            List.fold_left
+              (fun stop c -> match String.index_opt rest c with Some j -> min stop j | None -> stop)
+              (String.length rest) [ '/'; ':'; '?'; '#' ]
+          in
+          Some (String.lowercase_ascii (String.sub rest 0 stop))
+      | _ -> None
+    in
+    let site = String.lowercase_ascii book.playbook.site in
+    let on_site =
+      (match host st.observation.url with
+       | Some h -> h = site || String.ends_with ~suffix:("." ^ site) h || site = "www." ^ h
+       | None -> false)
+      || Playbook.page_kind book.playbook.pages ~url:st.observation.url ~text:st.observation.text
+         <> None
+    in
+    if current = Some (book_id book) || on_site then Ok (Continue st)
     else match navigate t book.playbook.entry with
     | Error error -> Error (with_trace st error)
     | Ok _ -> Result.map (fun observation -> Continue { st with observation }) (observe t ())
@@ -1697,7 +1889,7 @@ let loop ~(handler : handler) ~now ~installed ?discovery ?(on_record = fun _ -> 
            | None -> ())
     in
     let outcome = Model_usage.with_meter meter (fun () ->
-      Effect.Deep.match_with (fun () -> compute token ~on_record ~pause_ms ~now ~installed ?discovery args) ()
+      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_record ~pause_ms ~now ~installed ?discovery args) ()
       {
         retc = Fun.id;
         exnc = raise;

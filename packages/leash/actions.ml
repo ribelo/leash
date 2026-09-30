@@ -922,6 +922,25 @@ let operator_scroll ~cdp tab ~down =
           let* width, height = viewport cdp tab in
           let x, y = clamp ~width ~height (550., 650.) in
           let () = tab.engage () in
+          (* pbk-eyya: a wheel scroll lands asynchronously (smooth scrolling). The next
+             observation must see where it landed, or three scrolls read as a stall — the
+             Default category's page 4 did. Wait, bounded, for scrollY to move. *)
+          let before =
+            match
+              evaluate ~deadline:(Ox.Duration.ms 50) cdp tab "String(window.scrollY)"
+            with
+            | Ok json -> (
+                match E.Of_json.(at [ "result"; "value" ] (try_or_none string)) json with
+                | Ok (Some y)
+                  when y <> ""
+                       && String.for_all
+                            (fun c ->
+                              (c >= '0' && c <= '9') || c = '.' || c = '-' || c = 'e')
+                            y ->
+                    Some y
+                | _ -> None)
+            | Error _ -> None
+          in
           let* _ =
             call cdp ~session:tab.session "Input.dispatchMouseEvent"
               (E.object_
@@ -934,6 +953,36 @@ let operator_scroll ~cdp tab ~down =
                    ("pointerType", Some (E.string "mouse"));
                  ])
           in
+          (match before with
+          | None -> ()
+          | Some y -> (
+              let landed =
+                evaluate ~deadline:(Ox.Duration.ms 700) cdp tab
+                  (Printf.sprintf
+                     "new Promise(r=>{const s=performance.now();let \
+                      last=window.scrollY,still=0;(function f(){const \
+                      y=window.scrollY;if(y!==%s){if(y===last){still++;if(still>=2)return \
+                      r(String(y))}else{still=0;last=y}}if(performance.now()-s>500)return \
+                      r(String(y));setTimeout(f,16)})()})"
+                     y)
+              in
+              match landed with
+              | Ok json -> (
+                  match
+                    E.Of_json.(at [ "result"; "value" ] (try_or_none string)) json
+                  with
+                  | Ok (Some after) when after = y ->
+                      (* The wheel has not landed within half a second (a renderer
+                         short of frames defers it): put the document where the wheel
+                         was taking it, instantly. An absolute instant scroll replaces a
+                         smooth one still in flight, so the wheel cannot land twice. *)
+                      ignore
+                        (evaluate ~deadline:(Ox.Duration.ms 300) cdp tab
+                           (Printf.sprintf
+                              "window.scrollTo({top:Math.max(0,%s+(%d)),behavior:'instant'}),String(window.scrollY)"
+                              y delta))
+                  | _ -> ())
+              | Error _ -> ()));
           Ok ()))
 
 let operator_settle ~cdp tab ~autocomplete =

@@ -86,6 +86,24 @@ val elements : Protocol.snapshot -> element list
 
 type request
 
+type offered_script = { name : string; description : string }
+(** pbk-rai1: one script the operator question may offer. The criterion key is
+    {!run_script_prefix} plus [name]; the criterion text is [description]. *)
+
+val run_script_prefix : string
+(** pbk-otsl: pinned verbatim. The operator option is this prefix followed by the script
+    name, as in [run_script:list-page]. *)
+
+val run_script_rule : string
+(** pbk-rai1: appended to the operation rules only when a script is offered. *)
+
+type script_effect =
+  | Script_continue of { summary : string }
+  | Script_blocked of { argument : string }
+      (** pbk-3cq7 pbk-hcwy pbk-9549: what running a chosen script did. [Script_continue]
+          carries the one-line recent-actions summary. [Script_blocked] names a required
+          argument that could not be filled. *)
+
 val make :
   model:string ->
   goal:string ->
@@ -104,6 +122,9 @@ val make :
     [can_scroll_up] is [scrollY > 0]. The drive states them, so the request offers only
     the controls that apply. *)
 
+val with_scripts : request -> offered_script list -> request
+(** pbk-rai1: the scripts offered on this observation. *)
+
 val with_coverage : request -> Yojson.Safe.t -> request
 (** fly-crcc: attach exact guarded observation bounds and omissions. *)
 
@@ -118,6 +139,9 @@ val body : request -> Yojson.Safe.t
 
 type decision = {
   operation : Protocol.Operation.t;
+  script : string option;
+      (** pbk-rai1: [Some name] when the chosen key was [run_script:<name>]. [operation]
+          is then unused. *)
   index : int option;
   option : int option;
   confidence : float;

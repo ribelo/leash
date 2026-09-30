@@ -77,17 +77,24 @@ For an authorized example installation, save the following as `playbook.json` in
       "text_marker": "Example Domain"
     }
   ],
+  "shapes": {
+    "page": {"title": "string", "url": "url"}
+  },
   "scripts": {
     "page-info": {
-      "source": "return {title: document.title, url: location.href};",
-      "returns": {"title": "string", "url": "url"}
+      "source": "/** returns: \"page\" */\nreturn {title: document.title, url: location.href};",
+      "description": "Collect this page's title and URL.",
+      "pages": ["home"]
     }
   },
   "procedures": [
     {
-      "slug": "collect-page-info",
-      "description": "Collect this page's title and URL once.",
-      "steps": [{"script": "page-info"}],
+      "slug": "read-page",
+      "description": "Confirm the page and collect its title and URL.",
+      "steps": [
+        {"goal": "Confirm this is the Example Domain page."},
+        {"script": "page-info"}
+      ],
       "expect": ["the page is home", "no dialog is open"]
     }
   ]
@@ -113,11 +120,18 @@ This convenience snippet needs Bash and jq for `.tab`. Without jq, read that ret
 
 For a larger script, declare `"file": "scripts/list-items.js"` instead of `source`. Exactly one is required; inline source is capped at 4096 bytes. Files must be relative `.js` paths inside the playbook, with no `..`; resolved symlinks cannot escape the directory. The script is the body of an async function receiving `args` (an object of strings), not a standalone module. It may use the logged-in page's same-origin `fetch` without extracting session tokens. Keep requests within the task and site permissions.
 
-`returns` declares a record or list of records. Shapes use `string`, `number`, `boolean`, `url` (absolute http/https), nested objects, or a one-element array describing list items. A field name ending in `?` is optional (absent/null allowed). Undeclared fields, required nulls, missing fields, and wrong types fail closed with `script-invalid` and the first bad path. Throws/rejections are `script-failed`. Serialized output defaults to an 8 MiB bound; `max_bytes` may increase it only up to 16 MiB. Larger output is `too-large`. Calls are bounded and serialized on the tab.
+`returns` sits beside the script, not as an inline shape on the declaration. Put a leading `/** returns: ... */` block in the `.js` file, or `scripts/<name>.returns.json`, or `"returns": "<shape>"` naming an entry of the playbook's `shapes` object. The `...` is a shape or a shape name. A record or a list of records is valid. Shapes use `string`, `number`, `boolean`, `url` (absolute http/https), nested objects, or a one-element array describing list items. A field name ending in `?` is optional (absent/null allowed). Undeclared fields, required nulls, missing fields, and wrong types fail closed with `script-invalid` and the first bad path. Throws/rejections are `script-failed`. Serialized output defaults to an 8 MiB bound; `max_bytes` may increase it only up to 16 MiB. Larger output is `too-large`. Calls are bounded and serialized on the tab.
 
-Procedures have a lowercase slug, a useful description, optional string argument names, steps, and a **nonempty `expect` list**. `{name}` placeholders substitute supplied string arguments. Step forms are:
+A script declares `description` in one sentence and optional `pages` (page-kind names; absent means every page of the site; `[]` means never offered — a control script for `repeat.until` only). Inside a playbook procedure, the operator question offers `run_script:<name>` for every script whose pages match the current page kind, beside click, type, select, scroll, wait, done and blocked. The criterion text is the description. JEV can choose the script the way it chooses a click. The runner fills the script's declared args, validates the result, and puts a one-line summary in recent actions (`ran list-page: 20 records`, or scalar fields of at most 120 characters), never the records. A throw or invalid result is `ran <name>: failed (<first line>)` and does not end the procedure; the procedure's `expect` still decides. A script JEV already ran on the same address in the same step is not run again; JEV reads `ran <name>: already collected on this page (…)`. On-the-fly missions have no scripts. A script runs only after the page's document has loaded. A chosen playbook opens its `entry` only when the tab is elsewhere (blank, or another site); a tab already on the site keeps its page, so "collect the books on this page" means this page.
+
+Every script and procedure argument declares its source: `{"from":"mission"}`, `{"from":"mission","optional":true}`, or `{"const":<value>}`. A list of names is refused. `playbook check` and load fail if a script reads `args.<ident>` that is not declared. A required mission arg the text helper cannot fill blocks the run and names the arg. Known values are reused.
+
+The loader refuses a playbook in which no procedure has a goal step, with the message: every procedure is a script; use `leash eval` or `playbook test`, or add the goal steps JEV drives. A script-only procedure is allowed only as a `use:` sub-procedure. `playbook check` refuses a directory with stray JSON beside `playbook.json` (one book file only). Old inline `returns` and undeclared args are refused with a message naming the new form.
+
+Procedures have a lowercase slug, a useful description, declared arguments, steps, and a **nonempty `expect` list**. `{name}` placeholders substitute supplied string arguments. Step forms are:
 
 - `{"goal":"Search for {query}"}`: operator-driven UI goal.
+- `{"goal":"Open the next page of this category.","until":["the address changed","the page is category"]}`: the step ends `done` as soon as every `until` sentence holds after an executed action, without asking JEV to judge the page it landed on. Use it for relative goals ("next", "another"). Each sentence is a code checker or `the address changed` (the URL differs from the step's start); a judgment sentence is refused at load.
 - `{"use":"another-procedure","args":{"query":"{query}"}}`: compose a known procedure; cycles are refused. `optional: true` permits a blocked subprocedure to be skipped.
 - `{"script":"list-items","args":{"brand":"{brand}"}}`: run a prepared collection script.
 - `{"navigate":{"script":"next-url"}}`: run a prepared control script returning exactly `{url: string}`, then navigate the real browser tab. Only permitted URL schemes apply.

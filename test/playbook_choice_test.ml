@@ -57,6 +57,7 @@ let installed site description =
           entry = "https://" ^ site ^ "/";
           pages = [];
           procedures = [];
+          shapes = None;
           scripts = None;
         };
       checks = [];

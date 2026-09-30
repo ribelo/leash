@@ -50,8 +50,9 @@ let observation ?(url = "https://site-a.example/") ?(title = "A page") ?(text = 
 let page ?url_pattern ?text_marker name =
   B.{ name; description = name ^ " page"; url_pattern; text_marker }
 
-let goal ?hint text = B.Goal B.{ goal = text; hint }
+let goal ?hint ?until text = B.Goal B.{ goal = text; hint; until }
 let use ?args ?optional slug = B.Use B.{ use = slug; args; optional }
+let mission name = B.{ name; source = From_mission { optional = false } }
 
 let procedure ?(args = []) ?(expect = []) ?max_steps ?deadline_s ~slug ~description steps
     =
@@ -80,6 +81,7 @@ let book ~site ~entry ?(pages = []) procedures =
             description = site ^ " playbook";
             pages;
             procedures;
+            shapes = None;
             scripts = None;
           };
       checks = [];
@@ -437,7 +439,8 @@ let switch () =
       ~observations:
         [
           observation ();
-          observation ~url:"https://site-b.example/" ~title:"B" ();
+          observation ();
+          observation ();
           observation ~url:"https://site-b.example/" ~title:"B" ();
         ]
       ()
@@ -453,7 +456,8 @@ let switch () =
   check_status "run-xh5d done" "done" result;
   Alcotest.(check (list string))
     "run-xh5d the entry navigation of the switch"
-    [ "https://site-a.example/"; "https://site-b.example/" ]
+    (* pbk-eyya: the tab starts on site-a, so only the switch navigates. *)
+    [ "https://site-b.example/" ]
     h.navigations;
   Alcotest.(check int)
     "run-kli0 the playbook level was asked at the start and after the cross-site \
@@ -472,10 +476,12 @@ let arguments () =
     book ~site:"site-a.example" ~entry:"https://site-a.example/"
       ~pages:[ page ~url_pattern:"https://site-a.example/*" "a" ]
       [
-        procedure ~slug:"find" ~description:"Find the product." ~args:[ "product" ]
+        procedure ~slug:"find" ~description:"Find the product."
+          ~args:[ mission "product" ]
           ~max_steps:7 ~deadline_s:60 ~expect:[ "the page is a" ]
           [ goal ~hint:"search" "Search for {product}." ];
-        procedure ~slug:"open" ~description:"Open the product." ~args:[ "product" ]
+        procedure ~slug:"open" ~description:"Open the product."
+          ~args:[ mission "product" ]
           ~expect:[ "the page is a" ]
           [ goal "Open the offer for {product}." ];
       ]
@@ -857,17 +863,25 @@ let verified_procedure_is_not_replayed () =
         String.starts_with ~prefix:"already verified on this page" reason
     | _ -> false)
 
+(* pbk-eyya: a tab already on the chosen book's site keeps its page; only a tab elsewhere
+   (blank, or another site) is sent to the entry. *)
+let on_site_keeps_page () =
+  let h =
+    harness ~procs:[ "step"; "DONE" ]
+      ~observations:[ observation ~url:"https://site-a.example/catalogue/x" () ]
+      ()
+  in
+  let result = ran (run ~installed:[ site_a ] h (args ())) in
+  check_status "pbk-eyya done" "done" result;
+  Alcotest.(check (list string))
+    "pbk-eyya no entry navigation on the site" [] h.navigations
+
 (* run-vspj: the procedure cap and the run deadline bound a wandering run. *)
 let limits () =
   let h =
     harness ~procs:[ "step"; "step" ]
       ~observations:
-        [
-          observation ();
-          observation ();
-          observation ();
-          observation ~text:"new page state" ();
-        ]
+        [ observation (); observation (); observation ~text:"new page state" () ]
       ~drives:[ drive () ]
       ~verifies:[ [ expectation "the page is a" "page_kind" ] ]
       ()
@@ -973,7 +987,8 @@ let operations () =
     book ~site:"site-a.example" ~entry:"https://site-a.example/"
       ~pages:[ page ~url_pattern:"https://site-a.example/*" "a" ]
       [
-        procedure ~slug:"step" ~description:"Do the step." ~args:[ "product" ]
+        procedure ~slug:"step" ~description:"Do the step."
+          ~args:[ mission "product" ]
           ~expect:[ "the page is a" ]
           [ goal "Do it with {product}." ];
       ]
@@ -1231,9 +1246,10 @@ let script_book () =
           {|{
  "site":"site-a.example","entry":"https://site-a.example/","description":"site-a playbook",
  "pages":[{"name":"a","description":"a page","url_pattern":"https://site-a.example/*"}],
- "scripts":{"list":{"source":"return [{title: args.q}]","returns":[{"title":"string"}]}},
- "procedures":[{"slug":"collect","description":"Collect the list.","args":["product"],
-   "steps":[{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"]}]
+ "shapes":{"row":[{"title":"string"}]},
+ "scripts":{"list":{"source":"return [{title: args.q}]","description":"List the titles.","returns":"row","args":{"q":{"from":"mission"}}}},
+ "procedures":[{"slug":"collect","description":"Collect the list.","args":{"product":{"from":"mission"}},
+   "steps":[{"goal":"Open the list."},{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"]}]
 }|}))
 
 (* extr-ve3k extr-p7sj extr-b3u0: body and next collect through the same
@@ -1246,13 +1262,14 @@ let repeat_book () =
       "site":"site-a.example","entry":"https://site-a.example/","description":"site-a playbook",
       "pages":[{"name":"a","description":"a page","url_pattern":"https://site-a.example/*"},
                {"name":"b","description":"end","text_marker":"finished"}],
-      "scripts":{"list":{"source":"return [{title: args.q}]","returns":[{"title":"string"}]}},
+      "shapes":{"row":[{"title":"string"}]},
+      "scripts":{"list":{"source":"return [{title: args.q}]","description":"List the titles.","returns":"row","args":{"q":{"from":"mission"}}}},
       "procedures":[
-        {"slug":"collect","description":"Collect first page.","args":["product"],
-         "steps":[{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"],
+        {"slug":"collect","description":"Collect first page.","args":{"product":{"from":"mission"}},
+         "steps":[{"goal":"Open the list."},{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"],
          "repeat":{"next":"next","max":2,"until":"the page is b","delay_ms":20,"key":"title"}},
         {"slug":"next","description":"Collect next page.",
-         "steps":[{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"]}]
+         "steps":[{"goal":"Open the next page."},{"script":"list","args":{"q":"{product}"}}],"expect":["the page is a"]}]
     }|}))
 
 let repeat_collects_unique () =
@@ -1347,12 +1364,7 @@ let collection_reported_and_deduplicated () =
     harness
       ~procs:[ "collect"; "collect"; "DONE" ]
       ~observations:
-        [
-          observation ();
-          observation ();
-          observation ();
-          observation ~text:"next collection page" ();
-        ]
+        [ observation (); observation (); observation ~text:"next collection page" () ]
       ~verifies:[ good; until_holds; good; until_holds; good ]
       ()
   in
@@ -1493,7 +1505,8 @@ let script_step () =
         arguments
   | calls -> Alcotest.failf "extr-8o1h %d script calls" (List.length calls));
   Alcotest.(check int)
-    "extr-8o1h the operator level was never asked" 0 (List.length h.steps);
+    "extr-8o1h the goal step ran; the script step is not an operator step" 1
+    (List.length h.steps);
   Alcotest.(check int) "extr-8o1h records are counted" 2 result.P.collected;
   let entry = List.hd result.P.procedures in
   Alcotest.(check string) "extr-8o1h verified" "verified" entry.P.outcome;
@@ -1608,7 +1621,7 @@ let incomplete_steps_stop () =
   let book = { book with B.playbook = { book.B.playbook with B.procedures = procs } } in
   let h =
     harness ~procs:[ "collect"; "DONE" ]
-      ~drives:[ drive ~status:"blocked" ~reason:"pager unavailable" () ]
+      ~drives:[ drive (); drive ~status:"blocked" ~reason:"pager unavailable" () ]
       ~verifies:
         [
           [ expectation "the page is a" "page_kind" ];
@@ -1621,7 +1634,7 @@ let incomplete_steps_stop () =
   check_status "extr-ve3k next-page interruption blocks" "blocked" stopped;
   Alcotest.(check int)
     "extr-ve3k next script not silently run" 1 (List.length h.script_calls);
-  Alcotest.(check int) "extr-ve3k next action not replayed" 1 (List.length h.steps);
+  Alcotest.(check int) "extr-ve3k next action not replayed" 2 (List.length h.steps);
   let next = List.nth stopped.P.procedures 1 in
   Alcotest.(check string) "extr-ve3k failed next traced" "failed" next.P.outcome;
   Alcotest.(check bool)
@@ -1989,6 +2002,207 @@ let l45_mixed_output () =
   Alcotest.(check int)
     "operator state is not a normalized script record" 2 result.collected
 
+let script_choice () =
+  let book =
+    ok
+      (B.of_json ~file:"choice.json"
+         (Yojson.Safe.from_string
+            {|{
+ "site":"site-a.example","entry":"https://site-a.example/","description":"site-a",
+ "pages":[{"name":"a","description":"a page","url_pattern":"https://site-a.example/*"}],
+ "shapes":{"row":[{"title":"string"}]},
+ "scripts":{"list":{"source":"return [{title: args.q}]","description":"Collect the rows.",
+   "pages":["a"],"returns":"row","args":{"q":{"from":"mission"}}}},
+ "procedures":[{"slug":"read","description":"Read this page.",
+   "steps":[{"goal":"Collect the rows."}],"expect":["the page is a"]}]
+}|}))
+  in
+  let page () =
+    Leash__Drive.
+      {
+        snapshot = snapshot ();
+        text = "rows";
+        can_scroll_down = false;
+        can_scroll_up = false;
+        fingerprint = "p";
+      }
+  in
+  let decision ~script operation =
+    Leash__Jev_request.
+      {
+        operation = ok (P.Operation.of_string operation);
+        script;
+        index = None;
+        option = None;
+        confidence = 1.;
+        target_confidence = None;
+        operation_probabilities = [];
+        target_probabilities = [];
+        targets = [];
+      }
+  in
+  let run_case ~values ~scripts ~choices =
+    let bodies = ref [] and n = ref 0 and picked = ref false in
+    let handler =
+      R.
+        {
+          observe = (fun () -> Ok (observation ()));
+          navigate = (fun _ -> Ok ());
+          choose =
+            (fun q ->
+              let key =
+                if q.R.name = "select_playbook" then
+                  fst
+                    (List.find
+                       (fun (key, _) -> String.starts_with ~prefix:"book:" key)
+                       q.R.criteria)
+                else if not !picked then (
+                  picked := true;
+                  "read")
+                else "DONE"
+              in
+              Ok
+                {
+                  key;
+                  probabilities = `Assoc [ (key, `Float 1.) ];
+                  confidence = 1.;
+                  usage = None;
+                  judgments = [];
+                });
+          text_value =
+            (fun context ->
+              Ok (List.assoc_opt context.Leash.Text_helper.field.label values));
+          step =
+            (fun request ->
+              Leash__Drive.run
+                ~handler:
+                  {
+                    observe = (fun () -> Ok (page ()));
+                    decide =
+                      (fun jev ->
+                        bodies := Leash__Jev_request.body jev :: !bodies;
+                        let choice = List.nth choices !n in
+                        incr n;
+                        Ok choice);
+                    text_value = (fun _ -> Ok None);
+                    act =
+                      (fun _ _ ~text:_ ->
+                        Alcotest.fail "pbk-rai1 a script choice must not click");
+                  }
+                ~scripts:(fun page ->
+                  request.R.script_offers ~url:page.snapshot.url ~text:page.text)
+                ~run_script:(fun ~url name -> request.R.on_script ~url name)
+                ~now:(fun () -> 0.)
+                ~model:"test"
+                ~args:
+                  P.
+                    {
+                      tab = handle;
+                      goal = request.R.goal;
+                      max_steps = Some 4;
+                      deadline_s = Some 30;
+                      dry_run = None;
+                    }
+                ~dry_run:false ());
+          verify =
+            (fun ~pages:_ ~checks ~timeout_s:_ ->
+              Ok
+                ( List.map (fun (sentence, _) -> expectation sentence "page_kind") checks,
+                  observation () ));
+          plan =
+            (fun _ ->
+              Ok { answer = Fail "no plan"; expect = []; usage = None; pages = [] });
+          propose = (fun ~site:_ _ -> Alcotest.fail "no proposal");
+          hand_off = (fun ~reason:_ -> Alcotest.fail "no handoff");
+          script = (fun _ ~args -> scripts args);
+        }
+    in
+    let result =
+      ran (R.loop ~handler ~now:(fun () -> 0.) ~installed:[ book ] (args ~max_plans:0 ()))
+    in
+    (result, List.rev !bodies)
+  in
+  let records args =
+    Alcotest.(check (list (pair string string)))
+      "pbk-3cq7 the mission arg is reused"
+      [ ("q", "Blue") ]
+      args;
+    Ok
+      (R.Collected
+         {
+           value =
+             `List
+               (List.init 20 (fun i ->
+                    `Assoc
+                      [
+                        ( "title",
+                          `String (if i = 0 then "secret-record" else string_of_int i) );
+                      ]));
+           records = 20;
+           bytes = 40;
+           elapsed_ms = 3;
+         })
+  in
+  let collected, bodies =
+    run_case
+      ~values:[ ("q", "Blue") ]
+      ~scripts:records
+      ~choices:[ decision ~script:(Some "list") "blocked"; decision ~script:None "done" ]
+  in
+  check_status "pbk-hcwy a chosen script does not end the procedure" "done" collected;
+  Alcotest.(check int) "pbk-hcwy the records were collected" 20 collected.P.collected;
+  let second = List.nth bodies 1 in
+  let recent = Yojson.Safe.to_string second in
+  Alcotest.(check bool)
+    "pbk-hcwy the summary is one line of records" true
+    (contains_text "ran list: 20 records" recent);
+  Alcotest.(check bool)
+    "pbk-hcwy the records themselves stay out of recent actions" false
+    (contains_text "secret-record" recent);
+  let calls = ref 0 in
+  let twice, twice_bodies =
+    run_case
+      ~values:[ ("q", "Blue") ]
+      ~scripts:(fun args ->
+        incr calls;
+        records args)
+      ~choices:
+        [
+          decision ~script:(Some "list") "blocked";
+          decision ~script:(Some "list") "blocked";
+          decision ~script:None "done";
+        ]
+  in
+  check_status "pbk-hcwy a repeated choice still finishes" "done" twice;
+  Alcotest.(check int) "pbk-hcwy the same page is read once" 1 !calls;
+  Alcotest.(check int) "pbk-hcwy and collected once" 20 twice.P.collected;
+  Alcotest.(check bool)
+    "pbk-hcwy JEV is told the page is already collected" true
+    (contains_text "ran list: already collected on this page (20 records)"
+       (Yojson.Safe.to_string (List.nth twice_bodies 2)));
+  let failed, failed_bodies =
+    run_case
+      ~values:[ ("q", "Blue") ]
+      ~scripts:(fun _ -> Ok (R.Rejected { reason = "boom\nsecond"; elapsed_ms = 1 }))
+      ~choices:[ decision ~script:(Some "list") "blocked"; decision ~script:None "done" ]
+  in
+  check_status "pbk-9549 a failed script does not end the procedure" "done" failed;
+  Alcotest.(check bool)
+    "pbk-9549 the failure summary is the first line" true
+    (contains_text "ran list: failed (boom)"
+       (Yojson.Safe.to_string (List.nth failed_bodies 1)));
+  let blocked, _ =
+    run_case ~values:[]
+      ~scripts:(fun _ -> Alcotest.fail "pbk-3cq7 a missing arg must not run")
+      ~choices:[ decision ~script:(Some "list") "blocked" ]
+  in
+  check_status "pbk-3cq7 a missing required arg is blocked" "blocked" blocked;
+  Alcotest.(check bool)
+    "pbk-3cq7 the reason names the arg" true
+    (match blocked.P.reason with
+    | Some reason -> contains_text "q" reason
+    | None -> false)
+
 let () =
   Alcotest.run "L31 run"
     [
@@ -2023,6 +2237,8 @@ let () =
           Alcotest.test_case "extr-b3u0 extr-ve3k collection reported, dedup run-wide"
             `Quick collection_reported_and_deduplicated;
           Alcotest.test_case "extr-8o1h extr-p152 script step" `Quick script_step;
+          Alcotest.test_case "pbk-rai1 pbk-3cq7 pbk-hcwy pbk-9549 chosen scripts" `Quick
+            script_choice;
           Alcotest.test_case "extr-8o1h rejected script" `Quick script_rejected;
           Alcotest.test_case "extr-8o1h browser failure" `Quick script_browser_failure;
           Alcotest.test_case "extr-8o1h dry run" `Quick script_dry_run;
@@ -2047,6 +2263,8 @@ let () =
           Alcotest.test_case "ncaps-mygj unchanged verified procedure is not replayed"
             `Quick verified_procedure_is_not_replayed;
           Alcotest.test_case "run-vspj caps and deadline" `Quick limits;
+          Alcotest.test_case "pbk-eyya on-site tab keeps its page" `Quick
+            on_site_keeps_page;
           Alcotest.test_case "run-fp7i dry run" `Quick dry;
           Alcotest.test_case "run-klp9 endings" `Quick endings;
           Alcotest.test_case "run-vj48 run-7blx operations" `Quick operations;

@@ -369,43 +369,70 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
       (* tab-zc36: an empty-name control keeps its row, with the value it holds now or,
          when it holds none, the placeholder that is the only other thing telling an agent
          what it is. *)
+      (* field-8bzc field-sazr: the agent's table lists a password input — the agent is
+         the party that types it, by index — as a textbox marked [password] that never
+         carries a value. File inputs are added below as file-input rows; hidden inputs are
+         never rows. The operator's table (what JEV is offered) drops password rows again
+         in {!Jev_request.elements} (fly-eoqg): two readers, two rules. *)
+      let input_type =
+        if Hashtbl.find_opt names backend = Some "INPUT" then
+          Some
+            (String.lowercase_ascii
+               (Option.value ~default:"text" (Hashtbl.find_opt input_types backend)))
+        else None
+      in
+      let password = input_type = Some "password" in
       let here =
         if
-          List.mem effective_role included
-          && (label <> "" || not (List.mem effective_role informative))
+          (List.mem effective_role included || password)
+          && (label <> "" || password || not (List.mem effective_role informative))
           && get "ignored" n <> `Bool true
           && backend >= 0 && Hashtbl.mem visible backend
-          && not
-               (Hashtbl.find_opt names backend = Some "INPUT"
-               && List.mem
-                    (String.lowercase_ascii
-                       (Option.value ~default:"text"
-                          (Hashtbl.find_opt input_types backend)))
-                    [ "password"; "file"; "hidden" ])
+          && not (List.mem input_type [ Some "file"; Some "hidden" ])
         then
-          let value =
-            match get "value" n with
-            | `Assoc _ as v -> (
-                match value v with `String s when s <> "" -> Some s | _ -> None)
-            | `String s when s <> "" -> Some s
-            | _ -> None
-          in
-          let value =
-            match value with
-            | Some value -> Some value
-            | None -> if label = "" then Hashtbl.find_opt placeholders backend else None
-          in
-          [
-            ( {
-                P.index = 0;
-                role = effective_role;
-                name = label;
-                value;
-                state = states n;
-                options = options_of effective_role n;
-              },
-              backend );
-          ]
+          if password then
+            [
+              ( {
+                  P.index = 0;
+                  role = "textbox";
+                  name = label;
+                  value = None;
+                  state =
+                    Some
+                      (Option.value ~default:[] (states n)
+                      @ [
+                          (match P.Row_state.of_string "password" with
+                          | Ok x -> x
+                          | Error _ -> assert false);
+                        ]);
+                  options = None;
+                },
+                backend );
+            ]
+          else
+            let value =
+              match get "value" n with
+              | `Assoc _ as v -> (
+                  match value v with `String s when s <> "" -> Some s | _ -> None)
+              | `String s when s <> "" -> Some s
+              | _ -> None
+            in
+            let value =
+              match value with
+              | Some value -> Some value
+              | None -> if label = "" then Hashtbl.find_opt placeholders backend else None
+            in
+            [
+              ( {
+                  P.index = 0;
+                  role = effective_role;
+                  name = label;
+                  value;
+                  state = states n;
+                  options = options_of effective_role n;
+                },
+                backend );
+            ]
         else []
       in
       here @ List.concat_map walk (children n))

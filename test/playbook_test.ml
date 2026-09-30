@@ -380,14 +380,16 @@ let cart_after_add () =
 
 let books
     ?(scripts =
-      {|{"list":{"file":"scripts/list.js","returns":[{"title":"string","price":"number"}]}}|})
-    ?(steps = {|{"script":"list","args":{"page":"{page}"}}|}) () =
+      {|{"list":{"file":"scripts/list.js","description":"List the page.","returns":"list"}}|})
+    ?(steps = {|{"goal":"Open the list."},{"script":"list","args":{"page":"{page}"}}|}) ()
+    =
   Printf.sprintf
     {|{
  "site":"books.example","entry":"https://books.example/","description":"Books",
  "pages":[{"name":"list","description":"List","url_pattern":"https://books.example/*"}],
+ "shapes":{"list":[{"title":"string","price":"number"}],"count":{"n":"number"},"item":[{"title":"string"}]},
  "scripts": %s,
- "procedures":[{"slug":"collect","description":"Collect","args":["page"],"steps":[%s],"expect":["the page is list"]}]
+ "procedures":[{"slug":"collect","description":"Collect","args":{"page":{"from":"mission"}},"steps":[%s],"expect":["the page is list"]}]
 }|}
     scripts steps
 
@@ -415,8 +417,8 @@ let directory_and_scripts () =
   let json =
     books
       ~scripts:
-        {|{"list":{"file":"scripts/list.js","returns":[{"title":"string","price":"number"}]},
-           "count":{"source":"return {n: 1}","returns":{"n":"number"},"max_bytes":1000}}|}
+        {|{"list":{"file":"scripts/list.js","description":"List the page.","returns":"list"},
+           "count":{"source":"return {n: 1}","description":"Count the page.","returns":"count","max_bytes":1000}}|}
       ()
   in
   with_playbook ~files:[ list_js ] json (fun dir file ->
@@ -483,11 +485,20 @@ let script_refusals () =
        ());
   (* extr-zdst: a malformed shape refuses the playbook. *)
   expect_load_error ~story:"extr-zdst" "unknown type"
-    (books ~scripts:{|{"list":{"source":"return []","returns":[{"title":"text"}]}}|} ());
+    (books
+       ~scripts:
+         {|{"list":{"source":"/** returns: [{\"title\":\"text\"}] */\nreturn []","description":"List the page."}}|}
+       ());
   expect_load_error ~story:"extr-zdst" "record or a list of records"
-    (books ~scripts:{|{"list":{"source":"return []","returns":"string"}}|} ());
+    (books
+       ~scripts:
+         {|{"list":{"source":"/** returns: [\"string\"] */\nreturn []","description":"List the page."}}|}
+       ());
   expect_load_error ~story:"extr-zdst" "record or a list of records"
-    (books ~scripts:{|{"list":{"source":"return []","returns":["string"]}}|} ());
+    (books
+       ~scripts:
+         {|{"list":{"source":"/** returns: [\"string\"] */\nreturn []","description":"List the page."}}|}
+       ());
   (* A step naming a script the playbook does not have. *)
   expect_load_error ~story:"extr-8o1h" "unknown script"
     (books ~steps:{|{"script":"absent"}|} ());
@@ -508,7 +519,8 @@ let symlinks () =
       write
         (Filename.concat dir "playbook.json")
         (books
-           ~scripts:{|{"list":{"file":"scripts/link.js","returns":[{"title":"string"}]}}|}
+           ~scripts:
+             {|{"list":{"file":"scripts/link.js","description":"List the page.","returns":"item"}}|}
            ());
       write (Filename.concat dir "scripts/list.js") "return [];";
       Unix.symlink "list.js" (Filename.concat dir "scripts/link.js");
@@ -605,7 +617,9 @@ let proposals_carry_no_scripts () =
     (fun () ->
       let path = Filename.concat root "proposal.json" in
       write path
-        (books ~scripts:{|{"list":{"source":"return []","returns":[{"title":"string"}]}}|}
+        (books
+           ~scripts:
+             {|{"list":{"source":"return []","description":"List the page.","returns":"item"}}|}
            ());
       match B.accept ~caps:(Ox_test.powerbox ()) path with
       | Ok _ -> Alcotest.fail "extr-k40c a proposal with scripts was merged"
@@ -715,29 +729,16 @@ let script_examples () =
   | Ok () -> ()
   | Error why -> Alcotest.fail ("extr-8o1h " ^ why)
 
-(* extr-tkco extr-uhnc: the shipped primary fetch collector and optional native-repeat
-   variant share scripts and factual page kinds; real pager checks terminate repeat. *)
+(* pbk-abr3 extr-uhnc: the shipped example is a goal, a pinned collector and a next-page
+   goal, not a fetch crawl. The pager check still terminates the repeat. *)
 let books_toscrape_example () =
   let dir = "../examples/playbooks/books.toscrape.com" in
-  let file = Filename.concat dir "repeat.json" in
-  (match
-     B.of_json
-       ~dir:((Ox_test.powerbox () :> Ox_caps.Cap.fs_read), dir)
-       ~file (Yojson.Safe.from_file file)
-   with
-  | Error why -> Alcotest.fail ("extr-tkco repeat: " ^ why)
-  | Ok book ->
-      let first = List.hd book.playbook.procedures in
-      Alcotest.(check bool)
-        "extr-uhnc example checks real pager" true
-        (match first.repeat with
-        | Some { until = B.Script_check "last-page"; next = "next-page"; _ } -> true
-        | _ -> false);
-      Alcotest.(check bool)
-        "extr-uhnc example navigates natively" true
-        (match first.steps with
-        | [ B.Navigate _; B.Script { script = "list-page"; _ } ] -> true
-        | _ -> false));
+  Alcotest.(check bool)
+    "pbk-8n2l repeat.json is gone" false
+    (Sys.file_exists (Filename.concat dir "repeat.json"));
+  Alcotest.(check bool)
+    "pbk-abr3 the fetch crawl is gone" false
+    (Sys.file_exists (Filename.concat dir "scripts/crawl-category.js"));
   match B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/books.toscrape.com" with
   | Error why -> Alcotest.fail ("extr-tkco " ^ why)
   | Ok book ->
@@ -754,22 +755,32 @@ let books_toscrape_example () =
         | None -> Alcotest.fail ("extr-tkco script " ^ name)
       in
       Alcotest.(check bool)
-        "extr-tkco the list script is a file of the directory" true
-        (String.length (script "list-page").B.code > 200
+        "pbk-abr3 the list script is a file of the directory" true
+        (String.length (script "list-page").B.code > 80
         && (script "list-page").B.origin = "file scripts/list-page.js");
+      Alcotest.(check (option (list string)))
+        "pbk-46fr list-page applies to category pages" (Some [ "category" ])
+        (script "list-page").B.pages;
       Alcotest.(check bool)
-        "extr-vgir extr-tkco the crawl script fetches the site's own pages" true
-        (let code = (script "crawl-category").B.code in
-         try
-           ignore (Str.search_forward (Str.regexp_string "await fetch(") code 0);
+        "pbk-abr3 list-page does not fetch" false
+        (try
+           ignore
+             (Str.search_forward (Str.regexp_string "fetch(") (script "list-page").B.code
+                0);
            true
          with Not_found -> false);
-      List.iter
-        (fun slug ->
-          Alcotest.(check bool)
-            "extr-uhnc whole-category fetch needs no click repeat" true
-            ((procedure slug).repeat = None))
-        [ "collect-category"; "collect-category-under" ];
+      Alcotest.(check bool)
+        "pbk-abr3 open-category is a goal with the pager check" true
+        (match
+           ((procedure "open-category").steps, (procedure "open-category").repeat)
+         with
+        | ( B.Goal _ :: _,
+            Some { until = B.Script_check "last-page"; next = "next-page"; _ } ) ->
+            true
+        | _ -> false);
+      Alcotest.(check bool)
+        "pbk-abr3 next-page is a goal" true
+        (match (procedure "next-page").steps with B.Goal _ :: _ -> true | _ -> false);
       let kind url text = B.page_kind book.playbook.pages ~url ~text in
       let category = "https://books.toscrape.com/catalogue/category/books/mystery_3" in
       Alcotest.(check (option string))
@@ -843,11 +854,12 @@ let planner_procedures () =
 let control_scripts () =
   let data =
     {|{"site":"example.com","entry":"https://example.com/","description":"Catalogue",
-    "pages":[],"scripts":{"next":{"source":"return {url: location.href};","returns":{"url":"url"}},
-    "last":{"source":"return {done: true};","returns":{"done":"boolean"}}},
+    "pages":[],"scripts":{"next":{"source":"/** returns: {\"url\":\"url\"} */\nreturn {url: location.href};","description":"The next page URL."},
+    "last":{"source":"/** returns: {\"done\":\"boolean\"} */\nreturn {done: true};","description":"Whether the listing is finished."}},
     "procedures":[{"slug":"collect","description":"Collect pages","steps":[{"navigate":{"script":"next"}}],
     "expect":["no dialog is open"],"repeat":{"next":"next-page","max":8,"until":{"script":"last"},"key":"url"}},
-    {"slug":"next-page","description":"Next page","steps":[{"navigate":{"script":"next"}}],"expect":["no dialog is open"]}]}|}
+    {"slug":"next-page","description":"Next page","steps":[{"navigate":{"script":"next"}}],"expect":["no dialog is open"]},
+    {"slug":"open","description":"Open the catalogue.","steps":[{"goal":"Open the catalogue."},{"use":"collect"}],"expect":["no dialog is open"]}]}|}
   in
   with_playbook data (fun dir _ ->
       match B.load ~caps:(Ox_test.powerbox ()) dir with
@@ -870,6 +882,100 @@ let control_scripts () =
   expect_error "step must"
     (replace {|{"navigate":{"script":"next"}}|}
        {|{"navigate":{"script":"next"},"goal":"unsafe"}|})
+
+let format_refusals () =
+  let goal = {|{"goal":"Open the list."}|} in
+  let described =
+    {|{"list":{"source":"return []","description":"List the page.","returns":"item"}}|}
+  in
+  expect_load_error ~story:"pbk-85m1" B.script_only_message
+    (books ~steps:{|{"script":"list"}|} ());
+  expect_load_error ~story:"pbk-i0zl" "not an inline shape on the declaration"
+    (books ~steps:goal
+       ~scripts:
+         {|{"list":{"source":"return []","description":"List the page.","returns":[{"title":"string"}]}}|}
+       ());
+  expect_load_error ~story:"pbk-lww9" "args.secret is read but not declared"
+    (books ~steps:goal
+       ~scripts:
+         {|{"list":{"source":"return args.secret","description":"List the page.","returns":"item"}}|}
+       ());
+  with_playbook
+    {|{"site":"books.example","entry":"https://books.example/","description":"Books",
+ "pages":[{"name":"list","description":"List","url_pattern":"https://books.example/*"}],
+ "procedures":[{"slug":"collect","description":"Collect","args":["page"],"steps":[{"goal":"Open."}],"expect":["the page is list"]}]}|}
+    (fun _ file ->
+      match B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname file) with
+      | Ok _ -> Alcotest.fail "pbk-i0zl accepted a list of argument names"
+      | Error message ->
+          Alcotest.(check bool)
+            "pbk-i0zl names the new arg form" true
+            (contains "not a list of names" message));
+  with_playbook
+    ~files:[ ("repeat.json", "{}"); list_js ]
+    (books ~steps:goal ~scripts:described ())
+    (fun dir _ ->
+      match B.load ~caps:(Ox_test.powerbox ()) dir with
+      | Ok _ -> Alcotest.fail "pbk-8n2l accepted stray JSON"
+      | Error message ->
+          Alcotest.(check bool)
+            "pbk-8n2l names the stray file" true
+            (contains "repeat.json" message && contains "stray JSON" message));
+  with_playbook
+    {|{"site":"books.example","entry":"https://books.example/","description":"Books","returns":{"n":"number"},
+ "pages":[{"name":"list","description":"List","url_pattern":"https://books.example/*"}],
+ "procedures":[{"slug":"collect","description":"Collect","steps":[{"goal":"Open."}],"expect":["the page is list"]}]}|}
+    (fun _ file ->
+      match B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname file) with
+      | Ok _ -> Alcotest.fail "pbk-i0zl accepted top-level returns"
+      | Error message ->
+          Alcotest.(check bool)
+            "pbk-i0zl names the new returns form" true
+            (contains "not at the playbook top level" message))
+
+(* pbk-eyya: a goal step's until is code-checked; a judgment sentence is refused at load,
+   and "the address changed" compares with the step's start. *)
+let goal_until () =
+  let steps until =
+    Printf.sprintf
+      {|{"goal":"Open the next page.","until":%s},{"script":"list","args":{"page":"{page}"}}|}
+      until
+  in
+  expect_load_error ~story:"pbk-eyya" "goal until must be a code checker"
+    (books ~steps:(steps {|["the address changed","the shop looks happy"]|}) ());
+  expect_load_error ~story:"pbk-eyya" "goal until: unknown page kind"
+    (books ~steps:(steps {|["the page is cart"]|}) ());
+  expect_load_error ~story:"pbk-eyya" "goal until must not be empty"
+    (books ~steps:(steps "[]") ());
+  with_playbook ~files:[ list_js ]
+    (books ~steps:(steps {|["the address changed","the page is list"]|}) ())
+    (fun dir _ ->
+      match B.load ~caps:(Ox_test.powerbox ()) dir with
+      | Error why -> Alcotest.fail why
+      | Ok book ->
+          let until =
+            match (List.hd book.playbook.procedures).steps with
+            | B.Goal { until = Some until; _ } :: _ -> until
+            | _ -> Alcotest.fail "pbk-eyya until was not decoded"
+          in
+          let observation =
+            B.{ kind = Some "list"; text = ""; dialog = false; rows = []; downloads = [] }
+          in
+          let holds ~start_url ~url observation =
+            B.until_holds book.playbook until ~start_url ~url observation
+          in
+          Alcotest.(check bool)
+            "pbk-eyya holds after the address changed" true
+            (holds ~start_url:"https://books.example/1" ~url:"https://books.example/2"
+               observation);
+          Alcotest.(check bool)
+            "pbk-eyya not while the address is the start" false
+            (holds ~start_url:"https://books.example/1" ~url:"https://books.example/1"
+               observation);
+          Alcotest.(check bool)
+            "pbk-eyya not on another page kind" false
+            (holds ~start_url:"https://books.example/1" ~url:"https://books.example/2"
+               { observation with kind = None }))
 
 let () =
   Alcotest.run "playbooks"
@@ -905,5 +1011,8 @@ let () =
           Alcotest.test_case "extr-uhnc typed control scripts" `Quick control_scripts;
           Alcotest.test_case "extr-tkco books.toscrape.com example" `Quick
             books_toscrape_example;
+          Alcotest.test_case "pbk-85m1 pbk-lww9 pbk-8n2l pbk-i0zl format refusals" `Quick
+            format_refusals;
+          Alcotest.test_case "pbk-eyya goal until" `Quick goal_until;
         ] );
     ]

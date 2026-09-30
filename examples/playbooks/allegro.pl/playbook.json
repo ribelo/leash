@@ -32,9 +32,7 @@
     {
       "slug": "find-product",
       "description": "Search Allegro for the named product.",
-      "args": [
-        "product"
-      ],
+      "args": {"product": {"from": "mission"}},
       "steps": [
         {
           "goal": "Search for {product} on Allegro.",
@@ -49,9 +47,7 @@
     {
       "slug": "open-offer",
       "description": "Open the product offer from results.",
-      "args": [
-        "product"
-      ],
+      "args": {"product": {"from": "mission"}},
       "steps": [
         {
           "goal": "Open the offer for {product}.",
@@ -65,7 +61,6 @@
     {
       "slug": "add-to-cart",
       "description": "Add this offer to the cart, dismissing any upsell dialog.",
-      "args": [],
       "steps": [
         {
           "goal": "Add this product to the cart.",
@@ -84,7 +79,6 @@
     {
       "slug": "dismiss-upsell",
       "description": "Close an optional post-add upsell without buying more.",
-      "args": [],
       "steps": [
         {
           "goal": "Dismiss the optional extra-offer popup, if shown.",
@@ -98,7 +92,6 @@
     {
       "slug": "go-to-cart",
       "description": "Navigate to the cart and stop before payment.",
-      "args": [],
       "steps": [
         {
           "goal": "Open the shopping cart. Do not start checkout or payment.",

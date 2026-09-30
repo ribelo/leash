@@ -1148,6 +1148,7 @@ let drive_dry_run () =
           Leash__Jev_request.
             {
               operation;
+              script = None;
               index = Some 1;
               option = None;
               confidence = 1.;
@@ -1720,6 +1721,7 @@ let decide_done ~deadline:_ (_ : Jev.request) =
     Jev.
       {
         operation = operation "done";
+        script = None;
         index = None;
         option = None;
         confidence = 1.;
@@ -2255,7 +2257,11 @@ let run_proposal () =
                   description = "Check the added-to-cart modal.";
                   args = None;
                   steps =
-                    [ Goal Leash.Playbook.{ goal = "Look at the page."; hint = None } ];
+                    [
+                      Goal
+                        Leash.Playbook.
+                          { goal = "Look at the page."; hint = None; until = None };
+                    ];
                   expect = [ "the page is post-add" ];
                   expect_timeout_s = None;
                   repeat = None;
@@ -2330,7 +2336,7 @@ let discover_proposal () =
                 slug = "browse";
                 description = "Browse page";
                 args = None;
-                steps = [ Goal { goal = "Look at page"; hint = None } ];
+                steps = [ Goal { goal = "Look at page"; hint = None; until = None } ];
                 expect = [ "the page is product" ];
                 expect_timeout_s = None;
                 repeat = None;
@@ -2638,13 +2644,15 @@ let books_json =
   {|{
  "site":"books.example","entry":"https://books.example/","description":"Books to collect",
  "pages":[{"name":"page","description":"Any page","url_pattern":"https://automationexercise.com/*"}],
+ "shapes":{"row":[{"title":"string","price":"number"}],"title":[{"title":"string"}]},
  "scripts":{
-   "list":{"file":"scripts/list.js","returns":[{"title":"string","price":"number"}]},
-   "tiny":{"source":"return [{title: 'a long title that is over ten bytes'}]","returns":[{"title":"string"}],"max_bytes":10},
-   "broken":{"source":"return [SYNTAX_BAD","returns":[{"title":"string"}]}
+   "list":{"file":"scripts/list.js","description":"List the books.","returns":"row"},
+   "tiny":{"source":"return [{title: 'a long title that is over ten bytes'}]","description":"A tiny list.","returns":"title","max_bytes":10},
+   "broken":{"source":"return [SYNTAX_BAD","description":"Broken on purpose.","returns":"title"}
  },
- "procedures":[{"slug":"collect","description":"Collect the list.","args":["q"],
-   "steps":[{"script":"list","args":{"q":"{q}"}}],"expect":["the page shows Added!"]}]
+ "procedures":[{"slug":"collect","description":"Collect the list.","args":{"q":{"from":"mission"}},
+   "steps":[{"script":"list","args":{"q":"{q}"}}],"expect":["the page shows Added!"]},
+  {"slug":"open","description":"Open the list.","steps":[{"goal":"Open the list."},{"use":"collect"}],"expect":["the page shows Added!"]}]
 }|}
 
 (* The playbook directory is made and loaded the way an operator's is, under a directory

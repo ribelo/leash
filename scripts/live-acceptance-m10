@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# L46 live gate (pbk-eyya): JEV drives the rewritten books playbook and can choose a script.
+# HEADLESS Chrome only, private XDG and profile, key only via secret-env, never printed.
+# Usage: secret-env ai -- scripts/live-acceptance-m10
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [[ "${1:-}" != "--inside-nix" ]]; then
+  exec timeout 1800 nix develop -c env DUNE_BUILD_DIR=_build_l46_live bash "$0" --inside-nix "$@"
+fi
+shift
+if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+  echo "ERROR: OPENROUTER_API_KEY is not set; run under: secret-env ai -- $0" >&2
+  exit 2
+fi
+binary="$(command -v google-chrome-stable || command -v chromium)"
+if [[ "${1:-}" == "--binary" ]]; then binary="$(realpath "$2")"; shift 2; fi
+if [[ "$#" != 0 ]]; then echo "usage: $0 [--binary PATH]" >&2; exit 2; fi
+binary="$(realpath "$binary")"
+timeout 900 dune build @install
+leash="$(pwd)/_build_l46_live/default/packages/leash/bin/main.exe"
+root="$(mktemp -d)"
+chmod 700 "$root"
+export XDG_RUNTIME_DIR="$root/runtime"
+export XDG_CONFIG_HOME="$root/config"
+export XDG_STATE_HOME="$root/state"
+export XDG_DOWNLOAD_DIR="$root/downloads"
+mkdir -m 700 "$XDG_CONFIG_HOME" "$XDG_STATE_HOME" "$XDG_DOWNLOAD_DIR"
+mkdir -m 700 "$XDG_CONFIG_HOME/leash" "$XDG_CONFIG_HOME/leash/playbooks"
+cp -a examples/playbooks/books.toscrape.com "$XDG_CONFIG_HOME/leash/playbooks/"
+mkdir -m 700 "$XDG_RUNTIME_DIR"
+profile="$root/profile"
+config="$root/leash.toml"
+log="$root/service.log"
+cat > "$config" <<EOF
+[chrome]
+binary = "$binary"
+profile_dir = "$profile"
+workspace = "test"
+headless = true
+[tabs]
+cap = 4
+[expiry]
+idle_s = 3600
+unclaimed_s = 3600
+tombstone_s = 3600
+[models]
+jev_model = "typesafe/jev-1.13-20260917"
+text_model = "inception/mercury-2.5"
+planner_model = "openai/gpt-6-luna"
+systemone_endpoint = "https://openrouter.ai/api/v1/systemone"
+chat_base_url = "https://openrouter.ai/api/v1"
+EOF
+browser_alive() {
+  python3 - "$profile" <<'PY'
+import os, sys
+profile = sys.argv[1].encode()
+for entry in os.listdir("/proc"):
+    if not entry.isdigit() or int(entry) == os.getpid():
+        continue
+    try:
+        argv = open("/proc/" + entry + "/cmdline", "rb").read().split(b"\0")
+    except (OSError, PermissionError):
+        continue
+    if any(b"--user-data-dir=" + profile in arg for arg in argv) and any(b"--remote-debugging-pipe" in arg for arg in argv):
+        if not any(b"--headless=new" in arg for arg in argv):
+            print("ERROR: Chrome was started without --headless=new", file=sys.stderr)
+            sys.exit(2)
+        print(entry)
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+service_pid=""
+safe_log() {
+  python3 - "$log" <<'PY'
+import os, sys
+key = os.environ.get("OPENROUTER_API_KEY", "")
+with open(sys.argv[1], encoding="utf8", errors="replace") as handle:
+    for line in list(handle)[-40:]:
+        print(line.rstrip().replace(key, "[redacted]") if key else line.rstrip(), file=sys.stderr)
+PY
+}
+cleanup() {
+  local status=$?
+  if [[ "$status" != 0 ]]; then echo "gate failed; redacted service diagnostics:" >&2; safe_log; fi
+  if [[ -n "$service_pid" ]] && kill -0 "$service_pid" 2>/dev/null; then
+    kill -TERM "$service_pid" || :
+    wait "$service_pid" || :
+  fi
+  if browser_alive >/dev/null; then
+    echo "ERROR: Chrome remains alive with temporary profile $profile" >&2
+    exit 1
+  fi
+  rm -rf "$root"
+}
+trap cleanup EXIT
+"$leash" serve --config "$config" >"$log" 2>&1 &
+service_pid=$!
+for _ in $(seq 1 50); do
+  if "$leash" status --config "$config" >/dev/null 2>&1; then break; fi
+  sleep 0.2
+done
+"$leash" playbook check books.toscrape.com --owner live-m10 >/dev/null
+python3 scripts/live-acceptance-m10.py "$leash" "$root" "$log"

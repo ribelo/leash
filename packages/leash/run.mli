@@ -68,6 +68,11 @@ type step_request = {
   max_steps : int;
   deadline_s : int;
   dry_run : bool;
+  script_offers : url:string -> text:string -> Jev_request.offered_script list;
+  on_script : url:string -> string -> (Jev_request.script_effect, Protocol.error) result;
+  reached : (start_url:string -> Protocol.snapshot -> text:string -> bool) option;
+      (** pbk-eyya: the goal step's [until], checked in code after each executed action;
+          [true] ends the step [done]. *)
 }
 (** One playbook step as the operator level receives it (run-d82w): the goal with the
     step's hint shaping its text, and the step's own cap and deadline — the procedure's

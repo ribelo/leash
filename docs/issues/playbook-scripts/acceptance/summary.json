@@ -1,0 +1,236 @@
+{
+  "results": [
+    {
+      "mission": "collect every book in the Travel category",
+      "status": "done",
+      "reason": null,
+      "elapsed_s": 3.0,
+      "collected": 11,
+      "truth": 11,
+      "pages": 1,
+      "model_calls": 6,
+      "model_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 2,
+        "playbook": 1,
+        "procedure": 2
+      },
+      "model_cost": 0.0005523740000000001,
+      "cost_unreported": 0,
+      "procedures": [
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "open-category",
+          "verified"
+        ]
+      ],
+      "scripts": [
+        {
+          "name": "list-page",
+          "calls": 1,
+          "records": 11
+        },
+        {
+          "name": "last-page",
+          "calls": 1,
+          "records": 0
+        }
+      ],
+      "final": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html"
+    },
+    {
+      "mission": "collect every book in the Mystery category",
+      "status": "done",
+      "reason": null,
+      "elapsed_s": 7.0,
+      "collected": 32,
+      "truth": 32,
+      "pages": 2,
+      "model_calls": 11,
+      "model_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 7,
+        "playbook": 1,
+        "procedure": 2
+      },
+      "model_cost": 0.0016278920000000001,
+      "cost_unreported": 0,
+      "procedures": [
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "open-category",
+          "verified"
+        ],
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "next-page",
+          "verified"
+        ]
+      ],
+      "scripts": [
+        {
+          "name": "list-page",
+          "calls": 2,
+          "records": 32
+        },
+        {
+          "name": "last-page",
+          "calls": 2,
+          "records": 0
+        }
+      ],
+      "final": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html"
+    },
+    {
+      "mission": "collect every book in the Default category",
+      "status": "done",
+      "reason": null,
+      "elapsed_s": 33.4,
+      "collected": 152,
+      "truth": 152,
+      "pages": 8,
+      "model_calls": 35,
+      "model_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 31,
+        "playbook": 1,
+        "procedure": 2
+      },
+      "model_cost": 0.007077538,
+      "cost_unreported": 0,
+      "procedures": [
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "open-category",
+          "verified"
+        ],
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "next-page",
+          "verified"
+        ],
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "next-page",
+          "verified"
+        ],
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "next-page",
+          "verified"
+        ],
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "next-page",
+          "verified"
+        ],
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "next-page",
+          "verified"
+        ],
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "next-page",
+          "verified"
+        ],
+        [
+          "collect-page",
+          "verified"
+        ],
+        [
+          "next-page",
+          "verified"
+        ]
+      ],
+      "scripts": [
+        {
+          "name": "list-page",
+          "calls": 8,
+          "records": 152
+        },
+        {
+          "name": "last-page",
+          "calls": 8,
+          "records": 0
+        }
+      ],
+      "final": "https://books.toscrape.com/catalogue/category/books/default_15/page-8.html"
+    },
+    {
+      "mission": "Collect the book titles and prices on this page.",
+      "status": "done",
+      "reason": null,
+      "elapsed_s": 7.4,
+      "collected": 20,
+      "truth": 20,
+      "pages": 0,
+      "model_calls": 6,
+      "model_calls_by_kind": {
+        "operator": 3,
+        "playbook": 1,
+        "procedure": 2
+      },
+      "model_cost": 0.000721518,
+      "cost_unreported": 0,
+      "procedures": [
+        [
+          "read-page",
+          "verified"
+        ]
+      ],
+      "scripts": [
+        {
+          "name": "list-page",
+          "calls": 1,
+          "records": 20
+        }
+      ],
+      "final": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html"
+    }
+  ],
+  "oracle": {
+    "Travel": {
+      "pages": 1,
+      "books": 11
+    },
+    "Mystery": {
+      "pages": 2,
+      "books": 32
+    },
+    "Default": {
+      "pages": 8,
+      "books": 152
+    }
+  }
+}

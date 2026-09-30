@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 10
 ---
 
@@ -65,3 +65,29 @@ Scripts writing to the page beyond collection; JEV choosing scripts on-the-fly w
 ## Further Notes
 
 Decided 2026-09-30 after the operator's review: scripts are JEV's tools (an option in the choice, the file executed by the runner), scoped per page kind by default; both JEV-chosen and author-pinned scripts remain. The fetch-crawl example was the agent optimising for a gate that measured the wrong thing; the rewritten gate measures JEV driving.
+
+## Live gate (pbk-eyya), 2026-09-30
+
+`secret-env ai -- scripts/live-acceptance-m10`: private headless Chrome, the rewritten example installed in a temporary XDG config, ground truth fetched independently by the harness and compared record by record (title, price, url, category, rating, availability). Two consecutive runs passed; the second run's transcripts are in `acceptance/`.
+
+| Mission | Records | JEV calls (operator / procedure / playbook / text) | Cost | Wall | Pages |
+| --- | --- | --- | --- | --- | --- |
+| collect every book in the Travel category | 11/11 | 6 (2/2/1/1) | $0.00055 | 3.0 s | 1 |
+| collect every book in the Mystery category | 32/32 | 11 (7/2/1/1) | $0.0016 | 7.0 s | 2 |
+| collect every book in the Default category (8 pages) | 152/152 | 35 (31/2/1/1) | $0.0071 | 33.4 s | 8 |
+| "Collect the book titles and prices on this page." (tab on Mystery, no procedure named) | 20/20 | 6 (3/2/1/0) | $0.0007 | 2.4–7.4 s | — |
+
+Procedure traces (the trace records a `use:` sub-procedure before its parent): Travel `collect-page → open-category`; Mystery `collect-page → open-category → collect-page → next-page`; Default the same with `collect-page → next-page` seven times; the fourth mission `read-page`, in which JEV's own predictions were `run_script:list-page` (0.92), `run_script:list-page` again (answered "already collected on this page (20 records)"), then DONE. No fetch crawling; every page change is a JEV click.
+
+### What the gate found, and the causes fixed
+
+1. **A relative goal cannot be judged from where it lands.** `next-page`'s "Open the next page of this category" clicked Next correctly, then on the last page JEV saw no Next and answered BLOCKED (Mystery, run 1). Fix: a goal step may declare `until` — code-checked sentences ("the address changed", "the page is category") that end the step `done` after the action that satisfies them (`Playbook.until_holds`, `Drive.run ?reached`). Judgment sentences are refused in `until`.
+2. **The planner re-validated the playbook without its directory** and refused every book with file scripts ("a file script needs a playbook directory"). Fix: the reply's page kinds are validated alone (`planner.ml`), with a regression test.
+3. **A chosen book navigated to its entry even when the tab was already on the site**, so "collect the books on this page" collected another page. Fix: `adopt_book` keeps a tab already on the site (host or page-kind match); a blank or foreign tab still opens the entry.
+4. **JEV re-ran the same script on an unchanged page** (80 records for 20, the example's `list-page` scrolled the pager into view, so the page "changed"). Fix: a script already run on the same address in the step is not run again; JEV reads "already collected on this page". The scroll side effect was removed from `list-page.js`.
+5. **A script ran on a document still streaming in** (Default page 2 read 12 of 20 cards once `until` ended the step on the first observation). Fix: the runner waits, bounded, for the document load before any script.
+6. **JEV gave up on the Default listing's pager before seeing it** (three rescue scrolls do not reach the bottom of a 20-card page). Fix: the L45 unseen-frontier rescue bound goes from three to eight per URL (`drive.ml`, test updated).
+7. **Wheel scrolls landed late.** A background/occluded renderer produced few frames, so a wheel scroll landed after the next observation and three scrolls read as a stall (Default pages 4 and 7). Fixes: Chrome starts with `--disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling`; `operator_scroll` waits (timer-polled, ≤500 ms) for `scrollY` to move and otherwise puts the document where the wheel was taking it with one instant absolute scroll (which also cancels the in-flight smooth one).
+
+Also in this row (from L48, story field-8bzc/field-sazr, L45's own leak): `snap` lists password inputs as `textbox` rows with state `password` and never a value; `Jev_request.elements` (the operator's table) still excludes them and file inputs. `actions_test` asserts the two tables differ exactly on those rows.
+

@@ -1,0 +1,952 @@
+{
+  "summary": {
+    "mission": "Collect the book titles and prices on this page.",
+    "status": "done",
+    "reason": null,
+    "elapsed_s": 7.4,
+    "collected": 20,
+    "truth": 20,
+    "pages": 0,
+    "model_calls": 6,
+    "model_calls_by_kind": {
+      "operator": 3,
+      "playbook": 1,
+      "procedure": 2
+    },
+    "model_cost": 0.000721518,
+    "cost_unreported": 0,
+    "procedures": [
+      [
+        "read-page",
+        "verified"
+      ]
+    ],
+    "scripts": [
+      {
+        "name": "list-page",
+        "calls": 1,
+        "records": 20
+      }
+    ],
+    "final": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html"
+  },
+  "reply": {
+    "playbook_choices": [
+      {
+        "source": "jev",
+        "key": "book:/tmp/nix-shell.HZKO6p/tmp.32wb66Sjyk/config/leash/playbooks/books.toscrape.com/playbook.json",
+        "probabilities": {
+          "none": 0.09,
+          "book:/tmp/nix-shell.HZKO6p/tmp.32wb66Sjyk/config/leash/playbooks/books.toscrape.com/playbook.json": 0.91
+        },
+        "confidence": 0.82,
+        "usage": {
+          "input_tokens": 611,
+          "output_tokens": 104,
+          "cost": 2.5662e-05
+        },
+        "note": null
+      }
+    ],
+    "status": "done",
+    "site": "books.toscrape.com",
+    "procedures": [
+      {
+        "slug": "read-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "read-page",
+          "probabilities": {
+            "read-page": 0.5,
+            "DONE": 0.0,
+            "open-category": 0.02,
+            "collect-page": 0.47,
+            "NONE": 0.01
+          },
+          "confidence": 0.37,
+          "usage": {
+            "input_tokens": 575,
+            "output_tokens": 59,
+            "cost": 2.415e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Collect the books on this category page.",
+            "status": "done",
+            "steps": [
+              {
+                "n": 1,
+                "snapshot": "s_t_6d9cea5e7734d5f1fd29a36012e8088c",
+                "operation": "done",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "SCROLL_DOWN": 0.24,
+                    "BLOCKED": 0.05,
+                    "DONE": 0.66,
+                    "run_script:list-page": 0.04,
+                    "WAIT": 0.0,
+                    "CLICK": 0.01
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+                  "title": "Mystery | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 6204
+              }
+            ]
+          }
+        ],
+        "scripts": [
+          {
+            "script": "list-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+            "records": 20,
+            "bytes": 4192,
+            "elapsed_ms": 1
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 6237
+      }
+    ],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "collected": 20,
+    "data": {
+      "model_calls_by_kind": {
+        "operator": 3,
+        "playbook": 1,
+        "procedure": 2
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.000721518,
+      "count": 20,
+      "first": [
+        {
+          "title": "Sharp Objects",
+          "price": 47.82,
+          "url": "https://books.toscrape.com/catalogue/sharp-objects_997/index.html",
+          "category": "Mystery",
+          "rating": 4,
+          "availability": "In stock"
+        },
+        {
+          "title": "In a Dark, Dark Wood",
+          "price": 19.63,
+          "url": "https://books.toscrape.com/catalogue/in-a-dark-dark-wood_963/index.html",
+          "category": "Mystery",
+          "rating": 1,
+          "availability": "In stock"
+        },
+        {
+          "title": "The Past Never Ends",
+          "price": 56.5,
+          "url": "https://books.toscrape.com/catalogue/the-past-never-ends_942/index.html",
+          "category": "Mystery",
+          "rating": 4,
+          "availability": "In stock"
+        },
+        {
+          "title": "A Murder in Time",
+          "price": 16.64,
+          "url": "https://books.toscrape.com/catalogue/a-murder-in-time_877/index.html",
+          "category": "Mystery",
+          "rating": 1,
+          "availability": "In stock"
+        },
+        {
+          "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+          "price": 44.1,
+          "url": "https://books.toscrape.com/catalogue/the-murder-of-roger-ackroyd-hercule-poirot-4_852/index.html",
+          "category": "Mystery",
+          "rating": 4,
+          "availability": "In stock"
+        }
+      ],
+      "pages": 0,
+      "scripts": [
+        {
+          "name": "list-page",
+          "calls": 1,
+          "records": 20
+        }
+      ]
+    },
+    "model_calls": 6,
+    "model_cost": 0.000721518,
+    "operator_steps": [],
+    "operator_state": {
+      "status": "done",
+      "reason": null,
+      "error": null,
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "s_t_d14829ce686009f499561e00067915c3",
+          "tab": "t_52b28bba9a8025ffc1ec662bec6c40aa",
+          "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+          "title": "Mystery | Books to Scrape - Sandbox",
+          "rows": [
+            {
+              "index": 1,
+              "role": "link",
+              "name": "Books to Scrape"
+            },
+            {
+              "index": 2,
+              "role": "link",
+              "name": "Home"
+            },
+            {
+              "index": 3,
+              "role": "link",
+              "name": "Books"
+            },
+            {
+              "index": 4,
+              "role": "link",
+              "name": "Books"
+            },
+            {
+              "index": 5,
+              "role": "link",
+              "name": "Travel"
+            },
+            {
+              "index": 6,
+              "role": "link",
+              "name": "Mystery"
+            },
+            {
+              "index": 7,
+              "role": "link",
+              "name": "Historical Fiction"
+            },
+            {
+              "index": 8,
+              "role": "link",
+              "name": "Sequential Art"
+            },
+            {
+              "index": 9,
+              "role": "link",
+              "name": "Classics"
+            },
+            {
+              "index": 10,
+              "role": "link",
+              "name": "Philosophy"
+            },
+            {
+              "index": 11,
+              "role": "link",
+              "name": "Romance"
+            },
+            {
+              "index": 12,
+              "role": "link",
+              "name": "Womens Fiction"
+            },
+            {
+              "index": 13,
+              "role": "link",
+              "name": "Fiction"
+            },
+            {
+              "index": 14,
+              "role": "link",
+              "name": "Childrens"
+            },
+            {
+              "index": 15,
+              "role": "link",
+              "name": "Religion"
+            },
+            {
+              "index": 16,
+              "role": "link",
+              "name": "Nonfiction"
+            },
+            {
+              "index": 17,
+              "role": "link",
+              "name": "Music"
+            },
+            {
+              "index": 18,
+              "role": "link",
+              "name": "Default"
+            },
+            {
+              "index": 19,
+              "role": "link",
+              "name": "Science Fiction"
+            },
+            {
+              "index": 20,
+              "role": "link",
+              "name": "Sports and Games"
+            },
+            {
+              "index": 21,
+              "role": "link",
+              "name": "Add a comment"
+            },
+            {
+              "index": 22,
+              "role": "link",
+              "name": "Fantasy"
+            },
+            {
+              "index": 23,
+              "role": "link",
+              "name": "New Adult"
+            },
+            {
+              "index": 24,
+              "role": "link",
+              "name": "Young Adult"
+            },
+            {
+              "index": 25,
+              "role": "link",
+              "name": "Science"
+            },
+            {
+              "index": 26,
+              "role": "link",
+              "name": "Poetry"
+            },
+            {
+              "index": 27,
+              "role": "link",
+              "name": "Paranormal"
+            },
+            {
+              "index": 28,
+              "role": "link",
+              "name": "Art"
+            },
+            {
+              "index": 29,
+              "role": "link",
+              "name": "Psychology"
+            },
+            {
+              "index": 30,
+              "role": "link",
+              "name": "Autobiography"
+            },
+            {
+              "index": 31,
+              "role": "link",
+              "name": "Parenting"
+            },
+            {
+              "index": 32,
+              "role": "heading",
+              "name": "Mystery"
+            },
+            {
+              "index": 33,
+              "role": "link",
+              "name": "Sharp Objects"
+            },
+            {
+              "index": 34,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 35,
+              "role": "heading",
+              "name": "Sharp Objects"
+            },
+            {
+              "index": 36,
+              "role": "link",
+              "name": "Sharp Objects"
+            },
+            {
+              "index": 37,
+              "role": "paragraph",
+              "name": "\u00a347.82"
+            },
+            {
+              "index": 38,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 39,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 40,
+              "role": "link",
+              "name": "In a Dark, Dark Wood"
+            },
+            {
+              "index": 41,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 42,
+              "role": "heading",
+              "name": "In a Dark, Dark ..."
+            },
+            {
+              "index": 43,
+              "role": "link",
+              "name": "In a Dark, Dark ..."
+            },
+            {
+              "index": 44,
+              "role": "paragraph",
+              "name": "\u00a319.63"
+            },
+            {
+              "index": 45,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 46,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 47,
+              "role": "link",
+              "name": "The Past Never Ends"
+            },
+            {
+              "index": 48,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 49,
+              "role": "heading",
+              "name": "The Past Never Ends"
+            },
+            {
+              "index": 50,
+              "role": "link",
+              "name": "The Past Never Ends"
+            },
+            {
+              "index": 51,
+              "role": "paragraph",
+              "name": "\u00a356.50"
+            },
+            {
+              "index": 52,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 53,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 54,
+              "role": "link",
+              "name": "A Murder in Time"
+            },
+            {
+              "index": 55,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 56,
+              "role": "heading",
+              "name": "A Murder in Time"
+            },
+            {
+              "index": 57,
+              "role": "link",
+              "name": "A Murder in Time"
+            },
+            {
+              "index": 58,
+              "role": "paragraph",
+              "name": "\u00a316.64"
+            },
+            {
+              "index": 59,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 60,
+              "role": "button",
+              "name": "Add to basket"
+            }
+          ],
+          "total": 60,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "dialog": null
+        },
+        "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+        "title": "Mystery | Books to Scrape - Sandbox",
+        "text": "Books to Scrape\nWe love being scraped!\nHome\nBooks\nMystery\nBooks\nTravel\nMystery\nHistorical Fiction\nSequential Art\nClassics\nPhilosophy\nRomance\nWomens Fiction\nFiction\nChildrens\nReligion\nNonfiction\nMusic\nDefault\nScience Fiction\nSports and Games\nAdd a comment\nFantasy\nNew Adult\nYoung Adult\nScience\nPoetry\nParanormal\nArt\nPsychology\nAutobiography\nParenting\nMystery\n32\nresults - showing\n1\nto\n20\n.\nWarning!\nThis is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.\nSharp Objects\n\u00a347.82\nIn stock\nAdd to basket\nIn a Dark, Dark ...\n\u00a319.63\nIn stock\nAdd to basket\nThe Past Never Ends\n\u00a356.50\nIn stock\nAdd to basket\nA Murder in Time\n\u00a316.64\nIn stock\nAdd to basket",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [],
+        "can_scroll_down": true,
+        "can_scroll_up": false,
+        "coverage": "viewport+below",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": false,
+          "can_scroll_down": true,
+          "coverage": "viewport+below",
+          "unsupported_states": []
+        }
+      },
+      "history": [],
+      "predictions": [
+        {
+          "outcome": "script",
+          "n": 1,
+          "snapshot": "s_t_8d029271ae7eb047390588f8c83baced",
+          "operation": "run_script:list-page",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.04,
+              "DONE": 0.0,
+              "WAIT": 0.0,
+              "run_script:list-page": 0.96,
+              "CLICK": 0.0,
+              "BLOCKED": 0.0
+            },
+            "target": {}
+          },
+          "confidence": 0.94,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 5089,
+            "output_tokens": 420,
+            "cost": 0.000213738,
+            "retries": 0
+          },
+          "elapsed_ms": 5334
+        },
+        {
+          "outcome": "script",
+          "n": 2,
+          "snapshot": "s_t_6daed37ee7d084b87481f1578d1f8cf5",
+          "operation": "run_script:list-page",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "run_script:list-page": 0.46,
+              "SCROLL_DOWN": 0.13,
+              "DONE": 0.39,
+              "WAIT": 0.0,
+              "CLICK": 0.0,
+              "BLOCKED": 0.02
+            },
+            "target": {}
+          },
+          "confidence": 0.35,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 5126,
+            "output_tokens": 420,
+            "cost": 0.000215292,
+            "retries": 0
+          },
+          "elapsed_ms": 341
+        },
+        {
+          "outcome": "terminal",
+          "n": 3,
+          "snapshot": "s_t_6d9cea5e7734d5f1fd29a36012e8088c",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.24,
+              "BLOCKED": 0.05,
+              "DONE": 0.66,
+              "run_script:list-page": 0.04,
+              "WAIT": 0.0,
+              "CLICK": 0.01
+            },
+            "target": {}
+          },
+          "confidence": 0.61,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5170,
+            "output_tokens": 417,
+            "cost": 0.00021714,
+            "retries": 0
+          },
+          "elapsed_ms": 342
+        }
+      ],
+      "text_calls": [],
+      "metrics": {
+        "actions": 0,
+        "predictions": 3,
+        "text_calls": 0,
+        "observation_calls": 4,
+        "observation_retries": 0,
+        "stale_decisions": 0,
+        "bootstrap_ms": 0,
+        "observation_ms": 178,
+        "prediction_ms": 6017,
+        "text_helper_ms": 0,
+        "input_ms": 0,
+        "settle_ms": 0,
+        "elapsed_ms": 6204
+      }
+    },
+    "output_kinds": [
+      "script-record",
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "s_t_9eb47bbfb81d4a091013abefb24adccf",
+      "tab": "t_52b28bba9a8025ffc1ec662bec6c40aa",
+      "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+      "title": "Mystery | Books to Scrape - Sandbox",
+      "rows": [
+        {
+          "index": 1,
+          "role": "link",
+          "name": "Books to Scrape"
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Home"
+        },
+        {
+          "index": 3,
+          "role": "link",
+          "name": "Books"
+        },
+        {
+          "index": 4,
+          "role": "link",
+          "name": "Books"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Travel"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Mystery"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "Historical Fiction"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Sequential Art"
+        },
+        {
+          "index": 9,
+          "role": "link",
+          "name": "Classics"
+        },
+        {
+          "index": 10,
+          "role": "link",
+          "name": "Philosophy"
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Romance"
+        },
+        {
+          "index": 12,
+          "role": "link",
+          "name": "Womens Fiction"
+        },
+        {
+          "index": 13,
+          "role": "link",
+          "name": "Fiction"
+        },
+        {
+          "index": 14,
+          "role": "link",
+          "name": "Childrens"
+        },
+        {
+          "index": 15,
+          "role": "link",
+          "name": "Religion"
+        },
+        {
+          "index": 16,
+          "role": "link",
+          "name": "Nonfiction"
+        },
+        {
+          "index": 17,
+          "role": "link",
+          "name": "Music"
+        },
+        {
+          "index": 18,
+          "role": "link",
+          "name": "Default"
+        },
+        {
+          "index": 19,
+          "role": "link",
+          "name": "Science Fiction"
+        },
+        {
+          "index": 20,
+          "role": "link",
+          "name": "Sports and Games"
+        },
+        {
+          "index": 21,
+          "role": "link",
+          "name": "Add a comment"
+        },
+        {
+          "index": 22,
+          "role": "link",
+          "name": "Fantasy"
+        },
+        {
+          "index": 23,
+          "role": "link",
+          "name": "New Adult"
+        },
+        {
+          "index": 24,
+          "role": "link",
+          "name": "Young Adult"
+        },
+        {
+          "index": 25,
+          "role": "link",
+          "name": "Science"
+        },
+        {
+          "index": 26,
+          "role": "link",
+          "name": "Poetry"
+        },
+        {
+          "index": 27,
+          "role": "link",
+          "name": "Paranormal"
+        },
+        {
+          "index": 28,
+          "role": "link",
+          "name": "Art"
+        },
+        {
+          "index": 29,
+          "role": "link",
+          "name": "Psychology"
+        },
+        {
+          "index": 30,
+          "role": "link",
+          "name": "Autobiography"
+        },
+        {
+          "index": 31,
+          "role": "link",
+          "name": "Parenting"
+        },
+        {
+          "index": 32,
+          "role": "heading",
+          "name": "Mystery"
+        },
+        {
+          "index": 33,
+          "role": "link",
+          "name": "Sharp Objects"
+        },
+        {
+          "index": 34,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 35,
+          "role": "heading",
+          "name": "Sharp Objects"
+        },
+        {
+          "index": 36,
+          "role": "link",
+          "name": "Sharp Objects"
+        },
+        {
+          "index": 37,
+          "role": "paragraph",
+          "name": "\u00a347.82"
+        },
+        {
+          "index": 38,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 39,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 40,
+          "role": "link",
+          "name": "In a Dark, Dark Wood"
+        },
+        {
+          "index": 41,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 42,
+          "role": "heading",
+          "name": "In a Dark, Dark ..."
+        },
+        {
+          "index": 43,
+          "role": "link",
+          "name": "In a Dark, Dark ..."
+        },
+        {
+          "index": 44,
+          "role": "paragraph",
+          "name": "\u00a319.63"
+        },
+        {
+          "index": 45,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 46,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 47,
+          "role": "link",
+          "name": "The Past Never Ends"
+        },
+        {
+          "index": 48,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 49,
+          "role": "heading",
+          "name": "The Past Never Ends"
+        },
+        {
+          "index": 50,
+          "role": "link",
+          "name": "The Past Never Ends"
+        },
+        {
+          "index": 51,
+          "role": "paragraph",
+          "name": "\u00a356.50"
+        },
+        {
+          "index": 52,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 53,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 54,
+          "role": "link",
+          "name": "A Murder in Time"
+        },
+        {
+          "index": 55,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 56,
+          "role": "heading",
+          "name": "A Murder in Time"
+        },
+        {
+          "index": 57,
+          "role": "link",
+          "name": "A Murder in Time"
+        },
+        {
+          "index": 58,
+          "role": "paragraph",
+          "name": "\u00a316.64"
+        },
+        {
+          "index": 59,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 60,
+          "role": "button",
+          "name": "Add to basket"
+        }
+      ],
+      "total": 60,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "dialog": null
+    }
+  }
+}

@@ -72,7 +72,8 @@ let history (step : P.step) changed =
 (* fly-hc3l, fly-4mio, fly-9e0f: predictions and executed input have separate
    budgets. A decision is consumed exactly once; stale input is not an action. *)
 let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
-    ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent =
+    ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent
+    ~scripts ~run_script ~reached =
   let started = now () in
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
   let cap = Option.value ~default:60 args.P.max_steps in
@@ -82,7 +83,10 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
   let prediction_log = ref [] and text_log = ref [] and action_log = ref [] in
   let pending_text = ref None in
   (* fly-vnf1: BLOCKED cannot certify an unseen scroll frontier. This deliberate
-     deviation from jev-ultrafast is bounded to three exploration inputs per URL. *)
+     deviation from jev-ultrafast is bounded per URL. pbk-eyya raised the bound from three
+     to eight: a 20-card listing is taller than three viewports, and JEV gave up on the
+     pager of books.toscrape.com's Default category before seeing it. *)
+  let rescue_cap = 8 in
   let frontiers = Hashtbl.create 8 in
   let integer n = `Int n and string s = `String s in
   let optional_string = function None -> `Null | Some s -> string s in
@@ -180,6 +184,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
         else
           let request = J.make ~model ~goal:args.goal ~snapshot:page.snapshot ~text:page.text
             ~recent:(List.rev recent) ~can_scroll_down:page.can_scroll_down ~can_scroll_up:page.can_scroll_up
+            |> fun request -> J.with_scripts request (scripts page)
             |> fun request -> J.with_coverage request (coverage page) in
           let at = now () in
           incr predictions;
@@ -198,13 +203,16 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
               let model_operation = op_name op in
               let offered name = List.exists (fun (key, _) -> String.uppercase_ascii key = name) choice.operation_probabilities in
               let rescue =
-                if op <> operation "blocked" || rescue_count >= 3 || !actions >= cap then None
+                if op <> operation "blocked" || rescue_count >= rescue_cap || !actions >= cap then None
                 else if not seen_bottom && page.can_scroll_down && offered "SCROLL_DOWN" then Some (operation "scroll_down")
                 else if not seen_top && page.can_scroll_up && offered "SCROLL_UP" then Some (operation "scroll_up")
                 else None in
               prediction_log := `Assoc [ "n", integer !predictions;
                 "snapshot", string (P.Snapshot_id.to_string page.snapshot.snapshot);
-                "operation", string (op_name op); "index", optional_int choice.index;
+                "operation", string (match choice.J.script with
+                  | Some name -> J.run_script_prefix ^ name
+                  | None -> op_name op);
+                "index", optional_int choice.index;
                 "option", optional_int choice.option;
                 "probabilities", P.yojson_of_probabilities (J.trace_probabilities choice);
                 "confidence", `Float choice.confidence; "outcome", string "predicted";
@@ -215,7 +223,8 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                 { choice with J.operation; index = None; option = None; target_confidence = None;
                   target_probabilities = []; targets = [] } in
               let op = choice.J.operation in
-              let terminal = op = operation "done" || op = operation "blocked" in
+              let terminal =
+                choice.J.script = None && (op = operation "done" || op = operation "blocked") in
               let refresh () =
                 incr stale;
                 update_prediction "stale; no input";
@@ -228,6 +237,33 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                 let step = record_step page page choice None steps in
                 update_prediction "dry-run; no input";
                 finish ~reason:"dry run: the proposed action was not dispatched" "blocked" (step :: steps) page
+              else if Option.is_some choice.J.script then
+              let name = Option.get choice.J.script in (
+                  match run_script with
+                  | None ->
+                      finish ~reason:"internal: a script was chosen without a runner" "error" steps page
+                  | Some run_script -> (
+                      match run_script ~url:page.snapshot.url name with
+                      | Error error ->
+                          update_prediction "script error";
+                          finish ~error ~reason:(failed "run_script" error) "error" steps page
+                      | Ok (J.Script_blocked { argument }) ->
+                          update_prediction "missing argument; no input";
+                          finish ~reason:(Printf.sprintf "no value for argument %S" argument) "blocked" steps page
+                      | Ok (J.Script_continue { summary }) -> (
+                          update_prediction "script";
+                          match observe_page () with
+                          | Error error ->
+                              finish ~error ~reason:(failed "observe after script" error) "error" steps page
+                          | Ok next ->
+                              let changed = page.fingerprint <> next.fingerprint in
+                              let recent =
+                                J.{ action = summary; kind = Some "script"; text = None; page_changed = Some changed }
+                                :: recent
+                              in
+                              if J.stalled (List.rev recent) then
+                                finish ~reason:"the operator repeated three non-WAIT actions without changing the page" "blocked" steps next
+                              else go next steps recent)))
               else if not terminal && !actions >= cap then (
                 update_prediction "action budget; no input";
                 finish ~reason:(Printf.sprintf "action budget exhausted (%d executed actions)" cap) "step-cap" steps page)
@@ -329,6 +365,8 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                                    match acted.dialog, acted.popups with
                                    | Some dialog, _ -> finish ~reason:(dialog_reason dialog) "error" steps next
                                    | None, _ :: _ -> finish ~reason:(popup_reason acted.popups) "error" steps next
+                                   | None, [] when reached ~start:first next ->
+                                       finish ~reason:"the step's until checks hold" "done" steps next
                                    | None, [] when J.stalled (List.rev recent) ->
                                        finish ~reason:"the operator repeated three non-WAIT actions without changing the page" "blocked" steps next
                                    | None, [] -> go next steps recent)
@@ -337,6 +375,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
 
 let run ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(telemetry = fun () -> `Assoc []) ?(observe_attempts = 10) ?(recent = [])
+    ?(scripts = fun _ -> []) ?run_script ?(reached = fun ~start:_ _ -> false)
     ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run () =
   if Option.value ~default:60 args.P.max_steps < 1 ||
      Option.value ~default:120 args.deadline_s < 1 || observe_attempts < 1 || observe_attempts > 10 then
@@ -359,7 +398,7 @@ let run ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
       text_value = (fun context -> Effect.perform (M.Text context));
       act = (fun page choice text -> Effect.perform (M.Act (page, choice, text)));
     } in
-    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent) ()
+    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~reached) ()
       { retc = Fun.id; exnc = raise;
         effc = (fun (type a) (eff : a Effect.t) -> match eff with
           | M.Observe -> Some (fun (k : (a, (P.drive_result, P.error) result) Effect.Deep.continuation) -> Effect.Deep.continue k (handler.observe ()))

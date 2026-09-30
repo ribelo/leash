@@ -2025,8 +2025,9 @@ let drive_locked ?recent ?(meter = meter ())
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
     ?(text_helper = fun () -> Text_helper.unavailable)
-    ?(guard = fun (_ : P.snapshot) (_ : Jev_request.decision) -> None) t ~owner ~model tab
-    (args : P.drive_args) =
+    ?(guard = fun (_ : P.snapshot) (_ : Jev_request.decision) -> None)
+    ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?reached t ~owner ~model
+    tab (args : P.drive_args) =
   (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
          drive's own deadline: the caller's remaining budget is what the model call is
          bounded by, so a slow provider cannot outlast the reply the client is waiting
@@ -2230,7 +2231,7 @@ let drive_locked ?recent ?(meter = meter ())
   (* fly-4mio: acquire already retries ten times at 20 ms. One Drive attempt,
      or the two loops would nest to a hundred observations. *)
   Drive.run ~validate ~coverage ~usage:(usage meter) ~telemetry:(telemetry meter)
-    ~observe_attempts:1 ?recent
+    ~observe_attempts:1 ?recent ~scripts ?run_script ?reached
     ~handler:Drive.{ observe; decide; text_value; act }
     ~now:(fun () -> now t)
     ~model ~args
@@ -2490,7 +2491,19 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                             | Some row -> Run.unsafe_action (row.name ^ " " ^ row.role))
                     in
                     drive_locked ~recent:request.Run.recent ?meter ~decide ~text_helper
-                      ~guard t ~owner ~model tab
+                      ~guard
+                      ~scripts:(fun page ->
+                        request.Run.script_offers ~url:page.Drive.snapshot.url
+                          ~text:page.text)
+                      ~run_script:(fun ~url name -> request.Run.on_script ~url name)
+                      ?reached:
+                        (Option.map
+                           (fun until ~(start : Drive.observation)
+                                (page : Drive.observation) ->
+                             until ~start_url:start.snapshot.url page.snapshot
+                               ~text:page.text)
+                           request.Run.reached)
+                      t ~owner ~model tab
                       P.
                         {
                           tab = handle;
@@ -2538,6 +2551,18 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                 script =
                   (fun script ~args ->
                     let started = now t in
+                    (* pbk-eyya: a script reads a loaded document. A goal step that ends
+                       the moment its until holds can hand over a page still streaming in
+                       (the Default category's page 2 read 12 of 20 cards); the load wait
+                       is bounded like every other. *)
+                    if tab.page_loading && tab.dialog = None then (
+                      let promise, waiter = Eio.Promise.create () in
+                      tab.page_loads <- waiter :: tab.page_loads;
+                      Fun.protect
+                        ~finally:(fun () ->
+                          tab.page_loads <-
+                            List.filter (fun pending -> pending != waiter) tab.page_loads)
+                        (fun () -> ignore (t.await_load promise)));
                     match Reading.script browser script ~args with
                     | Ok ran ->
                         Ok

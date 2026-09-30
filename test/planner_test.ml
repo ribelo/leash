@@ -82,7 +82,8 @@ let page name url_pattern =
       text_marker = None;
     }
 
-let goal text = B.Goal B.{ goal = text; hint = None }
+let goal text = B.Goal B.{ goal = text; hint = None; until = None }
+let mission name = B.{ name; source = From_mission { optional = false } }
 
 let procedure ?(args = []) ?(expect = [ "the page is home" ]) ~slug ~description steps =
   B.
@@ -114,6 +115,7 @@ let playbook
             description = "Site A";
             pages = [ page "cart" (cart_url ^ "*"); page "home" (home_url ^ "*") ];
             procedures;
+            shapes = None;
             scripts = None;
           };
       checks = [];
@@ -513,6 +515,58 @@ let correction_budget () =
             "daily-9ggi elapsed correction times out" "timeout" (detail_code error);
           Alcotest.(check int) "daily-9ggi no correction after expiry" 1 !calls))
 
+(* pbk-eyya: a playbook whose scripts live in files is still a valid planner playbook —
+   the reply's page-kind check must not re-resolve file scripts without their directory
+   (the books.toscrape.com gate failed here on the first planner turn). *)
+let file_scripts_plan () =
+  Eio_main.run (fun env ->
+      Eio.Switch.run (fun sw ->
+          let server =
+            Fake.serve ~net:env#net ~sw (fun _ -> chat_content (fail_answer ()))
+          in
+          let logger =
+            Logger.create ~level:Logger.Info ~service:"planner-files" ~clock:env#clock
+              ~mono_clock:env#mono_clock
+              ~reporter:(Logger.Memory.reporter (Logger.Memory.create ()))
+              ()
+          in
+          let http = Ox_http.Client.create ~sw ~net:env#net ~clock:env#clock () in
+          let client =
+            Ox_ai_chat.create ~http ~clock:env#clock ~logger
+              ~endpoint:(Fake.url server "/chat/completions")
+              ~api_key:(Ox_observability.Redact.make key)
+              ()
+          in
+          let planner =
+            Leash__Planner.create
+              ~now:(fun () -> 0.)
+              ~client ~model:planner_model ~reasoning:"none" ~logger ()
+          in
+          let book = (playbook ()).B.playbook in
+          let book =
+            {
+              book with
+              B.scripts =
+                Some
+                  [
+                    ( "list-page",
+                      B.
+                        {
+                          file = Some "scripts/list-page.js";
+                          source = None;
+                          description = "Collect the page.";
+                          pages = Some [ "home" ];
+                          args = [];
+                          returns_json = None;
+                          max_bytes = None;
+                        } );
+                  ];
+            }
+          in
+          match planner.plan { (plan_request ()) with R.playbook = Some book } with
+          | Ok _ -> ()
+          | Error error -> Alcotest.failf "pbk-eyya planner refused: %s" error.P.message))
+
 (* ---------- Proposals on disk ---------- *)
 
 let temp_dir prefix =
@@ -631,7 +685,9 @@ let triggers () =
         playbook
           ~procedures:
             [
-              procedure ~args:[ "product" ] ~slug:"find" ~description:"Find the product."
+              procedure
+                ~args:[ mission "product" ]
+                ~slug:"find" ~description:"Find the product."
                 [ goal "Search for {product}." ];
             ]
           ()
@@ -1221,7 +1277,7 @@ let discover_accept () =
                   slug = "browse";
                   description = "Browse home";
                   args = None;
-                  steps = [ Goal { goal = "Inspect home"; hint = None } ];
+                  steps = [ Goal { goal = "Inspect home"; hint = None; until = None } ];
                   expect = [ "the page is home" ];
                   expect_timeout_s = None;
                   repeat = None;
@@ -1229,6 +1285,7 @@ let discover_accept () =
                   deadline_s = None;
                 };
               ];
+            shapes = None;
             scripts = None;
           }
       in
@@ -1255,6 +1312,7 @@ let () =
       ( "L32",
         [
           Alcotest.test_case "daily-9ggi correction budget" `Quick correction_budget;
+          Alcotest.test_case "pbk-eyya planner with file scripts" `Quick file_scripts_plan;
           Alcotest.test_case "run-w7ke triggers" `Quick triggers;
           Alcotest.test_case "run-rq6i answers" `Quick answers;
           Alcotest.test_case "run-rq6i malformed replies" `Quick malformed;

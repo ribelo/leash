@@ -1026,7 +1026,68 @@ let unsafe_inputs () =
                  fields)
         | _ -> Alcotest.fail "missing DOM"
       in
-      Alcotest.(check int) ("drive-zml5 no " ^ kind ^ " action row") 0 (count dom))
+      if kind <> "password" then
+        Alcotest.(check int) ("drive-zml5 no " ^ kind ^ " action row") 0 (count dom)
+      else
+        (* field-8bzc field-sazr: the agent's snapshot lists the password inputs as
+           textboxes marked password with no value; the operator's table offers none. The
+           two tables differ exactly on those rows. *)
+        let agent =
+          List.mapi (fun i ((row : P.row), _) -> { row with P.index = i + 1 }) (rows dom)
+        in
+        let password (row : P.row) =
+          List.exists
+            (fun s -> P.Row_state.to_string s = "password")
+            (Option.value ~default:[] row.state)
+        in
+        let secret = List.filter password agent in
+        Alcotest.(check int)
+          "field-8bzc password inputs are agent rows" 2 (List.length secret);
+        List.iter
+          (fun (row : P.row) ->
+            Alcotest.(check string) "field-8bzc role textbox" "textbox" row.role;
+            Alcotest.(check bool) "field-8bzc never a value" true (row.value = None))
+          secret;
+        let snapshot =
+          match P.Snapshot_id.of_string "s_test" with
+          | Error _ -> assert false
+          | Ok snapshot ->
+              P.
+                {
+                  snapshot;
+                  tab =
+                    (match P.Handle.of_string "t_test" with
+                    | Ok h -> h
+                    | Error _ -> assert false);
+                  url = "https://example.org/";
+                  title = "Sign up";
+                  rows = agent;
+                  total = List.length agent;
+                  offset = 0;
+                  truncated = false;
+                  settled = true;
+                  dialog = None;
+                }
+        in
+        let offered =
+          List.map
+            (fun (e : Leash__Jev_request.element) -> e.row)
+            (Leash__Jev_request.elements snapshot)
+        in
+        let actionable =
+          List.filter
+            (fun (row : P.row) ->
+              List.mem row.index offered || password row
+              || List.mem row.role
+                   [ "textbox"; "searchbox"; "button"; "link"; "checkbox" ])
+            agent
+        in
+        Alcotest.(check (list int))
+          "field-sazr the tables differ exactly on the password rows"
+          (List.map (fun (row : P.row) -> row.index) secret)
+          (List.filter
+             (fun index -> not (List.mem index offered))
+             (List.map (fun (row : P.row) -> row.index) actionable)))
     [ "password"; "file"; "hidden" ]
 
 (* The TargetInfo of a popup as headless Chrome sends it, with this test's ids in it. *)

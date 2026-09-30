@@ -149,6 +149,8 @@ type row_state =
   | Disabled [@json.name "disabled"]
   | Required [@json.name "required"]
   | Readonly [@json.name "readonly"]
+  | Password [@json.name "password"]
+      (** field-8bzc: an [<input type=password>] row; it never carries a value. *)
 [@@deriving yojson]
 
 module Row_state = struct

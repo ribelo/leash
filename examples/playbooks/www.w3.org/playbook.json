@@ -14,7 +14,6 @@
     {
       "slug": "open-guidance",
       "description": "Open the W3C accessibility guidance.",
-      "args": [],
       "steps": [
         {
           "goal": "Open W3C accessibility guidance."
@@ -27,7 +26,6 @@
     {
       "slug": "download-document",
       "description": "Download a linked PDF document from W3C guidance.",
-      "args": [],
       "steps": [
         {
           "goal": "Find a publicly linked PDF on this site and download it."

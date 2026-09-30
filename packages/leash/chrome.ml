@@ -55,6 +55,13 @@ let argv config =
     "--hide-crash-restore-bubble";
     "--remote-debugging-pipe";
     "--disable-blink-features=AutomationControlled";
+    (* pbk-eyya: an agent's tab is rarely the one in front. Without these, Chrome
+       throttles an occluded or background renderer to few or no frames, so a wheel
+       scroll lands seconds late (or after the next observation) and three scrolls read
+       as a stall — books.toscrape.com's Default listing, page 4 and page 7. *)
+    "--disable-backgrounding-occluded-windows";
+    "--disable-renderer-backgrounding";
+    "--disable-background-timer-throttling";
     "--class=leash";
   ]
   @
