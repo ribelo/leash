@@ -1,6 +1,6 @@
 ---
 name: leash
-description: Inspect, debug, or interact with pages in the local Leash-managed Chrome using the installed leash CLI. Use for browser workflows when Leash is available; not for the user's everyday browser or another browser session.
+description: Inspect, debug, or interact with pages in the local Leash-managed Chrome using the installed leash CLI, and write site playbooks for it. Use for browser workflows when Leash is available; not for the user's everyday browser or another browser session.
 ---
 
 # Leash
@@ -33,6 +33,7 @@ Read only the reference needed for the current task; resolve these paths relativ
 - **Service, tabs, or skill installation:** [lifecycle](references/lifecycle.md). Covers systemd, headed/headless Chrome, ownership, expiry, and `skill install` / `skill show` / skill currency in `status`.
 - **Read or act on a page, debug, wait, or ask the human to take over:** [browser](references/browser.md). Covers snapshots, all reading/action commands, and handoff/resume.
 - **Delegate a bounded mission:** [missions and playbooks](references/missions.md). `drive` works with no playbooks, one, many, or only unrelated books. `NONE` is not a block and is not a planner review. On-the-fly `--out` is tagged `operator-state` (bounded observed page). Validated records are tagged `script-record` and need a tested playbook. No site playbooks are installed automatically.
+- **Write a playbook for a site:** [authoring](references/authoring.md). The procedure from studying the site to a live run, the rules, the checker vocabulary, and a worked example.
 - **A command failed:** [errors and recovery](references/errors.md). Covers exit classes and recovery without repeating uncertain actions.
 
 ## Observe, act, verify

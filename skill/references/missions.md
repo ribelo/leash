@@ -138,7 +138,7 @@ Procedures have a lowercase slug, a useful description, declared arguments, step
 
 A procedure's `repeat` can specify `next` (next-page procedure slug), `max` (page cap), `until` (an expectation sentence or `{"script":"last-page"}` returning exactly `{done: boolean}`), `delay_ms` (default 500), and `key` (record field for run-wide deduplication). Termination is checked before the cap; reaching the cap with pages still remaining is explicit failure, not a complete dataset. Control-script values never become collected records. Repeat helper procedures are not offered as mission choices.
 
-Use native `navigate` plus extraction for pages that require browser navigation, or a bounded same-origin fetch collector when appropriate. Do not rewrite the DOM/history to trick page-kind checks. Pagination, deduplication, and endpoint fetching do not remove the need to verify coverage and respect the site's rate limits.
+Pagination is a goal step JEV drives (see [authoring](authoring.md)); a script reads the page it is on. Use `navigate` from a control script only when a URL cannot be reached by clicking. Do not rewrite the DOM/history to trick page-kind checks. Pagination, deduplication, and endpoint fetching do not remove the need to verify coverage and respect the site's rate limits.
 
 ## Read data and cost evidence
 
