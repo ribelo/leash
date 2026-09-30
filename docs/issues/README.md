@@ -141,6 +141,17 @@ Playbooks are optional knowledge, never permission to work. The operator decisio
 
 L45 is delivered. The spec names the exact superseded ADR/spec/story clauses, the unseen-page BLOCKED rescue, and the 2026-09-30 live gate. It does not claim normalized all-pages extraction from a browser snapshot.
 
+### Milestone 10, continued (review of 2026-09-30)
+
+L45 was useful but sideways: the direction is the cut-over (L44). The review found the installed playbook to be a fetch scraper that bypassed the design, and the skill silent on authoring.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L46 | **Scripts are JEV's tools; playbooks are procedures** (`playbook-scripts/01-playbook-scripts.md`). `run_script:<name>` as an operator option scoped by page kind; `returns` beside the script, named shapes; args declare their source; loader refuses script-only playbooks and stray files; the honest books example; L39's gate re-run with JEV choosing. | pbk-46fr, pbk-rai1, pbk-3cq7, pbk-hcwy, pbk-9549, pbk-otsl, pbk-lvy9, pbk-lww9, pbk-85m1, pbk-8n2l, pbk-abr3, pbk-eyya, pbk-wbhf, pbk-i0zl | — | [ ] |
+| L47 | **Authoring reference** (`playbook-authoring/01-playbook-authoring.md`). `skill/references/authoring.md` as a procedure with the worked example; verified by a fresh agent writing a playbook for automationexercise.com. | auth-cv0y, auth-m5ho, auth-47fd, auth-249z, auth-ovd4, auth-avng, auth-v3sc, auth-75l0 | L46 | [ ] |
+
+Then **L44 closes**: skill refreshed on this machine, fresh-agent acceptance, chrome-cdp deleted with every reference, L18/L28 ticked.
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
