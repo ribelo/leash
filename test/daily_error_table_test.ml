@@ -166,7 +166,8 @@ let examples () =
      row is gone, navigate back or re-find it before acting";
   check "service-stopped"
     "`systemctl --user start leash`, then `leash status`; a brief service-restarting \
-     (75) right after start is normal - retry";
+     (75) right after start is normal - retry; tabs and snapshots from before the stop \
+     are gone, so re-open them";
   check "service-unreachable" "`systemctl --user start leash`, or pass --socket";
   Alcotest.(check int)
     "cli-parse exits 124" 124

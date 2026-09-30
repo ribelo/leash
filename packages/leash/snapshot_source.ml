@@ -489,7 +489,12 @@ let observe_retry_s = 0.02
 let operator_mark = "leash-operator-read"
 let settle_mark = "leash-operator-settle"
 
-type unsupported_state = Iframe | Shadow_root | Canvas | Nested_scroll_container
+type unsupported_state =
+  | Iframe
+  | Shadow_root
+  | Canvas
+  | Nested_scroll_container
+  | Password_field
 
 type coverage = {
   text_truncated : bool;
@@ -524,6 +529,7 @@ let unsupported_name = function
   | Shadow_root -> "shadow-root"
   | Canvas -> "canvas"
   | Nested_scroll_container -> "nested-scroll-container"
+  | Password_field -> "password-field"
 
 let coverage_json coverage =
   `Assoc
@@ -641,6 +647,7 @@ let operator_script =
     if (e.tagName === 'IFRAME' || e.tagName === 'FRAME') unsupported.add('iframe');
     if (e.shadowRoot) unsupported.add('shadow-root');
     if (e.tagName === 'CANVAS') unsupported.add('canvas');
+    if (e.tagName === 'INPUT' && e.type === 'password') unsupported.add('password-field');
     if (e !== document.body && e !== document.documentElement) {
       const css = getComputedStyle(e);
       if ((/(auto|scroll)/.test(css.overflowY) && e.scrollHeight > e.clientHeight + 2) ||
@@ -811,6 +818,7 @@ let parse_operator json =
           | `String "shadow-root" -> Some Shadow_root
           | `String "canvas" -> Some Canvas
           | `String "nested-scroll-container" -> Some Nested_scroll_container
+          | `String "password-field" -> Some Password_field
           | _ -> None)
       in
       let coverage =

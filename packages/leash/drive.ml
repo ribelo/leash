@@ -284,6 +284,10 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                          if op = operation "done" then finish "done" (step :: steps) next
                          else
                             let reason = match member "unsupported_states" (coverage next) with
+                              | Some (`List states) when List.mem (`String "password-field") states ->
+                                  (* daily-9ggi fly-eoqg: the operator never types a password; the
+                                     agent does, with leash fill on the row snap marks password. *)
+                                  "the page needs a password, which the operator never types: fill it with `leash fill` (snap marks the row password), then drive the rest"
                               | Some (`List (_ :: _ as states)) ->
                                   "the operator found no available action; unsupported visible UI: " ^
                                   String.concat ", " (List.filter_map (function `String name -> Some name | _ -> None) states)

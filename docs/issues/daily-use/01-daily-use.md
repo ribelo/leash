@@ -47,7 +47,7 @@ Install Leash through nixos-config like Pie and nema. Give every failure a stabl
 
 16. As the operator, I want an acceptance run in which a fresh agent session that knows only the installed skill works against the installed systemd service and completes: open, snap, fill and click a form; read with `text` and bounded `eval`; find an API call in `net` and read its body; handle a dialog and a popup; download a file; one `drive` mission; and recover from three deliberate failures (service stopped, stale snapshot, not-owner) using only the hints. The transcript and any skill or help changes it forced should be recorded, so that Leash is proven as an agent's tool, not just a test suite. ^daily-9ggi
 17. As the operator, I want L28/L18's desktop checks (the handoff raises the window and notifies; Done returns control) run on the installed headed service, with my observations recorded, so that the handoff is proven on my desktop. ^daily-n7on
-18. (Operator decision 2026-09-30: disable, do not delete — `disable-model-invocation: true`, still `/chrome-cdp` by hand; dotfiles c9c2078.) As the operator, I want the chrome-cdp skill deleted from dotfiles after acceptance passes, and every reference to it updated: the screenshot skill, the leash skill, the upstream-sync request list (so a sync doesn't bring it back), and any AGENTS.md. So that agents have one browser tool. ^daily-6c5m
+18. (Operator decision 2026-09-30: disable; superseded the same night by the L44 finish line: deleted — dotfiles 3ce3c4b removes the skill and fixes REQUESTED-SKILLS.md, nixos-config 916f9c2 removes the chrome-cdp launcher and desktop entry, xwire/AGENTS.md names Leash; the screenshot skill already pointed to `leash shot`.) As the operator, I want the chrome-cdp skill deleted from dotfiles after acceptance passes, and every reference to it updated: the screenshot skill, the leash skill, the upstream-sync request list (so a sync doesn't bring it back), and any AGENTS.md. So that agents have one browser tool. ^daily-6c5m
 19. As the operator, I want the global and project AGENTS.md files that mention browser inspection to name Leash, so that agents reach for it by default. ^daily-mglh
 
 ### Operability
@@ -501,6 +501,15 @@ passed.
   `--enable-automation`; `actions_test.focus_emulation` pins no emulation on
   `new`, on/off around a snapshot in the tab's session with the off after the page
   read, the guard script's `worldName` and the guard reads' isolated `contextId`.
+
+## L44 acceptance run 3 — 2026-10-01
+
+A fresh `subagent_claude_sonnet` session with only the installed skill (service and skill at c263971) against the installed headed service; [transcript](acceptance/2026-10-01-l44-run3-transcript.md).
+
+- Pass: httpbin form (text, time, textarea, radio, checkbox, submit, echoed result); `text` and bounded `eval`; `net --type fetch` and `net body` (/spec.json); alert accept, confirm dismiss, popup read and close; download completed (307 bytes on disk); drive Mystery from a blank tab 32/32 (12 calls, $0.0017, ~9 s, independently re-scraped); drive "collect … on this page" on Travel with `--tab` 11/11 (6 calls, $0.0008, 2.6 s); recoveries from service-stopped (hint followed, healthy at once), stale-snapshot and not-owner.
+- Fail: the on-the-fly login mission on the-internet.herokuapp.com. The operator never types a password (fly-eoqg), but nothing said so: it typed both values into Username and answered `done` (without `--expect`), or BLOCKED with "no available action" (with it). Fix: the operator observation reports a visible `password-field`, and BLOCKED then says "the page needs a password, which the operator never types: fill it with `leash fill` (snap marks the row password), then drive the rest" (drive_test, and live on the same page: one `type_text` of the username, then that reason). Password rows are in `snap` since L46 (field-8bzc).
+- Other changes it forced: repeat pages no longer copy the parent's choice probabilities and usage into the trace; the `service-stopped` hint says tabs and snapshots from before the stop are gone; the missions reference now says to always pass `--expect`, where an on-the-fly answer is (`operator_state.page.text`), links the checker vocabulary, documents the `.record` nesting of `script-record` lines, the blank-tab playbook route, passwords, and reading large replies with `jq`.
+- Left for L48 or later (recorded, not blocking): `net` ring noise and unbounded `net body`; no documented `eval` output bound; `dialog` help shows ACCEPT|DISMISS in capitals; stale `.crdownload` files in the shared download directory; `time`/`date` input formats undocumented; `text` and `snap` titles can disagree right after navigation.
 
 ## Further Notes
 

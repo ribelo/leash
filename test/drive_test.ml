@@ -798,7 +798,22 @@ let fly_unsupported () =
   Alcotest.(check (option string))
     "unsupported reason is explicit"
     (Some "the operator found no available action; unsupported visible UI: iframe, canvas")
-    result.reason
+    result.reason;
+  (* daily-9ggi fly-eoqg: a password field is never the operator's; BLOCKED says who
+     types it (the L44 run-3 login mission typed the password into Username). *)
+  let password = `List [ `String "password-field" ] in
+  let result =
+    fly_run
+      ~coverage:(fun _ -> `Assoc [ ("unsupported_states", password) ])
+      ~decide:(fun _ -> Ok (decision "blocked"))
+      ~act:(fun _ _ ~text:_ -> Alcotest.fail "terminal password input")
+      ()
+  in
+  Alcotest.(check bool)
+    "daily-9ggi a password page names leash fill" true
+    (match result.reason with
+    | Some reason -> contains reason "leash fill" && contains reason "never types"
+    | None -> false)
 
 let () =
   Alcotest.run "drive"

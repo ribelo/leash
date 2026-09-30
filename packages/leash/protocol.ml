@@ -481,7 +481,8 @@ module Error_code = struct
     | Service_stopped ->
         info 69 "the leash unit is installed but inactive"
           "`systemctl --user start leash`, then `leash status`; a brief \
-           service-restarting (75) right after start is normal - retry"
+           service-restarting (75) right after start is normal - retry; tabs and \
+           snapshots from before the stop are gone, so re-open them"
     | Service_restarting ->
         info 75
           "the leash unit is activating or auto-restarting, or Chrome's generation is \

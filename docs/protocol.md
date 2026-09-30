@@ -607,7 +607,7 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message |
 | `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket |
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |
-| `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash`, then `leash status`; a brief service-restarting (75) right after start is normal - retry |
+| `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash`, then `leash status`; a brief service-restarting (75) right after start is normal - retry; tabs and snapshots from before the stop are gone, so re-open them |
 | `service-restarting` | 75 | the leash unit is activating or auto-restarting, or Chrome's generation is being relaunched | Leash is restarting; retry `leash status` in a few seconds |
 | `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its owner and mode, or pass --socket |
 | `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's owner and mode, or pass another path |

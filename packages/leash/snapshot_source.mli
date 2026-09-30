@@ -55,7 +55,12 @@ val operator_expression : string
 (** One DOM evaluation of the visible viewport: text, scroll, omission and the semantic
     marker. [null] means the document is navigating (fly-crcc fly-iodm). *)
 
-type unsupported_state = Iframe | Shadow_root | Canvas | Nested_scroll_container
+type unsupported_state =
+  | Iframe
+  | Shadow_root
+  | Canvas
+  | Nested_scroll_container
+  | Password_field
 
 type coverage = {
   text_truncated : bool;

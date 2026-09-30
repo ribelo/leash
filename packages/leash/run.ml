@@ -1399,6 +1399,12 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
       in
       Finish (finish { st with trace; recent } (status "failed") ~reason ())
     in
+    (* daily-9ggi: a repeat page is the runner's, not a model's choice; it must not
+       carry the parent's probabilities and usage (the L44 run-3 trace showed them twice). *)
+    let repeat_choice slug =
+      ignore choice;
+      { key = slug; probabilities = `Assoc []; confidence = 1.; usage = None; judgments = [] }
+    in
     let rec page st index =
       if now () >= deadline then
         Ok (Finish (finish st (status "deadline") ~reason:"repeat deadline" ()))
@@ -1429,7 +1435,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
               | Ok (Steps_interrupted (st, drives, reason))
               | Ok (Steps_failed (st, drives, reason)) ->
                   let st = record st ~book ~proc:next ~planned:false
-                    ~choice:{ choice with key = next.slug } ~drives ~expectations:[]
+                    ~choice:(repeat_choice next.slug) ~drives ~expectations:[]
                     ~outcome:"failed" ~attempts:1 ~elapsed:0 ~reason:(Some reason) in
                   Ok (Finish (finish st (status "blocked") ~reason ()))
               | Ok (Steps_done (st, drives, _)) ->
@@ -1441,14 +1447,14 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
                       let st = { st with observation } in
                       if not (List.for_all (fun (r : P.run_expectation) -> r.passed) results) then
                         let st = record st ~book ~proc:next ~planned:false
-                          ~choice:{ choice with key = next.slug } ~drives ~expectations:results
+                          ~choice:(repeat_choice next.slug) ~drives ~expectations:results
                           ~outcome:"skipped" ~attempts:1 ~elapsed:0
                           ~reason:(Some "end of pagination: next expectations failed") in
                         Ok (Continue { st with complete = true; collection_pending = false })
                       else
                         let st = { st with checks; pages = st.pages + 1 } in
                         let st = record st ~book ~proc:next ~planned:false
-                          ~choice:{ choice with key = next.slug } ~drives ~expectations:results
+                          ~choice:(repeat_choice next.slug) ~drives ~expectations:results
                           ~outcome:"verified" ~attempts:1 ~elapsed:0 ~reason:None in
                         page st (index + 1))
     in page st 1
