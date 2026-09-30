@@ -37,6 +37,7 @@ This table matches `leash help errors` (daily-c4cl, daily-9ggi).
 | `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry |
 | `script-failed` | 65 | a playbook script threw, rejected, or could not be compiled; message carries what it threw | read message; fix the script or the page, then `leash playbook test` |
 | `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |
+| `playbook-invalid` | 65 | a playbook failed validation (load, check or accept); message names the rule | fix the playbook as the message says, then `leash playbook check ./DIR`; the skill's authoring reference lists the rules |
 | `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message |
 | `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket |
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |

@@ -22,8 +22,8 @@ Status, ordinary tab clients, and the independent playbook-check exchange route
 all distinguish the same unreachable service states.
 
   $ mkdir -p "$XDG_CONFIG_HOME/leash/playbooks/example.test"
-  $ printf '%s\n' '{"site":"example.test","entry":"https://example.test/","description":"private CLI fixture","pages":[],"procedures":[],"scripts":{"probe":{"file":"probe.js","returns":{"title":"string"}}}}' > "$XDG_CONFIG_HOME/leash/playbooks/example.test/playbook.json"
-  $ printf '%s\n' '() => ({title: document.title})' > "$XDG_CONFIG_HOME/leash/playbooks/example.test/probe.js"
+  $ printf '%s\n' '{"site":"example.test","entry":"https://example.test/","description":"private CLI fixture","pages":[],"procedures":[{"slug":"look","description":"Look at the page.","steps":[{"goal":"Look at the page."}],"expect":["no dialog is open"]}],"scripts":{"probe":{"file":"probe.js","description":"Read the page title."}}}' > "$XDG_CONFIG_HOME/leash/playbooks/example.test/playbook.json"
+  $ printf '%s\n' '/** returns: {"title":"string"} */' 'return {title: document.title};' > "$XDG_CONFIG_HOME/leash/playbooks/example.test/probe.js"
   $ client() { expected="$1"; shift; LEASH_INSTALL_FIXTURE="$tmp/service.fixture" leash "$@" --owner test --socket "$tmp/missing.sock" >out 2>err; code=$?; ./daily_cli_fixture.exe inspect "$expected" "$code" out err >/dev/null; }
   $ routes() { client "$1" status && client "$1" list && client "$1" net t_9xk && client "$1" playbook check example.test && printf '%s: all four client routes\n' "$1"; }
   $ printf 'load=not-found\nactive=inactive\nsub=dead\nbinary=absent\n' > "$tmp/service.fixture"; routes not-installed

@@ -14,28 +14,32 @@ A playbook is a directory `~/.config/leash/playbooks/<site>/` holding `playbook.
 
 ## The procedure, in order
 
-1. **Study the site** on the pages the task touches: `leash new URL`, `leash snap TAB --limit 60`, `leash text TAB`, `leash net TAB`. Note the URLs, the controls a person would use, where lists and pagers are, what loads late.
+1. **Study the site** on the pages the task touches: `leash new URL`, `leash snap TAB --limit 60`, `leash text TAB`, `leash net TAB`. Note the URLs, **which page each control lives on**, where lists and pagers are, what loads late. `snap` lists only rows in the viewport (`--match` too): `leash scroll TAB down` and snap again. `text` is the rendered text (CSS `text-transform` applies: "SEARCHED PRODUCTS"), and `wait --text` is case-sensitive against it. A control with an empty name (an icon link) can be inspected with `eval --index N --snapshot S`; in goals, name it by what is next to it.
 2. **Name the page kinds.** One kind per page type the procedures start on or land on (`home`, `category`, `product`, `cart`). Prefer a `url_pattern` with `*`; use `text_marker` only when the URL does not tell (a modal, a single-page app).
-3. **Write each procedure's goal steps** as a person would say them: "Open the {category} category.", "Add this product to the cart.". One intention per goal. Put the site's words in the goal when they are the control's label.
+3. **Write each procedure's goal steps** as a person would say them: "Open the {category} category.", "Add this product to the cart.". One intention per goal. Put the site's words in the goal when they are the control's label. A goal runs on whatever page the tab is on — the entry, or where the last procedure left it — so if its control lives elsewhere, put a navigation goal first ("Open the Products page.", with `until`).
 4. **Add a script only where bulk reading or a file is needed.** Navigation, search, forms and pagination are goals. A script reads; it does not click, scroll, fetch other pages or change the page. Declare `description` (one sentence: when JEV should choose it), `pages` and `returns` beside it.
 5. **Declare every argument with its source** (table below).
 6. **Write `expect` sentences** from the checker vocabulary (below). Every procedure's `expect` names the page kind it lands on.
 7. `leash playbook check ./DIR` until clean; install by copying the directory; `leash playbook check <site> --owner O` (adds JS syntax).
-8. `leash playbook test <site>/<script> --tab TAB` on a real page of each kind the script is for. Compare the count with what you see.
-9. A `--dry-run` mission: confirms the book and first procedure are chosen, spends model calls, acts on nothing.
-10. A live mission with `--out`; then read the trace: `procedures[].slug` and `outcome`, each drive's steps, `data.scripts`, `collected`, `mission_expectations`. Fix the playbook where the trace shows JEV hesitating (low top probability, scroll loops, BLOCKED) before blaming the model.
+8. `leash playbook test <site>/<script> --tab TAB` on a real page of each kind the script is for. Compare the count with what you see. An empty list is a valid result (an empty cart); throw when the page is the wrong one.
+9. A `--dry-run` mission: shows which book and first procedure are chosen, with their probabilities. It spends model calls, acts on nothing, does not open `--url`, and always reads `status: blocked`. It cannot catch a control that is on another page.
+10. A live mission with `--out`; then read the trace: `procedures[].slug` and `outcome`, each drive's `steps[].operation` and `probabilities.op`, `data.scripts`, `collected`, `mission_expectations`. Scrolls alternating with BLOCKED near 0.5, ending "no available action toward the goal", means the control is not on this page or the goal does not name it. Fix the playbook before blaming the model.
 
 ## Rules
 
 `playbook check` refuses the first five; the last two are yours to keep.
 
-- Every playbook has a procedure with a goal step. A script-only procedure is allowed only as a `use:` sub-procedure.
+- Every procedure has a goal step of its own, unless another procedure `use:`s it. A procedure made only of `use:` or `script` steps is refused when nothing uses it; start it with a goal.
 - A script declares `description`, `returns` (in a leading `/** returns: ... */` comment, `scripts/<name>.returns.json`, or a name from `shapes`), and every `args.<x>` it reads.
 - `pages`: absent = offered on every page of the site; a list = offered on those kinds; `[]` = never offered (a control script for `repeat.until`).
 - Every procedure has a nonempty `expect`; page kinds named anywhere must exist.
 - Old forms are refused, not converted: top-level `returns`, inline `returns` on a declaration, `args` as a list of names.
 - A procedure's `expect` names the page kind it lands on.
-- Payment, messaging, deletion and other non-idempotent submissions never sit inside a `repeat` or a procedure whose failure could replay it (a failed procedure is replayed once).
+- Payment, messaging, deletion and other non-idempotent submissions never sit inside a `repeat` or a procedure whose failure could replay it (a failed procedure is replayed once). A milder repeatable action (add to cart bumps the quantity) sits in its own procedure whose `expect` sees it succeed ("the page shows Added"), so a replay happens only when it did not take.
+
+## Composing a task
+
+One procedure per stage (`search-product`, `open-product`, `add-to-cart`, `view-cart`), each starting with a goal. The run chooses one procedure at a time, verifies it, and asks again until JEV answers DONE; every procedure except a `repeat.next` helper stays a choice. JEV chooses on `description`, so say when it applies: "From a product page: add it to the cart." A whole-task procedure (a goal, then `use:` each stage) works too, and wins the choice only if its description says it is the whole task.
 
 ## Arguments and the mission sentence
 
@@ -54,15 +58,15 @@ Name arguments as the user would say them (`category`, `product`, `query`), so t
 | `the page is category` / `the page is not cart` | the page kind of the current URL and text |
 | `the page shows Your cart is empty` | the page text (case-insensitive substring) |
 | `a file was downloaded` / `a pdf was downloaded` | a completed download |
-| `no dialog is open` | the JS dialog state |
+| `no dialog is open` | a JS `alert`/`confirm`/`prompt` only; an HTML modal is page text and rows |
 | `a button named Checkout is present` | a snapshot row with that role and name |
 | `the address changed` | only in a goal's `until`: the URL differs from the step's start |
 
-Any other sentence is a judgment: JEV scores it against the page, which is slower and can be wrong. `{name}` placeholders are substituted first (`the page shows {product}`).
+A `url_pattern` matches the whole URL; `*` matches any characters, including `?` and `#` (`https://site/products*` covers `/products?search=x`). Without `*` it is an exact match. Any other sentence is a judgment: JEV scores it against the page, which is slower and can be wrong. `{name}` placeholders are substituted first (`the page shows {product}`).
 
 ## Goals that are relative: `until`
 
-"Open the next page", "open another result": once reached, the new page looks like the old one and JEV cannot tell whether it is done. Give such a goal an `until` list of code sentences; the step ends `done` after the first action that makes them all hold:
+"Open the next page", "open another result": once reached, the new page looks like the old one and JEV cannot tell whether it is done. Give such a goal an `until` list of code sentences; the step ends `done` after the first action that makes them all hold. `until` is checked only after an action, never before the first one:
 
 ```json
 {"goal": "Open the next page of this category.", "until": ["the address changed", "the page is category"]}
@@ -70,7 +74,7 @@ Any other sentence is a judgment: JEV scores it against the page, which is slowe
 
 ## Worked example: books.toscrape.com
 
-Mission: "collect every book title and price in the Mystery category". Source: `examples/playbooks/books.toscrape.com/` in the Leash checkout.
+Mission: "collect every book title and price in the Mystery category". The complete playbook follows; the two scripts are below it.
 
 ```json
 {

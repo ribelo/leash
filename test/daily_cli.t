@@ -61,11 +61,11 @@ classified. Aggregate field/path checks are also asserted below.
 
 Local authoring errors also use the envelope; no service is contacted.
 
-  $ check script-invalid leash playbook check "$tmp/missing/"
-  script-invalid: exit 65, JSON-only stderr, hint, empty stdout
+  $ check playbook-invalid leash playbook check "$tmp/missing/"
+  playbook-invalid: exit 65, JSON-only stderr, hint, empty stdout
   $ printf 'not json\n' > "$tmp/proposal.json"
-  $ check script-invalid leash playbook accept "$tmp/proposal.json"
-  script-invalid: exit 65, JSON-only stderr, hint, empty stdout
+  $ check playbook-invalid leash playbook accept "$tmp/proposal.json"
+  playbook-invalid: exit 65, JSON-only stderr, hint, empty stdout
   $ check usage leash help nonsense
   usage: exit 64, JSON-only stderr, hint, empty stdout
 

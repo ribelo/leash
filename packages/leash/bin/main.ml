@@ -28,7 +28,7 @@ let emit_error ~caps (error : P.error) =
 let report ~caps ?detail code message = emit_error ~caps (make_error ?detail code message)
 let usage ~caps message = report ~caps "usage" message
 let failure ~caps message = report ~caps "internal" message
-let invalid_playbook ~caps message = report ~caps "script-invalid" message
+let invalid_playbook ~caps message = report ~caps "playbook-invalid" message
 
 let protect ~caps run =
   try run () with

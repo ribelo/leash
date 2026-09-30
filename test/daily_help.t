@@ -24,4 +24,4 @@ Help is offline and short first contact is not the full manual.
   daily-9ggi list --all includes unowned and other owners
   $ leash help errors >errors 2>err
   $ ./daily_cli_fixture.exe error-help errors; test ! -s err
-  all 34 error codes, exit classes, meanings and hints are discoverable
+  all 35 error codes, exit classes, meanings and hints are discoverable

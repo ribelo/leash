@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 10
 ---
 
@@ -36,3 +36,28 @@ A fifth reference, `skill/references/authoring.md`, written as a procedure an ag
 ## Out of Scope
 
 Discovery (Luna writing playbooks) — kept, deprioritised, mentioned in one line as "exists; propose-and-accept".
+
+## Verification (auth-v3sc), 2026-10-01
+
+A fresh `subagent_claude_sonnet` session, told to use only the installed skill (Leash c263971, skill current) and not the Leash checkout, wrote `automationexercise.com` from scratch (search, open product, add to cart, view cart, stop before checkout), installed it, tested both scripts, dry-ran and drove it on the installed service.
+
+- Live run 1: `blocked` — the search goal started on the home page, which has no search box; ten scroll/BLOCKED steps, 16 calls, $0.0015, 13.8 s.
+- Live run 2 after its fix (a "Open the Products page" goal with `until` first): `done`; `search-product`, `open-product`, `add-to-cart`, `view-cart`, `add-product-to-cart` all verified on attempt 1; one `script-record` (`read-cart`: Blue Top, Rs. 500, quantity 1); 22 calls (operator 16, text helper 3, procedure 2, playbook 1), $0.0029, 20.5 s. The agent confirmed the cart independently with `text`/`snap` and never clicked checkout.
+
+Where the reference failed it (22 points reported), and what changed:
+
+| Finding | Fix |
+| --- | --- |
+| "Every playbook has a procedure with a goal step" read as playbook-level; the loader applies it per procedure, and the refusal carried the `script-invalid` hint about returns shapes | Rule restated per procedure; new error code `playbook-invalid` (exit 65) for load/check/accept refusals, with its own hint (protocol, errors table, cram) |
+| Composition of a multi-stage task never explained; how procedures are chosen unknown | New "Composing a task" section: one procedure per stage, chosen one at a time on `description`, all but `repeat.next` helpers stay choices |
+| Dry run reads `blocked`, does not open `--url`, cannot catch a control on another page | Stated in step 9 |
+| Goals run wherever the tab is | Stated in step 3, with the navigation-goal-plus-`until` pattern |
+| A BLOCKED trace was hard to read | Step 10 names the pattern (scrolls alternating with BLOCKED near 0.5) and what it means |
+| `until` before any action undocumented | "checked only after an action" |
+| `snap`/`--match` are viewport-scoped; `text` is CSS-rendered and `wait --text` case-sensitive; unnamed controls | Step 1 |
+| JS dialog vs HTML modal for `no dialog is open` | Checker table |
+| Add-to-cart replay | Rule on mild repeatable actions |
+| Empty list validity; `url_pattern` wildcard semantics | Steps 8 and checker section |
+| Source pointer into the checkout | Removed; the complete example is in the reference |
+
+Not changed here: consent-banner handling (the site showed none), mission-argument quoting (worked), string vs number prices (author's choice), `text`/`snap` title lag and a one-off `shot` timeout (browser reference / L48 territory).

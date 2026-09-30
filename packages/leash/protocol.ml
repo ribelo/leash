@@ -338,6 +338,7 @@ type error_code =
   | Too_large [@json.name "too-large"]
   | Script_failed [@json.name "script-failed"]
   | Script_invalid [@json.name "script-invalid"]
+  | Playbook_invalid [@json.name "playbook-invalid"]
   | Internal [@json.name "internal"]
   | Service_unreachable [@json.name "service-unreachable"]
   | Not_installed [@json.name "not-installed"]
@@ -462,6 +463,11 @@ module Error_code = struct
            mismatch"
           "the result missed its returns shape; message is the first bad path, so fix \
            the script or the returns"
+    | Playbook_invalid ->
+        info 65
+          "a playbook failed validation (load, check or accept); message names the rule"
+          "fix the playbook as the message says, then `leash playbook check ./DIR`; the \
+           skill's authoring reference lists the rules"
     | Internal ->
         info 70 "a defect; the message carries no page content"
           "a defect, not a page failure; retry once, then report the message"
@@ -527,6 +533,7 @@ module Error_code = struct
       Too_large;
       Script_failed;
       Script_invalid;
+      Playbook_invalid;
       Internal;
       Service_unreachable;
       Not_installed;
