@@ -1,0 +1,2239 @@
+{
+  "summary": {
+    "mission": "collect every book in the Default category",
+    "status": "blocked",
+    "reason": "procedure next-page stopped at step \"Open the next page of this category.\" (blocked): the operator repeated three non-WAIT actions without changing the page; 1 step(s) remain",
+    "elapsed_s": 18.0,
+    "collected": 80,
+    "truth": 152,
+    "pages": 5,
+    "model_calls": 29,
+    "model_calls_by_kind": {
+      "text_helper": 1,
+      "operator": 26,
+      "playbook": 1,
+      "procedure": 1
+    },
+    "model_cost": 0.0062445520000000004,
+    "cost_unreported": 0,
+    "procedures": [
+      [
+        "collect-page",
+        "verified"
+      ],
+      [
+        "open-category",
+        "verified"
+      ],
+      [
+        "collect-page",
+        "verified"
+      ],
+      [
+        "next-page",
+        "verified"
+      ],
+      [
+        "collect-page",
+        "verified"
+      ],
+      [
+        "next-page",
+        "verified"
+      ],
+      [
+        "collect-page",
+        "verified"
+      ],
+      [
+        "next-page",
+        "verified"
+      ],
+      [
+        "collect-page",
+        "verified"
+      ],
+      [
+        "next-page",
+        "verified"
+      ],
+      [
+        "next-page",
+        "failed"
+      ]
+    ],
+    "scripts": [
+      {
+        "name": "list-page",
+        "calls": 5,
+        "records": 100
+      },
+      {
+        "name": "last-page",
+        "calls": 5,
+        "records": 0
+      }
+    ],
+    "final": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html"
+  },
+  "reply": {
+    "playbook_choices": [
+      {
+        "source": "jev",
+        "key": "book:/tmp/nix-shell.S4Ykuo/tmp.e7laJYcuA6/config/leash/playbooks/books.toscrape.com/playbook.json",
+        "probabilities": {
+          "book:/tmp/nix-shell.S4Ykuo/tmp.e7laJYcuA6/config/leash/playbooks/books.toscrape.com/playbook.json": 0.83,
+          "none": 0.17
+        },
+        "confidence": 0.65,
+        "usage": {
+          "input_tokens": 596,
+          "output_tokens": 104,
+          "cost": 2.5032e-05
+        },
+        "note": null
+      }
+    ],
+    "status": "blocked",
+    "site": "books.toscrape.com",
+    "procedures": [
+      {
+        "slug": "collect-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "collect-page",
+          "probabilities": {},
+          "confidence": 1.0,
+          "usage": null
+        },
+        "drives": [],
+        "scripts": [
+          {
+            "script": "list-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/index.html",
+            "records": 20,
+            "bytes": 4709,
+            "elapsed_ms": 1
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 39
+      },
+      {
+        "slug": "open-category",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "open-category",
+          "probabilities": {
+            "collect-page": 0.12,
+            "open-category": 0.6,
+            "DONE": 0.0,
+            "NONE": 0.04,
+            "read-page": 0.24
+          },
+          "confidence": 0.49,
+          "usage": {
+            "input_tokens": 560,
+            "output_tokens": 59,
+            "cost": 2.352e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Open the Default category.",
+            "status": "done",
+            "steps": [
+              {
+                "n": 1,
+                "snapshot": "s_t_9bf59372c98f9831f307965506c1c912",
+                "operation": "click",
+                "index": 17,
+                "probabilities": {
+                  "op": {
+                    "BLOCKED": 0.0,
+                    "WAIT": 0.0,
+                    "DONE": 0.0,
+                    "SCROLL_DOWN": 0.0,
+                    "CLICK": 1.0
+                  },
+                  "target": {
+                    "1": 0.0,
+                    "2": 0.0,
+                    "3": 0.0,
+                    "4": 0.0,
+                    "5": 0.0,
+                    "6": 0.0,
+                    "7": 0.0,
+                    "8": 0.0,
+                    "9": 0.0,
+                    "10": 0.0,
+                    "11": 0.0,
+                    "12": 0.0,
+                    "13": 0.0,
+                    "14": 0.0,
+                    "15": 0.0,
+                    "16": 0.0,
+                    "17": 1.0,
+                    "18": 0.0,
+                    "19": 0.0,
+                    "20": 0.0,
+                    "21": 0.0,
+                    "22": 0.0,
+                    "23": 0.0,
+                    "24": 0.0,
+                    "25": 0.0,
+                    "26": 0.0,
+                    "27": 0.0,
+                    "28": 0.0,
+                    "29": 0.0,
+                    "30": 0.0,
+                    "32": 0.0,
+                    "35": 0.0,
+                    "38": 0.0,
+                    "39": 0.0,
+                    "42": 0.0,
+                    "45": 0.0,
+                    "46": 0.0,
+                    "49": 0.0,
+                    "52": 0.0,
+                    "53": 0.0,
+                    "56": 0.0,
+                    "59": 0.0
+                  }
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/index.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 594
+              },
+              {
+                "n": 2,
+                "snapshot": "s_t_c3677c02f2114ff7f2f174f3ff63eaff",
+                "operation": "done",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "CLICK": 0.04,
+                    "DONE": 0.95,
+                    "BLOCKED": 0.01,
+                    "run_script:list-page": 0.0,
+                    "SCROLL_DOWN": 0.0,
+                    "WAIT": 0.0
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/index.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 1420
+              }
+            ]
+          }
+        ],
+        "scripts": [
+          {
+            "script": "last-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/index.html",
+            "records": 0,
+            "bytes": 14,
+            "elapsed_ms": 0
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 2154
+      },
+      {
+        "slug": "collect-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "collect-page",
+          "probabilities": {},
+          "confidence": 1.0,
+          "usage": null
+        },
+        "drives": [],
+        "scripts": [
+          {
+            "script": "list-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+            "records": 20,
+            "bytes": 4386,
+            "elapsed_ms": 0
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 121
+      },
+      {
+        "slug": "next-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "next-page",
+          "probabilities": {
+            "collect-page": 0.12,
+            "open-category": 0.6,
+            "DONE": 0.0,
+            "NONE": 0.04,
+            "read-page": 0.24
+          },
+          "confidence": 0.49,
+          "usage": {
+            "input_tokens": 560,
+            "output_tokens": 59,
+            "cost": 2.352e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Open the next page of this category.",
+            "status": "done",
+            "steps": [
+              {
+                "n": 1,
+                "snapshot": "s_t_4fae53306c8e8334056188a9cb5c97c4",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "run_script:list-page": 0.01,
+                    "SCROLL_DOWN": 0.59,
+                    "CLICK": 0.03,
+                    "DONE": 0.0,
+                    "BLOCKED": 0.36,
+                    "WAIT": 0.01
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/index.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 910
+              },
+              {
+                "n": 2,
+                "snapshot": "s_t_5b0f20b152410eee72c141b8a7aebbae",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "SCROLL_DOWN": 0.39,
+                    "SCROLL_UP": 0.04,
+                    "WAIT": 0.0,
+                    "CLICK": 0.07,
+                    "BLOCKED": 0.5,
+                    "DONE": 0.0,
+                    "run_script:list-page": 0.0
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/index.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 1875
+              },
+              {
+                "n": 3,
+                "snapshot": "s_t_a2d09ad137f42a49b4c016ae6ae10e56",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "BLOCKED": 0.48,
+                    "SCROLL_DOWN": 0.41000000000000003,
+                    "CLICK": 0.08,
+                    "DONE": 0.0,
+                    "WAIT": 0.0,
+                    "run_script:list-page": 0.0,
+                    "SCROLL_UP": 0.03
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/index.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 2375
+              },
+              {
+                "n": 4,
+                "snapshot": "s_t_4263b40912fddb7e91266e916eda9d0e",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "SCROLL_DOWN": 0.29,
+                    "WAIT": 0.01,
+                    "run_script:list-page": 0.0,
+                    "DONE": 0.02,
+                    "BLOCKED": 0.51,
+                    "SCROLL_UP": 0.04,
+                    "CLICK": 0.13
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/index.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 2874
+              },
+              {
+                "n": 5,
+                "snapshot": "s_t_76627069283c61d6955eccd3028e6943",
+                "operation": "click",
+                "index": 57,
+                "probabilities": {
+                  "op": {
+                    "SCROLL_UP": 0.0,
+                    "BLOCKED": 0.0,
+                    "WAIT": 0.0,
+                    "DONE": 0.0,
+                    "CLICK": 1.0,
+                    "run_script:list-page": 0.0
+                  },
+                  "target": {
+                    "1": 0.0,
+                    "4": 0.0,
+                    "7": 0.0,
+                    "8": 0.0,
+                    "11": 0.0,
+                    "14": 0.0,
+                    "15": 0.0,
+                    "18": 0.0,
+                    "21": 0.0,
+                    "22": 0.0,
+                    "25": 0.0,
+                    "28": 0.0,
+                    "29": 0.0,
+                    "32": 0.0,
+                    "35": 0.0,
+                    "36": 0.0,
+                    "39": 0.0,
+                    "42": 0.0,
+                    "43": 0.0,
+                    "46": 0.0,
+                    "49": 0.0,
+                    "50": 0.0,
+                    "53": 0.0,
+                    "56": 0.0,
+                    "57": 1.0
+                  }
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 3845
+              }
+            ],
+            "reason": "the step's until checks hold"
+          }
+        ],
+        "scripts": [
+          {
+            "script": "last-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+            "records": 0,
+            "bytes": 14,
+            "elapsed_ms": 0
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 0
+      },
+      {
+        "slug": "collect-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "collect-page",
+          "probabilities": {},
+          "confidence": 1.0,
+          "usage": null
+        },
+        "drives": [],
+        "scripts": [
+          {
+            "script": "list-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+            "records": 20,
+            "bytes": 4386,
+            "elapsed_ms": 0
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 36
+      },
+      {
+        "slug": "next-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "next-page",
+          "probabilities": {
+            "collect-page": 0.12,
+            "open-category": 0.6,
+            "DONE": 0.0,
+            "NONE": 0.04,
+            "read-page": 0.24
+          },
+          "confidence": 0.49,
+          "usage": {
+            "input_tokens": 560,
+            "output_tokens": 59,
+            "cost": 2.352e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Open the next page of this category.",
+            "status": "done",
+            "steps": [
+              {
+                "n": 1,
+                "snapshot": "s_t_9011fb4fdca44ce814fe421840ab9ffb",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "run_script:list-page": 0.01,
+                    "WAIT": 0.01,
+                    "SCROLL_DOWN": 0.33,
+                    "BLOCKED": 0.54,
+                    "DONE": 0.02,
+                    "CLICK": 0.09
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 931
+              },
+              {
+                "n": 2,
+                "snapshot": "s_t_ef6560180325a9ce0d97073327d8b77f",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "WAIT": 0.01,
+                    "run_script:list-page": 0.0,
+                    "CLICK": 0.15,
+                    "BLOCKED": 0.44,
+                    "SCROLL_UP": 0.02,
+                    "SCROLL_DOWN": 0.33,
+                    "DONE": 0.05
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 2182
+              },
+              {
+                "n": 3,
+                "snapshot": "s_t_c75bebfda1f0a94a3e0dc14aa12f18db",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "run_script:list-page": 0.01,
+                    "BLOCKED": 0.46,
+                    "WAIT": 0.01,
+                    "CLICK": 0.17,
+                    "SCROLL_DOWN": 0.27,
+                    "DONE": 0.05,
+                    "SCROLL_UP": 0.03
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 2676
+              },
+              {
+                "n": 4,
+                "snapshot": "s_t_1a76c9b9361d8693de6eb825a0325dd0",
+                "operation": "done",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "DONE": 0.37,
+                    "SCROLL_DOWN": 0.13,
+                    "WAIT": 0.01,
+                    "CLICK": 0.16,
+                    "BLOCKED": 0.3,
+                    "SCROLL_UP": 0.03,
+                    "run_script:list-page": 0.0
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 3037
+              }
+            ]
+          }
+        ],
+        "scripts": [
+          {
+            "script": "last-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-2.html",
+            "records": 0,
+            "bytes": 14,
+            "elapsed_ms": 0
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 0
+      },
+      {
+        "slug": "collect-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "collect-page",
+          "probabilities": {},
+          "confidence": 1.0,
+          "usage": null
+        },
+        "drives": [],
+        "scripts": [
+          {
+            "script": "list-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-3.html",
+            "records": 20,
+            "bytes": 4348,
+            "elapsed_ms": 1
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 124
+      },
+      {
+        "slug": "next-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "next-page",
+          "probabilities": {
+            "collect-page": 0.12,
+            "open-category": 0.6,
+            "DONE": 0.0,
+            "NONE": 0.04,
+            "read-page": 0.24
+          },
+          "confidence": 0.49,
+          "usage": {
+            "input_tokens": 560,
+            "output_tokens": 59,
+            "cost": 2.352e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Open the next page of this category.",
+            "status": "done",
+            "steps": [
+              {
+                "n": 1,
+                "snapshot": "s_t_ddc680eb727f7bf42f8e3a794ea40d6a",
+                "operation": "click",
+                "index": 58,
+                "probabilities": {
+                  "op": {
+                    "SCROLL_UP": 0.0,
+                    "DONE": 0.0,
+                    "BLOCKED": 0.0,
+                    "SCROLL_DOWN": 0.0,
+                    "WAIT": 0.0,
+                    "CLICK": 1.0,
+                    "run_script:list-page": 0.0
+                  },
+                  "target": {
+                    "1": 0.0,
+                    "4": 0.0,
+                    "7": 0.0,
+                    "8": 0.0,
+                    "11": 0.0,
+                    "14": 0.0,
+                    "15": 0.0,
+                    "18": 0.0,
+                    "21": 0.0,
+                    "22": 0.0,
+                    "25": 0.0,
+                    "28": 0.0,
+                    "29": 0.0,
+                    "32": 0.0,
+                    "35": 0.0,
+                    "36": 0.0,
+                    "39": 0.0,
+                    "42": 0.0,
+                    "43": 0.0,
+                    "46": 0.0,
+                    "49": 0.0,
+                    "50": 0.0,
+                    "53": 0.0,
+                    "56": 0.0,
+                    "57": 0.0,
+                    "58": 1.0
+                  }
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-3.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 537
+              }
+            ],
+            "reason": "the step's until checks hold"
+          }
+        ],
+        "scripts": [
+          {
+            "script": "last-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-3.html",
+            "records": 0,
+            "bytes": 14,
+            "elapsed_ms": 0
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 0
+      },
+      {
+        "slug": "collect-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "collect-page",
+          "probabilities": {},
+          "confidence": 1.0,
+          "usage": null
+        },
+        "drives": [],
+        "scripts": [
+          {
+            "script": "list-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+            "records": 20,
+            "bytes": 4542,
+            "elapsed_ms": 2
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 117
+      },
+      {
+        "slug": "next-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "next-page",
+          "probabilities": {
+            "collect-page": 0.12,
+            "open-category": 0.6,
+            "DONE": 0.0,
+            "NONE": 0.04,
+            "read-page": 0.24
+          },
+          "confidence": 0.49,
+          "usage": {
+            "input_tokens": 560,
+            "output_tokens": 59,
+            "cost": 2.352e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Open the next page of this category.",
+            "status": "done",
+            "steps": [
+              {
+                "n": 1,
+                "snapshot": "s_t_01648d6c85f565f2ad9ebf154b1fd73e",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "run_script:list-page": 0.01,
+                    "WAIT": 0.01,
+                    "SCROLL_DOWN": 0.38,
+                    "CLICK": 0.09,
+                    "BLOCKED": 0.51,
+                    "DONE": 0.0
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-3.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 915
+              },
+              {
+                "n": 2,
+                "snapshot": "s_t_ee0ce9621664de4b39eca99b55cac935",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "BLOCKED": 0.35,
+                    "WAIT": 0.02,
+                    "DONE": 0.22,
+                    "SCROLL_UP": 0.04,
+                    "CLICK": 0.14,
+                    "SCROLL_DOWN": 0.23,
+                    "run_script:list-page": 0.0
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-3.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 1443
+              },
+              {
+                "n": 3,
+                "snapshot": "s_t_7cc996fe850a8d7e430a618d39c3e466",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "WAIT": 0.01,
+                    "run_script:list-page": 0.0,
+                    "SCROLL_UP": 0.04,
+                    "CLICK": 0.12,
+                    "SCROLL_DOWN": 0.31,
+                    "BLOCKED": 0.51,
+                    "DONE": 0.01
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-3.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 1941
+              },
+              {
+                "n": 4,
+                "snapshot": "s_t_dc5c7872eb8f9236e272d7d3ed301002",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "WAIT": 0.01,
+                    "SCROLL_DOWN": 0.28,
+                    "BLOCKED": 0.5,
+                    "DONE": 0.04,
+                    "SCROLL_UP": 0.05,
+                    "run_script:list-page": 0.0,
+                    "CLICK": 0.12
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-3.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 2438
+              },
+              {
+                "n": 5,
+                "snapshot": "s_t_20efdbf9b36f6c96e81f8bac2bd54df2",
+                "operation": "click",
+                "index": 58,
+                "probabilities": {
+                  "op": {
+                    "DONE": 0.0,
+                    "SCROLL_DOWN": 0.0,
+                    "WAIT": 0.0,
+                    "CLICK": 1.0,
+                    "BLOCKED": 0.0,
+                    "SCROLL_UP": 0.0,
+                    "run_script:list-page": 0.0
+                  },
+                  "target": {
+                    "1": 0.0,
+                    "4": 0.0,
+                    "7": 0.0,
+                    "8": 0.0,
+                    "11": 0.0,
+                    "14": 0.0,
+                    "15": 0.0,
+                    "18": 0.0,
+                    "21": 0.0,
+                    "22": 0.0,
+                    "25": 0.0,
+                    "28": 0.0,
+                    "29": 0.0,
+                    "32": 0.0,
+                    "35": 0.0,
+                    "36": 0.0,
+                    "39": 0.0,
+                    "42": 0.0,
+                    "43": 0.0,
+                    "46": 0.0,
+                    "49": 0.0,
+                    "50": 0.0,
+                    "53": 0.0,
+                    "56": 0.0,
+                    "57": 0.0,
+                    "58": 1.0
+                  }
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 2924
+              }
+            ],
+            "reason": "the step's until checks hold"
+          }
+        ],
+        "scripts": [
+          {
+            "script": "last-page",
+            "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+            "records": 0,
+            "bytes": 14,
+            "elapsed_ms": 0
+          }
+        ],
+        "expectations": [
+          {
+            "sentence": "the page is category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 0
+      },
+      {
+        "slug": "next-page",
+        "site": "books.toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "next-page",
+          "probabilities": {
+            "collect-page": 0.12,
+            "open-category": 0.6,
+            "DONE": 0.0,
+            "NONE": 0.04,
+            "read-page": 0.24
+          },
+          "confidence": 0.49,
+          "usage": {
+            "input_tokens": 560,
+            "output_tokens": 59,
+            "cost": 2.352e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Open the next page of this category.",
+            "status": "blocked",
+            "steps": [
+              {
+                "n": 1,
+                "snapshot": "s_t_0e3e8e85a3ec5db7b0f723aa3b6ba289",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "run_script:list-page": 0.01,
+                    "DONE": 0.01,
+                    "BLOCKED": 0.55,
+                    "WAIT": 0.01,
+                    "CLICK": 0.1,
+                    "SCROLL_DOWN": 0.32
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 920
+              },
+              {
+                "n": 2,
+                "snapshot": "s_t_100641f5596476f203f1f850428acd85",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "SCROLL_DOWN": 0.3,
+                    "SCROLL_UP": 0.06,
+                    "DONE": 0.0,
+                    "CLICK": 0.12,
+                    "WAIT": 0.0,
+                    "run_script:list-page": 0.0,
+                    "BLOCKED": 0.52
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 2134
+              },
+              {
+                "n": 3,
+                "snapshot": "s_t_2abc66a932e164af7dc0fb377a3d06c9",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "DONE": 0.0,
+                    "BLOCKED": 0.56,
+                    "run_script:list-page": 0.0,
+                    "WAIT": 0.0,
+                    "SCROLL_DOWN": 0.3,
+                    "SCROLL_UP": 0.05,
+                    "CLICK": 0.09
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+                  "title": "Default | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 3131
+              }
+            ],
+            "reason": "the operator repeated three non-WAIT actions without changing the page"
+          }
+        ],
+        "scripts": [],
+        "expectations": [],
+        "outcome": "failed",
+        "elapsed_ms": 0,
+        "reason": "procedure next-page stopped at step \"Open the next page of this category.\" (blocked): the operator repeated three non-WAIT actions without changing the page; 1 step(s) remain"
+      }
+    ],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "collected": 80,
+    "data": {
+      "model_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 26,
+        "playbook": 1,
+        "procedure": 1
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.0062445520000000004,
+      "count": 80,
+      "first": [
+        {
+          "title": "The Coming Woman: A Novel Based on the Life of the Infamous Feminist, Victoria Woodhull",
+          "price": 17.93,
+          "url": "https://books.toscrape.com/catalogue/the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993/index.html",
+          "category": "Default",
+          "rating": 3,
+          "availability": "In stock"
+        },
+        {
+          "title": "The Boys in the Boat: Nine Americans and Their Epic Quest for Gold at the 1936 Berlin Olympics",
+          "price": 22.6,
+          "url": "https://books.toscrape.com/catalogue/the-boys-in-the-boat-nine-americans-and-their-epic-quest-for-gold-at-the-1936-berlin-olympics_992/index.html",
+          "category": "Default",
+          "rating": 4,
+          "availability": "In stock"
+        },
+        {
+          "title": "Starving Hearts (Triangular Trade Trilogy, #1)",
+          "price": 13.99,
+          "url": "https://books.toscrape.com/catalogue/starving-hearts-triangular-trade-trilogy-1_990/index.html",
+          "category": "Default",
+          "rating": 2,
+          "availability": "In stock"
+        },
+        {
+          "title": "America's Cradle of Quarterbacks: Western Pennsylvania's Football Factory from Johnny Unitas to Joe Montana",
+          "price": 22.5,
+          "url": "https://books.toscrape.com/catalogue/americas-cradle-of-quarterbacks-western-pennsylvanias-football-factory-from-johnny-unitas-to-joe-montana_974/index.html",
+          "category": "Default",
+          "rating": 3,
+          "availability": "In stock"
+        },
+        {
+          "title": "Aladdin and His Wonderful Lamp",
+          "price": 53.13,
+          "url": "https://books.toscrape.com/catalogue/aladdin-and-his-wonderful-lamp_973/index.html",
+          "category": "Default",
+          "rating": 3,
+          "availability": "In stock"
+        }
+      ],
+      "pages": 5,
+      "scripts": [
+        {
+          "name": "list-page",
+          "calls": 5,
+          "records": 100
+        },
+        {
+          "name": "last-page",
+          "calls": 5,
+          "records": 0
+        }
+      ]
+    },
+    "model_calls": 29,
+    "model_cost": 0.0062445520000000004,
+    "operator_steps": [],
+    "operator_state": {
+      "status": "blocked",
+      "reason": "the operator repeated three non-WAIT actions without changing the page",
+      "error": null,
+      "initial_recent_actions": [
+        {
+          "action": "click",
+          "kind": "click",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "click",
+          "kind": "click",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "click",
+          "kind": "click",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "click",
+          "kind": "click",
+          "text": null,
+          "page_changed": null
+        }
+      ],
+      "page": {
+        "snapshot": {
+          "snapshot": "s_t_97f8caceaddb2c8c8b3f3302f350d1dc",
+          "tab": "t_4fb3bbda2850f05755c9f924c81650c2",
+          "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+          "title": "Default | Books to Scrape - Sandbox",
+          "rows": [
+            {
+              "index": 1,
+              "role": "link",
+              "name": "Suspense"
+            },
+            {
+              "index": 2,
+              "role": "link",
+              "name": "Short Stories"
+            },
+            {
+              "index": 3,
+              "role": "link",
+              "name": "Novels"
+            },
+            {
+              "index": 4,
+              "role": "link",
+              "name": "Health"
+            },
+            {
+              "index": 5,
+              "role": "link",
+              "name": "Politics"
+            },
+            {
+              "index": 6,
+              "role": "link",
+              "name": "Cultural"
+            },
+            {
+              "index": 7,
+              "role": "link",
+              "name": "Erotica"
+            },
+            {
+              "index": 8,
+              "role": "link",
+              "name": "Crime"
+            },
+            {
+              "index": 9,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 10,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 11,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 12,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 13,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 14,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 15,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 16,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 17,
+              "role": "link",
+              "name": "Modern Day Fables"
+            },
+            {
+              "index": 18,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 19,
+              "role": "heading",
+              "name": "Modern Day Fables"
+            },
+            {
+              "index": 20,
+              "role": "link",
+              "name": "Modern Day Fables"
+            },
+            {
+              "index": 21,
+              "role": "paragraph",
+              "name": "\u00a347.44"
+            },
+            {
+              "index": 22,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 23,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 24,
+              "role": "link",
+              "name": "The Unlikely Pilgrimage of Harold Fry (Harold Fry #1)"
+            },
+            {
+              "index": 25,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 26,
+              "role": "heading",
+              "name": "The Unlikely Pilgrimage of ..."
+            },
+            {
+              "index": 27,
+              "role": "link",
+              "name": "The Unlikely Pilgrimage of ..."
+            },
+            {
+              "index": 28,
+              "role": "paragraph",
+              "name": "\u00a343.62"
+            },
+            {
+              "index": 29,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 30,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 31,
+              "role": "link",
+              "name": "The Martian (The Martian #1)"
+            },
+            {
+              "index": 32,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 33,
+              "role": "heading",
+              "name": "The Martian (The Martian ..."
+            },
+            {
+              "index": 34,
+              "role": "link",
+              "name": "The Martian (The Martian ..."
+            },
+            {
+              "index": 35,
+              "role": "paragraph",
+              "name": "\u00a341.39"
+            },
+            {
+              "index": 36,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 37,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 38,
+              "role": "link",
+              "name": "Left Behind (Left Behind #1)"
+            },
+            {
+              "index": 39,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 40,
+              "role": "heading",
+              "name": "Left Behind (Left Behind ..."
+            },
+            {
+              "index": 41,
+              "role": "link",
+              "name": "Left Behind (Left Behind ..."
+            },
+            {
+              "index": 42,
+              "role": "paragraph",
+              "name": "\u00a340.72"
+            },
+            {
+              "index": 43,
+              "role": "paragraph",
+              "name": "\uf00c In stock"
+            },
+            {
+              "index": 44,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 45,
+              "role": "link",
+              "name": "John Vassos: Industrial Design for Modern Life"
+            },
+            {
+              "index": 46,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 47,
+              "role": "heading",
+              "name": "John Vassos: Industrial Design ..."
+            },
+            {
+              "index": 48,
+              "role": "link",
+              "name": "John Vassos: Industrial Design ..."
+            },
+            {
+              "index": 49,
+              "role": "paragraph",
+              "name": "\u00a320.22"
+            },
+            {
+              "index": 50,
+              "role": "link",
+              "name": "I'll Give You the Sun"
+            },
+            {
+              "index": 51,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 52,
+              "role": "heading",
+              "name": "I'll Give You the ..."
+            },
+            {
+              "index": 53,
+              "role": "link",
+              "name": "I'll Give You the ..."
+            },
+            {
+              "index": 54,
+              "role": "paragraph",
+              "name": "\u00a356.48"
+            },
+            {
+              "index": 55,
+              "role": "link",
+              "name": "Heaven is for Real: A Little Boy's Astounding Story of His Trip to Heaven and Back"
+            },
+            {
+              "index": 56,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 57,
+              "role": "heading",
+              "name": "Heaven is for Real: ..."
+            },
+            {
+              "index": 58,
+              "role": "link",
+              "name": "Heaven is for Real: ..."
+            },
+            {
+              "index": 59,
+              "role": "paragraph",
+              "name": "\u00a352.86"
+            },
+            {
+              "index": 60,
+              "role": "link",
+              "name": "Ender's Game (The Ender Quintet #1)"
+            },
+            {
+              "index": 61,
+              "role": "paragraph",
+              "name": "\uf005\uf005\uf005\uf005\uf005"
+            },
+            {
+              "index": 62,
+              "role": "heading",
+              "name": "Ender's Game (The Ender ..."
+            },
+            {
+              "index": 63,
+              "role": "link",
+              "name": "Ender's Game (The Ender ..."
+            },
+            {
+              "index": 64,
+              "role": "paragraph",
+              "name": "\u00a343.64"
+            }
+          ],
+          "total": 64,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "dialog": null
+        },
+        "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+        "title": "Default | Books to Scrape - Sandbox",
+        "text": "Suspense\nShort Stories\nNovels\nHealth\nPolitics\nCultural\nErotica\nCrime\nIn stock\nAdd to basket\nIn stock\nAdd to basket\nIn stock\nAdd to basket\nIn stock\nAdd to basket\nModern Day Fables\n\u00a347.44\nIn stock\nAdd to basket\nThe Unlikely Pilgrimage of ...\n\u00a343.62\nIn stock\nAdd to basket\nThe Martian (The Martian ...\n\u00a341.39\nIn stock\nAdd to basket\nLeft Behind (Left Behind ...\n\u00a340.72\nIn stock\nAdd to basket\nJohn Vassos: Industrial Design ...\n\u00a320.22\nI'll Give You the ...\n\u00a356.48\nHeaven is for Real: ...\n\u00a352.86\nEnder's Game (The Ender ...\n\u00a343.64",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [],
+        "can_scroll_down": true,
+        "can_scroll_up": true,
+        "coverage": "viewport+above+below",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": true,
+          "can_scroll_down": true,
+          "coverage": "viewport+above+below",
+          "unsupported_states": []
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "n": 1,
+            "snapshot": "s_t_0e3e8e85a3ec5db7b0f723aa3b6ba289",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "run_script:list-page": 0.01,
+                "DONE": 0.01,
+                "BLOCKED": 0.55,
+                "WAIT": 0.01,
+                "CLICK": 0.1,
+                "SCROLL_DOWN": 0.32
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+              "title": "Default | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 920
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "blocked",
+          "rescue": true,
+          "input_ms": 404,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "n": 2,
+            "snapshot": "s_t_100641f5596476f203f1f850428acd85",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "SCROLL_DOWN": 0.3,
+                "SCROLL_UP": 0.06,
+                "DONE": 0.0,
+                "CLICK": 0.12,
+                "WAIT": 0.0,
+                "run_script:list-page": 0.0,
+                "BLOCKED": 0.52
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+              "title": "Default | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 2134
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "blocked",
+          "rescue": true,
+          "input_ms": 302,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "n": 3,
+            "snapshot": "s_t_2abc66a932e164af7dc0fb377a3d06c9",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "BLOCKED": 0.56,
+                "run_script:list-page": 0.0,
+                "WAIT": 0.0,
+                "SCROLL_DOWN": 0.3,
+                "SCROLL_UP": 0.05,
+                "CLICK": 0.09
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+              "title": "Default | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 3131
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "blocked",
+          "rescue": true,
+          "input_ms": 115,
+          "settle_ms": 50
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "executed",
+          "n": 1,
+          "snapshot": "s_t_0e3e8e85a3ec5db7b0f723aa3b6ba289",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "run_script:list-page": 0.01,
+              "DONE": 0.01,
+              "BLOCKED": 0.55,
+              "WAIT": 0.01,
+              "CLICK": 0.1,
+              "SCROLL_DOWN": 0.32
+            },
+            "target": {}
+          },
+          "confidence": 0.48,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 5443,
+            "output_tokens": 419,
+            "cost": 0.000228606,
+            "retries": 0
+          },
+          "elapsed_ms": 373
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 2,
+          "snapshot": "s_t_d7e915b46c08e9f792dd5418f21acf28",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.07,
+              "BLOCKED": 0.55,
+              "run_script:list-page": 0.01,
+              "WAIT": 0.01,
+              "DONE": 0.0,
+              "SCROLL_DOWN": 0.36
+            },
+            "target": {}
+          },
+          "confidence": 0.46,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 5444,
+            "output_tokens": 419,
+            "cost": 0.000228648,
+            "retries": 0
+          },
+          "elapsed_ms": 379
+        },
+        {
+          "outcome": "executed",
+          "n": 3,
+          "snapshot": "s_t_100641f5596476f203f1f850428acd85",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.3,
+              "SCROLL_UP": 0.06,
+              "DONE": 0.0,
+              "CLICK": 0.12,
+              "WAIT": 0.0,
+              "run_script:list-page": 0.0,
+              "BLOCKED": 0.52
+            },
+            "target": {}
+          },
+          "confidence": 0.43,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 7471,
+            "output_tokens": 596,
+            "cost": 0.000313782,
+            "retries": 0
+          },
+          "elapsed_ms": 366
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 4,
+          "snapshot": "s_t_bc232e0689e0d6566ea81a04bba29614",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "run_script:list-page": 0.0,
+              "BLOCKED": 0.51,
+              "CLICK": 0.13,
+              "WAIT": 0.01,
+              "DONE": 0.01,
+              "SCROLL_DOWN": 0.31,
+              "SCROLL_UP": 0.03
+            },
+            "target": {}
+          },
+          "confidence": 0.43,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 7471,
+            "output_tokens": 596,
+            "cost": 0.000313782,
+            "retries": 0
+          },
+          "elapsed_ms": 418
+        },
+        {
+          "outcome": "executed",
+          "n": 5,
+          "snapshot": "s_t_2abc66a932e164af7dc0fb377a3d06c9",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "BLOCKED": 0.56,
+              "run_script:list-page": 0.0,
+              "WAIT": 0.0,
+              "SCROLL_DOWN": 0.3,
+              "SCROLL_UP": 0.05,
+              "CLICK": 0.09
+            },
+            "target": {}
+          },
+          "confidence": 0.48,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 4640,
+            "output_tokens": 340,
+            "cost": 0.00019488,
+            "retries": 0
+          },
+          "elapsed_ms": 315
+        }
+      ],
+      "text_calls": [],
+      "metrics": {
+        "actions": 3,
+        "predictions": 5,
+        "text_calls": 0,
+        "observation_calls": 6,
+        "observation_retries": 0,
+        "stale_decisions": 2,
+        "bootstrap_ms": 0,
+        "observation_ms": 430,
+        "prediction_ms": 1851,
+        "text_helper_ms": 0,
+        "input_ms": 2918,
+        "settle_ms": 900,
+        "elapsed_ms": 3131
+      }
+    },
+    "output_kinds": [
+      "script-record",
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "s_t_97f8caceaddb2c8c8b3f3302f350d1dc",
+      "tab": "t_4fb3bbda2850f05755c9f924c81650c2",
+      "url": "https://books.toscrape.com/catalogue/category/books/default_15/page-4.html",
+      "title": "Default | Books to Scrape - Sandbox",
+      "rows": [
+        {
+          "index": 1,
+          "role": "link",
+          "name": "Suspense"
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Short Stories"
+        },
+        {
+          "index": 3,
+          "role": "link",
+          "name": "Novels"
+        },
+        {
+          "index": 4,
+          "role": "link",
+          "name": "Health"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Politics"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Cultural"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "Erotica"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Crime"
+        },
+        {
+          "index": 9,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 10,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 11,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 12,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 13,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 14,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 15,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 16,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 17,
+          "role": "link",
+          "name": "Modern Day Fables"
+        },
+        {
+          "index": 18,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 19,
+          "role": "heading",
+          "name": "Modern Day Fables"
+        },
+        {
+          "index": 20,
+          "role": "link",
+          "name": "Modern Day Fables"
+        },
+        {
+          "index": 21,
+          "role": "paragraph",
+          "name": "\u00a347.44"
+        },
+        {
+          "index": 22,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 24,
+          "role": "link",
+          "name": "The Unlikely Pilgrimage of Harold Fry (Harold Fry #1)"
+        },
+        {
+          "index": 25,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 26,
+          "role": "heading",
+          "name": "The Unlikely Pilgrimage of ..."
+        },
+        {
+          "index": 27,
+          "role": "link",
+          "name": "The Unlikely Pilgrimage of ..."
+        },
+        {
+          "index": 28,
+          "role": "paragraph",
+          "name": "\u00a343.62"
+        },
+        {
+          "index": 29,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 30,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 31,
+          "role": "link",
+          "name": "The Martian (The Martian #1)"
+        },
+        {
+          "index": 32,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 33,
+          "role": "heading",
+          "name": "The Martian (The Martian ..."
+        },
+        {
+          "index": 34,
+          "role": "link",
+          "name": "The Martian (The Martian ..."
+        },
+        {
+          "index": 35,
+          "role": "paragraph",
+          "name": "\u00a341.39"
+        },
+        {
+          "index": 36,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 37,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 38,
+          "role": "link",
+          "name": "Left Behind (Left Behind #1)"
+        },
+        {
+          "index": 39,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 40,
+          "role": "heading",
+          "name": "Left Behind (Left Behind ..."
+        },
+        {
+          "index": 41,
+          "role": "link",
+          "name": "Left Behind (Left Behind ..."
+        },
+        {
+          "index": 42,
+          "role": "paragraph",
+          "name": "\u00a340.72"
+        },
+        {
+          "index": 43,
+          "role": "paragraph",
+          "name": "\uf00c In stock"
+        },
+        {
+          "index": 44,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 45,
+          "role": "link",
+          "name": "John Vassos: Industrial Design for Modern Life"
+        },
+        {
+          "index": 46,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 47,
+          "role": "heading",
+          "name": "John Vassos: Industrial Design ..."
+        },
+        {
+          "index": 48,
+          "role": "link",
+          "name": "John Vassos: Industrial Design ..."
+        },
+        {
+          "index": 49,
+          "role": "paragraph",
+          "name": "\u00a320.22"
+        },
+        {
+          "index": 50,
+          "role": "link",
+          "name": "I'll Give You the Sun"
+        },
+        {
+          "index": 51,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 52,
+          "role": "heading",
+          "name": "I'll Give You the ..."
+        },
+        {
+          "index": 53,
+          "role": "link",
+          "name": "I'll Give You the ..."
+        },
+        {
+          "index": 54,
+          "role": "paragraph",
+          "name": "\u00a356.48"
+        },
+        {
+          "index": 55,
+          "role": "link",
+          "name": "Heaven is for Real: A Little Boy's Astounding Story of His Trip to Heaven and Back"
+        },
+        {
+          "index": 56,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 57,
+          "role": "heading",
+          "name": "Heaven is for Real: ..."
+        },
+        {
+          "index": 58,
+          "role": "link",
+          "name": "Heaven is for Real: ..."
+        },
+        {
+          "index": 59,
+          "role": "paragraph",
+          "name": "\u00a352.86"
+        },
+        {
+          "index": 60,
+          "role": "link",
+          "name": "Ender's Game (The Ender Quintet #1)"
+        },
+        {
+          "index": 61,
+          "role": "paragraph",
+          "name": "\uf005\uf005\uf005\uf005\uf005"
+        },
+        {
+          "index": 62,
+          "role": "heading",
+          "name": "Ender's Game (The Ender ..."
+        },
+        {
+          "index": 63,
+          "role": "link",
+          "name": "Ender's Game (The Ender ..."
+        },
+        {
+          "index": 64,
+          "role": "paragraph",
+          "name": "\u00a343.64"
+        }
+      ],
+      "total": 64,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "dialog": null
+    },
+    "reason": "procedure next-page stopped at step \"Open the next page of this category.\" (blocked): the operator repeated three non-WAIT actions without changing the page; 1 step(s) remain"
+  }
+}

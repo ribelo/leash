@@ -40,6 +40,15 @@ A script is a **tool JEV can choose**: at the operator level, the scripts applic
 
 ## Implementation Decisions
 
+Pinned contract (pbk-otsl, pbk-hcwy, pbk-9549), verbatim:
+
+- operator option key: `run_script:<name>`
+- criterion text: the script's one-sentence description
+- rule appended only when a script is offered: `run_script:<name> runs that prepared script on the current page. Choose it to collect the page; its records are saved and do not need to be clicked.`
+- recent-actions summary for a list: `ran <name>: <N> records`
+- recent-actions summary for a failure: `ran <name>: failed (<first line>)`
+- a record's scalar fields are bounded to 120 characters
+
 - `run_script:<name>` is an operator-level option only inside a playbook procedure (on-the-fly missions have no scripts). The offered set is computed per observation from the current page kind.
 - Scripts read `args` as today; declaration is checked lexically at `playbook check` (`args\.([a-zA-Z_][a-zA-Z0-9_]*)`) and at load.
 - Named shapes live in `shapes`; a script's `returns` is a shape name or an inline shape. Validation code unchanged.
