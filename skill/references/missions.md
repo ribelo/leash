@@ -29,6 +29,8 @@ An unmet expectation in the no-playbook operator returns `blocked` with the fail
 
 Playbooks are installed at `$XDG_CONFIG_HOME/leash/playbooks/NAME/playbook.json` (normally `~/.config/leash/playbooks/NAME/playbook.json`), with their script files beside them. A standalone JSON file in the playbooks root is not the current format. Examples in this reference must be installed by the operator/agent when the task authorizes that configuration change; they are not guaranteed to ship on this machine.
 
+For structured collection, check `leash playbook list` before promising records: the no-playbook operator cannot collect JSONL. No site playbooks are installed automatically. Start with the complete example below, a trusted site playbook from the source checkout’s `examples/playbooks/` (for example `books.toscrape.com/` for catalogue collection), or a reviewed discovery proposal. Copy the whole example directory, including scripts, into the configured playbooks root only when authorized; run local validation and test its extraction on a permitted page before using `drive --out`.
+
 | Command | What it does |
 | --- | --- |
 | `leash playbook list` | List validated installed sites/descriptions; output is tab-separated text. |

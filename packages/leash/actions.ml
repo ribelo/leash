@@ -134,29 +134,20 @@ let dispatch cdp tab method_ params =
 let handles tab =
   List.map (fun ((info : P.tab_info), _) -> P.Handle.to_string info.tab) (tab.all_tabs ())
 
-let stale tab message =
-  match tab.snapshot () with
-  | Some (snapshot, _, _) ->
-      error "stale-snapshot" message
-        ~detail:
-          (E.object_ [ ("snapshot", Some (E.string (P.Snapshot_id.to_string snapshot))) ])
-  | None -> error "stale-snapshot" message
+let stale tab _message =
+  P.stale_snapshot (Option.map (fun (id, _, _) -> id) (tab.snapshot ()))
 
 let fail_stale tab message = Error (stale tab message)
 
 let current tab id =
   match tab.snapshot () with
   | Some (snapshot, loader, rows) when snapshot = id -> Ok (loader, rows)
-  | Some (snapshot, _, _) ->
-      fail "stale-snapshot" "that snapshot is not the current one; snap again"
-        ~detail:
-          (E.object_ [ ("snapshot", Some (E.string (P.Snapshot_id.to_string snapshot))) ])
-  | None -> fail "stale-snapshot" "there is no snapshot for this tab; snap first"
+  | Some _ | None -> fail_stale tab ""
 
 let current_any tab =
   match tab.snapshot () with
   | Some (_, loader, rows) -> Ok (loader, rows)
-  | None -> fail "stale-snapshot" "there is no snapshot for this tab; snap first"
+  | None -> fail_stale tab ""
 
 let loader_id cdp tab =
   let* json = call cdp ~session:tab.session "Page.getFrameTree" (E.object_ []) in

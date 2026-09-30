@@ -840,6 +840,10 @@ val make_error : ?detail:Yojson.Safe.t -> Error_code.t -> message:string -> erro
 val error_help : string
 (** Same text as {!Error_code.error_help}. *)
 
+val stale_snapshot : Snapshot_id.t option -> error
+(** daily-6pde daily-9ggi: the one stale-snapshot message and hint, with the current id in
+    [detail.snapshot], or [null] when no snapshot is current. *)
+
 val tab_gone : Disposition.t -> error
 (** own-teh1: the one [tab-gone] error, carrying the disposition that closed the tab in
     [detail.disposition] — [closed_by_owner], [closed_by_ttl], [closed_externally], or

@@ -112,8 +112,22 @@ let forceable = function
   | Close | Release -> true
   | Act | Dialog | Claim | Resume -> false
 
-let not_owner () = error "not-owner" "the tab belongs to another owner"
-let unowned () = error "not-owner" "the tab is unowned; claim it first"
+let not_owner state =
+  error "not-owner"
+    (match state with
+    | Unowned -> "the tab is unowned; claim it first"
+    | Owned _ | With_human _ -> "the tab belongs to another owner")
+    ~detail:
+      (obj
+         [
+           ("state", str (state_name state));
+           ( "owner",
+             match owner_of state with
+             | Some owner -> P.Owner.yojson_of_t owner
+             | None -> `Null );
+         ])
+
+let unowned () = not_owner Unowned
 let already_owned () = error "already-owned" "the tab is already owned"
 let held_by_human () = error "with-human" "the tab is with the human; resume it first"
 
@@ -147,7 +161,7 @@ let authorize ?(force = false) access ~caller state : (unit, P.error) result =
       else
         match state with
         | Owned owner when owner = caller -> Ok ()
-        | Owned _ -> Error (not_owner ())
+        | Owned _ -> Error (not_owner state)
         | Unowned -> Error (unowned ())
         | With_human _ -> Error (held_by_human ()))
 
@@ -450,7 +464,7 @@ let refusal_for_gone ~tombstone_s ledger ~force ~caller ~at handle =
   match Keys.find_opt (key handle) ledger.tombs with
   | Some tomb when at -. tomb.at >= float tombstone_s ->
       error "unknown-tab" "unknown tab handle"
-  | Some tomb when (not force) && held_by_other tomb.state caller -> not_owner ()
+  | Some tomb when (not force) && held_by_other tomb.state caller -> not_owner tomb.state
   | Some tomb -> P.tab_gone tomb.disposition
   | None -> error "unknown-tab" "unknown tab handle"
 
@@ -1619,8 +1633,24 @@ let snap t ~owner (args : P.snap_args) =
 (* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax:
    the registry owns identity and the page session; Reading owns browser-specific work. *)
 let reading_browser t ~session tab cdp : Reading.browser =
+  (* daily-6pde daily-9ggi: subscribe before each read so a dialog opening during
+     a withheld CDP call wins over the command deadline. Answering it bypasses the guard. *)
+  let call meth params =
+    if meth = "Page.handleJavaScriptDialog" then cdp_call ~session cdp meth params
+    else
+      match
+        Dialog_race.first (dialog_race tab) (fun () -> cdp_call ~session cdp meth params)
+      with
+      | `Value result -> result
+      | `Dialog dialog ->
+          Error
+            (P.make_error
+               (enum P.Error_code.of_string "dialog-open")
+               ~message:"a dialog blocks page reads; answer it first"
+               ~detail:(P.yojson_of_dialog dialog))
+  in
   {
-    call = (fun meth params -> cdp_call ~session cdp meth params);
+    call;
     now = (fun () -> now t);
     sleep = t.sleep;
     current = (fun () -> (tab.url, tab.title));
@@ -1636,13 +1666,10 @@ let reading_browser t ~session tab cdp : Reading.browser =
               (fun ((row : P.row), backend) ->
                 if row.P.index = index then Some backend else None)
               rows);
-    snapshot_current =
-      (fun id ->
-        match tab.snapshot with Some (current, _, _) -> current = id | None -> false);
+    snapshot = (fun () -> Option.map (fun (id, _, _) -> id) tab.snapshot);
     baseline = (fun id -> List.assoc_opt id tab.baselines);
     probe =
       (fun () ->
-        let call meth params = cdp_call ~session cdp meth params in
         let* loader = frame_loader call in
         let* epoch, count, _, _, _, _ = page_guard call in
         Ok Reading.{ loader; guard = Some (epoch, count) });
@@ -2711,17 +2738,32 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Ox.Duration.minutes 30)
         | Chrome.Started _ -> (
             match ready t with
             | Ok cdp ->
+                let setup_target = ref None in
                 Eio.Fiber.fork_daemon ~sw (fun () ->
                     let rec notifications () : [ `Stop_daemon ] =
                       match Eio.Stream.take (Cdp.events cdp) with
                       | Ox_rpc.Correlator.Message json ->
-                          inspect t json;
+                          let announced =
+                            Option.bind (member "params" json) (fun params ->
+                                Option.bind (member "targetInfo" params) (text "targetId"))
+                          in
+                          if announced = None || announced <> !setup_target then
+                            inspect t json;
                           notifications ()
                       | Ox_rpc.Correlator.Closed _ -> `Stop_daemon
                     in
                     notifications ());
                 Option.iter
                   (fun download_dir ->
+                    (match
+                       Download_setup.prepare ~clock:deps.clock ~cdp
+                         ~on_target:(fun target -> setup_target := Some target)
+                     with
+                    | Ok () -> ()
+                    | Error _ ->
+                        Ox_observability.Logger.warn t.logger
+                          "daily-c4cl: download history bootstrap failed; continuing \
+                           setup");
                     match
                       cdp_call cdp "Browser.setDownloadBehavior"
                         (obj

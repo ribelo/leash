@@ -160,7 +160,13 @@ let examples () =
   let check name expected =
     Alcotest.(check string) name expected (P.Error_code.hint (wire name))
   in
-  check "stale-snapshot" "run `leash snap TAB` again and use its snapshot id";
+  (* daily-9ggi: task recovery, not merely replacing the id. *)
+  check "stale-snapshot"
+    "read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the \
+     row is gone, navigate back or re-find it before acting";
+  check "service-stopped"
+    "`systemctl --user start leash`, then `leash status`; a brief service-restarting \
+     (75) right after start is normal - retry";
   check "service-unreachable" "`systemctl --user start leash`, or pass --socket";
   Alcotest.(check int)
     "cli-parse exits 124" 124

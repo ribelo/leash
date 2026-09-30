@@ -16,7 +16,7 @@ Reply, one of:
 
 ```json
 {"ok":true,"result":{…}}
-{"ok":false,"error":{"code":"stale-snapshot","message":"snapshot s_3 is stale; snap again","hint":"run `leash snap TAB` again and use its snapshot id","detail":{…}}}
+{"ok":false,"error":{"code":"stale-snapshot","message":"snapshot s_3 is stale; snap again","hint":"read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the row is gone, navigate back or re-find it before acting","detail":{…}}}
 ```
 
 - `owner` is required on every request. The CLI fills it from `DSH_SESSION_ID` (as `dsh:<id>`) or `--owner`; a human uses `--owner human` or whatever they like.
@@ -525,17 +525,17 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | code | exit | meaning | hint |
 | --- | --- | --- | --- |
 | `invalid-request` | 64 | malformed JSON, unknown command, or bad arguments | fix the request; `leash <command> --help` names the arguments and one example |
-| `not-owner` | 77 | the tab is owned by another caller, or unowned and the command needs an owner | run `leash list --all` to see the owner; if this is your tab, pass its --owner (without --owner, DSH_SESSION_ID selects dsh:<DSH_SESSION_ID>); claim only an unowned tab. If someone else owns it, use your own tab with `leash new` or ask the owner to release it |
+| `not-owner` | 77 | the tab is owned by another caller, or unowned and the command needs an owner | read detail.state and detail.owner: unowned means `leash claim TAB` if permitted; owned means use your own tab with `leash new` or ask that owner to release it; `leash list --all` shows live ownership - never impersonate another owner |
 | `already-owned` | 77 | claim on a tab that is not unowned | `leash list --all` shows its owner; use your own tab with `leash new` or ask the owner to release it |
 | `with-human` | 77 | the tab is handed to the human; commands are refused until resume | the human holds this tab; wait, or return it with `leash resume TAB` |
 | `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_owner, closed_by_ttl, closed_externally, or browser_lost | the handle is dead; read detail.disposition, then open a new tab with `leash new` |
 | `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; `leash list --all` shows live handles |
-| `stale-snapshot` | 65 | the snapshot id or target row no longer matches the current page | run `leash snap TAB` again and use its snapshot id |
+| `stale-snapshot` | 65 | the snapshot id or target row no longer matches the current page | read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the row is gone, navigate back or re-find it before acting |
 | `no-such-row` | 66 | the index is not in the snapshot | that index is not in the snapshot; `leash snap TAB` and use a listed index |
 | `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
 | `unknown-request` | 66 | the tab's ring holds no request with that id | that id is not in the tab's ring; `leash net TAB` and use a listed id |
 | `row-not-actionable` | 65 | the row is not visible, is disabled, is covered, or is the wrong kind of control | pick another row, or `leash snap TAB` if the page moved; a file input takes `leash upload` |
-| `dialog-open` | 65 | a dialog blocks the page; answer it before the action | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry |
+| `dialog-open` | 65 | a dialog blocks page reads and actions; answer it first | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry |
 | `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown |
 | `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it |
 | `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank |
@@ -550,7 +550,7 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message |
 | `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket |
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |
-| `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash` |
+| `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash`, then `leash status`; a brief service-restarting (75) right after start is normal - retry |
 | `service-restarting` | 75 | the leash unit is activating or auto-restarting, or Chrome's generation is being relaunched | Leash is restarting; retry `leash status` in a few seconds |
 | `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its owner and mode, or pass --socket |
 | `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's owner and mode, or pass another path |

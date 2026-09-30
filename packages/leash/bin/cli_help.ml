@@ -73,6 +73,7 @@ let top_man =
        stderr, even with --pretty.";
     `S "FIRST STEPS";
     `P "leash status --owner my-agent";
+    `P "leash list --all (inspect shared ownership without granting access)";
     `P "leash new https://example.com --owner my-agent";
     `P "leash snap TAB --owner my-agent --limit 20";
     `S "SERVICE";

@@ -6,6 +6,7 @@ let version = Version.version
 
 module Cdp = Cdp
 module Chrome = Chrome
+module Download_setup = Download_setup
 module Config = Config
 module Telemetry = Telemetry
 module Desktop = Desktop

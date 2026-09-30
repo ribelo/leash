@@ -1572,6 +1572,38 @@ let download_events () =
           (Fake.received fake)
       in
       Alcotest.(check int) "run-ykq4 behavior set" 1 (List.length behaviors);
+      let setup_closed = ref false in
+      List.iter
+        (fun req ->
+          if get "method" req = str "Target.closeTarget" then
+            setup_closed :=
+              get "targetId" (get "params" req) = str "download-setup-target";
+          if get "method" req = str "Browser.setDownloadBehavior" then
+            Alcotest.(check bool)
+              "daily-c4cl history bootstrap precedes override" true !setup_closed)
+        (Fake.received fake);
+      Fake.emit fake ~method_:"Target.attachedToTarget"
+        ~params:
+          (obj
+             [
+               ("sessionId", str "download-setup-session");
+               ( "targetInfo",
+                 obj
+                   [
+                     ("targetId", str "download-setup-target");
+                     ("type", str "page");
+                     ("url", str "chrome://downloads/");
+                     ("title", str "Downloads");
+                   ] );
+             ]);
+      for _ = 1 to 20 do
+        Eio.Fiber.yield ()
+      done;
+      (match get "tabs" (result (request tabs "alice" (P.List_tabs { all = true }))) with
+      | `List tabs ->
+          Alcotest.(check int)
+            "daily-c4cl setup target never registered" 1 (List.length tabs)
+      | _ -> Alcotest.fail "tabs list missing");
       let params = get "params" (List.hd behaviors) in
       Alcotest.(check string)
         "run-ykq4 allow" "allow"

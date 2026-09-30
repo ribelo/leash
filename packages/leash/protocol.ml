@@ -371,10 +371,10 @@ module Error_code = struct
     | Not_owner ->
         info 77
           "the tab is owned by another caller, or unowned and the command needs an owner"
-          "run `leash list --all` to see the owner; if this is your tab, pass its \
-           --owner (without --owner, DSH_SESSION_ID selects dsh:<DSH_SESSION_ID>); claim \
-           only an unowned tab. If someone else owns it, use your own tab with `leash \
-           new` or ask the owner to release it"
+          "read detail.state and detail.owner: unowned means `leash claim TAB` if \
+           permitted; owned means use your own tab with `leash new` or ask that owner to \
+           release it; `leash list --all` shows live ownership - never impersonate \
+           another owner"
     | Already_owned ->
         info 77 "claim on a tab that is not unowned"
           "`leash list --all` shows its owner; use your own tab with `leash new` or ask \
@@ -393,7 +393,8 @@ module Error_code = struct
           "that handle is not a tab; `leash list --all` shows live handles"
     | Stale_snapshot ->
         info 65 "the snapshot id or target row no longer matches the current page"
-          "run `leash snap TAB` again and use its snapshot id"
+          "read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; \
+           if the row is gone, navigate back or re-find it before acting"
     | No_such_row ->
         info 66 "the index is not in the snapshot"
           "that index is not in the snapshot; `leash snap TAB` and use a listed index"
@@ -410,7 +411,7 @@ module Error_code = struct
           "pick another row, or `leash snap TAB` if the page moved; a file input takes \
            `leash upload`"
     | Dialog_open ->
-        info 65 "a dialog blocks the page; answer it before the action"
+        info 65 "a dialog blocks page reads and actions; answer it first"
           "answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then \
            retry"
     | No_dialog ->
@@ -471,7 +472,8 @@ module Error_code = struct
            `systemctl --user start leash`"
     | Service_stopped ->
         info 69 "the leash unit is installed but inactive"
-          "`systemctl --user start leash`"
+          "`systemctl --user start leash`, then `leash status`; a brief \
+           service-restarting (75) right after start is normal - retry"
     | Service_restarting ->
         info 75
           "the leash unit is activating or auto-restarting, or Chrome's generation is \
@@ -1077,6 +1079,17 @@ type error = {
 
 let make_error ?detail code ~message =
   { code; message; hint = Error_code.hint code; detail }
+
+(* daily-6pde daily-9ggi: every stale path names the current id, or null after navigation. *)
+let stale_snapshot snapshot : error =
+  make_error
+    ~detail:
+      (`Assoc
+         [
+           ( "snapshot",
+             match snapshot with Some id -> Snapshot_id.yojson_of_t id | None -> `Null );
+         ])
+    Stale_snapshot ~message:"the snapshot or target row is no longer current"
 
 (* own-teh1 tab-0ohq: the one [tab-gone], whether it comes from a tombstone, from a
    dispatch the target's death settled (tab-0ohq), or from the browser lookup that probe

@@ -90,6 +90,7 @@ let top_help path =
       "PLAYBOOKS";
       "SERVICE";
       "SKILL";
+      "--all";
     ];
   print_endline
     "top-level help groups tabs, observe, act, network/debug, missions, playbooks, \
@@ -247,6 +248,11 @@ let () =
   | [ _; "config-details"; path; stderr ] -> config_details path stderr
   | [ _; "check-help"; path ] -> check_help path
   | [ _; "top-help"; path ] -> top_help path
+  | [ _; "list-help"; path ] ->
+      let text = read_file path in
+      if not (contains text "--all") then failwith "daily-9ggi list help omits --all";
+      if not (contains text "unowned") then failwith "daily-9ggi list help omits scope";
+      print_endline "daily-9ggi list --all includes unowned and other owners"
   | [ _; "error-help"; path ] -> error_help path
   | [ _; "inspect-init"; path; stdout; stderr ] -> inspect_init path stdout stderr
   | [ _; "skill-outcome"; action; path; stdout; stderr ] ->

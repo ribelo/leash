@@ -284,6 +284,103 @@ let native_identity () =
         (request tabs "alice"
            (P.Press { tab = h; snapshot = id; index = Some index; key = "Tab" })))
 
+(* daily-9ggi: stale branches share one recovery object; ownership refusal tells
+   whether to claim an unowned tab or leave another owner's tab alone. *)
+let recovery_details () =
+  rig (fun _ _ _ tabs fake _ _ ->
+      let h = tab (result (request tabs "alice" (P.New { url = None }))) in
+      script_row (fake ()) "InputTime";
+      let old =
+        match P.Snapshot_id.of_string "old" with Ok x -> x | _ -> assert false
+      in
+      let stale current command =
+        match request tabs "alice" command with
+        | P.Success _ -> Alcotest.fail "daily-9ggi expected stale-snapshot"
+        | P.Failure error ->
+            let expected = P.stale_snapshot current in
+            Alcotest.(check string)
+              "daily-9ggi one stale message" expected.message error.message;
+            Alcotest.(check string)
+              "daily-9ggi stale code" "stale-snapshot"
+              (P.Error_code.to_string error.code);
+            Alcotest.(check bool)
+              "daily-9ggi current snapshot always in detail" true
+              (error.detail = expected.detail);
+            Alcotest.(check string)
+              "daily-9ggi canonical recovery" expected.hint error.hint
+      in
+      let press snapshot index = P.Press { tab = h; snapshot; index; key = "Tab" } in
+      stale None (press old None);
+      let first, _ = snapshot tabs h in
+      ignore (result (request tabs "alice" (press first None)));
+      let current, json = snapshot tabs h in
+      stale (Some current) (press first None);
+      stale (Some current)
+        (P.Eval
+           {
+             tab = h;
+             expression = "return element.textContent";
+             argument = None;
+             index = Some 1;
+             snapshot = Some first;
+           });
+      let index =
+        match get "rows" json with
+        | `List [ row ] -> Yojson.Safe.Util.to_int (get "index" row)
+        | _ -> Alcotest.fail "daily-9ggi missing fixture row"
+      in
+      Fake.on_method (fake ()) "Accessibility.getPartialAXTree" (fun _ ->
+          obj
+            [
+              ( "nodes",
+                `List
+                  [
+                    obj
+                      [
+                        ("role", obj [ ("value", str "button") ]);
+                        ("name", obj [ ("value", str "Changed") ]);
+                      ];
+                  ] );
+            ]);
+      stale (Some current) (press current (Some index));
+      Fake.emit ~session:"session-1" (fake ()) ~method_:"Page.frameNavigated"
+        ~params:
+          (obj
+             [
+               ( "frame",
+                 obj
+                   [
+                     ("id", str "frame-1");
+                     ("loaderId", str "new-doc");
+                     ("url", str "https://example.com/new");
+                   ] );
+             ]);
+      spin "daily-9ggi navigation not observed" (fun () ->
+          (* This older id is refused without dispatch, even before the event arrives. *)
+          match request tabs "alice" (press first None) with
+          | P.Failure error -> Option.bind error.detail (field "snapshot") = Some `Null
+          | P.Success _ -> false);
+      stale None (press current None);
+      let not_owner who state expected_owner =
+        match request tabs who (P.Text { tab = h; index = None; max_chars = None }) with
+        | P.Success _ -> Alcotest.fail "daily-9ggi expected not-owner"
+        | P.Failure error ->
+            Alcotest.(check string)
+              "daily-9ggi not-owner code" "not-owner"
+              (P.Error_code.to_string error.code);
+            Alcotest.(check string)
+              "daily-9ggi canonical owner hint"
+              (P.Error_code.hint error.code)
+              error.hint;
+            let detail = Option.get error.detail in
+            Alcotest.(check bool)
+              "daily-9ggi ownership state detail" true
+              (get "state" detail = str state && get "owner" detail = expected_owner)
+      in
+      not_owner "bob" "owned" (str "alice");
+      ignore (result (request tabs "alice" (P.Release { tab = h; force = None })));
+      not_owner "alice" "unowned" `Null)
+
 let popup_url () =
   rig (fun env sw _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None }))) in
@@ -516,6 +613,7 @@ let () =
         [
           Alcotest.test_case "press vocabulary" `Quick press_keys;
           Alcotest.test_case "native time identity and stale row" `Quick native_identity;
+          Alcotest.test_case "daily-9ggi recovery detail" `Quick recovery_details;
           Alcotest.test_case "delayed popup URL" `Quick popup_url;
           Alcotest.test_case "download progress bytes" `Quick download_bytes;
           Alcotest.test_case "managed PID and signal numbers" `Quick chrome_identity;

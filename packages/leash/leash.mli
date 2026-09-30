@@ -4,6 +4,7 @@ val version : string
 
 module Cdp : module type of Cdp
 module Chrome : module type of Chrome
+module Download_setup : module type of Download_setup
 module Config : module type of Config
 module Telemetry : module type of Telemetry
 module Desktop : module type of Desktop

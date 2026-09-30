@@ -16,9 +16,17 @@ systemctl --user start leash
 leash status --owner browser-example
 ```
 
+A brief `service-restarting` (75) right after start is normal: retry `leash status` after a short delay until running; do not launch a competing service.
+
 For setup problems, `leash config check` reports all problems with the configuration path. `leash config init` writes the default configuration; inspect its help before using it on an existing setup. The default file is `${XDG_CONFIG_HOME:-$HOME/.config}/leash/config.toml`. An absent default file means defaults; an explicitly named missing `--config FILE` is an error. `--config FILE` selects configuration, and `--socket PATH` overrides the control socket for one client call. The default socket is `$XDG_RUNTIME_DIR/leash/control.sock`; it is private to the user's account. Do not weaken its permissions.
 
 `leash serve` runs the service in the foreground. Normally systemd owns it; do not start a competing instance or a second Chrome against the same profile. Stop/restart with `systemctl --user stop leash` / `systemctl --user restart leash` only when the task authorizes interruption: restarting loses live handles and may disrupt other agents. Generation-loss origins render OS-facing signals such as `SIGKILL / 9`, not OCaml's portable negative constants. For logs, use `journalctl --user -u leash -n 50 --no-pager`, keeping private page data out of reports.
+
+### Detect a shared-service interruption
+
+Save `status` generation, `pid` and `uptime_s` before a long run and compare them after a disconnect or unexpected tab loss. A Chrome restart in the same service increases generation and changes pid; a full service restart resets generation (normally back to 1) and resets uptime. Generation 1 alone proves nothing, and sparse samples can miss a restart, so compare uptime against elapsed time too. A lower uptime or changed generation/pid is a reason to re-check handles and re-snap, not to replay a submission.
+
+These fields cannot identify who restarted it. Check `journalctl --user -u leash` around the interruption and coordinate with other users/agents; overlapping sessions may have stopped/started the shared service. Do not restart it yourself merely to diagnose someone else’s interruption.
 
 ### Headed versus headless
 

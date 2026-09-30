@@ -27,7 +27,7 @@ an auto-restart, and an active unit whose socket is dead.
   > active=inactive
   > sub=dead
   > binary=present' service-stopped
-  service-stopped: unit=true binary=true hint=`systemctl --user start leash`
+  service-stopped: unit=true binary=true hint=`systemctl --user start leash`, then `leash status`; a brief service-restarting (75) right after start is normal - retry
   $ probe 'load=loaded
   > active=activating
   > sub=auto-restart

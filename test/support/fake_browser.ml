@@ -179,7 +179,30 @@ let defaults replies =
         obj [ ("documents", `List []); ("strings", `List []) ] );
       ("Page.navigate", obj [ ("frameId", str "frame-1"); ("loaderId", str "loader-1") ]);
       ("Runtime.evaluate", obj [ ("result", obj [ ("type", str "undefined") ]) ]);
-    ]
+    ];
+  (* daily-c4cl: the download-history bootstrap owns a separate background target. *)
+  let get key = function
+    | `Assoc fields -> Option.value (List.assoc_opt key fields) ~default:`Null
+    | _ -> `Null
+  in
+  Hashtbl.replace replies "Target.createTarget" (fun request ->
+      let id =
+        if get "url" (get "params" request) = str "chrome://downloads/" then
+          "download-setup-target"
+        else "target-1"
+      in
+      obj [ ("targetId", str id) ]);
+  Hashtbl.replace replies "Target.attachToTarget" (fun request ->
+      let id =
+        if get "targetId" (get "params" request) = str "download-setup-target" then
+          "download-setup-session"
+        else "session-1"
+      in
+      obj [ ("sessionId", str id) ]);
+  Hashtbl.replace replies "Runtime.evaluate" (fun request ->
+      if get "sessionId" request = str "download-setup-session" then
+        obj [ ("result", obj [ ("type", str "boolean"); ("value", `Bool true) ]) ]
+      else obj [ ("result", obj [ ("type", str "undefined") ]) ])
 
 let read_frame reader =
   if Eio.Buf_read.at_end_of_input reader then None

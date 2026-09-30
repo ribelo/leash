@@ -334,6 +334,115 @@ The niri window rule; making the repository public; new browser capabilities (if
   case; it was stopped and reported to the lead rather than counted as a pass. Private
   profiles, diagnostic scripts and `_build_l44a` were removed after verification.
 
+## L44 run-2 repairs — X: download crash (daily-c4cl)
+
+- **Finding → cause:** every run-2 download crashed Chrome 152.0.7977.64 before
+  completion. Fresh private profiles passed; copying the installed profile reproduced
+  both headed and headless, with both the installed Nix executable and a local build.
+  Profile bisection reduced the trigger to `Default/History` plus
+  `Default/shared_proto_db`: completed downloads persisted in both stores. The early
+  `Browser.setDownloadBehavior` replaces Chrome’s delegate before history reconciles;
+  Chrome 152’s DevTools delegate incorrectly reports no history-loading support.
+  Chromium [bug 556160935 / upstream fix](https://github.com/chromium/chromium/commit/34fe0e520e143149b4b8a3faf3736af66442544a)
+  forwards `SupportsHistoryLoading` to the original delegate. The byte-count change
+  is passive event parsing, not a new CDP call or file stat; `allowAndName` and disabling
+  extensions did not fix the reproduced crash.
+- **Fix:** before installing the download delegate, open one background
+  `chrome://downloads/` setup target and wait for its backend history-list
+  acknowledgement (the upgraded `downloads-manager` removes its `loading` attribute).
+  Close only that internal target, including failure/timeout paths, and exclude its
+  announcements from the tab ledger. No fixed startup sleep, profile cleanup or
+  history deletion. A five-second budget logs a warning and continues on failure;
+  cleanup has a separate 500 ms bound. Remove this workaround when supported Chrome
+  versions all contain the upstream fix.
+- **Regressions:** `download_setup_test` cites daily-c4cl and advances a mock clock
+  explicitly; it covers pending-to-ready history, background/session isolation,
+  cleanup after attach failure, and bounded unresponsive initialization.
+  `control_test.download_events` asserts bootstrap-before-override ordering and that
+  the setup target never registers as a human tab; existing download byte tests remain.
+- **Live verification:** ten independent copies of the complete installed profile
+  under `/tmp`, five headed and five headless: `hello.txt` completed every time with
+  `received_bytes = total_bytes = 16`; Chrome stayed in generation 1. The minimal
+  History/cache reproduction also passed after the fix. Every private service exited
+  0; the installed binary, service, Chrome and profile were never modified.
+
+## L44 run-2 repairs — Y: reading and recovery (daily-9ggi)
+
+The [run-2 transcript](acceptance/2026-09-30-l44-run2-transcript.md) names P1–P10.
+The repairs below are the non-download slice; X owns the download implementation above.
+
+- **P1 finding → cause → fix:** reads behind an alert timed out → Chrome withholds
+  page-reading CDP replies while the dialog is open, and these reads had no modal
+  guard/race → text, eval and shot refuse an existing dialog and subscribe before
+  each CDP read so a newly opened dialog cancels the withheld read with `dialog-open`
+  and its dialog detail. Answering a dialog bypasses that guard and stays possible.
+- **P2 finding → cause → fix (guidance only):** crashed downloads left unexplained
+  files and `.crdownload` → the skill described only the completed result, not
+  profile storage or lost-browser recovery → document the default/custom-profile
+  downloads location, completed-state verification, partial-file caveat and bounded
+  status/new-tab recovery. Do not retry a crashing download blindly or delete files
+  without authorization. The Chrome fix and live verification belong to X above.
+- **P3 finding → cause → fix:** snapshot-validity advice contradicted observed input
+  behavior → guidance demanded a new snap after every input and confused an action's
+  `snapshot: null` reply with invalidation → explain that a newer snap/navigation
+  invalidates old IDs, unchanged-page input preserves the current ID, and a changed
+  or removed target can still be stale. Re-find the observed row rather than merely
+  replacing the ID in an old index.
+- **P4 finding → cause → fix:** a submitted click reported the old URL/title → an
+  action reply can precede navigation, rather than proving submission failed → the
+  entrypoint and browser reference now direct bounded URL/text waits or a fresh snap
+  before another action. No action-settlement behavior was redesigned.
+- **P5 finding → cause → fix:** stale failures had three messages, omitted current
+  IDs and incomplete recovery → action and indexed-eval branches built errors
+  independently → one `Protocol.stale_snapshot` supplies the canonical message,
+  `detail.snapshot` (current ID or null), and a hint naming re-snap, re-find and
+  navigation back. The not-owner branches likewise share one hint and always expose
+  `detail.state` / `detail.owner` for both unowned/null and owned/named tabs;
+  guidance permits claiming an unowned tab, never impersonating another owner.
+- **P6 finding → cause → fix:** `--all` was hard to discover → the top-level help
+  and list summary did not name it → both now expose `leash list --all`, and list
+  help explicitly includes unowned tabs and other owners.
+- **P7 finding → cause → fix:** collection silently produced no records and no site
+  playbook was installed → the skill's collection pointer omitted its preparation
+  boundary → the entrypoint and a short missions routing note require an installed,
+  validated/tested collection playbook before promising JSONL. They point to the
+  reference's complete example and the source checkout's `examples/playbooks/`,
+  including Books collection; copy scripts too and obtain installation authorization.
+  No playbooks are installed automatically, and no drive internals changed in Y.
+- **P8 finding → cause → fix:** the stopped-service hint ended at start → it omitted
+  the next status probe and normal startup race → the canonical hint says start,
+  then status, and retry a brief `service-restarting` (75). The error table,
+  help/docs/skill and CLI status golden stay aligned.
+- **P9 finding → cause → fix:** generation returned to 1 after a service restart →
+  generation and uptime belong to this service instance, not a persistent history →
+  lifecycle guidance explains Chrome-generation increments versus service resets,
+  and compares saved generation, pid and uptime against elapsed time.
+- **P10 finding → cause → fix:** overlapping sessions stopped/started the service
+  without a documented diagnostic path → status can expose an interruption but
+  cannot attribute it → document comparison of saved status, user-service journal
+  evidence and coordination; do not restart the shared service just to diagnose it.
+- **Regressions:** `reading_test.modal_reads` cites daily-9ggi and withholds
+  text/eval/screenshot CDP replies before opening a dialog; each returns dialog-open
+  without advancing time, sends no page reads behind an existing dialog, leaves no
+  screenshot and still allows dismissal. `daily_acceptance_test.recovery_details`
+  covers missing/current/newer/changed-row/navigated snapshots, unchanged input and
+  both owner states. Help and stopped-service Cram pin discoverability/recovery;
+  the four-way error table stays green. Fixtures only: the installed binary,
+  service and Chrome were not touched; no commit was made.
+- **Gates:** `@install`, full `dune test`, `@fmt` and `scripts/caps-gate`
+  pass on the integrated tree. Dune ran under the required 900-second / 16-GiB
+  compiler cap; Semgrep runs without the compiler VM cap. An initial in-flight
+  integration run reached the 900-second limit; after finalizing the fixtures and
+  X's setup, all 28 executables completed individually and the full gate passed.
+- **Integration finding → cause → fix:** isolated hardening2 disconnect cancellation
+  counted a late queued poll (20 → 21) → the same failure reproduces on a clean
+  `a46c3e8` worktree; six yields did not acknowledge twenty cancellations or drain
+  prior CDP packets → after lead authorization, the fixture waits for all twenty
+  listener `disconnected` events (emitted after cancellation/join), then drains
+  old packets through a same-transport Cookies reply. Its original no-new-polls
+  assertion over eight mock-clock ticks remains. Five isolated executions pass;
+  no production cancellation behavior changed. The temporary baseline is removed.
+
 ## Further Notes
 
 From the operator on 2026-09-30: the agent is Leash's main user; help and error codes must be excellent; the skill is installed from the binary like nema's; chrome-cdp is deleted (git keeps its history) once Leash works.

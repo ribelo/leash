@@ -19,7 +19,7 @@ type browser = {
           is issued and woken by the registry when the window it opened appears, or when
           the tab's own target dies. *)
   row : int -> int option;
-  snapshot_current : Protocol.Snapshot_id.t -> bool;
+  snapshot : unit -> Protocol.Snapshot_id.t option;
       (** Whether this is the tab's current snapshot (hard-b20d). *)
   baseline : Protocol.Snapshot_id.t -> page_state option;
       (** What the page looked like when that snapshot was taken: its main-frame loader id

@@ -38,7 +38,7 @@ let browser ?(reply = fun _ _ -> obj []) ?(row = fun _ -> None) ?(dialog = fun (
        call; [eval] still races it (tab-gjo0), which is why its cases run under Ox. *)
     acknowledge = (fun () -> fst (Leash__Dispatch.make ()));
     row;
-    snapshot_current = (fun _ -> false);
+    snapshot = (fun () -> None);
     baseline = (fun _ -> None);
     probe = (fun () -> Ok { R.loader = ""; guard = None });
   }
@@ -597,6 +597,117 @@ let eval_settlement () =
             | None -> None)
       | P.Success _ -> Alcotest.fail "tab-gjo0 the closing eval should report tab-gone")
 
+(* daily-9ggi: a modal opening after a read starts must beat the deadline; a read
+   already behind that modal must send no page request. Answering it remains possible. *)
+let modal_reads () =
+  rig (fun ~env:_ ~sw ~tabs ~fake ->
+      let owner =
+        match P.Owner.of_string "alice" with Ok x -> x | Error e -> failwith e
+      in
+      let send command =
+        let wire = P.encode_request { owner; command } |> Yojson.Safe.to_string in
+        match
+          P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire))
+        with
+        | Ok reply -> reply
+        | Error why -> Alcotest.fail why
+      in
+      let result = function
+        | P.Success json -> json
+        | P.Failure e -> Alcotest.fail e.P.message
+      in
+      let tab = tab_of (result (send (P.New { url = None }))) in
+      let path =
+        Filename.concat
+          (Filename.get_temp_dir_name ())
+          ("leash-modal-read-" ^ string_of_int (Unix.getpid ()) ^ ".png")
+      in
+      let reads =
+        [
+          ("text", "Runtime.evaluate", P.Text { tab; index = None; max_chars = None });
+          ( "eval",
+            "Runtime.callFunctionOn",
+            P.Eval
+              {
+                tab;
+                expression = "return document.title";
+                argument = None;
+                index = None;
+                snapshot = None;
+              } );
+          ("shot", "Page.captureScreenshot", P.Shot { tab; path; full_page = None });
+        ]
+      in
+      let spin label condition =
+        let rec loop n =
+          if condition () then ()
+          else if n = 0 then Alcotest.fail ("daily-9ggi " ^ label)
+          else (
+            Eio.Fiber.yield ();
+            loop (n - 1))
+        in
+        loop 1000
+      in
+      let check label = function
+        | P.Success _ -> Alcotest.fail ("daily-9ggi " ^ label ^ " read escaped the dialog")
+        | P.Failure e ->
+            Alcotest.(check string)
+              ("daily-9ggi " ^ label) "dialog-open"
+              (P.Error_code.to_string e.code);
+            Alcotest.(check bool)
+              "daily-9ggi captured modal detail" true
+              (Option.bind e.detail (field "message") = Some (str "blocked read"))
+      in
+      Fake.on_method fake "Page.handleJavaScriptDialog" (fun _ ->
+          Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogClosed"
+            ~params:(obj [ ("result", `Bool false); ("userInput", str "") ]);
+          obj []);
+      List.iter
+        (fun (label, meth, command) ->
+          Fake.on_method fake "Runtime.evaluate" (fun _ ->
+              obj
+                [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]);
+          Fake.withhold fake meth (fun _ -> true);
+          let before = List.length (Fake.received fake) in
+          let cell = ref None in
+          Eio.Fiber.fork ~sw (fun () -> cell := Some (send command));
+          spin (label ^ " never sent its read") (fun () ->
+              Fake.received fake
+              |> List.filteri (fun index _ -> index >= before)
+              |> List.exists (fun json -> field "method" json = Some (str meth)));
+          Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogOpening"
+            ~params:
+              (obj
+                 [
+                   ("type", str "alert");
+                   ("message", str "blocked read");
+                   ("url", str "about:blank");
+                   ("hasBrowserHandler", `Bool true);
+                 ]);
+          spin (label ^ " did not settle on the modal") (fun () -> Option.is_some !cell);
+          check (label ^ " opening race") (Option.get !cell);
+          let before = List.length (Fake.received fake) in
+          List.iter (fun (name, _, read) -> check (name ^ " pre-check") (send read)) reads;
+          Alcotest.(check int)
+            "daily-9ggi blocked reads send nothing" before
+            (List.length (Fake.received fake));
+          ignore
+            (result
+               (send
+                  (P.Dialog
+                     {
+                       tab;
+                       text = None;
+                       answer =
+                         (match P.Answer.of_string "dismiss" with
+                         | Ok x -> x
+                         | _ -> assert false);
+                     })));
+          Fake.withhold fake meth (fun _ -> false))
+        reads;
+      Alcotest.(check bool)
+        "daily-9ggi blocked shot creates no file" false (Sys.file_exists path))
+
 let () =
   Alcotest.run "reading"
     [
@@ -611,5 +722,6 @@ let () =
           Alcotest.test_case "debug ring" `Quick debug_ring;
           Alcotest.test_case "control seam" `Quick protocol_smoke;
           Alcotest.test_case "tab-gjo0 eval settlement" `Quick eval_settlement;
+          Alcotest.test_case "daily-9ggi modal reads" `Quick modal_reads;
         ] );
     ]

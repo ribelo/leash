@@ -17,7 +17,11 @@ All commands below act on your owned tab. Pass `--owner NAME` on every service c
 | `leash storage TAB local` / `leash storage TAB session` | Read-only storage for this origin; check `truncated`. |
 | `leash downloads TAB` | This tab's downloads: suggested name, MIME, state, `received_bytes`, `total_bytes`, and completed path when Chrome supplies it. |
 
-Dialogs are **state** in snapshots, tab info, and action replies. `leash dialog` answers one; it is not a read command. Downloads stay under the managed profile's downloads directory; a pending download has no usable completed path. Verify `state: completed` before using it. Network/debug rings are bounded and begin when the tab is created or attached/claimed; they are not a full browser history.
+Dialogs are **state** in snapshots, tab info, and action replies. They block page reads (`text`, `eval`, `shot`) as well as input; these reads return `dialog-open`, including when a dialog opens during the read. Inspect it and use `leash dialog TAB accept` / `dismiss` deliberately, then retry the read. `snap` can still report the dialog; `leash dialog` answers one, it is not a read command. Network/debug rings are bounded and begin when the tab is created or attached/claimed; they are not a full browser history.
+
+Downloads normally land in `~/.local/share/leash/profile/downloads` (`$XDG_DATA_HOME/leash/profile/downloads` when set, or `downloads/` under a custom `chrome.profile_dir`). A pending download has no usable completed path. Verify `state: completed` before using it; a suggested filename, received byte count or `.crdownload` file is not proof of completion.
+
+If a download loses Chrome (`tab-gone` with `detail.disposition: browser_lost`, or a triggering navigation reports `internal`), do not repeat the crashing click/navigation blindly. Check `leash status` until running; old handles and their download tracking are gone. Inspect the downloads directory for a completed file and verify its contents/size against the source; lingering `.crdownload` files are partial, not success. Do not delete partial files without authorization. If still needed, open a new tab and retry only after the browser problem is understood and the download is safe to repeat; report recurring crashes rather than looping or restarting the shared service.
 
 A read-only example using a fresh scratch tab:
 
@@ -55,7 +59,9 @@ Take a fresh JSON snapshot, choose the row by its observed role/name/value/state
 
 Accepted `press` keys: Enter, Tab, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown, Escape/Esc, Space, lowercase a-z, digits 0-9, and the single punctuation characters `- = [ ] ; , . / '`. Unsupported names return `invalid-request` with this accepted set.
 
-A successful action returns URL/title, `dialog`, and any owned `popups`; its `snapshot` is null. Observe again before the next row action. Check dialogs/popups rather than assuming the original page is still the only relevant tab. Disabled, covered, or wrong-kind rows can be `row-not-actionable` even with a current snapshot.
+A successful action returns URL/title, `dialog`, and any owned `popups`; its `snapshot` is null because it does not include a new table. The current snapshot remains valid through input that leaves the page unchanged. A newer `snap` or navigation invalidates older IDs, and a changed/removed target row is refused even with the current ID. On `stale-snapshot`, inspect `detail.snapshot` (current ID, or null when no table remains), re-snap and re-find the row; if navigation removed it, navigate back only when appropriate. Check dialogs/popups rather than assuming the original page is still the only relevant tab. Disabled, covered, or wrong-kind rows can be `row-not-actionable` even with a current snapshot.
+
+A click that submits or navigates can return before navigation settles, with the **previous** URL/title. Do not repeat it on that evidence alone. Wait for the expected URL/text with a bounded `leash wait`, or re-snap and inspect the resulting page before acting again.
 
 Runnable navigation example on a disposable tab (opens the first observed link on example.com):
 

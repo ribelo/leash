@@ -19,6 +19,9 @@ Help is offline and short first contact is not the full manual.
   $ for cmd in init check; do leash config "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
   $ printf 'every command has examples and exit-status help\n'
   every command has examples and exit-status help
+  $ leash list --help=plain >help 2>err
+  $ ./daily_cli_fixture.exe list-help help; test ! -s err
+  daily-9ggi list --all includes unowned and other owners
   $ leash help errors >errors 2>err
   $ ./daily_cli_fixture.exe error-help errors; test ! -s err
   all 34 error codes, exit classes, meanings and hints are discoverable

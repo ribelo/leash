@@ -1335,7 +1335,8 @@ let with_runtime f =
       Unix.rmdir runtime)
     (fun () -> f runtime)
 
-let listen ~runtime env sw tabs =
+let listen ?(reporter = Ox_observability.Logger.Reporter.writer ignore) ~runtime env sw
+    tabs =
   match
     Leash.Control.create ~sw
       ~path:(Filename.concat (Filename.concat runtime "leash") "control.sock")
@@ -1356,10 +1357,8 @@ let listen ~runtime env sw tabs =
         net = env#net;
         clock = env#clock;
         logger =
-          Ox_observability.Logger.create ~service:"h2-socket" ~clock:env#clock
-            ~mono_clock:env#mono_clock
-            ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
-            ();
+          Ox_observability.Logger.create ~level:Debug ~service:"h2-socket"
+            ~clock:env#clock ~mono_clock:env#mono_clock ~reporter ();
         caps = (Ox_test.powerbox () :> Leash.Control.caps);
       }
   with
@@ -1478,7 +1477,15 @@ let many_waiters () =
           let fake = fake () in
           let page = fresh_page () in
           script fake page;
-          let path = listen ~runtime env sw tabs in
+          let disconnected = ref 0 in
+          let reporter =
+            Ox_observability.Logger.Reporter.records (fun record ->
+                if
+                  List.assoc_opt "code" record.fields
+                  = Some (Ox_observability.Logger.String "disconnected")
+                then incr disconnected)
+          in
+          let path = listen ~reporter ~runtime env sw tabs in
           let a = new_tab tabs "alice" in
           let until =
             Some
@@ -1516,12 +1523,15 @@ let many_waiters () =
           Alcotest.(check bool)
             "hard-b1na a 21st client is served" true
             (get "tabs" status <> `Null);
-          (* hard-sr9v: the clients go away and the waits stop with them. *)
+          (* hard-sr9v daily-9ggi: the listener reports disconnected only after
+             Fiber.first has cancelled and joined that peer's handler. Six yields
+             did not establish this barrier, even on the clean a46c3e8 baseline. *)
           List.iter Eio.Flow.close flows;
-          for _ = 1 to 6 do
-            Eio.Fiber.yield ();
-            Ox_test.advance env#clock (Ox.Duration.ms 300)
-          done;
+          eventually "all twenty wait handlers are cancelled" (fun () ->
+              !disconnected = 20);
+          (* Drain any already-sent CDP polls through a reply on the same transport
+             before sampling; a late pre-cancellation packet is not a live wait. *)
+          ignore (result (request tabs "alice" (P.Cookies { tab = a })));
           let settled = polls () in
           for _ = 1 to 8 do
             Eio.Fiber.yield ();

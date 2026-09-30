@@ -757,7 +757,7 @@ let commands ~caps ~send ~base ~run_owned =
         [],
         [ "leash downloads t_9xk" ] );
       ( "list",
-        "List the tabs this caller owns.",
+        "List this caller's tabs; --all also shows unowned tabs and other owners.",
         [],
         [
           opt "all" Bool "" "Include every tab with its origin, state and owner.";

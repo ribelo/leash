@@ -12,7 +12,7 @@ type browser = {
   dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
   row : int -> int option;
-  snapshot_current : Protocol.Snapshot_id.t -> bool;
+  snapshot : unit -> Protocol.Snapshot_id.t option;
   baseline : Protocol.Snapshot_id.t -> page_state option;
   probe : unit -> (page_state, Protocol.error) result;
 }
@@ -34,9 +34,31 @@ let internal why = error "internal" why
 let remote_value json = nested [ "result"; "value" ] (fun x -> Ok x) json
 let no_dialog () = error "no-dialog" "there is no open dialog"
 
+(* daily-6pde daily-9ggi: Chrome withholds page reads behind a modal dialog.
+   Refuse before sending them, rather than misclassifying that state as a timeout. *)
+let dialog_open dialog =
+  P.make_error
+    (enum P.Error_code.of_string "dialog-open")
+    ~message:"a dialog blocks page reads; answer it first"
+    ~detail:(P.yojson_of_dialog dialog)
+
+let check_dialog browser =
+  match browser.dialog () with Some dialog -> Error (dialog_open dialog) | None -> Ok ()
+
+let page_call browser meth params =
+  let* () = check_dialog browser in
+  match browser.call meth params with
+  | Error e -> (
+      match browser.dialog () with
+      | Some dialog -> Error (dialog_open dialog)
+      | None -> Error e)
+  | result -> result
+
+let stale browser = P.stale_snapshot (browser.snapshot ())
+
 let evaluate browser expression =
   let* reply =
-    browser.call "Runtime.evaluate"
+    page_call browser "Runtime.evaluate"
       (obj [ ("expression", str expression); ("returnByValue", `Bool true) ])
   in
   match remote_value reply with
@@ -45,7 +67,7 @@ let evaluate browser expression =
 
 let remote_object browser =
   let* reply =
-    browser.call "Runtime.evaluate" (obj [ ("expression", str "globalThis") ])
+    page_call browser "Runtime.evaluate" (obj [ ("expression", str "globalThis") ])
   in
   match nested [ "result"; "objectId" ] D.string reply with
   | Some id -> Ok id
@@ -53,7 +75,7 @@ let remote_object browser =
 
 let call_function_with browser ~object_id ~body ~arguments =
   let* reply =
-    browser.call "Runtime.callFunctionOn"
+    page_call browser "Runtime.callFunctionOn"
       (obj
          [
            ("objectId", str object_id);
@@ -101,20 +123,23 @@ let row_object browser index =
   match browser.row index with
   | None -> Error (error "no-such-row" "the snapshot has no such row")
   | Some backend -> (
-      match browser.call "DOM.resolveNode" (obj [ ("backendNodeId", `Int backend) ]) with
+      match
+        page_call browser "DOM.resolveNode" (obj [ ("backendNodeId", `Int backend) ])
+      with
       | Error e when e.P.message = "browser refused DOM.resolveNode" ->
-          Error (error "stale-snapshot" "the row no longer resolves; snap again")
+          Error (stale browser)
       | Error e -> Error e
       | Ok reply -> (
           match nested [ "object"; "objectId" ] D.string reply with
           | Some id -> Ok id
-          | None -> Error (error "stale-snapshot" "the row no longer resolves")))
+          | None -> Error (stale browser)))
 
 (* hard-b20d: with a row, the caller's function is called as (argument, element) — the
    element is the row's node, resolved from the snapshot's backend id, so no selector is
    ever written. The snapshot must be the tab's current one: a row of an older table may
    name another element now. *)
 let eval browser (args : P.eval_args) =
+  let* () = check_dialog browser in
   if String.length args.expression > cap then Error (too_large "expression")
   else
     let argument = Option.value ~default:`Null args.argument in
@@ -124,9 +149,7 @@ let eval browser (args : P.eval_args) =
         match (args.index, args.snapshot) with
         | None, None -> Ok None
         | Some index, Some snapshot ->
-            if not (browser.snapshot_current snapshot) then
-              Error
-                (error "stale-snapshot" "that snapshot is not the current one; snap again")
+            if browser.snapshot () <> Some snapshot then Error (stale browser)
             else
               let* element = row_object browser index in
               Ok (Some element)
@@ -175,7 +198,7 @@ let thrown reply =
 
 let call_script browser ~object_id ~body ~arguments =
   match
-    browser.call "Runtime.callFunctionOn"
+    page_call browser "Runtime.callFunctionOn"
       (obj
          [
            ("objectId", str object_id);
@@ -272,6 +295,7 @@ let truncate_chars max_chars text =
       true )
 
 let text browser (args : P.text_args) =
+  let* () = check_dialog browser in
   let max_chars = Option.value ~default:65_536 args.max_chars in
   if max_chars < 0 || max_chars > 65_536 then Error (invalid "max_chars must be 0..65536")
   else
@@ -301,7 +325,9 @@ let index_gone browser index =
   match browser.row index with
   | None -> Ok true
   | Some backend -> (
-      match browser.call "DOM.resolveNode" (obj [ ("backendNodeId", `Int backend) ]) with
+      match
+        page_call browser "DOM.resolveNode" (obj [ ("backendNodeId", `Int backend) ])
+      with
       | Error e when e.P.message = "browser refused DOM.resolveNode" -> Ok true
       | Error e -> Error e
       | Ok reply -> (
@@ -347,7 +373,7 @@ let poll_interval elapsed =
    was not the snapshot's. *)
 let changed_since browser snapshot =
   match browser.baseline snapshot with
-  | None -> Error (error "stale-snapshot" "no such snapshot for this tab; snap again")
+  | None -> Error (stale browser)
   | Some baseline ->
       Ok
         (fun () ->
@@ -470,7 +496,7 @@ let shot ~caps browser (args : P.shot_args) =
     Error (invalid "screenshot path must be absolute")
   else
     let* reply =
-      browser.call "Page.captureScreenshot"
+      page_call browser "Page.captureScreenshot"
         (obj
            [
              ("format", str "png");
@@ -613,7 +639,7 @@ let net_body browser t (args : P.net_entry_args) =
       Error (body_unavailable "that request has no response body to read")
   | Some request -> (
       match
-        browser.call "Network.getResponseBody"
+        page_call browser "Network.getResponseBody"
           (obj [ ("requestId", str request.chrome_id) ])
       with
       | Error e when refused "Network.getResponseBody" e ->
@@ -639,7 +665,7 @@ let net_request browser t (args : P.net_entry_args) =
         if not request.has_post_data then Ok (None, false, false)
         else
           match
-            browser.call "Network.getRequestPostData"
+            page_call browser "Network.getRequestPostData"
               (obj [ ("requestId", str request.chrome_id) ])
           with
           | Error e when refused "Network.getRequestPostData" e ->
@@ -668,7 +694,9 @@ let net_request browser t (args : P.net_entry_args) =
 
 let cookies browser =
   let url, _ = browser.current () in
-  let* reply = browser.call "Network.getCookies" (obj [ ("urls", `List [ str url ]) ]) in
+  let* reply =
+    page_call browser "Network.getCookies" (obj [ ("urls", `List [ str url ]) ])
+  in
   let cookie json =
     let text key = string_member key json in
     let expires =
@@ -703,7 +731,7 @@ let http_origin origin =
 (* The origin DOMStorage names its storage by is the page's security origin, which the
    frame tree reports; an opaque origin (about:blank) has no storage to read. *)
 let storage_origin browser =
-  let* tree = browser.call "Page.getFrameTree" (obj []) in
+  let* tree = page_call browser "Page.getFrameTree" (obj []) in
   match nested [ "frameTree"; "frame"; "securityOrigin" ] D.string tree with
   | Some origin when http_origin origin -> Ok origin
   | _ -> Error (invalid "this page has no web storage origin")
@@ -714,9 +742,9 @@ let max_storage_bytes = 1_048_576
 let storage browser (args : P.storage_args) =
   let* origin = storage_origin browser in
   let local = P.Storage_area.to_string args.area = "local" in
-  let* _ = browser.call "DOMStorage.enable" (obj []) in
+  let* _ = page_call browser "DOMStorage.enable" (obj []) in
   let read =
-    browser.call "DOMStorage.getDOMStorageItems"
+    page_call browser "DOMStorage.getDOMStorageItems"
       (obj
          [
            ( "storageId",
@@ -724,7 +752,7 @@ let storage browser (args : P.storage_args) =
          ])
   in
   (* Best effort: the domain only reports changes, which nobody here wants. *)
-  ignore (browser.call "DOMStorage.disable" (obj []));
+  ignore (page_call browser "DOMStorage.disable" (obj []));
   let* reply = read in
   match field "entries" (fun x -> Ok x) reply with
   | Some (`List entries) ->

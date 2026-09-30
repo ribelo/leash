@@ -72,6 +72,11 @@
  (deps ../packages/leash/bin/main.exe))
 
 (test
+ (name download_setup_test)
+ (modules download_setup_test)
+ (libraries leash leash_test_support ox_test eio yojson alcotest))
+
+(test
  (name cdp_test)
  (modules cdp_test)
  (libraries leash leash_test_support ox_test ox eio eio.unix yojson alcotest))
