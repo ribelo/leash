@@ -337,6 +337,9 @@ type error_code =
   | Script_invalid [@json.name "script-invalid"]
   | Internal [@json.name "internal"]
   | Service_unreachable [@json.name "service-unreachable"]
+  | Not_installed [@json.name "not-installed"]
+  | Service_stopped [@json.name "service-stopped"]
+  | Service_restarting [@json.name "service-restarting"]
   | Socket_permission [@json.name "socket-permission"]
   | Permission_denied [@json.name "permission-denied"]
   | Config_invalid [@json.name "config-invalid"]
@@ -455,6 +458,18 @@ module Error_code = struct
     | Service_unreachable ->
         info 69 "the CLI could not connect to the control socket"
           "`systemctl --user start leash`, or pass --socket"
+    | Not_installed ->
+        info 69 "no leash.service unit is installed"
+          "Leash is not installed; rebuild NixOS so leash.service exists, then \
+           `systemctl --user start leash`"
+    | Service_stopped ->
+        info 69 "the leash unit is installed but inactive"
+          "`systemctl --user start leash`"
+    | Service_restarting ->
+        info 75
+          "the leash unit is activating or auto-restarting, or Chrome's generation is \
+           being relaunched"
+          "Leash is restarting; retry `leash status` in a few seconds"
     | Socket_permission ->
         info 77 "the CLI was denied access to the control socket"
           "the control socket is not readable; check its owner and mode, or pass --socket"
@@ -502,6 +517,9 @@ module Error_code = struct
       Script_invalid;
       Internal;
       Service_unreachable;
+      Not_installed;
+      Service_stopped;
+      Service_restarting;
       Socket_permission;
       Permission_denied;
       Config_invalid;
@@ -790,6 +808,10 @@ type status_result = {
   chrome : Chrome_phase.t;
   uptime_s : float;
   models : models_status option; [@json.null]
+  version : string;
+  pid : int option; [@json.null]
+  headed : bool;
+  key_present : bool;
 }
 [@@deriving yojson]
 

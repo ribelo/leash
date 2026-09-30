@@ -21,4 +21,4 @@ Help is offline and short first contact is not the full manual.
   every command has examples and exit-status help
   $ leash help errors >errors 2>err
   $ ./daily_cli_fixture.exe error-help errors; test ! -s err
-  all 30 error codes, exit classes, meanings and hints are discoverable
+  all 33 error codes, exit classes, meanings and hints are discoverable

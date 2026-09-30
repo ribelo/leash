@@ -12,7 +12,8 @@ stderr stream, the canonical class, a one-line hint, and empty stdout.
 Service down, permission denied, usage, invalid request, and Cmdliner parsing all
 use that same client envelope, including --pretty.
 
-  $ check service-unreachable leash status --owner test --socket "$tmp/missing.sock" --pretty
+  $ printf 'load=loaded\nactive=active\nsub=running\nbinary=present\n' > "$tmp/active.fixture"
+  $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash status --owner test --socket "$tmp/missing.sock" --pretty
   service-unreachable: exit 69, JSON-only stderr, hint, empty stdout
   $ mkdir "$tmp/denied"; chmod 000 "$tmp/denied"
   $ check socket-permission leash status --owner test --socket "$tmp/denied/control.sock"

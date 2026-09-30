@@ -152,17 +152,145 @@ let service_socket ~caps ~config ~socket =
              ^ " does not resolve; set XDG_RUNTIME_DIR or pass --socket")
           else Ok path)
 
+let secret_field name =
+  let name = String.lowercase_ascii name in
+  name = "api_key" || name = "openrouter_api_key" || name = "token"
+  || name = "authorization"
+  || String.ends_with ~suffix:"_api_key" name
+
+let rec strip_secrets = function
+  | `Assoc fields ->
+      `Assoc
+        (List.filter_map
+           (fun (name, value) ->
+             if secret_field name then None else Some (name, strip_secrets value))
+           fields)
+  | `List values -> `List (List.map strip_secrets values)
+  | other -> other
+
+let assoc_field key = function `Assoc fields -> List.assoc_opt key fields | _ -> None
+let put key value fields = (key, value) :: List.remove_assoc key fields
+
+(* daily-smli: the printed status never carries a key. Version and commit are the
+   running binary's when the service omits them; key_present is a boolean derived from
+   the models section, never a string. *)
+let enrich_status ~caps body =
+  match strip_secrets body with
+  | `Assoc fields ->
+      let home = Option.value ~default:"" (Cap_sys.getenv_opt ~caps "HOME") in
+      let key_present =
+        match assoc_field "models" (`Assoc fields) with
+        | Some (`Assoc models) -> (
+            match List.assoc_opt "configured" models with
+            | Some (`Bool present) -> present
+            | _ -> false)
+        | _ -> false
+      in
+      let fields = put "skill" (Skill_install.status ~caps ~home) fields in
+      let fields =
+        match List.assoc_opt "version" fields with
+        | Some (`String _) -> fields
+        | _ -> put "version" (str Leash.version) fields
+      in
+      let fields =
+        put "commit" (str Leash_cli_support.Leash_build_commit.commit) fields
+      in
+      obj (put "key_present" (`Bool key_present) fields)
+  | other -> strip_secrets other
+
+let leash_binary_present ~caps =
+  match Cap_sys.getenv_opt ~caps "PATH" with
+  | None -> false
+  | Some path ->
+      List.exists
+        (fun dir -> dir <> "" && Sys.file_exists (Filename.concat dir "leash"))
+        (String.split_on_char ':' path)
+
+let systemctl_show base =
+  try
+    Ok
+      (Eio.Process.parse_out base#process_mgr Eio.Buf_read.take_all
+         [
+           "systemctl";
+           "--user";
+           "show";
+           "leash.service";
+           "-p";
+           "LoadState";
+           "-p";
+           "ActiveState";
+           "-p";
+           "SubState";
+           "--no-pager";
+         ])
+  with
+  | Eio.Cancel.Cancelled _ as exn -> raise exn
+  | _ -> Error ()
+
+let install_observation ~caps ~base =
+  match Cap_sys.getenv_opt ~caps "LEASH_INSTALL_FIXTURE" with
+  | Some fixture when fixture <> "" -> (
+      try
+        let text =
+          Cap_stdlib.In_channel.with_open_bin ~caps fixture In_channel.input_all
+        in
+        Ok (Leash_cli_support.Install_state.of_fixture text)
+      with
+      | Eio.Cancel.Cancelled _ as exn -> raise exn
+      | _ -> Error ())
+  | _ -> (
+      match systemctl_show base with
+      | Error () -> Error ()
+      | Ok text ->
+          Ok
+            (Leash_cli_support.Install_state.of_systemctl
+               ~binary_present:(leash_binary_present ~caps) text))
+
+(* daily-lqqn: status names not-installed, stopped and restarting. A fixture file keeps
+   the tests off the real systemd. Other commands keep the generic unreachable error. *)
+let status_down ~caps ~base path =
+  let socket = ("socket", str path) in
+  let detail ?obs () =
+    let flags =
+      match obs with
+      | None -> []
+      | Some obs ->
+          [
+            ("unit", `Bool (Leash_cli_support.Install_state.unit_present obs));
+            ("binary", `Bool obs.binary_present);
+          ]
+    in
+    obj (socket :: flags)
+  in
+  match install_observation ~caps ~base with
+  | Error () ->
+      report ~caps ~detail:(detail ()) "service-unreachable"
+        ("cannot reach the Leash service at " ^ path)
+  | Ok obs ->
+      let diagnosis = Leash_cli_support.Install_state.diagnose obs in
+      let code = Leash_cli_support.Install_state.code diagnosis in
+      let message =
+        if code = "service-unreachable" then "cannot reach the Leash service at " ^ path
+        else Leash_cli_support.Install_state.message diagnosis obs
+      in
+      report ~caps ~detail:(detail ~obs ()) code message
+
 (* One request to the service and its decoded reply; an error is the exit status to
    return after saying what went wrong. *)
-let exchange ~caps ~send ~config ~socket request =
+let exchange ~caps ~send ~config ~socket ?on_unreachable request =
   match service_socket ~caps ~config ~socket with
   | Error why -> Error (report ~caps "config-invalid" why)
   | Ok path -> (
       let detail = obj [ ("socket", str path) ] in
       let unreachable () =
         Error
-          (report ~caps ~detail "service-unreachable"
-             ("cannot reach the Leash service at " ^ path))
+          (match on_unreachable with
+          | Some diagnose -> diagnose path
+          | None ->
+              report ~caps
+                ~detail:(obj [ ("socket", str path) ])
+                "service-unreachable"
+                ("cannot reach the Leash service at " ^ path))
       in
       let denied () =
         Error
@@ -195,25 +323,25 @@ let owner_of ~caps ~owner =
       Option.bind (Cap_sys.getenv_opt ~caps "DSH_SESSION_ID") (fun id ->
           if id = "" then None else Some ("dsh:" ^ id))
 
-let rec perform ~caps ~send command fields positionals options =
+let rec perform ~caps ~send ~base command fields positionals options =
   match (command, positionals) with
   (* hard-xg6y hard-ovbx hard-vq5s: `net TAB` lists; `net TAB body ID` and `net TAB request
      ID` are commands of their own on the wire. *)
   | "net", [ tab; (("body" | "request") as part); id ] ->
-      perform ~caps ~send ("net_" ^ part) [ "tab"; "id" ] [ tab; id ] options
+      perform ~caps ~send ~base ("net_" ^ part) [ "tab"; "id" ] [ tab; id ] options
   | "net", [ _; verb; _ ] -> usage ~caps ("net takes body or request, not " ^ verb)
   | "net", [ _; _ ] -> usage ~caps "net takes body ID or request ID after the tab"
   | "net", _ :: _ :: _ :: _ ->
       usage ~caps "net takes a tab, and optionally body or request with an ID"
   (* hard-o3za: the files are the trailing positionals. *)
   | "upload", tab :: snapshot :: index :: (_ :: _ as paths) ->
-      perform_wire ~caps ~send command
+      perform_wire ~caps ~send ~base command
         [ "tab"; "snapshot"; "index" ]
         [ tab; snapshot; index ]
         (Some ("paths", `List (List.map str paths)) :: options)
-  | _ -> perform_wire ~caps ~send command fields positionals options
+  | _ -> perform_wire ~caps ~send ~base command fields positionals options
 
-and perform_wire ~caps ~send command fields positionals options =
+and perform_wire ~caps ~send ~base command fields positionals options =
   let actual = List.length positionals in
   let options = List.filter_map Fun.id options in
   let cli = List.filter (fun (name, _) -> List.mem name cli_options) options in
@@ -301,33 +429,43 @@ and perform_wire ~caps ~send command fields positionals options =
                     | Error why -> usage ~caps why
                     | Ok owner -> (
                         let request = P.encode_request P.{ owner; command = decoded } in
+                        let on_unreachable path =
+                          if command = "status" then status_down ~caps ~base path
+                          else
+                            report ~caps
+                              ~detail:(obj [ ("socket", str path) ])
+                              "service-unreachable"
+                              ("cannot reach the Leash service at " ^ path)
+                        in
                         match
                           exchange ~caps ~send ~config:(text "config")
-                            ~socket:(text "socket") request
+                            ~socket:(text "socket") ~on_unreachable request
                         with
                         | Error status -> status
                         | Ok (P.Failure error) -> emit_error ~caps error
                         | Ok (P.Success body) ->
                             let body =
                               if command <> "status" then body
-                              else
-                                let home =
-                                  Option.value ~default:""
-                                    (Cap_sys.getenv_opt ~caps "HOME")
-                                in
-                                match body with
-                                | `Assoc fields ->
-                                    obj
-                                      (("skill", Skill_install.status ~caps ~home)
-                                      :: List.remove_assoc "skill" fields)
-                                | _ -> body
+                              else enrich_status ~caps body
                             in
-                            if use_table then table ~caps command body
-                            else
-                              Cap_stdlib.print_endline ~caps
-                                (if pretty then Yojson.Safe.pretty_to_string body
-                                 else Yojson.Safe.to_string body);
-                            0)))))
+                            if
+                              command = "status"
+                              && assoc_field "chrome" body = Some (`String "restarting")
+                            then
+                              let body =
+                                match body with
+                                | `Assoc fields -> obj (put "pid" `Null fields)
+                                | other -> other
+                              in
+                              report ~caps ~detail:body "service-restarting"
+                                "Chrome is restarting"
+                            else (
+                              if use_table then table ~caps command body
+                              else
+                                Cap_stdlib.print_endline ~caps
+                                  (if pretty then Yojson.Safe.pretty_to_string body
+                                   else Yojson.Safe.to_string body);
+                              0))))))
 
 (* svc-hi4f: the table is the CLI's contract. Every command names its positionals in the
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
@@ -423,7 +561,7 @@ let positional_term positionals =
     (Term.const [])
     (List.mapi (fun index spec -> (index, spec)) positionals)
 
-let command ~caps ~send ~run_owned ?wire name doc positionals options examples =
+let command ~caps ~send ~base ~run_owned ?wire name doc positionals options examples =
   let wire = Option.value ~default:name wire in
   let fields = List.map (fun spec -> spec.field) positionals in
   let collected =
@@ -436,11 +574,11 @@ let command ~caps ~send ~run_owned ?wire name doc positionals options examples =
     Term.(
       const (fun args opts () ->
           run_owned (fun _sw ->
-              protect ~caps (fun () -> perform ~caps ~send wire fields args opts)))
+              protect ~caps (fun () -> perform ~caps ~send ~base wire fields args opts)))
       $ positional_term positionals $ collected)
 
 (* run-tcuz run-dbji run-ykq4: these authoring commands need no service. *)
-let playbook_command ~caps ~send ~run_owned =
+let playbook_command ~caps ~send ~base ~run_owned =
   let owned run = run_owned (fun _sw -> protect ~caps run) in
   let output ?code = function
     | Error message -> invalid_playbook ~caps message
@@ -561,7 +699,7 @@ let playbook_command ~caps ~send ~run_owned =
   (* extr-mp5z: runs one script of an installed playbook on a tab's page; the service
      looks the script up by name, and nothing of it travels on the wire. *)
   let test =
-    command ~caps ~send ~run_owned ~wire:"playbook_test" "test"
+    command ~caps ~send ~base ~run_owned ~wire:"playbook_test" "test"
       "Run one playbook script on a tab and print its validated output."
       [ pos "script" "PLAYBOOK/SCRIPT" ]
       ([
@@ -599,10 +737,10 @@ let playbook_command ~caps ~send ~run_owned =
        ~examples:[ "leash playbook list"; "leash playbook check ./my-playbook" ])
     [ list; show; check; test; accept ]
 
-let commands ~caps ~send ~run_owned =
+let commands ~caps ~send ~base ~run_owned =
   List.map
     (fun (name, doc, positionals, options, examples) ->
-      command ~caps ~send ~run_owned name doc positionals (options @ shared_options)
+      command ~caps ~send ~base ~run_owned name doc positionals (options @ shared_options)
         examples)
     [
       ( "new",
@@ -635,7 +773,7 @@ let commands ~caps ~send ~run_owned =
         [ opt "force" Bool "" "Ignore ownership; every use is logged." ],
         [ "leash close t_9xk" ] );
       ( "status",
-        "Report browser health and the models section.",
+        "Report version, Chrome, the model key and the installed skill.",
         [],
         [],
         [ "leash status" ] );
@@ -827,9 +965,37 @@ let commands ~caps ~send ~run_owned =
         ],
         [ "leash discover https://example.com --goal 'Find the documentation'" ] );
     ]
-  @ [ playbook_command ~caps ~send ~run_owned ]
+  @ [ playbook_command ~caps ~send ~base ~run_owned ]
 
 let ( let* ) = Result.bind
+
+let contains_text hay needle =
+  let n = String.length needle in
+  let h = String.length hay in
+  let rec loop i = i + n <= h && (String.sub hay i n = needle || loop (i + 1)) in
+  n > 0 && loop 0
+
+(* daily-smli: the managed Chrome is the process whose command line names this profile
+   and --class=leash. A relaunch reports no pid. Reading /proc is best-effort. *)
+let chrome_pid ~fs profile_dir =
+  let marker = "--user-data-dir=" ^ profile_dir in
+  let proc = Eio.Path.(fs / "/proc") in
+  try
+    let rec find = function
+      | [] -> None
+      | name :: rest -> (
+          match int_of_string_opt name with
+          | None -> find rest
+          | Some pid -> (
+              match Eio.Path.load Eio.Path.(proc / name / "cmdline") with
+              | exception _ -> find rest
+              | cmdline ->
+                  if contains_text cmdline marker && contains_text cmdline "--class=leash"
+                  then Some pid
+                  else find rest))
+    in
+    find (Eio.Path.read_dir proc)
+  with _ -> None
 
 let program env (config : Leash.Config.t) sw =
   let base = env.Ox_app.Env.base in
@@ -926,6 +1092,8 @@ let program env (config : Leash.Config.t) sw =
   let socket = Leash.Config.Text.to_string config.control.socket in
   let* _control =
     Leash.Control.create
+      ~chrome_pid:(fun () ->
+        chrome_pid ~fs:base#fs (Leash.Config.Text.to_string config.chrome.profile_dir))
       ~model:(Leash.Config.Text.to_string config.models.jev_model)
         (* run-7blx: the run's three upper levels over the same one models service — the
            playbook question, the procedure question and the judgment score — and L31's
@@ -1258,8 +1426,9 @@ let () =
        ~journal_level:Ox_observability.Logger.Warn
        ~commands_with_env_code:(fun env _run_owned run_owned_code ->
          let caps = env.Ox_app.Env.caps in
-         let send path request = send ~base:env.Ox_app.Env.base path request in
-         commands ~caps ~send ~run_owned:run_owned_code
+         let base = env.Ox_app.Env.base in
+         let send path request = send ~base path request in
+         commands ~caps ~send ~base ~run_owned:run_owned_code
          @ [ skill_command ~caps ~run_owned:run_owned_code; help_command ~caps ])
        ~telemetry
        ~config_commands_with_env:(fun env -> [ init_command ~caps:env.Ox_app.Env.caps ])

@@ -127,6 +127,8 @@ Leash replaces chrome-cdp. Agents are the main user: help, errors and exit codes
 
 L42 checks repository delivery; daily-hdex remains operator work because this delivery explicitly excludes dotfiles/installed-binary/service changes. See the [L42 evidence and scope boundary](daily-use/01-daily-use.md#l42-repository-delivery--2026-09-30).
 
+L43's unit and status distinction are in the working tree and in nixos-config `388870c`. daily-9zvz waits for the operator rebuild. See the [L43 evidence and scope boundary](daily-use/01-daily-use.md#l43-delivery--2026-09-30).
+
 L18 and L28 are closed by L44.
 
 ## Later milestones

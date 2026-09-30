@@ -24,6 +24,7 @@ val create :
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
   ?installed:Playbook.loaded list ->
+  ?chrome_pid:(unit -> int option) ->
   sw:Eio.Switch.t ->
   path:string ->
   ('clock, 'net) deps ->
@@ -62,9 +63,13 @@ val budget : (Protocol.request, string) result -> Ox.Duration.t option
 val status : t -> Ox_app.Status.t
 
 val report :
-  ?models_status:(unit -> Protocol.models_status) -> Tabs.t -> Protocol.status_result
+  ?models_status:(unit -> Protocol.models_status) ->
+  ?chrome_pid:(unit -> int option) ->
+  Tabs.t ->
+  Protocol.status_result
 (** [Tabs.report] plus the models section when a models service is given; without one the
-    reply carries [models: null] (L19). *)
+    reply carries [models: null] and [key_present: false] (L19, daily-smli). [chrome_pid]
+    is consulted only while Chrome is running; a relaunch reports [pid: null]. *)
 
 val dispatch :
   ?model:string ->
@@ -76,6 +81,7 @@ val dispatch :
   ?text_helper:(unit -> Text_helper.t) ->
   ?installed:Playbook.loaded list ->
   ?models_status:(unit -> Protocol.models_status) ->
+  ?chrome_pid:(unit -> int option) ->
   Tabs.t ->
   Protocol.request ->
   Protocol.reply
@@ -92,6 +98,7 @@ val handle :
   ?text_helper:(unit -> Text_helper.t) ->
   ?installed:Playbook.loaded list ->
   ?models_status:(unit -> Protocol.models_status) ->
+  ?chrome_pid:(unit -> int option) ->
   ?logger:Ox_observability.Logger.t ->
   Tabs.t ->
   string ->

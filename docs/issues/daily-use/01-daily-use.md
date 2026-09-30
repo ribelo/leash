@@ -145,6 +145,32 @@ capability, not that operator cut-over. Actual installation and fresh-agent brow
 acceptance remain L43–L44; chrome-cdp remains untouched. No commit was made, and the
 isolated build and temporary test/sample files were removed after verification.
 
+## L43 delivery — 2026-09-30
+
+Delivered daily-0tl4, daily-ki34, daily-a341, daily-smli and daily-lqqn up to the
+operator rebuild. daily-9zvz is the installed-service check and is not done here.
+
+`leash status` reports version, Chrome phase, generation, pid (null while a
+generation is relaunching), headed, key_present (boolean only; secret-shaped
+fields are stripped), tab counts and L42's skill field. A missing unit is
+`not-installed` (69), an inactive unit is `service-stopped` (69), and an
+activating unit, auto-restart, or Chrome generation relaunch is
+`service-restarting` (75). An active unit whose socket does not answer stays
+`service-unreachable` (69). The closed table is 33 codes. Classification reads
+`LEASH_INSTALL_FIXTURE` or `systemctl show`; the cram fixtures do not call the
+real systemd.
+
+The desktop unit is nixos-config `388870c` (`home/common/desktop/shell-stack.nix`),
+not Leash's home-manager module: that module has no secret wrapper and no OTLP,
+and dc14de3 dropped the duplicate module pattern for nema. The wrapper reads
+`/run/agenix/openrouter-api-key` into `OPENROUTER_API_KEY` at start. The key is
+not in the unit file. `nix eval .#nixosConfigurations.desktop.config.system.build.toplevel.drvPath`
+succeeded. `nixos-rebuild` was not run. A `nix build` of the leash package was
+not cheap (42 derivations, including the compiler) and was not run.
+
+**Scope boundary:** the operator rebuilds, then the lead checks daily-9zvz on the
+installed service. No Leash commit was made in this delivery.
+
 ## Out of Scope
 
 The niri window rule; making the repository public; new browser capabilities (iframes, raw CDP).

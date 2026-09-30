@@ -33,7 +33,7 @@ Tab lifecycle:
 | `claim` | `{tab}` | `TabInfo` |
 | `release` | `{tab, force?}` | `{released: true}` |
 | `close` | `{tab, force?}` | `{closed: true}` |
-| `status` | `{}` | `{generation, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` |
+| `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` |
 
 Observation:
 
@@ -323,6 +323,10 @@ Rules:
   is present, and the two model ids and two endpoints are the configured ones. It is read
   from the live configuration: no probe, nothing at boot, and never the key. It is
   `null` only in a dispatch with no models service; the service always reports it.
+  `key_present` is that same boolean at the top level, and is false when `models` is
+  null. `version` is the library version. `pid` is the managed Chrome's process id while
+  `chrome` is `running`, and null while a generation is being relaunched. `headed` is
+  false only when the service was started headless (daily-smli daily-a341).
 - Ownership is checked before every tab command (ADR-0005). The `act` commands — `nav`,
   `snap`, `text`, `eval`, `shot`, `debug`, `wait`, `click`, `fill`, `press`, `select`,
   `scroll`, `upload`, `hover`, `net`, `net_body`, `net_request`, `cookies`, `storage` — `dialog`, `release`, and `close` require that the caller owns the tab;
@@ -480,14 +484,13 @@ is `stale`. Any stale existing install makes the overall state stale; otherwise
 at least one current install makes it current, and no installed bundle means
 missing. Currency compares all embedded content as well as the stamp, so an edited
 reference is stale even without a version/commit change. A missing install in
-another harness's root does not invalidate an existing current copy. The service
-wire status is unchanged; a stopped service still returns `service-unreachable`.
+another harness's root does not invalidate an existing current copy. The service wire status carries version, Chrome, pid, headed and key_present. The CLI adds `commit` (the running binary's compiled commit) beside `skill`. A missing unit is `not-installed`; an installed inactive unit is `service-stopped`; an activating unit, an auto-restart, or a service whose Chrome generation is being relaunched is `service-restarting`. An active unit whose socket does not answer stays `service-unreachable` (daily-lqqn).
 
 ## Error codes
 
 A failed reply, and every failure the CLI prints on stderr, is one object `{code, message, hint, detail?}`. `hint` is always present: one line naming the next action, taken from this table. `detail?` is omitted when the error carries none (for `tab-gone`: `detail.disposition`; for `stale-snapshot`: the current snapshot id; for `model-unavailable`: `detail.code`, and on a drive `detail.steps`; for a handoff `timeout`: `detail.warnings`).
 
-Client-side codes (`service-unreachable`, `socket-permission`, `permission-denied`, `config-invalid`, `usage`, `cli-parse`, `invalid-response`) are printed by the CLI, not sent by the service. They are in the same closed set so one parser handles both. A model's `detail.code` of `invalid-response` is a kind of `model-unavailable`, not the client-side code of the same name.
+Client-side codes (`service-unreachable`, `not-installed`, `service-stopped`, `service-restarting`, `socket-permission`, `permission-denied`, `config-invalid`, `usage`, `cli-parse`, `invalid-response`) are printed by the CLI, not sent by the service. `service-restarting` is also what `leash status` prints when the service answers with `chrome: "restarting"`. They are in the same closed set so one parser handles both. A model's `detail.code` of `invalid-response` is a kind of `model-unavailable`, not the client-side code of the same name.
 
 Exit status is the class below, not 1. `leash help errors` prints this table. The classes are the ones command `--help` documents; an exit outside this set makes help raise:
 
@@ -528,6 +531,9 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |
 | `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message |
 | `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket |
+| `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |
+| `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash` |
+| `service-restarting` | 75 | the leash unit is activating or auto-restarting, or Chrome's generation is being relaunched | Leash is restarting; retry `leash status` in a few seconds |
 | `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its owner and mode, or pass --socket |
 | `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's owner and mode, or pass another path |
 | `config-invalid` | 65 | the configuration file is missing, unreadable, or invalid | fix the reported problems; `leash config check` lists every one with the config path |

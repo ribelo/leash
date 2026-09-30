@@ -80,6 +80,11 @@ systemctl --user status leash.service
 one, `systemctl --user start leash.service`. `ribelo.leash` takes `enable` and
 `package`; the module sets only the unit, nothing else in the system.
 
+This desktop does not use that module. It follows nema's shell-stack unit
+(`home/common/desktop/shell-stack.nix`, `ribelo.desktop.shell.leash.enable`),
+which adds the secret wrapper, OTLP to inn, and `leash` on PATH. The module
+above has none of those (daily-0tl4 daily-ki34).
+
 ## Install by hand (no home-manager)
 
 ```sh

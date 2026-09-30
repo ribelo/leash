@@ -2422,6 +2422,10 @@ let report t : P.status_result =
     (* L19: the models section belongs to the models service, which the control listener
        merges in before the reply goes out; the registry has no opinion about it. *)
     models = None;
+    version = Version.version;
+    pid = None;
+    headed = chrome.headed;
+    key_present = false;
   }
 
 let status t =

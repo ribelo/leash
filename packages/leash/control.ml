@@ -33,14 +33,22 @@ let unsupported = err "invalid-request" "this command is not available yet"
 (* L19: the status reply is the registry's plus the models section, which only the
    listener's models service knows. A dispatch that was given no models service reports
    [null] there rather than inventing a configuration. *)
-let report ?models_status tabs =
+let report ?models_status ?chrome_pid tabs =
   let report = Tabs.report tabs in
-  match models_status with
-  | None -> report
-  | Some models -> { report with P.models = Some (models ()) }
+  let models = Option.map (fun models -> models ()) models_status in
+  let running =
+    match P.Chrome_phase.to_string report.chrome with "running" -> true | _ -> false
+  in
+  let pid = if running then Option.bind chrome_pid (fun pid -> pid ()) else None in
+  {
+    report with
+    P.models;
+    pid;
+    key_present = (match models with Some models -> models.configured | None -> false);
+  }
 
 let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
-    ?models_status tabs (request : P.request) =
+    ?models_status ?chrome_pid tabs (request : P.request) =
   let owner = request.owner in
   let lift encode = function
     | Ok result -> success (encode result)
@@ -92,7 +100,8 @@ let dispatch ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
   | P.Resume args -> lift P.yojson_of_resumed_result (Tabs.resume tabs ~owner args.tab)
   | P.List_tabs args ->
       success (P.yojson_of_list_result (Tabs.list tabs ~owner ~all:args.all))
-  | P.Status -> success (P.yojson_of_status_result (report ?models_status tabs))
+  | P.Status ->
+      success (P.yojson_of_status_result (report ?models_status ?chrome_pid tabs))
   | P.Discover args -> (
       let turns = Option.value ~default:20 args.max_turns in
       let steps = Option.value ~default:100 args.max_steps in
@@ -225,14 +234,14 @@ let with_command ?logger (request : P.request) f =
       f ())
 
 let handle ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed
-    ?models_status ?logger tabs line =
+    ?models_status ?chrome_pid ?logger tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
-            dispatch ~model ?levels ?decide ?text_helper ?installed ?models_status tabs
-              request)
+            dispatch ~model ?levels ?decide ?text_helper ?installed ?models_status
+              ?chrome_pid tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -363,8 +372,8 @@ let on_peer_error logger error =
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
-let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ~sw ~path
-    deps =
+let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ?chrome_pid
+    ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -374,7 +383,7 @@ let create ?(model = "unconfigured") ?levels ?decide ?text_helper ?installed ~sw
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
               dispatch ~model ?levels ?decide ?text_helper ?installed
-                ~models_status:deps.models_status deps.tabs request)
+                ~models_status:deps.models_status ?chrome_pid deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply

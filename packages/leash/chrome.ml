@@ -2,7 +2,7 @@ type spawn_error = Ox_process.Child.error
 type reason = [ `Spawn of spawn_error | `Schedule_exhausted of Ox_process.Child.exit ]
 type event = Started of int | Lost of int | Gave_up of reason Ox.Cause.t | Stopped
 type phase = [ `Running | `Restarting | `Gave_up | `Stopped ]
-type status = { generation : int; phase : phase; failure : string option }
+type status = { generation : int; phase : phase; failure : string option; headed : bool }
 
 type backoff = {
   initial : Ox.Duration.t;
@@ -123,6 +123,7 @@ type state = {
   mutable generation : int;
   mutable current : (int * Cdp.t) option;
   mutable failure : string option;
+  headed : bool;
   mutable pending : Cdp.t option;
   mutable closed_before_start : int option;
   mutable spawns : int;
@@ -285,6 +286,7 @@ let create ~sw ?launch config (deps : 'clock deps) =
       generation = 0;
       current = None;
       failure = None;
+      headed = not config.headless;
       pending = None;
       closed_before_start = None;
       spawns = 0;
@@ -454,7 +456,12 @@ let create ~sw ?launch config (deps : 'clock deps) =
 let generation t = t.state.spawns
 
 let status t =
-  { generation = t.state.spawns; phase = t.state.phase; failure = t.state.failure }
+  {
+    generation = t.state.spawns;
+    phase = t.state.phase;
+    failure = t.state.failure;
+    headed = t.state.headed;
+  }
 
 let connection t =
   match (t.state.phase, t.state.current) with

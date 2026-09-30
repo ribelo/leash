@@ -52,5 +52,5 @@
 
 (library
  (name leash_cli_support)
- (modules skill_install leash_skill_data leash_build_commit)
+ (modules skill_install leash_skill_data leash_build_commit install_state)
  (libraries leash unix ox_caps yojson))

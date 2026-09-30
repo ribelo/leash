@@ -129,6 +129,101 @@ let skill_show stdout stderr =
   print_endline
     "show: exact bundled entrypoint, YAML version and commit stamp, empty stderr"
 
+let serve_result path result ready =
+  let socket = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+  Fun.protect
+    ~finally:(fun () ->
+      Unix.close socket;
+      Unix.unlink path)
+    (fun () ->
+      Unix.bind socket (Unix.ADDR_UNIX path);
+      Unix.listen socket 1;
+      Out_channel.with_open_bin ready (fun out -> output_string out "ready");
+      let client, _ = Unix.accept socket in
+      let input = Unix.in_channel_of_descr client in
+      let output = Unix.out_channel_of_descr client in
+      ignore (input_line input);
+      let response = Yojson.Safe.to_string (P.encode_reply (P.Success result)) ^ "\n" in
+      output_string output response;
+      flush output;
+      Unix.close client)
+
+let field key json =
+  match json with
+  | `Assoc fields -> List.assoc key fields
+  | _ -> failwith "expected an object"
+
+let status_down code stdout stderr =
+  let raw = read_file stderr in
+  if read_file stdout <> "" then failwith "status failure wrote stdout";
+  let error =
+    match P.error_of_yojson (Yojson.Safe.from_string (String.trim raw)) with
+    | Ok error -> error
+    | Error message -> failwith message
+  in
+  if P.Error_code.to_string error.code <> code then failwith "wrong status code";
+  let detail =
+    match error.detail with Some detail -> detail | None -> failwith "no detail"
+  in
+  let show name =
+    match field name detail with
+    | `Bool value -> Printf.sprintf "%s=%b" name value
+    | `String value -> Printf.sprintf "%s=%s" name value
+    | `Int value -> Printf.sprintf "%s=%d" name value
+    | `Null -> name ^ "=null"
+    | other -> name ^ "=" ^ Yojson.Safe.to_string other
+  in
+  let unit = show "unit" in
+  let binary = show "binary" in
+  if contains raw "sk-leash" || contains (read_file stdout) "sk-leash" then
+    failwith "status printed a key";
+  Printf.printf "%s: %s %s hint=%s\n" code unit binary error.hint
+
+let status_restart stdout stderr =
+  let raw = read_file stderr in
+  if read_file stdout <> "" then failwith "restarting status wrote stdout";
+  let error =
+    match P.error_of_yojson (Yojson.Safe.from_string (String.trim raw)) with
+    | Ok error -> error
+    | Error message -> failwith message
+  in
+  if P.Error_code.to_string error.code <> "service-restarting" then
+    failwith "chrome relaunch was not service-restarting";
+  let detail =
+    match error.detail with Some detail -> detail | None -> failwith "no detail"
+  in
+  if field "chrome" detail <> `String "restarting" then failwith "chrome phase lost";
+  if field "generation" detail <> `Int 4 then failwith "generation lost";
+  if field "pid" detail <> `Null then failwith "relaunch kept a pid";
+  if field "headed" detail <> `Bool true then failwith "headed lost";
+  if field "key_present" detail <> `Bool false then failwith "key flag lost";
+  if field "skill" detail = `Null then failwith "skill missing from restart detail";
+  if contains raw "sk-leash" then failwith "restart detail printed a key";
+  Printf.printf "service-restarting: chrome generation relaunch, %s\n" error.hint
+
+let status_healthy stdout stderr =
+  let raw = read_file stdout in
+  if read_file stderr <> "" then failwith "healthy status wrote stderr";
+  let result = Yojson.Safe.from_string raw in
+  if field "version" result <> `String Leash.version then failwith "wrong version";
+  if field "commit" result <> `String Leash_cli_support.Leash_build_commit.commit then
+    failwith "wrong commit";
+  if field "chrome" result <> `String "running" then failwith "chrome not running";
+  if field "generation" result <> `Int 7 then failwith "wrong generation";
+  if field "pid" result <> `Int 4242 then failwith "wrong pid";
+  if field "headed" result <> `Bool true then failwith "not headed";
+  if field "key_present" result <> `Bool true then failwith "key not reported present";
+  let models = field "models" result in
+  if field "configured" models <> `Bool true then failwith "models.configured lost";
+  let skill = field "skill" result in
+  if field "state" skill <> `String "missing" then failwith "skill state lost";
+  if contains raw "sk-leash" || contains raw "OPENROUTER" then
+    failwith "status printed a key";
+  Printf.printf
+    "healthy: version %s chrome running generation 7 pid 4242 headed key_present skill %s\n"
+    Leash.version
+    (match field "state" skill with `String state -> state | _ -> "?")
+
 let status_skill state stdout stderr =
   let result = Yojson.Safe.from_string (read_file stdout) in
   let field key = function
@@ -158,4 +253,9 @@ let () =
       skill_outcome action path stdout stderr
   | [ _; "skill-show"; stdout; stderr ] -> skill_show stdout stderr
   | [ _; "status-skill"; state; stdout; stderr ] -> status_skill state stdout stderr
+  | [ _; "serve-result"; path; file; ready ] ->
+      serve_result path (Yojson.Safe.from_string (read_file file)) ready
+  | [ _; "status-down"; code; stdout; stderr ] -> status_down code stdout stderr
+  | [ _; "status-restart"; stdout; stderr ] -> status_restart stdout stderr
+  | [ _; "status-healthy"; stdout; stderr ] -> status_healthy stdout stderr
   | _ -> failwith "invalid fixture invocation"

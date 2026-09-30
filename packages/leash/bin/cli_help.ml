@@ -38,7 +38,8 @@ let docs = function
 let exits name =
   let common = [ 0; 64; 65; 69; 70; 77; 124 ] in
   match name with
-  | "status" | "list" -> exit_infos common
+  | "status" -> exit_infos (List.sort Int.compare (75 :: common))
+  | "list" -> exit_infos common
   | "new" | "discover" -> exit_infos (List.sort Int.compare (75 :: common))
   | _ -> exit_infos (List.sort Int.compare (66 :: 75 :: common))
 

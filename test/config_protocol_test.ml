@@ -587,6 +587,10 @@ let status_result () =
         ("chrome", `String "restarting");
         ("uptime_s", `Float 12.5);
         ("models", `Null);
+        ("version", `String "0.0.0");
+        ("pid", `Null);
+        ("headed", `Bool true);
+        ("key_present", `Bool false);
       ]
   in
   let result = assert_ok "status result" (P.status_result_of_yojson json) in
@@ -619,6 +623,10 @@ let status_result () =
               ("systemone_endpoint", `String "https://openrouter.ai/api/v1/systemone");
               ("chat_base_url", `String "https://openrouter.ai/api/v1");
             ] );
+        ("version", `String "0.0.0");
+        ("pid", `Null);
+        ("headed", `Bool true);
+        ("key_present", `Bool true);
       ]
   in
   let result = assert_ok "configured status" (P.status_result_of_yojson configured) in
@@ -653,6 +661,10 @@ let status_result () =
                   ("chat_base_url", `String "https://openrouter.ai/api/v1");
                   ("oops", `Bool true);
                 ] );
+            ("version", `String "0.0.0");
+            ("pid", `Null);
+            ("headed", `Bool true);
+            ("key_present", `Bool false);
           ]));
   expect_error "unknown phase" [ "chrome"; "crashed" ]
     (P.status_result_of_yojson
@@ -663,6 +675,10 @@ let status_result () =
             ("chrome", `String "crashed");
             ("uptime_s", `Float 1.0);
             ("models", `Null);
+            ("version", `String "0.0.0");
+            ("pid", `Null);
+            ("headed", `Bool true);
+            ("key_present", `Bool false);
           ]))
 
 let drive_result () =

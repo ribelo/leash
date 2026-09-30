@@ -2,7 +2,7 @@
 
     Milestone 0: planning only. See docs/milestones.md. *)
 
-let version = "0.0.0"
+let version = Version.version
 
 module Cdp = Cdp
 module Chrome = Chrome

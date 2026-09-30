@@ -181,9 +181,10 @@ module Disposition : sig
 end
 
 (** The closed error-code set of [docs/protocol.md], service codes and the client-side
-    codes the CLI prints ([service-unreachable], [socket-permission], [permission-denied],
-    [config-invalid], [usage], [cli-parse], [invalid-response]). [no-handoff] is what
-    [resume] answers on a tab nobody is waiting on (hand-szz7). *)
+    codes the CLI prints ([service-unreachable], [not-installed], [service-stopped],
+    [service-restarting], [socket-permission], [permission-denied], [config-invalid],
+    [usage], [cli-parse], [invalid-response]). [no-handoff] is what [resume] answers on a
+    tab nobody is waiting on (hand-szz7). *)
 module Error_code : sig
   type t
 
@@ -499,9 +500,17 @@ type status_result = {
   chrome : Chrome_phase.t;
   uptime_s : float;
   models : models_status option; [@json.null]
+  version : string;
+  pid : int option; [@json.null]
+  headed : bool;
+  key_present : bool;
 }
 (** [models] is [T|null]: the service's models section, which every service the Door
-    starts has, and [null] only in a dispatch that was given no models service. *)
+    starts has, and [null] only in a dispatch that was given no models service. [version]
+    is the library version. [pid] is the managed Chrome's process id while it is running,
+    and [null] while a generation is being relaunched. [headed] is false only when the
+    service was started headless. [key_present] is whether a model key is configured; the
+    key itself is never a field (daily-smli). *)
 
 val status_result_of_yojson : Yojson.Safe.t -> (status_result, string) result
 val yojson_of_status_result : status_result -> Yojson.Safe.t
