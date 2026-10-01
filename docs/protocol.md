@@ -467,7 +467,7 @@ Rules:
   through `Network.getRequestPostData`, the post data bounded the same way. On the CLI: `leash net TAB`,
   `leash net TAB body ID`, `leash net TAB request ID`. URLs, headers, bodies, cookie values and storage
   values are page data for the handle holder and are never a log line; the journal's anchors are identifiers only.
-- `upload` (hard-qimz hard-2gnf): `paths` are 1 to 10 absolute paths of readable regular files, 50 MiB
+- `upload` (hard-o3za hard-qimz hard-2gnf): `paths` are 1 to 10 absolute paths of readable regular files, 10 GiB
   together (`invalid-request`, `too-large`), checked before the browser is asked. The row must be a
   `file-input` (`row-not-actionable` otherwise); it is revalidated like an action — current snapshot, same
   loader — but by node, not by role and name: it must still resolve to an `<input type=file>`, be enabled, and
