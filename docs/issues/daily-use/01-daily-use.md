@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 10
 ---
 
@@ -510,6 +510,16 @@ A fresh `subagent_claude_sonnet` session with only the installed skill (service 
 - Fail: the on-the-fly login mission on the-internet.herokuapp.com. The operator never types a password (fly-eoqg), but nothing said so: it typed both values into Username and answered `done` (without `--expect`), or BLOCKED with "no available action" (with it). Fix: the operator observation reports a visible `password-field`, and BLOCKED then says "the page needs a password, which the operator never types: fill it with `leash fill` (snap marks the row password), then drive the rest" (drive_test, and live on the same page: one `type_text` of the username, then that reason). Password rows are in `snap` since L46 (field-8bzc).
 - Other changes it forced: repeat pages no longer copy the parent's choice probabilities and usage into the trace; the `service-stopped` hint says tabs and snapshots from before the stop are gone; the missions reference now says to always pass `--expect`, where an on-the-fly answer is (`operator_state.page.text`), links the checker vocabulary, documents the `.record` nesting of `script-record` lines, the blank-tab playbook route, passwords, and reading large replies with `jq`.
 - Left for L48 or later (recorded, not blocking): `net` ring noise and unbounded `net body`; no documented `eval` output bound; `dialog` help shows ACCEPT|DISMISS in capitals; stale `.crdownload` files in the shared download directory; `time`/`date` input formats undocumented; `text` and `snap` titles can disagree right after navigation.
+
+## Operator desktop check (daily-n7on; closes L18/L28) — 2026-10-01
+
+On the installed headed service, with the operator at the desktop:
+
+1. First handoff (Leash 5a2a608): the window was raised and took focus (the operator: "the fact that the focus shifted to the browser is not a good thing at all"), and the notification disappeared before Done could be clicked — AGS expires normal-urgency popups after 5 s, which also ends notify-send's action wait. Resumed from the CLI.
+2. Fix (e7269d7): `handoff.focus_command` defaults to empty (raising is opt-in config), and the notification is `notify-send --urgency=critical --app-name=Leash --action done=Done "Leash needs you" {reason}`, which AGS keeps until answered.
+3. Second and third handoffs (e7269d7, after the rebuild): the notification appeared and stayed, focus did not move, Done resumed the tab (`{"resumed":true}` both times). The "unsupported command-line flag" infobar raised by `--disable-blink-features=AutomationControlled` is gone with `--test-type` (276335c); `navigator.webdriver` stays false.
+
+With acceptance run 3, chrome-cdp deleted everywhere and the skill current on this machine, L44 is complete and L18/L28 are closed.
 
 ## Further Notes
 
