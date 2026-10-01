@@ -253,6 +253,7 @@ type request = {
   elements : element list;
   scripts : offered_script list;
   coverage : Yojson.Safe.t;
+  shown_url : string option;
 }
 
 (* fly-iodm, fly-crcc: enforce the Unicode viewport bound at the request boundary. *)
@@ -283,9 +284,11 @@ let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
     can_scroll_up;
     elements = elements snapshot;
     scripts = [];
+    shown_url = None;
   }
 
 let with_scripts request scripts = { request with scripts }
+let with_shown_url request url = { request with shown_url = Some url }
 
 let with_coverage request coverage =
   match (request.coverage, coverage) with
@@ -490,7 +493,7 @@ let body request =
                  Some
                    (yojson_of_page
                       {
-                        url = request.snapshot.url;
+                        url = Option.value ~default:request.snapshot.url request.shown_url;
                         title = request.snapshot.title;
                         text = request.text;
                       }) );

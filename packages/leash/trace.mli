@@ -24,6 +24,9 @@ type trace_procedure = {
   steps : trace_step list;
 }
 
+type inferred_page = { name : string; url_pattern : string }
+(** kind-dnye kind-s1k2: one row of the session mapping in the trace header. *)
+
 type t = {
   version : int;
   time : string;
@@ -34,6 +37,9 @@ type t = {
   duration_ms : int;
   model_calls : int;
   page_kind_path : string list;
+  inferred_pages : inferred_page list;
+      (** kind-dnye: generalized pattern to name, first-seen. Empty when every kind was
+          declared. Missing on an older file decodes as [[]]. *)
   compiled : bool; [@json.default false]
   procedures : trace_procedure list;
   steps : trace_step list;

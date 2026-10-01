@@ -576,11 +576,19 @@ type dialog = {
 }
 [@@deriving yojson]
 
+type page_kind_source =
+  | Declared [@json.name "declared"]
+  | Inferred [@json.name "inferred"]
+[@@deriving yojson]
+
+type page_kind_label = { name : string; source : page_kind_source } [@@deriving yojson]
+
 type tab_info = {
   tab : Handle.t;
   label : string option; [@json.null]
   url : string;
   title : string;
+  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -597,6 +605,7 @@ type tab_listing = {
   label : string option; [@json.null]
   url : string;
   title : string;
+  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -611,6 +620,7 @@ type popup_info = {
   label : string option; [@json.null]
   url : string;
   title : string;
+  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -650,6 +660,7 @@ type snapshot = {
   tab : Handle.t;
   url : string;
   title : string;
+  page_kind : page_kind_label option;
   rows : row list;
   total : int;
   offset : int;

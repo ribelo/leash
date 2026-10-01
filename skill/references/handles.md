@@ -18,6 +18,8 @@ A handle is the only way to act on a tab. It is 128 bits from the system's rando
 
 `leash new` and `leash take` return a handle. Keep it. Losing it loses the tab: an agent tab closes when it has been idle, and a new one is opened. `leash list` shows every tab and never a handle. A label is a free string for finding a tab. It is not a capability.
 
+`list` and `snap` include `page_kind`: `{name, source}`. `source` is `declared` when an installed playbook's URL pattern matches, and `inferred` otherwise. An inferred name comes from the URL path. Digits, long hex, UUIDs, and separator-free mixed alphanumeric tokens of eight or more characters become `<id>`. A content slug (long, hyphenated, capitalized, or ending `_<digits>`) becomes `<slug>`. A short `word-<digits>` such as `page-2` stays `word-<id>`. A `ref=`, `@` coordinate, or `!` blob is dropped. The name is the last static segment plus the placeholders after it, so every product, place, category, or book of one shape shares a kind. The query is dropped. `list --table` adds `PAGE_KIND` and `KIND_SOURCE`. `snap --table` prints the kind above the rows and still omits the snapshot id.
+
 ## Origin
 
 Every tab has an origin. `human` means the tab was opened in the Chrome UI or by a page. `agent` means it was opened through the protocol, or a human tab an agent has taken. Taking flips the origin to `agent` and does not flip it back.

@@ -71,9 +71,11 @@ let history (step : P.step) changed =
 
 (* fly-hc3l, fly-4mio, fly-9e0f: predictions and executed input have separate
    budgets. A decision is consumed exactly once; stale input is not an action. *)
+type page_label = { kind : string; source : string; url : string }
+
 let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent
-    ~scripts ~run_script ~reached ~on_step =
+    ~scripts ~run_script ~reached ~on_step ~label =
   let started = now () in
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
   let cap = Option.value ~default:60 args.P.max_steps in
@@ -125,12 +127,16 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
       "observation_ms", integer !observation_ms; "prediction_ms", integer !prediction_ms;
       "text_helper_ms", integer !helper_ms; "input_ms", metric "input_ms" !input_ms;
       "settle_ms", metric "settle_ms" 0; "elapsed_ms", integer (ms (now () -. started)) ] in
+    let shown = Option.map (fun label -> label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text) label in
     let state = `Assoc [
       "status", string name; "reason", optional_string reason;
       "error", (match error with None -> `Null | Some error -> P.yojson_of_error error);
       "initial_recent_actions", `List (List.map J.yojson_of_recent_action initial_recent);
       "page", `Assoc [ "snapshot", P.yojson_of_snapshot page.snapshot;
-        "url", string page.snapshot.url; "title", string page.snapshot.title;
+        "url", string (match shown with Some shown -> shown.url | None -> page.snapshot.url);
+        "title", string page.snapshot.title;
+        "page_kind", (match shown with Some shown -> string shown.kind | None -> `Null);
+        "page_kind_source", (match shown with Some shown -> string shown.source | None -> `Null);
         "text", string page.text; "text_truncated", text_truncated;
         "omitted_elements", omitted_elements;
         "unsupported_states", Option.value ~default:(`List []) (member "unsupported_states" bounds);
@@ -206,7 +212,13 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
           let request = J.make ~model ~goal:args.goal ~snapshot:page.snapshot ~text:page.text
             ~recent:(List.rev recent) ~can_scroll_down:page.can_scroll_down ~can_scroll_up:page.can_scroll_up
             |> fun request -> J.with_scripts request (scripts page)
-            |> fun request -> J.with_coverage request (coverage page) in
+            |> fun request -> J.with_coverage request (coverage page)
+            |> fun request ->
+              match label with
+              | None -> request
+              | Some label ->
+                  let shown = label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text in
+                  if shown.url = page.snapshot.url then request else J.with_shown_url request shown.url in
           let at = now () in
           incr predictions;
           match measured prediction_ms (fun () -> decide t request) with
@@ -400,7 +412,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
 
 let run ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(telemetry = fun () -> `Assoc []) ?(observe_attempts = 10) ?(recent = [])
-    ?(scripts = fun _ -> []) ?run_script ?(reached = fun ~start:_ _ -> false)
+    ?(scripts = fun _ -> []) ?run_script ?(reached = fun ~start:_ _ -> false) ?label
     ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run () =
   if Option.value ~default:60 args.P.max_steps < 1 ||
      Option.value ~default:120 args.deadline_s < 1 || observe_attempts < 1 || observe_attempts > 10 then
@@ -423,7 +435,7 @@ let run ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(cover
       text_value = (fun context -> Effect.perform (M.Text context));
       act = (fun page choice text -> Effect.perform (M.Act (page, choice, text)));
     } in
-    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~reached ~on_step) ()
+    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~reached ~on_step ~label) ()
       { retc = Fun.id; exnc = raise;
         effc = (fun (type a) (eff : a Effect.t) -> match eff with
           | M.Observe -> Some (fun (k : (a, (P.drive_result, P.error) result) Effect.Deep.continuation) -> Effect.Deep.continue k (handler.observe ()))

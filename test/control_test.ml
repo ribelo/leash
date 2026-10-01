@@ -160,6 +160,23 @@ let lifecycle () =
       Alcotest.(check bool)
         "hand-x3hi list shows the tab and never the handle" true
         (visible_without_handle mine && mine = theirs);
+      let listed_kind =
+        match mine with
+        | `List [ row ] -> get "page_kind" row
+        | _ -> Alcotest.fail "kind-tdrv list did not return one tab"
+      in
+      let listed_url =
+        match mine with
+        | `List [ row ] -> ( match get "url" row with `String s -> s | _ -> "")
+        | _ -> ""
+      in
+      Alcotest.(check string)
+        "kind-tdrv list names the inferred kind"
+        (Leash.Page_kind.infer ~url:listed_url ~title:"").name
+        (match get "name" listed_kind with `String s -> s | _ -> "");
+      Alcotest.(check string)
+        "kind-tdrv list marks the kind inferred" "inferred"
+        (match get "source" listed_kind with `String s -> s | _ -> "");
       let status = result (request tabs "alice" P.Status) in
       Alcotest.(check bool)
         "chrome-fuao generation and open" true
@@ -1010,6 +1027,15 @@ let snapshot () =
       in
       let first = snap () in
       Alcotest.(check bool) "tab-of0i settled" true (get "settled" first = `Bool true);
+      Alcotest.(check bool)
+        "kind-tdrv snap shows a page kind and its source" true
+        (match get "page_kind" first with
+        | `Assoc fields -> (
+            match (List.assoc_opt "name" fields, List.assoc_opt "source" fields) with
+            | Some (`String name), Some (`String source) ->
+                name <> "" && (source = "declared" || source = "inferred")
+            | _ -> false)
+        | _ -> false);
       Alcotest.(check int)
         "tab-tmoc field-vji1 visible rows including cross-origin frame" 3
         (get "total" first |> function `Int n -> n | _ -> -1);
@@ -3421,9 +3447,19 @@ let durable_drive_traces () =
               (run_wire ~tab:h "operator NONE with matching installed pages")
             |> decoded |> saved
           in
-          Alcotest.(check (list string))
-            "trace-iqqz NONE has no page kinds even with installed matching book" []
-            fly.page_kind_path;
+          Alcotest.(check bool)
+            "kind-dnye NONE infers a kind and does not borrow the unselected book" true
+            (List.mem "product_details-<id>" fly.page_kind_path
+            && (not (List.mem "products" fly.page_kind_path))
+            && not (List.mem "cart" fly.page_kind_path));
+          Alcotest.(check bool)
+            "kind-s1k2 NONE records the generalized pattern" true
+            (List.exists
+               (fun (page : P.Trace.inferred_page) ->
+                 page.name = "product_details-<id>"
+                 && page.url_pattern
+                    = "https://automationexercise.com/product_details/<id>")
+               fly.inferred_pages);
           let authored =
             invoke ~traces:store ~installed:[ book ]
               ~levels:
@@ -3431,14 +3467,19 @@ let durable_drive_traces () =
               (run_wire ~tab:h "add Blue Top to the cart")
             |> decoded |> saved
           in
+          let declared kind =
+            List.exists
+              (fun (p : Leash.Playbook.page) -> p.name = kind)
+              book.playbook.pages
+          in
+          let path = String.concat "," authored.page_kind_path in
           Alcotest.(check bool)
-            "trace-iqqz selected book supplies only declared kinds" true
+            ("kind-4qke declared kinds win; unmatched pages are inferred (" ^ path ^ ")")
+            true
             (authored.page_kind_path <> []
             && List.for_all
                  (fun kind ->
-                   List.exists
-                     (fun (p : Leash.Playbook.page) -> p.name = kind)
-                     book.playbook.pages)
+                   declared kind || kind = "product_details-<id>" || kind = "blank")
                  authored.page_kind_path);
           Alcotest.(check bool)
             "trace-lg58 authored procedures flatten compiler-safe steps" true

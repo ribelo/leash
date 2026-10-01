@@ -409,7 +409,8 @@ let drive_to_done () =
       let state = get "state" body in
       let page = get "page" state in
       Alcotest.(check string)
-        "drive-y37b the page url" "https://example.com/" (text "url" page);
+        "kind-ir9l playbook-less operator state shows the kind in place of the raw URL"
+        "home" (text "url" page);
       Alcotest.(check string) "drive-y37b the page title" "Example" (text "title" page);
       Alcotest.(check string)
         "drive-y37b the page text" "Example content" (text "text" page);

@@ -34,6 +34,7 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
           tab = ok (Handle.of_string "t_control");
           url = !url;
           title = "Catalogue";
+          page_kind = None;
           rows = [];
           total = 0;
           offset = 0;

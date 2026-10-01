@@ -53,6 +53,7 @@ let snapshot ?(url = home_url) ?(title = "Site A") ?dialog () =
       tab = handle;
       url;
       title;
+      page_kind = None;
       rows = [];
       total = 0;
       offset = 0;
@@ -144,6 +145,7 @@ let tab_info () =
       tab = handle;
       url = home_url;
       title = "Site A";
+      page_kind = None;
       origin = ok (P.Origin.of_string "agent");
       label = None;
       age_s = 0;

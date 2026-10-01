@@ -41,7 +41,11 @@ val write : t -> Protocol.drive_trace -> (string, string) result
 type capture
 
 val capture : mission:string -> now:float -> capture
-val page : capture -> url:string -> kind:string option -> unit
+
+(* kind-4qke kind-dnye: [kind] is the page kind for the path. [pattern] is the
+   generalized URL when the kind was inferred; a declared kind passes [None] and is
+   not added to the header mapping. *)
+val page : capture -> url:string -> kind:string option -> pattern:string option -> unit
 val step : capture -> Protocol.step -> unit
 
 val finish :

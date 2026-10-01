@@ -225,6 +225,7 @@ val loop :
   handler:handler ->
   now:(unit -> float) ->
   installed:Playbook.loaded list ->
+  ?page_kinds:Page_kind.session ->
   ?discovery:discovery ->
   ?on_book:(Playbook.loaded option -> unit) ->
   ?on_record:(Yojson.Safe.t -> (unit, Protocol.error) result) ->

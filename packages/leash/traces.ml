@@ -312,15 +312,29 @@ type capture = {
   started : float;
   mutable first : string option;
   mutable kinds : string list;
+  mutable pages : (string * string) list;
   mutable last_page : (string * string option) option;
   mutable steps : P.step list;
 }
 
 let capture ~mission ~now =
-  { mission; started = now; first = None; kinds = []; last_page = None; steps = [] }
+  {
+    mission;
+    started = now;
+    first = None;
+    kinds = [];
+    pages = [];
+    last_page = None;
+    steps = [];
+  }
 
-let page t ~url ~kind =
+let page t ~url ~kind ~pattern =
   if t.first = None then t.first <- site url;
+  (match (pattern, kind) with
+  | Some pattern, Some name
+    when not (List.exists (fun (seen, _) -> seen = pattern) t.pages) ->
+      t.pages <- (pattern, name) :: t.pages
+  | _ -> ());
   if t.last_page <> Some (url, kind) then (
     Option.iter (fun k -> t.kinds <- k :: t.kinds) kind;
     t.last_page <- Some (url, kind))
@@ -434,6 +448,8 @@ let finish t ~now outcome =
       duration_ms = max 0 (int_of_float ((now -. t.started) *. 1000.));
       model_calls;
       page_kind_path = List.rev t.kinds;
+      inferred_pages =
+        List.rev_map (fun (url_pattern, name) -> P.Trace.{ name; url_pattern }) t.pages;
       compiled = false;
       procedures;
       steps;

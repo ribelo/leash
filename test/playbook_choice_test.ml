@@ -27,6 +27,7 @@ let blank =
         tab = ok (Handle.of_string "t_test");
         url = "about:blank";
         title = "";
+        page_kind = None;
         rows = [];
         total = 0;
         offset = 0;
@@ -223,8 +224,11 @@ let question_on_wire ~url () =
                    (List.mem_assoc "current_page" fields)
              | _ -> Alcotest.fail "expected state object");
           check_json "no site selected" `Null (get "site" state);
-          check_json "no page kind" `Null (get "page_kind" state);
-          check_json "observed URL" (`String url) (get "url" state);
+          let kind = if url = "about:blank" then "blank" else "home" in
+          check_json "kind-ir9l inferred kind before a book is chosen" (`String kind)
+            (get "page_kind" state);
+          check_json "kind-ir9l playbook-less lane shows the kind in place of the raw URL"
+            (`String kind) (get "url" state);
           check_json "plain mission without host"
             (`String "collect every book in the Travel category") (get "mission" state);
           match !asked with

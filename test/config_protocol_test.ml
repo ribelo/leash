@@ -1012,11 +1012,17 @@ let socket_cli () =
     "close";
   socket_cli_case
     ~expected_lines:
-      [ "LABEL\tURL\tTITLE\tORIGIN\tAGE_S\tIDLE_S\tCLOSES_IN_S\tWITH_HUMAN" ]
+      [
+        "LABEL\tURL\tTITLE\tPAGE_KIND\tKIND_SOURCE\tORIGIN\tAGE_S\tIDLE_S\tCLOSES_IN_S\tWITH_HUMAN";
+      ]
     [ "list"; "--table" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list";
   socket_cli_case
     ~expected_lines:
-      [ "INDEX\tROLE\tNAME\tVALUE\tSTATE"; "0\tbutton\tSave\t1\tdisabled,required" ]
+      [
+        "PAGE_KIND\t-\tKIND_SOURCE\t-";
+        "INDEX\tROLE\tNAME\tVALUE\tSTATE";
+        "0\tbutton\tSave\t1\tdisabled,required";
+      ]
     [ "snap"; "t_9xk"; "--table" ]
     (Yojson.Safe.to_string (P.encode_reply (P.Success snapshot_json)))
     0 "snap"

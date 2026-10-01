@@ -115,7 +115,7 @@ val drive :
     refusal over 4 KiB is [model-unavailable] with the steps completed (drive-ls3c). *)
 
 val run :
-  ?on_page:(url:string -> kind:string option -> unit) ->
+  ?on_page:(url:string -> kind:string option -> pattern:string option -> unit) ->
   ?on_step:(Protocol.step -> unit) ->
   ?levels:Run.levels ->
   ?model:string ->

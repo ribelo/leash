@@ -246,6 +246,7 @@ let capabilities () =
                       "label";
                       "url";
                       "title";
+                      "page_kind";
                       "origin";
                       "age_s";
                       "idle_s";

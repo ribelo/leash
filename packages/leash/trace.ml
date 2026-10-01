@@ -26,6 +26,8 @@ type trace_procedure = {
 }
 [@@deriving yojson]
 
+type inferred_page = { name : string; url_pattern : string } [@@deriving yojson]
+
 type t = {
   version : int;
   time : string;
@@ -36,6 +38,7 @@ type t = {
   duration_ms : int;
   model_calls : int;
   page_kind_path : string list;
+  inferred_pages : inferred_page list; [@json.default []]
   compiled : bool; [@json.default false]
   procedures : trace_procedure list;
   steps : trace_step list;

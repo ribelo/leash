@@ -11,8 +11,9 @@ adds `error.detail.trace_path`. The path exists before reply encoding. Disabled
 tracing or a failed write omits the field, and persistence failures never replace
 the drive outcome. `Protocol.drive_trace` is the version-1 derived safe durable
 projection, not the live result type, to exclude handles, page text, records, and
-raw state. It records headers, declared page kinds, procedures, redacted steps,
-URL/title, and a `compiled` marker (default false). See [traces](help/traces.md)
+raw state. It records headers, the page-kind path (declared kinds win; otherwise
+inferred), `inferred_pages` (`{name, url_pattern}`[], default empty), procedures,
+redacted steps, URL/title, and a `compiled` marker (default false). See [traces](help/traces.md)
 for the exact schema and local `traces list/show/prune` commands; those commands
 do not introduce wire verbs or contact the service.
 
@@ -157,6 +158,7 @@ OperatorState = {status: string, reason: string|null, error: Error|null,
                  page: OperatorPage, history: ActionLog[], predictions: Prediction[],
                  text_calls: TextCall[], metrics: OperatorMetrics}
 OperatorPage  = {snapshot: Snapshot, url, title, text,
+                 page_kind: string|null, page_kind_source: "declared"|"inferred"|null,
                  text_truncated: bool, omitted_elements: int,
                  can_scroll_up: bool, can_scroll_down: bool,
                  coverage: Coverage, bounds: CoverageBounds}
@@ -186,12 +188,18 @@ A field shown as `T|null` is always present, `null` when it has no value; a fiel
 `key?` is omitted when it has no value.
 
 ```
-TabListing   = {label: string|null, url, title, origin: "agent"|"human", age_s: int,
-                 idle_s: int, closes_in_s: int|null, with_human: bool}
+PageKind     = {name, source: "declared"|"inferred"}
+                 declared: an installed playbook's url_pattern matched (list and snap do
+                 not read page text, so a text_marker-only kind is inferred here)
+                 inferred: no declared kind; name and the trace's url_pattern come from
+                 the URL shape (ids and content slugs collapse; ref=/coordinates/data blobs
+                 drop; the query is stripped). See leash help handles.
+TabListing   = {label: string|null, url, title, page_kind: PageKind, origin: "agent"|"human",
+                 age_s: int, idle_s: int, closes_in_s: int|null, with_human: bool}
 TabInfo      = {tab, ...TabListing, generation: int, dialog: Dialog|null, reason?: string, loaded?: bool}
 PopupInfo    = {tab?: string, ...TabListing, state: "opening"|"blank"|"ready",
                  generation: int, dialog: Dialog|null, reason?: string, opener_url: string}
-Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
+Snapshot     = {snapshot: id, tab, url, title, page_kind: PageKind, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
                 source: "ax"|"dom" (default "ax" when omitted), reason?: string, dialog: Dialog|null}
 Row          = {index: int, role: string, name: string, value?: string, state?: string[],
                 options?: [{index: int, label: string, value: string, selected: bool, disabled: bool}]}
@@ -559,7 +567,7 @@ Wire shapes stay in the sections above. Each field's meaning is the linked topic
 | --- | --- |
 | `v`, `cmd`, `args`, `ok`, `result`, `error.code`, `error.message`, `error.hint`, `error.detail` | [errors](help/errors.md) for codes; this file for the envelope |
 | `tab`, `handle`, `origin`, `label`, `age_s`, `idle_s`, `closes_in_s`, `with_human`, `generation`, `reason`, disposition | [handles](help/handles.md) | [errors](help/errors.md) |
-| `url`, `title`, `loaded`, `dialog`, `popups`, `opener_url`, `state` (popup) | [handles](help/handles.md) for origin; this file for the wire object | [errors](help/errors.md) |
+| `url`, `title`, `page_kind`, `loaded`, `dialog`, `popups`, `opener_url`, `state` (popup) | [handles](help/handles.md) for origin and page kind; this file for the wire object | [errors](help/errors.md) |
 | `snapshot`, `rows`, `index`, `role`, `name`, `value`, `options`, `match`, `limit`, `offset`, `truncated`, `settled`, `source` | this file; acting on a row needs the handle in [handles](help/handles.md) | [errors](help/errors.md) |
 | `mission`, `start_url`, `max_steps`, `max_procedures`, `deadline_s`, `dry_run`, `expect`, `out`, `status`, `playbook_choices`, `procedures`, `mission_expectations`, `operator_state`, `operator_steps`, `output_kinds`, `collected`, `model_cost`, `final`, `Step`, `Operation` | [drive](help/drive.md) | [errors](help/errors.md) |
 | `site`, `entry`, `pages`, `shapes`, `procedures`, `slug`, `repeat`, `until`, `goal`, `use` | [playbooks](help/playbooks.md) | [errors](help/errors.md) |

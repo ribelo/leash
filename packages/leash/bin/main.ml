@@ -66,32 +66,42 @@ let cell = function
   | `Null -> "-"
   | other -> Yojson.Safe.to_string other
 
+let kind_cell key row =
+  match field "page_kind" row with
+  | `Assoc fields -> (
+      match List.assoc_opt key fields with Some value -> cell value | None -> "-")
+  | _ -> "-"
+
 let table ~caps command result =
   let tabs = match field "tabs" result with `List xs -> xs | _ -> [] in
   match command with
   | "list" ->
       (* hand-r4t1: REASON is what the tab is waiting on the human for, "-" on every tab
-         nobody is waiting on, so a human who stepped away can see what is asked. *)
+         nobody is waiting on, so a human who stepped away can see what is asked.
+         kind-tdrv: PAGE_KIND and KIND_SOURCE name the page outside a drive. *)
       Cap_stdlib.print_endline ~caps
-        "LABEL\tURL\tTITLE\tORIGIN\tAGE_S\tIDLE_S\tCLOSES_IN_S\tWITH_HUMAN";
+        "LABEL\tURL\tTITLE\tPAGE_KIND\tKIND_SOURCE\tORIGIN\tAGE_S\tIDLE_S\tCLOSES_IN_S\tWITH_HUMAN";
       List.iter
         (fun row ->
-          Cap_stdlib.print_endline ~caps
-            (String.concat "\t"
-               (List.map
-                  (fun key -> cell (field key row))
-                  [
-                    "label";
-                    "url";
-                    "title";
-                    "origin";
-                    "age_s";
-                    "idle_s";
-                    "closes_in_s";
-                    "with_human";
-                  ])))
+          let cols =
+            [
+              cell (field "label" row);
+              cell (field "url" row);
+              cell (field "title" row);
+              kind_cell "name" row;
+              kind_cell "source" row;
+              cell (field "origin" row);
+              cell (field "age_s" row);
+              cell (field "idle_s" row);
+              cell (field "closes_in_s" row);
+              cell (field "with_human" row);
+            ]
+          in
+          Cap_stdlib.print_endline ~caps (String.concat "\t" cols))
         tabs
   | "snap" ->
+      Cap_stdlib.printf ~caps "PAGE_KIND\t%s\tKIND_SOURCE\t%s\n" (kind_cell "name" result)
+        (kind_cell "source" result);
       Cap_stdlib.print_endline ~caps "INDEX\tROLE\tNAME\tVALUE\tSTATE";
       (match field "rows" result with `List xs -> xs | _ -> [])
       |> List.iter (fun row ->
@@ -600,8 +610,9 @@ let pretty_opt = opt "pretty" Bool "" "Indent JSON output."
 
 let table_opt =
   opt "table" Bool ""
-    "Render rows as a table. For snap this omits the snapshot id; omit --table to get \
-     the id needed by row actions."
+    "Render rows as a table. list adds PAGE_KIND and KIND_SOURCE. For snap this omits \
+     the snapshot id and prints the page kind above the rows; omit --table to get the id \
+     needed by row actions."
 
 let config_opt =
   opt "config" Str "FILE" "TOML configuration file the control socket is read from."
@@ -1045,7 +1056,8 @@ let commands ~caps ~send ~base ~run_owned =
         [ "leash downloads t_9xk" ] );
       ( "list",
         "List all tabs without handles; agent tabs close after 30 idle minutes; human \
-         tabs are never closed unless an agent takes one",
+         tabs are never closed unless an agent takes one. Each tab includes page_kind \
+         {name, source: declared|inferred}.",
         [],
         [ table_opt ],
         [ "leash list"; "leash list --table" ] );
@@ -1071,7 +1083,8 @@ let commands ~caps ~send ~base ~run_owned =
         [],
         [ "leash status" ] );
       ( "snap",
-        "Observe an indexed snapshot of a tab.",
+        "Observe an indexed snapshot of a tab. The reply includes page_kind {name, \
+         source: declared|inferred}.",
         [ pos "tab" "TAB" ],
         [
           opt "match" Str "TEXT" "Keep rows whose role, name or value contains TEXT.";

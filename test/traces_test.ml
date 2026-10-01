@@ -36,6 +36,7 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time 
       duration_ms = 200;
       model_calls = 2;
       page_kind_path = [ "catalog" ];
+      inferred_pages = [];
       compiled;
       procedures = [];
       steps = [];
@@ -153,11 +154,11 @@ let config () =
 
 let capture () =
   let c = T.capture ~mission:"mission" ~now:10. in
-  T.page c ~url:"about:blank" ~kind:None;
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "detail");
-  T.page c ~url:"https://other.example/" ~kind:(Some "checkout");
+  T.page c ~url:"about:blank" ~kind:None ~pattern:None;
+  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog") ~pattern:None;
+  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog") ~pattern:None;
+  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "detail") ~pattern:None;
+  T.page c ~url:"https://other.example/" ~kind:(Some "checkout") ~pattern:None;
   let error =
     P.make_error
       ~detail:
@@ -201,6 +202,7 @@ let scripted_steps () =
               tab = handle;
               url = "https://books.toscrape.com/";
               title = "Catalog";
+              page_kind = None;
               rows =
                 [
                   {
@@ -262,7 +264,7 @@ let scripted_steps () =
           via = None;
         }
   in
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
+  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog") ~pattern:None;
   let result =
     match
       D.run ~on_step:(T.step c)

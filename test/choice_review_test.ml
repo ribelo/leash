@@ -115,6 +115,7 @@ let review ~probability ~threshold ~content ~consulted:_ ~valid:_ () =
                 tab = ok (Handle.of_string "t_test");
                 url = "https://books.example/";
                 title = "";
+                page_kind = None;
                 rows = [];
                 total = 0;
                 offset = 0;

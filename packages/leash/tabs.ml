@@ -542,11 +542,30 @@ let call t request =
 let call_protected t request = Eio.Cancel.protect (fun () -> call t request)
 let transition t request = Result.map entry_of_answer (call t request)
 
-let listing_of t (entry : entry) : P.tab_listing =
+(* kind-tdrv kind-4qke: list and snap name the page. An installed playbook's kind
+   wins; otherwise the URL and title are inferred. Text markers need page text, which
+   list and snap do not read, so a marker-only kind stays inferred here. *)
+let installed_books t =
+  match Playbook.list ~caps:t.caps () with Ok books -> books | Error _ -> []
+
+let page_label ~books ~url ~title =
+  match
+    List.find_map
+      (fun (book : Playbook.loaded) ->
+        Playbook.page_kind book.playbook.pages ~url ~text:"")
+      books
+  with
+  | Some name -> Some P.{ name; source = Declared }
+  | None ->
+      let inferred = Page_kind.infer ~url ~title in
+      Some P.{ name = inferred.name; source = Inferred }
+
+let listing_of t ?(books = installed_books t) (entry : entry) : P.tab_listing =
   {
     label = entry.tab.label;
     url = entry.tab.url;
     title = entry.tab.title;
+    page_kind = page_label ~books ~url:entry.tab.url ~title:entry.tab.title;
     origin = entry.tab.origin;
     age_s = max 0 (int_of_float (now t -. entry.tab.opened_at));
     idle_s = max 0 (int_of_float (now t -. entry.last_activity));
@@ -562,6 +581,7 @@ let info_of t (entry : entry) : P.tab_info =
     label = i.label;
     url = i.url;
     title = i.title;
+    page_kind = i.page_kind;
     origin = i.origin;
     age_s = i.age_s;
     idle_s = i.idle_s;
@@ -1503,6 +1523,7 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
           tab = credential tab;
           url = tab.url;
           title = tab.title;
+          page_kind = page_label ~books:(installed_books t) ~url:tab.url ~title:tab.title;
           rows = shown;
           total;
           offset;
@@ -1700,6 +1721,7 @@ let action_view t ~session tab cdp : Actions.tab =
                 label = i.label;
                 url = i.url;
                 title = i.title;
+                page_kind = i.page_kind;
                 origin = i.origin;
                 age_s = i.age_s;
                 idle_s = i.idle_s;
@@ -1872,8 +1894,8 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
              ~detail:(obj [ ("code", str "client-unavailable") ])))
     ?(text_helper = fun () -> Text_helper.unavailable)
     ?(guard = fun (_ : P.snapshot) (_ : Jev_request.decision) -> None)
-    ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?reached t ~model tab
-    (args : P.drive_args) =
+    ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?reached ?label t ~model
+    tab (args : P.drive_args) =
   (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
          drive's own deadline: the caller's remaining budget is what the model call is
          bounded by, so a slow provider cannot outlast the reply the client is waiting
@@ -2100,7 +2122,7 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
   (* fly-4mio: acquire already retries ten times at 20 ms. One Drive attempt,
      or the two loops would nest to a hundred observations. *)
   Drive.run ~validate ~coverage ~usage:(usage meter) ~telemetry:(telemetry meter)
-    ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script ?reached
+    ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script ?reached ?label
     ~handler:Drive.{ observe; decide; text_value; act }
     ~now:(fun () -> now t)
     ~model ~args
@@ -2143,7 +2165,7 @@ let no_levels : Run.levels =
                "no model client is configured for the run's planner"));
     }
 
-let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(levels = no_levels)
+let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_levels)
     ?(model = "unconfigured")
     ?(decide =
       fun ~deadline:_ _ ->
@@ -2191,15 +2213,41 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(levels = no_levels)
           in
           (* run-pvmc: the page text stays on this side of the loop; the upper levels are
              asked over the small state Run builds. *)
-          (* trace-iqqz: only the selected authored book supplies kinds. Merely
-             having a matching installed book does not classify the on-the-fly lane. *)
+          (* trace-iqqz: only the selected authored book supplies declared kinds.
+             Merely having a matching installed book does not classify the on-the-fly
+             lane. kind-a7uy kind-dnye: a page with no declared kind is inferred, and the
+             session keeps that name stable for the drive. *)
+          let kinds = Page_kind.session () in
           let trace_book = ref None and trace_page = ref None in
+          let declared_kind ~url ~text =
+            Option.bind !trace_book (fun (book : Playbook.loaded) ->
+                Playbook.page_kind book.playbook.pages ~url ~text)
+          in
           let classify (snapshot : P.snapshot) text =
-            let kind =
-              Option.bind !trace_book (fun (book : Playbook.loaded) ->
-                  Playbook.page_kind book.playbook.pages ~url:snapshot.url ~text)
+            let declared = declared_kind ~url:snapshot.url ~text in
+            let inferred, source =
+              Page_kind.classify kinds ~declared ~url:snapshot.url ~title:snapshot.title
             in
-            on_page ~url:snapshot.url ~kind
+            let pattern =
+              match source with
+              | Page_kind.Inferred -> Some inferred.url_pattern
+              | Page_kind.Declared -> None
+            in
+            on_page ~url:snapshot.url ~kind:(Some inferred.name) ~pattern
+          in
+          let label ~url ~title ~text =
+            let inferred, source =
+              Page_kind.classify kinds ~declared:(declared_kind ~url ~text) ~url ~title
+            in
+            Drive.
+              {
+                kind = inferred.name;
+                source =
+                  (match source with
+                  | Page_kind.Declared -> "declared"
+                  | Page_kind.Inferred -> "inferred");
+                url = (if !trace_book = None then inferred.name else url);
+              }
           in
           let traced (snapshot : P.snapshot) text =
             trace_page := Some (snapshot, text);
@@ -2381,7 +2429,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(levels = no_levels)
                     in
                     drive_locked ~recent:request.Run.recent ?meter ?on_step
                       ~observed:(fun page -> traced page.Drive.snapshot page.text)
-                      ~decide ~text_helper ~guard
+                      ~decide ~text_helper ~guard ~label
                       ~scripts:(fun page ->
                         request.Run.script_offers ~url:page.Drive.snapshot.url
                           ~text:page.text)
@@ -2487,7 +2535,8 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(levels = no_levels)
                 Run.loop ~handler ~on_book ~on_record
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)
-                  ~installed:books ?discovery:(Option.map fst discovery) run_args
+                  ~page_kinds:kinds ~installed:books ?discovery:(Option.map fst discovery)
+                  run_args
               in
               let* result =
                 match args.P.out with

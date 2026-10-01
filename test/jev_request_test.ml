@@ -73,6 +73,7 @@ let snapshot rows =
       tab = handle;
       url = "https://example.com/";
       title = "Example";
+      page_kind = None;
       rows;
       total = List.length rows;
       offset = 0;

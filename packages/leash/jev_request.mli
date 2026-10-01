@@ -122,6 +122,10 @@ val make :
     [can_scroll_up] is [scrollY > 0]. The drive states them, so the request offers only
     the controls that apply. *)
 
+val with_shown_url : request -> string -> request
+(** kind-ir9l: the playbook-less lane shows the inferred kind in the page URL slot. The
+    snapshot itself is unchanged. *)
+
 val with_scripts : request -> offered_script list -> request
 (** pbk-rai1: the scripts offered on this observation. *)
 

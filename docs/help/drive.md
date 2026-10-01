@@ -65,7 +65,7 @@ Exit 0 means the service answered. It does not mean the mission succeeded. Read:
 - `steps[].operation`, `index`, and `probabilities.op` — what JEV picked and how sure it was.
 - `collected` — how many validated script records were streamed.
 - `mission_expectations` — the DONE guard, each sentence, checker, and whether it passed.
-- `operator_state.page.text` — on the fly, the answer is the page, at most 6000 characters of viewport text. `page.coverage` is a `+`-joined string starting with `viewport`.
+- `operator_state.page.text` — on the fly, the answer is the page, at most 6000 characters of viewport text. `page.coverage` is a `+`-joined string starting with `viewport`. `page.page_kind` is the kind JEV was shown (`page.page_kind_source` is `declared` or `inferred`); in the playbook-less lane `page.url` is that kind, not the raw URL. The snapshot inside the same object still has the raw URL.
 - `output_kinds` — `script-record`, `operator-state`, or both.
 - `model_cost` — null when any call is unpriced. `data.reported_cost` is the known subtotal.
 - `final` — the last snapshot.

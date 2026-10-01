@@ -26,6 +26,11 @@
   alcotest))
 
 (test
+ (name page_kind_test)
+ (modules page_kind_test)
+ (libraries leash alcotest))
+
+(test
  (name run_control_test)
  (modules run_control_test)
  (libraries leash yojson alcotest))

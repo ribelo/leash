@@ -204,11 +204,27 @@ type dialog = { kind : Dialog_kind.t; message : string; default_prompt : string 
 val dialog_of_yojson : Yojson.Safe.t -> (dialog, string) result
 val yojson_of_dialog : dialog -> Yojson.Safe.t
 
+type page_kind_source =
+  | Declared
+  | Inferred
+      (** kind-tdrv: [Declared] is a loaded playbook's kind. [Inferred] is {!Page_kind}.
+      *)
+
+type page_kind_label = { name : string; source : page_kind_source }
+(** Shown by [list] and [snap]. [name] is the kind; [source] is [declared] or [inferred].
+*)
+
+val page_kind_source_of_yojson : Yojson.Safe.t -> (page_kind_source, string) result
+val yojson_of_page_kind_source : page_kind_source -> Yojson.Safe.t
+val page_kind_label_of_yojson : Yojson.Safe.t -> (page_kind_label, string) result
+val yojson_of_page_kind_label : page_kind_label -> Yojson.Safe.t
+
 type tab_info = {
   tab : Handle.t;
   label : string option;
   url : string;
   title : string;
+  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -224,6 +240,7 @@ type tab_listing = {
   label : string option;
   url : string;
   title : string;
+  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -242,6 +259,7 @@ type popup_info = {
   label : string option;
   url : string;
   title : string;
+  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -298,6 +316,7 @@ type snapshot = {
   tab : Handle.t;
   url : string;
   title : string;
+  page_kind : page_kind_label option;
   rows : row list;
   total : int;
   offset : int;

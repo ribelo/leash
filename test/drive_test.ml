@@ -25,6 +25,7 @@ let snapshot ?(title = "Initial") () =
       tab = handle;
       url = "https://example.org";
       title;
+      page_kind = None;
       rows = [];
       total = 0;
       offset = 0;
@@ -474,6 +475,7 @@ let dialog_popup_error () =
         tab = Some handle;
         url = "https://example.org/popup";
         title = "Popup";
+        page_kind = None;
         origin =
           (match Origin.of_string "agent" with Ok x -> x | Error _ -> assert false);
         label = None;

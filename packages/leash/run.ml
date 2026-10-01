@@ -466,7 +466,7 @@ type steps_outcome =
       (** The run ended inside a step: a dialog, or a planner turn a called procedure
           asked for. *)
 
-let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~pause_ms ~now ~installed ?discovery (args : args) : (P.run_result, P.error) result =
+let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~pause_ms ~now ~installed ~page_kinds ?discovery (args : args) : (P.run_result, P.error) result =
   let installed = installed_playbooks installed in
   let started = now () in
   let deadline = started +. float_of_int args.deadline_s in
@@ -527,12 +527,25 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~pause_m
   (* run-pvmc (the L30 shape B, run-snk4): the state an upper level is asked over — the
      mission, the site, the page kind, the title and URL, the last five procedures with
      their outcomes, and the arguments known. Never the page text. *)
-  let state_json (st : state) =
-    let kind =
+  (* kind-ir9l kind-4qke: a declared kind wins. With no playbook the inferred kind
+     stands in the page_kind field and in place of the raw URL. *)
+  let semantic (st : state) =
+    let declared =
       match st.book with
-      | Some book -> Playbook.page_kind book.Playbook.playbook.pages ~url:st.observation.url ~text:st.observation.text
+      | Some book ->
+          Playbook.page_kind book.Playbook.playbook.pages ~url:st.observation.url
+            ~text:st.observation.text
       | None -> None
     in
+    let inferred, _ =
+      Page_kind.classify page_kinds ~declared ~url:st.observation.url
+        ~title:st.observation.title
+    in
+    let url = if st.book = None then inferred.name else st.observation.url in
+    (inferred.name, url)
+  in
+  let state_json (st : state) =
+    let kind, url = semantic st in
     `Assoc
       ([
         ("mission", `String args.mission);
@@ -540,9 +553,9 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~pause_m
           match st.book with
           | Some book -> `String book.Playbook.playbook.site
           | None -> `Null );
-        ("page_kind", match kind with Some kind -> `String kind | None -> `Null);
+        ("page_kind", `String kind);
         ("title", `String st.observation.title);
-        ("url", `String st.observation.url);
+        ("url", `String url);
         ( "recent_procedures",
           `List
             (List.map
@@ -779,13 +792,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~pause_m
                    args.max_plans)
               ()))
     else
-      let kind =
-        match st.book with
-        | Some book ->
-            Playbook.page_kind book.Playbook.playbook.pages ~url:st.observation.url
-              ~text:st.observation.text
-        | None -> None
-      in
+      let kind, _shown_url = semantic st in
       let request =
         {
           trigger;
@@ -796,7 +803,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~pause_m
             Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook) st.book;
           recent = st.recent;
           arguments = st.known;
-          page_kind = kind;
+          page_kind = Some kind;
           title = st.observation.title;
           url = st.observation.url;
           text = st.observation.text;
@@ -1804,7 +1811,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~pause_m
 
 (* ---------- The handler ---------- *)
 
-let loop ~(handler : handler) ~now ~installed ?discovery ?(on_book = fun _ -> ()) ?(on_record = fun _ -> Ok ()) ?(pause_ms = fun _ -> ()) (args : args) =
+let loop ~(handler : handler) ~now ~installed ?page_kinds ?discovery ?(on_book = fun _ -> ()) ?(on_record = fun _ -> Ok ()) ?(pause_ms = fun _ -> ()) (args : args) =
   if args.max_procedures < 1 || args.deadline_s < 1 || args.max_steps < 1 then
     Error (invalid "run max_steps, max_procedures and deadline_s must be positive")
   else if (match args.start_url with Some url -> not (valid_start_url url) | None -> false) then
@@ -1899,7 +1906,8 @@ let loop ~(handler : handler) ~now ~installed ?discovery ?(on_book = fun _ -> ()
            | None -> ())
     in
     let outcome = Model_usage.with_meter meter (fun () ->
-      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_book ~on_record ~pause_ms ~now ~installed ?discovery args) ()
+      let page_kinds = match page_kinds with Some session -> session | None -> Page_kind.session () in
+      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_book ~on_record ~pause_ms ~now ~installed ~page_kinds ?discovery args) ()
       {
         retc = Fun.id;
         exnc = raise;

@@ -14,6 +14,7 @@ module Models = Models
 module Text_helper = Text_helper
 module Protocol = Protocol
 module Traces = Traces
+module Page_kind = Page_kind
 module Playbook = Playbook
 module Run = Run
 module Tabs = Tabs

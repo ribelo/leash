@@ -185,7 +185,9 @@ let dispatch ?traces ?logger ?(model = "unconfigured") ?models ?levels ?decide
           (fun store -> Traces.capture ~mission:args.P.mission ~now:(Traces.now store))
           traces
       in
-      let on_page ~url ~kind = Option.iter (fun c -> Traces.page c ~url ~kind) capture in
+      let on_page ~url ~kind ~pattern =
+        Option.iter (fun c -> Traces.page c ~url ~kind ~pattern) capture
+      in
       let on_step step = Option.iter (fun c -> Traces.step c step) capture in
       let keep outcome =
         match (traces, capture) with

@@ -32,6 +32,10 @@ type handler = {
           loop observes and decides again. *)
 }
 
+type page_label = { kind : string; source : string; url : string }
+(** kind-ir9l: what the operator level shows JEV. [url] replaces the raw page URL in the
+    playbook-less lane; [kind] and [source] are recorded on the operator state. *)
+
 val run :
   ?on_step:(Protocol.step -> unit) ->
   ?validate:(observation -> (unit, Protocol.error) result) ->
@@ -43,6 +47,7 @@ val run :
   ?scripts:(observation -> Jev_request.offered_script list) ->
   ?run_script:(url:string -> string -> (Jev_request.script_effect, Protocol.error) result) ->
   ?reached:(start:observation -> observation -> bool) ->
+  ?label:(url:string -> title:string -> text:string -> page_label) ->
   handler:handler ->
   now:(unit -> float) ->
   model:string ->

@@ -33,8 +33,11 @@ and exit 65. No service, browser, or model is needed.
 ## Safe typed files
 
 The version-1 derived Protocol.drive_trace projection contains time, site, mission,
-outcome, cost (number or null), duration_ms, model_calls, page_kind_path, compiled,
-procedures, steps, final (URL/title or null), and optional error_code. Procedures
+outcome, cost (number or null), duration_ms, model_calls, page_kind_path,
+inferred_pages, compiled, procedures, steps, final (URL/title or null), and optional
+error_code. inferred_pages is the session mapping: each `{name, url_pattern}` is a
+generalized URL and the name it was given, first-seen. A missing inferred_pages on an
+older file decodes as empty. Procedures
 have n, procedure, outcome, planned, and safe steps. Steps have n, operation,
 optional target {role,label}, optional text, operations and targets probability
 lists ({key,probability}), after {url,title}, and elapsed_ms.
@@ -44,8 +47,12 @@ Password-field text is exactly [password]. Page text, tab/snapshot handles,
 cookies, raw model state, script records, and error messages/details are not saved.
 Mission, URLs, titles, and target labels are retained: do not put secrets in the
 mission. Non-finite probabilities and undeclared operation keys are discarded.
-Only declared playbook page kinds enter page_kind_path; unchanged observations
-do not add duplicates. On-the-fly runs have no synthesized kinds until L52.
+A selected playbook's declared kind wins over an inferred one and is not added to
+inferred_pages. Where no declared kind matches, the inferred name enters
+page_kind_path and the generalized pattern enters inferred_pages. An installed book
+that was not selected does not supply declared kinds. Unchanged observations do not
+add duplicates. Inferred kinds are not written into a playbook; the compiler proposes
+pages from inferred_pages.
 Persistence completes before reply encoding, so trace_path names an existing
 file. Errors expose error.detail.trace_path. Write/prune failures are logged and
 never change the drive outcome; a failed write omits the path.
