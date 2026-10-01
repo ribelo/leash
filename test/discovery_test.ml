@@ -204,6 +204,17 @@ let human_and_popup () =
         ~url:"https://popup.example/" ~title:"Popup" ();
       announce fake ~kind:"service_worker" ~id:"worker" ~url:"https://worker.example/" ();
       barrier fake tabs "first";
+      (* field-drpx: an attached popup is resumed, or Chrome leaves it blank and paused
+         ("Debugger paused in another tab", the Google sign-in popup of 2026-10-01). *)
+      let rec resumed n =
+        if received_in fake "Runtime.runIfWaitingForDebugger" "popup-session" <> [] then
+          true
+        else if n = 0 then false
+        else (
+          Eio.Fiber.yield ();
+          resumed (n - 1))
+      in
+      Alcotest.(check bool) "field-drpx the attached popup is resumed" true (resumed 1000);
       List.iter
         (fun url ->
           let row = row_of_url tabs url in

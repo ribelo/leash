@@ -2881,6 +2881,26 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Ox.Duration.minutes 30)
                             Option.bind (member "params" json) (fun params ->
                                 Option.bind (member "targetInfo" params) (text "targetId"))
                           in
+                          (* field-drpx: a popup opened by a page (Google's "Continue with
+                             Google") is auto-attached paused — Chrome 152 shows "Debugger
+                             paused in another tab" and the popup stays blank — even though
+                             waitForDebuggerOnStart is false and the event says
+                             waitingForDebugger:false. Resuming is a no-op for a target that
+                             is running, so every attached target is resumed, off this event
+                             fiber. Verified live 2026-10-01: the popup reached
+                             accounts.google.com only with this. *)
+                          (match (text "method" json, member "params" json) with
+                          | Some "Target.attachedToTarget", Some params -> (
+                              match text "sessionId" params with
+                              | Some session ->
+                                  Eio.Fiber.fork_daemon ~sw (fun () ->
+                                      ignore
+                                        (cdp_call ~deadline:(Ox.Duration.seconds 5)
+                                           ~session cdp "Runtime.runIfWaitingForDebugger"
+                                           (obj []));
+                                      `Stop_daemon)
+                              | None -> ())
+                          | _ -> ());
                           if announced = None || announced <> !setup_target then
                             inspect t json;
                           notifications ()
