@@ -13,9 +13,9 @@ This skill supplies operating guidance, not permission to submit forms, buy, sen
 
 Run `leash status`, then `leash new URL --label TEXT` for a disposable agent tab. Keep the returned `tab` handle: it is the capability, so anyone you intentionally share it with can use it. There is no caller identity or session environment default. Never invent a handle or expose one in a public artifact.
 
-`leash list` shows every tab without handles. To take an existing human tab with permission, select exactly one match using `leash take --url PREFIX`, `--title TEXT`, or `--label TEXT`. A label is display metadata, not authorization. A taken tab returns `taken`: ask the holder to share the handle rather than attempting another take.
+`leash list` shows every tab without handles. To take an existing human tab with permission, select exactly one match using `leash take --url PREFIX`, `--title TEXT`, or `--label TEXT`. A label is display metadata, not authorization. A taken tab returns `taken`: ask the holder to share the handle rather than attempting another take. Take only a tab the human told you to take; Leash does not ask or notify them. A taken tab is an agent tab from then on and closes after 30 idle minutes; tell the human when you leave one open for them. Human tabs often have no label, so match on URL or title.
 
-agent tabs close after 30 idle minutes; your tabs are never closed unless an agent takes one
+agent tabs close after 30 idle minutes; human tabs are never closed unless an agent takes one
 
 ```sh
 leash status

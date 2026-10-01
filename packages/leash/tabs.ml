@@ -1168,7 +1168,38 @@ let handoff t ~reason ~timeout_s handle =
           answer ()))
 
 (* hand-x3hi: list is for finding. Every live tab, never a handle. *)
+(* hand-x3hi: a human types a URL or follows a link without Leash watching, and Chrome
+   pushes only the tab-strip title (the formatted URL) for that. [list] and [take] find
+   tabs by title, so they read every target's current title and URL first (one bounded
+   call); a failure keeps the last known values. *)
+let refresh_titles t =
+  match ready t with
+  | Error _ -> ()
+  | Ok cdp -> (
+      match
+        cdp_call ~deadline:(Ox.Duration.seconds 2) cdp "Target.getTargets" (obj [])
+      with
+      | Error _ -> ()
+      | Ok result -> (
+          match member "targetInfos" result with
+          | Some (`List infos) ->
+              List.iter
+                (fun info ->
+                  match text "targetId" info with
+                  | None -> ()
+                  | Some id -> (
+                      match tab_of_target t id with
+                      | None -> ()
+                      | Some tab ->
+                          Option.iter (fun url -> tab.url <- url) (text "url" info);
+                          Option.iter
+                            (fun title -> if title <> "" then tab.title <- title)
+                            (text "title" info)))
+                infos
+          | _ -> ()))
+
 let list t =
+  refresh_titles t;
   {
     P.tabs =
       List.map (listing_of t)
@@ -1177,6 +1208,7 @@ let list t =
 
 (* hand-okk8 hand-gjqy: finding a tab is not authorization to act on it. *)
 let take t (args : P.take_args) =
+  refresh_titles t;
   let selectors =
     List.filter_map Fun.id
       [

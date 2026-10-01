@@ -71,7 +71,7 @@ let top_man =
       "Handles are secret capabilities; save the handle from leash new or leash take. \
        leash list never reveals handles.";
     `P
-      "agent tabs close after 30 idle minutes; your tabs are never closed unless an \
+      "agent tabs close after 30 idle minutes; human tabs are never closed unless an \
        agent takes one";
     `P "leash status";
     `P "leash list --table";

@@ -876,7 +876,7 @@ let commands ~caps ~send ~base ~run_owned =
         examples)
     [
       ( "new",
-        "Open an agent tab. agent tabs close after 30 idle minutes; your tabs are never \
+        "Open an agent tab. agent tabs close after 30 idle minutes; human tabs are never \
          closed unless an agent takes one",
         [ pos_opt "url" "URL" ],
         [ opt "label" Str "TEXT" "Free label shown by list. It is not a capability." ],
@@ -890,13 +890,15 @@ let commands ~caps ~send ~base ~run_owned =
         [],
         [ "leash downloads t_9xk" ] );
       ( "list",
-        "List all tabs without handles; agent tabs close after 30 idle minutes; your \
+        "List all tabs without handles; agent tabs close after 30 idle minutes; human \
          tabs are never closed unless an agent takes one",
         [],
         [ table_opt ],
         [ "leash list"; "leash list --table" ] );
       ( "take",
-        "Take exactly one human tab matching one selector and return its handle.",
+        "Take exactly one human tab matching one selector and return its handle. Take \
+         only a tab the human told you to take; Leash does not ask or notify them. From \
+         then on it is an agent tab: it closes after 30 idle minutes like any other.",
         [],
         [
           opt "url" Str "PREFIX" "Case-insensitive URL prefix.";
@@ -1089,7 +1091,9 @@ let commands ~caps ~send ~base ~run_owned =
         [ opt "text" Str "TEXT" "Answer text for a prompt." ],
         [ "leash dialog t_9xk accept" ] );
       ( "handoff",
-        "Hand the tab to the human and block until resume or timeout.",
+        "Hand the tab to the human and block until resume or timeout. The human gets a \
+         notification that stays until they click Done; run this as a background job and \
+         keep working. Actions on the tab answer with-human until then.",
         [ pos "tab" "TAB"; pos "reason" "REASON" ],
         [ opt "timeout_s" Int "S" "Seconds before the handoff ends (default 900)." ],
         [ "leash handoff t_9xk 'The captcha needs you'" ] );
@@ -1543,7 +1547,7 @@ let help_command ~caps =
           "Handles are secret capabilities: save the handle returned by leash new or \
            leash take, and pass it to tab commands. Share that handle only when you \
            intend to share access. leash list never reveals handles.\n\
-           agent tabs close after 30 idle minutes; your tabs are never closed unless an \
+           agent tabs close after 30 idle minutes; human tabs are never closed unless an \
            agent takes one";
         0
     | Some "errors" ->
@@ -1590,7 +1594,7 @@ let orientation env () =
      Service: %s\n\
      Start: systemctl --user start leash\n\
      Begin: leash status; leash new https://example.com; leash snap TAB\n\
-     agent tabs close after 30 idle minutes; your tabs are never closed unless an agent \
+     agent tabs close after 30 idle minutes; human tabs are never closed unless an agent \
      takes one\n\
      Help: leash --help; leash COMMAND --help; leash help errors\n"
     state;

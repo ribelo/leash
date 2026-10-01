@@ -91,7 +91,7 @@ let top_help path =
       "SERVICE";
       "SKILL";
       "take";
-      "your tabs are never closed unless an agent takes one";
+      "human tabs are never closed unless an agent takes one";
     ];
   print_endline
     "top-level help groups tabs, observe, act, network/debug, missions, playbooks, \
@@ -326,7 +326,7 @@ let () =
         |> String.concat " "
       in
       let rule =
-        "agent tabs close after 30 idle minutes; your tabs are never closed unless an \
+        "agent tabs close after 30 idle minutes; human tabs are never closed unless an \
          agent takes one"
       in
       if not (contains text rule) then failwith "hand-3v5u list help omits the tab rule";

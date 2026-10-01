@@ -45,11 +45,11 @@ A tab handle is the only credential. Share it intentionally; the CLI neither rea
 | `leash take --label TEXT` | Match the whole label, case-insensitively; labels need not be unique. |
 | `leash close TAB` | Close a tab for which you have the handle, unless it is handed to the human. |
 
-`ambiguous` returns handle-free matches; narrow the selector. `no-match` asks you to check the listing. `taken` means a live capability already exists: ask the holder for it. A human hold refuses take. Chrome UI tabs and page popups are human and have no capability until taken; a popup never inherits its opener capability. Taking a human tab changes its origin permanently to agent.
+`ambiguous` returns handle-free matches; narrow the selector. `no-match` asks you to check the listing. `taken` means a live capability already exists: ask the holder for it. A human hold refuses take. Chrome UI tabs and page popups are human and have no capability until taken; a popup never inherits its opener capability. Taking a human tab changes its origin permanently to agent, which starts its 30-minute idle clock (`closes_in_s` in `list`); any command on the handle resets it. `list` and `take` read each tab's current title first, so a tab the human navigated shows its page title.
 
 ### Expiry and lost handles
 
-agent tabs close after 30 idle minutes; your tabs are never closed unless an agent takes one
+agent tabs close after 30 idle minutes; human tabs are never closed unless an agent takes one
 
 Agent tabs close in a single stage after `expiry.idle_s` (default 1800 seconds). Handle use resets idleness; handoff pauses expiry and resume, timeout, or cancellation restarts the clock. `closes_in_s` is null for human or handed-off tabs. There is no force-close escape hatch.
 

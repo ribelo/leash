@@ -7,7 +7,7 @@ Help is offline and short first contact is not the full manual.
   Service: unreachable
   Start: systemctl --user start leash
   Begin: leash status; leash new https://example.com; leash snap TAB
-  agent tabs close after 30 idle minutes; your tabs are never closed unless an agent takes one
+  agent tabs close after 30 idle minutes; human tabs are never closed unless an agent takes one
   Help: leash --help; leash COMMAND --help; leash help errors
   $ test ! -s err
   $ leash --help=plain >help 2>err
@@ -23,7 +23,7 @@ Help is offline and short first contact is not the full manual.
   $ ./daily_cli_fixture.exe list-help help; test ! -s err
   hand-3v5u list help states the tab rule and never shows handles
   $ leash help handles >handles 2>err; test ! -s err
-  $ grep -q 'agent tabs close after 30 idle minutes; your tabs are never closed unless an agent takes one' handles
+  $ grep -q 'agent tabs close after 30 idle minutes; human tabs are never closed unless an agent takes one' handles
   $ leash help errors >errors 2>err
   $ ./daily_cli_fixture.exe error-help errors; test ! -s err
   all 38 error codes, exit classes, meanings and hints are discoverable
