@@ -32,8 +32,8 @@ decodes to the defaults it documents.
 | `models.jev_model` | `"typesafe/jev-1.13-20260917"` | The pinned decision model; a reply naming another model is refused (drive-e7oi). |
 | `models.chat_base_url` | `"https://openrouter.ai/api/v1"` | The text helper's base url (drive-ls3c). |
 | `models.text_model` | `"inception/mercury-2.5"` | The text helper's model (drive-ls3c). |
-| `handoff.focus_command` | `niri msg action focus-window --id {window_id}` | The argv template a handoff runs to raise the window; empty turns it off (hand-phof). |
-| `handoff.notify_command` | `notify-send --action done=Done {reason}` | The argv template for the notification whose Done action resumes; empty turns it off (hand-phof). |
+| `handoff.focus_command` | empty | The argv template a handoff runs to raise the window; off by default because a handoff must not take focus (daily-n7on, operator 2026-10-01). For niri: `["niri", "msg", "action", "focus-window", "--id", "{window_id}"]` (hand-phof). |
+| `handoff.notify_command` | `notify-send --urgency=critical --app-name=Leash --action done=Done "Leash needs you" {reason}` | The argv template for the notification whose Done action resumes; critical so the daemon keeps it until answered; empty turns it off (hand-phof). |
 
 Environment:
 

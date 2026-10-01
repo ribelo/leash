@@ -274,10 +274,23 @@ let default_models =
     planner_timeout = default_planner_timeout;
   }
 
-let default_focus_command =
-  [ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
+(* daily-n7on, operator 2026-10-01: a handoff must not take focus — the human is in the
+   middle of something else. Raising the window is opt-in (for niri:
+   ["niri", "msg", "action", "focus-window", "--id", "{window_id}"]). The notification is
+   critical so a daemon keeps it until it is answered; at normal urgency AGS expired it
+   after five seconds, before Done could be clicked. *)
+let default_focus_command = []
 
-let default_notify_command = [ "notify-send"; "--action"; "done=Done"; "{reason}" ]
+let default_notify_command =
+  [
+    "notify-send";
+    "--urgency=critical";
+    "--app-name=Leash";
+    "--action";
+    "done=Done";
+    "Leash needs you";
+    "{reason}";
+  ]
 
 type handoff = {
   focus_command : string list; [@json.default default_focus_command]

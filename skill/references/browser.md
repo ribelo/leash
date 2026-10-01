@@ -112,7 +112,7 @@ For login, CAPTCHA, MFA, or a choice only the human can make, explain what is ne
 leash handoff "$TAB" 'Please finish sign-in, then choose Done'   --timeout-s 900 --owner "$OWNER"
 ```
 
-This call blocks, activates the live tab, and attempts desktop focus/notification. Keep it running while the human acts; in a harness, use a tracked background job so you can communicate the request. Do not wait for the blocking call before telling the human what to do. While `state: with_human`, tab reads/actions are refused, including yours. `list --all` still shows its reason.
+This call blocks, selects the live tab inside Leash's Chrome, and sends the human a notification that stays until they click Done; it does not take their focus (a raise command is opt-in config). Keep it running while the human acts; in a harness, use a tracked background job so you can communicate the request. Do not wait for the blocking call before telling the human what to do. While `state: with_human`, tab reads/actions are refused, including yours. `list --all` still shows its reason.
 
 The notification's Done action or a second client can resume it:
 

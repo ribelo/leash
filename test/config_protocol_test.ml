@@ -902,12 +902,19 @@ let handoff_commands () =
     | Error (`Config message) -> Alcotest.fail message
   in
   Alcotest.(check (list string))
-    "hand-04rb the default focus command is the spec's niri one"
-    [ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
+    "daily-n7on a handoff takes no focus by default (operator 2026-10-01)" []
     value.C.handoff.focus_command;
   Alcotest.(check (list string))
-    "hand-phof the default notification is notify-send's Done action, with the reason"
-    [ "notify-send"; "--action"; "done=Done"; "{reason}" ]
+    "daily-n7on the default notification is critical, so it waits for Done"
+    [
+      "notify-send";
+      "--urgency=critical";
+      "--app-name=Leash";
+      "--action";
+      "done=Done";
+      "Leash needs you";
+      "{reason}";
+    ]
     value.C.handoff.notify_command;
   let configured =
     base
