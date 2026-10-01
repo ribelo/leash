@@ -164,7 +164,7 @@ The operator read the help as a newcomer (2026-10-01): `owner` was unexplained b
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
 | L49 | **Handles are capabilities.** No owner anywhere; `claim`/`release`/`not-owner`/`already-owned` removed; `list` shows no handles; `new --label`; `take` mints a handle for one matching human tab and flips its origin; one tab rule (agent tabs close idle, human tabs never until taken); handoff keyed on the handle; ADR-0005 superseded; outcome table; fresh-agent run. | hand-scaz, hand-qos2, hand-mb9s, hand-0wo8, hand-x3hi, hand-ryxz, hand-okk8, hand-gjqy, hand-k1ag, hand-0ibq, hand-ihcg, hand-3v5u, hand-fr87, hand-0o28, hand-0y04, hand-qy26, hand-oyzl, hand-7m8x, hand-amp5, hand-w85z, hand-s4cq, hand-iyyk | — | [x] |
-| L50 | **The help is the documentation.** `leash help` topics embedded from `docs/help/`, the skill's references generated from the same files, every option documented, first-run orientation, nothing harness-specific, a fresh agent with only the help writes and runs a playbook. | hdoc-ztwo, hdoc-8c12, hdoc-jh7u, hdoc-05q1, hdoc-socc, hdoc-vh8m, hdoc-fixp, hdoc-6vvm, hdoc-65jx, hdoc-2264, hdoc-vqj7, hdoc-em5c | L49 | [ ] |
+| L50 | **The help is the documentation.** `leash help` topics embedded from `docs/help/`, the skill's references generated from the same files, every option documented, first-run orientation, nothing harness-specific, a fresh agent with only the help writes and runs a playbook. | hdoc-ztwo, hdoc-8c12, hdoc-jh7u, hdoc-05q1, hdoc-socc, hdoc-vh8m, hdoc-fixp, hdoc-6vvm, hdoc-65jx, hdoc-2264, hdoc-vqj7, hdoc-em5c | L49 | [x] |
 
 Then field reports (`docs/research/field/`) shape what follows.
 

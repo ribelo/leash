@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 11
 ---
 
@@ -41,3 +41,7 @@ One set of Markdown topic files in the repository, embedded at build and rendere
 ## Out of Scope
 
 Man pages beyond Cmdliner's; localisation.
+
+## Delivered, 2026-10-01
+
+Leash bed8f66 (topics, embedding, generated skill references, option docs, orientation) and 56e48fd (gap fixes). Verification (hdoc-vqj7): a fresh subagent_claude_sonnet with no skill, only `leash`, `--help` and `leash help`, wrote, installed, checked, tested and drove an automationexercise.com playbook: `done`, all procedures verified, 18 model calls, $0.0023, ~31 s, cart independently verified ([transcript](2026-10-01-l50-fresh-transcript.md)). It listed 24 gaps; all were fixed in the topics or the code (unset-variable errors name the variable; topic descriptions; setup and environment; navigate arguments and the text helper; missing pinned arguments refused; eval syntax errors are `script-failed` with the engine's message; press synopsis; use: sub-procedures keep their parent in the trace; overlays and consent; playbook help grouping and slug rules). The upload bound became 10 GiB in the same row (operator's YouTube uploads).
