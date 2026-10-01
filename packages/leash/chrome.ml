@@ -55,6 +55,11 @@ let argv config =
     "--hide-crash-restore-bubble";
     "--remote-debugging-pipe";
     "--disable-blink-features=AutomationControlled";
+    (* daily-a341: Chrome answers that flag with an "unsupported command-line flag …
+       stability and security will suffer" infobar on every launch of the headed
+       service. --test-type is the switch Chrome's own bad-flags prompt checks to stay
+       silent; it changes nothing a page can see. *)
+    "--test-type";
     (* pbk-eyya: an agent's tab is rarely the one in front. Without these, Chrome
        throttles an occluded or background renderer to few or no frames, so a wheel
        scroll lands seconds late (or after the next observation) and three scrolls read
