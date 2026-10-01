@@ -153,6 +153,17 @@ L45 was useful but sideways: the direction is the cut-over (L44). The review fou
 
 Then **L44 closes**: skill refreshed on this machine, fresh-agent acceptance, chrome-cdp deleted with every reference, L18/L28 ticked.
 
+## Milestone 11 — a tool a newcomer can hold (`handles/01-handles.md`, `help-is-docs/01-help-is-docs.md`)
+
+The operator read the help as a newcomer (2026-10-01): `owner` was unexplained because it was a lock mislabelled as a name, tied to one harness; the playbook format lived only in the skill. ADR-0010 replaces ownership with the handle as capability; the help becomes the documentation.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L49 | **Handles are capabilities.** No owner anywhere; `claim`/`release`/`not-owner`/`already-owned` removed; `list` shows no handles; `new --label`; `take` mints a handle for one matching human tab and flips its origin; one tab rule (agent tabs close idle, human tabs never until taken); handoff keyed on the handle; ADR-0005 superseded; outcome table; fresh-agent run. | hand-scaz, hand-qos2, hand-mb9s, hand-0wo8, hand-x3hi, hand-ryxz, hand-okk8, hand-gjqy, hand-k1ag, hand-0ibq, hand-ihcg, hand-3v5u, hand-fr87, hand-0o28, hand-0y04, hand-qy26, hand-oyzl, hand-7m8x, hand-amp5, hand-w85z, hand-s4cq, hand-iyyk | — | [ ] |
+| L50 | **The help is the documentation.** `leash help` topics embedded from `docs/help/`, the skill's references generated from the same files, every option documented, first-run orientation, nothing harness-specific, a fresh agent with only the help writes and runs a playbook. | hdoc-ztwo, hdoc-8c12, hdoc-jh7u, hdoc-05q1, hdoc-socc, hdoc-vh8m, hdoc-fixp, hdoc-6vvm, hdoc-65jx, hdoc-2264, hdoc-vqj7, hdoc-em5c | L49 | [ ] |
+
+Then field reports (`docs/research/field/`) shape what follows.
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
