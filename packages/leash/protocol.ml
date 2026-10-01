@@ -432,9 +432,10 @@ module Error_code = struct
           "shrink the text, expression, argument, or files under the bound and retry"
     | Script_failed ->
         info 65
-          "a playbook script threw, rejected, or could not be compiled; message carries \
-           what it threw"
-          "read message; fix the script or the page, then `leash playbook test`"
+          "an eval expression or playbook script threw, rejected, or could not be \
+           compiled; message carries the engine error"
+          "read message; fix the expression, script, or page; `leash help scripts` \
+           explains function bodies and `leash playbook test` tests installed scripts"
     | Script_invalid ->
         info 65
           "a playbook script's result does not fit its returns; message is the first \
@@ -444,8 +445,8 @@ module Error_code = struct
     | Playbook_invalid ->
         info 65
           "a playbook failed validation (load, check or accept); message names the rule"
-          "fix the playbook as the message says, then `leash playbook check ./DIR`; the \
-           skill's authoring reference lists the rules"
+          "fix the playbook as the message says, then `leash playbook check ./DIR`; \
+           `leash help playbooks` lists the rules"
     | Internal ->
         info 70 "a defect; the message carries no page content"
           "a defect, not a page failure; retry once, then report the message"
@@ -686,12 +687,20 @@ type debug_entry = {
 type after = { url : string; title : string } [@@deriving yojson]
 type probabilities = { op : Yojson.Safe.t; target : Yojson.Safe.t } [@@deriving yojson]
 
+(* trace-qe8c trace-iqqz trace-lg58: deliberately capability-free projections. *)
+type trace_target = {
+  target_role : string; [@json.key "role"]
+  target_label : string; [@json.key "label"]
+}
+[@@deriving yojson]
+
 type step = {
   n : int;
   snapshot : Snapshot_id.t;
   operation : Operation.t;
   index : int option; [@json.null]
   probabilities : probabilities;
+  target : trace_target option;
   text : string option;
   after : after;
   elapsed_ms : int;
@@ -1156,8 +1165,13 @@ type run_result = {
   output_kinds : string list;
   final : snapshot;
   reason : string option;
+  trace_path : string option;
 }
 [@@deriving yojson]
+
+module Trace = Trace
+
+type drive_trace = Trace.t [@@deriving yojson]
 
 (* ---------- Errors and replies ---------- *)
 

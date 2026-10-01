@@ -1039,6 +1039,7 @@ let fallback_mission_expectations () =
         n = 1;
         snapshot = snapshot_id;
         operation = ok (Operation.of_string "click");
+        target = Some P.{ target_role = "button"; target_label = "Next" };
         index = Some 0;
         probabilities = { op = `Assoc []; target = `Assoc [] };
         text = None;
@@ -1524,6 +1525,35 @@ let script_step () =
       Alcotest.(check (option string)) "extr-p152 no error" None call.P.error
   | _ -> Alcotest.fail "extr-8o1h the trace lists no script call"
 
+(* hdoc-vqj7: a successful nested collection must not finish the mission before
+   its view-cart parent is verified and recorded. *)
+let nested_collection_trace () =
+  let loaded = script_book () in
+  let parent =
+    procedure ~slug:"view-cart" ~description:"View the cart." ~expect:[ "the page is a" ]
+      [ goal "Open the cart."; use "collect" ]
+  in
+  let loaded =
+    {
+      loaded with
+      B.playbook =
+        { loaded.B.playbook with B.procedures = parent :: loaded.B.playbook.B.procedures };
+    }
+  in
+  let h = harness ~procs:[ "view-cart" ] () in
+  h.scripts <- [ Ok (collected ()) ];
+  let result = ran (run ~installed:[ loaded ] h (args ~expect:[ "the page is a" ] ())) in
+  check_status "hdoc-vqj7 nested mission completes" "done" result;
+  Alcotest.(check (list string))
+    "hdoc-vqj7 child then parent" [ "collect"; "view-cart" ]
+    (List.map (fun (entry : P.run_procedure) -> entry.slug) result.P.procedures);
+  Alcotest.(check bool)
+    "hdoc-vqj7 both procedures verified" true
+    (List.for_all
+       (fun (entry : P.run_procedure) -> entry.outcome = "verified")
+       result.P.procedures);
+  Alcotest.(check int) "hdoc-vqj7 collection kept" 2 result.P.collected
+
 (* extr-8o1h: a rejected script — threw, wrong shape, too large — fails the attempt; the
    procedure is replayed once like a failed expectation and then fails with the reason. *)
 let script_rejected () =
@@ -1843,6 +1873,7 @@ let l45_progress () =
         n = 1;
         snapshot = snapshot_id;
         operation = ok (Operation.of_string "click");
+        target = Some P.{ target_role = "button"; target_label = "Next" };
         index = Some 0;
         text = None;
         elapsed_ms = 0;
@@ -2263,6 +2294,8 @@ let () =
             delayed_consent_recovery;
           Alcotest.test_case "run-4j1v run-snk4 Added! modal" `Quick added_modal;
           Alcotest.test_case "run-4mzm recorded answers" `Quick recorded;
+          Alcotest.test_case "hdoc-vqj7 nested collection parent trace" `Quick
+            nested_collection_trace;
           Alcotest.test_case "ncaps-mygj verified mission needs no next model" `Quick
             verified_mission_finishes_without_model;
           Alcotest.test_case "ncaps-mygj unchanged verified procedure is not replayed"

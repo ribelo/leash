@@ -277,7 +277,15 @@ let missing_header_members () =
 
 let path_checks_agree () =
   let getenv _ = None in
-  let json = `Assoc [] in
+  let json =
+    `Assoc
+      [
+        ( "skill",
+          `Assoc
+            [ ("roots", `List [ `String "$TEAM_SKILLS/reference"; `String "~/skills" ]) ]
+        );
+      ]
+  in
   let config =
     match C.t_of_yojson json with
     | Ok config -> C.env ~getenv config
@@ -296,8 +304,30 @@ let path_checks_agree () =
       in
       Alcotest.(check (list string))
         "binary, then socket, then profile"
-        [ "/chrome/binary"; "/control/socket"; "/chrome/profile_dir" ]
+        [
+          "/chrome/binary";
+          "/control/socket";
+          "/chrome/profile_dir";
+          "/skill/roots/0";
+          "/skill/roots/1";
+        ]
         (pointers door);
+      (* hdoc-vqj7: fields alone are not enough to repair an unset environment. *)
+      List.iter
+        (fun (pointer, variable) ->
+          let issue =
+            List.find (fun issue -> issue.Ox_app.Config.pointer = pointer) door
+          in
+          Alcotest.(check string)
+            ("hdoc-vqj7 " ^ variable)
+            ("the environment variable " ^ variable ^ " in this path is unset")
+            issue.Ox_app.Config.message)
+        [
+          ("/control/socket", "XDG_RUNTIME_DIR");
+          ("/chrome/profile_dir", "XDG_DATA_HOME");
+          ("/skill/roots/0", "TEAM_SKILLS");
+          ("/skill/roots/1", "HOME");
+        ];
       let pair issue = (issue.Ox_app.Config.pointer, issue.Ox_app.Config.message) in
       Alcotest.(check (list (pair string string)))
         "decode_all matches validate_paths" (List.map pair door) (List.map pair decoded))

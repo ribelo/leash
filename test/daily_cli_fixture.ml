@@ -119,9 +119,26 @@ let help_topics path =
   List.iter
     (fun topic ->
       if not (contains text topic) then failwith ("help list missing " ^ topic))
-    [ "handles"; "playbooks"; "authoring"; "expectations"; "drive"; "scripts"; "errors" ];
+    [
+      "handles";
+      "playbooks";
+      "authoring";
+      "expectations";
+      "drive";
+      "scripts";
+      "errors";
+      "traces";
+    ];
+  (* hdoc-vqj7: each offline topic has a useful one-line description. *)
+  String.split_on_char '\n' text
+  |> List.filter (fun line -> String.trim line <> "")
+  |> List.iter (fun line ->
+      match String.split_on_char '\t' line with
+      | [ _topic; description ] when String.length description > 20 -> ()
+      | _ -> failwith ("hdoc-vqj7 topic lacks a description: " ^ line));
   print_endline
-    "help lists handles, playbooks, authoring, expectations, drive, scripts, errors"
+    "help lists handles, playbooks, authoring, expectations, drive, scripts, errors, \
+     traces"
 
 let run_leash args =
   let cmd = Filename.quote_command "leash" args in

@@ -466,6 +466,62 @@ let tab_of json =
   | Ok handle -> handle
   | Error e -> Alcotest.fail e
 
+(* hdoc-vqj7: caller syntax/runtime errors retain their engine message; promises
+   are awaited. Exercise the real CDP reply boundary, not just a reading stub. *)
+let eval_diagnostics () =
+  rig (fun ~env:_ ~sw:_ ~tabs ~fake ->
+      Fake.on_method fake "Runtime.evaluate" (fun _ ->
+          obj [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]);
+      let send command =
+        let wire = P.encode_request { command } |> Yojson.Safe.to_string in
+        match
+          P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire))
+        with
+        | Ok reply -> reply
+        | Error why -> Alcotest.fail why
+      in
+      let tab =
+        match send (P.New { url = None; label = None }) with
+        | P.Success json -> tab_of json
+        | P.Failure e -> Alcotest.fail e.message
+      in
+      let evaluate expression =
+        send (P.Eval { tab; expression; argument = None; index = None; snapshot = None })
+      in
+      let refused expected = function
+        | P.Success _ -> Alcotest.fail "hdoc-vqj7 eval unexpectedly succeeded"
+        | P.Failure e ->
+            Alcotest.(check string)
+              "hdoc-vqj7 user script classification" "script-failed"
+              (P.Error_code.to_string e.code);
+            Alcotest.(check string) "hdoc-vqj7 engine diagnostic" expected e.message
+      in
+      Fake.on_failure fake "Runtime.callFunctionOn" (fun _ ->
+          Some (-32000, "SyntaxError: await is only valid in async functions"));
+      refused "SyntaxError: await is only valid in async functions"
+        (evaluate "await Promise.resolve(1)");
+      Fake.on_failure fake "Runtime.callFunctionOn" (fun _ -> None);
+      Fake.on_method fake "Runtime.callFunctionOn" (fun _ ->
+          obj
+            [
+              ( "exceptionDetails",
+                obj
+                  [
+                    ("text", str "Uncaught (in promise)");
+                    ("exception", obj [ ("description", str "Error: rejected") ]);
+                  ] );
+            ]);
+      refused "Error: rejected" (evaluate "return Promise.reject(new Error('rejected'))");
+      Fake.on_method fake "Runtime.callFunctionOn" (fun request ->
+          Alcotest.(check bool)
+            "hdoc-vqj7 await returned promise" true
+            (get "awaitPromise" (get "params" request) = `Bool true);
+          obj [ ("result", obj [ ("value", `Int 7) ]) ]);
+      match evaluate "return Promise.resolve(7)" with
+      | P.Success json ->
+          Alcotest.(check bool) "hdoc-vqj7 resolved value" true (get "value" json = `Int 7)
+      | P.Failure e -> Alcotest.fail e.message)
+
 (* tab-gjo0: an evaluated [window.open] is answered only once the popup is gone
    (docs/cdp-shapes.md, L10), so [eval] settles the way a trusted input does: a new target
    with this tab as its opener ends the wait with a null value and the popup adopted, and
@@ -705,6 +761,8 @@ let () =
       ( "operations",
         [
           Alcotest.test_case "eval limits" `Quick eval_bounds;
+          Alcotest.test_case "hdoc-vqj7 eval diagnostics and promise" `Quick
+            eval_diagnostics;
           Alcotest.test_case "text and AND wait" `Quick (fun () ->
               Ox_test.run (fun _ _ -> text_and_wait ()));
           Alcotest.test_case "indexed text and disappearance" `Quick (fun () ->

@@ -4,6 +4,18 @@ The Leash service listens on the `control.socket` path its configuration names â
 
 Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec. Meaning of each field and error is `leash help`, not this file: [handles](help/handles.md) (tab, handle, origin, label, idle, take), [playbooks](help/playbooks.md) (playbook JSON), [authoring](help/authoring.md) (how to write one), [expectations](help/expectations.md) (checker sentences), [drive](help/drive.md) (mission, lanes, trace), [scripts](help/scripts.md) (script, pages, returns, args), [errors](help/errors.md) (every code).
 
+## Durable drive traces (L51)
+
+A successful trace write adds `trace_path` to the drive result; an error reply
+adds `error.detail.trace_path`. The path exists before reply encoding. Disabled
+tracing or a failed write omits the field, and persistence failures never replace
+the drive outcome. `Protocol.drive_trace` is the version-1 derived safe durable
+projection, not the live result type, to exclude handles, page text, records, and
+raw state. It records headers, declared page kinds, procedures, redacted steps,
+URL/title, and a `compiled` marker (default false). See [traces](help/traces.md)
+for the exact schema and local `traces list/show/prune` commands; those commands
+do not introduce wire verbs or contact the service.
+
 ## Envelope
 
 Request:
@@ -122,7 +134,7 @@ Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [-
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string}` | [errors](help/errors.md) |
+| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string}` | [errors](help/errors.md) |
 
 `--url` is `start_url`: an optional explicit `http://` or `https://` URL with no userinfo. It opens a drive-owned tab; it does not replace an already populated `--tab`. The CLI rejects a bad scheme, `about:blank`, userinfo, or a non-positive `--max-steps` before it connects, as `usage` (64), and the message names a correct example. `--max-steps` is the on-the-fly executed-action cap (default 60, omitted on the wire when the caller accepts the default); the prediction cap is twice that value, including discarded stale decisions. `--max-procedures` is the playbook-lane cap (default 40). `--deadline-s` is the whole-mission budget (default 900). All three must be positive when present.
 
@@ -600,9 +612,9 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry | [errors](help/errors.md) |
 | `model-timeout` | 75 | a model call exceeded its per-call deadline | the model provider timed out; retry, or raise models.<kind>_timeout | [errors](help/errors.md) |
 | `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry | [errors](help/errors.md) |
-| `script-failed` | 65 | a playbook script threw, rejected, or could not be compiled; message carries what it threw | read message; fix the script or the page, then `leash playbook test` | [errors](help/errors.md) |
+| `script-failed` | 65 | an eval expression or playbook script threw, rejected, or could not be compiled; message carries the engine error | read message; fix the expression, script, or page; `leash help scripts` explains function bodies and `leash playbook test` tests installed scripts | [errors](help/errors.md) |
 | `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns | [errors](help/errors.md) |
-| `playbook-invalid` | 65 | a playbook failed validation (load, check or accept); message names the rule | fix the playbook as the message says, then `leash playbook check ./DIR`; the skill's authoring reference lists the rules | [errors](help/errors.md) |
+| `playbook-invalid` | 65 | a playbook failed validation (load, check or accept); message names the rule | fix the playbook as the message says, then `leash playbook check ./DIR`; `leash help playbooks` lists the rules | [errors](help/errors.md) |
 | `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message | [errors](help/errors.md) |
 | `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket | [errors](help/errors.md) |
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` | [errors](help/errors.md) |

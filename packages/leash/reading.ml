@@ -86,7 +86,15 @@ let call_function_with browser ~object_id ~body ~arguments =
          ])
   in
   if field "exceptionDetails" (fun x -> Ok x) reply <> None then
-    Error (internal "page evaluation threw an exception")
+    (* hdoc-vqj7: preserve the engine diagnostic for caller-owned eval bodies. *)
+    let message =
+      match nested [ "exceptionDetails"; "exception"; "description" ] D.string reply with
+      | Some message -> message
+      | None ->
+          Option.value ~default:"page evaluation threw an exception"
+            (nested [ "exceptionDetails"; "text" ] D.string reply)
+    in
+    Error (error "script-failed" message)
   else
     match remote_value reply with
     | Some x -> Ok x

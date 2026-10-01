@@ -597,7 +597,11 @@ let pos_opt field docv = { field; docv; optional = true; many = false }
 (* hard-o3za: the trailing positionals, one or more (the files `upload` sets). *)
 let pos_many field docv = { field; docv; optional = false; many = true }
 let pretty_opt = opt "pretty" Bool "" "Indent JSON output."
-let table_opt = opt "table" Bool "" "Render list and snap rows as a table."
+
+let table_opt =
+  opt "table" Bool ""
+    "Render rows as a table. For snap this omits the snapshot id; omit --table to get \
+     the id needed by row actions."
 
 let config_opt =
   opt "config" Str "FILE" "TOML configuration file the control socket is read from."
@@ -688,8 +692,18 @@ let usage_missing ~caps name specs spec =
   usage ~caps
     (Printf.sprintf "%s: %s is missing; usage: %s" name spec.docv (synopsis name specs))
 
-let command ~caps ~send ~base ~run_owned ?wire ?(man = []) name doc positionals options
-    examples =
+let command ~caps ~send ~base ~run_owned ?wire ?docs ?(man = []) name doc positionals
+    options examples =
+  (* hdoc-vqj7: parsing remains a JSON usage error, but the synopsis is not optional. *)
+  let man =
+    if name = "press" then
+      [
+        `S "SYNOPSIS";
+        `P "$(mname) $(b,press) [$(i,OPTION)]… $(i,TAB) $(i,SNAPSHOT) $(i,KEY)";
+      ]
+      @ man
+    else man
+  in
   let wire = Option.value ~default:name wire in
   let fields = List.map (fun spec -> spec.field) positionals in
   let collected =
@@ -698,7 +712,7 @@ let command ~caps ~send ~base ~run_owned ?wire ?(man = []) name doc positionals 
       (Term.const []) options
   in
   Cmd.v
-    (Cli_help.command_info ~man name ~doc ~examples)
+    (Cli_help.command_info ?docs ~man name ~doc ~examples)
     Term.(
       const (fun args opts () ->
           run_owned (fun _sw ->
@@ -722,7 +736,8 @@ let playbook_command ~caps ~send ~base ~run_owned =
   let file = Arg.(required & pos 0 (some string) None & info [] ~docv:"FILE") in
   let list =
     Cmd.v
-      (Cli_help.local_info "list" ~doc:"List validated installed site playbooks."
+      (Cli_help.local_info ~docs:"INSTALLED PLAYBOOKS" "list"
+         ~doc:"List validated installed site playbooks."
          ~examples:[ "leash playbook list" ])
       Term.(
         const (fun () () ->
@@ -740,7 +755,7 @@ let playbook_command ~caps ~send ~base ~run_owned =
   in
   let show =
     Cmd.v
-      (Cli_help.local_info "show"
+      (Cli_help.local_info ~docs:"INSTALLED PLAYBOOKS" "show"
          ~doc:
            "Show a named installed playbook: scripts, their text and resolved checkers."
          ~examples:[ "leash playbook show books.toscrape.com" ])
@@ -808,7 +823,7 @@ let playbook_command ~caps ~send ~base ~run_owned =
                     "script-invalid" "one or more playbook scripts did not compile")
     in
     Cmd.v
-      (Cli_help.command_info "check"
+      (Cli_help.command_info ~docs:"VALIDATION" "check"
          ~doc:"Check local playbook data and, for an installed NAME, compile its scripts."
          ~examples:
            [
@@ -822,7 +837,7 @@ let playbook_command ~caps ~send ~base ~run_owned =
   (* extr-mp5z: runs one script of an installed playbook on a tab's page; the service
      looks the script up by name, and nothing of it travels on the wire. *)
   let test =
-    command ~caps ~send ~base ~run_owned ~wire:"playbook_test" "test"
+    command ~caps ~send ~base ~run_owned ~wire:"playbook_test" ~docs:"VALIDATION" "test"
       "Run one playbook script on a tab and print its validated output."
       [ pos "script" "PLAYBOOK/SCRIPT" ]
       ([
@@ -831,7 +846,7 @@ let playbook_command ~caps ~send ~base ~run_owned =
        ]
       @ shared_options)
       [
-        "leash playbook test books.toscrape.com/list_books --tab t_9xk";
+        "leash playbook test books.toscrape.com/list-books --tab t_9xk";
         "leash playbook test shop/search --tab t_9xk --arg q=gpu --arg max=2000";
       ]
   in
@@ -840,7 +855,7 @@ let playbook_command ~caps ~send ~base ~run_owned =
      that accepts one, and it validates the merged playbook before it writes. *)
   let accept =
     Cmd.v
-      (Cli_help.local_info "accept"
+      (Cli_help.local_info ~docs:"AUTHORING" "accept"
          ~doc:"Merge a proposed procedure into its site's playbook."
          ~examples:[ "leash playbook accept ~/.local/state/leash/proposed/shop.json" ])
       Term.(
@@ -878,6 +893,135 @@ let snap_opts =
       "With --snap, keep rows whose role, name or value contains TEXT.";
     opt "limit" Int "N" "With --snap, at most N rows, default 120, max 1000.";
   ]
+
+(* trace-o6ld: these commands read local state and never exchange a service request. *)
+let traces_command ~caps ~run_owned =
+  let owned run = run_owned (fun _sw -> protect ~caps run) in
+  let failure why =
+    Cap_stdlib.prerr_endline ~caps ("trace error: " ^ why);
+    65
+  in
+  let store config =
+    Result.map
+      (fun (config : Leash.Config.t) ->
+        Leash.Traces.create ~caps ~retention:config.traces.retention ())
+      (load_config ~caps ~config)
+  in
+  let config =
+    Arg.(
+      value
+      & opt (some string) None
+      & info [ "config" ] ~docv:"FILE"
+          ~doc:
+            "Read retention from FILE instead of the default configuration; no service \
+             is contacted.")
+  in
+  let site =
+    Arg.(
+      value
+      & opt (some string) None
+      & info [ "site" ] ~docv:"SITE"
+          ~doc:"Select one registrable site directory, for example toscrape.com.")
+  in
+  let outcome =
+    Arg.(
+      value
+      & opt (some string) None
+      & info [ "outcome" ] ~docv:"OUTCOME"
+          ~doc:"Keep only this outcome, for example done, blocked, or failed.")
+  in
+  let dry_run =
+    Arg.(
+      value & flag
+      & info [ "dry-run" ]
+          ~doc:"Print paths retention would delete without changing files.")
+  in
+  let list =
+    Cmd.v
+      (Cli_help.local_info ~docs:"TRACES" "list"
+         ~doc:"List saved drive traces as TSV; no service, browser, or model is needed."
+         ~examples:
+           [ "leash traces list"; "leash traces list --site toscrape.com --outcome done" ])
+      Term.(
+        const (fun config site outcome () ->
+            owned (fun () ->
+                match store config with
+                | Error why -> failure why
+                | Ok store -> (
+                    match Leash.Traces.list store ?site ?outcome () with
+                    | Error why -> failure why
+                    | Ok rows ->
+                        let cell text =
+                          String.map (function '\t' | '\n' | '\r' -> ' ' | c -> c) text
+                        in
+                        List.iter
+                          (fun (_, (trace : Leash.Protocol.drive_trace)) ->
+                            Cap_stdlib.printf ~caps "%s\t%s\t%s\t%s\t%d\t%s\n" trace.time
+                              trace.site trace.outcome
+                              (match trace.cost with
+                              | None -> ""
+                              | Some cost -> Printf.sprintf "%g" cost)
+                              (List.length trace.steps) (cell trace.mission))
+                          rows;
+                        0)))
+        $ config $ site $ outcome)
+  in
+  let file =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"FILE"
+          ~doc:
+            "Regular saved trace file to print as JSON; symlinks and files over 8 MiB \
+             are refused.")
+  in
+  let show =
+    Cmd.v
+      (Cli_help.local_info ~docs:"TRACES" "show"
+         ~doc:"Print a saved trace as JSON without contacting the service."
+         ~examples:
+           [ "leash traces show ~/.local/state/leash/traces/toscrape.com/TRACE.json" ])
+      Term.(
+        const (fun file () ->
+            owned (fun () ->
+                match Leash.Traces.read ~caps file with
+                | Error why -> failure why
+                | Ok trace ->
+                    Cap_stdlib.print_endline ~caps
+                      (Yojson.Safe.pretty_to_string
+                         (Leash.Protocol.yojson_of_drive_trace trace));
+                    0))
+        $ file)
+  in
+  let prune =
+    Cmd.v
+      (Cli_help.local_info ~docs:"TRACES" "prune"
+         ~doc:
+           "Apply local retention and print deleted paths; uncompiled done traces are \
+            preserved."
+         ~examples:
+           [ "leash traces prune --dry-run"; "leash traces prune --site toscrape.com" ])
+      Term.(
+        const (fun config site dry_run () ->
+            owned (fun () ->
+                match store config with
+                | Error why -> failure why
+                | Ok store -> (
+                    match
+                      Leash.Traces.prune store ?site ~dry_run
+                        ~now:(Leash.Traces.now store) ()
+                    with
+                    | Error why -> failure why
+                    | Ok paths ->
+                        List.iter (Cap_stdlib.print_endline ~caps) paths;
+                        0)))
+        $ config $ site $ dry_run)
+  in
+  Cmd.group
+    (Cli_help.local_info ~docs:"TRACES" "traces"
+       ~doc:"Inspect and prune durable local drive traces offline."
+       ~examples:[ "leash traces list"; "leash traces prune --dry-run" ])
+    [ list; show; prune ]
 
 let commands ~caps ~send ~base ~run_owned =
   List.map
@@ -959,7 +1103,8 @@ let commands ~caps ~send ~base ~run_owned =
         ],
         [ "leash debug t_9xk --limit 10" ] );
       ( "eval",
-        "Evaluate EXPRESSION as a function body in the page.",
+        "Evaluate EXPRESSION as a function body in the page; a returned promise is \
+         awaited. Use return (async () => { ... })() for await, not top-level await.",
         [ pos "tab" "TAB"; pos "expression" "EXPRESSION" ],
         [
           opt "argument" Json "JSON" "JSON value bound to argument in the expression.";
@@ -1196,6 +1341,7 @@ let commands ~caps ~send ~base ~run_owned =
            --url https://www.google.com/travel/flights --max-steps 60 --deadline-s 300";
         ];
       playbook_command ~caps ~send ~base ~run_owned;
+      traces_command ~caps ~run_owned;
     ]
 
 let ( let* ) = Result.bind
@@ -1305,6 +1451,10 @@ let program env (config : Leash.Config.t) sw =
         (* drive-ls3c: the helper is a thunk, not a value — each drive takes its own
          instance, and with it the one-entry memo the stale-row reuse rule needs. *)
       ~text_helper:(fun () -> Leash.Models.text_helper models)
+      ?traces:
+        (if config.Leash.Config.traces.enabled then
+           Some (Leash.Traces.create ~caps:env.caps ~retention:config.traces.retention ())
+         else None)
       ~sw ~path:socket
       {
         Leash.Control.tabs;
@@ -1565,7 +1715,16 @@ let skill_command ~caps ~run_owned =
    opens the control socket. errors is rendered from Protocol.Error_code. *)
 let help_topics =
   let preferred =
-    [ "handles"; "playbooks"; "authoring"; "expectations"; "drive"; "scripts"; "errors" ]
+    [
+      "handles";
+      "playbooks";
+      "authoring";
+      "expectations";
+      "drive";
+      "traces";
+      "scripts";
+      "errors";
+    ]
   in
   let present =
     Leash_cli_support.Leash_help_data.topics
@@ -1579,6 +1738,22 @@ let help_body name =
   if String.equal name "errors" then Leash.Protocol.Error_code.topic_markdown
   else List.assoc (name ^ ".md") Leash_cli_support.Leash_help_data.topics
 
+(* hdoc-vqj7: the offline index says what each topic answers. *)
+let help_description = function
+  | "handles" -> "Setup, tab handles, sharing, expiry, and human handoff."
+  | "playbooks" -> "Install, validate, and read the playbook format and example."
+  | "authoring" -> "Write and test reliable procedures and goals."
+  | "expectations" -> "Checker sentences and when they are evaluated."
+  | "drive" -> "Mission lanes, arguments, results, and traces."
+  | "scripts" -> "Script and navigate steps, arguments, and validated results."
+  | "traces" ->
+      "Read and prune durable drive traces without a service, model, or browser."
+  | "errors" -> "Error codes, exit statuses, and recovery hints."
+  | name ->
+      help_body name |> String.split_on_char '\n'
+      |> List.find (fun line -> String.trim line <> "")
+      |> String.trim
+
 let help_command ~caps =
   let topic =
     Arg.(
@@ -1589,7 +1764,9 @@ let help_command ~caps =
   let run topic () =
     match topic with
     | None ->
-        Cap_stdlib.print_endline ~caps (String.concat "\n" help_topics);
+        List.iter
+          (fun name -> Cap_stdlib.printf ~caps "%s\t%s\n" name (help_description name))
+          help_topics;
         0
     | Some name when List.mem name help_topics ->
         Cap_stdlib.printf ~caps "%s"

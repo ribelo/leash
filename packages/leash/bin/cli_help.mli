@@ -1,6 +1,7 @@
 val all_exits : Cmdliner.Cmd.Exit.info list
 
 val command_info :
+  ?docs:string ->
   ?man:Cmdliner.Manpage.block list ->
   string ->
   doc:string ->

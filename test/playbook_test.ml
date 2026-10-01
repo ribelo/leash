@@ -504,7 +504,8 @@ let script_refusals () =
     (books ~steps:{|{"script":"absent"}|} ());
   expect_load_error ~story:"extr-8o1h" "args must be an object of strings"
     (books ~steps:{|{"script":"list","args":{"page":1}}|} ());
-  expect_load_error ~story:"extr-8o1h" "exactly one of goal, use or script"
+  (* hdoc-vqj7: the exclusivity refusal must name the navigate variant too. *)
+  expect_load_error ~story:"extr-8o1h" "exactly one of goal, use, script or navigate"
     (books ~steps:{|{"script":"list","goal":"x"}|} ())
 
 let symlinks () =
@@ -850,6 +851,38 @@ let planner_procedures () =
           {|{"source":"fetch('/x')"}|};
         ])
 
+(* hdoc-vqj7: pinned script/navigate steps do not fill declaration sources. *)
+let pinned_script_arguments () =
+  let ok = function Ok loaded -> loaded | Error why -> Alcotest.fail why in
+  let data declaration step =
+    Printf.sprintf
+      {|{
+    "site":"example.com","entry":"https://example.com/","description":"Navigate",
+    "pages":[],"shapes":{"destination":{"url":"url"}},
+    "scripts":{"product_url":{"source":"return {url: args.product};","description":"Resolve the product.",
+      "returns":"destination","args":{"product":%s}}},
+    "procedures":[{"slug":"view_cart","description":"View cart.","steps":[{"goal":"Confirm the cart."},%s],
+      "expect":["no dialog is open"]}]}|}
+      declaration step
+  in
+  List.iter
+    (fun step ->
+      expect_error "must pass declared argument product in step args"
+        (data {|{"from":"mission"}|} step);
+      expect_error "must pass declared argument product in step args"
+        (data {|{"const":"https://example.com/cart"}|} step);
+      ignore
+        (ok
+           (B.of_json ~file:"hdoc-vqj7.json"
+              (Yojson.Safe.from_string (data {|{"from":"mission","optional":true}|} step)))))
+    [ {|{"navigate":{"script":"product_url"}}|}; {|{"script":"product_url"}|} ];
+  ignore
+    (ok
+       (B.of_json ~file:"hdoc-vqj7.json"
+          (Yojson.Safe.from_string
+             (data {|{"from":"mission"}|}
+                {|{"navigate":{"script":"product_url","args":{"product":"https://example.com/cart"}}}|}))))
+
 (* extr-uhnc: control scripts are typed steps/checks, not collected records. *)
 let control_scripts () =
   let data =
@@ -1008,6 +1041,8 @@ let () =
           Alcotest.test_case "extr-k40c planner procedures" `Quick planner_procedures;
           Alcotest.test_case "extr-zdst extr-8o1h shapes" `Quick shapes;
           Alcotest.test_case "extr-8o1h many records" `Quick script_examples;
+          Alcotest.test_case "hdoc-vqj7 explicit pinned arguments" `Quick
+            pinned_script_arguments;
           Alcotest.test_case "extr-uhnc typed control scripts" `Quick control_scripts;
           Alcotest.test_case "extr-tkco books.toscrape.com example" `Quick
             books_toscrape_example;

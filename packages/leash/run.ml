@@ -368,6 +368,7 @@ let finish (st : state) status ?reason () =
       model_calls = 0;
       model_cost = Some 0.;
       operator_steps = [];
+      trace_path = None;
       operator_state = st.operator_state;
       output_kinds = (if st.collected_count > 0 then ["script-record"] else [])
         @ (if st.operator_state <> None then ["operator-state"] else []);
@@ -378,9 +379,7 @@ let finish (st : state) status ?reason () =
 (* drive-y7v8's rule for a run: a model failure carries the work it had done when it
    failed, so a failed mission is auditable. *)
 let with_trace (st : state) (error : P.error) =
-  if not (List.mem (P.Error_code.to_string error.P.code) ["model-unavailable"; "model-timeout"]) then error
-  else
-    let fields =
+  let fields =
       match error.P.detail with
       | Some (`Assoc fields) -> fields
       | _ -> ["code", `String "unavailable"]
@@ -467,7 +466,7 @@ type steps_outcome =
       (** The run ended inside a step: a dialog, or a planner turn a called procedure
           asked for. *)
 
-let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~installed ?discovery (args : args) : (P.run_result, P.error) result =
+let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~pause_ms ~now ~installed ?discovery (args : args) : (P.run_result, P.error) result =
   let installed = installed_playbooks installed in
   let started = now () in
   let deadline = started +. float_of_int args.deadline_s in
@@ -1232,7 +1231,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
                 { key = sub.Playbook.slug; probabilities = `Assoc []; confidence = 1.; usage = None; judgments = [] }
               in
               (match
-                 execute st ~book ~proc:sub ~planned:false ~choice
+                 execute ~nested:true st ~book ~proc:sub ~planned:false ~choice
                    ~optional:(Option.value ~default:false use.Playbook.optional)
                    ~values:extra
                with
@@ -1244,7 +1243,9 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
 
   (* run-k8bx run-28: the procedure's steps, then its expectations; a failed verification
      replays the whole procedure once and a second failure is reported to the planner. *)
-  and execute (st : state) ~(book : Playbook.loaded) ~(proc : Playbook.procedure) ~planned
+  (* hdoc-vqj7: nested use must leave completion to its parent, after parent
+     expectations and trace entry are committed. *)
+  and execute ?(nested = false) (st : state) ~(book : Playbook.loaded) ~(proc : Playbook.procedure) ~planned
       ~choice ~optional ~values =
     let proc_started = now () in
     let initial_kind =
@@ -1351,10 +1352,10 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
                               ~expectations:results ~outcome:"verified" ~attempts:n
                               ~elapsed:(ms (now () -. proc_started)) ~reason:None in
                             (match proc.Playbook.repeat with
-                            | None -> auto_mission_done st
+                            | None -> (if nested then Ok (Continue st) else auto_mission_done st)
                             | Some repeat ->
                                 let* st = paginate st ~book ~values ~choice repeat in
-                                auto_mission_done st))
+                                (if nested then Ok (Continue st) else auto_mission_done st)))
                       else if n < 2 then attempt (n + 1) st drives
                       else
                         let reason =
@@ -1575,6 +1576,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
     let route = P.{ source = "route"; key = Some "operator"; probabilities = `Assoc [];
       confidence = None; usage = None;
       note = Some "No fitting playbook/procedure; the full mission continues on the current page without a planner." } in
+    on_book None;
     let st = { st with book = None; playbook_choices = route :: st.playbook_choices } in
     let request = { goal = args.mission; hint = None; recent = st.operator_history;
       max_steps = max 0 (args.max_steps - st.steps_used); deadline_s = remaining (); dry_run = args.dry_run;
@@ -1606,6 +1608,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
   (* run-xh5d: a chosen book opens its entry on this tab unless that book is already
      current. The profile's logins carry over; JEV is not asked to leave about:blank. *)
   and adopt_book (st : state) (book : Playbook.loaded) =
+    on_book (Some book);
     let current = Option.map book_id st.book in
     let st = { st with book = Some book; switch = false;
       visited = book.playbook.site :: st.visited } in
@@ -1693,6 +1696,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
     | Error error -> Error error
     | Ok (st, None) -> single_goal st
     | Ok (st, Some book) ->
+        on_book (Some book);
         let st = { st with book = Some book } in
         match procedure_question st book with
                 | Error error -> Error error
@@ -1800,7 +1804,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
 
 (* ---------- The handler ---------- *)
 
-let loop ~(handler : handler) ~now ~installed ?discovery ?(on_record = fun _ -> Ok ()) ?(pause_ms = fun _ -> ()) (args : args) =
+let loop ~(handler : handler) ~now ~installed ?discovery ?(on_book = fun _ -> ()) ?(on_record = fun _ -> Ok ()) ?(pause_ms = fun _ -> ()) (args : args) =
   if args.max_procedures < 1 || args.deadline_s < 1 || args.max_steps < 1 then
     Error (invalid "run max_steps, max_procedures and deadline_s must be positive")
   else if (match args.start_url with Some url -> not (valid_start_url url) | None -> false) then
@@ -1895,7 +1899,7 @@ let loop ~(handler : handler) ~now ~installed ?discovery ?(on_record = fun _ -> 
            | None -> ())
     in
     let outcome = Model_usage.with_meter meter (fun () ->
-      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_record ~pause_ms ~now ~installed ?discovery args) ()
+      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_book ~on_record ~pause_ms ~now ~installed ?discovery args) ()
       {
         retc = Fun.id;
         exnc = raise;
@@ -1948,6 +1952,10 @@ let loop ~(handler : handler) ~now ~installed ?discovery ?(on_record = fun _ -> 
                     Effect.Deep.continue k (handler.script script ~args))
             | _ -> None);
       }) in
+    let outcome = Result.map_error (fun error ->
+      let fields = match error.P.detail with Some (`Assoc fields) -> fields | _ -> [] in
+      {error with P.detail=Some (`Assoc (("model_calls", `Int !calls)::
+        ("model_cost", (if !unreported > 0 then `Null else `Float !cost))::fields))}) outcome in
     Result.map (fun result ->
       let models = `Assoc (Hashtbl.fold (fun kind n acc -> (kind, `Int n) :: acc) kinds []) in
       let data = match result.P.data with

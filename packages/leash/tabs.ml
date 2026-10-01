@@ -611,6 +611,11 @@ let cdp_call ?(deadline = Ox.Duration.seconds 30) ?session cdp meth params =
   | Error _ -> Error (unavailable ())
   | Ok reply -> (
       match Cdp.error_of_reply reply with
+      | Some (_, message)
+        when meth = "Runtime.callFunctionOn"
+             && String.starts_with ~prefix:"SyntaxError" message ->
+          (* hdoc-vqj7: a malformed caller function is not a service defect. *)
+          Error (error "script-failed" message)
       | Some _ -> Error (error "internal" ("browser refused " ^ meth))
       | None -> (
           match Cdp.result reply with
@@ -1858,7 +1863,8 @@ let observation_of (snapshot : P.snapshot) (read : Snapshot_source.operator_read
 (* drive-8n2z drive-tfqh fly-iodm fly-crcc: keep the lock across observe/decide/act.
    Never call a public Tabs action here: each would reacquire this very same mutex.
    An invalid operator payload is an observation error, never a weaker legacy read. *)
-let drive_locked ?recent ?(meter = meter ())
+let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ())
+    ?(meter = meter ())
     ?(decide =
       fun ~deadline:_ _ ->
         Error
@@ -1998,7 +2004,9 @@ let drive_locked ?recent ?(meter = meter ())
           add_ms meter.settle_ms at (now t);
           Ok ()
     in
-    acquire ~loads:3 Snapshot_source.observe_attempts
+    let* page = acquire ~loads:3 Snapshot_source.observe_attempts in
+    observed page;
+    Ok page
   in
   let idle () =
     P.
@@ -2092,7 +2100,7 @@ let drive_locked ?recent ?(meter = meter ())
   (* fly-4mio: acquire already retries ten times at 20 ms. One Drive attempt,
      or the two loops would nest to a hundred observations. *)
   Drive.run ~validate ~coverage ~usage:(usage meter) ~telemetry:(telemetry meter)
-    ~observe_attempts:1 ?recent ~scripts ?run_script ?reached
+    ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script ?reached
     ~handler:Drive.{ observe; decide; text_value; act }
     ~now:(fun () -> now t)
     ~model ~args
@@ -2135,7 +2143,8 @@ let no_levels : Run.levels =
                "no model client is configured for the run's planner"));
     }
 
-let run ?(levels = no_levels) ?(model = "unconfigured")
+let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(levels = no_levels)
+    ?(model = "unconfigured")
     ?(decide =
       fun ~deadline:_ _ ->
         Error
@@ -2182,6 +2191,24 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
           in
           (* run-pvmc: the page text stays on this side of the loop; the upper levels are
              asked over the small state Run builds. *)
+          (* trace-iqqz: only the selected authored book supplies kinds. Merely
+             having a matching installed book does not classify the on-the-fly lane. *)
+          let trace_book = ref None and trace_page = ref None in
+          let classify (snapshot : P.snapshot) text =
+            let kind =
+              Option.bind !trace_book (fun (book : Playbook.loaded) ->
+                  Playbook.page_kind book.playbook.pages ~url:snapshot.url ~text)
+            in
+            on_page ~url:snapshot.url ~kind
+          in
+          let traced (snapshot : P.snapshot) text =
+            trace_page := Some (snapshot, text);
+            classify snapshot text
+          in
+          let on_book book =
+            trace_book := if discovery = None then book else None;
+            Option.iter (fun (snapshot, text) -> classify snapshot text) !trace_page
+          in
           let observe () =
             let* snapshot =
               snap_locked t tab
@@ -2201,6 +2228,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                 Reading.text browser
                   P.{ tab = handle; index = None; max_chars = Some 12_000 }
             in
+            traced snapshot rendered.P.text;
             Ok
               Run.
                 {
@@ -2351,8 +2379,9 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                             | None -> Some "unrecognized target"
                             | Some row -> Run.unsafe_action (row.name ^ " " ^ row.role))
                     in
-                    drive_locked ~recent:request.Run.recent ?meter ~decide ~text_helper
-                      ~guard
+                    drive_locked ~recent:request.Run.recent ?meter ?on_step
+                      ~observed:(fun page -> traced page.Drive.snapshot page.text)
+                      ~decide ~text_helper ~guard
                       ~scripts:(fun page ->
                         request.Run.script_offers ~url:page.Drive.snapshot.url
                           ~text:page.text)
@@ -2455,7 +2484,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
           | Error why -> Error (error "invalid-request" why)
           | Ok books -> (
               let execute on_record =
-                Run.loop ~handler ~on_record
+                Run.loop ~handler ~on_book ~on_record
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)
                   ~installed:books ?discovery:(Option.map fst discovery) run_args

@@ -33,6 +33,7 @@ type handler = {
 }
 
 val run :
+  ?on_step:(Protocol.step -> unit) ->
   ?validate:(observation -> (unit, Protocol.error) result) ->
   ?coverage:(observation -> Yojson.Safe.t) ->
   ?usage:(string -> Yojson.Safe.t option) ->

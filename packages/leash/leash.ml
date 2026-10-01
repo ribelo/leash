@@ -13,6 +13,7 @@ module Desktop = Desktop
 module Models = Models
 module Text_helper = Text_helper
 module Protocol = Protocol
+module Traces = Traces
 module Playbook = Playbook
 module Run = Run
 module Tabs = Tabs

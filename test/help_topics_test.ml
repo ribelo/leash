@@ -70,7 +70,16 @@ let portable () =
   in
   List.iter
     (fun name -> if not (List.mem name names) then failf "missing embedded topic %s" name)
-    [ "handles"; "playbooks"; "authoring"; "expectations"; "drive"; "scripts"; "errors" ];
+    [
+      "handles";
+      "playbooks";
+      "authoring";
+      "expectations";
+      "drive";
+      "scripts";
+      "errors";
+      "traces";
+    ];
   let errors = List.assoc "errors.md" Leash_cli_support.Leash_help_data.topics in
   if errors <> Leash.Protocol.Error_code.topic_markdown then
     failf "embedded errors.md drifted from Protocol.Error_code";
@@ -88,6 +97,75 @@ let portable () =
   then failf "SKILL.md lacks the tab rule";
   print_endline "topics portable, errors live, skill under 60 lines"
 
+(* hdoc-vqj7: the fresh-agent recovery/authoring answers must survive embedding. *)
+let fresh_agent_guidance () =
+  let topic name = List.assoc (name ^ ".md") Leash_cli_support.Leash_help_data.topics in
+  List.iter
+    (fun (name, needles) ->
+      let contents = topic name in
+      List.iter
+        (fun needle ->
+          if not (contains contents needle) then
+            failf "hdoc-vqj7 %s missing %S" name needle)
+        needles)
+    [
+      ( "handles",
+        [
+          "XDG_RUNTIME_DIR";
+          "HOME";
+          "service keeps its startup environment";
+          "omits that id";
+          "--url-prefix";
+          "cross-origin";
+          "Decline optional tracking";
+          "persist in the managed Chrome profile";
+          "refused click can scroll";
+        ] );
+      ("playbooks", [ "no source checkout is needed"; "navigate"; "step args" ]);
+      ( "scripts",
+        [
+          "three argument locations";
+          "text-helper model";
+          "returned promise is awaited";
+          "Top-level";
+          "script-failed";
+          "`_`";
+        ] );
+      ( "authoring",
+        [
+          "exactly once";
+          "not an exactly-once guarantee";
+          "model that scores available actions";
+          "sampled field values";
+          "must contain at least one goal";
+        ] );
+      ("drive", [ "child entries precede the parent"; "proposals" ]);
+      ("errors", [ "leash help playbooks"; "engine error" ]);
+    ];
+  (* hdoc-vqj7: the first authoring JSON fence is a loadable navigation book. *)
+  let rec fence = function
+    | [] -> failf "hdoc-vqj7 no minimal JSON example"
+    | "```json" :: rest -> rest
+    | _ :: rest -> fence rest
+  in
+  let rec body = function
+    | [] -> failf "hdoc-vqj7 unterminated JSON example"
+    | "```" :: _ -> []
+    | line :: rest -> line :: body rest
+  in
+  let json =
+    topic "authoring" |> String.split_on_char '\n' |> fence |> body |> String.concat "\n"
+    |> Yojson.Safe.from_string
+  in
+  (match Leash.Playbook.of_json ~file:"hdoc-vqj7.json" json with
+  | Ok _ -> ()
+  | Error why -> failf "hdoc-vqj7 minimal example does not load: %s" why);
+  List.iter
+    (fun (_, contents) ->
+      if contains contents "examples/playbooks/" then
+        failf "hdoc-vqj7 repository-only example reference")
+    Leash_cli_support.Leash_help_data.topics
+
 let () =
   Alcotest.run "help topics"
     [
@@ -95,5 +173,6 @@ let () =
         [
           Alcotest.test_case "render" `Quick render;
           Alcotest.test_case "portable" `Quick portable;
+          Alcotest.test_case "hdoc-vqj7 fresh agent answers" `Quick fresh_agent_guidance;
         ] );
     ]

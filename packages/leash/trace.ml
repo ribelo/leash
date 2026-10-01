@@ -1,0 +1,45 @@
+type trace_target = { role : string; label : string } [@@deriving yojson]
+
+(* trace-lg58: one derived durable format, projected from live replies because their
+   snapshots, collected data and operator state carry capabilities and page text. *)
+type trace_page = { url : string; title : string } [@@deriving yojson]
+type trace_probability = { key : string; probability : float } [@@deriving yojson]
+
+type trace_step = {
+  n : int;
+  operation : string;
+  target : trace_target option;
+  text : string option;
+  operations : trace_probability list;
+  targets : trace_probability list;
+  after : trace_page;
+  elapsed_ms : int;
+}
+[@@deriving yojson]
+
+type trace_procedure = {
+  n : int;
+  procedure : string;
+  outcome : string;
+  planned : bool;
+  steps : trace_step list;
+}
+[@@deriving yojson]
+
+type t = {
+  version : int;
+  time : string;
+  site : string;
+  mission : string;
+  outcome : string;
+  cost : float option; [@json.null]
+  duration_ms : int;
+  model_calls : int;
+  page_kind_path : string list;
+  compiled : bool; [@json.default false]
+  procedures : trace_procedure list;
+  steps : trace_step list;
+  final : trace_page option; [@json.null]
+  error_code : string option;
+}
+[@@deriving yojson]

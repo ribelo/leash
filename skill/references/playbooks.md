@@ -34,13 +34,13 @@ A goal step is `{"goal":"..."}` with optional `until` (a non-empty list of code 
 
 A use step is `{"use":"slug"}` with optional `args` (an object of strings) and optional `optional`. It must not form a cycle.
 
-A script step is `{"script":"name"}` with optional `args` (an object of strings). `navigate` is `{"navigate":{"script":"name"}}` and the script must return exactly `{url}`.
+A script step is `{"script":"name"}` with optional `args` (an object of strings). A navigation step is `{"navigate":{"script":"name","args":{"product":"{product}"}}}`: run the declared script, validate exactly `{url}`, then navigate the tab to that URL. It does not collect a record. For pinned script and navigate steps, pass each required script argument here; declaration sources do not fill these steps. See `leash help scripts` for the three argument locations.
 
 A procedure with no goal step is allowed only when another procedure `use:`s it, or it is a `repeat.next` helper. A playbook whose every procedure is only scripts is refused.
 
 ## Worked example
 
-This is `examples/playbooks/books.toscrape.com/playbook.json`, complete.
+Here is a complete `playbook.json` for the bookshop catalogue. Save it in your own playbook directory; no source checkout is needed.
 
 ```json
 {
@@ -196,7 +196,7 @@ The directory also holds `scripts/list-page.js` and `scripts/last-page.js`. Thos
 A JSON value of the wrong type is `FILE: ` plus the decoder's reason. That reason is not listed here; the messages below are the ones the loader writes itself. Shape messages are included because the loader returns them on `returns` and on `shapes`.
 
 ```
-step must have exactly one of goal, use or script
+step must have exactly one of goal, use, script or navigate
 step must be an object
 repeat until must be an expectation or {script: name}
 unknown arg field EXTRA; declare each source as {"from":"mission"},    {"from":"mission","optional":true}, or {"const":<value>}
@@ -247,6 +247,7 @@ FILE: procedure SLUG: use of unknown slug SLUG
 FILE: procedure SLUG: use args must be an object of strings
 FILE: procedure SLUG: script step names unknown script NAME
 FILE: procedure SLUG: script args must be an object of strings
+FILE: procedure SLUG: script step NAME must pass declared argument ARG in step args; declarations do not fill pinned steps
 a file script needs a playbook directory
 file must not be empty
 file must not contain NUL

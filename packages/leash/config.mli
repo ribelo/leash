@@ -115,6 +115,10 @@ type otlp = { endpoint : Text.t option; headers : otlp_header list }
 (** svc-f4op: no endpoint means no exporter. [headers] defaults to []. TOML uses
     [[otlp.headers]] entries with [name] and [value]. *)
 
+type traces = { enabled : bool; retention : Traces.Retention.t }
+
+val default_traces : traces
+
 type skill = { roots : Text.t list }
 (** daily-c4cl: skills roots used by both status and skill install. Empty means automatic
     discovery; paths expand environment placeholders through env. *)
@@ -128,6 +132,7 @@ type t = {
   models : models;
   handoff : handoff;
   skill : skill;
+  traces : traces;
 }
 (** svc-x8rp: every section and every field has a default, so a file that names one
     setting — or a file that is only comments — decodes: it is a configuration in which

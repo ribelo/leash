@@ -226,6 +226,7 @@ val loop :
   now:(unit -> float) ->
   installed:Playbook.loaded list ->
   ?discovery:discovery ->
+  ?on_book:(Playbook.loaded option -> unit) ->
   ?on_record:(Yojson.Safe.t -> (unit, Protocol.error) result) ->
   ?pause_ms:(int -> unit) ->
   args ->

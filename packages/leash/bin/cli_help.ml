@@ -46,8 +46,10 @@ let exits name =
 let local_exits = exit_infos [ 0; 64; 65; 70; 77; 124 ]
 let examples lines = `S "EXAMPLES" :: List.map (fun line -> `P line) lines
 
-let command_info ?(man = []) name ~doc ~examples:lines =
-  Cmd.info name ~doc ~docs:(docs name) ~exits:(exits name)
+let command_info ?docs:section ?(man = []) name ~doc ~examples:lines =
+  Cmd.info name ~doc
+    ~docs:(Option.value ~default:(docs name) section)
+    ~exits:(exits name)
     ~man:
       (examples lines @ man
       @ [

@@ -309,6 +309,14 @@ let default_expiry = { idle_s = default_idle_s; tombstone_s = default_tombstone_
 let default_control = { socket = default_socket }
 
 (* daily-c4cl: configured roots replace automatic agent-directory discovery. *)
+type traces = {
+  enabled : bool; [@json.default true]
+  retention : Traces.Retention.t; [@json.default Traces.Retention.default]
+}
+[@@deriving yojson]
+
+let default_traces = { enabled = true; retention = Traces.Retention.default }
+
 type skill = { roots : Text.t list [@json.default []] } [@@deriving yojson]
 
 let default_skill = { roots = [] }
@@ -331,6 +339,7 @@ type t = {
   models : models; [@json.default default_models]
   handoff : handoff; [@json.default default_handoff]
   skill : skill; [@json.default default_skill]
+  traces : traces; [@json.default default_traces]
 }
 [@@deriving yojson]
 
@@ -344,6 +353,7 @@ let default : t =
     models = default_models;
     handoff = default_handoff;
     skill = default_skill;
+    traces = default_traces;
   }
 
 let toml_array values =
@@ -398,6 +408,12 @@ let default_toml =
 # [skill]
 # roots = ["$HOME/.dotfiles/skills/engineering/debugging"]
 #                             # empty by default: discover supported agent directories
+#
+# [traces]
+# enabled = true              # save every drive; false disables capture and writes
+# [traces.retention]
+# count = 20                  # per site, 1..10000
+# days = 30                   # 1..3650; uncompiled done traces are never pruned
 #
 # [handoff]
 # focus_command = %s
@@ -579,13 +595,29 @@ let binary_issues ~getenv ~fs name =
     | Some path -> stat_issues "/chrome/binary" path `Regular_file 0o100 fs
     | None -> [ issue "/chrome/binary" (Printf.sprintf "%s is not on PATH" name) ]
 
-(* svc-o4wt: a placeholder an unset variable left behind names the field, and a relative
-   socket is never a place the listener can bind. *)
+(* hdoc-vqj7: keep the unresolved variable in setup diagnostics, including HOME
+   when a tilde could not be expanded. *)
+let unset_path_message path =
+  let variable =
+    match String.index_opt path '$' with
+    | None -> "HOME"
+    | Some at ->
+        let rec ending i =
+          if i < String.length path then
+            match path.[i] with
+            | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> ending (i + 1)
+            | _ -> i
+          else i
+        in
+        let start = at + 1 in
+        String.sub path start (ending start - start)
+  in
+  Printf.sprintf "the environment variable %s in this path is unset" variable
+
+(* svc-o4wt: a relative socket is never a place the listener can bind. *)
 let socket_issues ~check_unset socket =
   if String.contains socket '$' then
-    if check_unset then
-      [ issue "/control/socket" "the environment variable in this path is unset" ]
-    else []
+    if check_unset then [ issue "/control/socket" (unset_path_message socket) ] else []
   else if Filename.is_relative socket then
     [ issue "/control/socket" "must be an absolute path" ]
   else []
@@ -594,8 +626,7 @@ let socket_issues ~check_unset socket =
    {!ensure_dir} creates the rest before Chrome starts. *)
 let profile_issues ~check_unset ~fs profile =
   if String.contains profile '$' then
-    if check_unset then
-      [ issue "/chrome/profile_dir" "the environment variable in this path is unset" ]
+    if check_unset then [ issue "/chrome/profile_dir" (unset_path_message profile) ]
     else []
   else
     match fs with
@@ -618,8 +649,7 @@ let profile_issues ~check_unset ~fs profile =
 let skill_path_issues ~check_unset index path =
   let pointer = Printf.sprintf "/skill/roots/%d" index in
   let unexpanded = String.contains path '$' || String.starts_with ~prefix:"~" path in
-  if check_unset && unexpanded then
-    [ issue pointer "the environment variable in this path is unset" ]
+  if check_unset && unexpanded then [ issue pointer (unset_path_message path) ]
   else if Filename.is_relative path && not unexpanded then
     [ issue pointer "must be an absolute path" ]
   else []
@@ -817,7 +847,15 @@ let collect json =
         unknown_issues ""
           ~known:
             [
-              "chrome"; "tabs"; "expiry"; "control"; "otlp"; "models"; "handoff"; "skill";
+              "chrome";
+              "tabs";
+              "expiry";
+              "control";
+              "otlp";
+              "models";
+              "handoff";
+              "skill";
+              "traces";
             ]
           fields
       in
@@ -938,6 +976,37 @@ let collect json =
                       unknown
                       @ [ issue pointer ("expected an array, got " ^ show_json json) ] )))
       in
+      let traces_errors =
+        let pointer = child "" "traces" in
+        match List.assoc_opt "traces" fields with
+        | None -> []
+        | Some json ->
+            collect_object pointer json ~known:[ "enabled"; "retention" ] (fun section ->
+                field_errors pointer "enabled" section decode_bool
+                @ field_errors pointer "retention" section (fun rp json ->
+                    match expect_object rp json with
+                    | Error e -> Error e
+                    | Ok fields ->
+                        let unknown =
+                          unknown_issues rp ~known:[ "count"; "days" ] fields
+                        in
+                        let decode_bound key maximum pointer = function
+                          | `Int n when n >= 1 && n <= maximum -> Ok n
+                          | _ ->
+                              Error
+                                [
+                                  issue pointer
+                                    (Printf.sprintf "%s must be between 1 and %d" key
+                                       maximum);
+                                ]
+                        in
+                        let errors =
+                          unknown
+                          @ field_errors rp "count" fields (decode_bound "count" 10000)
+                          @ field_errors rp "days" fields (decode_bound "days" 3650)
+                        in
+                        if errors = [] then Ok Traces.Retention.default else Error errors))
+      in
       let handoff_errors =
         match List.assoc_opt "handoff" fields with
         | None -> []
@@ -951,7 +1020,7 @@ let collect json =
       {
         errors =
           unknown @ chrome_errors @ tabs_errors @ expiry_errors @ control_errors
-          @ otlp_errors @ models_errors @ handoff_errors @ skill_errors;
+          @ otlp_errors @ models_errors @ handoff_errors @ skill_errors @ traces_errors;
         binary;
         profile_dir;
         socket;

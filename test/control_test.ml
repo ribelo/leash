@@ -3331,6 +3331,156 @@ let shared_handle_over_socket () =
           check_code "hand-0wo8 queued client deadline" "timeout" (Option.get !second);
           ignore (result (call text))))
 
+(* trace-qe8c trace-iqqz trace-zbb9 trace-uovo: public control persists every
+   drive outcome before replying, without a browser/service/provider. *)
+let durable_drive_traces () =
+  let caps = Ox_test.powerbox () in
+  let root = Filename.temp_file "leash-l51-control-" "" in
+  Unix.unlink root;
+  Unix.mkdir root 0o700;
+  let rec remove path =
+    match Unix.lstat path with
+    | st when st.Unix.st_kind = Unix.S_DIR ->
+        Array.iter (fun name -> remove (Filename.concat path name)) (Sys.readdir path);
+        Unix.rmdir path
+    | _ -> Unix.unlink path
+  in
+  Fun.protect
+    ~finally:(fun () -> remove root)
+    (fun () ->
+      let store = Leash.Traces.create ~caps ~root () in
+      rig (fun env sw _ tabs fake ->
+          let f = fake () in
+          page_script f (fixture "unlabelled-controls-chrome.json") modal_text;
+          document_at ~title:"Blue Top" ~url:product_url f;
+          let h =
+            result (request tabs "alice" (P.New { url = Some product_url; label = None }))
+            |> tab
+          in
+          let logs = Buffer.create 128 in
+          let logger =
+            Ox_observability.Logger.create ~service:"trace-tests" ~clock:env#clock
+              ~mono_clock:env#mono_clock
+              ~reporter:
+                (Ox_observability.Logger.Reporter.writer (fun text ->
+                     Buffer.add_string logs text))
+              ()
+          in
+          let invoke ?traces ?levels ?(installed = []) ?(decide = decide_done) wire =
+            with_ticking_clock env sw (fun () ->
+                Leash.Control.handle ?traces ~logger ~model:"fixture-model" ?levels
+                  ~installed ~decide tabs wire)
+            |> Yojson.Safe.from_string |> P.decode_reply
+          in
+          let count () =
+            match Leash.Traces.list store () with
+            | Ok rows -> List.length rows
+            | Error why -> Alcotest.fail why
+          in
+          let saved body =
+            let path =
+              match get "trace_path" body with
+              | `String path -> path
+              | _ -> Alcotest.fail "trace-uovo missing reply trace_path"
+            in
+            Alcotest.(check bool)
+              "trace-uovo path exists before reply" true (Sys.file_exists path);
+            match Leash.Traces.read ~caps path with
+            | Ok trace -> trace
+            | Error why -> Alcotest.fail why
+          in
+          let body =
+            invoke ~traces:store (run_wire ~tab:h "inspect the current page") |> decoded
+          in
+          let trace = saved body in
+          Alcotest.(check string)
+            "trace-qe8c public on-the-fly success" "done" trace.outcome;
+          Alcotest.(check string)
+            "trace-qe8c first navigable site" "automationexercise.com" trace.site;
+          Alcotest.(check bool)
+            "trace-zbb9 public acknowledged steps" true (trace.steps <> []);
+          let before = count () in
+          let disabled = invoke (run_wire ~tab:h "disabled trace capture") |> decoded in
+          Alcotest.(check bool)
+            "trace-szpg disabled omits path and writes nothing" true
+            (field "trace_path" disabled = None && count () = before);
+          let book_dir =
+            if
+              Sys.file_exists "../examples/playbooks/automationexercise.com/playbook.json"
+            then "../examples/playbooks/automationexercise.com"
+            else "examples/playbooks/automationexercise.com"
+          in
+          let book =
+            match Leash.Playbook.load ~caps book_dir with
+            | Ok book -> book
+            | Error why -> Alcotest.fail why
+          in
+          let fly =
+            invoke ~traces:store ~installed:[ book ]
+              ~levels:(levels_with [ "none" ] (ref []))
+              (run_wire ~tab:h "operator NONE with matching installed pages")
+            |> decoded |> saved
+          in
+          Alcotest.(check (list string))
+            "trace-iqqz NONE has no page kinds even with installed matching book" []
+            fly.page_kind_path;
+          let authored =
+            invoke ~traces:store ~installed:[ book ]
+              ~levels:
+                (levels_with [ "automationexercise.com"; "add-to-cart"; "DONE" ] (ref []))
+              (run_wire ~tab:h "add Blue Top to the cart")
+            |> decoded |> saved
+          in
+          Alcotest.(check bool)
+            "trace-iqqz selected book supplies only declared kinds" true
+            (authored.page_kind_path <> []
+            && List.for_all
+                 (fun kind ->
+                   List.exists
+                     (fun (p : Leash.Playbook.page) -> p.name = kind)
+                     book.playbook.pages)
+                 authored.page_kind_path);
+          Alcotest.(check bool)
+            "trace-lg58 authored procedures flatten compiler-safe steps" true
+            (List.exists
+               (fun (p : P.Trace.trace_procedure) ->
+                 p.procedure = "add-to-cart" && p.steps <> [])
+               authored.procedures);
+          let json = P.yojson_of_drive_trace authored |> Yojson.Safe.to_string in
+          Alcotest.(check bool)
+            "trace-lg58 authored trace excludes rows handles and raw operator state" true
+            ((not (contains json "\"rows\""))
+            && (not (contains json "\"snapshot\""))
+            && (not (contains json "operator_state"))
+            && not (contains json modal_text));
+          let bad_root = Filename.concat root "not-a-directory" in
+          let fd =
+            Unix.openfile bad_root [ Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY ] 0o600
+          in
+          Unix.close fd;
+          let failed = Leash.Traces.create ~caps ~root:bad_root () in
+          let reply =
+            invoke ~traces:failed (run_wire ~tab:h "write failure preserves success")
+            |> decoded
+          in
+          Alcotest.(check bool)
+            "trace-uovo failed write logs without changing success" true
+            (get "status" reply = str "done"
+            && field "trace_path" reply = None
+            && contains (Buffer.contents logs) "drive trace write failed");
+          ignore (result (request tabs "alice" (P.Close { tab = h })));
+          let refusal =
+            invoke ~traces:store (run_wire ~tab:h "closed tab acquisition failure")
+          in
+          match refusal with
+          | Ok (P.Failure error) ->
+              let trace = saved (Option.value ~default:`Null error.detail) in
+              Alcotest.(check string)
+                "trace-qe8c trace-iqqz acquisition error is durable" "error" trace.outcome;
+              Alcotest.(check string)
+                "trace-qe8c no navigable page falls back to unknown" "unknown" trace.site
+          | _ -> Alcotest.fail "trace-iqqz closed tab should be a protocol error"))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -3365,6 +3515,8 @@ let () =
           Alcotest.test_case "human-origin shutdown" `Quick human;
           Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
           Alcotest.test_case "tab-bw4j pseudo-icon click safety" `Quick pseudo_icon_hit;
+          Alcotest.test_case "trace-qe8c trace-iqqz public durable drives" `Quick
+            durable_drive_traces;
           Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;
           Alcotest.test_case "run-9ypy run-4j1v run-snk4 run-shgh run-7blx" `Quick
             run_mission;

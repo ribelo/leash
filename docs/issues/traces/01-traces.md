@@ -26,8 +26,11 @@ Every drive writes its trace to `$XDG_STATE_HOME/leash/traces/<site>/<timestamp>
 
 ## Implementation Decisions
 
-- Site = the registrable domain of the first non-blank URL in the run (`allegro.pl`, `books.toscrape.com`); on-the-fly runs across sites write one trace per run under the first site.
-- Write happens after the reply is sent, in the run's own scope; a write failure is logged, never returned.
+- Site = the registrable domain of the first non-blank URL in the run (`allegro.pl`, `toscrape.com` for `books.toscrape.com`; frozen Mozilla PSL including private suffixes); on-the-fly runs across sites write one trace per run under the first site.
+- Approved deviation: persistence completes synchronously before reply encoding in the run's own scope. This ensures `trace_path` already exists; a write failure is logged, never returned as a drive failure. No asynchronous queue or Ox changes.
+- Approved deviation from trace-lg58: the live reply and durable file share derived typed codecs, but the file is a separate safe `Protocol.drive_trace` projection. The live reply contains handles, raw state, and records forbidden by trace-uovo.
+- Retention defaults to count 20 (1..10000) and days 30 (1..3650), per site. Keep the newest count within the age bound; exempt uncompiled done traces from both. `compiled` defaults false and may become true only after a compiler durably accepts the resulting procedure. L51 never marks it.
+- UTC microsecond filenames, directories 0700, files 0600. Failed drives without an observed HTTP(S) host use `unknown`. Offline commands refuse symlinks, malformed files, and files larger than 8 MiB.
 
 ## Testing Decisions
 

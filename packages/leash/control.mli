@@ -16,6 +16,7 @@ type ('clock, 'net) deps = {
 }
 
 val create :
+  ?traces:Traces.t ->
   ?model:string ->
   ?models:Models.t ->
   ?levels:Run.levels ->
@@ -73,6 +74,8 @@ val report :
     is consulted only while Chrome is running; a relaunch reports [pid: null]. *)
 
 val dispatch :
+  ?traces:Traces.t ->
+  ?logger:Ox_observability.Logger.t ->
   ?model:string ->
   ?models:Models.t ->
   ?levels:Run.levels ->
@@ -91,6 +94,7 @@ val dispatch :
 val decode : string -> (Protocol.request, string) result
 
 val handle :
+  ?traces:Traces.t ->
   ?model:string ->
   ?models:Models.t ->
   ?levels:Run.levels ->

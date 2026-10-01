@@ -1,5 +1,16 @@
 # Drive
 
+## Durable traces
+
+Every public drive outcome is saved by default. `trace_path` names its existing
+private JSON file; errors return `detail.trace_path`. This is a safe typed
+projection, not the full live reply: no page text, handles, raw state, or records;
+password text is `[password]`. Inspect offline with `leash traces list`,
+`leash traces show FILE`, and `leash traces prune --dry-run`.
+`leash help traces` describes the schema, switch, and retention defaults
+(20 newest traces per site, 30 days; uncompiled done traces survive both).
+A storage failure is logged without changing the drive outcome.
+
 `leash drive MISSION` is the one mission command. It runs on one tab toward one goal until `done`, `blocked`, a cap, a deadline, or an error, and returns the trace and a final snapshot. Leash never asserts that the goal is achieved. There is no `run` command, and the call is not `drive TAB GOAL`. Include the concrete result and any needed values in the mission. Do not delegate a broader action than the user authorized.
 
 ```sh
@@ -42,6 +53,8 @@ Playbooks are optional. A missing book never blocks a usable browser task and ne
 On a blank tab without a URL, installed playbooks are offered first. A chosen book opens its own `entry`. Otherwise pass `--url`, or include exactly one explicit http or https URL in the mission. With `--tab`, Leash works from the current page and does not replace an already populated page with `--url`. No URL and no chosen book, on a blank tab, returns `blocked` with the missing-start reason. That is not a missing playbook and it makes no model call. Do not invent a search engine or ask JEV to navigate from `about:blank`.
 
 ## Reading a trace
+
+A nested `use` child has its own `procedures[]` entry. It finishes before its parent is verified and recorded, so child entries precede the parent: execution order, not just top-level selections. A successfully completed parent remains visible when a child satisfies the mission expectations; caps or failures inside a child can stop before the parent completes. Transient planner procedures may appear as `planned: true`; reviewed candidates are listed under `proposals`, not silently installed.
 
 Exit 0 means the service answered. It does not mean the mission succeeded. Read:
 

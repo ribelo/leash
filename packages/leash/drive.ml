@@ -73,7 +73,7 @@ let history (step : P.step) changed =
    budgets. A decision is consumed exactly once; stale input is not an action. *)
 let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent
-    ~scripts ~run_script ~reached =
+    ~scripts ~run_script ~reached ~on_step =
   let started = now () in
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
   let cap = Option.value ~default:60 args.P.max_steps in
@@ -171,18 +171,22 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
             | Some states
               when List.exists (fun state -> P.Row_state.to_string state = "password") states
               ->
-                None
+                Some "[password]"
             | _ -> text)
         | None -> text)
     | _ -> text
   in
   let record_step (page : observation) (next : observation) choice text steps =
     let text = redact_password page choice.J.index text in
-    P.{ n = List.length steps + 1; snapshot = page.snapshot.snapshot;
+    let recorded = P.{ n = List.length steps + 1; snapshot = page.snapshot.snapshot;
         operation = choice.J.operation; index = choice.index;
-        probabilities = J.trace_probabilities choice; text;
+        probabilities = J.trace_probabilities choice;
+        target = Option.bind choice.index (fun index ->
+          Option.map (fun (row : P.row) -> P.{ target_role = row.role; target_label = row.name })
+            (List.find_opt (fun (row : P.row) -> row.index = index) page.snapshot.rows)); text;
         after = { url = next.snapshot.url; title = next.snapshot.title };
-        elapsed_ms = ms (now () -. started) }
+        elapsed_ms = ms (now () -. started) } in
+    on_step recorded; recorded
   in
   match observe_page () with
   | Error error -> Error error
@@ -394,7 +398,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
       in
       go first [] (List.rev initial_recent)
 
-let run ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
+let run ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(telemetry = fun () -> `Assoc []) ?(observe_attempts = 10) ?(recent = [])
     ?(scripts = fun _ -> []) ?run_script ?(reached = fun ~start:_ _ -> false)
     ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run () =
@@ -419,7 +423,7 @@ let run ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
       text_value = (fun context -> Effect.perform (M.Text context));
       act = (fun page choice text -> Effect.perform (M.Act (page, choice, text)));
     } in
-    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~reached) ()
+    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~reached ~on_step) ()
       { retc = Fun.id; exnc = raise;
         effc = (fun (type a) (eff : a Effect.t) -> match eff with
           | M.Observe -> Some (fun (k : (a, (P.drive_result, P.error) result) Effect.Deep.continuation) -> Effect.Deep.continue k (handler.observe ()))

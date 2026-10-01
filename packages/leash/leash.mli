@@ -11,6 +11,7 @@ module Desktop : module type of Desktop
 module Models : module type of Models
 module Text_helper : module type of Text_helper
 module Protocol : module type of Protocol
+module Traces : module type of Traces
 module Playbook : module type of Playbook
 module Run : module type of Run
 module Tabs : module type of Tabs

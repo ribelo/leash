@@ -351,12 +351,20 @@ type probabilities = { op : Yojson.Safe.t; target : Yojson.Safe.t }
 val probabilities_of_yojson : Yojson.Safe.t -> (probabilities, string) result
 val yojson_of_probabilities : probabilities -> Yojson.Safe.t
 
+(* trace-qe8c trace-iqqz trace-lg58: deliberately capability-free projections. *)
+type trace_target = {
+  target_role : string; [@json.key "role"]
+  target_label : string; [@json.key "label"]
+}
+[@@deriving yojson]
+
 type step = {
   n : int;
   snapshot : Snapshot_id.t;
   operation : Operation.t;
   index : int option;
   probabilities : probabilities;
+  target : trace_target option;
   text : string option;
   after : after;
   elapsed_ms : int;
@@ -872,6 +880,7 @@ type run_result = {
   output_kinds : string list;
   final : snapshot;
   reason : string option;
+  trace_path : string option;
 }
 (** run-9ypy run-m0r8: the whole run. [site] is the playbook that served the mission,
     [T|null] when the run never chose one; [procedures] is the trace, oldest first;
@@ -886,6 +895,13 @@ type run_result = {
 
 val run_result_of_yojson : Yojson.Safe.t -> (run_result, string) result
 val yojson_of_run_result : run_result -> Yojson.Safe.t
+
+module Trace = Trace
+
+type drive_trace = Trace.t
+
+val drive_trace_of_yojson : Yojson.Safe.t -> (drive_trace, string) result
+val yojson_of_drive_trace : drive_trace -> Yojson.Safe.t
 
 type error = {
   code : Error_code.t;

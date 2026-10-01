@@ -47,8 +47,8 @@ let report ?models_status ?chrome_pid tabs =
     key_present = (match models with Some models -> models.configured | None -> false);
   }
 
-let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
-    ?models_status ?chrome_pid tabs (request : P.request) =
+let dispatch ?traces ?logger ?(model = "unconfigured") ?models ?levels ?decide
+    ?text_helper ?installed ?models_status ?chrome_pid tabs (request : P.request) =
   let meter = Tabs.meter () in
   let decide, text_helper =
     match models with
@@ -177,47 +177,95 @@ let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?ins
                     (Tabs.run ~meter ?levels ~model ?decide ?text_helper ?installed
                        ~discovery:(Run.{ book; max_steps = steps; max_cost = cost }, turns)
                        tabs ~tab:info.tab run_args)))
-  | P.Drive args -> (
-      (* run-vj48 run-4mzm: the run's upper levels are one more seam. Production installs
-         {!Models.levels} — one System One client for all three levels (run-7blx) — and
-         scripted tests their own; [installed] hands a test its playbooks.
-
-         daily-9ggi: a mission owns the lifetime of a tab it creates. The final
-         snapshot survives cleanup; supplied tabs and human handoffs stay open. *)
-      let tab =
-        match args.P.tab with
-        | Some tab -> Ok tab
-        | None ->
-            Result.map
-              (fun (info : P.tab_info) -> info.P.tab)
-              (Tabs.new_tab tabs ~url:None)
+  | P.Drive args ->
+      (* trace-qe8c trace-uovo: persist a projection before reply encoding, including
+         errors during tab acquisition. No trace I/O is performed without a store. *)
+      let capture =
+        Option.map
+          (fun store -> Traces.capture ~mission:args.P.mission ~now:(Traces.now store))
+          traces
       in
-      match tab with
-      | Error error -> failure error
-      | Ok tab -> (
-          let cleanup () =
-            if args.P.tab = None then
-              Eio.Cancel.protect (fun () -> ignore (Tabs.close tabs tab))
+      let on_page ~url ~kind = Option.iter (fun c -> Traces.page c ~url ~kind) capture in
+      let on_step step = Option.iter (fun c -> Traces.step c step) capture in
+      let keep outcome =
+        match (traces, capture) with
+        | Some store, Some capture ->
+            Eio.Cancel.protect (fun () ->
+                let now = Traces.now store in
+                let trace = Traces.finish capture ~now outcome in
+                let warn what why =
+                  Option.iter
+                    (fun logger ->
+                      Ox_observability.Logger.warn logger
+                        ~fields:[ ("error", Ox_observability.Logger.String why) ]
+                        what)
+                    logger
+                in
+                match Traces.write store trace with
+                | Error why ->
+                    warn "drive trace write failed" why;
+                    outcome
+                | Ok path -> (
+                    (match
+                       Traces.prune store ~site:trace.P.Trace.site ~dry_run:false ~now ()
+                     with
+                    | Ok _ -> ()
+                    | Error why -> warn "drive trace retention failed" why);
+                    match outcome with
+                    | Ok result -> Ok { result with P.trace_path = Some path }
+                    | Error error ->
+                        let fields =
+                          match error.P.detail with
+                          | Some (`Assoc fields) -> fields
+                          | _ -> []
+                        in
+                        Error
+                          {
+                            error with
+                            P.detail =
+                              Some (`Assoc (("trace_path", `String path) :: fields));
+                          }))
+        | _ -> outcome
+      in
+      let outcome =
+        try
+          let tab =
+            match args.P.tab with
+            | Some tab -> Ok tab
+            | None ->
+                Result.map
+                  (fun (info : P.tab_info) -> info.P.tab)
+                  (Tabs.new_tab tabs ~url:None)
           in
-          let outcome =
-            match
-              Tabs.run ~meter ?levels ~model ?decide ?text_helper ?installed tabs ~tab
-                args
-            with
-            | outcome -> outcome
-            | exception exn ->
-                cleanup ();
-                raise exn
-          in
-          match outcome with
-          | Ok result when P.Run_status.to_string result.P.status = "handoff" ->
-              success (P.yojson_of_run_result result)
-          | outcome -> (
-              if args.P.tab <> None then lift P.yojson_of_run_result outcome
-              else
-                match Eio.Cancel.protect (fun () -> Tabs.close tabs tab) with
-                | Ok _ -> lift P.yojson_of_run_result outcome
-                | Error error -> failure error)))
+          match tab with
+          | Error error -> Error error
+          | Ok tab -> (
+              let cleanup () =
+                if args.P.tab = None then
+                  Eio.Cancel.protect (fun () -> ignore (Tabs.close tabs tab))
+              in
+              let outcome =
+                try
+                  Tabs.run ~on_page ~on_step ~meter ?levels ~model ?decide ?text_helper
+                    ?installed tabs ~tab args
+                with exn ->
+                  cleanup ();
+                  raise exn
+              in
+              match outcome with
+              | Ok result when P.Run_status.to_string result.P.status = "handoff" ->
+                  outcome
+              | _ when args.P.tab <> None -> outcome
+              | _ -> (
+                  match Eio.Cancel.protect (fun () -> Tabs.close tabs tab) with
+                  | Ok _ -> outcome
+                  | Error error -> Error error))
+        with exn ->
+          ignore
+            (keep (Error (P.make_error (enum "internal") ~message:"drive interrupted")));
+          raise exn
+      in
+      lift P.yojson_of_run_result (keep outcome)
 
 (* svc-p67t: a command's journal anchor contains only identifiers, never args or
    results. Commands without a tab use "-"; new does not have a handle yet. *)
@@ -230,15 +278,15 @@ let with_command ?logger (request : P.request) f =
         logger;
       f ())
 
-let handle ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
-    ?models_status ?chrome_pid ?logger tabs line =
+let handle ?traces ?(model = "unconfigured") ?models ?levels ?decide ?text_helper
+    ?installed ?models_status ?chrome_pid ?logger tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
-            dispatch ~model ?models ?levels ?decide ?text_helper ?installed ?models_status
-              ?chrome_pid tabs request)
+            dispatch ?traces ?logger ~model ?models ?levels ?decide ?text_helper
+              ?installed ?models_status ?chrome_pid tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -370,8 +418,8 @@ let on_peer_error logger error =
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
-let create ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
-    ?chrome_pid ~sw ~path deps =
+let create ?traces ?(model = "unconfigured") ?models ?levels ?decide ?text_helper
+    ?installed ?chrome_pid ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -380,8 +428,9 @@ let create ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?insta
       match request with
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
-              dispatch ~model ?models ?levels ?decide ?text_helper ?installed
-                ~models_status:deps.models_status ?chrome_pid deps.tabs request)
+              dispatch ?traces ~logger:deps.logger ~model ?models ?levels ?decide
+                ?text_helper ?installed ~models_status:deps.models_status ?chrome_pid
+                deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply

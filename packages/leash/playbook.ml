@@ -47,7 +47,7 @@ let step_of_yojson = function
           Result.map
             (fun x -> Navigate x)
             (script_step_of_yojson (List.assoc "navigate" fields))
-      | _ -> Error "step must have exactly one of goal, use or script")
+      | _ -> Error "step must have exactly one of goal, use, script or navigate")
   | _ -> Error "step must be an object"
 
 let yojson_of_step = function
@@ -590,6 +590,28 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
                 List.for_all (function _, `String _ -> true | _ -> false) fields
             | Some _ -> false)
             "script args must be an object of strings"
+        in
+        (* hdoc-vqj7: pinned steps bypass automatic argument filling. A declaration
+           alone must not look like it supplies a required value to the script. *)
+        let declarations =
+          (List.assoc step.script (Option.value ~default:[] book.scripts)).args
+        in
+        let supplied =
+          match step.args with Some (`Assoc fields) -> List.map fst fields | _ -> []
+        in
+        let* () =
+          List.fold_left
+            (fun result (decl : arg_decl) ->
+              let* () = result in
+              match decl.source with
+              | From_mission { optional = true } -> Ok ()
+              | From_mission { optional = false } | Const _ ->
+                  require (List.mem decl.name supplied)
+                    (Printf.sprintf
+                       "script step %s must pass declared argument %s in step args; \
+                        declarations do not fill pinned steps"
+                       step.script decl.name))
+            (Ok ()) declarations
         in
         steps tail
   in
