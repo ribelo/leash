@@ -79,6 +79,10 @@ val withhold : t -> string -> (Yojson.Safe.t -> bool) -> unit
     while the reader keeps serving the rest of the session. This is what Chrome does to a
     call whose handler opens a popup (docs/cdp-shapes.md, L10; tab-0ohq). *)
 
+val stop_evaluating : t -> session:string -> unit
+(** field-zr9n: this session stops answering Runtime.evaluate. Screenshot and all other
+    calls, including evaluations in other sessions, still answer. *)
+
 val sleep : t -> float -> unit
 (** Waits on the sleep function {!create} was given; a test advances its mock clock to let
     the delay pass. [Invalid_argument] when [create] was given no sleep. *)

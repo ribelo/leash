@@ -168,7 +168,8 @@ let new_tab tabs =
 let script fake reply =
   Fake.on_method fake "Runtime.evaluate" (fun request ->
       let expression = expression request in
-      if contains expression S.operator_mark then (
+      if expression = S.interactive_count_expression then evaluated (`Int 0)
+      else if contains expression S.operator_mark then (
         let params = Option.get (assoc "params" request) in
         Alcotest.(check int)
           "fly-spgh isolated-world read" 7
@@ -413,7 +414,8 @@ let unsettled_snapshot () =
       let fake = fake () in
       let count = ref 0 in
       Fake.on_method fake "Runtime.evaluate" (fun request ->
-          if contains (expression request) S.operator_mark then evaluated stable
+          if expression request = S.interactive_count_expression then evaluated (`Int 0)
+          else if contains (expression request) S.operator_mark then evaluated stable
           else (
             incr count;
             evaluated (replace_field "count" (`Int !count) guard_value)));

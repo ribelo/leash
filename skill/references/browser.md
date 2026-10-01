@@ -2,11 +2,21 @@
 
 All commands below act on your owned tab. Pass `--owner NAME` on every service call if not using `DSH_SESSION_ID`. The signatures use `TAB`, `SNAPSHOT`, `INDEX`, and `ID` for values returned by Leash, not literal arguments. Shell examples use actual variables; the optional `jq` examples need Bash and jq. Without jq, read those same fields from JSON.
 
+`new` and `nav` preserve the registered handle when a 30 s load wait expires.
+Their successful replies include `loaded:false` with the current URL/title: inspect
+the tab before retrying navigation, closing it or handing it off. `loaded:true`
+means load completed; other tab-info replies omit the field (field-m5jw).
+
+If a tab session stops answering CDP, `renderer-unresponsive` carries its last
+20 debug entries in `detail.entries`. A challenge or hung script is likely;
+`shot` may still work and other tabs remain independent. Close the affected tab
+or hand it off instead of blindly repeating input (field-cde7).
+
 ## Read the smallest useful view
 
 | Command | What to inspect |
 | --- | --- |
-| `leash snap TAB [--match TEXT] [--limit N] [--offset N]` | Indexed accessibility rows plus `snapshot`, URL, title, `total`, `truncated`, `settled`, and `dialog`. Default limit 120. |
+| `leash snap TAB [--match TEXT] [--limit N] [--offset N]` | Indexed rows plus `snapshot`, URL, title, `total`, `truncated`, `settled`, `source`, optional `reason`, and `dialog`. Default limit 120. |
 | `leash text TAB [--index N] [--max-chars N]` | Visible text, optionally scoped to a row of the current snapshot. Default/maximum 65536 characters; check `truncated`. |
 | `leash shot TAB PATH [--full-page]` | PNG screenshot; the reply names its path and byte count. |
 | `leash debug TAB [--limit N] [--clear]` | Console messages, exceptions, and failed requests since attachment. `--clear` discards the ring after reading. |
@@ -16,6 +26,10 @@ All commands below act on your owned tab. Pass `--owner NAME` on every service c
 | `leash cookies TAB` | Cookies, including HttpOnly values. Read only when necessary; do not paste secrets into reports. |
 | `leash storage TAB local` / `leash storage TAB session` | Read-only storage for this origin; check `truncated`. |
 | `leash downloads TAB` | This tab's downloads: suggested name, MIME, state, `received_bytes`, `total_bytes`, and completed path when Chrome supplies it. |
+
+`settled:true` means the document stayed stable and AX contains an interactive row, or a cheap DOM count found no interactive content. `settled:false` with `reason:"ax-tree-empty"` is not proof the page is blank: after two retakes, Leash can return up to 250 visible DOM-derived rows with `source:"dom"`. AX snapshots have `source:"ax"`; both use normal snapshot IDs and backend element identity checks. Inspect the rows and verify the expected page condition before assuming readiness. Non-password input row values reflect the current DOM value after a successful fill.
+
+A cross-origin iframe appears as role `frame`, named by its src origin, with `state:["cross-origin"]`. It is informational, not a target for inner-frame actions. `debug` names known reCAPTCHA, hCaptcha, and Turnstile loads; use a screenshot or human handoff when a challenge blocks the task, not an attempt to solve it.
 
 Dialogs are **state** in snapshots, tab info, and action replies. They block page reads (`text`, `eval`, `shot`) as well as input; these reads return `dialog-open`, including when a dialog opens during the read. Inspect it and use `leash dialog TAB accept` / `dismiss` deliberately, then retry the read. `snap` can still report the dialog; `leash dialog` answers one, it is not a read command. Network/debug rings are bounded and begin when the tab is created or attached/claimed; they are not a full browser history.
 
@@ -47,11 +61,13 @@ Take a fresh JSON snapshot, choose the row by its observed role/name/value/state
 
 | Signature | Contract |
 | --- | --- |
-| `leash click TAB SNAPSHOT INDEX` | Trusted click on an actionable row. |
-| `leash fill TAB SNAPSHOT INDEX TEXT` | Fill the observed editable control. |
-| `leash select TAB SNAPSHOT INDEX OPTION` | Choose an observed option index of a native select. |
-| `leash press TAB SNAPSHOT KEY [--index N]` | Focus row N first if supplied; otherwise send to the page. Snapshot currency is checked either way. |
-| `leash hover TAB SNAPSHOT INDEX` | Move to the observed row. |
+| `leash click TAB SNAPSHOT INDEX [--snap]` | Trusted click. A covering label of that control is clicked and reported as `via: "label"`. |
+| `leash fill TAB SNAPSHOT INDEX [TEXT] [--argument-file PATH \| --stdin] [--snap]` | Fill the observed control. Password text belongs in `--argument-file` or `--stdin`, never a flag value; the reply, trace and logs never echo it. |
+| `leash select TAB SNAPSHOT INDEX OPTION [--snap]` | Choose an observed option index of a native select. |
+| `leash press TAB SNAPSHOT KEY [--index N] [--snap]` | Focus row N first if supplied; otherwise send to the page. Snapshot currency is checked either way. |
+| `leash hover TAB SNAPSHOT INDEX [--snap]` | Move to the observed row. |
+| `leash check TAB SNAPSHOT INDEX [--snap]` | Click and require the control to become checked. Already checked, or a click that does not flip it, is `state-unchanged`. |
+| `leash uncheck TAB SNAPSHOT INDEX [--snap]` | The unchecked twin of `check`. |
 | `leash scroll TAB up` / `leash scroll TAB down` | Scroll one viewport. `--index N` instead brings a current row into view; no snapshot ID argument. |
 | `leash upload TAB SNAPSHOT INDEX PATH...` | Set local files on the observed `file-input` row, including a hidden one. Do not try to click/fill the file input. |
 | `leash nav TAB URL` | Navigate to http, https, or `about:blank`; credentialed userinfo and other schemes are refused. |
@@ -59,7 +75,14 @@ Take a fresh JSON snapshot, choose the row by its observed role/name/value/state
 
 Accepted `press` keys: Enter, Tab, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown, Escape/Esc, Space, lowercase a-z, digits 0-9, and the single punctuation characters `- = [ ] ; , . / '`. Unsupported names return `invalid-request` with this accepted set.
 
-A successful action returns URL/title, `dialog`, and any owned `popups`; its `snapshot` is null because it does not include a new table. The current snapshot remains valid through input that leaves the page unchanged. A newer `snap` or navigation invalidates older IDs, and a changed/removed target row is refused even with the current ID. On `stale-snapshot`, inspect `detail.snapshot` (current ID, or null when no table remains), re-snap and re-find the row; if navigation removed it, navigate back only when appropriate. Check dialogs/popups rather than assuming the original page is still the only relevant tab. Disabled, covered, or wrong-kind rows can be `row-not-actionable` even with a current snapshot.
+A successful action returns URL/title, `dialog`, and any owned `popups`. `snapshot` is null unless you passed `--snap`, in which case it is a fresh snapshot object (same `--match` and `--limit` as `snap`) taken after settlement. `via` is `"label"` when the click landed on the target's covering label, and omitted otherwise. The current snapshot remains valid through input that leaves the page unchanged. A newer `snap` or navigation invalidates older IDs, and a changed/removed target row is refused even with the current ID. On `stale-snapshot`, inspect `detail.snapshot` (current ID, or null when no table remains), re-snap and re-find the row; if navigation removed it, navigate back only when appropriate. Check dialogs/popups rather than assuming the original page is still the only relevant tab. Disabled, covered, or wrong-kind rows can be `row-not-actionable` even with a current snapshot.
+
+Action `popups` carry readiness, separate from ownership: `state:"opening"` for
+an empty/about:blank URL still in its first second (including dialog interruption),
+`state:"blank"` when it remains blank after the bounded 1 s settle window, or
+`state:"ready"` once it has a committed URL. Each includes `opener_url`. A blank
+popup is not necessarily an action failure; inspect it with list/text/shot before
+retrying the opener action (field-drpx).
 
 A click that submits or navigates can return before navigation settles, with the **previous** URL/title. Do not repeat it on that evidence alone. Wait for the expected URL/text with a bounded `leash wait`, or re-snap and inspect the resulting page before acting again.
 

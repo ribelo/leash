@@ -25,11 +25,13 @@ This table matches `leash help errors` (daily-c4cl, daily-9ggi).
 | `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
 | `unknown-request` | 66 | the tab's ring holds no request with that id | that id is not in the tab's ring; `leash net TAB` and use a listed id |
 | `row-not-actionable` | 65 | the row is not visible, is disabled, is covered, or is the wrong kind of control | pick another row, or `leash snap TAB` if the page moved; a file input takes `leash upload` |
+| `state-unchanged` | 65 | a check or uncheck did not change the control's checked state | snap and read the row's state; the control did not toggle, so pick another row or click its label |
 | `dialog-open` | 65 | a dialog blocks page reads and actions; answer it first | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry |
 | `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown |
 | `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it |
 | `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank |
 | `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` |
+| `renderer-unresponsive` | 75 | a tab session CDP call exceeded its deadline; detail.entries carries its last debug entries | the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off |
 | `timeout` | 75 | wait, handoff, or a bounded operation ran out of time; a handoff's detail.warnings lists the steps that failed | retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB` |
 | `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds |
 | `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry |
@@ -93,6 +95,7 @@ Check `leash status` and `leash list`. Close only your own unneeded disposable t
 
 - **`dialog-open` / `no-dialog`:** inspect the reported dialog; deliberately choose `leash dialog TAB accept` or `dismiss`, with `--text` for a prompt. Take a new snapshot before retrying. `no-dialog` means there is nothing to answer; refresh state.
 - **`no-handoff`:** no active handoff exists. Check state instead of repeatedly resuming or creating a new handoff to silence the error.
+- **`renderer-unresponsive`:** inspect `detail.entries` (the tab's last 20 debug-ring entries) for a challenge or hung script. `shot` may still work, as may other tabs. Close the affected tab or hand it off; do not blindly replay a mutation. Browser-level calls still use `timeout`.
 - **`timeout`:** inspect completion first. For a genuinely unfinished wait, use a bounded larger `--timeout-ms`; for handoff, inspect warnings and coordinate with the human. Seconds flags (`--timeout-s` for handoff, `--deadline-s` for drive) are different from wait's milliseconds.
 - **`unknown-request` / `body-unavailable`:** list `net TAB` again and choose an actual retained request ID. Bodies may be absent or evicted; do not treat missing history as proof that no request occurred.
 - **`config-invalid`:** run `leash config check`, fix the named problems/path when authorized, then recheck. Do not overwrite the whole configuration to bypass one error.

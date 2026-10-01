@@ -11,6 +11,21 @@
    (XDG_CONFIG_HOME /nonexistent/leash-test-config))))
 
 (test
+ (name hardening3_snapshot_test)
+ (modules hardening3_snapshot_test)
+ (libraries
+  leash
+  leash_test_support
+  ox_test
+  ox
+  ox_process
+  ox_observability
+  eio
+  eio.unix
+  yojson
+  alcotest))
+
+(test
  (name run_control_test)
  (modules run_control_test)
  (libraries leash yojson alcotest))
@@ -77,6 +92,21 @@
  (name download_setup_test)
  (modules download_setup_test)
  (libraries leash leash_test_support ox_test eio yojson alcotest))
+
+(test
+ (name frozen_tab_test)
+ (modules frozen_tab_test)
+ (libraries
+  leash
+  leash_test_support
+  ox_test
+  ox
+  ox_process
+  ox_observability
+  eio
+  eio.unix
+  yojson
+  alcotest))
 
 (test
  (name cdp_test)

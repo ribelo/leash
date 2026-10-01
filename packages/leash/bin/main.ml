@@ -101,7 +101,8 @@ let table ~caps command result =
 (* svc-hi4f: the options every command shares and the request fields it must not carry —
    the CLI's own, peeled off here so a command's table entry lists exactly what goes on
    the wire. *)
-let cli_options = [ "owner"; "pretty"; "table"; "config"; "socket" ]
+let cli_options =
+  [ "owner"; "pretty"; "table"; "config"; "socket"; "argument_file"; "stdin" ]
 
 (* svc-o4wt svc-x8rp: --socket wins for one call; otherwise the CLI reads the same
    configuration the service does — --config, or $XDG_CONFIG_HOME/leash/config.toml — and
@@ -358,6 +359,31 @@ let drive_request_options options =
       | Some (`Int n) when n > 0 -> Ok options
       | Some _ -> Error max_steps_usage)
 
+(* field-5sdo: fill text may come from the argument, a file, or stdin. The read stops
+   at the service's 64 KiB bound; the value is not printed here. *)
+let fill_limit = 65_536
+
+let read_bounded ic =
+  let limit = fill_limit + 1 in
+  let buf = Bytes.create limit in
+  let rec read_all off =
+    if off = limit then off
+    else
+      let n = In_channel.input ic buf off (limit - off) in
+      if n = 0 then off else read_all (off + n)
+  in
+  let n = read_all 0 in
+  if n > fill_limit then Error `Too_large else Ok (Bytes.sub_string buf 0 n)
+
+let read_fill_file ~caps path =
+  if not (Sys.file_exists path) then Error (`Missing path)
+  else
+    try Cap_stdlib.In_channel.with_open_bin ~caps path read_bounded with
+    | Eio.Cancel.Cancelled _ as exn -> raise exn
+    | Unix.Unix_error ((Unix.EACCES | Unix.EPERM | Unix.EROFS), _, _) -> Error `Denied
+    | Eio.Io (Eio.Fs.E (Eio.Fs.Permission_denied _), _) -> Error `Denied
+    | Sys_error _ -> Error (`Missing path)
+
 let rec perform ~caps ~send ~base command fields positionals options =
   match (command, positionals) with
   (* hard-xg6y hard-ovbx hard-vq5s: `net TAB` lists; `net TAB body ID` and `net TAB request
@@ -374,6 +400,54 @@ let rec perform ~caps ~send ~base command fields positionals options =
         [ "tab"; "snapshot"; "index" ]
         [ tab; snapshot; index ]
         (Some ("paths", `List (List.map str paths)) :: options)
+  | "fill", _ -> (
+      let present key =
+        List.find_map
+          (function Some (name, value) when name = key -> Some value | _ -> None)
+          options
+      in
+      let positional =
+        if List.length positionals >= 4 then List.nth positionals 3 else ""
+      in
+      let file =
+        match present "argument_file" with Some (`String path) -> Some path | _ -> None
+      in
+      let from_stdin =
+        match present "stdin" with Some (`Bool true) -> true | _ -> false
+      in
+      let from_arg = String.trim positional <> "" in
+      let sources =
+        (if from_arg then 1 else 0)
+        + (if Option.is_some file then 1 else 0)
+        + if from_stdin then 1 else 0
+      in
+      if sources = 0 then
+        usage ~caps "fill: TEXT is missing; usage: fill TAB SNAPSHOT INDEX TEXT"
+      else if sources > 1 then
+        usage ~caps "fill: give TEXT, --argument-file or --stdin, not more than one"
+      else
+        let read =
+          if from_stdin then read_bounded (Cap_stdlib.stdin ~caps)
+          else if from_arg then Ok positional
+          else read_fill_file ~caps (Option.get file)
+        in
+        match read with
+        | Error `Too_large -> report ~caps "too-large" "fill text is over 64 KiB"
+        | Error `Denied ->
+            report ~caps "permission-denied" "permission denied while reading fill text"
+        | Error (`Missing path) ->
+            usage ~caps
+              ("fill: cannot read " ^ path ^ "; pass an existing file to --argument-file")
+        | Ok text ->
+            let positionals =
+              if List.length positionals >= 4 then
+                List.mapi (fun i value -> if i = 3 then text else value) positionals
+              else positionals @ [ text ]
+            in
+            let fields =
+              if List.exists (( = ) "text") fields then fields else fields @ [ "text" ]
+            in
+            perform_wire ~caps ~send ~base command fields positionals options)
   | _ -> perform_wire ~caps ~send ~base command fields positionals options
 
 and perform_wire ~caps ~send ~base command fields positionals options =
@@ -593,19 +667,40 @@ let positional_term positionals =
         if spec.many then
           Term.(
             const Fun.id
-            $ Arg.(non_empty & pos_right (index - 1) string [] & info [] ~docv:spec.docv))
-        else if spec.optional then
+            $ Arg.(value & pos_right (index - 1) string [] & info [] ~docv:spec.docv))
+        else
           Term.(
             const (fun value -> Option.to_list value)
             $ Arg.(value & pos index (some string) None & info [] ~docv:spec.docv))
-        else
-          Term.(
-            const (fun value -> [ value ])
-            $ Arg.(required & pos index (some string) None & info [] ~docv:spec.docv))
       in
       Term.(const ( @ ) $ term $ arg))
     (Term.const [])
     (List.mapi (fun index spec -> (index, spec)) positionals)
+
+(* field-uqvp: a missing or blank positional is a usage error that names the argument
+   and the synopsis, not a Cmdliner parse failure. An empty shell variable is blank. *)
+let positional_blank s = String.trim s = ""
+
+let synopsis name specs =
+  String.concat " " (name :: List.map (fun spec -> spec.docv) specs)
+
+let missing_positional specs values =
+  let rec go i = function
+    | [] -> None
+    | spec :: rest when spec.many ->
+        let tail = List.filteri (fun j _ -> j >= i) values in
+        if tail = [] || List.exists positional_blank tail then Some spec else None
+    | spec :: rest when spec.optional -> go (i + 1) rest
+    | spec :: rest -> (
+        match List.nth_opt values i with
+        | Some s when not (positional_blank s) -> go (i + 1) rest
+        | _ -> Some spec)
+  in
+  go 0 specs
+
+let usage_missing ~caps name specs spec =
+  usage ~caps
+    (Printf.sprintf "%s: %s is missing; usage: %s" name spec.docv (synopsis name specs))
 
 let command ~caps ~send ~base ~run_owned ?wire ?(man = []) name doc positionals options
     examples =
@@ -621,7 +716,10 @@ let command ~caps ~send ~base ~run_owned ?wire ?(man = []) name doc positionals 
     Term.(
       const (fun args opts () ->
           run_owned (fun _sw ->
-              protect ~caps (fun () -> perform ~caps ~send ~base wire fields args opts)))
+              protect ~caps (fun () ->
+                  match missing_positional positionals args with
+                  | Some spec -> usage_missing ~caps name positionals spec
+                  | None -> perform ~caps ~send ~base wire fields args opts)))
       $ positional_term positionals $ collected)
 
 (* run-tcuz run-dbji run-ykq4: these authoring commands need no service. *)
@@ -791,6 +889,15 @@ let playbook_command ~caps ~send ~base ~run_owned =
        ~examples:[ "leash playbook list"; "leash playbook check ./my-playbook" ])
     [ list; show; check; test; accept ]
 
+(* field-swvb: the same filters as snap, applied to the snapshot taken after the action. *)
+let snap_opts =
+  [
+    opt "snap" Bool "" "After settling, include a fresh snapshot in the reply.";
+    opt "match" Str "TEXT"
+      "With --snap, keep rows whose role, name or value contains TEXT.";
+    opt "limit" Int "N" "With --snap, at most N rows (default 120).";
+  ]
+
 let commands ~caps ~send ~base ~run_owned =
   List.map
     (fun (name, doc, positionals, options, examples) ->
@@ -883,28 +990,39 @@ let commands ~caps ~send ~base ~run_owned =
         [],
         [ "leash nav t_9xk https://example.com" ] );
       ( "click",
-        "Click the row at INDEX of SNAPSHOT.",
+        "Click the row at INDEX of SNAPSHOT. A covering label of that control is clicked \
+         and reported as via label.",
         [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "index" "INDEX" ],
-        [],
-        [ "leash click t_9xk s_3 7" ] );
+        snap_opts,
+        [ "leash click t_9xk s_3 7"; "leash click t_9xk s_3 7 --snap --limit 20" ] );
       ( "fill",
-        "Fill the row at INDEX of SNAPSHOT with TEXT.",
+        "Fill the row at INDEX of SNAPSHOT with TEXT, or with --argument-file or --stdin.",
         [
           pos "tab" "TAB";
           pos "snapshot" "SNAPSHOT";
           pos "index" "INDEX";
-          pos "text" "TEXT";
+          pos_opt "text" "TEXT";
         ],
-        [],
-        [ "leash fill t_9xk s_3 1 'Ada Lovelace'" ] );
+        [
+          opt "argument_file" Str "PATH"
+            "Read TEXT from PATH instead of the argument (at most 64 KiB).";
+          opt "stdin" Bool ""
+            "Read TEXT from stdin instead of the argument (at most 64 KiB).";
+        ]
+        @ snap_opts,
+        [
+          "leash fill t_9xk s_3 1 'Ada Lovelace'";
+          "leash fill t_9xk s_3 4 --stdin";
+          "leash fill t_9xk s_3 4 --argument-file /tmp/secret.txt";
+        ] );
       ( "press",
         "Press KEY; with --index the row is focused first. Accepted names: Enter, \
          Escape, Esc, Tab, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, \
          Home, End, PageUp, PageDown, Space, lowercase a-z, digits 0-9, and single \
          punctuation characters - = [ ] ; , . / '.",
         [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "key" "KEY" ],
-        [ opt "index" Int "N" "Focus the row at index N before the key." ],
-        [ "leash press t_9xk s_3 Enter" ] );
+        opt "index" Int "N" "Focus the row at index N before the key." :: snap_opts,
+        [ "leash press t_9xk s_3 Enter"; "leash press t_9xk s_3 Enter --snap" ] );
       ( "select",
         "Choose OPTION, the row's observed option index.",
         [
@@ -913,8 +1031,8 @@ let commands ~caps ~send ~base ~run_owned =
           pos "index" "INDEX";
           pos "option" "OPTION";
         ],
-        [],
-        [ "leash select t_9xk s_3 2 0" ] );
+        snap_opts,
+        [ "leash select t_9xk s_3 2 0 --snap" ] );
       ( "scroll",
         "Scroll the page, or the row --index names, one viewport.",
         [ pos "tab" "TAB"; pos "direction" "UP|DOWN" ],
@@ -952,8 +1070,18 @@ let commands ~caps ~send ~base ~run_owned =
       ( "hover",
         "Move the mouse to the row at INDEX of SNAPSHOT.",
         [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "index" "INDEX" ],
-        [],
-        [ "leash hover t_9xk s_3 4" ] );
+        snap_opts,
+        [ "leash hover t_9xk s_3 4 --snap" ] );
+      ( "check",
+        "Check the control at INDEX and verify it became checked.",
+        [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "index" "INDEX" ],
+        snap_opts,
+        [ "leash check t_9xk s_3 8" ] );
+      ( "uncheck",
+        "Uncheck the control at INDEX and verify it became unchecked.",
+        [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "index" "INDEX" ],
+        snap_opts,
+        [ "leash uncheck t_9xk s_3 8" ] );
       ( "net",
         "List the tab's recent requests; `net TAB body ID` and `net TAB request ID` read \
          one.",

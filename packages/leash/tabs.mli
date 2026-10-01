@@ -419,6 +419,21 @@ val hover :
   (Protocol.action_result, Protocol.error) result
 (** hard-v1gs: the mouse moves to the row's revalidated point and settles. *)
 
+val check :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.click_args ->
+  (Protocol.action_result, Protocol.error) result
+(** field-guda: verified check. [state-unchanged] when the control does not become
+    checked. *)
+
+val uncheck :
+  t ->
+  owner:Protocol.Owner.t ->
+  Protocol.click_args ->
+  (Protocol.action_result, Protocol.error) result
+(** field-guda: verified uncheck. *)
+
 val navigate :
   t ->
   owner:Protocol.Owner.t ->

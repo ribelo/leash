@@ -31,6 +31,8 @@ let snapshot ?(url = "https://site-a.example/") ?(title = "A page") ?dialog () =
       offset = 0;
       truncated = false;
       settled = true;
+      source = P.Ax;
+      reason = None;
       dialog;
     }
 
@@ -132,6 +134,7 @@ let tab_info () =
       generation = 1;
       dialog = None;
       expires = None;
+      loaded = None;
       reason = None;
     }
 

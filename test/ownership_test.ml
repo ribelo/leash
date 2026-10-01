@@ -164,10 +164,42 @@ let page_commands handle : (string * P.command) list =
             };
           timeout_ms = Some 1;
         } );
-    ("click", P.Click { tab = handle; snapshot; index = 1 });
-    ("fill", P.Fill { tab = handle; snapshot; index = 1; text = "x" });
-    ("press", P.Press { tab = handle; snapshot; index = Some 1; key = "Enter" });
-    ("select", P.Select { tab = handle; snapshot; index = 1; option = 0 });
+    ( "click",
+      P.Click
+        { tab = handle; snapshot; index = 1; snap = None; match_ = None; limit = None } );
+    ( "fill",
+      P.Fill
+        {
+          tab = handle;
+          snapshot;
+          index = 1;
+          text = "x";
+          snap = None;
+          match_ = None;
+          limit = None;
+        } );
+    ( "press",
+      P.Press
+        {
+          tab = handle;
+          snapshot;
+          index = Some 1;
+          key = "Enter";
+          snap = None;
+          match_ = None;
+          limit = None;
+        } );
+    ( "select",
+      P.Select
+        {
+          tab = handle;
+          snapshot;
+          index = 1;
+          option = 0;
+          snap = None;
+          match_ = None;
+          limit = None;
+        } );
     ( "scroll",
       P.Scroll
         { tab = handle; direction = enum P.Direction.of_string "down"; index = None } );
@@ -179,7 +211,9 @@ let page_commands handle : (string * P.command) list =
     ("net_request", P.Net_request { tab = handle; id = "1000.1" });
     ( "upload",
       P.Upload { tab = handle; snapshot; index = 1; paths = [ "/tmp/leash-upload" ] } );
-    ("hover", P.Hover { tab = handle; snapshot; index = 1 });
+    ( "hover",
+      P.Hover
+        { tab = handle; snapshot; index = 1; snap = None; match_ = None; limit = None } );
     ("cookies", P.Cookies { tab = handle });
     ("storage", P.Storage { tab = handle; area = enum P.Storage_area.of_string "local" });
     ( "dialog",

@@ -111,6 +111,21 @@ module State = struct
   let yojson_of_t = yojson_of_state
 end
 
+type popup_state =
+  | Opening [@json.name "opening"]
+  | Blank [@json.name "blank"]
+  | Ready [@json.name "ready"]
+[@@deriving yojson]
+
+module Popup_state = struct
+  type t = popup_state
+
+  let of_string = wire_value popup_state_of_yojson
+  let to_string = wire_string yojson_of_popup_state
+  let t_of_yojson = popup_state_of_yojson
+  let yojson_of_t = yojson_of_popup_state
+end
+
 type stage = Release [@json.name "release"] | Close [@json.name "close"]
 [@@deriving yojson]
 
@@ -149,6 +164,7 @@ type row_state =
   | Disabled [@json.name "disabled"]
   | Required [@json.name "required"]
   | Readonly [@json.name "readonly"]
+  | Cross_origin [@json.name "cross-origin"]
   | Password [@json.name "password"]
       (** field-8bzc: an [<input type=password>] row; it never carries a value. *)
 [@@deriving yojson]
@@ -326,12 +342,14 @@ type error_code =
   | Body_unavailable [@json.name "body-unavailable"]
   | Unknown_request [@json.name "unknown-request"]
   | Row_not_actionable [@json.name "row-not-actionable"]
+  | State_unchanged [@json.name "state-unchanged"]
   | Dialog_open [@json.name "dialog-open"]
   | No_dialog [@json.name "no-dialog"]
   | No_handoff [@json.name "no-handoff"]
   | Url_refused [@json.name "url-refused"]
   | Tab_cap [@json.name "tab-cap"]
   | Timeout [@json.name "timeout"]
+  | Renderer_unresponsive [@json.name "renderer-unresponsive"]
   | Browser_unavailable [@json.name "browser-unavailable"]
   | Model_unavailable [@json.name "model-unavailable"]
   | Model_timeout [@json.name "model-timeout"]
@@ -413,6 +431,10 @@ module Error_code = struct
            control"
           "pick another row, or `leash snap TAB` if the page moved; a file input takes \
            `leash upload`"
+    | State_unchanged ->
+        info 65 "a check or uncheck did not change the control's checked state"
+          "snap and read the row's state; the control did not toggle, so pick another \
+           row or click its label"
     | Dialog_open ->
         info 65 "a dialog blocks page reads and actions; answer it first"
           "answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then \
@@ -436,6 +458,12 @@ module Error_code = struct
            detail.warnings lists the steps that failed"
           "retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or \
            `leash resume TAB`"
+    | Renderer_unresponsive ->
+        info 75
+          "a tab session CDP call exceeded its deadline; detail.entries carries its last \
+           debug entries"
+          "the page's renderer is not answering; a bot-detection challenge or a hung \
+           script is likely; shot may still work; close the tab or hand off"
     | Browser_unavailable ->
         info 69 "Chrome is restarting"
           "Chrome is restarting; retry `leash status` in a few seconds"
@@ -522,12 +550,14 @@ module Error_code = struct
       Body_unavailable;
       Unknown_request;
       Row_not_actionable;
+      State_unchanged;
       Dialog_open;
       No_dialog;
       No_handoff;
       Url_refused;
       Tab_cap;
       Timeout;
+      Renderer_unresponsive;
       Browser_unavailable;
       Model_unavailable;
       Model_timeout;
@@ -584,9 +614,26 @@ type tab_info = {
   generation : int;
   dialog : dialog option; [@json.null]
   expires : expires option; [@json.null]
+  loaded : bool option;
+      (** field-m5jw: only new/nav report whether the load wait finished. *)
   reason : string option;
       (** Why the human holds this tab, the reason of the live handoff (hand-r4t1); a
           [key?] field, so it is absent from every tab nobody is waiting on. *)
+}
+[@@deriving yojson]
+
+type popup_info = {
+  tab : Handle.t;
+  url : string;
+  title : string;
+  origin : Origin.t;
+  state : Popup_state.t;
+  owner : Owner.t option; [@json.null]
+  generation : int;
+  dialog : dialog option; [@json.null]
+  expires : expires option; [@json.null]
+  reason : string option;
+  opener_url : string;
 }
 [@@deriving yojson]
 
@@ -609,6 +656,8 @@ type row = {
 }
 [@@deriving yojson]
 
+type snapshot_source = Ax [@json.name "ax"] | Dom [@json.name "dom"] [@@deriving yojson]
+
 type snapshot = {
   snapshot : Snapshot_id.t;
   tab : Handle.t;
@@ -619,6 +668,8 @@ type snapshot = {
   offset : int;
   truncated : bool;
   settled : bool;
+  source : snapshot_source; [@json.default Ax]
+  reason : string option;
   dialog : dialog option; [@json.null]
 }
 [@@deriving yojson]
@@ -627,9 +678,14 @@ type action_result = {
   tab : Handle.t;
   url : string;
   title : string;
-  snapshot : Snapshot_id.t option; [@json.null]
+  snapshot : snapshot option; [@json.null]
+      (** field-swvb: null, or the fresh snapshot taken after settlement when the request
+          asked for one. The object is a {!snapshot}, not an id. *)
   dialog : dialog option; [@json.null]
-  popups : tab_info list;
+  popups : popup_info list;
+  via : string option;
+      (** field-uls3: [key?]. ["label"] when a click dispatched on the covering label of
+          the target; absent otherwise. *)
 }
 [@@deriving yojson]
 
@@ -697,10 +753,27 @@ type eval_args = {
 
 type nav_args = { tab : Handle.t; url : string } [@@deriving yojson]
 
-type click_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
+(* field-swvb: [snap], [match_] and [limit] are [key?]. Set [snap] to ask for a
+   fresh snapshot in the reply after settlement; [match_] and [limit] are snap's. *)
+type click_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  snap : bool option;
+  match_ : string option; [@json.key "match"]
+  limit : int option;
+}
 [@@deriving yojson]
 
-type fill_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int; text : string }
+type fill_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  text : string;
+  snap : bool option;
+  match_ : string option; [@json.key "match"]
+  limit : int option;
+}
 [@@deriving yojson]
 
 type press_args = {
@@ -708,10 +781,21 @@ type press_args = {
   snapshot : Snapshot_id.t;
   index : int option;
   key : string;
+  snap : bool option;
+  match_ : string option; [@json.key "match"]
+  limit : int option;
 }
 [@@deriving yojson]
 
-type select_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int; option : int }
+type select_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  option : int;
+  snap : bool option;
+  match_ : string option; [@json.key "match"]
+  limit : int option;
+}
 [@@deriving yojson]
 
 type scroll_args = { tab : Handle.t; direction : Direction.t; index : int option }
@@ -756,7 +840,14 @@ type upload_args = {
 }
 [@@deriving yojson]
 
-type hover_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
+type hover_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  snap : bool option;
+  match_ : string option; [@json.key "match"]
+  limit : int option;
+}
 [@@deriving yojson]
 
 type storage_args = { tab : Handle.t; area : Storage_area.t } [@@deriving yojson]
@@ -1207,6 +1298,8 @@ type command =
   | Net_request of net_entry_args
   | Upload of upload_args
   | Hover of hover_args
+  | Check of click_args
+  | Uncheck of click_args
   | Cookies of tab_args
   | Storage of storage_args
   | Playbook_test of playbook_test_args
@@ -1242,6 +1335,8 @@ let command_name = function
   | Net_request _ -> "net_request"
   | Upload _ -> "upload"
   | Hover _ -> "hover"
+  | Check _ -> "check"
+  | Uncheck _ -> "uncheck"
   | Cookies _ -> "cookies"
   | Storage _ -> "storage"
   | Playbook_test _ -> "playbook_test"
@@ -1276,6 +1371,7 @@ let args_to_json = function
   | Net_body args | Net_request args -> yojson_of_net_entry_args args
   | Upload args -> yojson_of_upload_args args
   | Hover args -> yojson_of_hover_args args
+  | Check args | Uncheck args -> yojson_of_click_args args
   | Cookies args -> yojson_of_tab_args args
   | Storage args -> yojson_of_storage_args args
   | Playbook_test args -> yojson_of_playbook_test_args args
@@ -1313,6 +1409,8 @@ let command_of_args ~cmd args =
   | "net_request" -> with_args net_entry_args_of_yojson (fun args -> Net_request args)
   | "upload" -> with_args upload_args_of_yojson (fun args -> Upload args)
   | "hover" -> with_args hover_args_of_yojson (fun args -> Hover args)
+  | "check" -> with_args click_args_of_yojson (fun args -> Check args)
+  | "uncheck" -> with_args click_args_of_yojson (fun args -> Uncheck args)
   | "cookies" -> with_args tab_args_of_yojson (fun args -> Cookies args)
   | "storage" -> with_args storage_args_of_yojson (fun args -> Storage args)
   | "playbook_test" ->

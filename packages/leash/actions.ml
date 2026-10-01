@@ -27,6 +27,12 @@ type tab = {
   page : unit -> string * string;
   refresh : unit -> unit;
   snapshot : unit -> (P.Snapshot_id.t * string * (P.row * int) list) option;
+  dom_snapshot : unit -> bool;
+      (** field-jkx6: the current table was derived from the DOM, not the AX tree.
+          Revalidation then identifies the row by backend node, not by accessible role and
+          name. *)
+  popup : P.tab_info -> P.popup_info;
+      (** field-drpx: the registry's popup readiness for a tab this action opened. *)
   dialog : unit -> P.dialog option;
   dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
@@ -49,10 +55,11 @@ type tab = {
    the target's death, never by a bound of the dispatch's own (tab-0ohq). *)
 let call_deadline = Ox.Duration.seconds 30
 
-type failure = Refused of int * string | Transport of string
+type failure = Refused of int * string | Transport of string | Timed_out
 
 let attempt ?deadline cdp ~session method_ params =
   match Cdp.call cdp ~session ?deadline method_ params with
+  | Error `Timeout -> Error Timed_out
   | Error _ -> Error (Transport "the browser connection failed")
   | Ok reply -> (
       match Cdp.error_of_reply reply with
@@ -62,9 +69,14 @@ let attempt ?deadline cdp ~session method_ params =
           | Some result -> Ok result
           | None -> Error (Transport "the browser's reply carried no result")))
 
+(* field-cde7: a session call that runs out its deadline is the renderer, not the
+   browser. Browser-level calls do not come through here. *)
+let unresponsive () = fail "renderer-unresponsive" "browser operation timed out"
+
 let call cdp ~session method_ params =
   match attempt ~deadline:call_deadline cdp ~session method_ params with
   | Ok json -> Ok json
+  | Error Timed_out -> unresponsive ()
   | Error (Refused (number, message)) ->
       fail "internal"
         (Printf.sprintf "the browser refused %s (%d %s)" method_ number message)
@@ -132,7 +144,7 @@ let dispatch cdp tab method_ params =
   | `Reply (Error `Timeout) ->
       if page_alive cdp tab then Ok ()
       else if target_gone cdp tab then Error (tab_gone_externally ())
-      else fail "browser-unavailable" "Chrome did not answer; try again shortly"
+      else unresponsive ()
   | `Reply (Error _) ->
       fail "browser-unavailable" "Chrome did not answer; try again shortly"
 
@@ -199,6 +211,24 @@ let described cdp tab backend =
       | Ok node -> Some node
       | Error _ -> None)
 
+(* field-jkx6: a DOM-derived row has no AX role to compare, so identity is the node
+   itself. A connected node has a nonzero nodeId, and the backend id Chrome returns must
+   be the one that was asked for. A reply that names another backend, or a disconnected
+   node, is staleness. *)
+let described_identity cdp tab backend =
+  match
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
+      (E.object_ [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
+  with
+  | Error _ -> None
+  | Ok json -> (
+      match
+        ( E.Of_json.(at [ "node"; "nodeId" ] int) json,
+          E.Of_json.(at [ "node"; "backendNodeId" ] int) json )
+      with
+      | Ok node, Ok returned when node <> 0 && returned = backend -> Some node
+      | _ -> None)
+
 let disabled (row : P.row) =
   match row.state with
   | Some states ->
@@ -231,15 +261,22 @@ let revalidate cdp tab ?snapshot_id ~index () =
   else if disabled row then fail "row-not-actionable" "the row is disabled"
   else
     let* () = loader_unchanged cdp tab loader in
-    match accessed cdp tab backend with
-    | None -> fail_stale tab "the row no longer resolves; snap again"
-    | Some (role, name) when Snapshot_source.row_role role <> row.role || name <> row.name
-      ->
-        fail_stale tab "the row changed since the snapshot; snap again"
-    | Some _ -> (
-        match described cdp tab backend with
-        | None -> fail_stale tab "the row no longer resolves; snap again"
-        | Some node -> Ok { row; backend; node })
+    if tab.dom_snapshot () then
+      (* field-jkx6: a DOM-derived row has no AX role to compare. The backend node
+         still resolving is the identity check; visibility stays with the hit test. *)
+      match described_identity cdp tab backend with
+      | None -> fail_stale tab "the row no longer resolves; snap again"
+      | Some node -> Ok { row; backend; node }
+    else
+      match accessed cdp tab backend with
+      | None -> fail_stale tab "the row no longer resolves; snap again"
+      | Some (role, name)
+        when Snapshot_source.row_role role <> row.role || name <> row.name ->
+          fail_stale tab "the row changed since the snapshot; snap again"
+      | Some _ -> (
+          match described cdp tab backend with
+          | None -> fail_stale tab "the row no longer resolves; snap again"
+          | Some node -> Ok { row; backend; node })
 
 let quads cdp tab backend =
   let* json =
@@ -327,10 +364,11 @@ let document_offset cdp tab =
 (* The click point must hit-test to the row or to one of its descendants: an overlay that
    covers the row answers with another node, and a row scrolled out of the viewport has
    no node at the point at all. A scroll is not staleness (ADR-0004), so a miss is given
-   one [scrollIntoViewIfNeeded] and a fresh aim before it is refused. *)
-let hit_test cdp tab ~backend ~x ~y =
+   one [scrollIntoViewIfNeeded] and a fresh aim before it is refused. field-uls3: a
+   covering LABEL whose control is the target, or which contains it, is the click. *)
+let hit_backend cdp tab ~x ~y =
   match document_offset cdp tab with
-  | None -> false
+  | None -> Ok None
   | Some (page_x, page_y) -> (
       match
         attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.getNodeForLocation"
@@ -341,29 +379,131 @@ let hit_test cdp tab ~backend ~x ~y =
                ("includeUserAgentShadowDOM", Some (E.bool false));
              ])
       with
-      | Error _ -> false
+      | Error Timed_out -> unresponsive ()
+      | Error _ -> Ok None
       | Ok json -> (
           match E.Of_json.(field "backendNodeId" (try_or_none int)) json with
-          | Ok (Some hit) when hit = backend -> true
-          | Ok (Some hit) -> subtree_contains cdp tab ~backend ~hit
-          | _ -> false))
+          | Ok hit -> Ok hit
+          | Error _ -> Ok None))
+
+let node_name cdp tab backend =
+  match
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
+      (E.object_ [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
+  with
+  | Error _ -> Error `Probe
+  | Ok json -> (
+      match E.Of_json.(at [ "node"; "nodeName" ] string) json with
+      | Ok name -> Ok (Some (String.uppercase_ascii name))
+      | Error _ -> Ok None)
+
+(* HTMLLabelElement.control is the labeled element, whether the label wraps it or names
+   it with for=. The object id comes back from the page; describeNode turns it into the
+   backend id the snapshot row carries. *)
+let label_control cdp tab label =
+  match
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.resolveNode"
+      (E.object_ [ ("backendNodeId", Some (E.int label)) ])
+  with
+  | Error Timed_out -> unresponsive ()
+  | Error _ -> Ok None
+  | Ok resolved -> (
+      match E.Of_json.(at [ "object"; "objectId" ] string) resolved with
+      | Error _ -> Ok None
+      | Ok object_id -> (
+          match
+            attempt ~deadline:call_deadline cdp ~session:tab.session
+              "Runtime.callFunctionOn"
+              (E.object_
+                 [
+                   ("objectId", Some (E.string object_id));
+                   ( "functionDeclaration",
+                     Some (E.string "function () { return this.control || null; }") );
+                   ("returnByValue", Some (E.bool false));
+                 ])
+          with
+          | Error Timed_out -> unresponsive ()
+          | Error _ -> Ok None
+          | Ok called -> (
+              match
+                E.Of_json.(at [ "result"; "objectId" ] (try_or_none string)) called
+              with
+              | Ok (Some control_id) -> (
+                  match
+                    attempt ~deadline:call_deadline cdp ~session:tab.session
+                      "DOM.describeNode"
+                      (E.object_
+                         [
+                           ("objectId", Some (E.string control_id));
+                           ("depth", Some (E.int 0));
+                         ])
+                  with
+                  | Error Timed_out -> unresponsive ()
+                  | Error _ -> Ok None
+                  | Ok described -> (
+                      match E.Of_json.(at [ "node"; "backendNodeId" ] int) described with
+                      | Ok id -> Ok (Some id)
+                      | Error _ -> Ok None))
+              | _ -> Ok None)))
+
+(* A probe the fixture does not answer, or that fails, is not a label. It must not
+   become browser-unavailable or renderer-unresponsive: the old covered verdict stands. *)
+let label_covers cdp tab ~target ~hit =
+  match node_name cdp tab hit with
+  | Error `Probe -> Error `Probe
+  | Ok (Some "LABEL") -> (
+      if subtree_contains cdp tab ~backend:hit ~hit:target.backend then Ok true
+      else
+        match label_control cdp tab hit with
+        | Error _ -> Error `Probe
+        | Ok control -> Ok (control = Some target.backend))
+  | Ok _ -> Ok false
+
+type aim = { x : float; y : float; via : string option }
+
+let classify cdp tab (target : target) x y =
+  let* hit = hit_backend cdp tab ~x ~y in
+  match hit with
+  | Some id
+    when id = target.backend || subtree_contains cdp tab ~backend:target.backend ~hit:id
+    ->
+      Ok `Direct
+  | Some id -> (
+      match label_covers cdp tab ~target ~hit:id with
+      | Error `Probe -> Ok `Probe_failed
+      | Ok true -> Ok `Label
+      | Ok false -> Ok `Covered)
+  | None -> Ok `Miss
 
 let aim cdp tab (target : target) =
+  let once x y =
+    let* kind = classify cdp tab target x y in
+    match kind with
+    | `Direct -> Ok (Some { x; y; via = None })
+    | `Label -> Ok (Some { x; y; via = Some "label" })
+    | `Probe_failed -> fail "row-not-actionable" "the row is covered at its click point"
+    | `Covered | `Miss -> Ok None
+  in
   let* x, y = point cdp tab target.backend in
-  if hit_test cdp tab ~backend:target.backend ~x ~y then Ok (x, y)
-  else
-    let* () =
-      match
-        attempt ~deadline:call_deadline cdp ~session:tab.session
-          "DOM.scrollIntoViewIfNeeded"
-          (E.object_ [ ("backendNodeId", Some (E.int target.backend)) ])
-      with
-      | Ok _ -> Ok ()
-      | Error _ -> Ok ()
-    in
-    let* x, y = point cdp tab target.backend in
-    if hit_test cdp tab ~backend:target.backend ~x ~y then Ok (x, y)
-    else fail "row-not-actionable" "the row is covered at its click point"
+  match once x y with
+  | Error e -> Error e
+  | Ok (Some point) -> Ok point
+  | Ok None -> (
+      let* () =
+        match
+          attempt ~deadline:call_deadline cdp ~session:tab.session
+            "DOM.scrollIntoViewIfNeeded"
+            (E.object_ [ ("backendNodeId", Some (E.int target.backend)) ])
+        with
+        | Ok _ -> Ok ()
+        | Error Timed_out -> unresponsive ()
+        | Error _ -> Ok ()
+      in
+      let* x, y = point cdp tab target.backend in
+      match once x y with
+      | Error e -> Error e
+      | Ok (Some point) -> Ok point
+      | Ok None -> fail "row-not-actionable" "the row is covered at its click point")
 
 let mouse cdp tab ~type_ ~x ~y ~buttons =
   dispatch cdp tab "Input.dispatchMouseEvent"
@@ -547,6 +687,26 @@ let resolve_node cdp tab backend =
   | Ok object_id -> Ok object_id
   | Error _ -> fail "row-not-actionable" "the row cannot be resolved as an object"
 
+let checked_expression =
+  "function () { if (typeof this.checked === 'boolean') return this.checked; const aria \
+   = this.getAttribute && this.getAttribute('aria-checked'); if (aria === 'true') return \
+   true; if (aria === 'false') return false; return null; }"
+
+let read_checked cdp tab backend =
+  let* object_id = resolve_node cdp tab backend in
+  let* json =
+    call cdp ~session:tab.session "Runtime.callFunctionOn"
+      (E.object_
+         [
+           ("objectId", Some (E.string object_id));
+           ("functionDeclaration", Some (E.string checked_expression));
+           ("returnByValue", Some (E.bool true));
+         ])
+  in
+  match E.Of_json.(at [ "result"; "value" ] (try_or_none bool)) json with
+  | Ok value -> Ok value
+  | Error _ -> Ok None
+
 let choose_expression =
   "function (index) { const option = this.options[index]; if (!option) { return null; } \
    option.selected = true; this.dispatchEvent(new Event('input', { bubbles: true })); \
@@ -599,8 +759,8 @@ let clamp ~width ~height (x, y) =
 
 (* The reply reports the page as it is after the action: url and title from the tab's
    target, any dialog that opened, and the tabs this action opened (tab-tm6c, tab-8k2g).
-   Taking a fresh snapshot is not part of settling, so the snapshot id is always null and
-   the caller decides when to observe again. *)
+   A fresh snapshot is not taken here; the registry attaches one when the request asked
+   (field-swvb). [via] stays absent until a click sets it (field-uls3). *)
 let result tab before =
   if tab.dialog () = None then tab.refresh ();
   let url, title = tab.page () in
@@ -611,10 +771,20 @@ let result tab before =
     tab.all_tabs ()
     |> List.filter_map (fun ((info : P.tab_info), opener) ->
         let fresh = not (List.mem (P.Handle.to_string info.tab) before) in
-        if fresh && opener = Some tab.target && info.owner = Some tab.owner then Some info
+        if fresh && opener = Some tab.target && info.owner = Some tab.owner then
+          Some (tab.popup info)
         else None)
   in
-  P.{ tab = tab.handle; url; title; snapshot = None; dialog = tab.dialog (); popups }
+  P.
+    {
+      tab = tab.handle;
+      url;
+      title;
+      snapshot = None;
+      dialog = tab.dialog ();
+      popups;
+      via = None;
+    }
 
 let with_result tab dispatch =
   let before = handles tab in
@@ -632,16 +802,59 @@ let guarded tab dispatch =
   | None -> dispatch ()
 
 let click ?(settle_after = true) ~cdp tab (args : P.click_args) =
-  guarded tab (fun () ->
-      with_result tab (fun () ->
-          let* target =
-            revalidate cdp tab ~snapshot_id:args.snapshot ~index:args.index ()
-          in
-          let* x, y = aim cdp tab target in
-          let* () = mouse cdp tab ~type_:"mousePressed" ~x ~y ~buttons:1 in
-          let* () = mouse cdp tab ~type_:"mouseReleased" ~x ~y ~buttons:0 in
-          if settle_after then settle cdp tab ~combobox:false else Ok ()))
+  let via = ref None in
+  let* result =
+    guarded tab (fun () ->
+        with_result tab (fun () ->
+            let* target =
+              revalidate cdp tab ~snapshot_id:args.snapshot ~index:args.index ()
+            in
+            let* point = aim cdp tab target in
+            via := point.via;
+            let* () =
+              mouse cdp tab ~type_:"mousePressed" ~x:point.x ~y:point.y ~buttons:1
+            in
+            let* () =
+              mouse cdp tab ~type_:"mouseReleased" ~x:point.x ~y:point.y ~buttons:0
+            in
+            if settle_after then settle cdp tab ~combobox:false else Ok ()))
+  in
+  Ok { result with P.via = !via }
 
+(* field-guda: click the control (following a covering label, field-uls3), then read
+   checked. Already in the requested state is state-unchanged without a click, so a
+   second check does not flip the control the other way. *)
+let set_checked ~want ~cdp tab (args : P.click_args) =
+  guarded tab (fun () ->
+      let* target = revalidate cdp tab ~snapshot_id:args.snapshot ~index:args.index () in
+      let* before = read_checked cdp tab target.backend in
+      match before with
+      | None -> fail "row-not-actionable" "the row is not a checkable control"
+      | Some current when current = want ->
+          fail "state-unchanged"
+            (if want then "the control was already checked"
+             else "the control was already unchecked")
+      | Some _ -> (
+          let via = ref None in
+          let* result =
+            with_result tab (fun () ->
+                let* point = aim cdp tab target in
+                via := point.via;
+                let* () =
+                  mouse cdp tab ~type_:"mousePressed" ~x:point.x ~y:point.y ~buttons:1
+                in
+                let* () =
+                  mouse cdp tab ~type_:"mouseReleased" ~x:point.x ~y:point.y ~buttons:0
+                in
+                settle cdp tab ~combobox:false)
+          in
+          let* after = read_checked cdp tab target.backend in
+          match after with
+          | Some value when value = want -> Ok { result with P.via = !via }
+          | _ -> fail "state-unchanged" "the control's checked state did not change"))
+
+let check ~cdp = set_checked ~want:true ~cdp
+let uncheck ~cdp = set_checked ~want:false ~cdp
 let text_controls = [ "textbox"; "searchbox"; "combobox"; "spinbutton" ]
 
 (* daily-9ggi: Chrome's segmented date/time editors ignore Input.insertText. Detect
@@ -768,14 +981,14 @@ let hover ~cdp tab (args : P.hover_args) =
           let* target =
             revalidate cdp tab ~snapshot_id:args.snapshot ~index:args.index ()
           in
-          let* x, y = aim cdp tab target in
+          let* point = aim cdp tab target in
           let* () =
             dispatch cdp tab "Input.dispatchMouseEvent"
               (E.object_
                  [
                    ("type", Some (E.string "mouseMoved"));
-                   ("x", E.float x);
-                   ("y", E.float y);
+                   ("x", E.float point.x);
+                   ("y", E.float point.y);
                    ("button", Some (E.string "none"));
                    ("buttons", Some (E.int 0));
                  ])

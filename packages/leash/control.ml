@@ -93,6 +93,8 @@ let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?ins
         (Tabs.playbook_check ?installed tabs ~owner args)
   | P.Upload args -> lift P.yojson_of_action_result (Tabs.upload tabs ~owner args)
   | P.Hover args -> lift P.yojson_of_action_result (Tabs.hover tabs ~owner args)
+  | P.Check args -> lift P.yojson_of_action_result (Tabs.check tabs ~owner args)
+  | P.Uncheck args -> lift P.yojson_of_action_result (Tabs.uncheck tabs ~owner args)
   | P.Dialog args -> lift P.yojson_of_action_result (Tabs.dialog tabs ~owner args)
   | P.Click args -> lift P.yojson_of_action_result (Tabs.click tabs ~owner args)
   | P.Fill args -> lift P.yojson_of_action_result (Tabs.fill tabs ~owner args)
@@ -242,6 +244,7 @@ let command_tab = function
   | P.Storage args -> P.Handle.to_string args.tab
   | P.Upload args -> P.Handle.to_string args.tab
   | P.Hover args -> P.Handle.to_string args.tab
+  | P.Check args | P.Uncheck args -> P.Handle.to_string args.tab
   | P.Eval args -> P.Handle.to_string args.tab
   | P.Playbook_test args -> P.Handle.to_string args.tab
   | P.Playbook_check _ -> "-"
@@ -340,7 +343,8 @@ let budget (request : (P.request, string) result) =
       {
         command =
           ( P.Click _ | P.Fill _ | P.Press _ | P.Select _ | P.Scroll _ | P.Upload _
-          | P.Hover _ | P.Net_body _ | P.Net_request _ | P.Cookies _ | P.Storage _ );
+          | P.Hover _ | P.Check _ | P.Uncheck _ | P.Net_body _ | P.Net_request _
+          | P.Cookies _ | P.Storage _ );
         _;
       } ->
       Some cdp_budget

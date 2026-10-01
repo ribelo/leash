@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# L48 live gate (field-i4x0): the field report's cases on a locally served registration form
+# (password row, fill --stdin, --snap with the typed value, a label-styled checkbox via check,
+# state-unchanged, usage naming the argument). Private headless Chrome and XDG dirs; no key needed.
+# Usage: scripts/live-acceptance-l48
+set -uo pipefail
+cd "$(dirname "$0")/.."
+if [[ "${1:-}" != "--inside-nix" ]]; then exec timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l48_live bash "$0" --inside-nix; fi
+timeout 900 dune build @install
+leash="$(pwd)/_build_l48_live/default/packages/leash/bin/main.exe"
+binary="$(realpath "$(command -v google-chrome-stable || command -v chromium)")"
+root="$(mktemp -d)"; chmod 700 "$root"
+export XDG_RUNTIME_DIR="$root/runtime" XDG_CONFIG_HOME="$root/config" XDG_STATE_HOME="$root/state" XDG_DOWNLOAD_DIR="$root/downloads"
+mkdir -p "$XDG_CONFIG_HOME/leash/playbooks" "$XDG_STATE_HOME" "$XDG_DOWNLOAD_DIR" "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME"
+cat > "$root/leash.toml" <<EOF
+[chrome]
+binary = "$binary"
+profile_dir = "$root/profile"
+workspace = "test"
+headless = true
+EOF
+"$leash" serve --config "$root/leash.toml" >"$root/log" 2>&1 & pid=$!
+trap 'kill -TERM $pid; wait $pid || true; rm -rf "$root"' EXIT
+for _ in $(seq 1 50); do "$leash" status --config "$root/leash.toml" >/dev/null 2>&1 && break; sleep 0.2; done
+(cd scripts/live && exec python3 -m http.server 18731 --bind 127.0.0.1 >/dev/null 2>&1) & srv=$!
+trap 'kill $srv 2>/dev/null; kill -TERM $pid; wait $pid || true; rm -rf "$root"' EXIT
+sleep 1
+LEASH="$leash" python3 - <<'PY'
+import json, os, subprocess
+L=os.environ['LEASH']
+def run(*a, stdin=None):
+    p=subprocess.run([L,*a,'--owner','l48'],capture_output=True,text=True,input=stdin)
+    out=p.stdout.strip() or p.stderr.strip()
+    try: j=json.loads(out)
+    except Exception: j={'raw':out}
+    return p.returncode,j
+ok=True
+def check(name,cond,detail=''):
+    global ok; ok&=bool(cond); print(('PASS ' if cond else 'FAIL ')+name, detail)
+rc,t=run('new','http://127.0.0.1:18731/registration.html'); tab=t['tab']
+rc,s=run('snap',tab)
+rows=s['rows']; sid=s['snapshot']
+pw=[r for r in rows if 'password' in (r.get('state') or [])]
+check('field-8bzc password row in snap', len(pw)==1 and pw[0]['role']=='textbox' and 'value' not in pw[0], pw)
+check('field-lp65 settled with reason absent', s.get('settled') is True and s.get('reason') is None, (s.get('settled'),s.get('reason'),s.get('source')))
+email=[r for r in rows if r['name']=='Email'][0]
+terms=[r for r in rows if 'terms' in r['name'].lower()]
+rc,f=run('fill',tab,sid,str(pw[0]['index']),'--stdin',stdin='hunter2-secret\n')
+check('field-5sdo fill --stdin on password', rc==0 and 'hunter2' not in json.dumps(f), (rc,f))
+rc,f=run('fill',tab,sid,str(email['index']),'ada@example.com','--snap')
+er=[r for r in (f.get('snapshot') or {}).get('rows',[]) if r['name']=='Email']
+check('field-swvb --snap returns a snapshot; field-cct4 value shown', rc==0 and er and er[0].get('value')=='ada@example.com', (rc, er))
+sid2=f['snapshot']['snapshot']
+rows2=f['snapshot']['rows']
+terms=[r for r in rows2 if 'terms' in r['name'].lower() and r['role'] in ('checkbox',)]
+check('terms checkbox row present', len(terms)==1, [ (r['role'],r['name']) for r in rows2])
+if terms:
+    rc,c=run('check',tab,sid2,str(terms[0]['index']))
+    check('field-guda/uls3 check via label', rc==0, c)
+    rc,s3=run('snap',tab)
+    t3=[r for r in s3['rows'] if r['index']==terms[0]['index']]
+    check('checkbox now checked', t3 and 'checked' in (t3[0].get('state') or []), t3)
+    rc,c=run('check',tab,s3['snapshot'],str(terms[0]['index']))
+    check('field-guda second check is state-unchanged', c.get('code')=='state-unchanged', c)
+rc,u=run('click',tab,'',str(1))
+check('field-uqvp usage names the argument', u.get('code')=='usage' and 'SNAPSHOT' in u.get('message',''), u)
+rc,v=run('eval',tab,'return document.querySelector("#password").value.length')
+check('password actually filled (length only)', v.get('value')==14, v)
+run('close',tab)
+print('ALL', 'PASS' if ok else 'FAIL')
+raise SystemExit(0 if ok else 1)
+PY

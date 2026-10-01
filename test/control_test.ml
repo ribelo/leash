@@ -321,8 +321,8 @@ let new_without_url () =
         (get "url" info = str "about:blank");
       Alcotest.(check bool) "chrome-qnul empty title" true (get "title" info = str ""))
 
-(* chrome-qnul, chrome-1yn9: one load event that never comes, one 30-second bound and one
-   [timeout] for both commands. *)
+(* field-m5jw, chrome-qnul, chrome-1yn9: missing load events retain the
+   registered handle and report loaded:false rather than losing it to an error. *)
 let load_timeout () =
   rig (fun env sw _ tabs _ ->
       (* One second at a time: the CDP calls around a load answer within a step or two,
@@ -348,10 +348,7 @@ let load_timeout () =
         in
         await 60
       in
-      let described = function
-        | P.Failure error -> P.Error_code.to_string error.code ^ ": " ^ error.message
-        | P.Success _ -> "ok"
-      in
+
       let handle = result (request tabs "alice" (P.New { url = None })) |> tab in
       let nav =
         after_deadline "chrome-1yn9 nav" (fun () ->
@@ -362,11 +359,22 @@ let load_timeout () =
         after_deadline "chrome-qnul new" (fun () ->
             request tabs "alice" (P.New { url = Some "https://example.com/slow" }))
       in
-      Alcotest.(check string)
-        "chrome-1yn9 nav timeout" "timeout: navigation did not load within 30 seconds"
-        (described nav);
-      Alcotest.(check string)
-        "chrome-qnul the same timeout as nav" (described nav) (described created))
+      let nav = result nav and created = result created in
+      Alcotest.(check bool)
+        "field-m5jw nav load unfinished" true
+        (get "loaded" nav = `Bool false);
+      Alcotest.(check bool)
+        "field-m5jw new load unfinished" true
+        (get "loaded" created = `Bool false);
+      Alcotest.(check bool) "field-m5jw nav retains handle" true (tab nav = handle);
+      Alcotest.(check bool)
+        "field-m5jw new handle immediately usable" true
+        (match
+           request tabs "alice"
+             (P.Debug { tab = tab created; limit = None; clear = None })
+         with
+        | P.Success _ -> true
+        | P.Failure _ -> false))
 
 (* chrome-qnul, chrome-1yn9, tab-0ohq: the listener must outlast the registry's own bounds
    -- a load's thirty seconds, and a trusted input's CDP deadline plus the probes after it
@@ -397,7 +405,10 @@ let budget () =
     (ms (P.Nav { tab = handle; url = "https://example.com" }) > 30_000);
   Alcotest.(check bool)
     "tab-0ohq a row action outlasts the settlement deadline" true
-    (ms (P.Click { tab = handle; snapshot; index = 1 }) > 30_000);
+    (ms
+       (P.Click
+          { tab = handle; snapshot; index = 1; snap = None; match_ = None; limit = None })
+    > 30_000);
   (* L32 run-obtt: the margin covers the last expectation wait and a planner turn's
      correction call, so a run that stops at the planner still answers. *)
   Alcotest.(check int)
@@ -485,8 +496,12 @@ let large_text_over_socket () =
       rig (fun env sw _ tabs fake ->
           let h = result (request tabs "alice" (P.New { url = None })) |> tab in
           let big = String.make 70_000 'x' in
-          Fake.on_method (fake ()) "Runtime.evaluate" (fun _ ->
-              obj [ ("result", obj [ ("type", str "string"); ("value", str big) ]) ]);
+          Fake.on_method (fake ()) "Runtime.evaluate" (fun request ->
+              if
+                get "expression" (get "params" request)
+                = str Leash__Snapshot_source.interactive_count_expression
+              then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
+              else obj [ ("result", obj [ ("type", str "string"); ("value", str big) ]) ]);
           let _control =
             match
               Leash.Control.create ~sw ~path:(socket runtime)
@@ -782,23 +797,28 @@ let human () =
             | None -> Alcotest.fail "human tab missing")
         | _ -> Alcotest.fail "tabs must be an array"
       in
-      Fake.on_method (fake ()) "Runtime.evaluate" (fun _ ->
-          obj
-            [
-              ( "result",
-                obj
-                  [
-                    ("type", str "object");
-                    ( "value",
-                      obj
-                        [
-                          ("epoch", str "human-doc");
-                          ("count", `Int 0);
-                          ("width", `Int 800);
-                          ("height", `Int 600);
-                        ] );
-                  ] );
-            ]);
+      Fake.on_method (fake ()) "Runtime.evaluate" (fun request ->
+          if
+            get "expression" (get "params" request)
+            = str Leash__Snapshot_source.interactive_count_expression
+          then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
+          else
+            obj
+              [
+                ( "result",
+                  obj
+                    [
+                      ("type", str "object");
+                      ( "value",
+                        obj
+                          [
+                            ("epoch", str "human-doc");
+                            ("count", `Int 0);
+                            ("width", `Int 800);
+                            ("height", `Int 600);
+                          ] );
+                    ] );
+              ]);
       (* own-jua9: a tab discovered from outside Leash appears unowned, so a client —
          the "human" owner here — claims it before it may observe it. *)
       ignore (result (request tabs "human" (P.Claim { tab = human_tab })));
@@ -869,24 +889,29 @@ let daily_snapshot () =
           Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" captured);
           Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" captured);
           let scroll_y = ref 0 in
-          Fake.on_method fake "Runtime.evaluate" (fun _ ->
-              obj
-                [
-                  ( "result",
-                    obj
-                      [
-                        ( "value",
-                          obj
-                            [
-                              ("epoch", str "daily-9ggi");
-                              ("count", `Int 1);
-                              ("width", `Int 1366);
-                              ("height", `Int 813);
-                              ("scrollY", `Int !scroll_y);
-                              ("devicePixelRatio", `Int 2);
-                            ] );
-                      ] );
-                ]);
+          Fake.on_method fake "Runtime.evaluate" (fun request ->
+              if
+                get "expression" (get "params" request)
+                = str Leash__Snapshot_source.interactive_count_expression
+              then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
+              else
+                obj
+                  [
+                    ( "result",
+                      obj
+                        [
+                          ( "value",
+                            obj
+                              [
+                                ("epoch", str "daily-9ggi");
+                                ("count", `Int 1);
+                                ("width", `Int 1366);
+                                ("height", `Int 813);
+                                ("scrollY", `Int !scroll_y);
+                                ("devicePixelRatio", `Int 2);
+                              ] );
+                        ] );
+                  ]);
           let tab = result (request tabs "alice" (P.New { url = None })) |> tab in
           let snap () =
             result
@@ -945,26 +970,31 @@ let snapshot () =
       let guard_reads = ref 0 in
       let mutating = ref false in
       let scroll_y = ref 0 in
-      Fake.on_method fake "Runtime.evaluate" (fun _ ->
-          incr guard_reads;
-          let counter = if !mutating then !guard_reads else 1 in
-          obj
-            [
-              ( "result",
-                obj
-                  [
-                    ("type", str "object");
-                    ( "value",
-                      obj
-                        [
-                          ("epoch", str "document-1");
-                          ("count", `Int counter);
-                          ("width", `Int 800);
-                          ("height", `Int 600);
-                          ("scrollY", `Int !scroll_y);
-                        ] );
-                  ] );
-            ]);
+      Fake.on_method fake "Runtime.evaluate" (fun request ->
+          if
+            get "expression" (get "params" request)
+            = str Leash__Snapshot_source.interactive_count_expression
+          then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
+          else (
+            incr guard_reads;
+            let counter = if !mutating then !guard_reads else 1 in
+            obj
+              [
+                ( "result",
+                  obj
+                    [
+                      ("type", str "object");
+                      ( "value",
+                        obj
+                          [
+                            ("epoch", str "document-1");
+                            ("count", `Int counter);
+                            ("width", `Int 800);
+                            ("height", `Int 600);
+                            ("scrollY", `Int !scroll_y);
+                          ] );
+                    ] );
+              ]));
       let h = result (request tabs "alice" (P.New { url = None })) |> tab in
       let snap ?match_ ?limit ?offset () =
         result (request tabs "alice" (P.Snap { tab = h; match_; limit; offset }))
@@ -972,7 +1002,7 @@ let snapshot () =
       let first = snap () in
       Alcotest.(check bool) "tab-of0i settled" true (get "settled" first = `Bool true);
       Alcotest.(check int)
-        "tab-tmoc visible rows" 2
+        "tab-tmoc field-vji1 visible rows including cross-origin frame" 3
         (get "total" first |> function `Int n -> n | _ -> -1);
       Alcotest.(check string)
         "tab-of0i reading order" "fresh doc"
@@ -999,21 +1029,22 @@ let snapshot () =
       Alcotest.(check bool)
         "tab-1r34 new id" true
         (get "snapshot" first <> get "snapshot" filtered);
-      let page = snap ~offset:1 ~limit:1 () in
+      let page = snap ~offset:2 ~limit:1 () in
       Alcotest.(check bool)
         "tab-1rx9 last page" true
-        (get "total" page = `Int 2 && get "truncated" page = `Bool false);
+        (get "total" page = `Int 3 && get "truncated" page = `Bool false);
       (* tab-tmoc: real Chrome DOMSnapshot bounds are document-relative.
          At scrollY=150, the top heading leaves the viewport while Go stays. *)
       scroll_y := 150;
       let scrolled = snap () in
       Alcotest.(check int)
-        "tab-tmoc scrolled total" 1
+        "tab-tmoc field-vji1 scrolled total including frame" 2
         (match get "total" scrolled with `Int n -> n | _ -> -1);
       Alcotest.(check string)
         "tab-tmoc scrolled row" "Go"
         (match get "rows" scrolled with
-        | `List [ row ] -> ( match get "name" row with `String name -> name | _ -> "")
+        | `List (row :: _) -> (
+            match get "name" row with `String name -> name | _ -> "")
         | _ -> "");
       Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogOpening"
         ~params:
@@ -1098,6 +1129,8 @@ let operator_observation ~text =
 let page_evaluate ~text fixture request =
   let expression = get "expression" (get "params" request) in
   match expression with
+  | `String s when s = Leash__Snapshot_source.interactive_count_expression ->
+      obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
   | `String "globalThis" -> obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
   | `String s when contains s "leash-operator-read" ->
       obj
@@ -1218,8 +1251,12 @@ let empty_names () =
       Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
       Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
       let guard = get "guard" fixture in
-      Fake.on_method fake "Runtime.evaluate" (fun _ ->
-          obj [ ("result", obj [ ("type", str "object"); ("value", guard) ]) ]);
+      Fake.on_method fake "Runtime.evaluate" (fun request ->
+          if
+            get "expression" (get "params" request)
+            = str Leash__Snapshot_source.interactive_count_expression
+          then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
+          else obj [ ("result", obj [ ("type", str "object"); ("value", guard) ]) ]);
       let h = result (request tabs "alice" (P.New { url = None })) |> tab in
       let snapshot () =
         result
@@ -1271,8 +1308,12 @@ let pseudo_icon_hit () =
       Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
       Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
       Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
-      Fake.on_method fake "Runtime.evaluate" (fun _ ->
-          obj [ ("result", obj [ ("value", get "guard" fixture) ]) ]);
+      Fake.on_method fake "Runtime.evaluate" (fun request ->
+          if
+            get "expression" (get "params" request)
+            = str Leash__Snapshot_source.interactive_count_expression
+          then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
+          else obj [ ("result", obj [ ("value", get "guard" fixture) ]) ]);
       Fake.on_method fake "Accessibility.getPartialAXTree" (fun _ ->
           obj
             [
@@ -1342,7 +1383,10 @@ let pseudo_icon_hit () =
             | Error why -> Alcotest.fail why)
         | _ -> Alcotest.fail "snapshot id missing"
       in
-      ignore (result (request tabs "alice" (P.Click { tab; snapshot; index })));
+      ignore
+        (result
+           (request tabs "alice"
+              (P.Click { tab; snapshot; index; snap = None; match_ = None; limit = None })));
       let dispatched () =
         Fake.received fake
         |> List.filter (fun json ->
@@ -1353,7 +1397,8 @@ let pseudo_icon_hit () =
       Alcotest.(check int) "tab-bw4j pseudo-icon dispatched press and release" 2 before;
       hit := 999;
       check_code "tab-bw4j unrelated overlay still blocks click" "row-not-actionable"
-        (request tabs "alice" (P.Click { tab; snapshot; index }));
+        (request tabs "alice"
+           (P.Click { tab; snapshot; index; snap = None; match_ = None; limit = None }));
       Alcotest.(check int)
         "tab-bw4j overlay dispatches no mouse input" before (dispatched ()))
 
@@ -1377,8 +1422,12 @@ let journal_redaction () =
       let secret_cookie = "cookie-secret-do-not-log" in
       let secret_path = "/nonexistent/path-secret-do-not-log" in
       let url = "https://user:" ^ userinfo ^ "@example.com/" in
-      Fake.on_method (fake ()) "Runtime.evaluate" (fun _ ->
-          obj [ ("result", obj [ ("value", str secret_text) ]) ]);
+      Fake.on_method (fake ()) "Runtime.evaluate" (fun request ->
+          if
+            get "expression" (get "params" request)
+            = str Leash__Snapshot_source.interactive_count_expression
+          then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
+          else obj [ ("result", obj [ ("value", str secret_text) ]) ]);
       let run who command =
         let request = P.{ owner = owner who; command } in
         let wire = P.encode_request request |> Yojson.Safe.to_string in
@@ -1500,17 +1549,60 @@ let journal_redaction () =
             Net_body { tab = missing; id = secret_request };
             Net_request { tab = missing; id = secret_request };
             Upload { tab = missing; snapshot = snap; index = 0; paths = [ secret_path ] };
-            Hover { tab = missing; snapshot = snap; index = 0 };
+            Hover
+              {
+                tab = missing;
+                snapshot = snap;
+                index = 0;
+                snap = None;
+                match_ = None;
+                limit = None;
+              };
             Cookies { tab = missing };
             Storage
               {
                 tab = missing;
                 area = Leash.Protocol.Storage_area.of_string "local" |> Result.get_ok;
               };
-            Click { tab = missing; snapshot = snap; index = 0 };
-            Fill { tab = missing; snapshot = snap; index = 0; text = secret_fill };
-            Press { tab = missing; snapshot = snap; index = None; key = "Enter" };
-            Select { tab = missing; snapshot = snap; index = 0; option = 0 };
+            Click
+              {
+                tab = missing;
+                snapshot = snap;
+                index = 0;
+                snap = None;
+                match_ = None;
+                limit = None;
+              };
+            Fill
+              {
+                tab = missing;
+                snapshot = snap;
+                index = 0;
+                text = secret_fill;
+                snap = None;
+                match_ = None;
+                limit = None;
+              };
+            Press
+              {
+                tab = missing;
+                snapshot = snap;
+                index = None;
+                key = "Enter";
+                snap = None;
+                match_ = None;
+                limit = None;
+              };
+            Select
+              {
+                tab = missing;
+                snapshot = snap;
+                index = 0;
+                option = 0;
+                snap = None;
+                match_ = None;
+                limit = None;
+              };
             Scroll { tab = missing; direction; index = None };
             Wait
               {

@@ -293,7 +293,9 @@ let script fake (page : page) =
         match param "expression" request with Some (`String s) -> s | _ -> ""
       in
       let value v = obj [ ("result", obj [ ("type", str "boolean"); ("value", v) ]) ] in
-      if contains expression "leashSnapshotGuard" then
+      if expression = Leash__Snapshot_source.interactive_count_expression then
+        obj [ ("result", obj [ ("type", str "number"); ("value", int 0) ]) ]
+      else if contains expression "leashSnapshotGuard" then
         obj
           [
             ( "result",
@@ -982,9 +984,28 @@ let upload () =
         (upload ~index:1 [ one ]);
       check_code "hard-o3za no such row" "no-such-row" (upload ~index:9 [ one ]);
       check_code "hard-2gnf a click on a file input is refused" "row-not-actionable"
-        (request tabs "alice" (P.Click { tab = a; snapshot = s; index = 3 }));
+        (request tabs "alice"
+           (P.Click
+              {
+                tab = a;
+                snapshot = s;
+                index = 3;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       check_code "hard-2gnf and so is a fill" "row-not-actionable"
-        (request tabs "alice" (P.Fill { tab = a; snapshot = s; index = 3; text = "x" }));
+        (request tabs "alice"
+           (P.Fill
+              {
+                tab = a;
+                snapshot = s;
+                index = 3;
+                text = "x";
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       Alcotest.(check int)
         "hard-2gnf no pointer input for it" 0
         (List.length (calls fake "Input.dispatchMouseEvent"));
@@ -1032,7 +1053,9 @@ let hover () =
       let a = new_tab tabs "alice" in
       let s = snapshot_of (snap tabs a) in
       let hover ?(who = "alice") index =
-        request tabs who (P.Hover { tab = a; snapshot = s; index })
+        request tabs who
+          (P.Hover
+             { tab = a; snapshot = s; index; snap = None; match_ = None; limit = None })
       in
       let reply = result (hover 2) in
       Alcotest.(check string)
@@ -1442,14 +1465,28 @@ let ten_clients () =
                     let reader = Eio.Buf_read.of_flow ~max_size:1_048_576 flow in
                     send_line flow
                       (P.Click
-                         { tab = handle; snapshot = snapshot_of snapshot; index = 1 })
+                         {
+                           tab = handle;
+                           snapshot = snapshot_of snapshot;
+                           index = 1;
+                           snap = None;
+                           match_ = None;
+                           limit = None;
+                         })
                       "alice";
                     let clicked = read_reply reader in
                     let flow = connect env sw path in
                     let reader = Eio.Buf_read.of_flow ~max_size:1_048_576 flow in
                     send_line flow
                       (P.Hover
-                         { tab = handle; snapshot = snapshot_of snapshot; index = 2 })
+                         {
+                           tab = handle;
+                           snapshot = snapshot_of snapshot;
+                           index = 2;
+                           snap = None;
+                           match_ = None;
+                           limit = None;
+                         })
                       "alice";
                     (clicked, read_reply reader)))
               actors

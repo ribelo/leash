@@ -120,6 +120,8 @@ let review ~probability ~threshold ~content ~consulted:_ ~valid:_ () =
                 offset = 0;
                 truncated = false;
                 settled = true;
+                source = P.Ax;
+                reason = None;
                 dialog = None;
               }
           in

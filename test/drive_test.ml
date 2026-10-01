@@ -30,6 +30,8 @@ let snapshot ?(title = "Initial") () =
       offset = 0;
       truncated = false;
       settled = true;
+      source = P.Ax;
+      reason = None;
       dialog = None;
     }
 
@@ -96,6 +98,7 @@ let run ?(clock_step = 0.) ?(max_steps = 30) ?(deadline_s = 120) ?(dry_run = fal
           snapshot = None;
           dialog = None;
           popups = [];
+          via = None;
         }
   in
   let reply =
@@ -220,6 +223,7 @@ let with_text ?(rows = []) ?(refuse = fun _ -> false) operations answers =
             snapshot = None;
             dialog = None;
             popups = [];
+            via = None;
           }
     end
   in
@@ -371,6 +375,7 @@ let model_error ?(code = "model-unavailable") () =
                   snapshot = None;
                   dialog = None;
                   popups = [];
+                  via = None;
                 });
       }
   in
@@ -421,6 +426,7 @@ let step_failure () =
                         snapshot = None;
                         dialog = None;
                         popups = [];
+                        via = None;
                       });
           }
       in
@@ -470,12 +476,14 @@ let dialog_popup_error () =
         title = "Popup";
         origin =
           (match Origin.of_string "agent" with Ok x -> x | Error _ -> assert false);
-        state = (match State.of_string "owned" with Ok x -> x | Error _ -> assert false);
+        state =
+          (match Popup_state.of_string "ready" with Ok x -> x | Error _ -> assert false);
         owner = None;
         generation = 1;
         dialog = None;
         expires = None;
         reason = None;
+        opener_url = "https://example.org/";
       }
   in
   List.iter
@@ -497,6 +505,7 @@ let dialog_popup_error () =
                       snapshot = None;
                       dialog;
                       popups;
+                      via = None;
                     });
           }
       in
@@ -553,6 +562,7 @@ let performed () =
       snapshot = None;
       dialog = None;
       popups = [];
+      via = None;
     }
 
 let stale_error =

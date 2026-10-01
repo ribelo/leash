@@ -12,6 +12,14 @@ val world_name : string
 
 val guard_expression : string
 
+val interactive_count_expression : string
+(** field-lp65: a cheap querySelectorAll count of possible interactive content. *)
+
+val interactive : Protocol.row -> bool
+
+val has_interactive : Yojson.Safe.t -> bool
+(** field-lp65: an interactive AX node exists, including outside the viewport. *)
+
 val guard : Yojson.Safe.t -> (string * int * float * float * float * float) option
 (** Epoch, mutation count, and device-scaled viewport width, height and scroll offsets, in
     the same coordinates as Chrome DOMSnapshot bounds (daily-9ggi). *)
@@ -28,6 +36,26 @@ val rows :
   scroll_x:float ->
   scroll_y:float ->
   (Protocol.row * int) list
+
+val url_origin : string -> string option
+
+val frame_rows :
+  url:string ->
+  dom:Yojson.Safe.t ->
+  width:float ->
+  height:float ->
+  scroll_x:float ->
+  scroll_y:float ->
+  (Protocol.row * int) list
+(** field-vji1: visible cross-origin iframe rows, named by src origin. *)
+
+val dom_rows_expression : string
+
+val dom_rows :
+  call:(string -> Yojson.Safe.t -> (Yojson.Safe.t, Protocol.error) result) ->
+  context:int ->
+  ((Protocol.row * int) list, Protocol.error) result
+(** field-jkx6: at most 250 visible DOM-derived rows with backend element identities. *)
 
 val text_limit : int
 (** fly-iodm: visible viewport text is cut at 6,000 characters. *)

@@ -11,6 +11,7 @@ type t = {
   mutable dropped : bool;
   failures : (string, Yojson.Safe.t -> (int * string) option) Hashtbl.t;
   withheld : (string, Yojson.Safe.t -> bool) Hashtbl.t;
+  frozen_evaluations : (string, unit) Hashtbl.t;
   reader_sleep : float -> unit;
   writes : Eio.Mutex.t;
 }
@@ -179,6 +180,7 @@ let defaults replies =
       ("Accessibility.getFullAXTree", obj [ ("nodes", `List []) ]);
       ( "DOMSnapshot.captureSnapshot",
         obj [ ("documents", `List []); ("strings", `List []) ] );
+      ("Page.captureScreenshot", obj [ ("data", str "iVBORw0KGgo=") ]);
       ("Page.navigate", obj [ ("frameId", str "frame-1"); ("loaderId", str "loader-1") ]);
       ("Runtime.evaluate", obj [ ("result", obj [ ("type", str "undefined") ]) ]);
     ];
@@ -204,6 +206,10 @@ let defaults replies =
   Hashtbl.replace replies "Runtime.evaluate" (fun request ->
       if get "sessionId" request = str "download-setup-session" then
         obj [ ("result", obj [ ("type", str "boolean"); ("value", `Bool true) ]) ]
+      else if
+        get "expression" (get "params" request)
+        = str Leash__Snapshot_source.interactive_count_expression
+      then obj [ ("result", obj [ ("value", `Int 0) ]) ]
       else obj [ ("result", obj [ ("type", str "undefined") ]) ])
 
 let read_frame reader =
@@ -218,7 +224,21 @@ let send t message =
       if not t.dropped then
         Eio.Flow.copy_string (Yojson.Safe.to_string message ^ "\000") t.peer_write)
 
+let stop_evaluating t ~session = Hashtbl.replace t.frozen_evaluations session ()
+
 let withheld t method_ request =
+  let frozen =
+    method_ = "Runtime.evaluate"
+    &&
+    match request with
+    | `Assoc fields -> (
+        match List.assoc_opt "sessionId" fields with
+        | Some (`String session) -> Hashtbl.mem t.frozen_evaluations session
+        | _ -> false)
+    | _ -> false
+  in
+  frozen
+  ||
   match Hashtbl.find_opt t.withheld method_ with
   | Some matches -> matches request
   | None -> false
@@ -270,6 +290,7 @@ let create ~sw ?sleep () =
       replies;
       failures;
       withheld = Hashtbl.create 4;
+      frozen_evaluations = Hashtbl.create 2;
       reader_sleep =
         (match sleep with
         | Some sleep -> sleep

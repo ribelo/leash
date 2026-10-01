@@ -215,6 +215,7 @@ type tab = {
       (** The session the reading and action domains were enabled in; [None] until a
           command needs the page. *)
   handle : P.Handle.t;
+  opened_at : float;
   mutable url : string;
   mutable title : string;
   origin : P.Origin.t;
@@ -235,6 +236,7 @@ type tab = {
       (** The action watches waiting for that load to finish; resolved once, when it does,
           like the waiter of {!with_load_wait}. *)
   mutable snapshot : (P.Snapshot_id.t * string * (P.row * int) list) option;
+  mutable dom_snapshot : bool;
   mutable baselines : (P.Snapshot_id.t * Reading.page_state) list;
       (** The page's loader id and mutation guard as each of the last few snapshots saw
           them, newest first (hard-sckn). Unlike [snapshot] this survives a navigation. *)
@@ -524,12 +526,13 @@ let register_entry ~tombstone_s ~at ledger tab state =
   in
   (ledger, entry)
 
-let new_record ~fresh ~generation ~id ~session ~origin ~url ~title ~opener =
+let new_record ~fresh ~generation ~at ~id ~session ~origin ~url ~title ~opener =
   {
     id;
     session;
     enabled_session = None;
     handle = fresh ();
+    opened_at = at;
     url;
     title;
     origin;
@@ -543,6 +546,7 @@ let new_record ~fresh ~generation ~id ~session ~origin ~url ~title ~opener =
     page_loading = false;
     page_loads = [];
     snapshot = None;
+    dom_snapshot = false;
     baselines = [];
     dialog = None;
     dialog_listeners = [];
@@ -573,7 +577,7 @@ let adopt ~fresh ~tombstone_s ~generation ~at ledger ~id ~session
          opener_entry)
   in
   let tab =
-    new_record ~fresh ~generation ~id ~session ~origin:creator.origin
+    new_record ~fresh ~generation ~at ~id ~session ~origin:creator.origin
       ~url:(Option.value ~default:"about:blank" info.url)
       ~title:(Option.value ~default:"" info.title)
       ~opener:info.opener
@@ -689,7 +693,7 @@ let fold ~fresh ~logger ~tombstone_s ~generation ledger request =
       | _ -> Ok (ledger, Nothing))
   | Register { id; session; origin; state; url; title; opener; at } ->
       let tab =
-        new_record ~fresh ~generation:(generation ()) ~id ~session ~origin ~url ~title
+        new_record ~fresh ~generation:(generation ()) ~at ~id ~session ~origin ~url ~title
           ~opener
       in
       let ledger, entry = register_entry ~tombstone_s ~at ledger tab state in
@@ -784,6 +788,7 @@ let info_of t (entry : entry) : P.tab_info =
     (* hand-r4t1: why this tab is waiting on the human, which is what [list --all] shows
        so a human who stepped away can catch up. *)
     reason = Option.map (fun (waiting : waiting) -> waiting.reason) entry.handoff;
+    loaded = None;
   }
 
 (* The entry as the ledger has it now. A tab that already left is answered from its
@@ -844,7 +849,11 @@ let disappear t (tab : tab) disposition =
 
 let cdp_call ?(deadline = Ox.Duration.seconds 30) ?session cdp meth params =
   match Cdp.call cdp ?session ~deadline meth params with
-  | Error `Timeout -> Error (error "timeout" "browser operation timed out")
+  | Error `Timeout ->
+      let code =
+        match session with None -> "timeout" | Some _ -> "renderer-unresponsive"
+      in
+      Error (error code "browser operation timed out")
   | Error _ -> Error (unavailable ())
   | Ok reply -> (
       match Cdp.error_of_reply reply with
@@ -853,6 +862,34 @@ let cdp_call ?(deadline = Ox.Duration.seconds 30) ?session cdp meth params =
           match Cdp.result reply with
           | Some result -> Ok result
           | None -> Error (error "internal" ("browser omitted " ^ meth ^ " result"))))
+
+(* field-cde7: diagnosis is local to this tab and reads the ring without asking
+   the stuck renderer for anything. Do not change transport/browser deadlines. *)
+let diagnose tab (failure : P.error) =
+  if P.Error_code.to_string failure.code <> "renderer-unresponsive" then failure
+  else
+    let entries =
+      match
+        Reading.debug tab.reading { P.tab = tab.handle; limit = Some 20; clear = None }
+      with
+      | Ok debug -> debug.entries
+      | Error _ -> []
+    in
+    {
+      failure with
+      P.detail =
+        Some
+          (obj
+             [
+               ("tab", P.Handle.yojson_of_t tab.handle);
+               ("url", str tab.url);
+               ("title", str tab.title);
+               ("entries", `List (List.map P.yojson_of_debug_entry entries));
+             ]);
+    }
+
+let session_call cdp tab session meth params =
+  cdp_call ~session cdp meth params |> Result.map_error (diagnose tab)
 
 let ready t =
   match Chrome.connection t.chrome with
@@ -917,7 +954,7 @@ let use_session t cdp tab session =
   tab.session <- Some session;
   if tab.enabled_session <> Some session then (
     tab.enabled_session <- Some session;
-    let enable meth params = ignore (cdp_call ~session cdp meth params) in
+    let enable meth params = ignore (session_call cdp tab session meth params) in
     enable "Page.enable" (obj []);
     enable "Runtime.enable" (obj []);
     enable "Network.enable" (obj []);
@@ -1070,12 +1107,13 @@ let with_load_wait t cdp tab start =
             let* () = start () in
             match t.await_load promise with
             | Error `Timeout ->
-                Error (error "timeout" "navigation did not load within 30 seconds")
+                refresh_from_target cdp tab;
+                Ok false
             | Ok () ->
                 refresh_from_target cdp tab;
-                Ok ())
+                Ok true)
       with
-      | `Dialog _ -> Ok ()
+      | `Dialog _ -> Ok false
       | `Value result -> result)
 
 let new_tab t ~owner ~url =
@@ -1107,6 +1145,13 @@ let new_tab t ~owner ~url =
         match text "targetId" created with
         | None -> Error (error "internal" "browser omitted targetId")
         | Some id -> (
+            (* field-m5jw: record the target as soon as Chrome creates it, before
+               attachment, domain setup or the load wait can suspend. *)
+            let* { tab; _ } =
+              register t ~id ~session:None
+                ~origin:(enum P.Origin.of_string "agent")
+                ~state:(Owned owner) ~url:"about:blank" ~title:"" ()
+            in
             let* attached =
               cdp_call cdp "Target.attachToTarget"
                 (obj [ ("targetId", str id); ("flatten", `Bool true) ])
@@ -1116,16 +1161,12 @@ let new_tab t ~owner ~url =
             | Some session ->
                 (* own-6ndc: the tab an agent creates is owned by that agent from the
                    start. *)
-                let* { tab; _ } =
-                  register t ~id ~session:(Some session)
-                    ~origin:(enum P.Origin.of_string "agent")
-                    ~state:(Owned owner) ~url:target ~title:"" ()
-                in
+                tab.session <- Some session;
                 (* chrome-qnul: a tab created with a url is only titled once its document
                    has loaded, so the reply waits exactly as [nav] does. Without a url (or
                    for [about:blank]) there is nothing to await and the reply is immediate. *)
                 let* _ =
-                  cdp_call ~session cdp "Page.addScriptToEvaluateOnNewDocument"
+                  session_call cdp tab session "Page.addScriptToEvaluateOnNewDocument"
                     (obj
                        [
                          ("source", str Snapshot_source.counter_script);
@@ -1136,11 +1177,11 @@ let new_tab t ~owner ~url =
                 (* chrome-qnul: Page.enable before the navigate, so the load waiter cannot
                    miss the load's events; tab-bw4j tab-8la3: the domains actions need. *)
                 use_session t cdp tab session;
-                let* () =
+                let* loaded =
                   if waits_for_load url then
                     with_load_wait t cdp tab (fun () ->
                         let* reply =
-                          cdp_call ~session cdp "Page.navigate"
+                          session_call cdp tab session "Page.navigate"
                             (obj [ ("url", str target) ])
                         in
                         (match text "frameId" reply with
@@ -1149,9 +1190,9 @@ let new_tab t ~owner ~url =
                         match text "errorText" reply with
                         | Some _ -> Error (error "internal" "browser navigation failed")
                         | None -> Ok ())
-                  else Ok ()
+                  else Ok true
                 in
-                Ok (info t tab)))
+                Ok { (info t tab) with P.loaded = Some loaded }))
 
 (* chrome-1yn9: the lock-free body, for a caller that already holds the tab's lock (the
    run's playbook switch, run-xh5d). *)
@@ -1163,9 +1204,11 @@ let navigate_locked t ~owner ~tab url =
      the URL Chrome committed, which is what a redirect changes. *)
   tab.url <- url;
   tab.snapshot <- None;
-  let* () =
+  let* loaded =
     with_load_wait t cdp tab (fun () ->
-        let* reply = cdp_call ~session cdp "Page.navigate" (obj [ ("url", str url) ]) in
+        let* reply =
+          session_call cdp tab session "Page.navigate" (obj [ ("url", str url) ])
+        in
         (match text "frameId" reply with
         | Some id -> tab.main_frame <- Some id
         | None -> ());
@@ -1175,7 +1218,7 @@ let navigate_locked t ~owner ~tab url =
   in
   let* _ = locate t ~access:Act ~owner tab.handle in
   let* _ = ready t in
-  Ok (info t tab)
+  Ok { (info t tab) with P.loaded = Some loaded }
 
 let navigate t ~owner handle url =
   if not (valid_url url) then Error (refusal ())
@@ -1240,7 +1283,7 @@ let close t ~owner ?(force = false) handle =
             | `Value result -> result
             | `Dialog dialog when P.Dialog_kind.to_string dialog.kind = "beforeunload" ->
                 let* _ =
-                  cdp_call ~session cdp "Page.handleJavaScriptDialog"
+                  session_call cdp tab session "Page.handleJavaScriptDialog"
                     (obj [ ("accept", `Bool true) ])
                 in
                 (* An already-open beforeunload needs the close dispatched now; an
@@ -1612,7 +1655,7 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
     let* session = page_session t cdp tab in
     with_focus t tab @@ fun engage ->
     engage ();
-    let call meth params = cdp_call ~session cdp meth params in
+    let call meth params = session_call cdp tab session meth params in
     let* () =
       if tab.counter_installed then Ok ()
       else
@@ -1629,7 +1672,7 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
     in
     let loader () = frame_loader call in
     let guard () = page_guard call in
-    let capture () =
+    let capture ~fallback () =
       let* before_loader = loader () in
       let* before = guard () in
       let* ax = call "Accessibility.getFullAXTree" (obj []) in
@@ -1641,29 +1684,75 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
                ("includeDOMRects", `Bool true);
              ])
       in
+      let _, _, width, height, scroll_x, scroll_y = before in
+      let ax_rows = Snapshot_source.rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y in
+      let populated = Snapshot_source.has_interactive ax in
+      let* empty_page =
+        if populated then Ok false
+        else
+          let* context = guard_context call in
+          let* count =
+            call "Runtime.evaluate"
+              (obj
+                 [
+                   ("expression", str Snapshot_source.interactive_count_expression);
+                   ("contextId", `Int context);
+                   ("returnByValue", `Bool true);
+                 ])
+          in
+          Ok (Option.bind (member "result" count) (member "value") = Some (`Int 0))
+      in
+      let ax_empty = (not populated) && not empty_page in
+      let* rows, source =
+        if ax_empty && fallback then
+          let* context = guard_context call in
+          let* rows = Snapshot_source.dom_rows ~call ~context in
+          Ok (rows, P.Dom)
+        else
+          let frames =
+            Snapshot_source.frame_rows ~url:tab.url ~dom ~width ~height ~scroll_x
+              ~scroll_y
+          in
+          let rows =
+            ax_rows
+            @ List.filter
+                (fun (_, backend) ->
+                  not (List.exists (fun (_, id) -> id = backend) ax_rows))
+                frames
+          in
+          Ok
+            ( List.mapi
+                (fun index ((row : P.row), backend) ->
+                  ({ row with P.index = index + 1 }, backend))
+                rows,
+              P.Ax )
+      in
       let* after = guard () in
       let* after_loader = loader () in
-      let _, _, width, height, scroll_x, scroll_y = before in
-      let rows = Snapshot_source.rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y in
+      let stable = before = after && before_loader = after_loader in
+      let settled = stable && not ax_empty in
+      let reason =
+        if ax_empty then Some "ax-tree-empty"
+        else if not stable then Some "document-changing"
+        else None
+      in
       let epoch, count, _, _, _, _ = after in
-      Ok
-        ( rows,
-          before = after && before_loader = after_loader,
-          after_loader,
-          Some (epoch, count) )
+      Ok (rows, settled, source, reason, after_loader, Some (epoch, count))
     in
     let rec attempt remaining =
-      let* rows, settled, loader_id, guard =
-        if tab.dialog <> None then Ok ([], false, "", None) else capture ()
+      let* rows, settled, source, reason, loader_id, guard =
+        if tab.dialog <> None then Ok ([], false, P.Ax, Some "dialog-open", "", None)
+        else capture ~fallback:(remaining = 0 && attempts >= 3) ()
       in
       if (not settled) && remaining > 0 && tab.dialog = None then attempt (remaining - 1)
-      else Ok (rows, settled, loader_id, guard)
+      else Ok (rows, settled, source, reason, loader_id, guard)
     in
-    let* rows, settled, loader_id, guard = attempt (attempts - 1) in
+    let* rows, settled, source, reason, loader_id, guard = attempt (attempts - 1) in
     let snapshot =
       enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ~caps:t.caps))
     in
     tab.snapshot <- Some (snapshot, loader_id, rows);
+    tab.dom_snapshot <- source = P.Dom;
     (* hard-sckn: what the page was when this table was taken, kept beyond the next
        navigation (which clears the table itself) so `wait --changed-since` can tell that
        the page moved on. The last few tables are remembered. *)
@@ -1704,6 +1793,8 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
           offset;
           truncated = offset + List.length shown < total;
           settled;
+          source;
+          reason;
           dialog = tab.dialog;
         }
 
@@ -1719,10 +1810,11 @@ let reading_browser t ~session tab cdp : Reading.browser =
   (* daily-6pde daily-9ggi: subscribe before each read so a dialog opening during
      a withheld CDP call wins over the command deadline. Answering it bypasses the guard. *)
   let call meth params =
-    if meth = "Page.handleJavaScriptDialog" then cdp_call ~session cdp meth params
+    if meth = "Page.handleJavaScriptDialog" then session_call cdp tab session meth params
     else
       match
-        Dialog_race.first (dialog_race tab) (fun () -> cdp_call ~session cdp meth params)
+        Dialog_race.first (dialog_race tab) (fun () ->
+            session_call cdp tab session meth params)
       with
       | `Value result -> result
       | `Dialog dialog ->
@@ -1857,10 +1949,12 @@ let wait t ~owner (args : P.wait_args) =
    tab's actions run one at a time in arrival order while another tab's proceed. *)
 let action_view t ~session ~owner tab cdp : Actions.tab =
   let observed = ref None in
+  let opener_url = tab.url in
+  let blank_url url = url = "" || url = "about:blank" in
   let refresh_popup popup =
     let rec refresh attempts =
       refresh_from_target cdp popup;
-      if attempts > 0 && popup.url = "" then (
+      if attempts > 0 && tab.dialog = None && blank_url popup.url then (
         t.sleep 0.01;
         refresh (attempts - 1))
     in
@@ -1873,7 +1967,31 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
     owner;
     page = (fun () -> (tab.url, tab.title));
     refresh = watch_navigation t cdp tab;
+    popup =
+      (fun (info : P.tab_info) ->
+        let state =
+          if not (blank_url info.url) then "ready"
+          else
+            match Keys.find_opt (key info.tab) (snapshot t).entries with
+            | Some entry when now t -. entry.tab.opened_at < 1. -> "opening"
+            | _ -> "blank"
+        in
+        P.
+          {
+            tab = info.tab;
+            url = info.url;
+            title = info.title;
+            origin = info.origin;
+            state = enum Popup_state.of_string state;
+            owner = info.owner;
+            generation = info.generation;
+            dialog = info.dialog;
+            expires = info.expires;
+            reason = info.reason;
+            opener_url;
+          });
     snapshot = (fun () -> tab.snapshot);
+    dom_snapshot = (fun () -> tab.dom_snapshot);
     dialog = (fun () -> tab.dialog);
     dialog_race = dialog_race tab;
     acknowledge = (fun () -> acknowledge tab);
@@ -1889,7 +2007,7 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
             Keys.iter
               (fun id (entry : entry) ->
                 if
-                  entry.tab.url = ""
+                  blank_url entry.tab.url
                   && (not (Keys.mem id before))
                   && entry.tab.opener = Some tab.id
                   && (info_of t entry).owner = Some owner
@@ -1902,26 +2020,44 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
             String.compare (key a.tab) (key b.tab)));
   }
 
-let with_action t ~owner handle f =
+(* field-swvb: a requested snapshot is taken after settlement, under the same lock,
+   by the snap path. A failure here is the action's failure: the click already happened,
+   and the caller must know the table did not come back. *)
+let attach_snap t tab ~snap ~match_ ~limit (result : P.action_result) =
+  match snap with
+  | Some true ->
+      let* fresh = snap_locked t tab { tab = tab.handle; match_; limit; offset = None } in
+      Ok { result with snapshot = Some fresh }
+  | _ -> Ok result
+
+let with_action ?(after = fun _tab result -> Ok result) t ~owner handle f =
   let* tab = peek t ~access:Act ~owner handle in
   with_tab_lock tab (fun () ->
       let* tab = locate t ~access:Act ~owner handle in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
       with_focus t tab (fun engage ->
-          f cdp { (action_view t ~session ~owner tab cdp) with Actions.engage }))
+          let* result =
+            f cdp { (action_view t ~session ~owner tab cdp) with Actions.engage }
+            |> Result.map_error (diagnose tab)
+          in
+          after tab result))
 
 let click t ~owner (args : P.click_args) =
-  with_action t ~owner args.tab (fun cdp view -> Actions.click ~cdp view args)
+  with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
+    t ~owner args.tab (fun cdp view -> Actions.click ~cdp view args)
 
 let fill t ~owner (args : P.fill_args) =
-  with_action t ~owner args.tab (fun cdp view -> Actions.fill ~cdp view args)
+  with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
+    t ~owner args.tab (fun cdp view -> Actions.fill ~cdp view args)
 
 let press t ~owner (args : P.press_args) =
-  with_action t ~owner args.tab (fun cdp view -> Actions.press ~cdp view args)
+  with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
+    t ~owner args.tab (fun cdp view -> Actions.press ~cdp view args)
 
 let select t ~owner (args : P.select_args) =
-  with_action t ~owner args.tab (fun cdp view -> Actions.select ~cdp view args)
+  with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
+    t ~owner args.tab (fun cdp view -> Actions.select ~cdp view args)
 
 let scroll t ~owner (args : P.scroll_args) =
   with_action t ~owner args.tab (fun cdp view -> Actions.scroll ~cdp view args)
@@ -1931,7 +2067,16 @@ let upload t ~owner (args : P.upload_args) =
       Actions.upload ~caps:t.caps ~cdp view args)
 
 let hover t ~owner (args : P.hover_args) =
-  with_action t ~owner args.tab (fun cdp view -> Actions.hover ~cdp view args)
+  with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
+    t ~owner args.tab (fun cdp view -> Actions.hover ~cdp view args)
+
+let check t ~owner (args : P.click_args) =
+  with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
+    t ~owner args.tab (fun cdp view -> Actions.check ~cdp view args)
+
+let uncheck t ~owner (args : P.click_args) =
+  with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
+    t ~owner args.tab (fun cdp view -> Actions.uncheck ~cdp view args)
 
 type meter = {
   usage : (string, Yojson.Safe.t) Hashtbl.t;
@@ -2169,6 +2314,7 @@ let drive_locked ?recent ?(meter = meter ())
         snapshot = None;
         dialog = tab.dialog;
         popups = [];
+        via = None;
       }
   in
   let row_role page index =
@@ -2192,7 +2338,15 @@ let drive_locked ?recent ?(meter = meter ())
           match op with
           | "click" ->
               Actions.click ~settle_after:false ~cdp view
-                P.{ tab = args.tab; snapshot; index }
+                P.
+                  {
+                    tab = args.tab;
+                    snapshot;
+                    index;
+                    snap = None;
+                    match_ = None;
+                    limit = None;
+                  }
           | "select" ->
               Actions.select ~settle_after:false ~check_hit:true ~cdp view
                 P.
@@ -2201,6 +2355,9 @@ let drive_locked ?recent ?(meter = meter ())
                     snapshot;
                     index;
                     option = Option.value ~default:0 choice.option;
+                    snap = None;
+                    match_ = None;
+                    limit = None;
                   }
           | "scroll_down" -> Actions.operator_scroll ~cdp view ~down:true
           | "scroll_up" -> Actions.operator_scroll ~cdp view ~down:false
@@ -2212,7 +2369,16 @@ let drive_locked ?recent ?(meter = meter ())
               | Some value ->
                   Actions.fill ~settle_after:false ~check_hit:true ~blur_after:false ~cdp
                     view
-                    P.{ tab = args.tab; snapshot; index; text = value }
+                    P.
+                      {
+                        tab = args.tab;
+                        snapshot;
+                        index;
+                        text = value;
+                        snap = None;
+                        match_ = None;
+                        limit = None;
+                      }
               | None ->
                   Error
                     (error "internal"

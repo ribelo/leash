@@ -13,7 +13,7 @@ Help is offline and short first contact is not the full manual.
   $ leash --help=plain >help 2>err
   $ ./daily_cli_fixture.exe top-help help; test ! -s err
   top-level help groups tabs, observe, act, network/debug, missions, playbooks, service and skill
-  $ for cmd in new downloads list claim release close status snap text shot debug eval nav click fill press select scroll wait upload hover net cookies storage dialog handoff resume drive discover playbook serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
+  $ for cmd in new downloads list claim release close status snap text shot debug eval nav click fill press select scroll wait upload hover check uncheck net cookies storage dialog handoff resume drive discover playbook serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
   $ for cmd in list show check test accept; do leash playbook "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
   $ for cmd in install show; do leash skill "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
   $ for cmd in init check; do leash config "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && test ! -s err || exit 1; done
@@ -24,4 +24,4 @@ Help is offline and short first contact is not the full manual.
   daily-9ggi list --all includes unowned and other owners
   $ leash help errors >errors 2>err
   $ ./daily_cli_fixture.exe error-help errors; test ! -s err
-  all 35 error codes, exit classes, meanings and hints are discoverable
+  all 37 error codes, exit classes, meanings and hints are discoverable

@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Leash controlled registration fixture</title>
+<style>
+body { font: 18px system-ui; max-width: 36rem; margin: 3rem auto; }
+label, input, button { display: block; margin: 1rem 0; }
+input { font: inherit; padding: .5rem; }
+#terms { position: absolute; opacity: 0; width: 1px; height: 1px; }
+label[for=terms] { padding: 1rem; border: 2px solid #555; cursor: pointer; }
+#terms:checked + label { background: #cdf5d4; }
+</style>
+<h1>Register</h1>
+<form>
+<label for=email>Email</label>
+<input id=email name=email autocomplete=email value="initial@example.org">
+<label for=password>Password</label>
+<input id=password name=password type=password autocomplete=new-password>
+<input id=terms name=terms type=checkbox><label for=terms>Accept terms</label>
+<button type=submit>Register</button>
+</form>
+<output id=status aria-live=polite>Ready</output>
+<script>
+// Controlled-style, not React: state owns the value and rerenders on trusted input.
+const email = document.querySelector('#email');
+const nativeSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+let state = {email: email.value};
+email.addEventListener('input', () => {
+  state = {...state, email: email.value};
+  nativeSet.call(email, state.email);
+  document.querySelector('#status').textContent = 'Email updated';
+});
+document.querySelector('form').addEventListener('submit', event => {
+  event.preventDefault();
+  document.querySelector('#status').textContent = document.querySelector('#terms').checked ? 'Registered' : 'Accept terms first';
+});
+</script>

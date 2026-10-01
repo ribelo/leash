@@ -39,6 +39,8 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
           offset = 0;
           truncated = false;
           settled = true;
+          source = P.Ax;
+          reason = None;
           dialog = None;
         }
     in

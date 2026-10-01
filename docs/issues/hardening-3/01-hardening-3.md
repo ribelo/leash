@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 8
 ---
 
@@ -71,5 +71,7 @@ Password fields return to `snap` for the agent (with `value` never echoed), and 
 Solving CAPTCHAs; interacting inside cross-origin iframes (visible only); OAuth popups' internals.
 
 ## Further Notes
+
+Delivered 2026-10-01. Live gate `scripts/live-acceptance-l48` (private headless Chrome, `scripts/live/registration.html` served on 127.0.0.1): password row in `snap` as textbox/password without a value; `fill --stdin` on it with nothing echoed (the page's field held 14 characters); `fill --snap` returned a snapshot whose Email row showed the typed value on a controlled-style input; `check` on the label-styled checkbox succeeded `via: label` and the next snap showed it checked; a second `check` answered `state-unchanged`; `click` with an empty SNAPSHOT answered `usage` naming it — all PASS. Deviations: the controlled input is a self-contained native-setter page, not React (no React dependency in the tree); `source:"ax"` is always on the wire (the codec cannot omit a default). The frozen-renderer, DOM-fallback and iframe stories are covered by the fake browser only; no public page reliably reproduces them. The field report is in `docs/research/2026-09-30-field-report/`.
 
 Source: an agent's report of 2026-09-30 after registering four API keys through Leash and Gmail. What worked: `new`/`list`, `fill` with Polish letters, `eval --argument` for secrets, `net body`, `debug` naming Turnstile, popup reporting, screenshots, reading confirmation links from Gmail. The agent also noted the installed skill was stale — closed by L44.

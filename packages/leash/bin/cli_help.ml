@@ -28,7 +28,7 @@ let docs = function
   | "new" | "list" | "claim" | "release" | "close" | "handoff" | "resume" -> "TABS"
   | "snap" | "text" | "shot" | "downloads" -> "OBSERVE"
   | "nav" | "click" | "fill" | "press" | "select" | "scroll" | "wait" | "upload" | "hover"
-  | "dialog" ->
+  | "check" | "uncheck" | "dialog" ->
       "ACT"
   | "net" | "debug" | "eval" | "cookies" | "storage" -> "NETWORK AND DEBUG"
   | "drive" | "discover" -> "MISSIONS"

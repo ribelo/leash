@@ -23,8 +23,17 @@ use that same client envelope, including --pretty.
   usage: exit 64, JSON-only stderr, hint, empty stdout
   $ check usage leash status --owner '   ' --socket "$tmp/missing.sock"
   usage: exit 64, JSON-only stderr, hint, empty stdout
-  $ check cli-parse leash snap --owner test
-  cli-parse: exit 124, JSON-only stderr, hint, empty stdout
+  $ check usage leash snap --owner test
+  usage: exit 64, JSON-only stderr, hint, empty stdout
+  $ leash click t_9xk --owner test >out 2>err; test $? -eq 64
+  $ grep -q 'click: SNAPSHOT is missing; usage: click TAB SNAPSHOT INDEX' err
+  $ leash click t_9xk '' 7 --owner test >out 2>err; test $? -eq 64
+  $ grep -q 'SNAPSHOT is missing' err
+  $ printf 's3cret-field-5sdo' | leash fill t_9xk s_1 1 --stdin --owner test --socket "$tmp/missing.sock" >out 2>err; test $? -ne 0
+  $ grep -q 's3cret-field-5sdo' out err && exit 1 || true
+  $ printf '%65537s' x > "$tmp/big-fill"
+  $ check too-large leash fill t_9xk s_1 1 --argument-file "$tmp/big-fill" --owner test --socket "$tmp/missing.sock"
+  too-large: exit 65, JSON-only stderr, hint, empty stdout
   $ check cli-parse leash status --bogus
   cli-parse: exit 124, JSON-only stderr, hint, empty stdout
   $ check cli-parse leash definitely-not-a-command

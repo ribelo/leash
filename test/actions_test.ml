@@ -300,7 +300,9 @@ let evaluate_reply ?(suggestions = true) request =
     | Some expression -> expression
     | None -> ""
   in
-  if contains expression "leashSnapshotGuard" then guard
+  if expression = Leash__Snapshot_source.interactive_count_expression then
+    o [ ("result", o [ ("type", s "number"); ("value", i 0) ]) ]
+  else if contains expression "leashSnapshotGuard" then guard
   else if contains expression "querySelectorAll" then
     o [ ("result", o [ ("type", s "boolean"); ("value", b suggestions) ]) ]
   else if contains expression "requestAnimationFrame" then
@@ -334,35 +336,48 @@ let script_page fake ?(loader = "loader-1") ?(suggestions = true) ?hit () =
   Fake.on_method fake "DOM.describeNode" (fun request ->
       let params = member "params" request in
       match E.int_member "backendNodeId" params with
-      | Some backend ->
-          let spot = spot_of_backend backend in
-          (* A subtree describe is what the descendant check walks; every row here has one
-             child, the way a button has its label span. *)
-          let children =
-            if Option.value ~default:0 (E.int_member "depth" params) < 0 then
-              E.array
+      | Some backend -> (
+          match List.find_opt (fun spot -> spot.backend = backend) page with
+          | None ->
+              o
                 [
-                  o
-                    [
-                      ("nodeId", i 111);
-                      ("backendNodeId", i (backend + 100));
-                      ("nodeName", s "SPAN");
-                    ];
+                  ( "node",
+                    o
+                      [
+                        ("nodeId", i backend);
+                        ("backendNodeId", i backend);
+                        ("nodeName", s "DIV");
+                        ("children", E.array []);
+                      ] );
                 ]
-            else E.array []
-          in
-          o
-            [
-              ( "node",
-                o
-                  [
-                    ("nodeId", i spot.frontend);
-                    ("backendNodeId", i spot.backend);
-                    ("nodeName", s (String.uppercase_ascii spot.role));
-                    ("parentId", i 1);
-                    ("children", children);
-                  ] );
-            ]
+          | Some spot ->
+              (* A subtree describe is what the descendant check walks; every row here has
+                 one child, the way a button has its label span. *)
+              let children =
+                if Option.value ~default:0 (E.int_member "depth" params) < 0 then
+                  E.array
+                    [
+                      o
+                        [
+                          ("nodeId", i 111);
+                          ("backendNodeId", i (backend + 100));
+                          ("nodeName", s "SPAN");
+                        ];
+                    ]
+                else E.array []
+              in
+              o
+                [
+                  ( "node",
+                    o
+                      [
+                        ("nodeId", i spot.frontend);
+                        ("backendNodeId", i spot.backend);
+                        ("nodeName", s (String.uppercase_ascii spot.role));
+                        ("parentId", i 1);
+                        ("children", children);
+                      ] );
+                ])
       | None ->
           let node = Option.value ~default:0 (E.int_member "nodeId" params) in
           o
@@ -486,7 +501,17 @@ let click () =
       let id = snapshot_id (snap tabs handle) in
       let before = List.length (Fake.received fake) in
       let reply =
-        result (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 }))
+        result
+          (request tabs "alice"
+             (P.Click
+                {
+                  tab = handle;
+                  snapshot = id;
+                  index = 1;
+                  snap = None;
+                  match_ = None;
+                  limit = None;
+                }))
       in
       let during = Fake.received fake |> List.filteri (fun index _ -> index >= before) in
       Alcotest.(check string)
@@ -541,7 +566,16 @@ let click () =
          the same table is allowed, and it is a second dispatch, not a replay. *)
       ignore
         (result
-           (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+           (request tabs "alice"
+              (P.Click
+                 {
+                   tab = handle;
+                   snapshot = id;
+                   index = 1;
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       Alcotest.(check int)
         "tab-1lhx one dispatch per click" 4
         (List.length (calls fake "Input.dispatchMouseEvent"));
@@ -566,7 +600,16 @@ let click () =
             ]);
       let replaced = snapshot_id (snap tabs handle) in
       check_code "tab-j1z2 replaced row" "stale-snapshot"
-        (request tabs "alice" (P.Click { tab = handle; snapshot = replaced; index = 1 }));
+        (request tabs "alice"
+           (P.Click
+              {
+                tab = handle;
+                snapshot = replaced;
+                index = 1;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       Alcotest.(check int)
         "tab-j1z2 no dispatch for a stale row" 4
         (List.length (calls fake "Input.dispatchMouseEvent"));
@@ -576,7 +619,16 @@ let click () =
       Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
           o [ ("backendNodeId", i 999); ("nodeId", i 999) ]);
       check_code "tab-bw4j covered row" "row-not-actionable"
-        (request tabs "alice" (P.Click { tab = handle; snapshot = fresh; index = 1 }));
+        (request tabs "alice"
+           (P.Click
+              {
+                tab = handle;
+                snapshot = fresh;
+                index = 1;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       Alcotest.(check int)
         "tab-bw4j no dispatch for a covered row" 4
         (List.length (calls fake "Input.dispatchMouseEvent"));
@@ -585,18 +637,54 @@ let click () =
           o [ ("backendNodeId", i 111); ("nodeId", i 111) ]);
       ignore
         (result
-           (request tabs "alice" (P.Click { tab = handle; snapshot = fresh; index = 1 })));
+           (request tabs "alice"
+              (P.Click
+                 {
+                   tab = handle;
+                   snapshot = fresh;
+                   index = 1;
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       Alcotest.(check int)
         "tab-bw4j a descendant of the row is a hit" 6
         (List.length (calls fake "Input.dispatchMouseEvent"));
       (* A navigation between the snapshot and the click. *)
       ignore (script_page fake ~loader:"loader-2" ());
       check_code "tab-j1z2 loader moved" "stale-snapshot"
-        (request tabs "alice" (P.Click { tab = handle; snapshot = fresh; index = 1 }));
+        (request tabs "alice"
+           (P.Click
+              {
+                tab = handle;
+                snapshot = fresh;
+                index = 1;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       check_code "tab-of0i row outside the table" "no-such-row"
-        (request tabs "alice" (P.Click { tab = handle; snapshot = fresh; index = 99 }));
+        (request tabs "alice"
+           (P.Click
+              {
+                tab = handle;
+                snapshot = fresh;
+                index = 99;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       check_code "tab-bw4j disabled row" "row-not-actionable"
-        (request tabs "alice" (P.Click { tab = handle; snapshot = fresh; index = 6 }));
+        (request tabs "alice"
+           (P.Click
+              {
+                tab = handle;
+                snapshot = fresh;
+                index = 6;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       Alcotest.(check int)
         "tab-1lhx a refusal dispatches nothing" 6
         (List.length (calls fake "Input.dispatchMouseEvent")))
@@ -617,7 +705,16 @@ let scrolled_click () =
       let id = snapshot_id (snap tabs handle) in
       ignore
         (result
-           (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+           (request tabs "alice"
+              (P.Click
+                 {
+                   tab = handle;
+                   snapshot = id;
+                   index = 1;
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       let hit = List.hd (calls fake "DOM.getNodeForLocation") |> params in
       Alcotest.(check int) "document-space hit point" 575 (integer "y" hit);
       let event = List.hd (calls fake "Input.dispatchMouseEvent") |> params in
@@ -640,7 +737,16 @@ let never_retried () =
       let handle = new_tab tabs in
       let id = snapshot_id (snap tabs handle) in
       let reply =
-        request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })
+        request tabs "alice"
+          (P.Click
+             {
+               tab = handle;
+               snapshot = id;
+               index = 1;
+               snap = None;
+               match_ = None;
+               limit = None;
+             })
       in
       Alcotest.(check string) "tab-1lhx the action failed" "internal" (code reply);
       let events = calls fake "Input.dispatchMouseEvent" in
@@ -665,7 +771,16 @@ let fill () =
       ignore
         (result
            (request tabs "alice"
-              (P.Fill { tab = handle; snapshot = id; index = 2; text = "hello" })));
+              (P.Fill
+                 {
+                   tab = handle;
+                   snapshot = id;
+                   index = 2;
+                   text = "hello";
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       let texted = calls fake "Input.insertText" in
       Alcotest.(check int) "tab-p3x1 one insertText" 1 (List.length texted);
       Alcotest.(check string)
@@ -697,7 +812,16 @@ let fill () =
       ignore
         (result
            (request tabs "alice"
-              (P.Fill { tab = handle; snapshot = id; index = 3; text = "pi" })));
+              (P.Fill
+                 {
+                   tab = handle;
+                   snapshot = id;
+                   index = 3;
+                   text = "pi";
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       Alcotest.(check int)
         "tab-p3x1 suggestions polled, bounded" 10
         (List.length (probes_since before));
@@ -706,7 +830,16 @@ let fill () =
       ignore
         (result
            (request tabs "alice"
-              (P.Fill { tab = handle; snapshot = id; index = 3; text = "pi" })));
+              (P.Fill
+                 {
+                   tab = handle;
+                   snapshot = id;
+                   index = 3;
+                   text = "pi";
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       Alcotest.(check int)
         "tab-p3x1 stops when a suggestion is visible" 1
         (List.length (probes_since before));
@@ -714,13 +847,30 @@ let fill () =
       check_code "tab-0lax fill text over 64 KiB" "too-large"
         (request tabs "alice"
            (P.Fill
-              { tab = handle; snapshot = id; index = 2; text = String.make 65_537 'x' }));
+              {
+                tab = handle;
+                snapshot = id;
+                index = 2;
+                text = String.make 65_537 'x';
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       Alcotest.(check int)
         "tab-0lax a too-large fill touches no browser" count
         (List.length (Fake.received fake));
       check_code "tab-p3x1 a button is not a text control" "row-not-actionable"
         (request tabs "alice"
-           (P.Fill { tab = handle; snapshot = id; index = 1; text = "x" })))
+           (P.Fill
+              {
+                tab = handle;
+                snapshot = id;
+                index = 1;
+                text = "x";
+                snap = None;
+                match_ = None;
+                limit = None;
+              })))
 
 (* daily-9ggi: native temporal inputs need their value setter, not insertText. *)
 let temporal_fill () =
@@ -800,7 +950,16 @@ let temporal_fill () =
       let fill value =
         let id = snapshot_id (snap tabs handle) in
         request tabs "alice"
-          (P.Fill { tab = handle; snapshot = id; index = 2; text = value })
+          (P.Fill
+             {
+               tab = handle;
+               snapshot = id;
+               index = 2;
+               text = value;
+               snap = None;
+               match_ = None;
+               limit = None;
+             })
       in
       ignore (result (fill "12:30"));
       Alcotest.(check int)
@@ -830,7 +989,16 @@ let press () =
       ignore
         (result
            (request tabs "alice"
-              (P.Press { tab = handle; snapshot = id; index = Some 1; key = "Enter" })));
+              (P.Press
+                 {
+                   tab = handle;
+                   snapshot = id;
+                   index = Some 1;
+                   key = "Enter";
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       Alcotest.(check int)
         "tab-luo5 the row is focused first" 1
         (List.length (calls fake "DOM.focus"));
@@ -846,7 +1014,16 @@ let press () =
       ignore
         (result
            (request tabs "alice"
-              (P.Press { tab = handle; snapshot = id; index = None; key = "Escape" })));
+              (P.Press
+                 {
+                   tab = handle;
+                   snapshot = id;
+                   index = None;
+                   key = "Escape";
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       Alcotest.(check int)
         "tab-luo5 without an index the page gets the key" 1
         (List.length (calls fake "DOM.focus"));
@@ -856,7 +1033,16 @@ let press () =
            (params (List.nth (calls fake "Input.dispatchKeyEvent") 2)));
       check_code "tab-luo5 unknown key" "invalid-request"
         (request tabs "alice"
-           (P.Press { tab = handle; snapshot = id; index = None; key = "Frobnicate" })))
+           (P.Press
+              {
+                tab = handle;
+                snapshot = id;
+                index = None;
+                key = "Frobnicate";
+                snap = None;
+                match_ = None;
+                limit = None;
+              })))
 
 (* tab-5deq *)
 let select () =
@@ -868,7 +1054,16 @@ let select () =
       ignore
         (result
            (request tabs "alice"
-              (P.Select { tab = handle; snapshot = id; index = 4; option = 2 })));
+              (P.Select
+                 {
+                   tab = handle;
+                   snapshot = id;
+                   index = 4;
+                   option = 2;
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       let chosen = calls fake "Runtime.callFunctionOn" in
       Alcotest.(check int) "tab-5deq one call" 1 (List.length chosen);
       Alcotest.(check int)
@@ -887,10 +1082,28 @@ let select () =
             ]);
       check_code "tab-5deq an option the select does not have" "invalid-request"
         (request tabs "alice"
-           (P.Select { tab = handle; snapshot = id; index = 4; option = 9 }));
+           (P.Select
+              {
+                tab = handle;
+                snapshot = id;
+                index = 4;
+                option = 9;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       check_code "tab-5deq a button is not a select" "row-not-actionable"
         (request tabs "alice"
-           (P.Select { tab = handle; snapshot = id; index = 1; option = 0 })))
+           (P.Select
+              {
+                tab = handle;
+                snapshot = id;
+                index = 1;
+                option = 0;
+                snap = None;
+                match_ = None;
+                limit = None;
+              })))
 
 (* tab-8dop *)
 let scroll () =
@@ -1066,6 +1279,8 @@ let unsafe_inputs () =
                   offset = 0;
                   truncated = false;
                   settled = true;
+                  source = P.Ax;
+                  reason = None;
                   dialog = None;
                 }
         in
@@ -1143,7 +1358,17 @@ let popups () =
           o []);
       let id = snapshot_id (snap tabs handle) in
       let reply =
-        result (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 }))
+        result
+          (request tabs "alice"
+             (P.Click
+                {
+                  tab = handle;
+                  snapshot = id;
+                  index = 1;
+                  snap = None;
+                  match_ = None;
+                  limit = None;
+                }))
       in
       Alcotest.(check int)
         "tab-tm6c the popup is reported" 1
@@ -1195,7 +1420,17 @@ let popups_exact () =
                    ~opener_id:"target-2" ~url:"https://example.com/bob-popup" ~title:"Bob"));
           o []);
       let reply =
-        result (request tabs "alice" (P.Click { tab = alice; snapshot = id; index = 1 }))
+        result
+          (request tabs "alice"
+             (P.Click
+                {
+                  tab = alice;
+                  snapshot = id;
+                  index = 1;
+                  snap = None;
+                  match_ = None;
+                  limit = None;
+                }))
       in
       let popups = list (member "popups" reply) in
       Alcotest.(check int) "tab-8k2g only the acted tab's popup" 1 (List.length popups);
@@ -1234,7 +1469,17 @@ let dialog_during_dispatch () =
                    ]);
           o []);
       let reply =
-        result (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 }))
+        result
+          (request tabs "alice"
+             (P.Click
+                {
+                  tab = handle;
+                  snapshot = id;
+                  index = 1;
+                  snap = None;
+                  match_ = None;
+                  limit = None;
+                }))
       in
       Alcotest.(check string)
         "hard-dljv captures dispatch dialog" "confirm"
@@ -1273,16 +1518,52 @@ let dialog () =
       wait 1000;
       let before = List.length (Fake.received fake) in
       check_code "tab-60kn click" "dialog-open"
-        (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 }));
+        (request tabs "alice"
+           (P.Click
+              {
+                tab = handle;
+                snapshot = id;
+                index = 1;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       check_code "tab-60kn fill" "dialog-open"
         (request tabs "alice"
-           (P.Fill { tab = handle; snapshot = id; index = 2; text = "x" }));
+           (P.Fill
+              {
+                tab = handle;
+                snapshot = id;
+                index = 2;
+                text = "x";
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       check_code "tab-60kn press" "dialog-open"
         (request tabs "alice"
-           (P.Press { tab = handle; snapshot = id; index = None; key = "Escape" }));
+           (P.Press
+              {
+                tab = handle;
+                snapshot = id;
+                index = None;
+                key = "Escape";
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       check_code "tab-60kn select" "dialog-open"
         (request tabs "alice"
-           (P.Select { tab = handle; snapshot = id; index = 4; option = 0 }));
+           (P.Select
+              {
+                tab = handle;
+                snapshot = id;
+                index = 4;
+                option = 0;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       check_code "tab-60kn scroll" "dialog-open"
         (request tabs "alice"
            (P.Scroll { tab = handle; direction = direction "down"; index = None }));
@@ -1321,12 +1602,28 @@ let serialization () =
           cell :=
             Some
               (request tabs "alice"
-                 (P.Click { tab = first; snapshot = first_snapshot; index = 1 })));
+                 (P.Click
+                    {
+                      tab = first;
+                      snapshot = first_snapshot;
+                      index = 1;
+                      snap = None;
+                      match_ = None;
+                      limit = None;
+                    })));
       Eio.Fiber.yield ();
       ignore
         (result
            (request tabs "alice"
-              (P.Click { tab = first; snapshot = first_snapshot; index = 5 })));
+              (P.Click
+                 {
+                   tab = first;
+                   snapshot = first_snapshot;
+                   index = 5;
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       ignore (result (await ~sw "the first click" cell));
       let after = Fake.received fake |> List.filteri (fun index _ -> index >= start) in
       let events =
@@ -1353,12 +1650,28 @@ let serialization () =
             Some
               (request tabs "alice"
                  (P.Fill
-                    { tab = first; snapshot = first_snapshot; index = 3; text = "pi" })));
+                    {
+                      tab = first;
+                      snapshot = first_snapshot;
+                      index = 3;
+                      text = "pi";
+                      snap = None;
+                      match_ = None;
+                      limit = None;
+                    })));
       Eio.Fiber.yield ();
       ignore
         (result
            (request tabs "alice"
-              (P.Click { tab = second; snapshot = second_snapshot; index = 5 })));
+              (P.Click
+                 {
+                   tab = second;
+                   snapshot = second_snapshot;
+                   index = 5;
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       let after = Fake.received fake |> List.filteri (fun index _ -> index >= start) in
       let last_of who =
         let rec scan index found = function
@@ -1528,7 +1841,16 @@ let popup_acknowledged () =
       Eio.Fiber.fork ~sw (fun () ->
           cell :=
             Some
-              (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+              (request tabs "alice"
+                 (P.Click
+                    {
+                      tab = handle;
+                      snapshot = id;
+                      index = 1;
+                      snap = None;
+                      match_ = None;
+                      limit = None;
+                    })));
       wait_for_press fake;
       Fake.emit fake ~method_:"Target.targetCreated"
         ~params:
@@ -1571,7 +1893,16 @@ let slow_reply_settles () =
       Eio.Fiber.fork ~sw (fun () ->
           cell :=
             Some
-              (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+              (request tabs "alice"
+                 (P.Click
+                    {
+                      tab = handle;
+                      snapshot = id;
+                      index = 1;
+                      snap = None;
+                      match_ = None;
+                      limit = None;
+                    })));
       wait_for_press fake;
       Ox_test.advance env#clock (Ox.Duration.seconds 3);
       ignore (result (await ~sw "tab-1lhx the slow reply" cell));
@@ -1585,9 +1916,11 @@ let slow_reply_settles () =
            (fun json -> E.string_member "method" json)
            (between_press_and_release fake)))
 
-(* tab-0ohq tab-1lhx own-ehqa: the CDP deadline is the only bound a dispatch has left. A
-   page that answers neither the input nor the liveness probe is browser-unavailable, and
-   the clock runs out the call's own 30 seconds and the two probes after it. *)
+(* tab-0ohq tab-1lhx own-ehqa field-cde7: the CDP deadline is the only bound a dispatch
+   has left. A page that answers neither the input nor the liveness probe, and whose
+   target the browser still knows, is renderer-unresponsive. The clock runs out the
+   call's own 30 seconds and the two probes after it. A target the browser no longer
+   knows stays tab-gone. *)
 let silent_page_unavailable () =
   rig (fun env sw _ tabs fake ->
       let fake = fake () in
@@ -1607,7 +1940,16 @@ let silent_page_unavailable () =
       Eio.Fiber.fork ~sw (fun () ->
           cell :=
             Some
-              (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+              (request tabs "alice"
+                 (P.Click
+                    {
+                      tab = handle;
+                      snapshot = id;
+                      index = 1;
+                      snap = None;
+                      match_ = None;
+                      limit = None;
+                    })));
       wait_for_press fake;
       (* One second at a time, as control_test's load timeout does: the dispatch deadline
          and the two probes after it expire in turn while the fiber runs. *)
@@ -1627,7 +1969,7 @@ let silent_page_unavailable () =
               spin (n - 1))
       in
       spin 45;
-      check_code "tab-0ohq a silent page stays browser-unavailable" "browser-unavailable"
+      check_code "tab-0ohq a silent page is renderer-unresponsive" "renderer-unresponsive"
         (await ~sw "tab-0ohq the silent click" cell))
 
 (* tab-0ohq own-teh1: a dispatch whose handler closes the tab destroys its own reply; the
@@ -1646,7 +1988,16 @@ let self_closing_click_reports_tab_gone () =
       Eio.Fiber.fork ~sw (fun () ->
           cell :=
             Some
-              (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+              (request tabs "alice"
+                 (P.Click
+                    {
+                      tab = handle;
+                      snapshot = id;
+                      index = 1;
+                      snap = None;
+                      match_ = None;
+                      limit = None;
+                    })));
       wait_for_press fake;
       Fake.emit fake ~method_:"Target.targetDestroyed"
         ~params:(o [ ("targetId", s "target-1") ]);
@@ -1674,7 +2025,16 @@ let self_closing_click_probe () =
       Eio.Fiber.fork ~sw (fun () ->
           cell :=
             Some
-              (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 })));
+              (request tabs "alice"
+                 (P.Click
+                    {
+                      tab = handle;
+                      snapshot = id;
+                      index = 1;
+                      snap = None;
+                      match_ = None;
+                      limit = None;
+                    })));
       wait_for_press fake;
       (* Every request of the revalidation is answered before the press is read, so from
          here on the page session and the target lookup fail, as they do once the tab's
@@ -1736,7 +2096,17 @@ let navigation_title_refresh () =
       let handle = new_tab tabs in
       let id = snapshot_id (snap tabs handle) in
       let reply =
-        result (request tabs "alice" (P.Click { tab = handle; snapshot = id; index = 1 }))
+        result
+          (request tabs "alice"
+             (P.Click
+                {
+                  tab = handle;
+                  snapshot = id;
+                  index = 1;
+                  snap = None;
+                  match_ = None;
+                  limit = None;
+                }))
       in
       Alcotest.(check string)
         "svc-hi4f the reply carries the loaded document's title" "Example Domain"
@@ -1746,6 +2116,298 @@ let navigation_title_refresh () =
       Alcotest.(check int)
         "svc-hi4f the target is read once mid-navigation and once after the load" 2
         (List.length (calls fake "Target.getTargetInfo")))
+
+(* field-drpx: a newly opened empty popup is actionable evidence, not a
+   failure. A dialog interrupts URL settlement; without one, the bounded
+   settle window distinguishes a still-blank popup from a committed page. *)
+let popup_readiness url dialog expected () =
+  rig (fun env sw _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let fixture = chrome_fixture () in
+      let handle = new_tab tabs in
+      let before = snap tabs handle in
+      let id = snapshot_id before and opener_url = text "url" before in
+      Fake.on_method fake "Target.getTargetInfo" (fun request ->
+          if E.string_member "targetId" (params request) = Some "field-popup" then
+            o
+              [
+                ( "targetInfo",
+                  popup_target_info fixture ~target_id:"field-popup" ~opener_id:"target-1"
+                    ~url ~title:"" );
+              ]
+          else
+            o
+              [
+                ( "targetInfo",
+                  o
+                    [
+                      ("targetId", s "target-1");
+                      ("type", s "page");
+                      ("url", s opener_url);
+                      ("title", member "title" before);
+                    ] );
+              ]);
+      Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
+          if E.string_member "type" (params request) = Some "mousePressed" then (
+            Fake.emit fake ~method_:"Target.targetCreated"
+              ~params:
+                (popup_announcement fixture ~target_id:"field-popup" ~opener_id:"target-1"
+                   ~url ~title:"");
+            if dialog then
+              Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogOpening"
+                ~params:
+                  (o
+                     [
+                       ("type", s "alert");
+                       ("message", s "opening popup");
+                       ("defaultPrompt", s "");
+                     ]));
+          o []);
+      let cell = ref None in
+      Eio.Fiber.fork ~sw (fun () ->
+          cell :=
+            Some
+              (request tabs "alice"
+                 (P.Click
+                    {
+                      tab = handle;
+                      snapshot = id;
+                      index = 1;
+                      snap = None;
+                      match_ = None;
+                      limit = None;
+                    })));
+      wait_for_press fake;
+      let rec settle n =
+        match !cell with
+        | Some reply -> result reply
+        | None ->
+            if n = 0 then Alcotest.fail "field-drpx popup reply did not settle";
+            if not dialog then Ox_test.advance env#clock (Ox.Duration.ms 20);
+            for _ = 1 to 20 do
+              Eio.Fiber.yield ()
+            done;
+            settle (n - 1)
+      in
+      let reply = settle 300 in
+      let popups = list (member "popups" reply) in
+      Alcotest.(check int) "field-drpx popup retained" 1 (List.length popups);
+      let popup = List.hd popups in
+      (match P.popup_info_of_yojson popup with
+      | Ok _ -> ()
+      | Error why -> Alcotest.failf "field-drpx popup wire: %s" why);
+      Alcotest.(check string) "field-drpx readiness" expected (text "state" popup);
+      Alcotest.(check string)
+        "field-drpx opener context" opener_url (text "opener_url" popup);
+      Alcotest.(check string)
+        "field-drpx ownership is separate" "alice" (text "owner" popup);
+      Alcotest.(check string) "field-drpx original URL retained" url (text "url" popup))
+
+let row_args ~tab ~snapshot ~index ?(snap = None) ?(match_ = None) ?(limit = None) () :
+    P.click_args =
+  { snap; match_; limit; tab; snapshot; index }
+
+(* field-uls3: a covering label whose control is the target is the click. *)
+let label_click () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          o [ ("backendNodeId", i 50); ("nodeId", i 50) ]);
+      Fake.on_method fake "DOM.describeNode" (fun request ->
+          let params = member "params" request in
+          match E.int_member "backendNodeId" params with
+          | Some 50 ->
+              o
+                [
+                  ( "node",
+                    o
+                      [
+                        ("nodeId", i 50);
+                        ("backendNodeId", i 50);
+                        ("nodeName", s "LABEL");
+                        ("children", E.array []);
+                      ] );
+                ]
+          | Some backend ->
+              let spot = spot_of_backend backend in
+              o
+                [
+                  ( "node",
+                    o
+                      [
+                        ("nodeId", i spot.frontend);
+                        ("backendNodeId", i spot.backend);
+                        ("nodeName", s "BUTTON");
+                      ] );
+                ]
+          | None ->
+              o
+                [
+                  ( "node",
+                    o
+                      [
+                        ("nodeId", i 101);
+                        ("backendNodeId", i 11);
+                        ("nodeName", s "BUTTON");
+                      ] );
+                ]);
+      Fake.on_method fake "DOM.resolveNode" (fun _ ->
+          o [ ("object", o [ ("objectId", s "label-1"); ("type", s "object") ]) ]);
+      Fake.on_method fake "Runtime.callFunctionOn" (fun request ->
+          let decl =
+            Option.value ~default:""
+              (E.string_member "functionDeclaration" (params request))
+          in
+          if contains decl "this.control" then
+            o [ ("result", o [ ("type", s "object"); ("objectId", s "control-1") ]) ]
+          else o [ ("result", o [ ("type", s "undefined") ]) ]);
+      let reply =
+        result
+          (request tabs "alice" (P.Click (row_args ~tab:handle ~snapshot:id ~index:1 ())))
+      in
+      Alcotest.(check string) "field-uls3 via label" "label" (text "via" reply);
+      Alcotest.(check bool)
+        "field-uls3 the mouse was dispatched" true
+        (List.length (calls fake "Input.dispatchMouseEvent") >= 2))
+
+let unrelated_cover () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          o [ ("backendNodeId", i 77); ("nodeId", i 77) ]);
+      Fake.on_method fake "DOM.describeNode" (fun request ->
+          let params = member "params" request in
+          match E.int_member "backendNodeId" params with
+          | Some 77 ->
+              o
+                [
+                  ( "node",
+                    o [ ("nodeId", i 77); ("backendNodeId", i 77); ("nodeName", s "DIV") ]
+                  );
+                ]
+          | Some backend ->
+              let spot = spot_of_backend backend in
+              o
+                [
+                  ( "node",
+                    o
+                      [
+                        ("nodeId", i spot.frontend);
+                        ("backendNodeId", i spot.backend);
+                        ("nodeName", s "BUTTON");
+                      ] );
+                ]
+          | None -> o [ ("node", o [ ("nodeId", i 1); ("backendNodeId", i 1) ]) ]);
+      check_code "field-uls3 an unrelated cover still blocks" "row-not-actionable"
+        (request tabs "alice" (P.Click (row_args ~tab:handle ~snapshot:id ~index:1 ()))))
+
+let script_checked fake answers =
+  let answers = ref answers in
+  Fake.on_method fake "Runtime.callFunctionOn" (fun request ->
+      let decl =
+        Option.value ~default:"" (E.string_member "functionDeclaration" (params request))
+      in
+      if contains decl "this.checked" then (
+        let value, rest =
+          match !answers with value :: rest -> (value, rest) | [] -> (false, [])
+        in
+        answers := rest;
+        o [ ("result", o [ ("type", s "boolean"); ("value", b value) ]) ])
+      else o [ ("result", o [ ("type", s "string"); ("value", s "c") ]) ])
+
+let check_flips () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      script_checked fake [ false; true ];
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let reply =
+        result
+          (request tabs "alice" (P.Check (row_args ~tab:handle ~snapshot:id ~index:1 ())))
+      in
+      Alcotest.(check bool)
+        "field-guda a flip is a success" true
+        (Yojson.Safe.Util.member "tab" reply <> `Null))
+
+let check_unchanged () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      script_checked fake [ true; true ];
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let before = List.length (calls fake "Input.dispatchMouseEvent") in
+      check_code "field-guda a click that does not flip" "state-unchanged"
+        (request tabs "alice" (P.Uncheck (row_args ~tab:handle ~snapshot:id ~index:1 ())));
+      Alcotest.(check bool)
+        "field-guda the failed flip still clicked" true
+        (List.length (calls fake "Input.dispatchMouseEvent") > before))
+
+let snap_on_click () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let plain =
+        result
+          (request tabs "alice" (P.Click (row_args ~tab:handle ~snapshot:id ~index:1 ())))
+      in
+      Alcotest.(check bool)
+        "field-swvb snapshot stays null without --snap" true
+        (member "snapshot" plain = null);
+      let reply =
+        result
+          (request tabs "alice"
+             (P.Click
+                (row_args ~tab:handle ~snapshot:id ~index:1 ~snap:(Some true)
+                   ~match_:(Some "Send") ~limit:(Some 5) ())))
+      in
+      let snap_json = member "snapshot" reply in
+      Alcotest.(check bool)
+        "field-swvb snapshot is an object" true
+        (match snap_json with `Assoc _ -> true | _ -> false);
+      let rows = match member "rows" snap_json with `List xs -> xs | _ -> [] in
+      Alcotest.(check int) "field-swvb match keeps Send" 1 (List.length rows);
+      Alcotest.(check string)
+        "field-swvb the matched name" "Send"
+        (text "name" (List.hd rows)))
+
+let password_fill_not_echoed () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let secret = "s3cret-field-5sdo" in
+      let reply =
+        result
+          (request tabs "alice"
+             (P.Fill
+                {
+                  tab = handle;
+                  snapshot = id;
+                  index = 2;
+                  text = secret;
+                  snap = None;
+                  match_ = None;
+                  limit = None;
+                }))
+      in
+      Alcotest.(check bool)
+        "field-5sdo the reply does not echo the secret" false
+        (contains (Yojson.Safe.to_string reply) secret);
+      let inserted = List.hd (List.rev (calls fake "Input.insertText")) |> params in
+      Alcotest.(check string)
+        "field-5sdo the page still receives the text" secret (text "text" inserted))
 
 let () =
   Alcotest.run "L7 actions"
@@ -1764,6 +2426,14 @@ let () =
           Alcotest.test_case "drive-zml5 unsafe inputs" `Quick unsafe_inputs;
           Alcotest.test_case "tab-8dop" `Quick scroll;
           Alcotest.test_case "tab-tm6c" `Quick popups;
+          Alcotest.test_case "field-drpx opening interrupted" `Quick
+            (popup_readiness "" true "opening");
+          Alcotest.test_case "field-drpx still blank" `Quick
+            (popup_readiness "" false "blank");
+          Alcotest.test_case "field-drpx about:blank" `Quick
+            (popup_readiness "about:blank" false "blank");
+          Alcotest.test_case "field-drpx committed" `Quick
+            (popup_readiness "https://example.com/popup" false "ready");
           Alcotest.test_case "tab-8k2g" `Quick popups_exact;
           Alcotest.test_case "tab-60kn" `Quick dialog;
           Alcotest.test_case "hard-dljv dispatch modal" `Quick dialog_during_dispatch;
@@ -1779,5 +2449,12 @@ let () =
             self_closing_click_probe;
           Alcotest.test_case "svc-hi4f title after a navigating action" `Quick
             navigation_title_refresh;
+          Alcotest.test_case "field-uls3 label click" `Quick label_click;
+          Alcotest.test_case "field-uls3 unrelated cover" `Quick unrelated_cover;
+          Alcotest.test_case "field-guda check flips" `Quick check_flips;
+          Alcotest.test_case "field-guda state unchanged" `Quick check_unchanged;
+          Alcotest.test_case "field-swvb snap on click" `Quick snap_on_click;
+          Alcotest.test_case "field-5sdo password fill is not echoed" `Quick
+            password_fill_not_echoed;
         ] );
     ]

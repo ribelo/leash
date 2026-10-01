@@ -355,7 +355,16 @@ let page_contains browser needle =
 
 let action_result browser tab =
   let url, title = browser.current () in
-  P.{ tab; url; title; snapshot = None; dialog = browser.dialog (); popups = [] }
+  P.
+    {
+      tab;
+      url;
+      title;
+      snapshot = None;
+      dialog = browser.dialog ();
+      popups = [];
+      via = None;
+    }
 
 (* hard-sr9v: a wait may last an hour. The control listener derives its handler budget from
    this same bound and cancels the handler when the client goes away, and a wait takes no
@@ -538,6 +547,26 @@ let timestamp at =
   Printf.sprintf "%04d-%02d-%02dT%02d:%02d:%02dZ" (tm.Unix.tm_year + 1900)
     (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
 
+(* field-vji1: match known hosts, not arbitrary URLs containing a vendor's name. *)
+let challenge url =
+  let url = String.lowercase_ascii url in
+  match Snapshot_source.url_origin url with
+  | None -> None
+  | Some origin ->
+      let host =
+        match String.index_opt origin ':' with
+        | None -> origin
+        | Some at -> String.sub origin (at + 3) (String.length origin - at - 3)
+      in
+      let domain root = host = root || String.ends_with ~suffix:("." ^ root) host in
+      if host = "challenges.cloudflare.com" then Some ("Turnstile", origin)
+      else if domain "hcaptcha.com" then Some ("hCaptcha", origin)
+      else if
+        domain "recaptcha.net"
+        || (domain "google.com" && String.starts_with ~prefix:(origin ^ "/recaptcha/") url)
+      then Some ("reCAPTCHA", origin)
+      else None
+
 let observe t ~at json =
   Net_log.observe t.net json;
   let method_ = field "method" D.string json in
@@ -572,6 +601,16 @@ let observe t ~at json =
           | None -> nested [ "exceptionDetails"; "text" ] D.string params)
       in
       emit "exception" text
+  | Some "Network.requestWillBeSent", Some params -> (
+      match Option.bind (nested [ "request"; "url" ] D.string params) challenge with
+      | Some (vendor, origin) ->
+          emit "console" ~level:"warn" (vendor ^ " challenge loaded: " ^ origin)
+      | None -> ())
+  | Some "Page.frameNavigated", Some params -> (
+      match Option.bind (nested [ "frame"; "url" ] D.string params) challenge with
+      | Some (vendor, origin) ->
+          emit "console" ~level:"warn" (vendor ^ " challenge frame loaded: " ^ origin)
+      | None -> ())
   | Some "Network.loadingFailed", Some params ->
       let text =
         Option.value ~default:"request failed" (field "errorText" D.string params)

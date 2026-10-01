@@ -192,6 +192,8 @@ let script_row fake role =
       let expression = get "expression" (get "params" req) in
       let value =
         match expression with
+        | `String s when s = Leash__Snapshot_source.interactive_count_expression ->
+            obj [ ("type", str "number"); ("value", `Int 0) ]
         | `String s when contains s "leashSnapshotGuard" ->
             obj
               [
@@ -232,11 +234,29 @@ let press_keys () =
           ignore
             (result
                (request tabs "alice"
-                  (P.Press { tab = h; snapshot = id; index = None; key }))))
+                  (P.Press
+                     {
+                       tab = h;
+                       snapshot = id;
+                       index = None;
+                       key;
+                       snap = None;
+                       match_ = None;
+                       limit = None;
+                     }))))
         [ "Enter"; "Esc"; "Escape"; "ArrowRight"; "a"; "1"; "-"; "'" ];
       match
         request tabs "alice"
-          (P.Press { tab = h; snapshot = id; index = None; key = "Return" })
+          (P.Press
+             {
+               tab = h;
+               snapshot = id;
+               index = None;
+               key = "Return";
+               snap = None;
+               match_ = None;
+               limit = None;
+             })
       with
       | P.Success _ -> Alcotest.fail "unsupported Return accepted"
       | P.Failure error ->
@@ -266,7 +286,16 @@ let native_identity () =
       ignore
         (result
            (request tabs "alice"
-              (P.Press { tab = h; snapshot = id; index = Some index; key = "Tab" })));
+              (P.Press
+                 {
+                   tab = h;
+                   snapshot = id;
+                   index = Some index;
+                   key = "Tab";
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
       Fake.on_method (fake ()) "Accessibility.getPartialAXTree" (fun _ ->
           obj
             [
@@ -282,7 +311,16 @@ let native_identity () =
             ]);
       check_code "daily-c4cl row identity changed, not only id" "stale-snapshot"
         (request tabs "alice"
-           (P.Press { tab = h; snapshot = id; index = Some index; key = "Tab" })))
+           (P.Press
+              {
+                tab = h;
+                snapshot = id;
+                index = Some index;
+                key = "Tab";
+                snap = None;
+                match_ = None;
+                limit = None;
+              })))
 
 (* daily-9ggi: stale branches share one recovery object; ownership refusal tells
    whether to claim an unowned tab or leave another owner's tab alone. *)
@@ -309,7 +347,18 @@ let recovery_details () =
             Alcotest.(check string)
               "daily-9ggi canonical recovery" expected.hint error.hint
       in
-      let press snapshot index = P.Press { tab = h; snapshot; index; key = "Tab" } in
+      let press snapshot index =
+        P.Press
+          {
+            tab = h;
+            snapshot;
+            index;
+            key = "Tab";
+            snap = None;
+            match_ = None;
+            limit = None;
+          }
+      in
       stale None (press old None);
       let first, _ = snapshot tabs h in
       ignore (result (request tabs "alice" (press first None)));
@@ -433,7 +482,16 @@ let popup_url () =
       let reply =
         timed env sw (fun () ->
             request tabs "alice"
-              (P.Press { tab = h; snapshot = id; index = None; key = "Enter" }))
+              (P.Press
+                 {
+                   tab = h;
+                   snapshot = id;
+                   index = None;
+                   key = "Enter";
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 }))
         |> result
       in
       let popup =

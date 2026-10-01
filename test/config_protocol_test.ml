@@ -342,6 +342,8 @@ let snapshot_json =
       ("offset", `Int 0);
       ("truncated", `Bool false);
       ("settled", `Bool true);
+      (* field-jkx6: the codec writes the default AX source; absent reason stays omitted. *)
+      ("source", `String "ax");
       ( "dialog",
         assoc
           [
@@ -540,6 +542,7 @@ let result_shapes () =
       snapshot = None;
       dialog = None;
       popups = [];
+      via = None;
     }
   in
   Alcotest.(check string)

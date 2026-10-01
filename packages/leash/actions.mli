@@ -50,6 +50,12 @@ type tab = {
   snapshot : unit -> (Protocol.Snapshot_id.t * string * (Protocol.row * int) list) option;
       (** The current snapshot: its id, the loader id it was taken under, and every row
           with the backend node id it came from. *)
+  dom_snapshot : unit -> bool;
+      (** field-jkx6: true when the current table came from the DOM fallback. Revalidation
+          then keeps the loader, disabled and hit-test checks and identifies the row by
+          backend node ([DOM.describeNode]) instead of the AX role and name. *)
+  popup : Protocol.tab_info -> Protocol.popup_info;
+      (** field-drpx: map a freshly opened tab to the popup record the reply reports. *)
   dialog : unit -> Protocol.dialog option;
   dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
@@ -113,6 +119,22 @@ val hover :
 (** hard-v1gs: the row is revalidated and hit-tested like a click's, then the mouse is
     moved to its point with a single [mouseMoved]; nothing is pressed, and two frames of
     settling let a hover menu open. *)
+
+val check :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.click_args ->
+  (Protocol.action_result, Protocol.error) result
+(** field-guda: click the row, following a covering label, and require [checked] to become
+    true. Already checked, or a click that does not flip it, is [state-unchanged]. A row
+    with no checked state is [row-not-actionable]. *)
+
+val uncheck :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.click_args ->
+  (Protocol.action_result, Protocol.error) result
+(** field-guda: the unchecked twin of {!check}. *)
 
 val upload :
   caps:< Ox_caps.Cap.fs_read ; .. > ->

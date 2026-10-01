@@ -28,6 +28,18 @@ let counter_script =
 
 let guard_expression = "window.__leashSnapshotGuard?.()"
 
+(* field-lp65: intentionally cheap; hidden controls count too, so a loading application
+   cannot be declared ready just because its controls do not have layout yet. *)
+let interactive_selector =
+  "a[href],button,input:not([type=hidden]),select,textarea,[role=button],[role=link],[role=textbox],[role=searchbox],[role=checkbox],[role=radio],[role=combobox],[role=listbox],[role=option],[role=switch],[role=menuitem],[role=slider],[role=spinbutton],[role=tab],[role=treeitem],[contenteditable]:not([contenteditable=false]),[tabindex]:not([tabindex='-1'])"
+
+let interactive_count_expression =
+  Printf.sprintf "document.querySelectorAll(%s).length"
+    (Yojson.Safe.to_string (`String interactive_selector))
+
+let interactive (row : P.row) =
+  not (List.mem row.role [ "heading"; "paragraph"; "img"; "status"; "alert"; "frame" ])
+
 let guard json =
   match (get "epoch" json, get "count" json) with
   | `String epoch, `Int count when epoch <> "" ->
@@ -117,6 +129,28 @@ let dom_attribute dom name =
    it as the accessible name when nothing else names the control, so this map matters for
    the case where an author's aria-label or title left the name empty, and the row still
    has to say what the control is for. *)
+(* field-cct4: inputValue is the live DOM property, not the stale value attribute or AX cache. *)
+let input_values dom =
+  let table = Hashtbl.create 16 in
+  let nodes = dom_nodes dom in
+  let backends = Array.of_list (list (get "backendNodeId" nodes)) in
+  let strings = Array.of_list (list (get "strings" dom)) in
+  let sparse = get "inputValue" nodes in
+  let rec collect indices values =
+    match (indices, values) with
+    | index :: indices, value :: values ->
+        let i = integer index in
+        let v = integer value in
+        (if i >= 0 && i < Array.length backends && v >= 0 && v < Array.length strings then
+           match strings.(v) with
+           | `String value -> Hashtbl.replace table (integer backends.(i)) value
+           | _ -> ());
+        collect indices values
+    | _ -> ()
+  in
+  collect (list (get "index" sparse)) (list (get "value" sparse));
+  table
+
 let placeholders dom =
   let table = Hashtbl.create 16 in
   Hashtbl.iter
@@ -153,6 +187,34 @@ let row_role = function
 
 let role n = text (value (get "role" n))
 let name n = text (value (get "name" n))
+
+(* field-lp65: readiness belongs to the raw tree, not viewport-clipped rows. A page
+   scrolled beyond every control still has a populated AX tree. *)
+let has_interactive ax =
+  List.exists
+    (fun n ->
+      get "ignored" n <> `Bool true
+      && integer (get "backendDOMNodeId" n) > 0
+      && List.mem
+           (row_role (role n))
+           [
+             "link";
+             "button";
+             "textbox";
+             "checkbox";
+             "radio";
+             "combobox";
+             "listbox";
+             "option";
+             "switch";
+             "menuitem";
+             "searchbox";
+             "slider";
+             "spinbutton";
+             "tab";
+             "treeitem";
+           ])
+    (list (get "nodes" ax))
 
 let prop key n =
   list (get "properties" n)
@@ -297,6 +359,7 @@ let file_inputs ~dom ~ax_by_backend =
   collect 0 backends names
 
 let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
+  let input_values = input_values dom in
   let visible = visible dom ~width ~height ~scroll_x ~scroll_y in
   let placeholders = placeholders dom in
   let values = dom_attribute dom "value" in
@@ -411,11 +474,23 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
             ]
           else
             let value =
-              match get "value" n with
-              | `Assoc _ as v -> (
-                  match value v with `String s when s <> "" -> Some s | _ -> None)
-              | `String s when s <> "" -> Some s
-              | _ -> None
+              match Hashtbl.find_opt input_values backend with
+              | Some "" -> None
+              | Some s -> Some s
+              | None -> (
+                  let ax_value =
+                    match get "value" n with
+                    | `Assoc _ as v -> (
+                        match value v with `String s when s <> "" -> Some s | _ -> None)
+                    | `String s when s <> "" -> Some s
+                    | _ -> None
+                  in
+                  match ax_value with
+                  | Some _ -> ax_value
+                  | None -> (
+                      match Hashtbl.find_opt values backend with
+                      | Some "" | None -> None
+                      | Some value -> Some value))
             in
             let value =
               match value with
@@ -479,6 +554,82 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
   List.mapi
     (fun index ((row : P.row), backend) -> ({ row with index = index + 1 }, backend))
     raw
+
+(* field-vji1: only the src origin is exposed; frame documents are never inspected. *)
+let url_origin url =
+  let url = String.trim url |> String.lowercase_ascii in
+  let scheme, start =
+    if String.starts_with ~prefix:"https://" url then ("https", 8)
+    else if String.starts_with ~prefix:"http://" url then ("http", 7)
+    else ("", 0)
+  in
+  if scheme = "" then None
+  else
+    let rec scan i =
+      if i = String.length url || List.mem url.[i] [ '/'; '?'; '#'; '\\' ] then i
+      else scan (i + 1)
+    in
+    let stop = scan start in
+    let authority = String.sub url start (stop - start) in
+    let authority =
+      match String.rindex_opt authority '@' with
+      | None -> authority
+      | Some at -> String.sub authority (at + 1) (String.length authority - at - 1)
+    in
+    let port = if scheme = "https" then ":443" else ":80" in
+    let authority =
+      if String.ends_with ~suffix:port authority then
+        String.sub authority 0 (String.length authority - String.length port)
+      else authority
+    in
+    if authority = "" then None else Some (scheme ^ "://" ^ authority)
+
+let frame_rows ~url ~dom ~width ~height ~scroll_x ~scroll_y =
+  let visible = visible dom ~width ~height ~scroll_x ~scroll_y in
+  let names = dom_node_names dom in
+  let srcs = dom_attribute dom "src" in
+  let parent = url_origin url in
+  list (get "backendNodeId" (dom_nodes dom))
+  |> List.filter_map (fun backend ->
+      let backend = integer backend in
+      if
+        Hashtbl.find_opt names backend <> Some "IFRAME"
+        || not (Hashtbl.mem visible backend)
+      then None
+      else
+        match Hashtbl.find_opt srcs backend with
+        | None -> None
+        | Some src -> (
+            let src =
+              if String.starts_with ~prefix:"//" src then
+                (if String.starts_with ~prefix:"https:" url then "https:" else "http:")
+                ^ src
+              else src
+            in
+            match url_origin src with
+            | Some origin when Some origin <> parent ->
+                let state =
+                  match P.Row_state.of_string "cross-origin" with
+                  | Ok state -> state
+                  | Error _ -> assert false
+                in
+                Some
+                  ( P.
+                      {
+                        index = 0;
+                        role = "frame";
+                        name = origin;
+                        value = None;
+                        state = Some [ state ];
+                        options = None;
+                      },
+                    backend )
+            | _ -> None))
+
+let dom_rows_expression = Snapshot_dom.expression ~selector:interactive_selector
+
+let dom_rows ~call ~context =
+  Snapshot_dom.rows ~call ~context ~selector:interactive_selector
 
 let text_limit = 6000
 let element_limit = 250

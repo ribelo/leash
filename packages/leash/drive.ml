@@ -160,7 +160,24 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     | `Assoc fields :: rest -> prediction_log := `Assoc (("outcome", string outcome) :: List.remove_assoc "outcome" fields) :: rest
     | _ -> ()
   in
+  (* field-5sdo: a password row's value is never a trace field, even if a step
+     typed one. The operator does not type passwords; this is the backstop. *)
+  let redact_password (page : observation) index text =
+    match (index, text) with
+    | Some index, Some _ -> (
+        match List.find_opt (fun (row : P.row) -> row.index = index) page.snapshot.rows with
+        | Some row -> (
+            match row.state with
+            | Some states
+              when List.exists (fun state -> P.Row_state.to_string state = "password") states
+              ->
+                None
+            | _ -> text)
+        | None -> text)
+    | _ -> text
+  in
   let record_step (page : observation) (next : observation) choice text steps =
+    let text = redact_password page choice.J.index text in
     P.{ n = List.length steps + 1; snapshot = page.snapshot.snapshot;
         operation = choice.J.operation; index = choice.index;
         probabilities = J.trace_probabilities choice; text;

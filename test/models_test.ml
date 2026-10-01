@@ -156,6 +156,8 @@ let script_page fake =
   Fake.on_method fake "Runtime.evaluate" (fun request ->
       let expression = get "expression" (get "params" request) in
       match expression with
+      | `String s when s = Leash__Snapshot_source.interactive_count_expression ->
+          obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
       | `String "globalThis" ->
           obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
       | `String expression when contains expression "leash-operator-read" ->

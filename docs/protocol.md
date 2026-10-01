@@ -71,15 +71,27 @@ Actions (serialized per tab; each returns `ActionResult`):
 | cmd | args |
 | --- | --- |
 | `nav` | `{tab, url}` |
-| `click` | `{tab, snapshot, index}` |
-| `fill` | `{tab, snapshot, index, text}` |
-| `press` | `{tab, snapshot, index?, key}` |
-| `select` | `{tab, snapshot, index, option: int}` |
+| `click` | `{tab, snapshot, index, snap?, match?, limit?}` |
+| `fill` | `{tab, snapshot, index, text, snap?, match?, limit?}` |
+| `press` | `{tab, snapshot, index?, key, snap?, match?, limit?}` |
+| `select` | `{tab, snapshot, index, option: int, snap?, match?, limit?}` |
 | `scroll` | `{tab, direction: "up"\|"down", index?}` |
 | `upload` | `{tab, snapshot, index, paths: string[]}` |
-| `hover` | `{tab, snapshot, index}` |
+| `hover` | `{tab, snapshot, index, snap?, match?, limit?}` |
+| `check` | `{tab, snapshot, index, snap?, match?, limit?}` |
+| `uncheck` | `{tab, snapshot, index, snap?, match?, limit?}` |
 | `wait` | `{tab, until: {url_prefix?, text?, index_gone?: int, dialog?: bool, changed_since?: snapshot}, timeout_ms?}` |
 | `dialog` | `{tab, answer: "accept"\|"dismiss", text?}` |
+
+`new` and `nav` register the tab before waiting for load and return `TabInfo` with
+`loaded: true` when the load finishes, or `loaded: false` when the 30 s load wait
+expires or a dialog interrupts it (field-m5jw). A load timeout is a successful
+reply: it retains the handle, current committed URL and title, so the agent can
+inspect, shoot, close or hand off the tab. `loaded` is omitted from other TabInfo
+replies. A session CDP call that itself stops answering is instead
+`renderer-unresponsive`; browser-level CDP calls remain `timeout` (field-cde7).
+The diagnosis carries `detail: {tab, url, title, entries: DebugEntry[]}` with the
+last 20 debug-ring entries, newest first, without clearing the ring.
 
 `new` and `nav` return `TabInfo` (including the tab handle and any active dialog) even
 when a load is interrupted by `Page.javascriptDialogOpening`. A modal interrupts
@@ -165,21 +177,27 @@ A field shown as `T|null` is always present, `null` when it has no value; a fiel
 ```
 TabInfo      = {tab, url, title, origin: "agent"|"human", state: "unowned"|"owned"|"with_human",
                 owner: string|null, generation: int, dialog: Dialog|null, expires: {stage: "release"|"close", in_s: int}|null,
-                reason?: string}
+                reason?: string, loaded?: bool}
+PopupInfo    = {tab, url, title, origin: "agent"|"human", state: "opening"|"blank"|"ready",
+                owner: string|null, generation: int, dialog: Dialog|null, expires: {stage: "release"|"close", in_s: int}|null,
+                reason?: string, opener_url: string}
 Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
-                dialog: Dialog|null}
+                source: "ax"|"dom" (default "ax" when omitted), reason?: string, dialog: Dialog|null}
 Row          = {index: int, role: string, name: string, value?: string, state?: string[],
                 options?: [{index: int, label: string, value: string, selected: bool, disabled: bool}]}
-                 state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly, password}
+                 state ⊆ {checked, unchecked, mixed, selected, expanded, collapsed, disabled, required, readonly, password, cross-origin}
                  a password input (field-8bzc) is role textbox with state password and never a value; the operator's
                  table (what JEV is offered) excludes it, as it excludes file inputs (fly-eoqg)
                  role file-input (hard-2gnf) is an <input type=file>, listed even when the page hides it behind a styled
                  button; only `upload` acts on it
                  options is the option list a select row exposes, in the select's own order, index 0 first
 Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string, default_prompt: string|null}
-ActionResult = {tab, url, title, snapshot: null, dialog: Dialog|null, popups: TabInfo[]}
-                 snapshot is always null in this version: no snapshot is taken while an action settles; call snap
-                 popups lists only tabs opened by the acted-on tab (opener), owned by the caller; newly opened target metadata is refreshed after a bounded wait for its URL (daily-c4cl)
+ActionResult = {tab, url, title, snapshot: Snapshot|null, dialog: Dialog|null, popups: PopupInfo[], via?: "label"}
+                 snapshot is null, or a fresh Snapshot (the object, not an id) taken after settlement when the request set snap (field-swvb)
+                 via is "label" when the click dispatched on a covering label of the target, and omitted otherwise (field-uls3)
+                 popups lists only tabs opened by the acted-on tab (opener), owned by the caller; newly opened target metadata is refreshed after a bounded 1 s wait for its URL (daily-c4cl)
+                  an empty/about:blank URL younger than 1 s is state opening; still blank after the settle window is blank; a committed URL is ready (field-drpx)
+                  a dialog skips the settle wait and reports an opening popup immediately; opener_url identifies the page that opened it; owner remains separate from readiness
 NetEntry     = {id: string, method, url, status: int|null, type: string, mime: string|null, size: int|null,
                 duration_ms: int|null, from_cache: bool, error?: string}
                  one request of the tab's own ring (see the net rules below); type is Chrome's resource type
@@ -460,12 +478,15 @@ Rules:
   `list`, `release`, and `close` need no attachment. A discovered tab that goes away
   without Leash closing it leaves a tombstone with disposition `closed_externally`.
 - Every action except `nav`, `scroll`, `wait`, and `dialog` requires the `snapshot` id it targets; it is refused with `stale-snapshot` if that is not the tab's current snapshot, if the page navigated since, if the row's node no longer resolves, or if its role and name differ from the snapshot's. An indexed `scroll` carries no id and revalidates against the tab's current snapshot.
-- A row action also refuses with `row-not-actionable` when the row is disabled, has no layout box, cannot take focus, or is covered at its click point (a hit test that answers with another node than the row or one of its descendants). Clicking reads the row's geometry at that moment; scrolling and animation are never staleness.
+- A row action also refuses with `row-not-actionable` when the row is disabled, has no layout box, cannot take focus, or is covered at its click point (a hit test that answers with another node than the row or one of its descendants). Clicking reads the row's geometry at that moment; scrolling and animation are never staleness. A covering LABEL whose control is the target, or which contains it, is not a cover: the click is dispatched at that point and the reply carries via "label" (field-uls3).
 - An action whose handler closes its own tab (a click on `window.close()`) reports `tab-gone` with `closed_externally` when the browser no longer knows the target; if the reply wins the race the action succeeds and the next command on the handle reports `tab-gone`.
 - A trusted input or an `eval` whose handler opens a popup is settled by the popup itself: Chrome withholds the reply of the call whose handler opened it, so Leash waits — with no bound of its own beyond the CDP call's deadline — for whichever comes first: the call's reply, a target Chrome reports with this tab as its `openerId` (an action then lists it in `popups`, and `eval` answers `{value: null}`), or the destruction of this tab's own target (`tab-gone` with `closed_externally`). Nothing is ever dispatched twice.
 - `press` with `index` focuses the row first; without it, sends the key to the page (and only the snapshot's currency is checked). Accepted named keys are `Enter`, `Escape`/`Esc`, `Tab`, `Backspace`, `Delete`, `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Home`, `End`, `PageUp`, `PageDown`, and `Space`. Single lowercase `a`–`z`, digits `0`–`9`, and punctuation `- = [ ] ; , . / '` are also accepted. `Return`, uppercase letters, chords, and other names are rejected with `invalid-request`; its hint and `detail.accepted_keys` enumerate the vocabulary.
 - `select` targets a native `<select>` row (role `combobox` or `listbox`); `option` is its index in the select's observed option order, and an index the select does not have is `invalid-request`. A row that is not a native select is `row-not-actionable`. The observed order is the row's `options`, read from the accessibility tree even while the select is closed — a closed select's options have no layout box and are never rows of their own (tab-5deq): each carries the `index` the action takes, its `label`, the `value` it holds, its label when it holds none, and whether it is `selected` or `disabled`.
-- `ActionResult.snapshot` is null unless a snapshot was taken as part of settling; actions do not observe the page again on their own, so a caller that wants a fresh table asks for one.
+- `check` and `uncheck` click the row (following a covering label) and then read its checked state. The row must report a boolean checked or aria-checked; otherwise the answer is `row-not-actionable`. If it was already in the requested state, or the click did not flip it, the answer is `state-unchanged` and an already-correct control is not clicked (field-guda).
+- `click`, `fill`, `press`, `select`, `hover`, `check` and `uncheck` take optional `snap`, `match` and `limit`. `snap: true` takes a fresh snapshot after settlement, with the same `match` and `limit` as `snap`, and puts that Snapshot object in `ActionResult.snapshot` (then non-null). Without `snap`, `snapshot` stays null (field-swvb).
+- `fill` text is the `text` field. The CLI also accepts it from `--argument-file PATH` or `--stdin`, reading at most 64 KiB. A password row's value is never copied into the reply, a drive trace, or a log line (field-5sdo).
+- `ActionResult.snapshot` is null unless the request set `snap`. It is then a Snapshot object, not an id.
 - An action reply's `url` and `title` come from `Target.getTargetInfo` read after the action settled. When the action navigated the tab, that read waits — bounded like a load — for the new document to finish, so the reply, a drive step's `after`, and `list` carry the document title rather than the tab strip's formatted URL (chrome-qnul, svc-hi4f).
 - `wait` conditions are ANDed; `timeout_ms` defaults to 30 000 and may be up to 3 600 000 — one hour
   (hard-sr9v). The listener's handler budget for a wait is its `timeout_ms` plus one second, and a client
@@ -511,9 +532,11 @@ Rules:
   `eval`, `text`, `shot`, `snap` and `drive` serialize per tab.
 - `eval` runs the expression as a function body in the page with `argument` bound; expression, argument, and result are each bounded to 64 KiB.
 - `shot` writes a PNG to `path`, which must be an absolute path the service can write; the reply carries no image data.
-- `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful. `settled` is false when the page kept mutating during the observation (retaken twice first); the snapshot is still usable and actions revalidate at dispatch.
+- `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful. `settled:true` requires a stable document and at least one interactive AX row, or no possible interactive content in a cheap DOM selector count. Otherwise it retakes twice, then reports `settled:false` with `reason:"ax-tree-empty"` for unpopulated AX, `"document-changing"` for mutations, or `"dialog-open"` for a dialog. An empty AX tree with interactive DOM content falls back to at most 250 visible tag/ARIA-derived rows marked `source:"dom"`; normal rows have `source:"ax"`. Both use the same snapshot IDs and indices. DOM actions revalidate the original backend element identity, never a selector. These snapshots remain usable even when unsettled (field-lp65, field-jkx6).
+- Non-password input values come from the live DOM property captured by DOMSnapshot, so the next snapshot reflects a fill that took effect, including React-controlled fields (field-cct4).
+- Visible cross-origin iframes are informational `frame` rows named by their src origin with `state:["cross-origin"]`; they expose no inner-frame controls. Known reCAPTCHA, hCaptcha, and Turnstile request/frame loads also enter `debug` as warning-level console entries (field-vji1).
 - A row's `name` may be empty: a control with no accessible name (an unlabelled native select, a bare text input, an icon button) is kept with its `role`, an empty `name`, and its `value` or `placeholder`, so it stays addressable by index (tab-zc36). `value` is omitted when the control has neither.
-- `new` with a url navigates and returns when the document has loaded, exactly like `nav`, so `title` is populated; `new` without a url returns at once with `about:blank`. Both report the URL Chrome committed — after any redirect — and the document title, not the requested URL.
+- `new` with a url and `nav` register or retain the handle before waiting for load. Both succeed with `loaded:true` on load, or `loaded:false` after the bounded 30 s load wait (field-m5jw). They refresh the current committed URL — after any redirect — and title in either case; an unfinished load is not a navigation failure. `new` without a url returns at once with `about:blank` and `loaded:true`.
 - The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Every command names its positional arguments in its synopsis — `leash click [OPTION]… TAB SNAPSHOT INDEX` — and accepts only the options it uses, so `leash <command> --help` is the whole call; `--owner`, `--pretty`, `--config` and `--socket` are the client options every command shares. Exit status 0 on `ok:true`. A failure exits with its code's class from the error table below, not 1; command-line parse exits 124. `leash help errors` prints that table.
 
 ## Bundled agent skill (CLI-local)
@@ -591,11 +614,13 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
 | `unknown-request` | 66 | the tab's ring holds no request with that id | that id is not in the tab's ring; `leash net TAB` and use a listed id |
 | `row-not-actionable` | 65 | the row is not visible, is disabled, is covered, or is the wrong kind of control | pick another row, or `leash snap TAB` if the page moved; a file input takes `leash upload` |
+| `state-unchanged` | 65 | a check or uncheck did not change the control's checked state | snap and read the row's state; the control did not toggle, so pick another row or click its label |
 | `dialog-open` | 65 | a dialog blocks page reads and actions; answer it first | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry |
 | `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown |
 | `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it |
 | `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank |
 | `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` |
+| `renderer-unresponsive` | 75 | a tab session CDP call exceeded its deadline; detail.entries carries its last debug entries | the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off |
 | `timeout` | 75 | wait, handoff, or a bounded operation ran out of time; a handoff's detail.warnings lists the steps that failed | retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB` |
 | `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds |
 | `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry |

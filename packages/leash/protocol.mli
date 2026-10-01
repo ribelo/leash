@@ -63,6 +63,15 @@ module State : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
+module Popup_state : sig
+  type t
+
+  val of_string : string -> (t, string) result
+  val to_string : t -> string
+  val t_of_yojson : Yojson.Safe.t -> (t, string) result
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
 module Stage : sig
   type t
 
@@ -234,6 +243,7 @@ type tab_info = {
   generation : int;
   dialog : dialog option;
   expires : expires option;
+  loaded : bool option;
   reason : string option;
 }
 (** [owner] and [expires] are [T|null]: both keys are always on the wire and read [null]
@@ -243,6 +253,26 @@ type tab_info = {
 
 val tab_info_of_yojson : Yojson.Safe.t -> (tab_info, string) result
 val yojson_of_tab_info : tab_info -> Yojson.Safe.t
+
+type popup_info = {
+  tab : Handle.t;
+  url : string;
+  title : string;
+  origin : Origin.t;
+  state : Popup_state.t;
+  owner : Owner.t option;
+  generation : int;
+  dialog : dialog option;
+  expires : expires option;
+  reason : string option;
+  opener_url : string;
+}
+(** field-drpx: popup readiness is independent of ownership. Empty/about:blank targets are
+    opening until the settle window ends, then blank; opener_url identifies the page that
+    opened them. *)
+
+val popup_info_of_yojson : Yojson.Safe.t -> (popup_info, string) result
+val yojson_of_popup_info : popup_info -> Yojson.Safe.t
 
 type row_option = {
   index : int;
@@ -275,6 +305,11 @@ type row = {
 val row_of_yojson : Yojson.Safe.t -> (row, string) result
 val yojson_of_row : row -> Yojson.Safe.t
 
+type snapshot_source = Ax | Dom
+
+val snapshot_source_of_yojson : Yojson.Safe.t -> (snapshot_source, string) result
+val yojson_of_snapshot_source : snapshot_source -> Yojson.Safe.t
+
 type snapshot = {
   snapshot : Snapshot_id.t;
   tab : Handle.t;
@@ -285,6 +320,8 @@ type snapshot = {
   offset : int;
   truncated : bool;
   settled : bool;
+  source : snapshot_source;
+  reason : string option;
   dialog : dialog option;
 }
 (** [dialog] is [T|null]. *)
@@ -296,11 +333,15 @@ type action_result = {
   tab : Handle.t;
   url : string;
   title : string;
-  snapshot : Snapshot_id.t option;
+  snapshot : snapshot option;
   dialog : dialog option;
-  popups : tab_info list;
+  popups : popup_info list;
+  via : string option;
 }
-(** [snapshot] and [dialog] are [T|null]. *)
+(** [snapshot] and [dialog] are [T|null]. [snapshot] is null, or a fresh {!snapshot} taken
+    after settlement when the request set [snap] (field-swvb) — a snapshot object, not an
+    id. [via] is [key?]: ["label"] when the click dispatched on the target's covering
+    label (field-uls3), absent otherwise. *)
 
 val action_result_of_yojson : Yojson.Safe.t -> (action_result, string) result
 val yojson_of_action_result : action_result -> Yojson.Safe.t
@@ -376,17 +417,49 @@ type eval_args = {
     the row's element as its second parameter, [(argument, element)]. *)
 
 type nav_args = { tab : Handle.t; url : string }
-type click_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
-type fill_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int; text : string }
+
+type click_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  snap : bool option;
+  match_ : string option;
+  limit : int option;
+}
+(** [snap], [match_] and [limit] are [key?]. [snap] asks for a fresh snapshot in the reply
+    after settlement; [match_] and [limit] are the same filters as [snap] (field-swvb).
+    [check] and [uncheck] use this record (field-guda). *)
+
+type fill_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  text : string;
+  snap : bool option;
+  match_ : string option;
+  limit : int option;
+}
 
 type press_args = {
   tab : Handle.t;
   snapshot : Snapshot_id.t;
   index : int option;
   key : string;
+  snap : bool option;
+  match_ : string option;
+  limit : int option;
 }
 
-type select_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int; option : int }
+type select_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  option : int;
+  snap : bool option;
+  match_ : string option;
+  limit : int option;
+}
+
 type scroll_args = { tab : Handle.t; direction : Direction.t; index : int option }
 
 type wait_until = {
@@ -424,7 +497,15 @@ type upload_args = {
 }
 (** hard-o3za: absolute, readable regular files; at most 10 and 50 MiB together. *)
 
-type hover_args = { tab : Handle.t; snapshot : Snapshot_id.t; index : int }
+type hover_args = {
+  tab : Handle.t;
+  snapshot : Snapshot_id.t;
+  index : int;
+  snap : bool option;
+  match_ : string option;
+  limit : int option;
+}
+
 type storage_args = { tab : Handle.t; area : Storage_area.t }
 
 type playbook_test_args = { tab : Handle.t; script : string; args : Yojson.Safe.t option }
@@ -898,6 +979,8 @@ type command =
   | Net_request of net_entry_args
   | Upload of upload_args
   | Hover of hover_args
+  | Check of click_args
+  | Uncheck of click_args
   | Cookies of tab_args
   | Storage of storage_args
   | Playbook_test of playbook_test_args
