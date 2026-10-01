@@ -1,0 +1,64 @@
+# Drive
+
+`leash drive MISSION` is the one mission command. It runs on one tab toward one goal until `done`, `blocked`, a cap, a deadline, or an error, and returns the trace and a final snapshot. Leash never asserts that the goal is achieved. There is no `run` command, and the call is not `drive TAB GOAL`. Include the concrete result and any needed values in the mission. Do not delegate a broader action than the user authorized.
+
+```sh
+leash drive 'Open Travel and return the visible titles and prices' --url https://books.toscrape.com/ --out /tmp/travel-state.jsonl
+leash drive 'Complete this page search and open the matching result' --tab TAB --max-steps 60 --deadline-s 300
+```
+
+The connection stays open until the mission returns. A long mission can run in the background while you work on other tabs. Do not start another action or read on that tab while it is working.
+
+Models are OpenRouter. The service needs `OPENROUTER_API_KEY` in its own environment, or `models.api_key` in the configuration. The key is the operator's. Setting a variable in the client shell does not update an already running service. A missing key or a provider failure is `model-unavailable`; read `detail.code` and the partial trace before any retry.
+
+## Options
+
+| Option | Meaning |
+| --- | --- |
+| `--url URL` | Explicit http or https start, no userinfo. Opens a drive-owned tab. Does not replace an already populated `--tab`. A bad URL is `usage` and names a correct example. |
+| `--tab TAB` | Reuse this tab and leave it open. Without it, Leash opens a temporary tab and closes it when the mission ends, including errors. A human handoff keeps it open. `final` is the last snapshot, not a promise that its tab still exists. |
+| `--max-steps N` | On-the-fly executed-action cap, default 60. Must be a positive integer. The prediction cap is twice N. Not the playbook procedure cap. |
+| `--max-procedures N` | Playbook-lane procedure cap, default 40. Not the operator action cap. |
+| `--deadline-s S` | Whole mission budget, default 900 seconds. Must be positive when present. |
+| `--expect SENTENCE` | Repeatable mission expectation the DONE guard verifies, with or without a playbook. |
+| `--out FILE` | Append tagged JSONL. Use a deliberate writable path, not an existing valuable file. |
+| `--dry-run` | Observe and decide once. No navigation, input, text helper, or `--out` write. Still makes billable model calls and may allocate a blank tab. |
+
+Always pass `--expect` with a concrete sentence the result must satisfy. Without one, `done` is only JEV's opinion. Code-checked sentences are in `leash help expectations`. The operator never types a password: fill that row yourself (`snap` marks it `password`) with `leash fill`, then drive the rest.
+
+A drive reply is large. Write it to a file and read the fields below. Do not paste the whole reply into the chat.
+
+## Lanes
+
+Playbooks are optional. A missing book never blocks a usable browser task and never requires you to author one first.
+
+| Installed books | What happens |
+| --- | --- |
+| no-playbooks | No playbook question and no planner. The operator runs the whole mission. |
+| one-book | JEV is offered that book and `NONE`. A lone book is never forced. |
+| many-books | JEV chooses one book identity (`book:<file>`) or `NONE`. Books are not merged. |
+| none-matching | `NONE` enters the operator on the current page. It is not `BLOCKED`, not discovery, and not a planner review. A procedure-level `NONE` or `BLOCKED` falls through the same way. |
+
+On a blank tab without a URL, installed playbooks are offered first. A chosen book opens its own `entry`. Otherwise pass `--url`, or include exactly one explicit http or https URL in the mission. With `--tab`, Leash works from the current page and does not replace an already populated page with `--url`. No URL and no chosen book, on a blank tab, returns `blocked` with the missing-start reason. That is not a missing playbook and it makes no model call. Do not invent a search engine or ask JEV to navigate from `about:blank`.
+
+## Reading a trace
+
+Exit 0 means the service answered. It does not mean the mission succeeded. Read:
+
+- `status` — `done`, `blocked`, `failed`, `handoff`, `limit`, `deadline`, or `error`. An operator action cap is `limit`.
+- `reason` — why it stopped, when present.
+- `playbook_choices` — decision order, including a JEV `NONE`.
+- `procedures[].slug`, `outcome` (`verified`, `failed`, `skipped`, `planned`), and `expectations`.
+- `steps[].operation`, `index`, and `probabilities.op` — what JEV picked and how sure it was.
+- `collected` — how many validated script records were streamed.
+- `mission_expectations` — the DONE guard, each sentence, checker, and whether it passed.
+- `operator_state.page.text` — on the fly, the answer is the page, at most 6000 characters of viewport text. `page.coverage` is a `+`-joined string starting with `viewport`.
+- `output_kinds` — `script-record`, `operator-state`, or both.
+- `model_cost` — null when any call is unpriced. `data.reported_cost` is the known subtotal.
+- `final` — the last snapshot.
+
+`--out` lines are tagged. `{"kind":"script-record","source":"playbook",...}` has the record under `.record`. `{"kind":"operator-state","source":"operator","state":...}` is one terminal bounded observation, not a record list. A dry run writes neither.
+
+An unmet expectation in the operator lane returns `blocked`. It does not call the planner. In a playbook mission the planner may ask for the human when a selected procedure fails twice or an argument cannot be filled. A procedure's failed expectations or a rejected script can cause the whole procedure to replay once. Keep payment, messaging, deletion, and other non-idempotent submissions out of a retryable procedure unless repeating them is explicitly safe and authorized.
+
+Repeating a form-submit mission is not idempotent. Keep the executed-input evidence and do not automatically rerun an uncertain mutation.

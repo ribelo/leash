@@ -2,7 +2,7 @@
 
 The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, mode 0600, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `wait`) hold the connection open until they settle. The socket admits 64 requests at once (hard-b1na); see Concurrency below.
 
-Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec.
+Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec. Meaning of each field and error is `leash help`, not this file: [handles](help/handles.md) (tab, handle, origin, label, idle, take), [playbooks](help/playbooks.md) (playbook JSON), [authoring](help/authoring.md) (how to write one), [expectations](help/expectations.md) (checker sentences), [drive](help/drive.md) (mission, lanes, trace), [scripts](help/scripts.md) (script, pages, returns, args), [errors](help/errors.md) (every code).
 
 ## Envelope
 
@@ -28,11 +28,11 @@ Tab lifecycle:
 
 | cmd | args | result |
 | --- | --- | --- |
-| `new` | `{url?, label?: string}` | `TabInfo` |
-| `list` | `{}` | `{tabs: TabListing[]}` |
-| `take` | exactly one of `{url}`, `{title}`, `{label}` | `TabInfo` |
-| `close` | `{tab}` | `{closed: true}` |
-| `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` |
+| `new` | `{url?, label?: string}` | `TabInfo` | [errors](help/errors.md) |
+| `list` | `{}` | `{tabs: TabListing[]}` | [errors](help/errors.md) |
+| `take` | exactly one of `{url}`, `{title}`, `{label}` | `TabInfo` | [errors](help/errors.md) |
+| `close` | `{tab}` | `{closed: true}` | [errors](help/errors.md) |
+| `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` | [errors](help/errors.md) |
 
 `pid` is the actual managed Chrome child PID, not the Leash service PID or a
 `/proc` profile search. It is null whenever that child is not running, including
@@ -47,17 +47,17 @@ Observation:
 
 | cmd | args | result |
 | --- | --- | --- |
-| `snap` | `{tab, match?: string, limit?: int, offset?: int}` | `Snapshot` |
-| `downloads` | `{tab}` | `{downloads: Download[]}` |
-| `text` | `{tab, index?: int, max_chars?: int}` | `{url, title, text, truncated}` |
-| `shot` | `{tab, path, full_page?: bool}` | `{path, bytes}` |
-| `debug` | `{tab, limit?: int, clear?: bool}` | `{entries: DebugEntry[]}` |
-| `eval` | `{tab, expression, argument?, index?, snapshot?}` | `{value}` |
-| `net` | `{tab, match?, limit?, type?}` | `{requests: NetEntry[]}` |
-| `net_body` | `{tab, id}` | `{id, body, base64, bytes, truncated}` |
-| `net_request` | `{tab, id}` | `{id, method, url, headers, post_data?, base64, truncated}` |
-| `cookies` | `{tab}` | `{cookies: Cookie[]}` |
-| `storage` | `{tab, area: "local"\|"session"}` | `{origin, area, items, truncated}` |
+| `snap` | `{tab, match?: string, limit?: int, offset?: int}` | `Snapshot` | [errors](help/errors.md) |
+| `downloads` | `{tab}` | `{downloads: Download[]}` | [errors](help/errors.md) |
+| `text` | `{tab, index?: int, max_chars?: int}` | `{url, title, text, truncated}` | [errors](help/errors.md) |
+| `shot` | `{tab, path, full_page?: bool}` | `{path, bytes}` | [errors](help/errors.md) |
+| `debug` | `{tab, limit?: int, clear?: bool}` | `{entries: DebugEntry[]}` | [errors](help/errors.md) |
+| `eval` | `{tab, expression, argument?, index?, snapshot?}` | `{value}` | [errors](help/errors.md) |
+| `net` | `{tab, match?, limit?, type?}` | `{requests: NetEntry[]}` | [errors](help/errors.md) |
+| `net_body` | `{tab, id}` | `{id, body, base64, bytes, truncated}` | [errors](help/errors.md) |
+| `net_request` | `{tab, id}` | `{id, method, url, headers, post_data?, base64, truncated}` | [errors](help/errors.md) |
+| `cookies` | `{tab}` | `{cookies: Cookie[]}` | [errors](help/errors.md) |
+| `storage` | `{tab, area: "local"\|"session"}` | `{origin, area, items, truncated}` | [errors](help/errors.md) |
 
 `net` observes events collected so far; it is not a barrier for pending requests.
 DOM/load settlement can precede response events, so a first poll may be empty.
@@ -69,18 +69,18 @@ Actions (serialized per tab; each returns `ActionResult`):
 
 | cmd | args |
 | --- | --- |
-| `nav` | `{tab, url}` |
-| `click` | `{tab, snapshot, index, snap?, match?, limit?}` |
-| `fill` | `{tab, snapshot, index, text, snap?, match?, limit?}` |
-| `press` | `{tab, snapshot, index?, key, snap?, match?, limit?}` |
-| `select` | `{tab, snapshot, index, option: int, snap?, match?, limit?}` |
-| `scroll` | `{tab, direction: "up"\|"down", index?}` |
-| `upload` | `{tab, snapshot, index, paths: string[]}` |
-| `hover` | `{tab, snapshot, index, snap?, match?, limit?}` |
-| `check` | `{tab, snapshot, index, snap?, match?, limit?}` |
-| `uncheck` | `{tab, snapshot, index, snap?, match?, limit?}` |
-| `wait` | `{tab, until: {url_prefix?, text?, index_gone?: int, dialog?: bool, changed_since?: snapshot}, timeout_ms?}` |
-| `dialog` | `{tab, answer: "accept"\|"dismiss", text?}` |
+| `nav` | `{tab, url}` | [errors](help/errors.md) |
+| `click` | `{tab, snapshot, index, snap?, match?, limit?}` | [errors](help/errors.md) |
+| `fill` | `{tab, snapshot, index, text, snap?, match?, limit?}` | [errors](help/errors.md) |
+| `press` | `{tab, snapshot, index?, key, snap?, match?, limit?}` | [errors](help/errors.md) |
+| `select` | `{tab, snapshot, index, option: int, snap?, match?, limit?}` | [errors](help/errors.md) |
+| `scroll` | `{tab, direction: "up"\|"down", index?}` | [errors](help/errors.md) |
+| `upload` | `{tab, snapshot, index, paths: string[]}` | [errors](help/errors.md) |
+| `hover` | `{tab, snapshot, index, snap?, match?, limit?}` | [errors](help/errors.md) |
+| `check` | `{tab, snapshot, index, snap?, match?, limit?}` | [errors](help/errors.md) |
+| `uncheck` | `{tab, snapshot, index, snap?, match?, limit?}` | [errors](help/errors.md) |
+| `wait` | `{tab, until: {url_prefix?, text?, index_gone?: int, dialog?: bool, changed_since?: snapshot}, timeout_ms?}` | [errors](help/errors.md) |
+| `dialog` | `{tab, answer: "accept"\|"dismiss", text?}` | [errors](help/errors.md) |
 
 `new` and `nav` register the tab before waiting for load and return `TabInfo` with
 `loaded: true` when the load finishes, or `loaded: false` when the 30 s load wait
@@ -108,21 +108,21 @@ to the CLI and read the playbooks directory; nothing on the wire ever carries sc
 
 | cmd | args | result |
 | --- | --- | --- |
-| `playbook_test` | `{tab, script: "<playbook>/<script>", args?: {name: string}}` | `{script, value, records, bytes, elapsed_ms, truncated}` |
-| `playbook_check` | `{playbook}` | `{playbook, scripts: [{script, ok, error?}]}` |
+| `playbook_test` | `{tab, script: "<playbook>/<script>", args?: {name: string}}` | `{script, value, records, bytes, elapsed_ms, truncated}` | [errors](help/errors.md) |
+| `playbook_check` | `{playbook}` | `{playbook, scripts: [{script, ok, error?}]}` | [errors](help/errors.md) |
 
 Human handoff:
 
 | cmd | args | result |
 | --- | --- | --- |
-| `handoff` | `{tab, reason, timeout_s?}` | `{resumed: true, url, title, warnings?: string[]}` |
-| `resume` | `{tab}` | `{resumed: true}` |
+| `handoff` | `{tab, reason, timeout_s?}` | `{resumed: true, url, title, warnings?: string[]}` | [errors](help/errors.md) |
+| `resume` | `{tab}` | `{resumed: true}` | [errors](help/errors.md) |
 
 Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [--url URL] [--max-steps N] [--deadline-s S] [--max-procedures N] [--expect SENTENCE]... [--out FILE] [--dry-run]` may select an installed playbook or enter the operator with the whole mission. A playbook is optional routing knowledge, not permission to work. There is no `run` protocol verb.
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string}` |
+| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string}` | [errors](help/errors.md) |
 
 `--url` is `start_url`: an optional explicit `http://` or `https://` URL with no userinfo. It opens a drive-owned tab; it does not replace an already populated `--tab`. The CLI rejects a bad scheme, `about:blank`, userinfo, or a non-positive `--max-steps` before it connects, as `usage` (64), and the message names a correct example. `--max-steps` is the on-the-fly executed-action cap (default 60, omitted on the wire when the caller accepts the default); the prediction cap is twice that value, including discarded stale decisions. `--max-procedures` is the playbook-lane cap (default 40). `--deadline-s` is the whole-mission budget (default 900). All three must be positive when present.
 
@@ -467,7 +467,7 @@ Rules:
   through `Network.getRequestPostData`, the post data bounded the same way. On the CLI: `leash net TAB`,
   `leash net TAB body ID`, `leash net TAB request ID`. URLs, headers, bodies, cookie values and storage
   values are page data for the handle holder and are never a log line; the journal's anchors are identifiers only.
-- `upload` (hard-o3za hard-2gnf): `paths` are 1 to 10 absolute paths of readable regular files, 50 MiB
+- `upload` (hard-qimz hard-2gnf): `paths` are 1 to 10 absolute paths of readable regular files, 50 MiB
   together (`invalid-request`, `too-large`), checked before the browser is asked. The row must be a
   `file-input` (`row-not-actionable` otherwise); it is revalidated like an action — current snapshot, same
   loader — but by node, not by role and name: it must still resolve to an `<input type=file>`, be enabled, and
@@ -539,6 +539,22 @@ missing. Currency compares all embedded content as well as the stamp, so an edit
 reference is stale even without a version/commit change. A missing install in
 another harness's root does not invalidate an existing current copy. The service wire status carries version, Chrome, pid, headed and key_present. The CLI adds `commit` (the running binary's compiled commit) beside `skill`. A missing unit is `not-installed`; an installed inactive unit is `service-stopped`; an activating unit, an auto-restart, or a service whose Chrome generation is being relaunched is `service-restarting`. An active unit whose socket does not answer stays `service-unreachable` (daily-lqqn).
 
+## Field meaning
+
+Wire shapes stay in the sections above. Each field's meaning is the linked topic.
+
+| Field | Topic |
+| --- | --- |
+| `v`, `cmd`, `args`, `ok`, `result`, `error.code`, `error.message`, `error.hint`, `error.detail` | [errors](help/errors.md) for codes; this file for the envelope |
+| `tab`, `handle`, `origin`, `label`, `age_s`, `idle_s`, `closes_in_s`, `with_human`, `generation`, `reason`, disposition | [handles](help/handles.md) | [errors](help/errors.md) |
+| `url`, `title`, `loaded`, `dialog`, `popups`, `opener_url`, `state` (popup) | [handles](help/handles.md) for origin; this file for the wire object | [errors](help/errors.md) |
+| `snapshot`, `rows`, `index`, `role`, `name`, `value`, `options`, `match`, `limit`, `offset`, `truncated`, `settled`, `source` | this file; acting on a row needs the handle in [handles](help/handles.md) | [errors](help/errors.md) |
+| `mission`, `start_url`, `max_steps`, `max_procedures`, `deadline_s`, `dry_run`, `expect`, `out`, `status`, `playbook_choices`, `procedures`, `mission_expectations`, `operator_state`, `operator_steps`, `output_kinds`, `collected`, `model_cost`, `final`, `Step`, `Operation` | [drive](help/drive.md) | [errors](help/errors.md) |
+| `site`, `entry`, `pages`, `shapes`, `procedures`, `slug`, `repeat`, `until`, `goal`, `use` | [playbooks](help/playbooks.md) | [errors](help/errors.md) |
+| `script`, `file`, `source`, `returns`, `pages` (script), `args`, `max_bytes`, `records` | [scripts](help/scripts.md) | [errors](help/errors.md) |
+| `checker`, `sentence`, `passed`, `score`, page-kind sentences | [expectations](help/expectations.md) | [errors](help/errors.md) |
+| how to write a book | [authoring](help/authoring.md) |
+
 ## Error codes
 
 A failed reply, and every failure the CLI prints on stderr, is one object `{code, message, hint, detail?}`. `hint` is always present: one line naming the next action, taken from this table. `detail?` is omitted when the error carries none (for `tab-gone`: `detail.disposition`; for `stale-snapshot`: the current snapshot id; for `model-unavailable`: `detail.code`, and on a drive `detail.steps`; for a handoff `timeout`: `detail.warnings`).
@@ -558,43 +574,43 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | permission | 77 | EX_NOPERM | filesystem or socket permission, or capability or human-hold refused |
 | parse | 124 | — | the command line did not parse; the command did not run |
 
-| code | exit | meaning | hint |
-| --- | --- | --- | --- |
-| `invalid-request` | 64 | malformed JSON, unknown command, or bad arguments | fix the request; `leash <command> --help` names the arguments and one example |
-| `ambiguous` | 66 | take matches several tabs; detail.matches lists them without handles | narrow the URL, title or label selector |
-| `no-match` | 66 | take matches no tab | read `leash list` and use a matching URL prefix, title or label |
-| `taken` | 77 | the tab already has a live handle | ask the holder for the handle |
-| `with-human` | 77 | the tab is handed to the human; commands are refused until resume | the human holds this tab; wait, or return it with `leash resume TAB` |
-| `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_handle, closed_by_idle, closed_externally, or browser_lost | open a new tab with `leash new` |
-| `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; open a new tab with `leash new`, or ask the holder for the handle |
-| `stale-snapshot` | 65 | the snapshot id or target row no longer matches the current page | read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the row is gone, navigate back or re-find it before acting |
-| `no-such-row` | 66 | the index is not in the snapshot | that index is not in the snapshot; `leash snap TAB` and use a listed index |
-| `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
-| `unknown-request` | 66 | the tab's ring holds no request with that id | that id is not in the tab's ring; `leash net TAB` and use a listed id |
-| `row-not-actionable` | 65 | the row is not visible, is disabled, is covered, or is the wrong kind of control | pick another row, or `leash snap TAB` if the page moved; a file input takes `leash upload` |
-| `state-unchanged` | 65 | a check or uncheck did not change the control's checked state | snap and read the row's state; the control did not toggle, so pick another row or click its label |
-| `dialog-open` | 65 | a dialog blocks page reads and actions; answer it first | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry |
-| `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown |
-| `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it |
-| `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank |
-| `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` |
-| `renderer-unresponsive` | 75 | a tab session CDP call exceeded its deadline; detail.entries carries its last debug entries | the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off |
-| `timeout` | 75 | wait, handoff, or a bounded operation ran out of time; a handoff's detail.warnings lists the steps that failed | retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB` |
-| `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds |
-| `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry |
-| `model-timeout` | 75 | a model call exceeded its per-call deadline | the model provider timed out; retry, or raise models.<kind>_timeout |
-| `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry |
-| `script-failed` | 65 | a playbook script threw, rejected, or could not be compiled; message carries what it threw | read message; fix the script or the page, then `leash playbook test` |
-| `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |
-| `playbook-invalid` | 65 | a playbook failed validation (load, check or accept); message names the rule | fix the playbook as the message says, then `leash playbook check ./DIR`; the skill's authoring reference lists the rules |
-| `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message |
-| `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket |
-| `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |
-| `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash`, then `leash status`; a brief service-restarting (75) right after start is normal - retry; tabs and snapshots from before the stop are gone, so re-open them |
-| `service-restarting` | 75 | the leash unit is activating or auto-restarting, or Chrome's generation is being relaunched | Leash is restarting; retry `leash status` in a few seconds |
-| `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its permissions, or pass --socket |
-| `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's permissions, or pass another path |
-| `config-invalid` | 65 | the configuration file is missing, unreadable, or invalid | fix the reported problems; `leash config check` lists every one with the config path |
-| `usage` | 64 | the command was invoked wrongly; the arguments do not match its synopsis | `leash <command> --help` shows the arguments and an example |
-| `cli-parse` | 124 | Cmdliner rejected the command line; the command did not run | the command line did not parse; `leash <command> --help` shows the accepted form |
-| `invalid-response` | 70 | the service reply was not a protocol object the CLI could decode | the service reply was not a protocol object; check `leash status` and retry |
+| code | exit | meaning | hint | topic |
+| --- | --- | --- | --- | --- |
+| `invalid-request` | 64 | malformed JSON, unknown command, or bad arguments | fix the request; `leash <command> --help` names the arguments and one example | [errors](help/errors.md) |
+| `ambiguous` | 66 | take matches several tabs; detail.matches lists them without handles | narrow the URL, title or label selector | [errors](help/errors.md) |
+| `no-match` | 66 | take matches no tab | read `leash list` and use a matching URL prefix, title or label | [errors](help/errors.md) |
+| `taken` | 77 | the tab already has a live handle | ask the holder for the handle | [errors](help/errors.md) |
+| `with-human` | 77 | the tab is handed to the human; commands are refused until resume | the human holds this tab; wait, or return it with `leash resume TAB` | [errors](help/errors.md) |
+| `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_handle, closed_by_idle, closed_externally, or browser_lost | open a new tab with `leash new` | [errors](help/errors.md) |
+| `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; open a new tab with `leash new`, or ask the holder for the handle | [errors](help/errors.md) |
+| `stale-snapshot` | 65 | the snapshot id or target row no longer matches the current page | read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the row is gone, navigate back or re-find it before acting | [errors](help/errors.md) |
+| `no-such-row` | 66 | the index is not in the snapshot | that index is not in the snapshot; `leash snap TAB` and use a listed index | [errors](help/errors.md) |
+| `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one | [errors](help/errors.md) |
+| `unknown-request` | 66 | the tab's ring holds no request with that id | that id is not in the tab's ring; `leash net TAB` and use a listed id | [errors](help/errors.md) |
+| `row-not-actionable` | 65 | the row is not visible, is disabled, is covered, or is the wrong kind of control | pick another row, or `leash snap TAB` if the page moved; a file input takes `leash upload` | [errors](help/errors.md) |
+| `state-unchanged` | 65 | a check or uncheck did not change the control's checked state | snap and read the row's state; the control did not toggle, so pick another row or click its label | [errors](help/errors.md) |
+| `dialog-open` | 65 | a dialog blocks page reads and actions; answer it first | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry | [errors](help/errors.md) |
+| `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown | [errors](help/errors.md) |
+| `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it | [errors](help/errors.md) |
+| `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank | [errors](help/errors.md) |
+| `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` | [errors](help/errors.md) |
+| `renderer-unresponsive` | 75 | a tab session CDP call exceeded its deadline; detail.entries carries its last debug entries | the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off | [errors](help/errors.md) |
+| `timeout` | 75 | wait, handoff, or a bounded operation ran out of time; a handoff's detail.warnings lists the steps that failed | retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB` | [errors](help/errors.md) |
+| `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds | [errors](help/errors.md) |
+| `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry | [errors](help/errors.md) |
+| `model-timeout` | 75 | a model call exceeded its per-call deadline | the model provider timed out; retry, or raise models.<kind>_timeout | [errors](help/errors.md) |
+| `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry | [errors](help/errors.md) |
+| `script-failed` | 65 | a playbook script threw, rejected, or could not be compiled; message carries what it threw | read message; fix the script or the page, then `leash playbook test` | [errors](help/errors.md) |
+| `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns | [errors](help/errors.md) |
+| `playbook-invalid` | 65 | a playbook failed validation (load, check or accept); message names the rule | fix the playbook as the message says, then `leash playbook check ./DIR`; the skill's authoring reference lists the rules | [errors](help/errors.md) |
+| `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message | [errors](help/errors.md) |
+| `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket | [errors](help/errors.md) |
+| `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` | [errors](help/errors.md) |
+| `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash`, then `leash status`; a brief service-restarting (75) right after start is normal - retry; tabs and snapshots from before the stop are gone, so re-open them | [errors](help/errors.md) |
+| `service-restarting` | 75 | the leash unit is activating or auto-restarting, or Chrome's generation is being relaunched | Leash is restarting; retry `leash status` in a few seconds | [errors](help/errors.md) |
+| `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its permissions, or pass --socket | [errors](help/errors.md) |
+| `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's permissions, or pass another path | [errors](help/errors.md) |
+| `config-invalid` | 65 | the configuration file is missing, unreadable, or invalid | fix the reported problems; `leash config check` lists every one with the config path | [errors](help/errors.md) |
+| `usage` | 64 | the command was invoked wrongly; the arguments do not match its synopsis | `leash <command> --help` shows the arguments and an example | [errors](help/errors.md) |
+| `cli-parse` | 124 | Cmdliner rejected the command line; the command did not run | the command line did not parse; `leash <command> --help` shows the accepted form | [errors](help/errors.md) |
+| `invalid-response` | 70 | the service reply was not a protocol object the CLI could decode | the service reply was not a protocol object; check `leash status` and retry | [errors](help/errors.md) |
