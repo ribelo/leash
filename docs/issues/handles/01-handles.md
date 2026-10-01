@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 11
 ---
 
@@ -71,3 +71,7 @@ Authentication between agents; a browser extension; reverting a taken tab to hum
 ## Further Notes
 
 Operator, 2026-10-01: 'better wrong but predictable'; sharing between agents is by hand-over or not at all; a lost handle is a closed tab and a new one; human tabs may be taken by agents, not the reverse. Coordinator's two departures, with the operator's trust: `handoff` stays (it is the agent asking the human, keyed on the handle, and the field report needed it twice); `take` exists because the human cannot hold a handle and `list` is the only way to name a tab without an extension.
+
+## Delivered, 2026-10-01
+
+Leash 964c51a and a549414. Fresh-agent run (subagent_claude_sonnet, skill only) on the installed service, [transcript](2026-10-01-l49-fresh-transcript.md): opened its own labelled tab, found the operator's Poetry tab in `list` and took it with `--title`, worked in both, handed one off (the operator clicked Done; actions answered `with-human` meanwhile), closed its own tab (`tab-gone`, `closed_by_handle` afterwards); no "owner", "claim" or "release" anywhere it looked. Deviation: the tab-rule sentence of story 12 reads "human tabs are never closed unless an agent takes one" — the agent read "your tabs" as its own, so the sentence contradicted itself. Fixes it forced: take and handoff help say what happens next; `list` and `take` refresh every tab's title and URL first (a human-navigated tab showed its URL as its title).
