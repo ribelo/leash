@@ -28,7 +28,7 @@ class Page(http.server.BaseHTTPRequestHandler):
 
 
 def request(command, **args):
-    wire = json.dumps({'v': 1, 'owner': 'live-m8', 'cmd': command, 'args': args}) + '\n'
+    wire = json.dumps({'v': 1, 'cmd': command, 'args': args}) + '\n'
     with socket.socket(socket.AF_UNIX) as peer:
         peer.settimeout(20)
         peer.connect(SOCKET)

@@ -373,11 +373,8 @@ let protocol_smoke () =
           obj [ ("result", obj [ ("value", value) ]) ]);
       Fake.on_method fake "Page.captureScreenshot" (fun _ ->
           obj [ ("data", str "iVBORw0KGgo=") ]);
-      let owner =
-        match P.Owner.of_string "alice" with Ok x -> x | Error e -> failwith e
-      in
       let send command =
-        let wire = P.encode_request { owner; command } |> Yojson.Safe.to_string in
+        let wire = P.encode_request { command } |> Yojson.Safe.to_string in
         let decoded =
           P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire))
         in
@@ -387,7 +384,7 @@ let protocol_smoke () =
         | P.Success x -> x
         | P.Failure e -> Alcotest.fail e.P.message
       in
-      let new_tab = result (send (P.New { url = None })) in
+      let new_tab = result (send (P.New { url = None; label = None })) in
       let tab =
         match P.Handle.t_of_yojson (get "tab" new_tab) with
         | Ok x -> x
@@ -480,11 +477,8 @@ let eval_settlement () =
       Fake.on_method fake "Runtime.evaluate" (fun _ ->
           obj [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]);
       Fake.withhold fake "Runtime.callFunctionOn" (fun _ -> true);
-      let owner =
-        match P.Owner.of_string "alice" with Ok x -> x | Error e -> failwith e
-      in
       let send command =
-        let wire = P.encode_request { owner; command } |> Yojson.Safe.to_string in
+        let wire = P.encode_request { command } |> Yojson.Safe.to_string in
         match
           P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire))
         with
@@ -524,7 +518,7 @@ let eval_settlement () =
         in
         loop 100_000
       in
-      let tab = tab_of (result (send (P.New { url = None }))) in
+      let tab = tab_of (result (send (P.New { url = None; label = None }))) in
       (* window.open: the popup's own announcement settles the call. *)
       let cell = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -549,7 +543,7 @@ let eval_settlement () =
         "tab-gjo0 a window-opening eval ends with a null value" true
         (get "value" opened = `Null);
       let popup =
-        match get "tabs" (result (send (P.List_tabs { all = true }))) with
+        match get "tabs" (result (send P.List_tabs)) with
         | `List rows ->
             List.find_opt
               (fun row -> get "url" row = str "https://example.com/popup")
@@ -559,11 +553,11 @@ let eval_settlement () =
       (match popup with
       | Some row ->
           Alcotest.(check string)
-            "tab-gjo0 the popup is the opener's tab" "agent"
+            "hand-x3hi tab-gjo0 popup starts human" "human"
             (match get "origin" row with `String s -> s | _ -> "");
-          Alcotest.(check string)
-            "tab-gjo0 owned by the caller" "alice"
-            (match get "owner" row with `String s -> s | _ -> "")
+          Alcotest.(check bool)
+            "hand-x3hi list does not reveal the popup handle" true
+            (field "tab" row = None)
       | None -> Alcotest.fail "tab-gjo0 the popup was not adopted");
       (* window.close: the tab's own death settles it with tab-gone. *)
       let cell = ref None in
@@ -601,11 +595,8 @@ let eval_settlement () =
    already behind that modal must send no page request. Answering it remains possible. *)
 let modal_reads () =
   rig (fun ~env:_ ~sw ~tabs ~fake ->
-      let owner =
-        match P.Owner.of_string "alice" with Ok x -> x | Error e -> failwith e
-      in
       let send command =
-        let wire = P.encode_request { owner; command } |> Yojson.Safe.to_string in
+        let wire = P.encode_request { command } |> Yojson.Safe.to_string in
         match
           P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire))
         with
@@ -616,7 +607,7 @@ let modal_reads () =
         | P.Success json -> json
         | P.Failure e -> Alcotest.fail e.P.message
       in
-      let tab = tab_of (result (send (P.New { url = None }))) in
+      let tab = tab_of (result (send (P.New { url = None; label = None }))) in
       let path =
         Filename.concat
           (Filename.get_temp_dir_name ())

@@ -126,7 +126,7 @@ journalctl --user -u leash.service --since "10 min ago" -p warning
 `leash status` is one request over the control socket (svc-gxhu): the reply carries the
 Chrome generation and phase, the tab counts and the models section, and the exit code is
 0 only while the service answers, so a script can use it unchanged. Every command logs
-its tab, owner and command to the journal (svc-p67t), and a `chrome generation lost`
+its command name to the journal (svc-p67t); handles are never logged. A `chrome generation lost`
 entry carries Chrome's last stderr lines (svc-qrmc). `systemctl --user restart
 leash.service` drops the open tabs and keeps the profile, so the logins survive.
 

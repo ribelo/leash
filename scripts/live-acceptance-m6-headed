@@ -12,9 +12,9 @@
 #   3. records what niri does with the managed window (app-id "leash"): the rule's
 #      placement, and the focus move a handoff causes — "niri msg --json windows" plus
 #      workspace names, before and after;
-#   4. runs the L27 skill workflow from the operator's shell with a DSH-style owner:
+#   4. runs the L27 skill workflow from the operator's shell by handle:
 #      new / snap --match / fill / click / text / shot / debug / close on a page this
-#      script serves on 127.0.0.1, and checks the journal carries owner and cmd;
+#      script serves on 127.0.0.1, and checks the journal carries cmd;
 #   5. triggers one real handoff (niri focus + notify-send Done action; L18's content)
 #      and asks whether the window was focused, whether the notification appeared, and
 #      whether clicking Done resumed it;
@@ -31,7 +31,7 @@
 # run of L18 alone; this run does not need it.
 #
 # Optional L34 Allegro operator step (not part of unattended L28 verification):
-# after this headed gate, while the operator is present, open a fresh owner-bound tab
+# after this headed gate, while the operator is present, open a fresh agent tab
 # on https://allegro.pl/ through the installed service. If the headed site permits
 # access, run the product search -> offer -> add to cart -> cart mission with
 # --expect "the page is cart", inspect the cart, and stop BEFORE checkout/payment.
@@ -188,7 +188,7 @@ EOF
     niri_windows_after) echo '[{"id":7,"title":"Leash M6 acceptance page","app_id":"leash","workspace_id":2,"is_focused":true,"is_floating":false,"is_urgent":false},{"id":3,"title":"foot","app_id":"foot","workspace_id":1,"is_focused":false}]' ;;
     niri_windows_after_restart) echo '[{"id":12,"title":"Leash M6 acceptance page","app_id":"leash","workspace_id":2,"is_focused":false,"is_floating":false,"is_urgent":false}]' ;;
     niri_workspaces) echo '[{"id":1,"idx":1,"name":"main","output":"eDP-1","is_active":true,"is_focused":true,"active_window_id":3},{"id":2,"idx":2,"name":"leash","output":"eDP-1","is_active":false,"is_focused":false,"active_window_id":7}]' ;;
-    new) echo '{"tab":"t_fixture","url":"http://127.0.0.1:8080/","title":"Leash M6 acceptance page","origin":"agent","state":"owned","owner":"@@OWNER@@","generation":3,"expires":null}' ;;
+    new) echo '{"tab":"t_fixture","url":"http://127.0.0.1:8080/","title":"Leash M6 acceptance page","origin":"agent","state":"owned","generation":3,"expires":null}' ;;
     snap_input) echo '{"snapshot":"s_0001","tab":"t_fixture","url":"http://127.0.0.1:8080/","title":"Leash M6 acceptance page","rows":[{"index":1,"role":"statictext","name":"Name"},{"index":2,"role":"textbox","name":"Name"},{"index":3,"role":"button","name":"Save"}],"total":3,"offset":0,"truncated":false,"settled":true,"dialog":null}' ;;
     snap_button) echo '{"snapshot":"s_0002","tab":"t_fixture","url":"http://127.0.0.1:8080/","title":"Leash M6 acceptance page","rows":[{"index":2,"role":"textbox","name":"Name"},{"index":3,"role":"button","name":"Save"}],"total":2,"offset":0,"truncated":false,"settled":true,"dialog":null}' ;;
     fill) echo '{"tab":"t_fixture","url":"http://127.0.0.1:8080/","title":"Leash M6 acceptance page","snapshot":null,"dialog":null,"popups":[]}' ;;
@@ -199,21 +199,19 @@ EOF
     shot) echo '{"path":"/tmp/leash-m6-headed/workflow.png","bytes":23456}' ;;
     debug) echo '{"entries":[]}' ;;
     close) echo '{"closed":true}' ;;
-    list_all) echo '{"tabs":[{"tab":"t_fixture","url":"http://127.0.0.1:8080/","title":"Leash M6 acceptance page","origin":"agent","state":"owned","owner":"@@OWNER@@","generation":3,"expires":null}]}' ;;
+    list_all) echo '{"tabs":[{"tab":"t_fixture","url":"http://127.0.0.1:8080/","title":"Leash M6 acceptance page","origin":"agent","state":"owned","generation":3,"expires":null}]}' ;;
     list_all_empty) echo '{"tabs":[]}' ;;
     handoff) echo '{"resumed":true,"url":"http://127.0.0.1:8080/","title":"Leash M6 acceptance page"}' ;;
-    journal_tail) printf '{"ts":"2026-01-01T00:00:00Z","level":"info","service":"leash","msg":"control command","context":{"tab":"-","owner":"@@OWNER@@","cmd":"status"}}\n{"ts":"2026-01-01T00:00:01Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","owner":"@@OWNER@@","cmd":"close"}}\n' ;;
-    journal_run) printf '{"ts":"2026-01-01T00:00:00Z","level":"info","service":"leash","msg":"control command","context":{"tab":"-","owner":"@@OWNER@@","cmd":"status"}}\n{"ts":"2026-01-01T00:00:01Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","owner":"@@OWNER@@","cmd":"new"}}\n{"ts":"2026-01-01T00:00:02Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","owner":"@@OWNER@@","cmd":"snap"}}\n{"ts":"2026-01-01T00:00:03Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","owner":"@@OWNER@@","cmd":"fill"}}\n{"ts":"2026-01-01T00:00:04Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","owner":"@@OWNER@@","cmd":"click"}}\n{"ts":"2026-01-01T00:00:05Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","owner":"@@OWNER@@","cmd":"text"}}\n{"ts":"2026-01-01T00:00:06Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","owner":"@@OWNER@@","cmd":"shot"}}\n{"ts":"2026-01-01T00:00:07Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","owner":"@@OWNER@@","cmd":"close"}}\n' ;;
+    journal_tail) printf '{"ts":"2026-01-01T00:00:00Z","level":"info","service":"leash","msg":"control command","context":{"tab":"-","cmd":"status"}}\n{"ts":"2026-01-01T00:00:01Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","cmd":"close"}}\n' ;;
+    journal_run) printf '{"ts":"2026-01-01T00:00:00Z","level":"info","service":"leash","msg":"control command","context":{"tab":"-","cmd":"status"}}\n{"ts":"2026-01-01T00:00:01Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","cmd":"new"}}\n{"ts":"2026-01-01T00:00:02Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","cmd":"snap"}}\n{"ts":"2026-01-01T00:00:03Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","cmd":"fill"}}\n{"ts":"2026-01-01T00:00:04Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","cmd":"click"}}\n{"ts":"2026-01-01T00:00:05Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","cmd":"text"}}\n{"ts":"2026-01-01T00:00:06Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","cmd":"shot"}}\n{"ts":"2026-01-01T00:00:07Z","level":"info","service":"leash","msg":"control command","context":{"tab":"t_fixture","cmd":"close"}}\n' ;;
     profile) echo "exists=yes files=137 bytes=9876543 cookies=yes login_data=yes" ;;
     chrome_procs) echo "2" ;;
     *) : ;;
   esac
 }
 
-fixture_text() { # fixture_text KEY -> the fixture for KEY, with this run's owner substituted
-  local text
-  text="$(fixture "${1#fail:}")"
-  printf '%s' "${text//@@OWNER@@/${owner:-}}"
+fixture_text() { # fixture_text KEY -> the fixture for KEY
+  fixture "${1#fail:}"
 }
 
 # ---------------------------------------------------------------------- run helpers
@@ -376,10 +374,10 @@ print("%s\t%s\t%s\t%s" % (d.get("snapshot", ""), row.get("index", ""), row.get("
 PY
 }
 
-journal_owner_cmds() { # journal_owner_cmds FILE OWNER -> "RECORDS<TAB>CMD,CMD"
-  python3 - "$1" "$2" <<'PY'
+journal_command_cmds() { # journal_command_cmds FILE -> "RECORDS<TAB>CMD,CMD"
+  python3 - "$1" <<'PY'
 import json, sys
-path, owner = sys.argv[1], sys.argv[2]
+path = sys.argv[1]
 cmds, matched = [], 0
 try:
     lines = open(path, errors="replace").read().splitlines()
@@ -394,7 +392,7 @@ for line in lines:
     except Exception:
         continue
     context = record.get("context") or {}
-    if context.get("owner") == owner:
+    if context.get("cmd"):
         matched += 1
         cmd = context.get("cmd")
         if cmd and cmd not in cmds:
@@ -635,10 +633,8 @@ record "leash_bin: $LEASH"
 record "leash_bin_source: $leash_bin_source"
 say "leash CLI: $LEASH ($leash_bin_source)"
 
-export DSH_SESSION_ID="${DSH_SESSION_ID:-m6-headed-$start_epoch}"
-owner="dsh:${DSH_SESSION_ID}"
-record "owner: $owner"
-say "owner for this run: $owner (DSH-style: dsh:\$DSH_SESSION_ID); every command names it."
+record "capability: handle from leash new; list never prints it"
+say "capability: the handle from leash new; list never prints it."
 
 if ! capture_file "$WORK/unit-before.txt" unit_show systemctl --user show leash.service -p ActiveState,SubState,ExecMainStatus,Result,NRestarts; then
   fatal "systemctl --user show leash.service failed"
@@ -666,7 +662,7 @@ fi
 say "unit is active."
 
 status_rc=0
-capture_file "$WORK/status-1.json" status "$LEASH" status --owner "$owner" || status_rc=$?
+capture_file "$WORK/status-1.json" status "$LEASH" status || status_rc=$?
 record "leash_status_exit: $status_rc"
 show "leash status" "$(cat "$WORK/status-1.json" 2>/dev/null)" 10
 if (( status_rc != 0 )); then
@@ -721,7 +717,7 @@ else
 fi
 
 # -------------------------------------------------------------- 4. skill workflow
-section "4. the L27 leash-skill workflow, from your shell, with $owner"
+section "4. the L27 leash-skill workflow, from your shell, by handle"
 say "This serves a local page on 127.0.0.1 and drives it through the skill's commands:"
 say "new, snap --match, fill, click, text, shot, debug, close."
 site_dir="$WORK/site"
@@ -786,7 +782,7 @@ record "workflow_page: $page_url"
 say "page: $page_url"
 
 tab=""
-if capture_file "$WORK/new.json" new "$LEASH" new --owner "$owner" "$page_url"; then
+if capture_file "$WORK/new.json" new "$LEASH" new "$page_url"; then
   tab="$(pyq "$WORK/new.json" 'd["tab"]')"
   record "workflow_new: $(tr -d '\n' <"$WORK/new.json")"
   record "workflow_tab: $tab"
@@ -795,15 +791,15 @@ else
   fatal "leash new failed; see $(cat "$WORK/new.json" 2>/dev/null)"
 fi
 
-capture_file "$WORK/list-all-1.json" list_all "$LEASH" list --all --owner "$owner" || true
+capture_file "$WORK/list-all-1.json" list_all "$LEASH" list || true
 record "workflow_list_all: $(tr -d '\n' <"$WORK/list-all-1.json")"
-capture_file "$WORK/snap-input.json" snap_input "$LEASH" snap --owner "$owner" "$tab" --match 'Name' --limit 10 --pretty || true
+capture_file "$WORK/snap-input.json" snap_input "$LEASH" snap "$tab" --match 'Name' --limit 10 --pretty || true
 show "snap --match Name" "$(cat "$WORK/snap-input.json")" 25
 fill_row="$(snap_pick "$WORK/snap-input.json" input)"
 if [[ -z "$fill_row" ]]; then
   say "no textbox matched \"Name\"; taking an unfiltered snapshot"
   record "workflow_snap_fallback: input (no row matched 'Name')"
-  capture_file "$WORK/snap-input.json" snap_input "$LEASH" snap --owner "$owner" "$tab" --limit 20 --pretty || true
+  capture_file "$WORK/snap-input.json" snap_input "$LEASH" snap "$tab" --limit 20 --pretty || true
   show "snap --limit 20 (fallback)" "$(cat "$WORK/snap-input.json")" 25
   fill_row="$(snap_pick "$WORK/snap-input.json" input)"
 fi
@@ -814,19 +810,19 @@ IFS=$'\t' read -r fill_snapshot fill_index fill_role fill_name <<<"$fill_row"
 record "workflow_fill_row: snapshot=$fill_snapshot index=$fill_index role=$fill_role name=$fill_name"
 say "textbox: index $fill_index ($fill_role \"$fill_name\") of snapshot $fill_snapshot"
 
-if capture_file "$WORK/fill.json" fill "$LEASH" fill --owner "$owner" "$tab" "$fill_snapshot" "$fill_index" 'Leash operator'; then
+if capture_file "$WORK/fill.json" fill "$LEASH" fill "$tab" "$fill_snapshot" "$fill_index" 'Leash operator'; then
   record "workflow_fill: ok"
 else
   fatal "leash fill failed: $(cat "$WORK/fill.json" 2>/dev/null)"
 fi
 
-capture_file "$WORK/snap-button.json" snap_button "$LEASH" snap --owner "$owner" "$tab" --match 'Save' --limit 10 --pretty || true
+capture_file "$WORK/snap-button.json" snap_button "$LEASH" snap "$tab" --match 'Save' --limit 10 --pretty || true
 show "snap --match Save" "$(cat "$WORK/snap-button.json")" 25
 click_row="$(snap_pick "$WORK/snap-button.json" button)"
 if [[ -z "$click_row" ]]; then
   say "no button matched \"Save\"; taking an unfiltered snapshot"
   record "workflow_snap_fallback: button (no row matched 'Save')"
-  capture_file "$WORK/snap-button.json" snap_button "$LEASH" snap --owner "$owner" "$tab" --limit 20 --pretty || true
+  capture_file "$WORK/snap-button.json" snap_button "$LEASH" snap "$tab" --limit 20 --pretty || true
   show "snap --limit 20 (fallback)" "$(cat "$WORK/snap-button.json")" 25
   click_row="$(snap_pick "$WORK/snap-button.json" button)"
 fi
@@ -836,13 +832,13 @@ fi
 IFS=$'\t' read -r click_snapshot click_index click_role click_name <<<"$click_row"
 record "workflow_click_row: snapshot=$click_snapshot index=$click_index role=$click_role name=$click_name"
 
-if capture_file "$WORK/click.json" click "$LEASH" click --owner "$owner" "$tab" "$click_snapshot" "$click_index"; then
+if capture_file "$WORK/click.json" click "$LEASH" click "$tab" "$click_snapshot" "$click_index"; then
   record "workflow_click: ok"
 else
   fatal "leash click failed: $(cat "$WORK/click.json" 2>/dev/null)"
 fi
 
-capture_file "$WORK/text.json" text "$LEASH" text --owner "$owner" "$tab" --max-chars 300 || true
+capture_file "$WORK/text.json" text "$LEASH" text "$tab" --max-chars 300 || true
 workflow_text="$(pyq "$WORK/text.json" 'd["text"]')"
 record "workflow_text: $(printf '%s' "$workflow_text" | tr '\n' ' ' | cut -c1-200)"
 if [[ "$workflow_text" == *"Hello Leash operator!"* ]]; then
@@ -854,7 +850,7 @@ else
   say "WARNING: the page text does not contain \"Hello Leash operator!\" — record this."
 fi
 
-if capture_file "$WORK/shot.json" shot "$LEASH" shot --owner "$owner" "$tab" "$WORK/workflow.png"; then
+if capture_file "$WORK/shot.json" shot "$LEASH" shot "$tab" "$WORK/workflow.png"; then
   shot_bytes="$(pyq "$WORK/shot.json" 'd["bytes"]')"
   record "workflow_shot: $WORK/workflow.png bytes=$shot_bytes"
   if (( dry == 0 )) && [[ -f "$WORK/workflow.png" ]]; then
@@ -866,24 +862,24 @@ else
   say "WARNING: leash shot failed (could the the service write $WORK/workflow.png?)"
 fi
 
-capture_file "$WORK/debug.json" debug "$LEASH" debug --owner "$owner" "$tab" --limit 10 || true
+capture_file "$WORK/debug.json" debug "$LEASH" debug "$tab" --limit 10 || true
 record "workflow_debug_entries: $(pyq "$WORK/debug.json" 'len(d.get("entries") or [])')"
 
-if capture_file "$WORK/close.json" close "$LEASH" close --owner "$owner" "$tab"; then
+if capture_file "$WORK/close.json" close "$LEASH" close "$tab"; then
   record "workflow_close: ok"
 else
   record "workflow_close: failed"
 fi
-capture_file "$WORK/list-all-2.json" list_all_empty "$LEASH" list --all --owner "$owner" || true
-record "tabs_after_workflow_close: $(pyq "$WORK/list-all-2.json" 'len(d.get("tabs") or [])') (list --all; human-origin tabs included)"
+capture_file "$WORK/list-all-2.json" list_all_empty "$LEASH" list || true
+record "tabs_after_workflow_close: $(pyq "$WORK/list-all-2.json" 'len(d.get("tabs") or [])') (list; human-origin tabs included)"
 say "workflow done; the tab is closed."
 
 capture_file "$WORK/journal-run.json" journal_run journalctl --user -u leash.service --since "$start_stamp" --no-pager || true
-journal_owner="$(journal_owner_cmds "$WORK/journal-run.json" "$owner")"
-IFS=$'\t' read -r journal_owner_records journal_owner_cmd_list <<<"$journal_owner"
-record "journal_owner_records: $journal_owner_records"
-record "journal_owner_cmds: $journal_owner_cmd_list"
-say "journal: $journal_owner_records record(s) for $owner, cmds: $journal_owner_cmd_list"
+journal_command="$(journal_command_cmds "$WORK/journal-run.json")"
+IFS=$'\t' read -r journal_command_records journal_command_cmd_list <<<"$journal_command"
+record "journal_command_records: $journal_command_records"
+record "journal_command_cmds: $journal_command_cmd_list"
+say "journal: $journal_command_records record(s), cmds: $journal_command_cmd_list"
 
 # ---------------------------------------------------------------- 5. handoff (L18)
 section "5. one handoff (L18: focus, notification, Done)"
@@ -891,7 +887,7 @@ say "A handoff hands the tab to you: the service calls Target.activateTarget, ru
 say "niri focus command, and shows a notify-send notification whose Done action resumes."
 say ""
 handoff_reason="L18/L28 headed acceptance: press Done in this notification"
-if capture_file "$WORK/handoff-tab.json" new "$LEASH" new --owner "$owner" "$page_url"; then
+if capture_file "$WORK/handoff-tab.json" new "$LEASH" new "$page_url"; then
   handoff_tab="$(pyq "$WORK/handoff-tab.json" 'd["tab"]')"
   record "handoff_tab: $handoff_tab"
 else
@@ -906,13 +902,13 @@ fi
 handoff_out="$WORK/handoff-reply.txt"
 : >"$handoff_out"
 handoff_started_epoch="$(date +%s)"
-say "  \$ $(quote_cmd "$LEASH" handoff --owner "$owner" "$handoff_tab" "$handoff_reason" --timeout-s "$handoff_timeout_s") > $handoff_out &"
+say "  \$ $(quote_cmd "$LEASH" handoff "$handoff_tab" "$handoff_reason" --timeout-s "$handoff_timeout_s") > $handoff_out &"
 if (( dry )); then
   fixture_text handoff >"$handoff_out"
 else
   say "    (running now, up to ${handoff_timeout_s}s; watch your desktop)"
   (
-    "$LEASH" handoff --owner "$owner" "$handoff_tab" "$handoff_reason" --timeout-s "$handoff_timeout_s" \
+    "$LEASH" handoff "$handoff_tab" "$handoff_reason" --timeout-s "$handoff_timeout_s" \
       >"$handoff_out" 2>&1
   ) &
   handoff_pid=$!
@@ -940,7 +936,7 @@ record "user_saw_notification_with_done: $q_notify"
 record "user_notification_note: $q_notify_note"
 say ""
 say "  Now click Done in the notification. (CLI fallback, from another terminal:"
-say "      $LEASH resume --owner human $handoff_tab"
+say "      $LEASH resume $handoff_tab"
 say "  ) then come back here."
 ask _ignored "Press ENTER here once you clicked Done (or resumed from the terminal):" ""
 
@@ -953,7 +949,7 @@ if (( dry == 0 )) && [[ -n "$handoff_pid" ]]; then
     done
   fi
   if kill -0 "$handoff_pid" 2>/dev/null; then
-    say "  (still waiting; stopping the handoff client — the service restores ownership on disconnect)"
+    say "  (still waiting; stopping the handoff client — the service clears with_human on disconnect)"
     kill -TERM "$handoff_pid" 2>/dev/null || true
     wait "$handoff_pid" 2>/dev/null || true
     record "handoff_client_stopped_by_script: yes"
@@ -991,7 +987,7 @@ record "resumed_via: $resumed_via"
 record "user_done_click_resumed: $q3_done"
 record "user_resume_note: $q_resume_note"
 say "handoff: resumed=$handoff_resumed, warnings=$handoff_warnings"
-if capture_file "$WORK/text-after-resume.json" text "$LEASH" text --owner "$owner" "$handoff_tab" --max-chars 200; then
+if capture_file "$WORK/text-after-resume.json" text "$LEASH" text "$handoff_tab" --max-chars 200; then
   record "handoff_tab_after_resume: $(pyq "$WORK/text-after-resume.json" '(d.get("text") or "").replace(chr(10), " ")[:160]')"
   record "handoff_tab_reachable_after: yes"
 else
@@ -1020,7 +1016,7 @@ else
 fi
 record "profile_before_restart: $profile_before"
 record "chrome_processes_before_restart: $chrome_before"
-capture_file "$WORK/list-before-restart.json" list_all "$LEASH" list --all --owner "$owner" || true
+capture_file "$WORK/list-before-restart.json" list_all "$LEASH" list || true
 record "tabs_before_restart: $(pyq "$WORK/list-before-restart.json" 'len(d.get("tabs") or [])')"
 
 say "restarting the unit: systemctl --user restart leash.service"
@@ -1029,7 +1025,7 @@ try sysctl_restart_reply "" systemctl --user restart leash.service || restart_rc
 record "restart_exit: $restart_rc"
 health_after_restart="no"
 for _ in $(seq 1 120); do
-  if capture_file "$WORK/status-2.json" status_after_restart "$LEASH" status --owner "$owner"; then
+  if capture_file "$WORK/status-2.json" status_after_restart "$LEASH" status; then
     if [[ "$(pyq "$WORK/status-2.json" 'd["chrome"]')" == "running" ]]; then
       health_after_restart="yes"
       break
@@ -1057,7 +1053,7 @@ if [[ -n "$have_niri" ]]; then
   show "niri windows (app-id leash) after the restart (fresh Chrome)" "$(cat "$WORK/summary-niri-after-restart.txt")" 6
   record "niri_after_restart: $(tr '\n' ' ' <"$WORK/summary-niri-after-restart.txt")"
 fi
-if try old_tab_reply "fail:text_after_restart" "$LEASH" text --owner "$owner" "$handoff_tab" --max-chars 80; then
+if try old_tab_reply "fail:text_after_restart" "$LEASH" text "$handoff_tab" --max-chars 80; then
   old_tab_verdict="still reachable (UNEXPECTED after a restart)"
 else
   old_tab_verdict="tab-gone"
@@ -1065,7 +1061,7 @@ fi
 printf '%s' "${old_tab_reply:-}" >"$WORK/old-tab-after-restart.json"
 record "old_tab_after_restart: $old_tab_verdict"
 record "old_tab_after_restart_reply: ${old_tab_reply:-(no reply)}"
-capture_file "$WORK/list-after-restart.json" list_all_empty "$LEASH" list --all --owner "$owner" || true
+capture_file "$WORK/list-after-restart.json" list_all_empty "$LEASH" list || true
 record "tabs_after_restart: $(pyq "$WORK/list-after-restart.json" 'len(d.get("tabs") or [])')"
 if (( dry )); then
   profile_after="$(fixture_text profile)"
@@ -1088,7 +1084,7 @@ capture_file "$WORK/unit-after-stop.txt" unit_show_after_stop systemctl --user s
 record "unit_after_stop: $(tr '\n' ' ' <"$WORK/unit-after-stop.txt")"
 service_stop_summary="systemctl --user stop -> $(tr '\n' ' ' <"$WORK/unit-after-stop.txt")"
 stop_status_rc=0
-try status_after_stop "fail:status_after_stop" "$LEASH" status --owner "$owner" || stop_status_rc=$?
+try status_after_stop "fail:status_after_stop" "$LEASH" status || stop_status_rc=$?
 record "status_after_stop_exit: $stop_status_rc"
 record "status_after_stop_reply: ${status_after_stop:-(no reply)}"
 socket_path="/run/user/$(id -u)/leash/control.sock"
@@ -1107,22 +1103,22 @@ record "chrome_processes_after_stop: $chrome_after_stop"
 capture_file "$WORK/journal-tail.txt" journal_tail journalctl --user -u leash.service -n 20 --no-pager || true
 show "journalctl --user -u leash.service -n 20" "$(cat "$WORK/journal-tail.txt" 2>/dev/null)" 20
 capture_file "$WORK/journal-run-final.json" journal_run journalctl --user -u leash.service --since "$start_stamp" --no-pager || true
-journal_owner="$(journal_owner_cmds "$WORK/journal-run-final.json" "$owner")"
-IFS=$'\t' read -r journal_owner_records journal_owner_cmd_list <<<"$journal_owner"
-record "journal_owner_records_total: $journal_owner_records"
-record "journal_owner_cmds_total: $journal_owner_cmd_list"
+journal_command="$(journal_command_cmds "$WORK/journal-run-final.json")"
+IFS=$'\t' read -r journal_command_records journal_command_cmd_list <<<"$journal_command"
+record "journal_command_records_total: $journal_command_records"
+record "journal_command_cmds_total: $journal_command_cmd_list"
 journal_warn="$(grep -c 'chrome generation lost' "$WORK/journal-run-final.json" 2>/dev/null || true)"
 record "journal_generation_lost_lines: ${journal_warn:-0}"
-journal_sample="$(grep -m1 "\"owner\":\"$owner\"" "$WORK/journal-run-final.json" 2>/dev/null | cut -c1-240 || true)"
+journal_sample="$(grep -m1 '"cmd"' "$WORK/journal-run-final.json" 2>/dev/null | cut -c1-240 || true)"
 record "journal_sample_line: ${journal_sample:-(none)}"
-say "journal: $journal_owner_records record(s) for $owner; generation-lost lines: ${journal_warn:-0}"
+say "journal: $journal_command_records record(s); generation-lost lines: ${journal_warn:-0}"
 
 ask_yn start_again "Start leash.service again so your desktop service is left running?" y
 if [[ "$start_again" == y ]]; then
   run "" systemctl --user start leash.service
   final_health="no"
   for _ in $(seq 1 120); do
-    if capture_file "$WORK/status-3.json" status_after_restart "$LEASH" status --owner "$owner"; then
+    if capture_file "$WORK/status-3.json" status_after_restart "$LEASH" status; then
       if [[ "$(pyq "$WORK/status-3.json" 'd["chrome"]')" == "running" ]]; then
         final_health="yes"
         break

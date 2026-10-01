@@ -57,7 +57,7 @@ class PageHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 def cli(command, *args, error=None):
-    proc = subprocess.run([LEASH, command, '--owner', 'live', *map(str,args)],
+    proc = subprocess.run([LEASH, command, *map(str,args)],
                           capture_output=True, text=True, timeout=45)
     try: value = json.loads(proc.stdout)
     except json.JSONDecodeError as exc:

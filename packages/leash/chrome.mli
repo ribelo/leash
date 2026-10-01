@@ -116,7 +116,7 @@ val launch_pipe : caps:< Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; .. > -> 'clock la
 type t
 
 val create : sw:Eio.Switch.t -> ?launch:'clock launch -> config -> 'clock deps -> t
-(** Starts the supervisor and its two owner fibers on [sw]. The first spawn is
+(** Starts the supervisor and its two supervisor fibers on [sw]. The first spawn is
     asynchronous, so {!connection} answers [`Browser_unavailable] until the first
     [Started]. Nothing synchronously fails; a spawn failure arrives as [Gave_up]. *)
 

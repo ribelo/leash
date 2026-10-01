@@ -49,7 +49,6 @@ let report ?models_status ?chrome_pid tabs =
 
 let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
     ?models_status ?chrome_pid tabs (request : P.request) =
-  let owner = request.owner in
   let meter = Tabs.meter () in
   let decide, text_helper =
     match models with
@@ -70,53 +69,45 @@ let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?ins
     | Error error -> failure error
   in
   match request.command with
-  | P.New args -> lift P.yojson_of_tab_info (Tabs.new_tab tabs ~owner ~url:args.url)
-  | P.Snap args -> lift P.yojson_of_snapshot (Tabs.snap tabs ~owner args)
-  | P.Downloads args ->
-      lift P.yojson_of_downloads_result (Tabs.downloads tabs ~owner args.tab)
-  | P.Text args -> lift P.yojson_of_text_result (Tabs.text tabs ~owner args)
-  | P.Eval args -> lift P.yojson_of_eval_result (Tabs.eval tabs ~owner args)
-  | P.Shot args -> lift P.yojson_of_shot_result (Tabs.shot tabs ~owner args)
-  | P.Debug args -> lift P.yojson_of_debug_result (Tabs.debug tabs ~owner args)
-  | P.Wait args -> lift P.yojson_of_action_result (Tabs.wait tabs ~owner args)
-  | P.Net args -> lift P.yojson_of_net_result (Tabs.net tabs ~owner args)
-  | P.Net_body args -> lift P.yojson_of_net_body_result (Tabs.net_body tabs ~owner args)
-  | P.Net_request args ->
-      lift P.yojson_of_net_request_result (Tabs.net_request tabs ~owner args)
-  | P.Cookies args -> lift P.yojson_of_cookies_result (Tabs.cookies tabs ~owner args)
-  | P.Storage args -> lift P.yojson_of_storage_result (Tabs.storage tabs ~owner args)
+  | P.New args ->
+      lift P.yojson_of_tab_info (Tabs.new_tab ?label:args.label tabs ~url:args.url)
+  | P.Snap args -> lift P.yojson_of_snapshot (Tabs.snap tabs args)
+  | P.Downloads args -> lift P.yojson_of_downloads_result (Tabs.downloads tabs args.tab)
+  | P.Text args -> lift P.yojson_of_text_result (Tabs.text tabs args)
+  | P.Eval args -> lift P.yojson_of_eval_result (Tabs.eval tabs args)
+  | P.Shot args -> lift P.yojson_of_shot_result (Tabs.shot tabs args)
+  | P.Debug args -> lift P.yojson_of_debug_result (Tabs.debug tabs args)
+  | P.Wait args -> lift P.yojson_of_action_result (Tabs.wait tabs args)
+  | P.Net args -> lift P.yojson_of_net_result (Tabs.net tabs args)
+  | P.Net_body args -> lift P.yojson_of_net_body_result (Tabs.net_body tabs args)
+  | P.Net_request args -> lift P.yojson_of_net_request_result (Tabs.net_request tabs args)
+  | P.Cookies args -> lift P.yojson_of_cookies_result (Tabs.cookies tabs args)
+  | P.Storage args -> lift P.yojson_of_storage_result (Tabs.storage tabs args)
   | P.Playbook_test args ->
-      lift P.yojson_of_playbook_test_result
-        (Tabs.playbook_test ?installed tabs ~owner args)
+      lift P.yojson_of_playbook_test_result (Tabs.playbook_test ?installed tabs args)
   | P.Playbook_check args ->
-      lift P.yojson_of_playbook_check_result
-        (Tabs.playbook_check ?installed tabs ~owner args)
-  | P.Upload args -> lift P.yojson_of_action_result (Tabs.upload tabs ~owner args)
-  | P.Hover args -> lift P.yojson_of_action_result (Tabs.hover tabs ~owner args)
-  | P.Check args -> lift P.yojson_of_action_result (Tabs.check tabs ~owner args)
-  | P.Uncheck args -> lift P.yojson_of_action_result (Tabs.uncheck tabs ~owner args)
-  | P.Dialog args -> lift P.yojson_of_action_result (Tabs.dialog tabs ~owner args)
-  | P.Click args -> lift P.yojson_of_action_result (Tabs.click tabs ~owner args)
-  | P.Fill args -> lift P.yojson_of_action_result (Tabs.fill tabs ~owner args)
-  | P.Press args -> lift P.yojson_of_action_result (Tabs.press tabs ~owner args)
-  | P.Select args -> lift P.yojson_of_action_result (Tabs.select tabs ~owner args)
-  | P.Scroll args -> lift P.yojson_of_action_result (Tabs.scroll tabs ~owner args)
-  | P.Nav args -> lift P.yojson_of_tab_info (Tabs.navigate tabs ~owner args.tab args.url)
-  | P.Claim args -> lift P.yojson_of_tab_info (Tabs.claim tabs ~owner args.tab)
-  | P.Release args ->
-      lift P.yojson_of_released_result
-        (Tabs.release tabs ~owner ?force:args.force args.tab)
-  | P.Close args ->
-      lift P.yojson_of_closed_result (Tabs.close tabs ~owner ?force:args.force args.tab)
+      lift P.yojson_of_playbook_check_result (Tabs.playbook_check ?installed tabs args)
+  | P.Upload args -> lift P.yojson_of_action_result (Tabs.upload tabs args)
+  | P.Hover args -> lift P.yojson_of_action_result (Tabs.hover tabs args)
+  | P.Check args -> lift P.yojson_of_action_result (Tabs.check tabs args)
+  | P.Uncheck args -> lift P.yojson_of_action_result (Tabs.uncheck tabs args)
+  | P.Dialog args -> lift P.yojson_of_action_result (Tabs.dialog tabs args)
+  | P.Click args -> lift P.yojson_of_action_result (Tabs.click tabs args)
+  | P.Fill args -> lift P.yojson_of_action_result (Tabs.fill tabs args)
+  | P.Press args -> lift P.yojson_of_action_result (Tabs.press tabs args)
+  | P.Select args -> lift P.yojson_of_action_result (Tabs.select tabs args)
+  | P.Scroll args -> lift P.yojson_of_action_result (Tabs.scroll tabs args)
+  | P.Nav args -> lift P.yojson_of_tab_info (Tabs.navigate tabs args.tab args.url)
+  | P.Take args -> lift P.yojson_of_tab_info (Tabs.take tabs args)
+  | P.Close args -> lift P.yojson_of_closed_result (Tabs.close tabs args.tab)
   | P.Handoff args ->
       (* hand-lz3p: the one command that blocks in the registry. The listener cancels this
          handler if the client disconnects, which is a handoff ending — the tab goes back
-         to its owner — not a leak. *)
+         to agent control — not a leak. *)
       lift P.yojson_of_handoff_result
-        (Tabs.handoff tabs ~owner ~reason:args.reason ~timeout_s:args.timeout_s args.tab)
-  | P.Resume args -> lift P.yojson_of_resumed_result (Tabs.resume tabs ~owner args.tab)
-  | P.List_tabs args ->
-      success (P.yojson_of_list_result (Tabs.list tabs ~owner ~all:args.all))
+        (Tabs.handoff tabs ~reason:args.reason ~timeout_s:args.timeout_s args.tab)
+  | P.Resume args -> lift P.yojson_of_resumed_result (Tabs.resume tabs args.tab)
+  | P.List_tabs -> success (P.yojson_of_list_result (Tabs.list tabs))
   | P.Status ->
       success (P.yojson_of_status_result (report ?models_status ?chrome_pid tabs))
   | P.Discover args -> (
@@ -165,7 +156,7 @@ let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?ins
           match Playbook.of_json ~file:"discovery seed" (Playbook.yojson_of_t seed) with
           | Error why -> err "invalid-request" why
           | Ok book -> (
-              match Tabs.new_tab tabs ~owner ~url:(Some entry) with
+              match Tabs.new_tab tabs ~url:(Some entry) with
               | Error error -> failure error
               | Ok info ->
                   let run_args =
@@ -185,7 +176,7 @@ let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?ins
                   lift P.yojson_of_run_result
                     (Tabs.run ~meter ?levels ~model ?decide ?text_helper ?installed
                        ~discovery:(Run.{ book; max_steps = steps; max_cost = cost }, turns)
-                       tabs ~owner ~tab:info.tab run_args)))
+                       tabs ~tab:info.tab run_args)))
   | P.Drive args -> (
       (* run-vj48 run-4mzm: the run's upper levels are one more seam. Production installs
          {!Models.levels} — one System One client for all three levels (run-7blx) — and
@@ -199,19 +190,19 @@ let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?ins
         | None ->
             Result.map
               (fun (info : P.tab_info) -> info.P.tab)
-              (Tabs.new_tab tabs ~owner ~url:None)
+              (Tabs.new_tab tabs ~url:None)
       in
       match tab with
       | Error error -> failure error
       | Ok tab -> (
           let cleanup () =
             if args.P.tab = None then
-              Eio.Cancel.protect (fun () -> ignore (Tabs.close tabs ~owner tab))
+              Eio.Cancel.protect (fun () -> ignore (Tabs.close tabs tab))
           in
           let outcome =
             match
-              Tabs.run ~meter ?levels ~model ?decide ?text_helper ?installed tabs ~owner
-                ~tab args
+              Tabs.run ~meter ?levels ~model ?decide ?text_helper ?installed tabs ~tab
+                args
             with
             | outcome -> outcome
             | exception exn ->
@@ -224,50 +215,15 @@ let dispatch ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?ins
           | outcome -> (
               if args.P.tab <> None then lift P.yojson_of_run_result outcome
               else
-                match Eio.Cancel.protect (fun () -> Tabs.close tabs ~owner tab) with
+                match Eio.Cancel.protect (fun () -> Tabs.close tabs tab) with
                 | Ok _ -> lift P.yojson_of_run_result outcome
                 | Error error -> failure error)))
 
 (* svc-p67t: a command's journal anchor contains only identifiers, never args or
    results. Commands without a tab use "-"; new does not have a handle yet. *)
-let command_tab = function
-  | P.New _ | P.List_tabs _ | P.Status -> "-"
-  | P.Claim args | P.Resume args | P.Downloads args -> P.Handle.to_string args.tab
-  | P.Release args | P.Close args -> P.Handle.to_string args.tab
-  | P.Snap args -> P.Handle.to_string args.tab
-  | P.Text args -> P.Handle.to_string args.tab
-  | P.Shot args -> P.Handle.to_string args.tab
-  | P.Debug args -> P.Handle.to_string args.tab
-  | P.Net args -> P.Handle.to_string args.tab
-  | P.Net_body args | P.Net_request args -> P.Handle.to_string args.tab
-  | P.Cookies args -> P.Handle.to_string args.tab
-  | P.Storage args -> P.Handle.to_string args.tab
-  | P.Upload args -> P.Handle.to_string args.tab
-  | P.Hover args -> P.Handle.to_string args.tab
-  | P.Check args | P.Uncheck args -> P.Handle.to_string args.tab
-  | P.Eval args -> P.Handle.to_string args.tab
-  | P.Playbook_test args -> P.Handle.to_string args.tab
-  | P.Playbook_check _ -> "-"
-  | P.Nav args -> P.Handle.to_string args.tab
-  | P.Click args -> P.Handle.to_string args.tab
-  | P.Fill args -> P.Handle.to_string args.tab
-  | P.Press args -> P.Handle.to_string args.tab
-  | P.Select args -> P.Handle.to_string args.tab
-  | P.Scroll args -> P.Handle.to_string args.tab
-  | P.Wait args -> P.Handle.to_string args.tab
-  | P.Dialog args -> P.Handle.to_string args.tab
-  | P.Handoff args -> P.Handle.to_string args.tab
-  | P.Drive args -> (
-      match args.tab with Some tab -> P.Handle.to_string tab | None -> "-")
-  | P.Discover _ -> "-"
-
 let with_command ?logger (request : P.request) f =
   Ox_observability.Context.with_fields
-    [
-      ("tab", command_tab request.command);
-      ("owner", P.Owner.to_string request.owner);
-      ("cmd", P.command_name request.command);
-    ]
+    [ ("cmd", P.command_name request.command) ]
     (fun () ->
       Option.iter
         (fun logger -> Ox_observability.Logger.info logger "control command")

@@ -19,9 +19,6 @@ let text key json = match member key json with Some (`String s) -> Some s | _ ->
 let enum of_string value =
   match of_string value with Ok v -> v | Error _ -> assert false
 
-(* A tombstone's disposition is the protocol's closed set, not a string: the registry is
-   the one place that decides why a tab is gone, and the wire reads it back by name
-   (ADR-0005, own-teh1). *)
 let disposition name : P.Disposition.t = enum P.Disposition.of_string name
 
 let error ?detail code message : P.error =
@@ -78,120 +75,25 @@ let handle ~caps =
     bytes;
   enum P.Handle.of_string (Buffer.contents buf)
 
-(* ---------- Ownership (ADR-0005) ---------- *)
+(* hand-qos2 hand-fr87: the only access restriction is a human handoff. *)
+type access = Act | Dialog | Close | Resume
 
-(* own-6ndc own-jua9 own-2zs7: who a tab belongs to is a closed variant rather than a
-   nullable name, because the three states answer differently: [Unowned] is a tab nobody
-   has claimed (a human's, or one an agent released), [Owned] is the one the caller
-   created or claimed, and [With_human] is the one handed off while the human works on it
-   (milestone 4). *)
-type owner_state = Unowned | Owned of P.Owner.t | With_human of P.Owner.t
-
-let owner_of = function Unowned -> None | Owned owner | With_human owner -> Some owner
-
-let state_name = function
-  | Unowned -> "unowned"
-  | Owned _ -> "owned"
-  | With_human _ -> "with_human"
-
-(* The command classes the one authorization function distinguishes. Every tab command
-   names one: [Act] is everything that touches the page (observe, navigate, act, wait),
-   [Resume] is the human's answer to a handoff, and only [Close] and [Release] can be
-   forced. *)
-type access = Act | Dialog | Close | Release | Claim | Resume
-
-let access_name = function
-  | Act -> "act"
-  | Dialog -> "dialog"
-  | Close -> "close"
-  | Release -> "release"
-  | Claim -> "claim"
-  | Resume -> "resume"
-
-let forceable = function
-  | Close | Release -> true
-  | Act | Dialog | Claim | Resume -> false
-
-let not_owner state =
-  error "not-owner"
-    (match state with
-    | Unowned -> "the tab is unowned; claim it first"
-    | Owned _ | With_human _ -> "the tab belongs to another owner")
-    ~detail:
-      (obj
-         [
-           ("state", str (state_name state));
-           ( "owner",
-             match owner_of state with
-             | Some owner -> P.Owner.yojson_of_t owner
-             | None -> `Null );
-         ])
-
-let unowned () = not_owner Unowned
-let already_owned () = error "already-owned" "the tab is already owned"
 let held_by_human () = error "with-human" "the tab is with the human; resume it first"
+let nothing_waiting () = error "no-handoff" "there is no handoff to resume"
 
-let nothing_waiting () =
-  error "no-handoff" "nobody is waiting on this tab; there is no handoff to resume"
-
-(* own-pmr7 own-0np9 own-7pzw own-0pnk hand-nisr: the one authorization function. Acting,
-   answering a dialog, releasing, and closing require that the caller owns the tab;
-   claiming requires that nobody does; and no command at all reaches a tab the human
-   holds. [force] is honoured only for [close] and [release], where it ignores ownership
-   and the human's hold entirely, because an agent that died without releasing is exactly
-   why the human needs it (ADR-0005).
-
-   hand-0sja hand-szz7: [Resume] is the one class anybody may ask for — the human in
-   another terminal is usually not the owner, and a resume only ever gives the tab back to
-   the owner it was handed off from — and the only state that answers it is [With_human].
-   A tab nobody is waiting on is [no-handoff] rather than a refusal about ownership, so a
-   stale notification does nothing surprising. *)
-let authorize ?(force = false) access ~caller state : (unit, P.error) result =
+let authorize access ~with_human =
   match access with
-  | Claim -> (
-      match state with
-      | Unowned -> Ok ()
-      | Owned _ | With_human _ -> Error (already_owned ()))
-  | Resume -> (
-      match state with
-      | With_human _ -> Ok ()
-      | Unowned | Owned _ -> Error (nothing_waiting ()))
-  | Act | Dialog | Close | Release -> (
-      if force && forceable access then Ok ()
-      else
-        match state with
-        | Owned owner when owner = caller -> Ok ()
-        | Owned _ -> Error (not_owner state)
-        | Unowned -> Error (unowned ())
-        | With_human _ -> Error (held_by_human ()))
+  | Resume -> if with_human then Ok () else Error (nothing_waiting ())
+  | Act | Dialog | Close -> if with_human then Error (held_by_human ()) else Ok ()
 
-(* A tombstone keeps whose tab it was, so a caller still learns that a closed tab was
-   never its own (own-teh1). *)
-let held_by_other state caller =
-  match state with Unowned -> false | Owned owner | With_human owner -> owner <> caller
-
-(* own-uo77 own-hslp own-ay3s: what one sweep decides on — the sweep itself is at the end
-   of this file, and the policy is [Expiry.decide]. It is declared before [tab] on
-   purpose: both records name a handle, an origin, and an owner state, and when a value's
-   type is not yet known OCaml's field disambiguation picks the most recent declaration,
-   which must stay [tab] or every lambda in this file that only says [tab.id] breaks. *)
 type idleness = {
   handle : P.Handle.t;
   origin : P.Origin.t;
-  owner_state : owner_state;
-  idle_for_s : float;  (** seconds since the last owner action on the tab *)
-  unowned_for_s : float option;
-      (** seconds since the tab became unowned; [None] while it is owned *)
+  with_human : bool;
+  idle_for_s : float;
 }
 
-(* What one sweep may do with one tab: release it, close it, or leave it. *)
-type sweep_step = Release_idle | Close_idle | Keep_idle
-
-(* hand-lz3p hand-lmd5 hand-yytf own-0pnk: how one handoff ended. The request that handed
-   the tab over waits on [promise]; [Resumed] is the human's [resume], [Ended] is every
-   other ending the registry decides — the tab leaving it (a browser loss, a close) or a
-   forced release taking the tab away — and carries the error the waiting request answers
-   with. The deadline is not in here at all: it cancels the wait instead of waking it. *)
+type sweep_step = Close_idle | Keep_idle
 type outcome = Resumed | Ended of P.error
 
 (* hand-lz3p hand-r4t1: the record one live handoff leaves on its tab — the reason the
@@ -214,11 +116,12 @@ type tab = {
   mutable enabled_session : string option;
       (** The session the reading and action domains were enabled in; [None] until a
           command needs the page. *)
-  handle : P.Handle.t;
+  mutable handle : P.Handle.t option;
+  label : string option;
   opened_at : float;
   mutable url : string;
   mutable title : string;
-  origin : P.Origin.t;
+  mutable origin : P.Origin.t;
   generation : int;
   lock : Eio.Mutex.t;
   mutable loading : bool;
@@ -260,31 +163,21 @@ type tab = {
 
 let baselines_kept = 8
 
-type tomb = { state : owner_state; disposition : P.Disposition.t; at : float }
+type tomb = { disposition : P.Disposition.t; at : float }
 
 let key handle = P.Handle.to_string handle
+let credential (tab : tab) = Option.get tab.handle
 
-(* ---------- The ledger: ownership, owned by one actor ---------- *)
+let ledger_key (tab : tab) =
+  match tab.handle with Some h -> key h | None -> "human:" ^ tab.id
 
 module Keys = Map.Make (String)
 
-(* What the registry knows about one live tab: the page record ([tab], whose mutable fields
-   belong to the tab's lock and the event fiber) and the ownership facts, which belong to
-   the ledger and change only by folding a request. *)
 type entry = {
   tab : tab;
-  owner_state : owner_state;
+  with_human : bool;
   last_activity : float;
-      (** The instant of the last action this tab's owner was allowed to take on it, its
-          creation included; stage 1 releases a tab this has not moved for [idle]
-          (own-ay3s). *)
-  unowned_since : float option;
-      (** The instant the tab last became unowned, [None] while it is owned; stage 2
-          closes an agent-origin tab this has been unclaimed for [unclaimed] (own-hslp).
-      *)
   handoff : waiting option;
-      (** The handoff this tab is in the middle of, [Some] exactly while it is
-          [With_human] because a [handoff] request is waiting on it (hand-lz3p). *)
 }
 
 (* The registry's whole bookkeeping as one immutable value: every live tab, the target ids
@@ -311,44 +204,25 @@ let empty_ledger =
 (* Everything that changes the ledger is one of these, handled one at a time in arrival
    order by the actor, so no transition can interleave with another. *)
 type request =
-  | Locate of {
-      access : access;
-      force : bool;
-      caller : P.Owner.t;
-      handle : P.Handle.t;
-      at : float;
-    }  (** [permitted] and, unless it is a [Resume], the idle-clock touch (own-ay3s). *)
-  | Claim of { caller : P.Owner.t; handle : P.Handle.t; at : float }
-  | Release of { caller : P.Owner.t; force : bool; handle : P.Handle.t; at : float }
-  | Hand_over of { caller : P.Owner.t; reason : string; handle : P.Handle.t; at : float }
-      (** authorization as [Act], then [With_human] with a fresh handoff record. *)
-  | Hand_over_held of {
-      caller : P.Owner.t;
-      reason : string;
-      handle : P.Handle.t;
-      at : float;
-    }
-      (** the same transition for a caller that already holds the tab's lock and has been
-          authorized: the run's [hand_off] (run-d82w). *)
-  | Resume of { caller : P.Owner.t; handle : P.Handle.t; at : float }
-  | Restore of { handle : P.Handle.t; waiting : waiting }
-      (** a handoff that ended without a resume gives the tab back to its owner. *)
-  | Touch of { handle : P.Handle.t; owner : P.Owner.t; at : float }
-  | Release_idle of { handle : P.Handle.t; at : float }
+  | Locate of { access : access; handle : P.Handle.t; at : float }
+  | Take of { id : string; at : float }
+  | Hand_over of { reason : string; handle : P.Handle.t; at : float }
+  | Hand_over_held of { reason : string; handle : P.Handle.t; at : float }
+  | Resume of { handle : P.Handle.t; at : float }
+  | Restore of { handle : P.Handle.t; waiting : waiting; at : float }
+  | Touch of { handle : P.Handle.t; at : float }
   | Register of {
       id : string;
       session : string option;
       origin : P.Origin.t;
-      state : owner_state;
+      label : string option;
       url : string;
       title : string;
       opener : string option;
       at : float;
     }
-  | Disappear of { handle : P.Handle.t; disposition : P.Disposition.t; at : float }
+  | Disappear of { key : string; disposition : P.Disposition.t; at : float }
   | Creating of { delta : int; at : float }
-      (** a creation began (+1) or ended (-1); the last one to end adopts what Chrome
-          reported meanwhile *)
   | Discover of { session : string option; info : Discovery.target; at : float }
 
 type answer =
@@ -375,7 +249,6 @@ type t = {
   cap : int;
   tombstone_s : int;
   idle : float;
-  unclaimed : float;
   started : float;
   ledger :
     ( ledger,
@@ -398,34 +271,10 @@ let live_tabs t = List.map (fun entry -> entry.tab) (live_entries t)
 let open_tabs t = Keys.cardinal (snapshot t).entries
 let iter_tabs t f = List.iter f (live_tabs t)
 
-(* own-82jd own-uo77 own-hslp: [expires] is the next stage this tab faces and the seconds
-   left before it, so [list --all] shows what is about to happen. An owned tab faces
-   release; an unowned tab of agent origin faces close; a human's tab, and one the human
-   holds, face nothing, because no timer may take them (ADR-0005). *)
-let expires t (entry : entry) : P.expires option =
-  let at = now t in
-  let remaining seconds = max 0 (int_of_float (Float.ceil seconds)) in
-  let stage name = enum P.Stage.of_string name in
-  match entry.owner_state with
-  | Owned _ ->
-      Some
-        P.
-          {
-            stage = stage "release";
-            in_s = remaining (t.idle -. (at -. entry.last_activity));
-          }
-  | With_human _ -> None
-  | Unowned ->
-      if P.Origin.to_string entry.tab.origin <> "agent" then None
-      else
-        Option.map
-          (fun since ->
-            P.{ stage = stage "close"; in_s = remaining (t.unclaimed -. (at -. since)) })
-          entry.unowned_since
+let closes_in_s t (entry : entry) =
+  if entry.with_human || P.Origin.to_string entry.tab.origin <> "agent" then None
+  else Some (max 0 (int_of_float (Float.ceil (t.idle -. (now t -. entry.last_activity)))))
 
-(* hand-lz3p hand-lmd5 hand-yytf: the one place an outcome is written. Whichever
-   ending gets there first wins and wakes the request that waited; a [resume] that landed
-   while the tab was already dying is not overwritten by the death. *)
 let settle (waiting : waiting) outcome =
   if waiting.outcome = None then waiting.outcome <- Some outcome;
   Eio.Promise.resolve waiting.resolve ()
@@ -436,7 +285,7 @@ let refused error = Error (`Refused error)
 let refuse = function Ok _ as ok -> ok | Error error -> refused error
 
 let with_entry ledger entry =
-  { ledger with entries = Keys.add (key entry.tab.handle) entry ledger.entries }
+  { ledger with entries = Keys.add (ledger_key entry.tab) entry ledger.entries }
 
 (* A tombstone outlives the tab for [tombstone_s]; older ones are dropped whenever the
    ledger next changes shape, and are already answered as unknown before that. *)
@@ -449,89 +298,46 @@ let prune ~tombstone_s ~at ledger =
 (* own-0pnk: the one gate every tab command passes through. The decision is the pure
    [authorize]; this is the only place that also records a forced override, with the
    command, the caller, the tab and the state it overrode. *)
-let permitted ~logger ~access ~force ~caller handle state =
-  if force && forceable access then
-    Ox_observability.Logger.warn logger
-      ~fields:
-        [
-          ("cmd", Ox_observability.Logger.String (access_name access));
-          ("owner", Ox_observability.Logger.String (P.Owner.to_string caller));
-          ("tab", Ox_observability.Logger.String (key handle));
-          ("state", Ox_observability.Logger.String (state_name state));
-        ]
-      "ownership forced";
-  authorize ~force access ~caller state
-
-(* own-pmr7 own-teh1: a handle with no live tab is answered from its tombstone.
-   [--force] ignores whose tab that was, exactly as it ignores ownership for a live
-   one. *)
-let refusal_for_gone ~tombstone_s ledger ~force ~caller ~at handle =
+let refusal_for_gone ~tombstone_s ledger ~at handle =
   match Keys.find_opt (key handle) ledger.tombs with
-  | Some tomb when at -. tomb.at >= float tombstone_s ->
-      error "unknown-tab" "unknown tab handle"
-  | Some tomb when (not force) && held_by_other tomb.state caller -> not_owner tomb.state
-  | Some tomb -> P.tab_gone tomb.disposition
-  | None -> error "unknown-tab" "unknown tab handle"
+  | Some tomb when at -. tomb.at < float tombstone_s -> P.tab_gone tomb.disposition
+  | _ -> error "unknown-tab" "unknown tab handle"
 
-(* own-pmr7: every command that names a tab resolves it here: the entry, once the caller
-   is allowed, or the refusal.
-
-   own-ay3s: any action its owner is allowed to take resets the tab's idle clock, so the
-   tab an agent is working on stays its own. A refused command is not an action and leaves
-   the clock alone. A [Resume] is the human's answer rather than an owner action, and it
-   moves the clock itself, once, when it actually resumes (hand-0sja). *)
-let authorized ~logger ~tombstone_s ledger ~access ~force ~caller ~at handle =
+let authorized ~tombstone_s ledger ~(access : access) ~at handle =
   match Keys.find_opt (key handle) ledger.entries with
-  | Some entry -> (
-      match permitted ~logger ~access ~force ~caller handle entry.owner_state with
-      | Ok () -> (
-          match access with
-          | Resume -> Ok entry
-          | Act | Dialog | Close | Release | Claim -> Ok { entry with last_activity = at }
-          )
-      | Error _ as refusal -> refusal)
-  | None -> Error (refusal_for_gone ~tombstone_s ledger ~force ~caller ~at handle)
+  | Some entry when entry.tab.handle = Some handle ->
+      Result.map
+        (fun () -> if access = Resume then entry else { entry with last_activity = at })
+        (authorize access ~with_human:entry.with_human)
+  | _ -> Error (refusal_for_gone ~tombstone_s ledger ~at handle)
 
-(* hand-nisr hand-lz3p: the entry as [With_human] holding the reason the human is shown
-   and the promise the blocked request awaits. hand-len8: a handoff is not an owner action,
-   so it leaves the idle clock where it was; [With_human] is exempt from stage 1 anyway
-   (ADR-0005). *)
-let handed_over entry ~caller ~reason =
+let handed_over entry ~reason =
   let promise, resolve = Eio.Promise.create () in
-  let waiting = { reason; promise; resolve; outcome = None } in
   {
     entry with
-    owner_state = With_human caller;
-    unowned_since = None;
-    handoff = Some waiting;
+    with_human = true;
+    handoff = Some { reason; promise; resolve; outcome = None };
   }
 
-let register_entry ~tombstone_s ~at ledger tab state =
-  let entry =
-    {
-      tab;
-      owner_state = state;
-      last_activity = at;
-      unowned_since =
-        (match state with Unowned -> Some at | Owned _ | With_human _ -> None);
-      handoff = None;
-    }
-  in
+let register_entry ~tombstone_s ~at ledger tab =
+  let k = ledger_key tab in
+  let entry = { tab; with_human = false; last_activity = at; handoff = None } in
   let ledger =
     {
-      (prune ~tombstone_s ~at ledger) with
-      entries = Keys.add (key tab.handle) entry ledger.entries;
-      targets = Keys.add tab.id (key tab.handle) ledger.targets;
+      ledger with
+      entries = Keys.add k entry ledger.entries;
+      targets = Keys.add tab.id k ledger.targets;
     }
   in
-  (ledger, entry)
+  (prune ~tombstone_s ~at ledger, entry)
 
-let new_record ~fresh ~generation ~at ~id ~session ~origin ~url ~title ~opener =
+let new_record ~fresh ~generation ~at ~id ~session ~origin ~label ~url ~title ~opener =
   {
     id;
     session;
     enabled_session = None;
-    handle = fresh ();
+    handle = (if P.Origin.to_string origin = "agent" then Some (fresh ()) else None);
+    label;
     opened_at = at;
     url;
     title;
@@ -559,9 +365,6 @@ let new_record ~fresh ~generation ~at ~id ~session ~origin ~url ~title ~opener =
     reading = Reading.create ();
   }
 
-(* own-c0cl own-ehqa: a target Chrome reports from outside the control protocol enters the
-   registry here, with the origin and owner [Discovery.born] gives it: the tab that opened
-   it when the ledger knows that tab, and a human's unowned tab otherwise. *)
 let adopt ~fresh ~tombstone_s ~generation ~at ledger ~id ~session
     (info : Discovery.target) =
   let opener_entry =
@@ -569,21 +372,15 @@ let adopt ~fresh ~tombstone_s ~generation ~at ledger ~id ~session
         Option.bind (Keys.find_opt opener ledger.targets) (fun k ->
             Keys.find_opt k ledger.entries))
   in
-  let creator =
-    Discovery.born
-      (Option.map
-         (fun entry ->
-           Discovery.{ origin = entry.tab.origin; owner = owner_of entry.owner_state })
-         opener_entry)
-  in
   let tab =
-    new_record ~fresh ~generation ~at ~id ~session ~origin:creator.origin
+    new_record ~fresh ~generation ~at ~id ~session
+      ~origin:(enum P.Origin.of_string "human")
+      ~label:None
       ~url:(Option.value ~default:"about:blank" info.url)
       ~title:(Option.value ~default:"" info.title)
       ~opener:info.opener
   in
-  let state = match creator.owner with Some owner -> Owned owner | None -> Unowned in
-  let ledger, entry = register_entry ~tombstone_s ~at ledger tab state in
+  let ledger, entry = register_entry ~tombstone_s ~at ledger tab in
   (ledger, (entry, Option.map (fun opener -> opener.tab) opener_entry))
 
 (* Targets Chrome reported while Leash was creating one of its own: the tab it created —
@@ -607,117 +404,96 @@ let flush_pending ~fresh ~tombstone_s ~generation ~at ledger =
    answered with the next ledger and what the caller needs. A refusal is an [Error] and
    leaves the ledger as it was (^nactor-7qi7). It never suspends. *)
 let fold ~fresh ~logger ~tombstone_s ~generation ledger request =
-  let authorized = authorized ~logger ~tombstone_s ledger in
+  let authorized = authorized ~tombstone_s ledger in
   match request with
-  | Locate { access; force; caller; handle; at } -> (
-      match authorized ~access ~force ~caller ~at handle with
-      | Error error -> refused error
+  | Locate { access; handle; at } -> (
+      match authorized ~access ~at handle with
+      | Error e -> refused e
       | Ok entry -> Ok (with_entry ledger entry, Entry entry))
-  | Claim { caller; handle; at } -> (
-      (* own-jua9 own-hslp: claiming takes a tab nobody owns for the caller, and the
-         unclaimed clock stops when somebody takes it. *)
-      match authorized ~access:Claim ~force:false ~caller ~at handle with
-      | Error error -> refused error
-      | Ok entry ->
-          let entry = { entry with owner_state = Owned caller; unowned_since = None } in
-          Ok (with_entry ledger entry, Entry entry))
-  | Release { caller; force; handle; at } -> (
-      match authorized ~access:Release ~force ~caller ~at handle with
-      | Error error -> refused error
-      | Ok entry ->
-          (* own-hslp: the unclaimed clock starts when a caller lets the tab go.
-             own-0pnk hand-lz3p: a release that reaches a tab the human holds — only
-             [--force] can; a plain one is [with-human] — ends the handoff there and then:
-             the waiting request answers [not-owner] and the record leaves with the hold,
-             so a later [resume] is [no-handoff]. *)
-          Option.iter (fun waiting -> settle waiting (Ended (unowned ()))) entry.handoff;
-          let entry =
-            { entry with owner_state = Unowned; unowned_since = Some at; handoff = None }
-          in
-          Ok (with_entry ledger entry, Entry entry))
-  | Hand_over { caller; reason; handle; at } -> (
-      match authorized ~access:Act ~force:false ~caller ~at handle with
-      | Error error -> refused error
-      | Ok entry ->
-          let entry = handed_over entry ~caller ~reason in
-          Ok (with_entry ledger entry, Entry entry))
-  | Hand_over_held { caller; reason; handle; at } -> (
-      match Keys.find_opt (key handle) ledger.entries with
-      | None ->
-          refused (refusal_for_gone ~tombstone_s ledger ~force:false ~caller ~at handle)
-      | Some entry ->
-          let entry = handed_over entry ~caller ~reason in
-          Ok (with_entry ledger entry, Entry entry))
-  | Resume { caller; handle; at } -> (
-      match authorized ~access:Resume ~force:false ~caller ~at handle with
-      | Error error -> refused error
-      | Ok entry -> (
-          match (entry.owner_state, entry.handoff) with
-          | With_human owner, Some waiting ->
-              (* hand-0sja own-ay3s: the resume resets the tab's idle clock, so the human's
-                 work does not expire the agent's tab a moment later. *)
-              let entry =
+  | Take { id; at } -> (
+      match Keys.find_opt id ledger.targets with
+      | None -> refused (error "no-match" "the tab disappeared before take")
+      | Some old -> (
+          match Keys.find_opt old ledger.entries with
+          | None -> refused (error "no-match" "the tab disappeared before take")
+          | Some entry when entry.with_human -> refused (held_by_human ())
+          | Some entry when entry.tab.handle <> None ->
+              refused
+                (error "taken"
+                   "the tab already has a live handle; ask the holder for the handle")
+          | Some entry ->
+              let h = fresh () in
+              entry.tab.handle <- Some h;
+              entry.tab.origin <- enum P.Origin.of_string "agent";
+              let entry = { entry with last_activity = at } in
+              let ledger =
                 {
-                  entry with
-                  owner_state = Owned owner;
-                  unowned_since = None;
-                  last_activity = at;
-                  handoff = None;
+                  ledger with
+                  entries = Keys.remove old ledger.entries;
+                  targets = Keys.add id (key h) ledger.targets;
                 }
               in
+              Ox_observability.Logger.info logger
+                ~fields:
+                  [
+                    ("url", Ox_observability.Logger.String entry.tab.url);
+                    ("at", Ox_observability.Logger.Float at);
+                  ]
+                "tab taken";
+              Ok (with_entry ledger entry, Entry entry)))
+  | Hand_over { reason; handle; at } | Hand_over_held { reason; handle; at } -> (
+      match authorized ~access:Act ~at handle with
+      | Error e -> refused e
+      | Ok entry ->
+          let entry = handed_over entry ~reason in
+          Ok (with_entry ledger entry, Entry entry))
+  | Resume { handle; at } -> (
+      match authorized ~access:Resume ~at handle with
+      | Error e -> refused e
+      | Ok entry -> (
+          match entry.handoff with
+          | None -> refused (nothing_waiting ())
+          | Some waiting ->
+              let entry =
+                { entry with with_human = false; handoff = None; last_activity = at }
+              in
               settle waiting Resumed;
-              Ok (with_entry ledger entry, Entry entry)
-          | _ -> refused (nothing_waiting ())))
-  | Restore { handle; waiting } -> (
-      (* hand-lz3p hand-lmd5: an ending only cleans up after the handoff it installed
-         (compared physically), never after the one that replaced it. *)
+              Ok (with_entry ledger entry, Entry entry)))
+  | Restore { handle; waiting; at } -> (
       match Keys.find_opt (key handle) ledger.entries with
       | Some ({ handoff = Some current; _ } as entry) when current == waiting ->
-          let owner_state =
-            match entry.owner_state with
-            | With_human owner -> Owned owner
-            | (Unowned | Owned _) as state -> state
-          in
-          Ok (with_entry ledger { entry with handoff = None; owner_state }, Nothing)
+          Ok
+            ( with_entry ledger
+                { entry with handoff = None; with_human = false; last_activity = at },
+              Nothing )
       | _ -> Ok (ledger, Nothing))
-  | Touch { handle; owner; at } -> (
-      match Keys.find_opt (key handle) ledger.entries with
-      | Some ({ owner_state = Owned holder; _ } as entry) when holder = owner ->
-          Ok (with_entry ledger { entry with last_activity = at }, Nothing)
-      | _ -> Ok (ledger, Nothing))
-  | Release_idle { handle; at } -> (
-      match Keys.find_opt (key handle) ledger.entries with
-      | Some ({ owner_state = Owned _; _ } as entry) ->
-          let entry = { entry with owner_state = Unowned; unowned_since = Some at } in
-          Ok (with_entry ledger entry, Entry entry)
-      | _ -> Ok (ledger, Nothing))
-  | Register { id; session; origin; state; url; title; opener; at } ->
+  | Touch { handle; at } -> (
+      match authorized ~access:Act ~at handle with
+      | Ok entry -> Ok (with_entry ledger entry, Entry entry)
+      | Error _ -> Ok (ledger, Nothing))
+  | Register { id; session; origin; label; url; title; opener; at } ->
       let tab =
-        new_record ~fresh ~generation:(generation ()) ~at ~id ~session ~origin ~url ~title
-          ~opener
+        new_record ~fresh ~generation:(generation ()) ~at ~id ~session ~origin ~label ~url
+          ~title ~opener
       in
-      let ledger, entry = register_entry ~tombstone_s ~at ledger tab state in
+      let ledger, entry = register_entry ~tombstone_s ~at ledger tab in
       Ok (ledger, Entry entry)
-  | Disappear { handle; disposition; at } -> (
-      match Keys.find_opt (key handle) ledger.entries with
+  | Disappear { key = k; disposition; at } -> (
+      match Keys.find_opt k ledger.entries with
       | None -> Ok (ledger, Nothing)
       | Some entry ->
-          (* hand-yytf: a tab that leaves the registry while a handoff is waiting on it
-             ends the handoff with the disposition that closed it — a browser loss is
-             [tab-gone] with [browser_lost] — rather than leaving the request blocked on a
-             page that is gone. *)
-          Option.iter
-            (fun waiting -> settle waiting (Ended (P.tab_gone disposition)))
-            entry.handoff;
+          Option.iter (fun w -> settle w (Ended (P.tab_gone disposition))) entry.handoff;
+          let tombs =
+            match entry.tab.handle with
+            | None -> ledger.tombs
+            | Some h -> Keys.add (key h) { disposition; at } ledger.tombs
+          in
           let ledger =
             {
               ledger with
-              entries = Keys.remove (key handle) ledger.entries;
+              entries = Keys.remove k ledger.entries;
               targets = Keys.remove entry.tab.id ledger.targets;
-              tombs =
-                Keys.add (key handle)
-                  { state = entry.owner_state; disposition; at }
-                  ledger.tombs;
+              tombs;
             }
           in
           Ok (prune ~tombstone_s ~at ledger, Gone entry))
@@ -730,13 +506,6 @@ let fold ~fresh ~logger ~tombstone_s ~generation ledger request =
         in
         Ok (ledger, Adopted adopted)
   | Discover { session; info; at } -> (
-      (* own-c0cl own-ehqa: the one road a target Chrome reports from outside the control
-         protocol takes into the registry. A known tab is the caller's to update — with the
-         session it was attached under, once, and the page's url and title — and never
-         another origin or owner: those are what the tab was born with. A target Leash is
-         creating is not a discovery: it waits in [pending] until the creation that owns it
-         has registered its tab, so an agent's own tab never enters as a human's
-         (own-6ndc). *)
       match Keys.find_opt info.id ledger.targets with
       | Some k -> (
           match Keys.find_opt k ledger.entries with
@@ -773,66 +542,51 @@ let call t request =
 let call_protected t request = Eio.Cancel.protect (fun () -> call t request)
 let transition t request = Result.map entry_of_answer (call t request)
 
-let info_of t (entry : entry) : P.tab_info =
-  let tab = entry.tab in
+let listing_of t (entry : entry) : P.tab_listing =
   {
-    tab = tab.handle;
-    url = tab.url;
-    title = tab.title;
-    origin = tab.origin;
-    state = enum P.State.of_string (state_name entry.owner_state);
-    owner = owner_of entry.owner_state;
-    generation = tab.generation;
-    dialog = tab.dialog;
-    expires = expires t entry;
-    (* hand-r4t1: why this tab is waiting on the human, which is what [list --all] shows
-       so a human who stepped away can catch up. *)
-    reason = Option.map (fun (waiting : waiting) -> waiting.reason) entry.handoff;
+    label = entry.tab.label;
+    url = entry.tab.url;
+    title = entry.tab.title;
+    origin = entry.tab.origin;
+    age_s = max 0 (int_of_float (now t -. entry.tab.opened_at));
+    idle_s = max 0 (int_of_float (now t -. entry.last_activity));
+    closes_in_s = closes_in_s t entry;
+    with_human = entry.with_human;
+    reason = Option.map (fun (w : waiting) -> w.reason) entry.handoff;
+  }
+
+let info_of t (entry : entry) : P.tab_info =
+  let i = listing_of t entry in
+  {
+    tab = credential entry.tab;
+    label = i.label;
+    url = i.url;
+    title = i.title;
+    origin = i.origin;
+    age_s = i.age_s;
+    idle_s = i.idle_s;
+    closes_in_s = i.closes_in_s;
+    with_human = i.with_human;
+    reason = i.reason;
+    generation = entry.tab.generation;
+    dialog = entry.tab.dialog;
     loaded = None;
   }
 
-(* The entry as the ledger has it now. A tab that already left is answered from its
-   tombstone, so a late reader still names the state it left in. *)
 let entry_of t (tab : tab) : entry =
-  let ledger = snapshot t in
-  match Keys.find_opt (key tab.handle) ledger.entries with
+  match Keys.find_opt (ledger_key tab) (snapshot t).entries with
   | Some entry -> entry
-  | None ->
-      let owner_state =
-        match Keys.find_opt (key tab.handle) ledger.tombs with
-        | Some tomb -> tomb.state
-        | None -> Unowned
-      in
-      { tab; owner_state; last_activity = now t; unowned_since = None; handoff = None }
+  | None -> { tab; with_human = false; last_activity = now t; handoff = None }
 
 let info t tab = info_of t (entry_of t tab)
+let locate_entry t ~access handle = transition t (Locate { access; handle; at = now t })
+let locate t ~access handle = Result.map (fun e -> e.tab) (locate_entry t ~access handle)
 
-(* own-pmr7 own-teh1: every command that names a tab resolves it here. *)
-let locate_entry t ~access ?(force = false) ~owner handle =
-  transition t (Locate { access; force; caller = owner; handle; at = now t })
+let peek t ~access handle =
+  Result.map
+    (fun e -> e.tab)
+    (authorized ~tombstone_s:t.tombstone_s (snapshot t) ~access ~at:(now t) handle)
 
-let locate t ~access ?force ~owner handle =
-  Result.map (fun entry -> entry.tab) (locate_entry t ~access ?force ~owner handle)
-
-(* The refusal [locate] would give, and the tab it would return, read from the ledger as it
-   is now, without a message and without the idle-clock touch or the forced-override log.
-   It is what a command asks before it queues on the tab's lock, so a caller that will be
-   refused is never made to wait behind another's action; the authoritative check is
-   [locate] or the transition under the lock, which see the ledger as the actor has it. *)
-let peek t ~access ?(force = false) ~owner handle =
-  let ledger = snapshot t in
-  match Keys.find_opt (key handle) ledger.entries with
-  | Some entry -> (
-      match authorize ~force access ~caller:owner entry.owner_state with
-      | Ok () -> Ok entry.tab
-      | Error _ as refusal -> refusal)
-  | None ->
-      Error
-        (refusal_for_gone ~tombstone_s:t.tombstone_s ledger ~force ~caller:owner
-           ~at:(now t) handle)
-
-(* The tab a target id names, when the registry knows one: what a popup's [openerId]
-   resolves through, and which tab an acknowledgement is delivered to. *)
 let tab_of_target t id =
   let ledger = snapshot t in
   Option.bind (Keys.find_opt id ledger.targets) (fun k ->
@@ -840,7 +594,7 @@ let tab_of_target t id =
 
 (* A tab leaves the ledger, and whatever waited on its load is woken. *)
 let disappear t (tab : tab) disposition =
-  ignore (call_protected t (Disappear { handle = tab.handle; disposition; at = now t }));
+  ignore (call_protected t (Disappear { key = ledger_key tab; disposition; at = now t }));
   match tab.load_waiter with
   | None -> ()
   | Some waiter ->
@@ -870,7 +624,8 @@ let diagnose tab (failure : P.error) =
   else
     let entries =
       match
-        Reading.debug tab.reading { P.tab = tab.handle; limit = Some 20; clear = None }
+        Reading.debug tab.reading
+          { P.tab = credential tab; limit = Some 20; clear = None }
       with
       | Ok debug -> debug.entries
       | Error _ -> []
@@ -881,7 +636,7 @@ let diagnose tab (failure : P.error) =
         Some
           (obj
              [
-               ("tab", P.Handle.yojson_of_t tab.handle);
+               ("tab", P.Handle.yojson_of_t (credential tab));
                ("url", str tab.url);
                ("title", str tab.title);
                ("entries", `List (List.map P.yojson_of_debug_entry entries));
@@ -897,17 +652,11 @@ let ready t =
   | Error _ -> Error (unavailable ())
 
 (* own-6ndc: a tab Leash created, or one Chrome reported, enters the ledger here. *)
-let register t ~id ~session ~origin ~state ~url ~title ?opener () =
-  transition t (Register { id; session; origin; state; url; title; opener; at = now t })
+let register t ~id ~session ~origin ~label ~url ~title ?opener () =
+  transition t (Register { id; session; origin; label; url; title; opener; at = now t })
 
 let ( let* ) = Result.bind
 
-(* tab-0ohq tab-gjo0 own-teh1: a dispatch Chrome may never answer -- the trusted input
-   whose handler opens a popup, or the [eval] that runs [window.open] -- is settled by the
-   registry, and this is where its waiters live. [acknowledge] registers one before the
-   input is sent; [wake] resolves every waiter of the tab a report named; and the no-op
-   release {!Dispatch.make} leaves is replaced with the closure that drops the waiter once
-   the call has settled by its own reply, so a settled dispatch leaves nothing behind. *)
 let dialog_race (tab : tab) : Dialog_race.t =
   {
     current = (fun () -> tab.dialog);
@@ -960,10 +709,6 @@ let use_session t cdp tab session =
     enable "Network.enable" (obj []);
     enable "DOM.enable" (obj []))
 
-(* own-c0cl: a discovered target has no page session of its own until Chrome attaches to
-   it. The first command that needs the page takes the session Chrome attached under, or
-   attaches here, flattened as [new] does; either way that is where its domains are
-   enabled, and what makes a claimed human tab usable. *)
 let page_session t cdp tab =
   match tab.session with
   | Some session ->
@@ -1029,12 +774,6 @@ let wake_openers adopted =
 
 let adopted_of = function Adopted adopted -> adopted | _ -> []
 
-(* own-c0cl own-ehqa: the one road a target Chrome reports from outside the control
-   protocol takes into the registry, whether Chrome announced it, attached to it, or both
-   in that order; the ledger decides what it is ([fold]'s [Discover]). A known tab gains
-   what a later report adds — the session it was attached under, once, and the page's url
-   and title — and never another origin or owner: those are what the tab was born with,
-   which is what "origin never changes" means. *)
 let discover t ~session (info : Discovery.target) =
   match call t (Discover { session; info; at = now t }) with
   | Error _ -> ()
@@ -1116,7 +855,7 @@ let with_load_wait t cdp tab start =
       | `Dialog _ -> Ok false
       | `Value result -> result)
 
-let new_tab t ~owner ~url =
+let new_tab ?label t ~url =
   let target = Option.value ~default:"about:blank" url in
   if not (valid_url target) then Error (refusal ())
   else if open_tabs t >= t.cap then Error (error "tab-cap" "tab cap reached")
@@ -1150,7 +889,7 @@ let new_tab t ~owner ~url =
             let* { tab; _ } =
               register t ~id ~session:None
                 ~origin:(enum P.Origin.of_string "agent")
-                ~state:(Owned owner) ~url:"about:blank" ~title:"" ()
+                ~label ~url:"about:blank" ~title:"" ()
             in
             let* attached =
               cdp_call cdp "Target.attachToTarget"
@@ -1196,7 +935,7 @@ let new_tab t ~owner ~url =
 
 (* chrome-1yn9: the lock-free body, for a caller that already holds the tab's lock (the
    run's playbook switch, run-xh5d). *)
-let navigate_locked t ~owner ~tab url =
+let navigate_locked t ~tab url =
   let* cdp = ready t in
   let* session = page_session t cdp tab in
   (* chrome-1yn9: the tab is navigating to [url] now, so [url] is the fallback until
@@ -1216,62 +955,29 @@ let navigate_locked t ~owner ~tab url =
         | Some _ -> Error (error "internal" "browser navigation failed")
         | None -> Ok ())
   in
-  let* _ = locate t ~access:Act ~owner tab.handle in
+  let* _ = locate t ~access:Act (credential tab) in
   let* _ = ready t in
   Ok { (info t tab) with P.loaded = Some loaded }
 
-let navigate t ~owner handle url =
+let navigate t handle url =
   if not (valid_url url) then Error (refusal ())
   else
-    let* tab = peek t ~access:Act ~owner handle in
+    let* tab = peek t ~access:Act handle in
     with_tab_lock tab (fun () ->
-        let* tab = locate t ~access:Act ~owner handle in
-        navigate_locked t ~owner ~tab url)
+        let* tab = locate t ~access:Act handle in
+        navigate_locked t ~tab url)
 
-(* own-jua9: claiming takes a tab nobody owns for the caller, and leaves every other
-   command's authorization untouched. *)
-let claim t ~owner handle =
-  let* tab = peek t ~access:Claim ~owner handle in
-  with_tab_lock tab (fun () ->
-      let* { tab; _ } = transition t (Claim { caller = owner; handle; at = now t }) in
-      (* tab-a7l3: a claim is the moment a discovered tab stops being lazy. Discovery
-         itself only records the session Chrome reports (own-c0cl), so the page's event
-         domains are enabled here, in the session the tab is talked to in, and a [debug]
-         from the claim on covers what the page did while the agent held it. Best effort
-         like every enable: a browser that refuses leaves the tab claimed, and the first
-         command that needs the page reports its own failure. *)
-      (match ready t with Error _ -> () | Ok cdp -> ignore (page_session t cdp tab));
-      Ok (info t tab))
-
-(* own-2zs7 own-0pnk: release drops the caller's ownership without touching the page, so
-   another agent or the human can take it; [--force] does the same to a tab the caller
-   does not own, and to one the human is holding (ADR-0005). *)
-let release t ~owner ?(force = false) handle =
-  let* tab = locate t ~access:Release ~force ~owner handle in
-  (* own-0pnk hand-lz3p: a release that reaches a tab the human holds ends the handoff
-     there and then, under this lock, rather than leaving the agent to wait out its
-     deadline for a tab it no longer owns (the ledger's [Release] does that). *)
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-      let* _ = transition t (Release { caller = owner; force; handle; at = now t }) in
-      Ok P.{ released = true })
-
-(* own-7pzw own-0pnk: [close] is idempotent for the caller that closed the tab, and
-   [--force] closes anyone's — including the tab the human holds — because an agent that
-   died without releasing is why the flag exists. A close that reaches a held tab ends
-   the handoff with it: [disappear] wakes the waiting request with [tab-gone] and the
-   disposition that closed it, so nothing waits on a page that is gone (hand-lz3p). *)
-let close t ~owner ?(force = false) handle =
+let close t handle =
   let k = key handle in
   match Keys.find_opt k (snapshot t).tombs with
   | Some tomb
-    when P.Disposition.to_string tomb.disposition = "closed_by_owner"
-         && (force || owner_of tomb.state = Some owner)
+    when P.Disposition.to_string tomb.disposition = "closed_by_handle"
          && now t -. tomb.at < float t.tombstone_s ->
       Ok P.{ closed = true }
   | _ ->
-      let* tab = peek t ~access:Close ~force ~owner handle in
+      let* tab = peek t ~access:Close handle in
       with_tab_lock tab (fun () ->
-          let* tab = locate t ~access:Close ~force ~owner handle in
+          let* tab = locate t ~access:Close handle in
           let* cdp = ready t in
           let* session = page_session t cdp tab in
           let close_target () =
@@ -1292,7 +998,7 @@ let close t ~owner ?(force = false) handle =
             | `Dialog _ ->
                 Error (error "dialog-open" "answer the dialog before closing the tab")
           in
-          disappear t tab (disposition "closed_by_owner");
+          disappear t tab (disposition "closed_by_handle");
           Ok P.{ closed = true })
 
 (* hand-lmd5: the deadline a handoff runs on — the caller's [timeout_s], fifteen minutes
@@ -1303,62 +1009,41 @@ let handoff_timeout = function
   | Some seconds when seconds > 0 -> Ox.Duration.seconds seconds
   | Some _ | None -> Ox.Duration.minutes 15
 
-(* hand-nisr own-pmr7 hand-lz3p: the state transition a handoff is. It lands in the
-   registry here because [With_human] is part of the owner state and the [with-human]
-   refusal has to be reachable to be tested: the tab moves to [With_human] holding the
-   reason the human is shown and the promise the blocked request awaits, and from that
-   moment every command is refused, the owner's own included, until [resume]. *)
 (* hand-len8 hand-nisr: the transition itself, for a caller that already holds the tab's
    lock — which the run does for its whole duration (run-d82w) — and for the command
    below. *)
-let begin_handoff_locked t ~owner ~reason tab =
+let begin_handoff_locked t ~reason tab =
   let* entry =
-    transition t
-      (Hand_over_held { caller = owner; reason; handle = tab.handle; at = now t })
+    transition t (Hand_over_held { reason; handle = credential tab; at = now t })
   in
   match entry.handoff with
   | Some waiting -> Ok (entry, waiting)
   | None -> Error (error "internal" "a handoff was not installed")
 
-let begin_handoff t ~owner ~reason handle =
-  let* tab = peek t ~access:Act ~owner handle in
+let begin_handoff t ~reason handle =
+  let* tab = peek t ~access:Act handle in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-      let* entry =
-        transition t (Hand_over { caller = owner; reason; handle; at = now t })
-      in
+      let* entry = transition t (Hand_over { reason; handle; at = now t }) in
       match entry.handoff with
       | Some waiting -> Ok (entry, waiting)
       | None -> Error (error "internal" "a handoff was not installed"))
 
-(* hand-nisr hand-lz3p: the transition without its wait, which is what [handoff] is built
-   from and what a caller that only needs the state — the authorization matrix of
-   ADR-0005, the suspended handoff a test resumes later — drives directly. *)
-let hand_over t ~owner ~reason handle =
-  let* entry, _ = begin_handoff t ~owner ~reason handle in
+let hand_over t ~reason handle =
+  let* entry, _ = begin_handoff t ~reason handle in
   Ok (info_of t entry)
 
-(* hand-0sja hand-szz7: the human's answer, from any terminal — the notification action
-   and [leash resume <tab>] arrive here as the same request. Whoever asks, the tab goes
-   back to the owner it was handed off from, which is why [Resume] is the one command
-   anybody may send and why a tab nobody is waiting on is [no-handoff] rather than a
-   refusal about ownership. *)
-let resume t ~owner handle =
-  let* tab = peek t ~access:Resume ~owner handle in
+let resume t handle =
+  let* tab = peek t ~access:Resume handle in
   Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
       (* hand-0sja own-ay3s: the resume resets the tab's idle clock, so the human's work
          does not expire the agent's tab a moment later. *)
-      let* _ = transition t (Resume { caller = owner; handle; at = now t }) in
+      let* _ = transition t (Resume { handle; at = now t }) in
       Ok P.{ resumed = true })
 
 (* hand-04rb: every human-facing step a handoff waits on is bounded by five seconds — the
    browser call that raises the view here, and the window lookup and focus command inside
    {!Desktop} — so a desktop that has stopped answering cannot hold the handler. *)
 let step_deadline = Ox.Duration.seconds 5
-
-(* hand-0sja: the notification's action return is the human resuming, from a terminal that
-   is not the owner's, so it arrives as the same request a person types. *)
-let human_owner =
-  match P.Owner.of_string "human" with Ok owner -> owner | Error _ -> assert false
 
 (* hand-04rb hand-phof hand-rg9h: the human-facing side of one handoff, best effort by
    contract. The tab is already [With_human] when this runs, every step that fails becomes
@@ -1374,7 +1059,9 @@ let human_owner =
      the tab going away. Its Done action is the human's [resume] (hand-0sja); one that
      arrives after the handoff already ended is logged, not retried. *)
 let announce t ~sw ~tab ~reason ~warn =
-  let context = Desktop.{ tab = tab.handle; reason; url = tab.url; title = tab.title } in
+  let context =
+    Desktop.{ tab = credential tab; reason; url = tab.url; title = tab.title }
+  in
   let guarded step f =
     match
       try f () with
@@ -1405,38 +1092,20 @@ let announce t ~sw ~tab ~reason ~warn =
   Eio.Fiber.fork_daemon ~sw (fun () ->
       guarded "notify" (fun () ->
           Desktop.notify t.desktop ~sw context ~on_done:(fun () ->
-              match resume t ~owner:human_owner tab.handle with
+              match resume t (credential tab) with
               | Ok _ -> ()
               | Error error ->
                   Ox_observability.Logger.info t.logger
-                    ~fields:[ ("tab", Ox_observability.Logger.String (key tab.handle)) ]
+                    ~fields:[ ("url", Ox_observability.Logger.String tab.url) ]
                     ("the notification answered a handoff that had already ended: "
                    ^ error.P.message)));
       `Stop_daemon)
 
-(* hand-lz3p hand-lmd5 hand-yytf hand-szz7: the wire path into [With_human], and the one
-   request that blocks. It hands the tab over, then waits on the promise [resume] resolves
-   while the deadline runs; whichever ending comes first decides the reply:
-
-   - [resume] (hand-lz3p hand-0sja) hands the tab back to its owner and answers with the
-     page's url and title, which is what the agent re-observes from;
-   - the deadline (hand-lmd5) cancels the wait and the tab is the owner's again;
-   - the tab's disappearance (hand-yytf) wakes the wait with the disposition that closed
-     it, [browser_lost] for a browser loss;
-   - the client going away cancels this handler, which is the same restore as the
-     deadline: a disconnected agent does not leave the tab stranded with the human.
-
-   Every path but a resume gives the tab back to the owner it was handed off from and
-   drops the record, so a later [resume] is [no-handoff] rather than a second resume.
-
-   hand-04rb hand-phof hand-rg9h: the human-facing steps run on a switch of their own
-   between the transition and the wait, so the notification is stopped when this request
-   ends and the reply says what did not work. *)
-let handoff t ~owner ~reason ~timeout_s handle =
+let handoff t ~reason ~timeout_s handle =
   (* hand-lmd5: the deadline counts from the request, not from the moment the ledger's
      answer reaches this fiber. *)
   let started = now t in
-  let* { tab; _ }, waiting = begin_handoff t ~owner ~reason handle in
+  let* { tab; _ }, waiting = begin_handoff t ~reason handle in
   let warnings = ref [] in
   let warn step message =
     let warning = step ^ ": " ^ message in
@@ -1444,7 +1113,7 @@ let handoff t ~owner ~reason ~timeout_s handle =
     Ox_observability.Logger.warn t.logger
       ~fields:
         [
-          ("tab", Ox_observability.Logger.String (key tab.handle));
+          ("url", Ox_observability.Logger.String tab.url);
           ("reason", Ox_observability.Logger.String reason);
         ]
       ("handoff warning: " ^ warning)
@@ -1455,7 +1124,7 @@ let handoff t ~owner ~reason ~timeout_s handle =
        on a lock it will never get. *)
     Eio.Cancel.protect (fun () ->
         Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-            ignore (call t (Restore { handle = tab.handle; waiting }))))
+            ignore (call t (Restore { handle = credential tab; waiting; at = now t }))))
   in
   let warnings_json () =
     match List.rev !warnings with
@@ -1498,90 +1167,99 @@ let handoff t ~owner ~reason ~timeout_s handle =
             ignore (t.await_handoff left waiting.promise);
           answer ()))
 
-(* own-82jd: without [--all] a caller sees its own tabs — the ones it owns and the one the
-   human is holding for it — and nothing of another agent's. *)
-let list t ~owner ~all =
-  let tabs =
-    Keys.fold
-      (fun _ (entry : entry) acc ->
-        if all || owner_of entry.owner_state = Some owner then info_of t entry :: acc
-        else acc)
-      (snapshot t).entries []
-  in
-  P.
-    {
-      tabs =
-        List.sort
-          (fun (a : P.tab_info) (b : P.tab_info) ->
-            String.compare (key a.tab) (key b.tab))
-          tabs;
-    }
-
-(* ---------- Expiry (ADR-0005) ---------- *)
-
-let idleness_of t (entry : entry) : idleness =
-  let at = now t in
+(* hand-x3hi: list is for finding. Every live tab, never a handle. *)
+let list t =
   {
-    handle = entry.tab.handle;
-    origin = entry.tab.origin;
-    owner_state = entry.owner_state;
-    idle_for_s = at -. entry.last_activity;
-    unowned_for_s = Option.map (fun since -> at -. since) entry.unowned_since;
+    P.tabs =
+      List.map (listing_of t)
+        (live_entries t |> List.sort (fun a b -> String.compare a.tab.id b.tab.id));
   }
 
-let idleness t : idleness list =
-  Keys.fold (fun _ entry acc -> idleness_of t entry :: acc) (snapshot t).entries []
-  |> List.sort (fun (a : idleness) (b : idleness) ->
-      String.compare (key a.handle) (key b.handle))
-
-(* own-uo77 own-hslp own-2zpi own-nbwk: one expiry pass. Every decision is taken and
-   applied with the tab's own lock held, so a claim or an action that lands while the
-   sweep runs is not overrun: [Release_idle] only sets an owned tab unowned (the ledger
-   checks the state again when it applies it), and [Close_idle] only closes an unowned
-   tab of agent origin, with disposition [closed_by_ttl]. The handles are collected before
-   the first decision because closing suspends. *)
-let sweep t ~decide =
-  let handles =
-    Keys.fold
-      (fun _ (entry : entry) acc -> entry.tab.handle :: acc)
-      (snapshot t).entries []
-    |> List.sort (fun a b -> String.compare (key a) (key b))
+(* hand-okk8 hand-gjqy: finding a tab is not authorization to act on it. *)
+let take t (args : P.take_args) =
+  let selectors =
+    List.filter_map Fun.id
+      [
+        Option.map (fun v -> `Url v) args.url;
+        Option.map (fun v -> `Title v) args.title;
+        Option.map (fun v -> `Label v) args.label;
+      ]
   in
+  match selectors with
+  | [ selector ] -> (
+      let lower = String.lowercase_ascii in
+      let contains s sub =
+        let n = String.length sub in
+        let rec loop i =
+          i + n <= String.length s && (String.sub s i n = sub || loop (i + 1))
+        in
+        loop 0
+      in
+      let matches entry =
+        match selector with
+        | `Url v -> String.starts_with ~prefix:(lower v) (lower entry.tab.url)
+        | `Title v -> contains (lower entry.tab.title) (lower v)
+        | `Label v ->
+            Option.fold ~none:false ~some:(fun l -> lower l = lower v) entry.tab.label
+      in
+      match List.filter matches (live_entries t) with
+      | [] -> Error (error "no-match" "no tab matches the selector")
+      | [ entry ] ->
+          Eio.Mutex.use_rw ~protect:true entry.tab.lock (fun () ->
+              Result.map (info_of t)
+                (transition t (Take { id = entry.tab.id; at = now t })))
+      | entries ->
+          Error
+            (error "ambiguous" "several tabs match; narrow the selector"
+               ~detail:
+                 (obj
+                    [
+                      ( "matches",
+                        `List
+                          (List.map
+                             (fun e -> P.yojson_of_tab_listing (listing_of t e))
+                             entries) );
+                    ])))
+  | _ -> Error (error "usage" "take requires exactly one of --url, --title or --label")
+
+let idleness_of t (entry : entry) : idleness =
+  {
+    handle = credential entry.tab;
+    origin = entry.tab.origin;
+    with_human = entry.with_human;
+    idle_for_s = now t -. entry.last_activity;
+  }
+
+let idleness t =
+  live_entries t
+  |> List.filter (fun e -> e.tab.handle <> None)
+  |> List.map (idleness_of t)
+
+(* hand-0ibq hand-ihcg: recheck under the action lock. A long-running action cannot be swept. *)
+let sweep t ~decide =
   List.filter_map
-    (fun handle ->
-      match Keys.find_opt (key handle) (snapshot t).entries with
-      | None -> None
-      | Some { tab; _ } ->
-          with_tab_lock tab (fun () ->
-              match Keys.find_opt (key handle) (snapshot t).entries with
-              | None -> None
-              | Some entry -> (
-                  let step = decide (idleness_of t entry) in
-                  match step with
-                  | Keep_idle -> None
-                  | Release_idle -> (
-                      match entry.owner_state with
-                      | Owned _ -> (
-                          match call t (Release_idle { handle; at = now t }) with
-                          | Ok (Entry _) -> Some (handle, step)
-                          | Ok _ | Error _ -> None)
-                      | Unowned | With_human _ -> None)
-                  | Close_idle -> (
-                      match entry.owner_state with
-                      | Unowned when P.Origin.to_string tab.origin = "agent" -> (
-                          match ready t with
-                          | Error _ -> None
-                          | Ok cdp -> (
-                              match
-                                cdp_call cdp "Target.closeTarget"
-                                  (obj [ ("targetId", str tab.id) ])
-                              with
-                              | Error _ -> None
-                              | Ok _ ->
-                                  disappear t tab (disposition "closed_by_ttl");
-                                  Some (handle, step)))
-                      | Unowned | Owned _ | With_human _ -> None))))
-    handles
+    (fun entry ->
+      if entry.tab.handle = None then None
+      else
+        let h = credential entry.tab in
+        with_tab_lock entry.tab (fun () ->
+            match Keys.find_opt (key h) (snapshot t).entries with
+            | Some entry
+              when (not entry.with_human) && P.Origin.to_string entry.tab.origin = "agent"
+              -> (
+                match (decide (idleness_of t entry), ready t) with
+                | Close_idle, Ok cdp -> (
+                    match
+                      cdp_call cdp "Target.closeTarget"
+                        (obj [ ("targetId", str entry.tab.id) ])
+                    with
+                    | Ok _ ->
+                        disappear t entry.tab (disposition "closed_by_idle");
+                        Some (h, Close_idle)
+                    | Error _ -> None)
+                | _ -> None)
+            | _ -> None))
+    (live_entries t)
 
 (* The two reads a snapshot's currency rests on, shared by `snap` and by `wait
    --changed-since` (hard-sckn): the main frame's loader id, and the document's mutation
@@ -1785,7 +1463,7 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
       P.
         {
           snapshot;
-          tab = tab.handle;
+          tab = credential tab;
           url = tab.url;
           title = tab.title;
           rows = shown;
@@ -1798,10 +1476,10 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
           dialog = tab.dialog;
         }
 
-let snap t ~owner (args : P.snap_args) =
-  let* tab = peek t ~access:Act ~owner args.tab in
+let snap t (args : P.snap_args) =
+  let* tab = peek t ~access:Act args.tab in
   with_tab_lock tab (fun () ->
-      let* tab = locate t ~access:Act ~owner args.tab in
+      let* tab = locate t ~access:Act args.tab in
       snap_locked t tab args)
 
 (* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax:
@@ -1850,10 +1528,10 @@ let reading_browser t ~session tab cdp : Reading.browser =
         Ok Reading.{ loader; guard = Some (epoch, count) });
   }
 
-let with_reading t ~access ~owner handle f =
-  let* tab = peek t ~access ~owner handle in
+let with_reading t ~access handle f =
+  let* tab = peek t ~access handle in
   with_tab_lock tab (fun () ->
-      let* tab = locate t ~access ~owner handle in
+      let* tab = locate t ~access handle in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
       with_focus t tab (fun engage ->
@@ -1867,18 +1545,18 @@ let with_reading t ~access ~owner handle f =
                   browser.call meth params);
             }))
 
-let read_text t ~owner (args : P.text_args) =
-  with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.text browser args)
+let read_text t (args : P.text_args) =
+  with_reading t ~access:Act args.tab (fun _ browser -> Reading.text browser args)
 
-let eval t ~owner (args : P.eval_args) =
-  with_reading t ~access:Act ~owner args.tab (fun _ browser -> Reading.eval browser args)
+let eval t (args : P.eval_args) =
+  with_reading t ~access:Act args.tab (fun _ browser -> Reading.eval browser args)
 
-let shot t ~owner (args : P.shot_args) =
-  with_reading t ~access:Act ~owner args.tab (fun _ browser ->
+let shot t (args : P.shot_args) =
+  with_reading t ~access:Act args.tab (fun _ browser ->
       Reading.shot ~caps:t.caps browser args)
 
-let debug t ~owner (args : P.debug_args) =
-  let* tab = locate t ~access:Act ~owner args.tab in
+let debug t (args : P.debug_args) =
+  let* tab = locate t ~access:Act args.tab in
   Reading.debug tab.reading args
 
 (* hard-xg6y hard-ovbx hard-vq5s hard-ufb7: the request ring, cookies and storage are
@@ -1886,53 +1564,43 @@ let debug t ~owner (args : P.debug_args) =
    [drive] holds the tab is the point, and they change nothing a running action could
    trip over. Ownership is still checked, and the page session still comes from the
    registry. *)
-let with_reading_unlocked t ~owner handle f =
-  let* tab = locate t ~access:Act ~owner handle in
+let with_reading_unlocked t handle f =
+  let* tab = locate t ~access:Act handle in
   let* cdp = ready t in
   let* session = page_session t cdp tab in
   f tab (reading_browser t ~session tab cdp)
 
-let net t ~owner (args : P.net_args) =
-  let* tab = locate t ~access:Act ~owner args.tab in
+let net t (args : P.net_args) =
+  let* tab = locate t ~access:Act args.tab in
   Reading.net tab.reading args
 
-let net_body t ~owner (args : P.net_entry_args) =
-  with_reading_unlocked t ~owner args.tab (fun tab browser ->
+let net_body t (args : P.net_entry_args) =
+  with_reading_unlocked t args.tab (fun tab browser ->
       Reading.net_body browser tab.reading args)
 
-let net_request t ~owner (args : P.net_entry_args) =
-  with_reading_unlocked t ~owner args.tab (fun tab browser ->
+let net_request t (args : P.net_entry_args) =
+  with_reading_unlocked t args.tab (fun tab browser ->
       Reading.net_request browser tab.reading args)
 
-let cookies t ~owner (args : P.tab_args) =
-  with_reading_unlocked t ~owner args.tab (fun _ browser -> Reading.cookies browser)
+let cookies t (args : P.tab_args) =
+  with_reading_unlocked t args.tab (fun _ browser -> Reading.cookies browser)
 
-let storage t ~owner (args : P.storage_args) =
-  with_reading_unlocked t ~owner args.tab (fun _ browser -> Reading.storage browser args)
+let storage t (args : P.storage_args) =
+  with_reading_unlocked t args.tab (fun _ browser -> Reading.storage browser args)
 
-(* own-pmr7: answering a dialog is the owner's, exactly as acting is — a dialog is the
-   page asking the tab's owner, and a stranger answering it is the "stomping" ADR-0005
-   refuses. *)
-let dialog t ~owner (args : P.dialog_args) =
-  (* Do not take the tab action mutex: an in-flight action can itself be blocked
-     by a JavaScript dialog, and this command is the only way to release it. *)
-  let* tab = locate t ~access:Dialog ~owner args.tab in
+let dialog t (args : P.dialog_args) =
+  let* tab = locate t ~access:Dialog args.tab in
   let* cdp = ready t in
   let* session = page_session t cdp tab in
   Reading.dialog (reading_browser t ~session tab cdp) args
 
-let wait t ~owner (args : P.wait_args) =
-  let* tab = locate t ~access:Act ~owner args.tab in
+let wait t (args : P.wait_args) =
+  let* tab = locate t ~access:Act args.tab in
   let* cdp = ready t in
   let* session = page_session t cdp tab in
   let browser = reading_browser t ~session tab cdp in
-  (* hard-sr9v hard-b1na: a wait takes no lock of the tab's — an action on the same tab
-     runs beside it — and, being the owner's work in progress, keeps the tab from idling
-     out: a wait of an hour outlasts the idle clock's thirty minutes, which counts owner
-     activity. *)
-  let touch () =
-    Ox.Actor.tell t.ledger (Touch { handle = tab.handle; owner; at = now t })
-  in
+
+  let touch () = Ox.Actor.tell t.ledger (Touch { handle = credential tab; at = now t }) in
   Reading.wait
     {
       browser with
@@ -1947,7 +1615,7 @@ let wait t ~owner (args : P.wait_args) =
    tab-1lhx tab-8la3: the registry owns the tab's identity, its page session, and its
    lock; Actions owns revalidation, dispatch, and settlement. The lock is what makes one
    tab's actions run one at a time in arrival order while another tab's proceed. *)
-let action_view t ~session ~owner tab cdp : Actions.tab =
+let action_view t ~session tab cdp : Actions.tab =
   let observed = ref None in
   let opener_url = tab.url in
   let blank_url url = url = "" || url = "about:blank" in
@@ -1963,33 +1631,9 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
   {
     Actions.session;
     target = tab.id;
-    handle = tab.handle;
-    owner;
+    handle = credential tab;
     page = (fun () -> (tab.url, tab.title));
     refresh = watch_navigation t cdp tab;
-    popup =
-      (fun (info : P.tab_info) ->
-        let state =
-          if not (blank_url info.url) then "ready"
-          else
-            match Keys.find_opt (key info.tab) (snapshot t).entries with
-            | Some entry when now t -. entry.tab.opened_at < 1. -> "opening"
-            | _ -> "blank"
-        in
-        P.
-          {
-            tab = info.tab;
-            url = info.url;
-            title = info.title;
-            origin = info.origin;
-            state = enum Popup_state.of_string state;
-            owner = info.owner;
-            generation = info.generation;
-            dialog = info.dialog;
-            expires = info.expires;
-            reason = info.reason;
-            opener_url;
-          });
     snapshot = (fun () -> tab.snapshot);
     dom_snapshot = (fun () -> tab.dom_snapshot);
     dialog = (fun () -> tab.dialog);
@@ -1999,8 +1643,6 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
     all_tabs =
       (fun () ->
         let entries = (snapshot t).entries in
-        (* daily-c4cl: targetCreated can precede navigation. Refresh only newly
-           opened, caller-owned children before returning action metadata. *)
         (match !observed with
         | None -> observed := Some entries
         | Some before ->
@@ -2010,14 +1652,34 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
                   blank_url entry.tab.url
                   && (not (Keys.mem id before))
                   && entry.tab.opener = Some tab.id
-                  && (info_of t entry).owner = Some owner
                 then refresh_popup entry.tab)
               entries);
         Keys.fold
-          (fun _ (entry : entry) acc -> (info_of t entry, entry.tab.opener) :: acc)
-          entries []
-        |> List.sort (fun ((a : P.tab_info), _) ((b : P.tab_info), _) ->
-            String.compare (key a.tab) (key b.tab)));
+          (fun _ (entry : entry) acc ->
+            let i = listing_of t entry in
+            let p : P.popup_info =
+              {
+                tab = entry.tab.handle;
+                label = i.label;
+                url = i.url;
+                title = i.title;
+                origin = i.origin;
+                age_s = i.age_s;
+                idle_s = i.idle_s;
+                closes_in_s = i.closes_in_s;
+                with_human = i.with_human;
+                reason = i.reason;
+                generation = entry.tab.generation;
+                dialog = entry.tab.dialog;
+                opener_url;
+                state =
+                  enum P.Popup_state.of_string
+                    (if blank_url i.url then if i.age_s < 1 then "opening" else "blank"
+                     else "ready");
+              }
+            in
+            (p, entry.tab.id, entry.tab.opener) :: acc)
+          entries []);
   }
 
 (* field-swvb: a requested snapshot is taken after settlement, under the same lock,
@@ -2026,57 +1688,58 @@ let action_view t ~session ~owner tab cdp : Actions.tab =
 let attach_snap t tab ~snap ~match_ ~limit (result : P.action_result) =
   match snap with
   | Some true ->
-      let* fresh = snap_locked t tab { tab = tab.handle; match_; limit; offset = None } in
+      let* fresh =
+        snap_locked t tab { tab = credential tab; match_; limit; offset = None }
+      in
       Ok { result with snapshot = Some fresh }
   | _ -> Ok result
 
-let with_action ?(after = fun _tab result -> Ok result) t ~owner handle f =
-  let* tab = peek t ~access:Act ~owner handle in
+let with_action ?(after = fun _tab result -> Ok result) t handle f =
+  let* tab = peek t ~access:Act handle in
   with_tab_lock tab (fun () ->
-      let* tab = locate t ~access:Act ~owner handle in
+      let* tab = locate t ~access:Act handle in
       let* cdp = ready t in
       let* session = page_session t cdp tab in
       with_focus t tab (fun engage ->
           let* result =
-            f cdp { (action_view t ~session ~owner tab cdp) with Actions.engage }
+            f cdp { (action_view t ~session tab cdp) with Actions.engage }
             |> Result.map_error (diagnose tab)
           in
           after tab result))
 
-let click t ~owner (args : P.click_args) =
+let click t (args : P.click_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
-    t ~owner args.tab (fun cdp view -> Actions.click ~cdp view args)
+    t args.tab (fun cdp view -> Actions.click ~cdp view args)
 
-let fill t ~owner (args : P.fill_args) =
+let fill t (args : P.fill_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
-    t ~owner args.tab (fun cdp view -> Actions.fill ~cdp view args)
+    t args.tab (fun cdp view -> Actions.fill ~cdp view args)
 
-let press t ~owner (args : P.press_args) =
+let press t (args : P.press_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
-    t ~owner args.tab (fun cdp view -> Actions.press ~cdp view args)
+    t args.tab (fun cdp view -> Actions.press ~cdp view args)
 
-let select t ~owner (args : P.select_args) =
+let select t (args : P.select_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
-    t ~owner args.tab (fun cdp view -> Actions.select ~cdp view args)
+    t args.tab (fun cdp view -> Actions.select ~cdp view args)
 
-let scroll t ~owner (args : P.scroll_args) =
-  with_action t ~owner args.tab (fun cdp view -> Actions.scroll ~cdp view args)
+let scroll t (args : P.scroll_args) =
+  with_action t args.tab (fun cdp view -> Actions.scroll ~cdp view args)
 
-let upload t ~owner (args : P.upload_args) =
-  with_action t ~owner args.tab (fun cdp view ->
-      Actions.upload ~caps:t.caps ~cdp view args)
+let upload t (args : P.upload_args) =
+  with_action t args.tab (fun cdp view -> Actions.upload ~caps:t.caps ~cdp view args)
 
-let hover t ~owner (args : P.hover_args) =
+let hover t (args : P.hover_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
-    t ~owner args.tab (fun cdp view -> Actions.hover ~cdp view args)
+    t args.tab (fun cdp view -> Actions.hover ~cdp view args)
 
-let check t ~owner (args : P.click_args) =
+let check t (args : P.click_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
-    t ~owner args.tab (fun cdp view -> Actions.check ~cdp view args)
+    t args.tab (fun cdp view -> Actions.check ~cdp view args)
 
-let uncheck t ~owner (args : P.click_args) =
+let uncheck t (args : P.click_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
-    t ~owner args.tab (fun cdp view -> Actions.uncheck ~cdp view args)
+    t args.tab (fun cdp view -> Actions.uncheck ~cdp view args)
 
 type meter = {
   usage : (string, Yojson.Safe.t) Hashtbl.t;
@@ -2171,8 +1834,8 @@ let drive_locked ?recent ?(meter = meter ())
              ~detail:(obj [ ("code", str "client-unavailable") ])))
     ?(text_helper = fun () -> Text_helper.unavailable)
     ?(guard = fun (_ : P.snapshot) (_ : Jev_request.decision) -> None)
-    ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?reached t ~owner ~model
-    tab (args : P.drive_args) =
+    ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?reached t ~model tab
+    (args : P.drive_args) =
   (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
          drive's own deadline: the caller's remaining budget is what the model call is
          bounded by, so a slow provider cannot outlast the reply the client is waiting
@@ -2197,7 +1860,7 @@ let drive_locked ?recent ?(meter = meter ())
   let* cdp = ready t in
   let* session = page_session t cdp tab in
   with_focus t tab @@ fun engage ->
-  let view = { (action_view t ~session ~owner tab cdp) with Actions.engage } in
+  let view = { (action_view t ~session tab cdp) with Actions.engage } in
   let remembered = Hashtbl.create 8 in
   let remember (snapshot : P.snapshot) (read : Snapshot_source.operator_read) =
     let omitted_elements =
@@ -2406,11 +2069,11 @@ let drive_locked ?recent ?(meter = meter ())
 
 (* drive-8n2z: the public drive takes the tab's lock for the whole computation; the body
    above is what a caller that already holds it (the run's every step, run-d82w) uses. *)
-let drive ?decide ?text_helper ?meter ?recent t ~owner ~model (args : P.drive_args) =
-  let* tab = peek t ~access:Act ~owner args.tab in
+let drive ?decide ?text_helper ?meter ?recent t ~model (args : P.drive_args) =
+  let* tab = peek t ~access:Act args.tab in
   with_tab_lock tab (fun () ->
-      let* tab = locate t ~access:Act ~owner args.tab in
-      drive_locked ?decide ?text_helper ?meter ?recent t ~owner ~model tab args)
+      let* tab = locate t ~access:Act args.tab in
+      drive_locked ?decide ?text_helper ?meter ?recent t ~model tab args)
 
 (* L31 run-9ypy run-vj48 run-shgh run-fwl8, L32 run-m0r8: a mission over the installed
    playbooks, with the
@@ -2446,12 +2109,12 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable) ?discovery ?meter t ~owner ~tab
-    ?installed (args : P.run_args) =
+    ?(text_helper = fun () -> Text_helper.unavailable) ?discovery ?meter t ~tab ?installed
+    (args : P.run_args) =
   let handle = tab in
-  let* tab = peek t ~access:Act ~owner handle in
+  let* tab = peek t ~access:Act handle in
   with_tab_lock tab (fun () ->
-      let* tab = locate t ~access:Act ~owner handle in
+      let* tab = locate t ~access:Act handle in
       (* run-fwl8: a run starts from a state it can act in. Ownership and the human's hold
          are [locate]'s refusals; a dialog waiting to be answered is this one. *)
       match tab.dialog with
@@ -2624,7 +2287,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                 observe;
                 navigate =
                   (fun url ->
-                    let* _ = navigate_locked t ~owner ~tab url in
+                    let* _ = navigate_locked t ~tab url in
                     Ok ());
                 choose =
                   (fun question -> levels.Run.choose ~deadline:(remaining ()) question);
@@ -2669,7 +2332,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                              until ~start_url:start.snapshot.url page.snapshot
                                ~text:page.text)
                            request.Run.reached)
-                      t ~owner ~model tab
+                      t ~model tab
                       P.
                         {
                           tab = handle;
@@ -2708,7 +2371,7 @@ let run ?(levels = no_levels) ?(model = "unconfigured")
                         | Error why -> Error (error "internal" why)));
                 hand_off =
                   (fun ~reason ->
-                    let* entry, _ = begin_handoff_locked t ~owner ~reason tab in
+                    let* entry, _ = begin_handoff_locked t ~reason tab in
                     Ok (info_of t entry));
                 (* extr-8o1h extr-k40c: the only script text that reaches the page in a run
                    is a loaded playbook's, through {!Reading.script}. A script that threw,
@@ -2827,7 +2490,7 @@ let script_arguments = function
 
 let echo_limit = 1_048_576
 
-let playbook_test ?installed t ~owner (args : P.playbook_test_args) =
+let playbook_test ?installed t (args : P.playbook_test_args) =
   let* playbook, name =
     match String.split_on_char '/' args.script with
     | [ playbook; script ] when playbook <> "" && script <> "" -> Ok (playbook, script)
@@ -2843,7 +2506,7 @@ let playbook_test ?installed t ~owner (args : P.playbook_test_args) =
              (Printf.sprintf "playbook %s has no script %s" playbook name))
   in
   let* arguments = script_arguments args.args in
-  with_reading t ~access:Act ~owner args.tab (fun _ browser ->
+  with_reading t ~access:Act args.tab (fun _ browser ->
       let* ran = Reading.script browser script ~args:arguments in
       let value, truncated =
         if ran.Reading.bytes <= echo_limit then (ran.Reading.value, false)
@@ -2865,15 +2528,15 @@ let playbook_test ?installed t ~owner (args : P.playbook_test_args) =
 
 (* extr-lslp: every script of the playbook is compiled, never called, in a blank page of
    its own that the caller owns for the duration and that is closed after. *)
-let playbook_check ?installed t ~owner (args : P.playbook_check_args) =
+let playbook_check ?installed t (args : P.playbook_check_args) =
   let* book = find_playbook ~caps:t.caps ?installed args.playbook in
   match book.Playbook.scripts with
   | [] -> Ok P.{ playbook = args.playbook; scripts = [] }
   | scripts -> (
-      let* blank = new_tab t ~owner ~url:None in
-      let close () = Eio.Cancel.protect (fun () -> ignore (close t ~owner blank.P.tab)) in
+      let* blank = new_tab t ~url:None in
+      let close () = Eio.Cancel.protect (fun () -> ignore (close t blank.P.tab)) in
       match
-        with_reading t ~access:Act ~owner blank.P.tab (fun _ browser ->
+        with_reading t ~access:Act blank.P.tab (fun _ browser ->
             let rec go acc = function
               | [] -> Ok (List.rev acc)
               | (script : Playbook.script) :: rest -> (
@@ -2983,7 +2646,7 @@ let download_event t json method_ params =
                       path = None;
                     }
                   :: tab.downloads;
-                Hashtbl.replace t.downloads_by_guid id (key tab.handle)))
+                Hashtbl.replace t.downloads_by_guid id (key (credential tab))))
             target
       | _ -> ())
   | "Browser.downloadProgress" | "Page.downloadProgress" -> (
@@ -3021,8 +2684,8 @@ let download_event t json method_ params =
       | _ -> ())
   | _ -> ()
 
-let downloads t ~owner handle =
-  let* tab = locate t ~access:Act ~owner handle in
+let downloads t handle =
+  let* tab = locate t ~access:Act handle in
   Ok P.{ downloads = List.rev tab.downloads }
 
 let inspect t json =
@@ -3048,7 +2711,7 @@ let inspect t json =
   | Some "Target.targetDestroyed", Some params -> (
       (* own-teh1: a target that goes away without Leash closing it is gone externally. A
          tab Leash closed left the registry when it issued the close, so its tombstone
-         keeps closed_by_owner (or, with the TTL sweep, closed_by_ttl) and this report
+         keeps closed_by_handle (or, with the TTL sweep, closed_by_idle) and this report
          finds no live tab to rewrite. *)
       match Discovery.destroyed params with
       | Some id -> (
@@ -3127,7 +2790,7 @@ let inspect t json =
   | _ -> ()
 
 let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Ox.Duration.minutes 30)
-    ?(unclaimed = Ox.Duration.hours 1) (deps : 'clock deps) =
+    (deps : 'clock deps) =
   (* ^nactor-8z1n: the registry's bookkeeping is one actor's state, folded by [fold], for
      as long as the switch lives. A handler that raises fails the switch. *)
   let ledger =
@@ -3166,7 +2829,6 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Ox.Duration.minutes 30)
       (* own-vhqo: the two expiry durations are config; the ADR's defaults stand in when a
          caller does not name them, which is what a test registry gets. *)
       idle = Ox.Duration.to_seconds_float idle;
-      unclaimed = Ox.Duration.to_seconds_float unclaimed;
       started = Eio.Time.now deps.clock;
       ledger;
       stopping = false;

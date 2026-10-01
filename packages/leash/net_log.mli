@@ -1,14 +1,14 @@
 (** The per-tab request ring behind `net` (hard-xg6y hard-ovbx hard-vq5s).
 
     Chrome delivers network events per tab session, so every tab has a ring of its own and
-    the ring is owner-bound like every other tab command: it is reached only through the
+    the ring is handle-gated like every other tab command: it is reached only through the
     registry's authorization. It is fed by `Network.requestWillBeSent`,
     `requestWillBeSentExtraInfo`, `responseReceived`, `requestServedFromCache`,
     `loadingFinished` and `loadingFailed`, and holds metadata only — bodies and post data
     are fetched from Chrome on demand and never kept.
 
-    Everything in a ring is page data (URLs, headers). It is returned to the owner and
-    never becomes a log line. *)
+    Everything in a ring is page data (URLs, headers). It is returned to the handle holder
+    and never becomes a log line. *)
 
 type t
 

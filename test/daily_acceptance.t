@@ -1,7 +1,7 @@
 daily-c4cl / daily-9ggi: CLI acceptance fixes are proved against private files
 and a one-request socket peer, never the installed service or managed Chrome.
 
-  $ unset DSH_SESSION_ID LEASH_INSTALL_FIXTURE
+  $ unset LEASH_INSTALL_FIXTURE
   $ export XDG_CONFIG_HOME="$PWD/config" XDG_RUNTIME_DIR="$PWD/runtime" XDG_STATE_HOME="$PWD/state" HOME="$PWD/home"
   $ mkdir -p "$XDG_CONFIG_HOME" "$XDG_RUNTIME_DIR" "$XDG_STATE_HOME" "$HOME"
   $ tmp=$(mktemp -d /tmp/leash-daily-c4cl-XXXXXX)
@@ -24,7 +24,7 @@ all distinguish the same unreachable service states.
   $ mkdir -p "$XDG_CONFIG_HOME/leash/playbooks/example.test"
   $ printf '%s\n' '{"site":"example.test","entry":"https://example.test/","description":"private CLI fixture","pages":[],"procedures":[{"slug":"look","description":"Look at the page.","steps":[{"goal":"Look at the page."}],"expect":["no dialog is open"]}],"scripts":{"probe":{"file":"probe.js","description":"Read the page title."}}}' > "$XDG_CONFIG_HOME/leash/playbooks/example.test/playbook.json"
   $ printf '%s\n' '/** returns: {"title":"string"} */' 'return {title: document.title};' > "$XDG_CONFIG_HOME/leash/playbooks/example.test/probe.js"
-  $ client() { expected="$1"; shift; LEASH_INSTALL_FIXTURE="$tmp/service.fixture" leash "$@" --owner test --socket "$tmp/missing.sock" >out 2>err; code=$?; ./daily_cli_fixture.exe inspect "$expected" "$code" out err >/dev/null; }
+  $ client() { expected="$1"; shift; LEASH_INSTALL_FIXTURE="$tmp/service.fixture" leash "$@" --socket "$tmp/missing.sock" >out 2>err; code=$?; ./daily_cli_fixture.exe inspect "$expected" "$code" out err >/dev/null; }
   $ routes() { client "$1" status && client "$1" list && client "$1" net t_9xk && client "$1" playbook check example.test && printf '%s: all four client routes\n' "$1"; }
   $ printf 'load=not-found\nactive=inactive\nsub=dead\nbinary=absent\n' > "$tmp/service.fixture"; routes not-installed
   not-installed: all four client routes
@@ -37,10 +37,12 @@ all distinguish the same unreachable service states.
   $ printf 'load=loaded\nactive=active\nsub=running\nbinary=present\n' > "$tmp/service.fixture"; routes service-unreachable
   service-unreachable: all four client routes
 
-The local playbook list accepts a redundant owner without changing its output.
+hand-scaz / hand-w85z: a leftover caller flag is a parse failure, not an
+ignored option. This transcript deliberately tries the removed spelling.
 
-  $ leash playbook list >without-owner; leash playbook list --owner test >with-owner; cmp without-owner with-owner && printf 'local list accepts --owner\n'
-  local list accepts --owner
+  $ leash playbook list >listed 2>err
+  $ leash playbook list --owner gone >rejected 2>err; code=$?; test "$code" -eq 124 && test ! -s rejected && printf 'playbook list rejects a caller flag\n'
+  playbook list rejects a caller flag
 
 Configured nested roots drive install and status; explicit PATH still wins and
 automatic consent is not granted for a configured target.
@@ -56,7 +58,7 @@ automatic consent is not granted for a configured target.
   $ outcome installed "$root/leash" leash skill install --config "$tmp/config.toml" --force
   installed: one JSON outcome, empty stderr
   $ test -f "$root/leash/SKILL.md" && test ! -e "$HOME/.agents/skills/leash"
-  $ ./daily_cli_fixture.exe serve "$tmp/control.sock" success "$tmp/ready" & peer=$!; while test ! -f "$tmp/ready"; do :; done; leash status --owner test --config "$tmp/config.toml" --socket "$tmp/control.sock" >out 2>err; code=$?; wait "$peer"; test "$code" -eq 0 && ./daily_cli_fixture.exe status-skill current out err
+  $ ./daily_cli_fixture.exe serve "$tmp/control.sock" success "$tmp/ready" & peer=$!; while test ! -f "$tmp/ready"; do :; done; leash status --config "$tmp/config.toml" --socket "$tmp/control.sock" >out 2>err; code=$?; wait "$peer"; test "$code" -eq 0 && ./daily_cli_fixture.exe status-skill current out err
   status: skill current, running version and commit, service fields retained
   $ outcome planned-install "$HOME/explicit/leash" leash skill install "$HOME/explicit" --config "$tmp/config.toml" --dry-run
   planned-install: one JSON outcome, empty stderr

@@ -70,8 +70,8 @@ def playbook(name, base, scripts, files=()):
     return directory
 
 
-def cli(*argv, expect=0, owner='live-m9', service=True):
-    flags = ['--socket', SOCKET, '--owner', owner] if service else []
+def cli(*argv, expect=0, service=True):
+    flags = ['--socket', SOCKET] if service else []
     run = subprocess.run([LEASH, *argv, *flags], capture_output=True, text=True, timeout=120)
     assert run.returncode == expect, f"leash {' '.join(argv)}: exit {run.returncode}, wanted {expect}: {run.stdout} {run.stderr}"
     return json.loads(run.stdout) if run.stdout.strip() else None

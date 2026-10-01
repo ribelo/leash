@@ -20,11 +20,10 @@ decodes to the defaults it documents.
 | `chrome.profile_dir` | `"$XDG_DATA_HOME/leash/profile"` | The one profile Chrome runs on; `$HOME/.local/share` when `XDG_DATA_HOME` is unset. The service creates it 0700 on a first run. |
 | `chrome.workspace` | `"leash"` | The niri workspace the window belongs on, best effort (chrome-2y3t). |
 | `chrome.headless` | `false` | Only the live-acceptance gate sets true; production is headed (ADR-0003). |
-| `tabs.cap` | `32` | Open tabs; `new` past it fails at once (ADR-0005). |
-| `expiry.idle_s` | `1800` | Stage 1 releases a tab idle this long (own-uo77). |
-| `expiry.unclaimed_s` | `3600` | Stage 2 closes an unclaimed agent-origin tab this long after (own-hslp). |
+| `tabs.cap` | `32` | Open tabs; `new` past it fails at once. |
+| `expiry.idle_s` | `1800` | An agent tab closes after this many idle seconds (hand-0ibq). A human tab is never closed. |
 | `expiry.tombstone_s` | `3600` | A closed handle answers `tab-gone` for this long (chrome-akz4). |
-| `control.socket` | `"$XDG_RUNTIME_DIR/leash/control.sock"` | Where the service listens and the CLI connects; owner-only, in a directory the listener verifies (svc-o4wt). |
+| `control.socket` | `"$XDG_RUNTIME_DIR/leash/control.sock"` | Where the service listens and the CLI connects; mode 0600, in a directory the listener verifies (svc-o4wt). |
 | `otlp.endpoint` | unset | Optional OTLP/HTTP exporter; absent means no exporter is acquired (svc-f4op). |
 | `otlp.headers` | `[]` | Collector headers, each `{name, value}`; values are secrets (svc-f4op). |
 | `models.api_key` | unset | `OPENROUTER_API_KEY` in the environment wins over the file, and no rendering path ever shows it (svc-kzt6). |

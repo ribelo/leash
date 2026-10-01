@@ -33,7 +33,7 @@ def leaked(text):
 
 
 def cli(*args, timeout=60):
-    proc = subprocess.run([LEASH, *map(str, args), "--owner", OWNER], text=True, capture_output=True, timeout=timeout)
+    proc = subprocess.run([LEASH, *map(str, args)], text=True, capture_output=True, timeout=timeout)
     assert not leaked(proc.stdout) and not leaked(proc.stderr), "API key leaked in CLI output"
     try:
         value = json.loads(proc.stdout)

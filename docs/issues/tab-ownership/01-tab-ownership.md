@@ -5,6 +5,10 @@ milestone: 3
 
 # Own, claim, release, and expire tabs
 
+**Historical; superseded by L49 / ADR-0010.** This records milestone 3 as delivered.
+Do not implement its tab-access or two-stage expiry model; the current contract is
+`../handles/01-handles.md` and `../../adr/0010-handles-are-capabilities.md`.
+
 ## Problem Statement
 
 Agents left running all day leave a hundred tabs nobody can attribute, eating memory, and the human cannot find the tabs that matter. Meanwhile the human sometimes wants to prepare a page (log in, pass a captcha) and hand it to an agent, and one agent must not close or act on another's tab by accident.

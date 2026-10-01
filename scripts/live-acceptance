@@ -30,7 +30,6 @@ headless = true
 cap = 8
 [expiry]
 idle_s = 3600
-unclaimed_s = 3600
 tombstone_s = 3600
 [models]
 jev_model = "not-used"
@@ -80,20 +79,20 @@ for _ in $(seq 1 100); do
 done
 if [[ ! -S "$socket" ]]; then echo "ERROR: control socket did not appear" >&2; exit 1; fi
 for _ in $(seq 1 100); do
-  if "$leash" status --owner live >/dev/null 2>&1; then break; fi
+  if "$leash" status >/dev/null 2>&1; then break; fi
   sleep 0.1
 done
 printf 'new: '
-new="$("$leash" new --owner live https://example.com)"
+new="$("$leash" new https://example.com)"
 echo "$new"
 tab="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["tab"])' <<< "$new")"
 printf 'list: '
-listed="$("$leash" list --owner live)"
+listed="$("$leash" list)"
 echo "$listed"
 python3 -c 'import json,sys; assert sys.argv[1] in [x["tab"] for x in json.load(sys.stdin)["tabs"]]' "$tab" <<< "$listed"
 if ! browser_alive >/dev/null; then echo "ERROR: Chrome was never running (profile=$profile)" >&2; ps -eo pid,args | awk '/--headless=new/ && /--remote-debugging-pipe/ {print}' >&2; sed -n '1,80p' "$log" >&2; exit 1; fi
 printf 'close: '
-"$leash" close --owner live "$tab"
+"$leash" close "$tab"
 kill -TERM "$service_pid"
 if wait "$service_pid"; then echo 'SIGTERM: Leash exited 0'; else echo 'ERROR: Leash exited nonzero' >&2; sed -n '1,100p' "$log" >&2; exit 1; fi
 service_pid=""

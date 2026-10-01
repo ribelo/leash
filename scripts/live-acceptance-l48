@@ -30,7 +30,7 @@ LEASH="$leash" python3 - <<'PY'
 import json, os, subprocess
 L=os.environ['LEASH']
 def run(*a, stdin=None):
-    p=subprocess.run([L,*a,'--owner','l48'],capture_output=True,text=True,input=stdin)
+    p=subprocess.run([L,*a],capture_output=True,text=True,input=stdin)
     out=p.stdout.strip() or p.stderr.strip()
     try: j=json.loads(out)
     except Exception: j={'raw':out}

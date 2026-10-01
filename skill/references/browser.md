@@ -1,6 +1,6 @@
 # Read, act, wait, and hand off
 
-All commands below act on your owned tab. Pass `--owner NAME` on every service call if not using `DSH_SESSION_ID`. The signatures use `TAB`, `SNAPSHOT`, `INDEX`, and `ID` for values returned by Leash, not literal arguments. Shell examples use actual variables; the optional `jq` examples need Bash and jq. Without jq, read those same fields from JSON.
+All commands below act on the tab capability you received from `new` or `take`. The signatures use `TAB`, `SNAPSHOT`, `INDEX`, and `ID` for real returned values, not literal arguments. The optional shell examples need Bash and jq.
 
 `new` and `nav` preserve the registered handle when a 30 s load wait expires.
 Their successful replies include `loaded:false` with the current URL/title: inspect
@@ -31,7 +31,7 @@ or hand it off instead of blindly repeating input (field-cde7).
 
 A cross-origin iframe appears as role `frame`, named by its src origin, with `state:["cross-origin"]`. It is informational, not a target for inner-frame actions. `debug` names known reCAPTCHA, hCaptcha, and Turnstile loads; use a screenshot or human handoff when a challenge blocks the task, not an attempt to solve it.
 
-Dialogs are **state** in snapshots, tab info, and action replies. They block page reads (`text`, `eval`, `shot`) as well as input; these reads return `dialog-open`, including when a dialog opens during the read. Inspect it and use `leash dialog TAB accept` / `dismiss` deliberately, then retry the read. `snap` can still report the dialog; `leash dialog` answers one, it is not a read command. Network/debug rings are bounded and begin when the tab is created or attached/claimed; they are not a full browser history.
+Dialogs are **state** in snapshots, tab info, and action replies. They block page reads (`text`, `eval`, `shot`) as well as input; these reads return `dialog-open`, including when a dialog opens during the read. Inspect it and use `leash dialog TAB accept` / `dismiss` deliberately, then retry the read. `snap` can still report the dialog; `leash dialog` answers one, it is not a read command. Network/debug rings are bounded and begin when the tab is created or attached; they are not a full browser history.
 
 Downloads normally land in `~/.local/share/leash/profile/downloads` (`$XDG_DATA_HOME/leash/profile/downloads` when set, or `downloads/` under a custom `chrome.profile_dir`). A pending download has no usable completed path. Verify `state: completed` before using it; a suggested filename, received byte count or `.crdownload` file is not proof of completion.
 
@@ -41,14 +41,13 @@ A read-only example using a fresh scratch tab:
 
 ```bash
 set -o pipefail
-OWNER="browser-example-$$"
-TAB=$(leash new https://example.com --owner "$OWNER" | jq -er '.tab') || exit 1
-leash snap "$TAB" --owner "$OWNER" --limit 20
-leash text "$TAB" --owner "$OWNER" --max-chars 2000
-leash shot "$TAB" /tmp/leash-example.png --owner "$OWNER"
-leash net "$TAB" --owner "$OWNER" --type document --limit 5
-leash debug "$TAB" --owner "$OWNER" --limit 10
-leash close "$TAB" --owner "$OWNER"
+TAB=$(leash new https://example.com | jq -er '.tab') || exit 1
+leash snap "$TAB" --limit 20
+leash text "$TAB" --max-chars 2000
+leash shot "$TAB" /tmp/leash-example.png
+leash net "$TAB" --type document --limit 5
+leash debug "$TAB" --limit 10
+leash close "$TAB"
 ```
 
 `net` is asynchronous: entries arrive from Chrome events and can lag a navigation/action reply. A first empty ring is not proof that no request happened. Wait for a concrete page condition (`leash wait TAB --text TEXT --timeout-ms 5000`) and read `net` again; if needed, retry this read for a bounded interval. Completion-only fields such as size/duration can remain null while the request is pending.
@@ -77,7 +76,7 @@ Accepted `press` keys: Enter, Tab, Backspace, Delete, ArrowUp, ArrowDown, ArrowL
 
 A successful action returns URL/title, `dialog`, and any owned `popups`. `snapshot` is null unless you passed `--snap`, in which case it is a fresh snapshot object (same `--match` and `--limit` as `snap`) taken after settlement. `via` is `"label"` when the click landed on the target's covering label, and omitted otherwise. The current snapshot remains valid through input that leaves the page unchanged. A newer `snap` or navigation invalidates older IDs, and a changed/removed target row is refused even with the current ID. On `stale-snapshot`, inspect `detail.snapshot` (current ID, or null when no table remains), re-snap and re-find the row; if navigation removed it, navigate back only when appropriate. Check dialogs/popups rather than assuming the original page is still the only relevant tab. Disabled, covered, or wrong-kind rows can be `row-not-actionable` even with a current snapshot.
 
-Action `popups` carry readiness, separate from ownership: `state:"opening"` for
+Action `popups` carry readiness, separate from the capability: `state:"opening"` for
 an empty/about:blank URL still in its first second (including dialog interruption),
 `state:"blank"` when it remains blank after the bounded 1 s settle window, or
 `state:"ready"` once it has a committed URL. Each includes `opener_url`. A blank
@@ -90,14 +89,13 @@ Runnable navigation example on a disposable tab (opens the first observed link o
 
 ```bash
 set -o pipefail
-OWNER="browser-link-$$"
-TAB=$(leash new https://example.com --owner "$OWNER" | jq -er '.tab') || exit 1
-SNAP=$(leash snap "$TAB" --owner "$OWNER" --limit 20) || exit 1
+TAB=$(leash new https://example.com | jq -er '.tab') || exit 1
+SNAP=$(leash snap "$TAB" --limit 20) || exit 1
 SID=$(jq -er '.snapshot' <<<"$SNAP") || exit 1
 INDEX=$(jq -er 'first(.rows[] | select(.role == "link") | .index)' <<<"$SNAP") || exit 1
-leash click "$TAB" "$SID" "$INDEX" --owner "$OWNER" || exit 1
-leash snap "$TAB" --owner "$OWNER" --limit 20
-leash close "$TAB" --owner "$OWNER"
+leash click "$TAB" "$SID" "$INDEX" || exit 1
+leash snap "$TAB" --limit 20
+leash close "$TAB"
 ```
 
 The example's scratch tab is the only cleanup target. For a real form, read its observed controls, fill only the requested fields, and verify their values before an authorized submission. Do not turn a whole form into a blind chain of guessed indices or repeated Enter presses.
@@ -107,12 +105,12 @@ The example's scratch tab is the only cleanup target. For a real form, read its 
 `eval` takes a **function body** with `return`, not a bare expression. A JSON `--argument` binds `argument`; indexed calls bind `element` as well and require `--snapshot`. With `TAB`, `SID`, and `INDEX` set from the current snapshot, these are read-only queries:
 
 ```bash
-leash eval "$TAB" 'return document.title' --owner "$OWNER"
-leash eval "$TAB" 'return {tag: element.tagName, text: element.textContent}'   --snapshot "$SID" --index "$INDEX" --owner "$OWNER"
-leash eval "$TAB" 'return document.querySelectorAll(argument.selector).length'   --argument '{"selector":"a"}' --owner "$OWNER"
+leash eval "$TAB" 'return document.title'
+leash eval "$TAB" 'return {tag: element.tagName, text: element.textContent}'   --snapshot "$SID" --index "$INDEX"
+leash eval "$TAB" 'return document.querySelectorAll(argument.selector).length'   --argument '{"selector":"a"}'
 ```
 
-Do not use eval to bypass ownership, stale-target checks, refused URLs, or a needed trusted UI action. JavaScript may change the page; writes require the same authorization as other actions. For reusable data collection, read [missions and playbooks](missions.md) instead of repeatedly injecting ad hoc scripts.
+Do not use eval to bypass the human hold, stale-target checks, refused URLs, or a needed trusted UI action. JavaScript may change the page; writes require the same authorization as other actions. For reusable data collection, read [missions and playbooks](missions.md) instead of repeatedly injecting ad hoc scripts.
 
 ## Wait for a concrete result
 
@@ -121,8 +119,8 @@ Do not use eval to bypass ownership, stale-target checks, refused URLs, or a nee
 For a tab navigated to example.com:
 
 ```bash
-leash wait "$TAB" --text 'Example Domain' --timeout-ms 5000 --owner "$OWNER"
-leash wait "$TAB" --until '{"url_prefix":"https://example.com","text":"Example Domain"}'   --timeout-ms 5000 --owner "$OWNER"
+leash wait "$TAB" --text 'Example Domain' --timeout-ms 5000
+leash wait "$TAB" --until '{"url_prefix":"https://example.com","text":"Example Domain"}'   --timeout-ms 5000
 ```
 
 `--changed-since` detects navigation or DOM mutation from a remembered snapshot; it does not prove the desired outcome. Only the last eight baselines are retained. A wait holds no action lock, so it can run beside an action in another client; its polling keeps the tab active. A disconnect cancels it. A dialog interrupts ordinary waits with `dialog-open`; answer only after inspecting it. On timeout, inspect the actual page before increasing the bound or repeating anything.
@@ -132,15 +130,15 @@ leash wait "$TAB" --until '{"url_prefix":"https://example.com","text":"Example D
 For login, CAPTCHA, MFA, or a choice only the human can make, explain what is needed and use the **headed** managed browser. Do not ask for secrets in chat or automatically solve/approve a security challenge.
 
 ```bash
-leash handoff "$TAB" 'Please finish sign-in, then choose Done'   --timeout-s 900 --owner "$OWNER"
+leash handoff "$TAB" 'Please finish sign-in, then choose Done'   --timeout-s 900
 ```
 
-This call blocks, selects the live tab inside Leash's Chrome, and sends the human a notification that stays until they click Done; it does not take their focus (a raise command is opt-in config). Keep it running while the human acts; in a harness, use a tracked background job so you can communicate the request. Do not wait for the blocking call before telling the human what to do. While `state: with_human`, tab reads/actions are refused, including yours. `list --all` still shows its reason.
+This call blocks, selects the live tab inside Leash's Chrome, and sends the human a notification that stays until they click Done; it does not take their focus (a raise command is opt-in config). Keep it running while the human acts; in a harness, use a tracked background job so you can communicate the request. Do not wait for the blocking call before telling the human what to do. While `with_human: true`, tab reads/actions are refused, including yours. `list` still shows the human hold.
 
 The notification's Done action or a second client can resume it:
 
 ```bash
-leash resume "$TAB" --owner human
+leash resume "$TAB"
 ```
 
-Anyone may call resume because it returns the tab to its original owner, not to the caller. An agent should do so only after the human says they are finished, not to seize it back. Timeout or disconnect also returns ownership; neither proves the human completed the task. Collect the waiting command's result, inspect any `warnings` (or `detail.warnings` on timeout), take a fresh snapshot, and verify the page the human left. `no-handoff` means no handoff is active; refresh state instead of starting/resuming repeatedly.
+Anyone with the handle may call resume; it restores ordinary use of that same capability. An agent should do so only after the human says they are finished, not to seize it back. Timeout or disconnect also restores handle use; neither proves the human completed the task. Collect the waiting command's result, inspect any `warnings` (or `detail.warnings` on timeout), take a fresh snapshot, and verify the page the human left. `no-handoff` means no handoff is active; refresh state instead of starting/resuming repeatedly.

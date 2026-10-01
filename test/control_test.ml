@@ -12,9 +12,6 @@ let field key = function `Assoc xs -> List.assoc_opt key xs | _ -> None
 let get key json =
   match field key json with Some x -> x | None -> Alcotest.fail ("missing " ^ key)
 
-let owner text =
-  match P.Owner.of_string text with Ok x -> x | Error e -> Alcotest.fail e
-
 let tab json =
   match P.Handle.t_of_yojson (get "tab" json) with
   | Ok x -> x
@@ -28,8 +25,8 @@ let result = function
   | P.Success json -> json
   | P.Failure e -> Alcotest.failf "%s: %s" (P.Error_code.to_string e.code) e.message
 
-let request tabs who command =
-  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+let request tabs _client command =
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   match P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire)) with
   | Ok x -> x
   | Error e -> Alcotest.fail e
@@ -145,22 +142,24 @@ let lifecycle () =
   rig (fun _ _ _ tabs fake ->
       loads (fake ());
       let info =
-        result (request tabs "alice" (P.New { url = Some "https://example.com" }))
+        result
+          (request tabs "alice"
+             (P.New { url = Some "https://example.com"; label = None }))
       in
       let h = tab info in
       Alcotest.(check bool)
         "chrome-qnul random handle" true
         (String.starts_with ~prefix:"t_" (P.Handle.to_string h));
-      let mine =
-        result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
+      let mine = result (request tabs "alice" P.List_tabs) |> get "tabs" in
+      let theirs = result (request tabs "bob" P.List_tabs) |> get "tabs" in
+      let visible_without_handle = function
+        | `List [ `Assoc fields ] ->
+            (not (List.mem_assoc "tab" fields)) && not (List.mem_assoc "handle" fields)
+        | _ -> false
       in
-      let theirs =
-        result (request tabs "bob" (P.List_tabs { all = false })) |> get "tabs"
-      in
-      Alcotest.(check int)
-        "chrome-hjw9 mine" 1
-        (match mine with `List xs -> List.length xs | _ -> 0);
-      Alcotest.(check bool) "chrome-hjw9 isolation" true (theirs = `List []);
+      Alcotest.(check bool)
+        "hand-x3hi list shows the tab and never the handle" true
+        (visible_without_handle mine && mine = theirs);
       let status = result (request tabs "alice" P.Status) in
       Alcotest.(check bool)
         "chrome-fuao generation and open" true
@@ -171,11 +170,16 @@ let lifecycle () =
             match field "method" j with Some (`String s) -> Some s | _ -> None)
       in
       Alcotest.(check bool) "attached" true (List.mem "Target.attachToTarget" methods);
-      check_code "drive-ig84 owner" "not-owner"
+      let bad =
+        match P.Handle.of_string "t_not_a_tab" with
+        | Ok h -> h
+        | Error e -> Alcotest.fail e
+      in
+      check_code "hand-mb9s unknown handle" "unknown-tab"
         (request tabs "bob"
            (P.Drive
               {
-                tab = Some h;
+                tab = Some bad;
                 mission = "Do a task";
                 max_steps = None;
                 start_url = None;
@@ -186,12 +190,11 @@ let lifecycle () =
                 dry_run = Some true;
               }));
       Alcotest.(check int)
-        "drive-8n2z denied before browser access" (List.length methods)
+        "hand-mb9s a missing capability never reaches the browser" (List.length methods)
         (List.length (Fake.received (fake ())));
-      check_code "owner" "not-owner"
-        (request tabs "bob" (P.Close { tab = h; force = None }));
-      ignore (result (request tabs "alice" (P.Close { tab = h; force = None })));
-      ignore (result (request tabs "alice" (P.Close { tab = h; force = None })));
+      ignore (result (request tabs "bob" (P.Close { tab = h })));
+      ignore (result (request tabs "alice" (P.Close { tab = h })));
+      ignore (result (request tabs "alice" (P.Close { tab = h })));
       Alcotest.(check bool)
         "chrome-2n8n closed" true
         (get "open" (get "tabs" (result (request tabs "alice" P.Status))) = `Int 0))
@@ -201,17 +204,18 @@ let safety () =
       List.iter
         (fun url ->
           check_code "chrome-akz4 policy" "url-refused"
-            (request tabs "alice" (P.New { url = Some url })))
+            (request tabs "alice" (P.New { url = Some url; label = None })))
         [ "file:///etc/passwd"; "javascript:alert(1)"; "https://user:pw@example.com" ];
-      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       check_code "chrome-akz4 nav" "url-refused"
         (request tabs "alice" (P.Nav { tab = h; url = "file:///etc/shadow" }));
-      ignore (result (request tabs "alice" (P.New { url = None })));
-      check_code "chrome-d4mz cap" "tab-cap" (request tabs "alice" (P.New { url = None })))
+      ignore (result (request tabs "alice" (P.New { url = None; label = None })));
+      check_code "chrome-d4mz cap" "tab-cap"
+        (request tabs "alice" (P.New { url = None; label = None })))
 
 let nav () =
   rig (fun _ _ _ tabs fake ->
-      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       Fake.on_method (fake ()) "Page.navigate" (fun request ->
           let session =
             match get "sessionId" request with `String s -> s | _ -> assert false
@@ -272,7 +276,9 @@ let new_waits () =
       Fake.on_method (fake ()) "Target.getTargetInfo" (fun _ ->
           document ~title:"Example Domain" ~url:"https://example.com/");
       let info =
-        result (request tabs "alice" (P.New { url = Some "https://example.com" }))
+        result
+          (request tabs "alice"
+             (P.New { url = Some "https://example.com"; label = None }))
       in
       Alcotest.(check bool)
         "chrome-qnul committed url" true
@@ -313,7 +319,7 @@ let new_without_url () =
   rig (fun _ sw _ tabs _ ->
       let info =
         settle ~sw "chrome-qnul new without a url" (fun () ->
-            request tabs "alice" (P.New { url = None }))
+            request tabs "alice" (P.New { url = None; label = None }))
         |> result
       in
       Alcotest.(check bool)
@@ -349,7 +355,9 @@ let load_timeout () =
         await 60
       in
 
-      let handle = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let handle =
+        result (request tabs "alice" (P.New { url = None; label = None })) |> tab
+      in
       let nav =
         after_deadline "chrome-1yn9 nav" (fun () ->
             request tabs "alice"
@@ -357,7 +365,8 @@ let load_timeout () =
       in
       let created =
         after_deadline "chrome-qnul new" (fun () ->
-            request tabs "alice" (P.New { url = Some "https://example.com/slow" }))
+            request tabs "alice"
+              (P.New { url = Some "https://example.com/slow"; label = None }))
       in
       let nav = result nav and created = result created in
       Alcotest.(check bool)
@@ -389,17 +398,19 @@ let budget () =
     | Error why -> Alcotest.fail why
   in
   let ms command =
-    match Leash.Control.budget (Ok P.{ owner = owner "alice"; command }) with
+    match Leash.Control.budget (Ok P.{ command }) with
     | Some duration -> Ox.Duration.to_ms duration
     | None -> Alcotest.fail "no budget"
   in
   Alcotest.(check bool)
     "chrome-qnul new with a url outlasts the load wait" true
-    (ms (P.New { url = Some "https://example.com" }) > 30_000);
-  Alcotest.(check int) "chrome-qnul new without a url" 1_000 (ms (P.New { url = None }));
+    (ms (P.New { url = Some "https://example.com"; label = None }) > 30_000);
+  Alcotest.(check int)
+    "chrome-qnul new without a url" 1_000
+    (ms (P.New { url = None; label = None }));
   Alcotest.(check int)
     "chrome-qnul new about:blank" 1_000
-    (ms (P.New { url = Some "about:blank" }));
+    (ms (P.New { url = Some "about:blank"; label = None }));
   Alcotest.(check bool)
     "chrome-1yn9 nav outlasts the load wait" true
     (ms (P.Nav { tab = handle; url = "https://example.com" }) > 30_000);
@@ -432,8 +443,7 @@ let malformed () =
   rig (fun _ _ _ tabs _ ->
       let reply =
         Yojson.Safe.from_string
-          (Leash.Control.handle tabs
-             {|{"v":1,"owner":"alice","cmd":"new","args":{"url":77}}|})
+          (Leash.Control.handle tabs {|{"v":1,"cmd":"new","args":{"url":77}}|})
       in
       let error = get "error" reply in
       Alcotest.(check bool)
@@ -443,7 +453,7 @@ let malformed () =
 
 let lost () =
   rig (fun _ _ chrome tabs fake ->
-      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       Fake.drop (fake ());
       let rec await n =
         if n = 0 then Alcotest.fail "Chrome did not restart"
@@ -455,7 +465,7 @@ let lost () =
       let rec gone n =
         if n = 0 then Alcotest.fail "no tombstone"
         else
-          match request tabs "alice" (P.Close { tab = h; force = None }) with
+          match request tabs "alice" (P.Close { tab = h }) with
           | P.Failure e when P.Error_code.to_string e.code = "tab-gone" ->
               Alcotest.(check bool)
                 "chrome-2z2z browser_lost" true
@@ -468,7 +478,7 @@ let lost () =
       in
       gone 1000;
       check_code "chrome-6lfk restart" "browser-unavailable"
-        (request tabs "alice" (P.New { url = None })))
+        (request tabs "alice" (P.New { url = None; label = None })))
 
 let with_runtime f =
   let runtime = Filename.temp_file "leash-control-" "" in
@@ -494,7 +504,9 @@ let socket runtime = Filename.concat (Filename.concat runtime "leash") "control.
 let large_text_over_socket () =
   with_runtime (fun runtime ->
       rig (fun env sw _ tabs fake ->
-          let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+          let h =
+            result (request tabs "alice" (P.New { url = None; label = None })) |> tab
+          in
           let big = String.make 70_000 'x' in
           Fake.on_method (fake ()) "Runtime.evaluate" (fun request ->
               if
@@ -536,10 +548,7 @@ let large_text_over_socket () =
           let flow = Eio.Net.connect ~sw env#net (`Unix path) in
           let line =
             P.encode_request
-              {
-                owner = owner "alice";
-                command = P.Text { tab = h; index = None; max_chars = None };
-              }
+              { command = P.Text { tab = h; index = None; max_chars = None } }
             |> Yojson.Safe.to_string
           in
           Eio.Flow.copy_string (line ^ "\n") flow;
@@ -600,7 +609,7 @@ let socket () =
             "chrome-fwnu private socket" 0
             ((Unix.lstat path).st_perm land 0o077);
           let flow = Eio.Net.connect ~sw env#net (`Unix path) in
-          Eio.Flow.copy_string {|{"v":1,"owner":"alice","cmd":"status","args":{}}
+          Eio.Flow.copy_string {|{"v":1,"cmd":"status","args":{}}
 |} flow;
           let reply =
             Eio.Buf_read.line (Eio.Buf_read.of_flow flow ~max_size:4096)
@@ -690,7 +699,7 @@ let socket () =
           Unix.chmod dir 0o700;
           verdict))
 
-(* svc-5wm8: one socket path has one owner. A second listener on the same path is
+(* svc-5wm8: one socket path has one listener. A second listener on the same path is
    refused with [`Active_listener] and does not unlink the live socket, so the first
    instance keeps answering: the operator sees a refusal at boot instead of two
    services fighting over one Chrome profile. *)
@@ -743,14 +752,14 @@ let second_instance () =
                 (listener_error error));
           (* The lock file is what stops a second instance before the socket probe, so
              the refusal is [`Lock_conflict]; [`Active_listener] is the same refusal seen
-             when only a live socket is there. Either one is the story: no second owner. *)
+             when only a live socket is there. Either one is the story: no second listener. *)
           (match create () with
           | Ok _ -> Alcotest.fail "svc-5wm8 a second instance started on the owned socket"
           | Error `Lock_conflict | Error `Active_listener -> ()
           | Error error ->
               Alcotest.failf "svc-5wm8 expected a refusal, got %s" (listener_error error));
           let flow = Eio.Net.connect ~sw env#net (`Unix path) in
-          Eio.Flow.copy_string {|{"v":1,"owner":"alice","cmd":"status","args":{}}
+          Eio.Flow.copy_string {|{"v":1,"cmd":"status","args":{}}
 |} flow;
           let reply =
             Eio.Buf_read.line (Eio.Buf_read.of_flow flow ~max_size:4096)
@@ -762,7 +771,9 @@ let second_instance () =
 
 let human () =
   rig (fun _ _ _ tabs fake ->
-      let agent = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let agent =
+        result (request tabs "alice" (P.New { url = None; label = None })) |> tab
+      in
       Fake.emit (fake ()) ~method_:"Target.attachedToTarget"
         ~params:
           (obj
@@ -780,9 +791,7 @@ let human () =
       let rec await n =
         if n = 0 then Alcotest.fail "human tab not adopted"
         else
-          match
-            get "tabs" (result (request tabs "alice" (P.List_tabs { all = true })))
-          with
+          match get "tabs" (result (request tabs "alice" P.List_tabs)) with
           | `List [ _; _ ] -> ()
           | _ ->
               Eio.Fiber.yield ();
@@ -790,12 +799,10 @@ let human () =
       in
       await 1000;
       let human_tab =
-        match get "tabs" (result (request tabs "alice" (P.List_tabs { all = true }))) with
-        | `List xs -> (
-            match List.find_opt (fun x -> get "origin" x = str "human") xs with
-            | Some x -> tab x
-            | None -> Alcotest.fail "human tab missing")
-        | _ -> Alcotest.fail "tabs must be an array"
+        result
+          (request tabs "any"
+             (P.Take { url = Some "https://human.example/"; title = None; label = None }))
+        |> tab
       in
       Fake.on_method (fake ()) "Runtime.evaluate" (fun request ->
           if
@@ -819,9 +826,8 @@ let human () =
                           ] );
                     ] );
               ]);
-      (* own-jua9: a tab discovered from outside Leash appears unowned, so a client —
-         the "human" owner here — claims it before it may observe it. *)
-      ignore (result (request tabs "human" (P.Claim { tab = human_tab })));
+      (* own-jua9: a tab discovered from outside Leash is human without a handle, so a client —
+         here takes it before it may observe it. *)
       ignore
         (result
            (request tabs "human"
@@ -839,7 +845,8 @@ let human () =
         |> List.filteri (fun i _ -> i >= before)
         |> List.filter (fun x -> field "method" x = Some (str "Target.closeTarget"))
       in
-      Alcotest.(check int) "agent only closed, human retained" 1 (List.length closed);
+      Alcotest.(check int)
+        "taken human tab permanently becomes agent" 2 (List.length closed);
       ignore agent)
 
 (* Blank the accessible name Chrome computed from the placeholder: the shape a control
@@ -912,7 +919,9 @@ let daily_snapshot () =
                               ] );
                         ] );
                   ]);
-          let tab = result (request tabs "alice" (P.New { url = None })) |> tab in
+          let tab =
+            result (request tabs "alice" (P.New { url = None; label = None })) |> tab
+          in
           let snap () =
             result
               (request tabs "alice"
@@ -995,7 +1004,7 @@ let snapshot () =
                           ] );
                     ] );
               ]));
-      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       let snap ?match_ ?limit ?offset () =
         result (request tabs "alice" (P.Snap { tab = h; match_; limit; offset }))
       in
@@ -1016,9 +1025,18 @@ let snapshot () =
       Alcotest.(check int)
         "tab-1rx9 no CDP on invalid request" calls
         (List.length (Fake.received fake));
-      check_code "tab-of0i owner isolation" "not-owner"
+      ignore
+        (result
+           (request tabs "bob"
+              (P.Snap { tab = h; match_ = None; limit = None; offset = None })));
+      let bad =
+        match P.Handle.of_string "t_not_a_tab" with
+        | Ok h -> h
+        | Error e -> Alcotest.fail e
+      in
+      check_code "hand-scaz a handle you do not hold" "unknown-tab"
         (request tabs "bob"
-           (P.Snap { tab = h; match_ = None; limit = None; offset = None }));
+           (P.Snap { tab = bad; match_ = None; limit = None; offset = None }));
       let filtered = snap ~match_:"GO" ~limit:0 () in
       Alcotest.(check int)
         "tab-hyap matched total" 1
@@ -1059,8 +1077,7 @@ let snapshot () =
         if n = 0 then Alcotest.fail "dialog event was not delivered"
         else
           match
-            Leash.Tabs.snap tabs ~owner:(owner "alice")
-              { tab = h; match_ = None; limit = None; offset = None }
+            Leash.Tabs.snap tabs { tab = h; match_ = None; limit = None; offset = None }
           with
           | Ok { dialog = Some _; _ } -> ()
           | _ ->
@@ -1170,7 +1187,7 @@ let drive_dry_run () =
                     );
                   ] );
             ]);
-      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       let decisions = ref 0 in
       let decide ~deadline:_ (_ : Leash__Jev_request.request) =
         incr decisions;
@@ -1194,7 +1211,6 @@ let drive_dry_run () =
       let wire =
         P.encode_request
           {
-            owner = owner "alice";
             command =
               P.Drive
                 {
@@ -1257,7 +1273,7 @@ let empty_names () =
             = str Leash__Snapshot_source.interactive_count_expression
           then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
           else obj [ ("result", obj [ ("type", str "object"); ("value", guard) ]) ]);
-      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       let snapshot () =
         result
           (request tabs "alice"
@@ -1359,7 +1375,9 @@ let pseudo_icon_hit () =
       let hit = ref 894 in
       Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
           obj [ ("backendNodeId", `Int !hit) ]);
-      let tab = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let tab =
+        result (request tabs "alice" (P.New { url = None; label = None })) |> tab
+      in
       let observed =
         result
           (request tabs "alice"
@@ -1403,7 +1421,7 @@ let pseudo_icon_hit () =
         "tab-bw4j overlay dispatches no mouse input" before (dispatched ()))
 
 (* svc-p67t svc-qilu: inspect every command anchor and every journal line of a
-   scripted owner session; page data and credentials must never become a log line. *)
+   scripted tab session; page data and credentials must never become a log line. *)
 let journal_redaction () =
   let module L = Ox_observability.Logger in
   let memory = L.Memory.create () in
@@ -1429,12 +1447,12 @@ let journal_redaction () =
           then obj [ ("result", obj [ ("type", str "number"); ("value", `Int 0) ]) ]
           else obj [ ("result", obj [ ("value", str secret_text) ]) ]);
       let run who command =
-        let request = P.{ owner = owner who; command } in
+        let request = P.{ command } in
         let wire = P.encode_request request |> Yojson.Safe.to_string in
         let reply = Leash.Control.handle ~logger tabs wire |> Yojson.Safe.from_string in
         match P.decode_reply reply with Ok result -> result | Error e -> Alcotest.fail e
       in
-      let h = result (run "alice" (P.New { url = None })) |> tab in
+      let h = result (run "alice" (P.New { url = None; label = None })) |> tab in
       let got =
         result (run "alice" (P.Text { tab = h; index = None; max_chars = None }))
       in
@@ -1446,7 +1464,7 @@ let journal_redaction () =
         | Ok x -> x
         | Error e -> Alcotest.fail e
       in
-      (* The new reads, on a live tab: the results carry the secrets to the owner, and no
+      (* The new reads, on a live tab: the results carry the secrets to the handle holder, and no
          journal line may. *)
       Fake.on_method (fake ()) "Network.getCookies" (fun _ ->
           obj
@@ -1484,7 +1502,7 @@ let journal_redaction () =
       (* Wait for the event without the journal: only the one command below is anchored. *)
       let rec await_ring n =
         match
-          Leash.Tabs.net tabs ~owner:(owner "alice")
+          Leash.Tabs.net tabs
             { tab = h; match_ = Some secret_request; limit = None; type_ = None }
         with
         | Ok { requests = _ :: _ } -> ()
@@ -1501,17 +1519,17 @@ let journal_redaction () =
              (P.Net { tab = h; match_ = Some secret_request; limit = None; type_ = None }))
       in
       Alcotest.(check bool)
-        "the owner is given the request's url" true
+        "the handle holder is given the request's url" true
         (contains (Yojson.Safe.to_string listed) secret_request);
       let request_data =
         result (run "alice" (P.Net_request { tab = h; id = "leak-1" }))
       in
       Alcotest.(check bool)
-        "the owner is given the request's headers" true
+        "the handle holder is given the request's headers" true
         (contains (Yojson.Safe.to_string request_data) secret_request);
       let jar = result (run "alice" (P.Cookies { tab = h })) in
       Alcotest.(check bool)
-        "the owner is given the cookie's value" true
+        "the handle holder is given the cookie's value" true
         (contains (Yojson.Safe.to_string jar) secret_cookie);
       let snap =
         match P.Snapshot_id.of_string "s_diagnostics" with
@@ -1527,11 +1545,10 @@ let journal_redaction () =
       let commands =
         P.
           [
-            List_tabs { all = false };
+            List_tabs;
             Status;
-            Claim { tab = missing };
-            Release { tab = missing; force = None };
-            Close { tab = missing; force = None };
+            Take { url = None; title = None; label = Some "missing" };
+            Close { tab = missing };
             Snap { tab = missing; match_ = None; limit = None; offset = None };
             Shot { tab = missing; path = "/tmp/no-shot"; full_page = None };
             Debug { tab = missing; limit = None; clear = None };
@@ -1642,7 +1659,7 @@ let journal_redaction () =
         (5 + List.length commands)
         (List.length anchors);
       let expected_commands =
-        P.New { url = None }
+        P.New { url = None; label = None }
         :: P.Text { tab = h; index = None; max_chars = None }
         :: P.Net { tab = h; match_ = Some secret_request; limit = None; type_ = None }
         :: P.Net_request { tab = h; id = "leak-1" }
@@ -1650,20 +1667,13 @@ let journal_redaction () =
         :: commands
       in
       List.iter2
-        (fun (position, command) record ->
+        (fun (_position, command) record ->
           let context key = List.assoc_opt key record.L.context in
-          Alcotest.(check (option string)) "owner" (Some "alice") (context "owner");
           Alcotest.(check (option string))
             "cmd"
             (Some (P.command_name command))
             (context "cmd");
-          let expected_tab =
-            match command with
-            | P.New _ | P.List_tabs _ | P.Status -> "-"
-            | _ when position >= 1 && position <= 4 -> P.Handle.to_string h
-            | _ -> P.Handle.to_string missing
-          in
-          Alcotest.(check (option string)) "tab" (Some expected_tab) (context "tab"))
+          Alcotest.(check (option string)) "no capability in journal" None (context "tab"))
         (List.mapi (fun position command -> (position, command)) expected_commands)
         anchors;
       let contains text sub =
@@ -1690,11 +1700,11 @@ let journal_redaction () =
             ])
         records)
 
-(* run-ykq4: no Chrome process; browser-level events and the owner-bound
+(* run-ykq4: no Chrome process; browser-level events and the handle-gated
    protocol response are driven by the scripted CDP peer. *)
 let download_events () =
   rig ~download_dir:"/tmp/leash-scripted-downloads" (fun _ _ _ tabs fake ->
-      let h = result (request tabs "alice" (P.New { url = None })) |> tab in
+      let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       let fake = fake () in
       let behaviors =
         List.filter
@@ -1729,7 +1739,7 @@ let download_events () =
       for _ = 1 to 20 do
         Eio.Fiber.yield ()
       done;
-      (match get "tabs" (result (request tabs "alice" (P.List_tabs { all = true }))) with
+      (match get "tabs" (result (request tabs "alice" P.List_tabs)) with
       | `List tabs ->
           Alcotest.(check int)
             "daily-c4cl setup target never registered" 1 (List.length tabs)
@@ -1749,7 +1759,7 @@ let download_events () =
           (obj [ ("frame", obj [ ("id", frame); ("url", str "https://example.com/") ]) ]);
       Fake.emit fake ~method_:"Browser.downloadWillBegin" ~params:(get "params" begin_);
       (* run-ykq4, L34 live PDF: the same GUID can arrive twice. One file must
-         still have one owner-bound record. *)
+         still have one handle-gated record. *)
       Fake.emit fake ~method_:"Browser.downloadWillBegin" ~params:(get "params" begin_);
       (match get "downloadProgress" fixture with
       | `List events ->
@@ -1775,8 +1785,14 @@ let download_events () =
       Alcotest.(check string)
         "run-ykq4 path" "<managed-profile>/downloads/sample.pdf"
         (match get "path" download with `String s -> s | _ -> "");
-      check_code "run-ykq4 other owner refused" "not-owner"
-        (request tabs "bob" (P.Downloads { tab = h })))
+      ignore (result (request tabs "bob" (P.Downloads { tab = h })));
+      let bad =
+        match P.Handle.of_string "t_not_a_tab" with
+        | Ok h -> h
+        | Error e -> Alcotest.fail e
+      in
+      check_code "hand-scaz downloads need the handle" "unknown-tab"
+        (request tabs "bob" (P.Downloads { tab = bad })))
 
 let optional_otlp () =
   Ox_test.run (fun env sw ->
@@ -1873,7 +1889,6 @@ let levels_with
 let run_wire ?(who = "alice") ?expect ?tab mission =
   P.encode_request
     {
-      owner = owner who;
       command =
         P.Drive
           {
@@ -1973,7 +1988,10 @@ let run_mission () =
         | Ok book -> book
         | Error why -> Alcotest.fail why
       in
-      let h = result (request tabs "alice" (P.New { url = Some product_url })) |> tab in
+      let h =
+        result (request tabs "alice" (P.New { url = Some product_url; label = None }))
+        |> tab
+      in
       let questions = ref [] in
       let answers = [ "automationexercise.com"; "add-to-cart"; "DONE" ] in
       let base = levels_with answers questions in
@@ -2153,9 +2171,7 @@ let drive_temporary_cleanup () =
                 "daily-9ggi original outcome retained" outcome
                 (match get "status" body with `String s -> s | _ -> "")
           | _ -> Alcotest.fail "daily-9ggi unexpected drive reply");
-          let listed =
-            result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
-          in
+          let listed = result (request tabs "alice" P.List_tabs) |> get "tabs" in
           Alcotest.(check bool)
             "daily-9ggi temporary tab closed on every outcome" true
             (listed = `List [])))
@@ -2172,9 +2188,7 @@ let drive_temporary_cleanup () =
        with
       | exception Exit -> ()
       | _ -> Alcotest.fail "daily-9ggi expected scripted exception");
-      let listed =
-        result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
-      in
+      let listed = result (request tabs "alice" P.List_tabs) |> get "tabs" in
       Alcotest.(check bool)
         "daily-9ggi exception closes temporary tab" true
         (listed = `List []));
@@ -2210,13 +2224,11 @@ let drive_temporary_cleanup () =
       Alcotest.(check bool)
         "daily-9ggi genuine handoff returned" true
         (get "status" body = str "handoff");
-      let listed =
-        result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
-      in
+      let listed = result (request tabs "alice" P.List_tabs) |> get "tabs" in
       Alcotest.(check bool)
         "daily-9ggi human tab preserved" true
         (match listed with
-        | `List [ tab ] -> get "state" tab = str "with_human"
+        | `List [ tab ] -> get "with_human" tab = `Bool true
         | _ -> false))
 
 let run_refusals () =
@@ -2226,7 +2238,10 @@ let run_refusals () =
       page_script f fixture "";
       document_at ~title:"A page" ~url:"https://example.com/" f;
       let h =
-        result (request tabs "alice" (P.New { url = Some "https://example.com/" })) |> tab
+        result
+          (request tabs "alice"
+             (P.New { url = Some "https://example.com/"; label = None }))
+        |> tab
       in
       let levels = levels_with [] (ref []) in
       let run ?expect who =
@@ -2237,15 +2252,24 @@ let run_refusals () =
                    ~decide:decide_done tabs
                    (run_wire ~who ?expect ~tab:h "do the thing"))))
       in
-      check_code "run-fwl8 not-owner" "not-owner" (run "bob");
+      let bad =
+        match P.Handle.of_string "t_not_a_tab" with
+        | Ok h -> h
+        | Error e -> Alcotest.fail e
+      in
+      check_code "hand-oyzl a bad handle is unknown" "unknown-tab"
+        (reply_of
+           (P.decode_reply
+              (Yojson.Safe.from_string
+                 (Leash.Control.handle ~model:"fixture-model" ~levels ~installed:[]
+                    ~decide:decide_done tabs
+                    (run_wire ~tab:bad "do the thing")))));
       (* The human's hold: every command on the tab answers [with-human], a run included. *)
-      (match
-         Leash.Tabs.hand_over tabs ~owner:(owner "alice") ~reason:"look at this" h
-       with
+      (match Leash.Tabs.hand_over tabs ~reason:"look at this" h with
       | Ok _ -> ()
       | Error error -> Alcotest.fail error.P.message);
       check_code "run-fwl8 with-human" "with-human" (run "alice");
-      ignore (Leash.Tabs.resume tabs ~owner:(owner "human") h);
+      ignore (Leash.Tabs.resume tabs h);
       (* A dialog waiting to be answered: the run refuses to start rather than fight it. *)
       Fake.emit ~session:"session-1" f ~method_:"Page.javascriptDialogOpening"
         ~params:
@@ -2260,8 +2284,7 @@ let run_refusals () =
         if n = 0 then Alcotest.fail "run-fwl8 the dialog event was not delivered"
         else
           match
-            Leash.Tabs.snap tabs ~owner:(owner "alice")
-              { tab = h; match_ = None; limit = None; offset = None }
+            Leash.Tabs.snap tabs { tab = h; match_ = None; limit = None; offset = None }
           with
           | Ok { dialog = Some _; _ } -> ()
           | _ ->
@@ -2284,9 +2307,7 @@ let run_refusals () =
           Alcotest.(check string)
             "daily-9ggi blank mission without URL is explained" "blocked"
             (match get "status" body with `String s -> s | _ -> ""));
-      let tabs_now =
-        result (request tabs "alice" (P.List_tabs { all = false })) |> get "tabs"
-      in
+      let tabs_now = result (request tabs "alice" P.List_tabs) |> get "tabs" in
       Alcotest.(check int)
         "daily-9ggi the run cleaned its tab, supplied tab remains" 1
         (match tabs_now with `List xs -> List.length xs | _ -> 0))
@@ -2334,7 +2355,8 @@ let run_proposal () =
           in
           let before = read playbook.Leash.Playbook.file in
           let h =
-            result (request tabs "alice" (P.New { url = Some product_url })) |> tab
+            result (request tabs "alice" (P.New { url = Some product_url; label = None }))
+            |> tab
           in
           let questions = ref [] in
           (* fly-yolk: procedure BLOCKED enters the operator. A DONE nothing can verify
@@ -2491,8 +2513,7 @@ let discover_proposal () =
             with_ticking_clock env sw (fun () ->
                 Leash.Control.handle ~model:"fixture-model" ~levels ~decide:decide_done
                   tabs
-                  (P.encode_request { owner = owner "alice"; command }
-                  |> Yojson.Safe.to_string))
+                  (P.encode_request { command } |> Yojson.Safe.to_string))
             |> Yojson.Safe.from_string |> P.decode_reply
           in
           let body = decoded reply in
@@ -2547,7 +2568,8 @@ let dialog_interruptions () =
           obj [ ("frameId", str "frame-1") ]);
       let info =
         settle ~sw "hard-6eei new prompt" (fun () ->
-            request tabs "alice" (P.New { url = Some "https://example.com/" }))
+            request tabs "alice"
+              (P.New { url = Some "https://example.com/"; label = None }))
         |> result
       in
       let handle = tab info in
@@ -2614,7 +2636,7 @@ let dialog_interruptions () =
       Fake.on_method fake "Target.closeTarget" (fun _ ->
           emit "beforeunload" ();
           obj [ ("success", `Bool true) ]);
-      ignore (result (request tabs "alice" (P.Close { tab = handle; force = None })));
+      ignore (result (request tabs "alice" (P.Close { tab = handle })));
       Alcotest.(check bool)
         "hard-t6cq beforeunload accepted" true
         (Fake.received fake
@@ -2627,7 +2649,9 @@ let dialog_interruptions () =
 let listener_budget_reply () =
   with_runtime (fun runtime ->
       rig (fun env sw _ tabs fake ->
-          let tab = result (request tabs "alice" (P.New { url = None })) |> tab in
+          let tab =
+            result (request tabs "alice" (P.New { url = None; label = None })) |> tab
+          in
           Fake.withhold (fake ()) "Target.closeTarget" (fun _ -> true);
           let path = Filename.concat (Filename.concat runtime "leash") "control.sock" in
           let _control =
@@ -2662,9 +2686,7 @@ let listener_budget_reply () =
           in
           let flow = Eio.Net.connect ~sw env#net (`Unix path) in
           let wire =
-            P.encode_request
-              { owner = owner "alice"; command = P.Close { tab; force = None } }
-            |> Yojson.Safe.to_string
+            P.encode_request { command = P.Close { tab } } |> Yojson.Safe.to_string
           in
           Eio.Flow.copy_string (wire ^ "\n") flow;
           Eio.Fiber.fork ~sw (fun () ->
@@ -2765,7 +2787,7 @@ let with_books f =
       | Error why -> Alcotest.fail why)
 
 let handle_with ?levels ?text_helper ?(decide = decide_done) ~installed tabs who command =
-  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   match
     P.decode_reply
       (Yojson.Safe.from_string
@@ -2845,7 +2867,8 @@ let playbook_test_command () =
           let answer = ref (value_reply books_rows) in
           script_page f ~reply:(fun _ _ -> !answer);
           let h =
-            result (request tabs "alice" (P.New { url = Some product_url })) |> tab
+            result (request tabs "alice" (P.New { url = Some product_url; label = None }))
+            |> tab
           in
           let test ?(who = "alice") ?args script =
             handle_with ~installed:[ book ] tabs who
@@ -2916,7 +2939,14 @@ let playbook_test_command () =
             (test "../books/list");
           check_code "extr-mp5z args are strings" "invalid-request"
             (test ~args:(obj [ ("q", `Int 1) ]) "books/list");
-          check_code "extr-mp5z owner-bound" "not-owner" (test ~who:"bob" "books/list");
+          let bad =
+            match P.Handle.of_string "t_not_a_tab" with
+            | Ok h -> h
+            | Error e -> Alcotest.fail e
+          in
+          check_code "hand-0y04 playbook test needs the handle" "unknown-tab"
+            (handle_with ~installed:[ book ] tabs "second"
+               (P.Playbook_test { tab = bad; script = "books/list"; args = None }));
           Alcotest.(check int)
             "extr-k40c a refusal reaches the page with nothing" before
             (List.length (payloads f))))
@@ -3006,7 +3036,8 @@ let run_scripts ?out hostile =
           let f = fake () in
           script_page f ~reply:(fun _ _ -> value_reply books_rows);
           let h =
-            result (request tabs "alice" (P.New { url = Some product_url })) |> tab
+            result (request tabs "alice" (P.New { url = Some product_url; label = None }))
+            |> tab
           in
           let questions = ref [] in
           let base = levels_with [ "books.example"; "collect"; "DONE" ] questions in
@@ -3205,6 +3236,101 @@ let run_script_step () =
     (List.sort_uniq compare (List.filter own payloads_seen)
     = List.sort_uniq compare baseline)
 
+(* L49 hand-mb9s hand-0wo8: share a capability across real socket clients. *)
+let shared_handle_over_socket () =
+  with_runtime (fun runtime ->
+      rig (fun env sw _ tabs fake ->
+          let fake = fake () in
+          Fake.on_method fake "Runtime.evaluate" (fun _ ->
+              obj [ ("result", obj [ ("value", str "shared page") ]) ]);
+          let path = Filename.concat (Filename.concat runtime "leash") "control.sock" in
+          let _control =
+            match
+              Leash.Control.create ~sw ~path
+                {
+                  Leash.Control.tabs;
+                  status_query = (fun () -> []);
+                  models_status =
+                    (fun () ->
+                      P.
+                        {
+                          configured = false;
+                          jev_model = "unconfigured";
+                          text_model = "";
+                          systemone_endpoint = "";
+                          chat_base_url = "";
+                        });
+                  fs = env#fs;
+                  net = env#net;
+                  clock = env#clock;
+                  logger =
+                    Ox_observability.Logger.create ~service:"handle-socket-test"
+                      ~clock:env#clock ~mono_clock:env#mono_clock
+                      ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
+                      ();
+                  caps = (Ox_test.powerbox () :> Leash.Control.caps);
+                }
+            with
+            | Ok control -> control
+            | Error _ -> Alcotest.fail "hand-mb9s listener refused"
+          in
+          let call command =
+            let flow = Eio.Net.connect ~sw env#net (`Unix path) in
+            let line = P.encode_request { command } |> Yojson.Safe.to_string in
+            Eio.Flow.copy_string (line ^ "\n") flow;
+            let json =
+              Eio.Buf_read.line (Eio.Buf_read.of_flow flow ~max_size:1_048_576)
+              |> Yojson.Safe.from_string
+            in
+            match P.decode_reply json with
+            | Ok reply -> reply
+            | Error e -> Alcotest.fail e
+          in
+          let h = result (call (P.New { url = None; label = Some "shared" })) |> tab in
+          let text = P.Text { tab = h; index = None; max_chars = None } in
+          Alcotest.(check bool)
+            "hand-mb9s a new connection uses the handle" true
+            (get "text" (result (call text)) = str "shared page");
+          let first = ref None and second = ref None in
+          let evaluations () =
+            Fake.received fake
+            |> List.filter (fun j -> field "method" j = Some (str "Runtime.evaluate"))
+            |> List.length
+          in
+          let before = evaluations () in
+          let hold = ref true in
+          Fake.withhold fake "Runtime.evaluate" (fun _ ->
+              if !hold then (
+                hold := false;
+                true)
+              else false);
+          let await label ready =
+            let rec loop n =
+              if ready () then ()
+              else if n = 0 then Alcotest.fail label
+              else (
+                Eio.Fiber.yield ();
+                loop (n - 1))
+            in
+            loop 1000
+          in
+          Eio.Fiber.fork ~sw (fun () -> first := Some (call text));
+          await "first client did not enter Chrome" (fun () -> evaluations () > before);
+          Eio.Fiber.fork ~sw (fun () -> second := Some (call text));
+          for _ = 1 to 100 do
+            Eio.Fiber.yield ()
+          done;
+          Alcotest.(check int)
+            "hand-0wo8 second client stays behind the tab lock" (before + 1)
+            (evaluations ());
+          Alcotest.(check bool) "hand-0wo8 no early reply" true (!second = None);
+          Ox_test.advance env#clock (Ox.Duration.seconds 40);
+          await "socket clients did not settle" (fun () ->
+              !first <> None && !second <> None);
+          check_code "hand-0wo8 first client timeout" "timeout" (Option.get !first);
+          check_code "hand-0wo8 queued client deadline" "timeout" (Option.get !second);
+          ignore (result (call text))))
+
 let () =
   Alcotest.run "L3 control protocol"
     [
@@ -3231,6 +3357,9 @@ let () =
           Alcotest.test_case "chrome-fwnu socket" `Quick socket;
           Alcotest.test_case "hard-yi0a real socket timeout" `Quick listener_budget_reply;
           Alcotest.test_case "svc-5wm8 second instance" `Quick second_instance;
+          Alcotest.test_case
+            "hand-mb9s hand-0wo8 real socket capability and serialization" `Quick
+            shared_handle_over_socket;
           Alcotest.test_case "tab-x4v0 large text over socket" `Quick
             large_text_over_socket;
           Alcotest.test_case "human-origin shutdown" `Quick human;

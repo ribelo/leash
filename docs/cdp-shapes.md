@@ -92,7 +92,7 @@ Probe: `--headless=new`, `--remote-debugging-pipe`, local HTTP origins, no heade
 - After cross-document navigation to an HTTP page, the guard existed with a newly generated epoch and count 1; an actual DOM mutation changed count to 2. `history.pushState` and fragment navigation retained that epoch and count. A second cross-document navigation changed epoch and reset the counter to 1. `Page.getFrameTree` provided a main-frame `loaderId`, also compared around both CDP captures.
 - The measured AX reply had `nodeId`, `childIds`, `backendDOMNodeId`, role and name; the DOMSnapshot reply had `documents[].nodes.backendNodeId`, `layout.nodeIndex`, `layout.bounds` and `layout.styles`. Its `documents` array contained a main document and a same-origin `about:srcdoc` child. The child had a separate epoch/counter in its own execution context after the parent session registered the script.
 - The source joins the top document's layout backend IDs to AX backend IDs and clips **document-relative** rectangles against the viewport at the sampled `scrollX`/`scrollY`. The guard also samples scroll position and viewport dimensions, but cannot detect pure animation between calls. The observer catches DOM mutations; later action execution must revalidate loader, backend node, and geometry. The current main-frame AX capture does not include child-frame AX rows: same-origin and OOPIF content therefore remain explicit visibility limitations, not silently trusted action targets.
-- An HTTP iframe pointing from `localhost` to `127.0.0.1` became an OOPIF with a `Target.getTargets` entry of type `iframe` and `parentFrameId`. Browser-level `Target.setAutoAttach` alone did not attach this child; setting `Target.setAutoAttach {"autoAttach":true,"waitForDebuggerOnStart":false,"flatten":true}` on the **page session** produced flattened `Target.attachedToTarget` notifications for the iframe. Its frame was not listed alongside the `about:srcdoc` child in the main session's `Page.getFrameTree` response. Evaluating the guard in the active OOPIF session returned null even though the parent and same-origin srcdoc had it; a second, earlier child session had already disappeared by evaluation time. Parent-page registration does **not** cover the OOPIF session. L6 deliberately excludes these cross-origin child rows rather than claiming they are guarded.
+- An HTTP iframe pointing from `localhost` to `127.0.0.1` became an OOPIF with a `Target.getTargets` entry of type `iframe` and `parentFrameId`. Browser-level `Target.setAutoAttach` alone did not attach this child; setting `Target.setAutoAttach {"autoAttach":true,"waitForDebuggerOnStart":false,"flatten":true}` on the **page session** produced flattened `Target.attachedToTarget` notifications for the iframe. Its frame was not listed alongside the `about:srcdoc` child in the main session's `Page.getFrameTree` response. Evaluating the guard in the active OOPIF session returned null even though the parent and same-origin srcdoc had it; a second, earlier child session had already disappeared by evaluation time. Parent-page registration does **not** cover the OOPIF session. L6 deliberately excludes these cross-origin child rows rather than reporting them as guarded.
 
 ## L4 snapshot-source spike (Chrome/152.0.7977.64, headless pipe)
 
@@ -230,16 +230,17 @@ which is why a creation can arrive before `Target.createTarget` answers —
 auto-attach session follows as `Target.attachedToTarget` for the same target, the popup
 record above shows `attached` moving false → true with it.
 
-- Origin and owner state are decided from the first report about a target and never
-  rewritten (own-c0cl own-ehqa): no `openerId`, or one naming a tab the registry does not
-  know, is human origin and unowned; an `openerId` naming a tab the registry knows inherits
-  that tab's origin and owner, which is how a page's popup becomes the opener agent's tab.
-- A discovered target is listed, claimed, released, and closed with no page session at all.
+- Origin is decided from the first report about a target (own-c0cl own-ehqa): no
+  `openerId`, or one naming a tab the registry does not know, is human origin; an
+  `openerId` naming a known tab inherits that origin, which is how a page's popup becomes
+  an agent tab. `take` is the later flip from human to agent (ADR-0010).
+- A discovered target is listed and can be closed once it has a handle, with no page
+  session until the first command that needs the page.
   The first command that needs the page uses the session Chrome attached it under, or
   attaches itself (`Target.attachToTarget`, flatten); the reading and action domains are
   enabled in that session then, so nothing in the notification path waits on the browser.
 - `Target.targetDestroyed` is `closed_externally` unless Leash issued the close: a tab
-  Leash closed, or the TTL sweep closes, left the registry with its own disposition, so the
+  Leash closed, or the idle sweep closes, left the registry with its own disposition, so the
   later destroy report finds nothing to rewrite (own-teh1).
 
 `test/discovery_test.ml` scripts exactly this at the control seam: emitting
@@ -250,9 +251,13 @@ acceptance.
 
 ## L14 live acceptance (Chrome/152.0.7977.64, headless pipe, scripts/live-acceptance-m3)
 
+Historical measurements follow. L49 / ADR-0010 supersedes the attribution described here:
+popups now start human without a handle, and an agent must explicitly `take` one before
+acting. The current gate uses `take`, not the former acquisition commands.
+
 Run `bash scripts/live-acceptance-m3` for the real-service gate: phase 0 proves the
-test-only sweep override fails fast, then one service each for ownership, popups, and
-expiry (idle 5 s, unclaimed 12 s, sweep 1 s). Every phase ends in SIGTERM exit 0 with
+test-only sweep override fails fast, then one service each for handles, popups, and
+expiry (idle 5 s, sweep 1 s). Every phase ends in SIGTERM exit 0 with
 its Chrome gone. The live half of L12 answers the L10 open question and splits popups
 in two:
 
@@ -333,7 +338,7 @@ WebSocket CDP carries the same JSON method/params as the managed debugging pipe.
   and a `state` whose active spelling is **`inProgress`** (normalized to
   `in_progress` in the inventory), then `completed`. Only the final event carried
   `filePath`; active entries have a null path. Canceled download shape was not observed.
-  Unattributable frame IDs are ignored rather than credited to the wrong owner.
+  Unattributable frame IDs are ignored rather than credited to the wrong tab.
 
 
 ## L36 hardening 2 (Chrome/152.0.7977.64, headless pipe, scripts/live-acceptance-m8b)

@@ -136,8 +136,8 @@
   alcotest))
 
 (test
- (name ownership_test)
- (modules ownership_test)
+ (name capability_test)
+ (modules capability_test)
  (libraries
   leash
   leash_test_support
@@ -208,7 +208,12 @@
 (test
  (name daily_error_table_test)
  (modules daily_error_table_test)
- (deps ../docs/protocol.md ../packages/leash/protocol.ml)
+ (deps
+  ../docs/protocol.md
+  ../packages/leash/protocol.ml
+  ../CONTEXT.md
+  ../docs/adr/0005-owner-bound-tabs-and-expiry.md
+  ../docs/adr/0010-handles-are-capabilities.md)
  (libraries leash alcotest))
 
 (test

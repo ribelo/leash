@@ -200,7 +200,7 @@ let make_error_fills_hint () =
       | Error message -> failf "%s decode: %s" (P.Error_code.to_string code) message)
     P.Error_code.all;
   let code = wire "tab-gone" in
-  let detail = `Assoc [ ("disposition", `String "closed_by_owner") ] in
+  let detail = `Assoc [ ("disposition", `String "closed_by_handle") ] in
   let built = P.make_error ~detail code ~message:"gone" in
   match P.yojson_of_error built with
   | `Assoc fields ->
@@ -210,12 +210,38 @@ let make_error_fills_hint () =
         failf "detailled error omitted hint"
   | _ -> failf "error did not encode as an object"
 
+let handles_documented () =
+  let read path = In_channel.with_open_bin path In_channel.input_all in
+  let context = read "../CONTEXT.md" in
+  List.iter
+    (fun term ->
+      if find_sub context term = None then failf "hand-qy26 missing glossary term %s" term)
+    [ "**Handle**:"; "capability"; "**Label**:"; "**With human**:" ];
+  let adr = read "../docs/adr/0005-owner-bound-tabs-and-expiry.md" in
+  if find_sub adr "**Superseded by ADR-0010.**" = None then
+    failf "hand-qy26 earlier ADR is not explicitly historical";
+  let current = read "../docs/adr/0010-handles-are-capabilities.md" in
+  if find_sub current "128 bits from the system's randomness" = None then
+    failf "hand-qy26 current ADR does not state the capability entropy";
+  List.iter
+    (fun option ->
+      if find_sub current option = None then
+        failf "hand-iyyk missing rejected option %s" option)
+    [
+      "peer-credential authentication";
+      "a flat pool";
+      "labels as access";
+      "human tabs that revert";
+    ]
+
 let () =
   Alcotest.run "daily-error-table"
     [
       ( "table",
         [
-          Alcotest.test_case "daily-u1k2 four-way" `Quick four_way;
+          Alcotest.test_case "hand-s4cq daily-u1k2 four-way" `Quick four_way;
+          Alcotest.test_case "hand-qy26 hand-iyyk glossary and ADR decisions" `Quick
+            handles_documented;
           Alcotest.test_case "daily-6pde spec hints" `Quick examples;
           Alcotest.test_case "daily-azxe make_error" `Quick make_error_fills_hint;
         ] );

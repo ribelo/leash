@@ -73,8 +73,8 @@ class Page(http.server.BaseHTTPRequestHandler):
         pass
 
 
-def wire(owner, command, timeout=120, **args):
-    line = json.dumps({'v': 1, 'owner': owner, 'cmd': command, 'args': args}) + '\n'
+def wire(command, timeout=120, **args):
+    line = json.dumps({'v': 1, 'cmd': command, 'args': args}) + '\n'
     with socket.socket(socket.AF_UNIX) as peer:
         peer.settimeout(timeout)
         peer.connect(SOCKET)
@@ -89,14 +89,15 @@ def ok(reply, what):
     return reply['result']
 
 
-def request(command, owner='live-h2', **args):
-    return ok(wire(owner, command, **args), command)
+def request(command, **args):
+    return ok(wire(command, **args), command)
 
 
-def cli(*argv, owner='live-h2', expect_ok=True):
-    run = subprocess.run([LEASH, *argv, '--socket', SOCKET, '--owner', owner],
+def cli(*argv, expect_ok=True):
+    run = subprocess.run([LEASH, *argv, '--socket', SOCKET],
                          capture_output=True, text=True, timeout=120)
-    body = json.loads(run.stdout) if run.stdout.strip() else None
+    raw = run.stdout if run.returncode == 0 else run.stderr
+    body = json.loads(raw) if raw.strip() else None
     if expect_ok:
         assert run.returncode == 0, f"leash {' '.join(argv)}: {run.returncode} {run.stdout} {run.stderr}"
     return body
@@ -203,8 +204,8 @@ try:
     slow_ring = request('net', tab=other)['requests']
     assert not any('/api/' in e['url'] for e in slow_ring), slow_ring
     print('the other tab\'s ring holds', len(slow_ring), 'requests, none of the first tab\'s')
-    stranger = wire('somebody-else', 'net', tab=tab)
-    assert not stranger['ok'] and stranger['error']['code'] == 'not-owner', stranger
+    stranger = wire('net', tab='t_not_a_tab')
+    assert not stranger['ok'] and stranger['error']['code'] == 'unknown-tab', stranger
 
     section('hard-ufb7: cookies and storage (CLI)')
     jar = cli('cookies', tab)['cookies']
@@ -235,15 +236,15 @@ try:
     print('a page that does not change: timeout')
 
     section('hard-sr9v hard-b1na: ten agents at once, five in a wait longer than 30 s')
-    waiters = [request('new', owner=f'agent-{n}', url=base + '/slow')['tab'] for n in range(1, 6)]
-    actors = [request('new', owner=f'agent-{n}', url=base + '/')['tab'] for n in range(6, 11)]
+    waiters = [request('new', url=base + '/slow')['tab'] for n in range(1, 6)]
+    actors = [request('new', url=base + '/')['tab'] for n in range(6, 11)]
     results = {}
     slowest = []
     lock = threading.Lock()
 
     def waiting(n, handle):
         started = time.time()
-        reply = wire(f'agent-{n}', 'wait', timeout=120, tab=handle,
+        reply = wire('wait', timeout=120, tab=handle,
                      until={'text': 'SLOW-DONE'}, timeout_ms=3_600_000)
         results[n] = (reply, time.time() - started)
 
@@ -255,13 +256,13 @@ try:
             for command, args in (('snap', {}), ('net', {'limit': 5}), ('cookies', {}),
                                   ('eval', {'expression': 'return 1'})):
                 started = time.time()
-                ok(wire(f'agent-{n}', command, tab=handle, **args), command)
+                ok(wire(command, tab=handle, **args), command)
                 worst = max(worst, time.time() - started)
                 count += 1
-            page = request('snap', owner=f'agent-{n}', tab=handle)
+            page = request('snap', tab=handle)
             button = row(page, 'button', 'Hover me')
             started = time.time()
-            request('hover', owner=f'agent-{n}', tab=handle, snapshot=page['snapshot'], index=button['index'])
+            request('hover', tab=handle, snapshot=page['snapshot'], index=button['index'])
             worst = max(worst, time.time() - started)
             count += 2
         with lock:

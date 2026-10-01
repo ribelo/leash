@@ -86,9 +86,7 @@ let rich_success () =
               ("window_size", `String "800,600");
             ] );
         ("tabs", `Assoc [ ("cap", `Int 4) ]);
-        ( "expiry",
-          `Assoc
-            [ ("idle_s", `Int 10); ("unclaimed_s", `Int 20); ("tombstone_s", `Int 30) ] );
+        ("expiry", `Assoc [ ("idle_s", `Int 1800) ]);
         ("control", `Assoc [ ("socket", `String "/tmp/leash.sock") ]);
         ( "otlp",
           `Assoc
@@ -207,13 +205,7 @@ let every_field_wrong_type () =
               ("window_size", bad);
             ] );
         ("tabs", `Assoc [ ("cap", `String "x") ]);
-        ( "expiry",
-          `Assoc
-            [
-              ("idle_s", `String "x");
-              ("unclaimed_s", `String "x");
-              ("tombstone_s", `String "x");
-            ] );
+        ("expiry", `Assoc [ ("idle_s", `String "x"); ("tombstone_s", `String "x") ]);
         ("control", `Assoc [ ("socket", bad) ]);
         ("otlp", `Assoc [ ("endpoint", bad); ("headers", bad) ]);
         ( "models",
@@ -243,7 +235,6 @@ let every_field_wrong_type () =
       "/chrome/window_size";
       "/tabs/cap";
       "/expiry/idle_s";
-      "/expiry/unclaimed_s";
       "/expiry/tombstone_s";
       "/control/socket";
       "/otlp/endpoint";

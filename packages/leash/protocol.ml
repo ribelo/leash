@@ -52,23 +52,6 @@ module Snapshot_id = struct
   let yojson_of_t t = `String t
 end
 
-(** The requester: ["dsh:<session>"] for an agent, ["human"], or whatever an operator
-    chooses. Required on every request. *)
-module Owner = struct
-  type t = string
-
-  let of_string value =
-    if String.trim value <> "" then Ok value else Error "must not be empty"
-
-  let to_string t = t
-
-  let t_of_yojson = function
-    | `String value -> of_string value
-    | json -> Error (expected "an owner string" json)
-
-  let yojson_of_t t = `String t
-end
-
 (* ---------- Closed sets ---------- *)
 
 (** [wire_string] and [wire_value] read the string form of a closed set out of its derived
@@ -96,21 +79,6 @@ module Origin = struct
   let yojson_of_t = yojson_of_origin
 end
 
-type state =
-  | Unowned [@json.name "unowned"]
-  | Owned [@json.name "owned"]
-  | With_human [@json.name "with_human"]
-[@@deriving yojson]
-
-module State = struct
-  type t = state
-
-  let of_string = wire_value state_of_yojson
-  let to_string = wire_string yojson_of_state
-  let t_of_yojson = state_of_yojson
-  let yojson_of_t = yojson_of_state
-end
-
 type popup_state =
   | Opening [@json.name "opening"]
   | Blank [@json.name "blank"]
@@ -124,18 +92,6 @@ module Popup_state = struct
   let to_string = wire_string yojson_of_popup_state
   let t_of_yojson = popup_state_of_yojson
   let yojson_of_t = yojson_of_popup_state
-end
-
-type stage = Release [@json.name "release"] | Close [@json.name "close"]
-[@@deriving yojson]
-
-module Stage = struct
-  type t = stage
-
-  let of_string = wire_value stage_of_yojson
-  let to_string = wire_string yojson_of_stage
-  let t_of_yojson = stage_of_yojson
-  let yojson_of_t = yojson_of_stage
 end
 
 type dialog_kind =
@@ -310,13 +266,10 @@ module Chrome_phase = struct
   let yojson_of_t = yojson_of_chrome_phase
 end
 
-(** The wire's dispositions (ADR-0005): why a tombstone says a tab is gone.
-    [Closed_by_owner] and [Closed_by_ttl] are the two Leash issues itself, when its owner
-    closes the tab or the second expiry stage does; [Closed_externally] is anything else
-    Chrome reports; [Browser_lost] is a generation that ended. *)
+(** hand-mb9s hand-0ibq: why a capability stopped naming a live tab. *)
 type disposition =
-  | Closed_by_owner [@json.name "closed_by_owner"]
-  | Closed_by_ttl [@json.name "closed_by_ttl"]
+  | Closed_by_handle [@json.name "closed_by_handle"]
+  | Closed_by_idle [@json.name "closed_by_idle"]
   | Closed_externally [@json.name "closed_externally"]
   | Browser_lost [@json.name "browser_lost"]
 [@@deriving yojson]
@@ -332,8 +285,9 @@ end
 
 type error_code =
   | Invalid_request [@json.name "invalid-request"]
-  | Not_owner [@json.name "not-owner"]
-  | Already_owned [@json.name "already-owned"]
+  | Ambiguous [@json.name "ambiguous"]
+  | No_match [@json.name "no-match"]
+  | Taken [@json.name "taken"]
   | With_human [@json.name "with-human"]
   | Tab_gone [@json.name "tab-gone"]
   | Unknown_tab [@json.name "unknown-tab"]
@@ -389,29 +343,25 @@ module Error_code = struct
     | Invalid_request ->
         info 64 "malformed JSON, unknown command, or bad arguments"
           "fix the request; `leash <command> --help` names the arguments and one example"
-    | Not_owner ->
-        info 77
-          "the tab is owned by another caller, or unowned and the command needs an owner"
-          "read detail.state and detail.owner: unowned means `leash claim TAB` if \
-           permitted; owned means use your own tab with `leash new` or ask that owner to \
-           release it; `leash list --all` shows live ownership - never impersonate \
-           another owner"
-    | Already_owned ->
-        info 77 "claim on a tab that is not unowned"
-          "`leash list --all` shows its owner; use your own tab with `leash new` or ask \
-           the owner to release it"
+    | Ambiguous ->
+        info 66 "take matches several tabs; detail.matches lists them without handles"
+          "narrow the URL, title or label selector"
+    | No_match ->
+        info 66 "take matches no tab"
+          "read `leash list` and use a matching URL prefix, title or label"
+    | Taken -> info 77 "the tab already has a live handle" "ask the holder for the handle"
     | With_human ->
         info 77 "the tab is handed to the human; commands are refused until resume"
           "the human holds this tab; wait, or return it with `leash resume TAB`"
     | Tab_gone ->
         info 66
-          "the handle names a closed tab; detail.disposition is closed_by_owner, \
-           closed_by_ttl, closed_externally, or browser_lost"
-          "the handle is dead; read detail.disposition, then open a new tab with `leash \
-           new`"
+          "the handle names a closed tab; detail.disposition is closed_by_handle, \
+           closed_by_idle, closed_externally, or browser_lost"
+          "open a new tab with `leash new`"
     | Unknown_tab ->
         info 66 "no tab and no tombstone for the handle"
-          "that handle is not a tab; `leash list --all` shows live handles"
+          "that handle is not a tab; open a new tab with `leash new`, or ask the holder \
+           for the handle"
     | Stale_snapshot ->
         info 65 "the snapshot id or target row no longer matches the current page"
           "read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; \
@@ -518,10 +468,10 @@ module Error_code = struct
           "Leash is restarting; retry `leash status` in a few seconds"
     | Socket_permission ->
         info 77 "the CLI was denied access to the control socket"
-          "the control socket is not readable; check its owner and mode, or pass --socket"
+          "the control socket is not readable; check its permissions, or pass --socket"
     | Permission_denied ->
         info 77 "the CLI was denied access to a filesystem path"
-          "check the path's owner and mode, or pass another path"
+          "check the path's permissions, or pass another path"
     | Config_invalid ->
         info 65 "the configuration file is missing, unreadable, or invalid"
           "fix the reported problems; `leash config check` lists every one with the \
@@ -540,8 +490,9 @@ module Error_code = struct
   let all =
     [
       Invalid_request;
-      Not_owner;
-      Already_owned;
+      Ambiguous;
+      No_match;
+      Taken;
       With_human;
       Tab_gone;
       Unknown_tab;
@@ -595,8 +546,6 @@ let error_help = Error_code.error_help
 
 (* ---------- Tab, snapshot and drive shapes ---------- *)
 
-type expires = { stage : Stage.t; in_s : int } [@@deriving yojson]
-
 type dialog = {
   kind : Dialog_kind.t;
   message : string;
@@ -606,33 +555,48 @@ type dialog = {
 
 type tab_info = {
   tab : Handle.t;
+  label : string option; [@json.null]
   url : string;
   title : string;
   origin : Origin.t;
-  state : State.t;
-  owner : Owner.t option; [@json.null]
+  age_s : int;
+  idle_s : int;
+  closes_in_s : int option; [@json.null]
+  with_human : bool;
+  reason : string option;
   generation : int;
   dialog : dialog option; [@json.null]
-  expires : expires option; [@json.null]
   loaded : bool option;
-      (** field-m5jw: only new/nav report whether the load wait finished. *)
+}
+[@@deriving yojson]
+
+type tab_listing = {
+  label : string option; [@json.null]
+  url : string;
+  title : string;
+  origin : Origin.t;
+  age_s : int;
+  idle_s : int;
+  closes_in_s : int option; [@json.null]
+  with_human : bool;
   reason : string option;
-      (** Why the human holds this tab, the reason of the live handoff (hand-r4t1); a
-          [key?] field, so it is absent from every tab nobody is waiting on. *)
 }
 [@@deriving yojson]
 
 type popup_info = {
-  tab : Handle.t;
+  tab : Handle.t option; [@json.null]
+  label : string option; [@json.null]
   url : string;
   title : string;
   origin : Origin.t;
+  age_s : int;
+  idle_s : int;
+  closes_in_s : int option; [@json.null]
+  with_human : bool;
+  reason : string option;
   state : Popup_state.t;
-  owner : Owner.t option; [@json.null]
   generation : int;
   dialog : dialog option; [@json.null]
-  expires : expires option; [@json.null]
-  reason : string option;
   opener_url : string;
 }
 [@@deriving yojson]
@@ -714,14 +678,12 @@ type step = {
 
 (* ---------- Per-command arguments ---------- *)
 
-type new_args = { url : string option } [@@deriving yojson]
-type list_args = { all : bool [@json.default false] } [@@deriving yojson]
-type tab_args = { tab : Handle.t } [@@deriving yojson]
+type new_args = { url : string option; label : string option } [@@deriving yojson]
 
-type force_args = { tab : Handle.t; force : bool option } [@@deriving yojson]
-(** The arguments of the two commands a caller may force (own-0pnk): [force] is honoured
-    only for [release] and [close], and is a [key?] field, so a request that does not ask
-    for it carries no [force] key at all. *)
+type take_args = { url : string option; title : string option; label : string option }
+[@@deriving yojson]
+
+type tab_args = { tab : Handle.t } [@@deriving yojson]
 
 type snap_args = {
   tab : Handle.t;
@@ -928,7 +890,7 @@ type status_result = {
 }
 [@@deriving yojson]
 
-type list_result = { tabs : tab_info list } [@@deriving yojson]
+type list_result = { tabs : tab_listing list } [@@deriving yojson]
 
 (* run-ykq4: a download belongs to the tab whose main frame began it. *)
 type download_info = {
@@ -943,7 +905,6 @@ type download_info = {
 [@@deriving yojson]
 
 type downloads_result = { downloads : download_info list } [@@deriving yojson]
-type released_result = { released : bool } [@@deriving yojson]
 type closed_result = { closed : bool } [@@deriving yojson]
 type resumed_result = { resumed : bool } [@@deriving yojson]
 
@@ -955,7 +916,7 @@ type debug_result = { entries : debug_entry list } [@@deriving yojson]
 type eval_result = { value : Yojson.Safe.t } [@@deriving yojson]
 
 (* hard-xg6y: one request of a tab's ring. Everything here is page data returned to the
-   owner; none of it is ever a log line. *)
+   handle holder; none of it is ever a log line. *)
 type net_entry = {
   id : string;
   method_ : string; [@json.key "method"]
@@ -1270,10 +1231,9 @@ type empty_args = unit [@@deriving yojson] [@@yojson.empty_record]
 
 type command =
   | New of new_args
-  | List_tabs of list_args
-  | Claim of tab_args
-  | Release of force_args
-  | Close of force_args
+  | List_tabs
+  | Take of take_args
+  | Close of tab_args
   | Status
   | Snap of snap_args
   | Text of text_args
@@ -1307,9 +1267,8 @@ type command =
 
 let command_name = function
   | New _ -> "new"
-  | List_tabs _ -> "list"
-  | Claim _ -> "claim"
-  | Release _ -> "release"
+  | List_tabs -> "list"
+  | Take _ -> "take"
   | Close _ -> "close"
   | Status -> "status"
   | Snap _ -> "snap"
@@ -1344,10 +1303,9 @@ let command_name = function
 
 let args_to_json = function
   | New args -> yojson_of_new_args args
-  | List_tabs args -> yojson_of_list_args args
-  | Claim args -> yojson_of_tab_args args
-  | Release args -> yojson_of_force_args args
-  | Close args -> yojson_of_force_args args
+  | List_tabs -> `Assoc []
+  | Take args -> yojson_of_take_args args
+  | Close args -> yojson_of_tab_args args
   | Status -> yojson_of_empty_args ()
   | Snap args -> yojson_of_snap_args args
   | Text args -> yojson_of_text_args args
@@ -1381,10 +1339,18 @@ let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
   match cmd with
   | "new" -> with_args new_args_of_yojson (fun args -> New args)
-  | "list" -> with_args list_args_of_yojson (fun args -> List_tabs args)
-  | "claim" -> with_args tab_args_of_yojson (fun args -> Claim args)
-  | "release" -> with_args force_args_of_yojson (fun args -> Release args)
-  | "close" -> with_args force_args_of_yojson (fun args -> Close args)
+  | "list" -> (
+      match args with `Assoc [] -> Ok List_tabs | _ -> Error "list takes no arguments")
+  | "take" -> (
+      match with_path "args" (take_args_of_yojson args) with
+      | Error message -> Error message
+      | Ok args ->
+          let n =
+            List.length (List.filter Option.is_some [ args.url; args.title; args.label ])
+          in
+          if n = 1 then Ok (Take args)
+          else Error "args: take requires exactly one selector")
+  | "close" -> with_args tab_args_of_yojson (fun args -> Close args)
   | "status" -> with_args empty_args_of_yojson (fun () -> Status)
   | "snap" -> with_args snap_args_of_yojson (fun args -> Snap args)
   | "text" -> with_args text_args_of_yojson (fun args -> Text args)
@@ -1423,7 +1389,7 @@ let command_of_args ~cmd args =
 
 (* ---------- The request envelope ---------- *)
 
-type request = { owner : Owner.t; command : command }
+type request = { command : command }
 (** The wire's ["v"] is a protocol constant: [decode_request] refuses anything but
     {!version}, and [encode_request] always writes it. *)
 
@@ -1433,7 +1399,6 @@ let encode_request request =
   `Assoc
     [
       ("v", `Int version);
-      ("owner", Owner.yojson_of_t request.owner);
       ("cmd", `String (command_name request.command));
       ("args", args_to_json request.command);
     ]
@@ -1441,7 +1406,7 @@ let encode_request request =
 let decode_request json =
   let ( let* ) = Result.bind in
   let* fields = object_fields "request" json in
-  let* () = reject_unknown "request" [ "v"; "owner"; "cmd"; "args" ] fields in
+  let* () = reject_unknown "request" [ "v"; "cmd"; "args" ] fields in
   let* version_json = required "request" "v" fields in
   let* () =
     if version_json = `Int version then Ok ()
@@ -1450,8 +1415,6 @@ let decode_request json =
         (Printf.sprintf "v: expected version %d, got %s" version
            (Yojson.Safe.to_string version_json))
   in
-  let* owner_json = required "request" "owner" fields in
-  let* owner = with_path "owner" (Owner.t_of_yojson owner_json) in
   let* cmd_json = required "request" "cmd" fields in
   let* cmd =
     match cmd_json with
@@ -1462,4 +1425,4 @@ let decode_request json =
   in
   let* args = required "request" "args" fields in
   let* command = command_of_args ~cmd args in
-  Ok { owner; command }
+  Ok { command }

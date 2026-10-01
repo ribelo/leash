@@ -1,6 +1,6 @@
 # Control protocol and the leash CLI
 
-The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, owner-only, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `wait`) hold the connection open until they settle. The socket admits 64 requests at once (hard-b1na); see Concurrency below.
+The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, mode 0600, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `wait`) hold the connection open until they settle. The socket admits 64 requests at once (hard-b1na); see Concurrency below.
 
 Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec.
 
@@ -9,7 +9,7 @@ Wire shapes here are the contract; field names are stable across the CLI and any
 Request:
 
 ```json
-{"v":1,"owner":"dsh:4f2a…","cmd":"click","args":{"tab":"t_9xk…","index":7}}
+{"v":1,"cmd":"click","args":{"tab":"t_9xk…","index":7}}
 ```
 
 Reply, one of:
@@ -19,7 +19,7 @@ Reply, one of:
 {"ok":false,"error":{"code":"stale-snapshot","message":"snapshot s_3 is stale; snap again","hint":"read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the row is gone, navigate back or re-find it before acting","detail":{…}}}
 ```
 
-- `owner` is required on every request. The CLI fills it from `DSH_SESSION_ID` (as `dsh:<id>`) or `--owner`; a human uses `--owner human` or whatever they like.
+- A tab handle is the capability (ADR-0010). The envelope has only `v`, `cmd`, and `args`; no caller identity or environment default exists.
 - `error.code` is from the closed set below. `message` is one short sentence for the agent. `hint` is always present: one line naming the next action, from that table. `detail?` is optional structured context (for `tab-gone`: the disposition; for `stale-snapshot`: the current snapshot id); it is omitted when the error carries none.
 
 ## Commands
@@ -28,11 +28,10 @@ Tab lifecycle:
 
 | cmd | args | result |
 | --- | --- | --- |
-| `new` | `{url?}` | `TabInfo` |
-| `list` | `{all?: bool}` | `{tabs: TabInfo[]}` |
-| `claim` | `{tab}` | `TabInfo` |
-| `release` | `{tab, force?}` | `{released: true}` |
-| `close` | `{tab, force?}` | `{closed: true}` |
+| `new` | `{url?, label?: string}` | `TabInfo` |
+| `list` | `{}` | `{tabs: TabListing[]}` |
+| `take` | exactly one of `{url}`, `{title}`, `{label}` | `TabInfo` |
+| `close` | `{tab}` | `{closed: true}` |
 | `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` |
 
 `pid` is the actual managed Chrome child PID, not the Leash service PID or a
@@ -99,7 +98,7 @@ input settlement and `wait` immediately: action replies carry `dialog`, while `w
 reports `dialog-open` with the serialized dialog in `error.detail`. Run expectation
 waits stop with run status `error` and the dialog in the final observation. A prompt
 reports Chrome’s `defaultPrompt` as `default_prompt` (null for other dialog kinds).
-Answer the dialog before another command on that tab; an owner-initiated close
+Answer the dialog before another command on that tab; an handle-initiated close
 automatically accepts its own `beforeunload` dialog. When a handler exhausts its
 listener budget, its socket still returns `timeout` with `detail.command` and
 `detail.budget_ms` instead of closing without a reply.
@@ -175,12 +174,11 @@ A field shown as `T|null` is always present, `null` when it has no value; a fiel
 `key?` is omitted when it has no value.
 
 ```
-TabInfo      = {tab, url, title, origin: "agent"|"human", state: "unowned"|"owned"|"with_human",
-                owner: string|null, generation: int, dialog: Dialog|null, expires: {stage: "release"|"close", in_s: int}|null,
-                reason?: string, loaded?: bool}
-PopupInfo    = {tab, url, title, origin: "agent"|"human", state: "opening"|"blank"|"ready",
-                owner: string|null, generation: int, dialog: Dialog|null, expires: {stage: "release"|"close", in_s: int}|null,
-                reason?: string, opener_url: string}
+TabListing   = {label: string|null, url, title, origin: "agent"|"human", age_s: int,
+                 idle_s: int, closes_in_s: int|null, with_human: bool}
+TabInfo      = {tab, ...TabListing, generation: int, dialog: Dialog|null, reason?: string, loaded?: bool}
+PopupInfo    = {tab?: string, ...TabListing, state: "opening"|"blank"|"ready",
+                 generation: int, dialog: Dialog|null, reason?: string, opener_url: string}
 Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
                 source: "ax"|"dom" (default "ax" when omitted), reason?: string, dialog: Dialog|null}
 Row          = {index: int, role: string, name: string, value?: string, state?: string[],
@@ -195,9 +193,9 @@ Dialog       = {kind: "alert"|"confirm"|"prompt"|"beforeunload", message: string
 ActionResult = {tab, url, title, snapshot: Snapshot|null, dialog: Dialog|null, popups: PopupInfo[], via?: "label"}
                  snapshot is null, or a fresh Snapshot (the object, not an id) taken after settlement when the request set snap (field-swvb)
                  via is "label" when the click dispatched on a covering label of the target, and omitted otherwise (field-uls3)
-                 popups lists only tabs opened by the acted-on tab (opener), owned by the caller; newly opened target metadata is refreshed after a bounded 1 s wait for its URL (daily-c4cl)
+                 popups lists only tabs opened by the acted-on tab (opener); page-opened tabs have human origin and no capability until taken; newly opened target metadata is refreshed after a bounded 1 s wait for its URL (daily-c4cl)
                   an empty/about:blank URL younger than 1 s is state opening; still blank after the settle window is blank; a committed URL is ready (field-drpx)
-                  a dialog skips the settle wait and reports an opening popup immediately; opener_url identifies the page that opened it; owner remains separate from readiness
+                  a dialog skips the settle wait and reports an opening popup immediately; opener_url identifies the page that opened it; human hold remains separate from readiness
 NetEntry     = {id: string, method, url, status: int|null, type: string, mime: string|null, size: int|null,
                 duration_ms: int|null, from_cache: bool, error?: string}
                  one request of the tab's own ring (see the net rules below); type is Chrome's resource type
@@ -255,7 +253,7 @@ Models       = {configured: bool, jev_model: string, text_model: string,
 
 Rules:
 
-- `drive` checks ownership, then holds the tab action lock across all observations and
+- `drive` authorizes the handle, then holds the tab action lock across all observations and
   actions; no other tab command can interleave. It observes a fresh snapshot, reads
   visible page text and scroll metrics, requests one JEV decision, acts, and records a
   Step. `dry_run: true` makes exactly one Observe/Decide/trace pass and never acts, and
@@ -291,12 +289,12 @@ Rules:
   `final` names). `start_url`, when present, is the explicit http(s) page that tab opens
   before the operator starts. On a blank tab with no `start_url`, one unambiguous http(s)
   URL in the mission is the bootstrap; none or several is `blocked` with the missing-start
-  reason, not a playbook failure and not a model call. It checks ownership and then holds
+  reason, not a playbook failure and not a model call. It authorizes the handle and then holds
   the tab action lock for the whole run. A playbook step is one operator call bounded by
   the procedure and by what is left of the mission. The on-the-fly operator uses
   `max_steps` (default 60 executed actions; prediction cap twice that) and the remaining
   mission deadline. It is refused before it starts on a tab the caller does not own
-  (`not-owner`), one the human holds (`with-human`), or one with a dialog open
+  (`unknown-tab`), one the human holds (`with-human`), or one with a dialog open
   (`dialog-open`).
 - The playbook level is asked when at least one book is installed: at the start, after a
   procedure whose description or the mission names another installed site the run has not
@@ -358,7 +356,7 @@ Rules:
   does. The runner streams each validated record to `--out` as a tagged `script-record` line (`kind`, `source: "playbook"`, playbook identity, procedure, script, record) as pages complete; it keeps only five bounded samples in memory and `collected` is the count. No model sees a prepared script record. A terminal `operator-state` line is separate and is not a script record. A dry run
   runs no script. A procedure may declare `repeat: {next, max, until, delay_ms?, key}`: after its body the runner executes the named next-page procedure up to `max` pages, checks `until` and the next procedure’s expectations, waits `delay_ms` (default 500 ms), and streams each record once by `key` — the key de-duplicates for the rest of the run, so a page read twice (a replayed procedure, a next-page step the mission level chooses itself) never streams a record twice.
 - `playbook_test` runs one script of an installed playbook on the tab's page and answers its validated output, so that writing
-  a script is a fast loop; it is owner-bound and takes the tab's action lock. The script is looked up by name in the
+  a script is a fast loop; it is handle-based and takes the tab's action lock. The script is looked up by name in the
   playbooks directory (`invalid-request` for a playbook or script that is not there; a path is never a playbook name).
   `records` is the length of a list result, or 1; a result over 1 MiB is not echoed whole: `value` is its first five
   records and `truncated` is true. `playbook_check` opens a blank tab for the caller, compiles every script of the
@@ -418,39 +416,11 @@ Rules:
   null. `version` is the library version. `pid` is the managed Chrome's process id while
   `chrome` is `running`, and null while a generation is being relaunched. `headed` is
   false only when the service was started headless (daily-smli daily-a341).
-- Ownership is checked before every tab command (ADR-0005). The `act` commands — `nav`,
-  `snap`, `text`, `eval`, `shot`, `debug`, `wait`, `click`, `fill`, `press`, `select`,
-  `scroll`, `upload`, `hover`, `net`, `net_body`, `net_request`, `cookies`, `storage` — `dialog`, `release`, and `close` require that the caller owns the tab;
-  `claim` requires that nobody does. A tab nobody owns and a tab another caller owns both
-  refuse with `not-owner`; a tab handed to the human refuses with `with-human` — its
-  owner's commands included, until `resume`.
-- `force: true` (the CLI's `--force`) is honoured on `release` and `close` only, where it
-  ignores ownership and a human's hold so a human can clean up after an agent that is
-  gone; every use is logged. A `force` key on any other command is an unknown field, so
-  the request is `invalid-request`.
-- `downloads` requires ownership (also refuses with `with-human` during handoff). Only a download whose main frame belongs to that tab is listed; an unattributed browser event is ignored. Downloads live under the managed Chrome profile in `downloads/`, configured through `Browser.setDownloadBehavior` with `eventsEnabled: true`.
-- `list` shows the caller's tabs — the ones it owns and the one the human is holding for
-  it — and `list --all` every tab with its `origin`, `state`, and `owner`; `owner` is
-  null exactly when `state` is `unowned`.
-- `expires` is the next stage a tab faces and the whole seconds left before it: an owned
-  tab faces `release` after `expiry.idle_s` with no owner action, and an unowned
-  agent-origin tab faces `close` after `expiry.unclaimed_s` with nobody claiming it. It is
-  `null` for a human-origin tab and for one the human holds, because no timer may take
-  them.
-- `handoff` hands the tab to the human and blocks while the tab is `with_human`: every
-  command on it is refused with `with-human` — its owner's included — and `reason` is on
-  every `TabInfo` the service reports for it, which is what `list --all` shows. The request
-  ends the first of: a `resume`, which is authorized for anyone because it only ever gives
-  the tab back to its owner and answers `{resumed: true, url, title}` with the page as the
-  human left it, and which restarts the tab's idle clock; the deadline, `timeout_s` or
-  fifteen minutes measured from the request — the human-facing steps below included — which
-  answers `timeout` and gives the tab back to its owner; the agent's
-  disconnect, which does the same; and the tab's disappearance, which answers `tab-gone`
-  with the disposition that closed it. A forced `release` or `close` of the tab the human
-  holds ends the handoff there and then rather than at the deadline: the release answers
-  `not-owner` — the agent no longer owns the tab — and leaves it unowned with no `reason`,
-  and the close answers `tab-gone` with its disposition. `resume` on a tab nobody is
-  waiting on is `no-handoff`, so a stale notification cannot do something surprising.
+- Every tab command authorizes by handle. A missing handle is `invalid-request`, an unknown handle is `unknown-tab`, and a tombstoned handle is `tab-gone` with its disposition. While `with_human` is true, actions refuse with `with-human`; `resume` and dialog answers remain available by handle.
+- `list` shows all tabs and never returns handles. A label is nullable display metadata, not a credential. `new [URL] --label TEXT` creates a labelled agent tab.
+- `take --url PREFIX | --title TEXT | --label TEXT` requires exactly one selector. Matching is case-insensitive: URL prefix, title substring, whole label. No match returns `no-match`; several return `ambiguous` with handle-free listings in `detail.matches`. A live capability returns `taken` with a sharing hint; a handed-off tab returns `with-human`. A successful take permanently changes origin to agent and returns its new capability. The journal records URL and time, never the capability.
+- `downloads` requires the handle and refuses during handoff. Only downloads attributed to the tab main frame appear; files remain under the managed profile downloads directory.
+- `handoff HANDLE REASON` waits for handle-based `resume`, the deadline (default fifteen minutes), client disconnection, or disappearance. Resume, timeout and disconnection restore ordinary use and restart the idle clock; disappearance returns `tab-gone`. Resume outside a handoff returns `no-handoff`. A human hold cannot be bypassed by close or take.
 - The human-facing side of a `handoff` runs in the order the story says: `Target.activateTarget`
   for the tab, then `handoff.focus_command`, then `handoff.notify_command`, whose stdout
   carries the action the human took and whose Done action (`done`, what
@@ -461,22 +431,9 @@ Rules:
   told is exactly why nobody answered. Each external command gets five seconds of its own;
   the notification instead runs for as long as the handoff does and is stopped when the
   handoff ends, however it ends.
-- Expiry is one sweep every 30 seconds on the service clock. Stage 1 releases an owned tab
-  idle for `idle_s`: it stays open, unowned, and claimable. Stage 2 closes an unowned
-  agent-origin tab unclaimed for `unclaimed_s` with disposition `closed_by_ttl`. Any action
-  its owner is allowed to take resets the idle clock, a human-origin tab is never
-  auto-closed whatever its ownership history, and a handed-off tab is exempt while the
-  human holds it.
-- Tabs Leash did not create are discovered from Chrome's target stream. A tab opened in the
-  Chrome UI, or by a page whose opener Leash does not know, appears in `list --all` with
-  origin `human` and state `unowned`, and an agent claims it to work on it. A tab a page
-  opens from a tab an agent owns is that agent's instead: origin `agent` and state
-  `owned`. Origin and owner state are decided when the tab is first seen and never
-  change; a later report about the tab moves its url and title. Leash attaches to a
-  discovered tab when a command first needs its page — `claim` is such a command, and it
-  enables the tab's event domains there, so `debug` covers the tab from the claim on;
-  `list`, `release`, and `close` need no attachment. A discovered tab that goes away
-  without Leash closing it leaves a tombstone with disposition `closed_externally`.
+- Agent tabs close after `expiry.idle_s` without handle use (default 1800 seconds); a sweep runs every 30 seconds. There is no intermediate stage. Handoff pauses expiry. Idle closure leaves `closed_by_idle`; late use returns `tab-gone` and the hint “open a new tab with `leash new`”.
+- agent tabs close after 30 idle minutes; your tabs are never closed unless an agent takes one
+- Chrome UI tabs and page popups are human, even with an agent opener. Discovery does not mint a handle. Taking such a tab makes it agent permanently; it then follows the idle rule. External closure leaves `closed_externally`. Attachment is lazy on first observation; restored targets after a browser restart are human and previous-generation handles remain dead.
 - Every action except `nav`, `scroll`, `wait`, and `dialog` requires the `snapshot` id it targets; it is refused with `stale-snapshot` if that is not the tab's current snapshot, if the page navigated since, if the row's node no longer resolves, or if its role and name differ from the snapshot's. An indexed `scroll` carries no id and revalidates against the tab's current snapshot.
 - A row action also refuses with `row-not-actionable` when the row is disabled, has no layout box, cannot take focus, or is covered at its click point (a hit test that answers with another node than the row or one of its descendants). Clicking reads the row's geometry at that moment; scrolling and animation are never staleness. A covering LABEL whose control is the target, or which contains it, is not a cover: the click is dispatched at that point and the reply carries via "label" (field-uls3).
 - An action whose handler closes its own tab (a click on `window.close()`) reports `tab-gone` with `closed_externally` when the browser no longer knows the target; if the reply wins the race the action succeeds and the next command on the handle reports `tab-gone`.
@@ -495,11 +452,11 @@ Rules:
   last eight snapshots of a tab are remembered, and their baselines outlive the navigation that clears
   the tab's current table, so a navigated page counts as changed. A snapshot the tab does not remember is
   `stale-snapshot`. A wait takes **no lock of the tab's**: an action on the same tab runs beside it, and its
-  polling counts as the owner's activity, so an hour-long wait does not idle the tab out.
+  polling counts as the handle activity, so an hour-long wait does not idle the tab out.
 - `net` (hard-xg6y hard-ovbx hard-vq5s). Chrome delivers network events per tab session, so **every tab has a
-  ring of its own** (500 requests, oldest dropped first), owner-bound like every tab command. It is fed by
+  ring of its own** (500 requests, oldest dropped first), handle-based like every tab command. It is fed by
   `Network.requestWillBeSent`, `requestWillBeSentExtraInfo`, `responseReceived`, `requestServedFromCache`,
-  `loadingFinished` and `loadingFailed` from the tab's claim (or creation) on, and holds metadata only. `net`
+  `loadingFinished` and `loadingFailed` from the tab's first attachment on, and holds metadata only. `net`
   lists the most recent `limit` (default 100, at most 500) whose URL contains `match` (case-insensitive)
   and whose resource `type` equals the filter, oldest first. A request that redirected stays listed under
   `<id>~<n>` with the redirect's status; the request it became keeps the id. `net_body` returns the response
@@ -509,7 +466,7 @@ Rules:
   `net_request` returns the headers (the extra-info headers, cookies included, win over the event's) and,
   through `Network.getRequestPostData`, the post data bounded the same way. On the CLI: `leash net TAB`,
   `leash net TAB body ID`, `leash net TAB request ID`. URLs, headers, bodies, cookie values and storage
-  values are page data for the owner and are never a log line; the journal's anchors are identifiers only.
+  values are page data for the handle holder and are never a log line; the journal's anchors are identifiers only.
 - `upload` (hard-o3za hard-2gnf): `paths` are 1 to 10 absolute paths of readable regular files, 50 MiB
   together (`invalid-request`, `too-large`), checked before the browser is asked. The row must be a
   `file-input` (`row-not-actionable` otherwise); it is revalidated like an action — current snapshot, same
@@ -537,11 +494,11 @@ Rules:
 - Visible cross-origin iframes are informational `frame` rows named by their src origin with `state:["cross-origin"]`; they expose no inner-frame controls. Known reCAPTCHA, hCaptcha, and Turnstile request/frame loads also enter `debug` as warning-level console entries (field-vji1).
 - A row's `name` may be empty: a control with no accessible name (an unlabelled native select, a bare text input, an icon button) is kept with its `role`, an empty `name`, and its `value` or `placeholder`, so it stays addressable by index (tab-zc36). `value` is omitted when the control has neither.
 - `new` with a url and `nav` register or retain the handle before waiting for load. Both succeed with `loaded:true` on load, or `loaded:false` after the bounded 30 s load wait (field-m5jw). They refresh the current committed URL — after any redirect — and title in either case; an unfinished load is not a navigation failure. `new` without a url returns at once with `about:blank` and `loaded:true`.
-- The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Every command names its positional arguments in its synopsis — `leash click [OPTION]… TAB SNAPSHOT INDEX` — and accepts only the options it uses, so `leash <command> --help` is the whole call; `--owner`, `--pretty`, `--config` and `--socket` are the client options every command shares. Exit status 0 on `ok:true`. A failure exits with its code's class from the error table below, not 1; command-line parse exits 124. `leash help errors` prints that table.
+- The CLI prints the `result` (or the error) as compact JSON; `--pretty` indents; `snap` and `list` also accept `--table` for a human-readable rendering. Every command names its positional arguments in its synopsis — `leash click [OPTION]… TAB SNAPSHOT INDEX` — and accepts only the options it uses, so `leash <command> --help` is the whole call; `--pretty`, `--config` and `--socket` are the client options every command shares. Exit status 0 on `ok:true`. A failure exits with its code's class from the error table below, not 1; command-line parse exits 124. `leash help errors` prints that table.
 
 ## Bundled agent skill (CLI-local)
 
-These commands need no service, configuration file or owner. The executable embeds
+These commands need no service, configuration file or caller identity. The executable embeds
 all of `skill/`; it never loads the bundle from the caller's checkout or network.
 
 - `leash skill show` prints the complete stamped `SKILL.md` as raw Markdown, not JSON.
@@ -560,7 +517,7 @@ all of `skill/`; it never loads the bundle from the caller's checkout or network
 - Replacement first writes a complete sibling staging tree, renames the old tree
   to a backup, and moves the staged tree into place. Failed moves roll back; symlinks
   in the old tree are removed without following them. Cleanup failures report the
-  completed replacement and retained backup path rather than claiming full success.
+  completed replacement and retained backup path rather than reporting full success.
   Targets are independent: completed outcomes stay on stdout, with one canonical
   combined error on stderr if any target fails. Existing `usage` (64),
   `permission-denied` (77), `internal` (70) and `cli-parse` (124) apply.
@@ -598,17 +555,18 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | unavailable | 69 | EX_UNAVAILABLE | service, browser, or model cannot be used |
 | internal | 70 | EX_SOFTWARE | a defect, or a reply that is not protocol JSON |
 | retry | 75 | EX_TEMPFAIL | timed out, or the tab cap is full |
-| permission | 77 | EX_NOPERM | filesystem or socket permission, or tab ownership refused |
+| permission | 77 | EX_NOPERM | filesystem or socket permission, or capability or human-hold refused |
 | parse | 124 | — | the command line did not parse; the command did not run |
 
 | code | exit | meaning | hint |
 | --- | --- | --- | --- |
 | `invalid-request` | 64 | malformed JSON, unknown command, or bad arguments | fix the request; `leash <command> --help` names the arguments and one example |
-| `not-owner` | 77 | the tab is owned by another caller, or unowned and the command needs an owner | read detail.state and detail.owner: unowned means `leash claim TAB` if permitted; owned means use your own tab with `leash new` or ask that owner to release it; `leash list --all` shows live ownership - never impersonate another owner |
-| `already-owned` | 77 | claim on a tab that is not unowned | `leash list --all` shows its owner; use your own tab with `leash new` or ask the owner to release it |
+| `ambiguous` | 66 | take matches several tabs; detail.matches lists them without handles | narrow the URL, title or label selector |
+| `no-match` | 66 | take matches no tab | read `leash list` and use a matching URL prefix, title or label |
+| `taken` | 77 | the tab already has a live handle | ask the holder for the handle |
 | `with-human` | 77 | the tab is handed to the human; commands are refused until resume | the human holds this tab; wait, or return it with `leash resume TAB` |
-| `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_owner, closed_by_ttl, closed_externally, or browser_lost | the handle is dead; read detail.disposition, then open a new tab with `leash new` |
-| `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; `leash list --all` shows live handles |
+| `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_handle, closed_by_idle, closed_externally, or browser_lost | open a new tab with `leash new` |
+| `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; open a new tab with `leash new`, or ask the holder for the handle |
 | `stale-snapshot` | 65 | the snapshot id or target row no longer matches the current page | read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the row is gone, navigate back or re-find it before acting |
 | `no-such-row` | 66 | the index is not in the snapshot | that index is not in the snapshot; `leash snap TAB` and use a listed index |
 | `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
@@ -634,8 +592,8 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |
 | `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash`, then `leash status`; a brief service-restarting (75) right after start is normal - retry; tabs and snapshots from before the stop are gone, so re-open them |
 | `service-restarting` | 75 | the leash unit is activating or auto-restarting, or Chrome's generation is being relaunched | Leash is restarting; retry `leash status` in a few seconds |
-| `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its owner and mode, or pass --socket |
-| `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's owner and mode, or pass another path |
+| `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its permissions, or pass --socket |
+| `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's permissions, or pass another path |
 | `config-invalid` | 65 | the configuration file is missing, unreadable, or invalid | fix the reported problems; `leash config check` lists every one with the config path |
 | `usage` | 64 | the command was invoked wrongly; the arguments do not match its synopsis | `leash <command> --help` shows the arguments and an example |
 | `cli-parse` | 124 | Cmdliner rejected the command line; the command did not run | the command line did not parse; `leash <command> --help` shows the accepted form |

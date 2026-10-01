@@ -34,7 +34,7 @@ def leaked(text):
 
 
 def cli(*args, timeout=60, expect=0):
-    p = subprocess.run([LEASH, *map(str, args), "--owner", OWNER],
+    p = subprocess.run([LEASH, *map(str, args)],
                        text=True, capture_output=True, timeout=timeout)
     OUTPUTS.extend((p.stdout, p.stderr))
     assert not leaked(p.stdout) and not leaked(p.stderr), "API key leaked in CLI output"

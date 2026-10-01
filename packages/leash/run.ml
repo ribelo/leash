@@ -1514,7 +1514,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_record ~pause_ms ~now ~i
         else if auto then Ok (Continue st)
         else if st.book = None then
           (* daily-9ggi: no-playbook verification is not a planning problem or
-             a request for a human. Return control without changing ownership. *)
+             a request for a human. Return control without handing off the tab. *)
           Ok (Finish (finish st (status "blocked")
             ~reason:(Printf.sprintf "DONE was refused: %s" (failures results)) ()))
         else

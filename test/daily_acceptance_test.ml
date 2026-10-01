@@ -10,9 +10,6 @@ let field key = function `Assoc xs -> List.assoc_opt key xs | _ -> None
 let get key json =
   match field key json with Some x -> x | None -> Alcotest.fail ("missing " ^ key)
 
-let owner text =
-  match P.Owner.of_string text with Ok x -> x | Error e -> Alcotest.fail e
-
 let tab json =
   match P.Handle.t_of_yojson (get "tab" json) with
   | Ok x -> x
@@ -26,8 +23,8 @@ let result = function
   | P.Success json -> json
   | P.Failure e -> Alcotest.failf "%s: %s" (P.Error_code.to_string e.code) e.message
 
-let request tabs who command =
-  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+let request tabs _client command =
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   match P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire)) with
   | Ok x -> x
   | Error e -> Alcotest.fail e
@@ -226,7 +223,7 @@ let snapshot tabs h =
 
 let press_keys () =
   rig (fun _ _ _ tabs fake _ _ ->
-      let h = tab (result (request tabs "alice" (P.New { url = None }))) in
+      let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let id, _ = snapshot tabs h in
       List.iter
@@ -271,7 +268,7 @@ let press_keys () =
 
 let native_identity () =
   rig (fun _ _ _ tabs fake _ _ ->
-      let h = tab (result (request tabs "alice" (P.New { url = None }))) in
+      let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let id, json = snapshot tabs h in
       let row =
@@ -322,11 +319,11 @@ let native_identity () =
                 limit = None;
               })))
 
-(* daily-9ggi: stale branches share one recovery object; ownership refusal tells
-   whether to claim an unowned tab or leave another owner's tab alone. *)
+(* daily-9ggi hand-scaz: stale branches share one recovery object; a second
+   connection that holds the handle can still read the tab. *)
 let recovery_details () =
   rig (fun _ _ _ tabs fake _ _ ->
-      let h = tab (result (request tabs "alice" (P.New { url = None }))) in
+      let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let old =
         match P.Snapshot_id.of_string "old" with Ok x -> x | _ -> assert false
@@ -410,29 +407,14 @@ let recovery_details () =
           | P.Failure error -> Option.bind error.detail (field "snapshot") = Some `Null
           | P.Success _ -> false);
       stale None (press current None);
-      let not_owner who state expected_owner =
-        match request tabs who (P.Text { tab = h; index = None; max_chars = None }) with
-        | P.Success _ -> Alcotest.fail "daily-9ggi expected not-owner"
-        | P.Failure error ->
-            Alcotest.(check string)
-              "daily-9ggi not-owner code" "not-owner"
-              (P.Error_code.to_string error.code);
-            Alcotest.(check string)
-              "daily-9ggi canonical owner hint"
-              (P.Error_code.hint error.code)
-              error.hint;
-            let detail = Option.get error.detail in
-            Alcotest.(check bool)
-              "daily-9ggi ownership state detail" true
-              (get "state" detail = str state && get "owner" detail = expected_owner)
-      in
-      not_owner "bob" "owned" (str "alice");
-      ignore (result (request tabs "alice" (P.Release { tab = h; force = None })));
-      not_owner "alice" "unowned" `Null)
+      Fake.on_method (fake ()) "Runtime.evaluate" (fun _ ->
+          obj [ ("result", obj [ ("value", str "Page text") ]) ]);
+      ignore
+        (result (request tabs "bob" (P.Text { tab = h; index = None; max_chars = None }))))
 
 let popup_url () =
   rig (fun env sw _ tabs fake _ _ ->
-      let h = tab (result (request tabs "alice" (P.New { url = None }))) in
+      let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       let fake = fake () in
       script_row fake "InputTime";
       let id, _ = snapshot tabs h in
@@ -506,7 +488,7 @@ let popup_url () =
 
 let download_bytes () =
   rig ~download_dir:"/tmp/leash-c-acceptance-downloads" (fun _ _ _ tabs fake _ _ ->
-      let h = tab (result (request tabs "alice" (P.New { url = None }))) in
+      let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       let fake = fake () in
       Fake.emit ~session:"session-1" fake ~method_:"Page.frameNavigated"
         ~params:

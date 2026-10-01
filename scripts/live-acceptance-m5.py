@@ -44,8 +44,8 @@ DEADLINE_S = 300
 TRANSCRIPT = []
 
 
-def cli(owner, command, *args, error=None, timeout=60):
-    proc = subprocess.run([LEASH, command, "--owner", owner, *map(str, args)],
+def cli(command, *args, error=None, timeout=60):
+    proc = subprocess.run([LEASH, command, *map(str, args)],
                           capture_output=True, text=True, timeout=timeout)
     TRANSCRIPT.append(proc.stdout)
     try:
@@ -119,10 +119,10 @@ def summarize(name, reply, wall_s, systemone, helper):
 
 
 def dry_run(tab, goal, name):
-    before = cli("live", "snap", tab)
+    before = cli("snap", tab)
     pos = log_pos()
     started = time.monotonic()
-    reply = cli("live", "drive", goal, "--tab", tab, "--dry-run", timeout=120)
+    reply = cli("drive", goal, "--tab", tab, "--dry-run", timeout=120)
     wall = time.monotonic() - started
     systemone, helper = usage_since(pos)
     steps = reply.get("operator_steps", [])
@@ -130,7 +130,7 @@ def dry_run(tab, goal, name):
     step = steps[0]
     op, prob = top1(step.get("probabilities", {}).get("op"))
     assert op != "-" and prob > 0, (name, step)
-    after = cli("live", "snap", tab)
+    after = cli("snap", tab)
     assert after["url"] == before["url"], (name, before, after)
     assert after["title"] == before["title"], (name, before, after)
     assert len(systemone) == 1, (name, systemone)
@@ -141,7 +141,7 @@ def dry_run(tab, goal, name):
 
 
 def main():
-    status = cli("live", "status")
+    status = cli("status")
     models = status.get("models") or {}
     assert models.get("configured") is True, models
     assert models.get("jev_model") == JEV_MODEL, models
@@ -151,11 +151,11 @@ def main():
     print(f"status: models configured, {JEV_MODEL} + {TEXT_MODEL}", flush=True)
 
     # Wikipedia: jev's own article task.
-    wiki_tab = cli("live", "new", WIKI_URL)["tab"]
+    wiki_tab = cli("new", WIKI_URL)["tab"]
     dry_run(wiki_tab, WIKI_GOAL, "wikipedia")
     pos = log_pos()
     started = time.monotonic()
-    wiki = cli("live", "drive", WIKI_GOAL, "--tab", wiki_tab,
+    wiki = cli("drive", WIKI_GOAL, "--tab", wiki_tab,
                "--max-procedures", MAX_PROCEDURES, "--deadline-s", DEADLINE_S, timeout=360)
     wiki_wall = time.monotonic() - started
     wiki_sys, wiki_help = usage_since(pos)
@@ -165,19 +165,19 @@ def main():
     assert "wikipedia.org/wiki/" in final.get("url", ""), wiki_summary
     assert "ncompleteness" in final.get("url", ""), wiki_summary
     assert "ncompleteness" in final.get("title", ""), wiki_summary
-    text = cli("live", "text", wiki_tab, timeout=120)
+    text = cli("text", wiki_tab, timeout=120)
     assert "ncompleteness" in text.get("text", ""), text.get("text", "")[:500]
     print("wikipedia: done on the article, page text confirms it", flush=True)
 
     # Flights: the one-way search, recorded honestly.
-    flights_tab = cli("live", "new", FLIGHTS_URL)["tab"]
-    opened = cli("live", "snap", flights_tab)
+    flights_tab = cli("new", FLIGHTS_URL)["tab"]
+    opened = cli("snap", flights_tab)
     print(f"flights opened at: {opened['url']} | {opened['title']!r}", flush=True)
     dry_run(flights_tab, FLIGHTS_GOAL, "flights")
     pos = log_pos()
     started = time.monotonic()
     try:
-        flights = cli("live", "drive", FLIGHTS_GOAL, "--tab", flights_tab,
+        flights = cli("drive", FLIGHTS_GOAL, "--tab", flights_tab,
                       "--max-procedures", MAX_PROCEDURES, "--deadline-s", DEADLINE_S, timeout=360)
     except AssertionError as exc:
         raise AssertionError(f"flights drive failed at the protocol: {exc}") from exc
@@ -186,7 +186,7 @@ def main():
     flights_summary = summarize("flights drive", flights, flights_wall,
                                 flights_sys, flights_help)
     if flights["status"] == "done":
-        text = cli("live", "text", flights_tab, timeout=120).get("text", "")
+        text = cli("text", flights_tab, timeout=120).get("text", "")
         markers = [m for m in ("Nonstop", "1 stop", "2 stops", "Top departing",
                                "Other flights", "round trip", "one-way", "One-way",
                                "WAW", "LHR", "z\u0142", "$", "\u20ac")
@@ -199,8 +199,9 @@ def main():
     else:
         raise AssertionError(f"flights drive needs a worker look: {flights_summary}")
 
-    for row in cli("live", "list", "--all")["tabs"]:
-        cli("live", "close", row["tab"], "--force")
+    for row in cli("list")["tabs"]:
+        if row.get("origin") == "agent":
+            print("agent tab remains; it closes when idle", row.get("url"), flush=True)
 
     with open(LOG, encoding="utf-8", errors="replace") as handle:
         logged = handle.read()

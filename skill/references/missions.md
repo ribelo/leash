@@ -6,9 +6,9 @@
 
 ```sh
 leash drive 'Open Travel and return the visible titles and prices' \
-  --url https://books.toscrape.com/ --out travel-state.jsonl --owner browser-example
+  --url https://books.toscrape.com/ --out travel-state.jsonl
 leash drive 'Complete this page search and open the matching result' \
-  --tab TAB --max-steps 60 --deadline-s 300 --owner browser-example
+  --tab TAB --max-steps 60 --deadline-s 300
 ```
 
 | Option | Meaning |
@@ -43,7 +43,7 @@ On the fly, the result is the operator's observed page state: URL, title, at mos
 
 A dry run is a plan check, not evidence that the page works. Supplied mission expectations are verified on a fresh observation before DONE is accepted; named page kinds require a playbook, so use concrete text, row, download or dialog expectations without one. After a live run inspect `status`, `reason`, `operator_state` (coverage included), `output_kinds`, `procedures` and their expectations, `mission_expectations`, and `final`. Protocol success/exit 0 can still contain `blocked`, `failed`, `handoff`, `limit`, `deadline`, or `error`. An operator action cap is `limit`. Even `done` is JEV's opinion unless expectations passed; check the requested outcome independently, especially an external submission. Repeating a form-submit mission is not idempotent: keep executed-input evidence and do not automatically rerun an uncertain mutation.
 
-An unmet expectation in the operator lane returns `blocked` with the failed check. It does not call the planner or transfer ownership. In a playbook mission the planner may still ask for the human when a selected procedure fails twice or an argument cannot be filled; use the live headed tab, communicate what is needed, and follow [handoff/resume](browser.md). A dialog must be answered deliberately. A procedure's failed expectations or rejected script can cause the **whole procedure to replay once**; keep payment, messaging, deletion, and other non-idempotent submissions out of a retryable procedure unless their repetition is explicitly safe and authorized.
+An unmet expectation in the operator lane returns `blocked` with the failed check. It does not call the planner or hand the tab to the human. In a playbook mission the planner may still ask for the human when a selected procedure fails twice or an argument cannot be filled; use the live headed tab, communicate what is needed, and follow [handoff/resume](browser.md). A dialog must be answered deliberately. A procedure's failed expectations or rejected script can cause the **whole procedure to replay once**; keep payment, messaging, deletion, and other non-idempotent submissions out of a retryable procedure unless their repetition is explicitly safe and authorized.
 
 ## Inspect and test a playbook before relying on it
 
@@ -56,7 +56,7 @@ For validated, reusable records, check `leash playbook list` first. The on-the-f
 | `leash playbook list` | List validated installed sites/descriptions; output is tab-separated text. |
 | `leash playbook show NAME` | JSON inspection including script text and resolved expectation checkers. |
 | `leash playbook check ./DIR` | Local validation of `DIR/playbook.json`, paths, shapes, procedures, and expectations. Script syntax is **skipped** for a directory path. |
-| `leash playbook check NAME` | The same checks for an installed name plus JS syntax compilation in a temporary blank tab. Needs the service/owner; it never invokes the scripts and closes its own temporary tab. |
+| `leash playbook check NAME` | The same checks for an installed name plus JS syntax compilation in a temporary blank tab. Needs the service; it never invokes the scripts and closes its own temporary tab. |
 | `leash playbook test NAME/SCRIPT --tab TAB [--arg K=V]` | Execute one prepared script on your tab's actual page and validate its result. Repeat `--arg` for string arguments; this is **not a dry run**. |
 | `leash playbook accept FILE` | Validate and install/merge a reviewed proposed playbook or procedure. It preserves existing scripts but can replace same-slug procedures; use only for an authorized persistent update. |
 
@@ -107,13 +107,12 @@ Once installed, with a permitted running service:
 
 ```bash
 set -o pipefail
-OWNER="collection-example-$$"
 leash playbook show example.com
-leash playbook check example.com --owner "$OWNER" || exit 1
-TAB=$(leash new https://example.com --owner "$OWNER" | jq -er '.tab') || exit 1
-leash playbook test example.com/page-info --tab "$TAB" --owner "$OWNER" || exit 1
-leash drive 'Collect the title and URL of https://example.com once'   --tab "$TAB" --out /tmp/leash-page-info.jsonl   --expect 'the page is home' --deadline-s 60 --max-procedures 3   --owner "$OWNER"
-leash close "$TAB" --owner "$OWNER"
+leash playbook check example.com || exit 1
+TAB=$(leash new https://example.com | jq -er '.tab') || exit 1
+leash playbook test example.com/page-info --tab "$TAB" || exit 1
+leash drive 'Collect the title and URL of https://example.com once'   --tab "$TAB" --out /tmp/leash-page-info.jsonl   --expect 'the page is home' --deadline-s 60 --max-procedures 3
+leash close "$TAB"
 ```
 
 This convenience snippet needs Bash and jq for `.tab`. Without jq, read that returned handle and pass it explicitly. The `--out` path is illustrative; choose a fresh path for your real output. Judge success by the run's status/trace **and** the record, not by the exit code alone.
@@ -158,7 +157,7 @@ Leash does not send prepared script records to its models. Viewport text, includ
 ## Discover and review reusable procedures
 
 ```sh
-leash discover https://example.com --goal 'Find the documentation link'   --max-turns 5 --max-steps 20 --deadline-s 120 --max-cost 0.25   --owner browser-example
+leash discover https://example.com --goal 'Find the documentation link'   --max-turns 5 --max-steps 20 --deadline-s 120 --max-cost 0.25
 ```
 
 `discover` is live planner-led exploration, not harmless help: it can navigate and act and makes billable calls. Its reported-cost cap cannot account for missing provider cost. Keep the goal within authorization. It writes a proposed playbook; it does not silently install it. Mission-generated procedure proposals are also reported under `proposals` and stored in Leash's XDG state directory. Review their content and resolved checkers before an authorized `playbook accept FILE`. Planner output cannot supply executable JavaScript; only fixed Leash code, agent-authored eval bodies, and prepared loaded scripts reach the page's JS engine.

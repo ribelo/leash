@@ -37,17 +37,16 @@ let field key = function
       match List.assoc_opt key fields with Some value -> value | None -> `Null)
   | _ -> `Null
 
-let request_json ?(v = 1) ?(owner = "dsh:test") cmd args =
-  assoc [ ("v", `Int v); ("owner", `String owner); ("cmd", `String cmd); ("args", args) ]
+let request_json ?(v = 1) cmd args =
+  assoc [ ("v", `Int v); ("cmd", `String cmd); ("args", args) ]
 
 (* ---------- chrome-38a4: the envelope and the per-command arguments ---------- *)
 
 let request_validation () =
-  let request =
-    assert_ok "status" (P.decode_request (request_json "status" (assoc [])))
+  let r =
+    assert_ok "anonymous status" (P.decode_request (request_json "status" (assoc [])))
   in
-  Alcotest.(check string) "command" "status" (P.command_name request.command);
-  Alcotest.(check string) "owner" "dsh:test" (P.Owner.to_string request.owner);
+  Alcotest.(check string) "command" "status" (P.command_name r.command);
   expect_error "unsupported version" [ "v"; "2" ]
     (P.decode_request (request_json ~v:2 "status" (assoc [])));
   expect_error "unknown command" [ "cmd"; "bogus" ]
@@ -58,45 +57,22 @@ let request_validation () =
   expect_error "missing argument"
     [ "args"; "snapshot"; "missing field" ]
     (P.decode_request (request_json "click" (assoc [ ("tab", `String "t_9xk") ])));
-  expect_error "blank owner"
-    [ "owner"; "must not be empty" ]
-    (P.decode_request (request_json ~owner:" " "status" (assoc [])));
   expect_error "unknown envelope field"
     [ "request"; "unknown field"; "extra" ]
     (P.decode_request
-       (assoc
-          [
-            ("v", `Int 1);
-            ("owner", `String "x");
-            ("cmd", `String "status");
-            ("args", assoc []);
-            ("extra", `Bool true);
-          ]));
-  let snap =
-    assert_ok "snap"
-      (P.decode_request
-         (request_json "snap"
-            (assoc [ ("tab", `String "t_9xk"); ("match", `String "Save") ])))
-  in
-  (match snap.command with
-  | P.Snap { match_; _ } ->
-      Alcotest.(check (option string)) "[@json.key \"match\"]" (Some "Save") match_
-  | _ -> Alcotest.fail "snap decoded to another command");
-  let list = assert_ok "list" (P.decode_request (request_json "list" (assoc []))) in
-  match list.command with
-  | P.List_tabs { all } ->
-      Alcotest.(check bool) "all defaults to false" false all;
-      Alcotest.(check bool)
-        "all is written back" true
-        (contains "\"all\":false" (Yojson.Safe.to_string (P.args_to_json list.command)))
-  | _ -> Alcotest.fail "list decoded to another command"
+       (assoc [ ("cmd", `String "status"); ("args", assoc []); ("extra", `Bool true) ]));
+  expect_error "take needs selector" [ "selector" ]
+    (P.decode_request (request_json "take" (assoc [])));
+  let r = assert_ok "list" (P.decode_request (request_json "list" (assoc []))) in
+  Alcotest.(check string)
+    "list has no arguments" "{}"
+    (Yojson.Safe.to_string (P.args_to_json r.command))
 
 let command_table =
   [
     ("new", assoc [ ("url", `String "https://example.com") ]);
     ("list", assoc []);
-    ("claim", assoc [ ("tab", `String "t_9xk") ]);
-    ("release", assoc [ ("tab", `String "t_9xk") ]);
+    ("take", assoc [ ("url", `String "https://example.com") ]);
     ("close", assoc [ ("tab", `String "t_9xk") ]);
     ("status", assoc []);
     ( "snap",
@@ -209,7 +185,8 @@ let command_table =
   ]
 
 let command_round_trip () =
-  Alcotest.(check int) "every command of docs/protocol.md" 29 (List.length command_table);
+  Alcotest.(check int)
+    "hand-scaz handle command round trips" 28 (List.length command_table);
   List.iter
     (fun (name, args) ->
       let request = assert_ok name (P.decode_request (request_json name args)) in
@@ -238,8 +215,6 @@ let closed_sets () =
       values
   in
   speaks "origin" P.Origin.of_string P.Origin.to_string [ "agent"; "human" ];
-  speaks "state" P.State.of_string P.State.to_string [ "unowned"; "owned"; "with_human" ];
-  speaks "stage" P.Stage.of_string P.Stage.to_string [ "release"; "close" ];
   speaks "dialog kind" P.Dialog_kind.of_string P.Dialog_kind.to_string
     [ "alert"; "confirm"; "prompt"; "beforeunload" ];
   speaks "row state" P.Row_state.of_string P.Row_state.to_string
@@ -278,8 +253,9 @@ let closed_sets () =
   speaks "error code" P.Error_code.of_string P.Error_code.to_string
     [
       "invalid-request";
-      "not-owner";
-      "already-owned";
+      "ambiguous";
+      "no-match";
+      "taken";
       "with-human";
       "tab-gone";
       "unknown-tab";
@@ -309,14 +285,16 @@ let tab_json =
   assoc
     [
       ("tab", `String "t_9xk");
+      ("label", `Null);
       ("url", `String "https://example.com/");
       ("title", `String "Example");
       ("origin", `String "agent");
-      ("state", `String "owned");
-      ("owner", `String "dsh:test");
+      ("age_s", `Int 5);
+      ("idle_s", `Int 2);
+      ("closes_in_s", `Int 1798);
+      ("with_human", `Bool false);
       ("generation", `Int 2);
       ("dialog", `Null);
-      ("expires", `Null);
     ]
 
 let snapshot_json =
@@ -355,108 +333,12 @@ let snapshot_json =
 
 let result_shapes () =
   let tab = assert_ok "tab info" (P.tab_info_of_yojson tab_json) in
-  Alcotest.(check string) "handle" "t_9xk" (P.Handle.to_string tab.tab);
-  Alcotest.(check string) "origin" "agent" (P.Origin.to_string tab.origin);
-  Alcotest.(check string) "state" "owned" (P.State.to_string tab.state);
-  Alcotest.(check (option string))
-    "owner" (Some "dsh:test")
-    (Option.map P.Owner.to_string tab.owner);
-  Alcotest.(check bool) "no expiry" true (tab.expires = None);
-  Alcotest.(check string)
-    "TabInfo names its fields"
-    (Yojson.Safe.to_string tab_json)
-    (Yojson.Safe.to_string (P.yojson_of_tab_info tab));
-  (* docs/protocol.md: [owner] and [expires] are [T|null], so both keys stay on the wire
-     and read [null] when there is no value. An absent key is still read as [None], and
-     re-encoding writes the null the protocol asks for. *)
-  let bare_json =
-    assoc
-      [
-        ("tab", `String "t_9xk");
-        ("url", `String "about:blank");
-        ("title", `String "");
-        ("origin", `String "human");
-        ("state", `String "unowned");
-        ("owner", `Null);
-        ("generation", `Int 1);
-        ("dialog", `Null);
-        ("expires", `Null);
-      ]
-  in
-  let bare = assert_ok "unowned tab info" (P.tab_info_of_yojson bare_json) in
-  Alcotest.(check (option string))
-    "owner null is None" None
-    (Option.map P.Owner.to_string bare.owner);
-  Alcotest.(check bool) "expires null is None" true (bare.expires = None);
-  Alcotest.(check string)
-    "T|null fields stay on the wire as null"
-    (Yojson.Safe.to_string bare_json)
-    (Yojson.Safe.to_string (P.yojson_of_tab_info bare));
-  let absent =
-    assert_ok "absent T|null keys"
-      (P.tab_info_of_yojson
-         (assoc
-            [
-              ("tab", `String "t_9xk");
-              ("url", `String "about:blank");
-              ("title", `String "");
-              ("origin", `String "human");
-              ("state", `String "unowned");
-              ("generation", `Int 1);
-            ]))
-  in
-  Alcotest.(check string)
-    "an absent T|null key is read as null and written back null"
-    (Yojson.Safe.to_string bare_json)
-    (Yojson.Safe.to_string (P.yojson_of_tab_info absent));
-  let expiring =
-    assert_ok "expiring tab info"
-      (P.tab_info_of_yojson
-         (assoc
-            [
-              ("tab", `String "t_9xk");
-              ("url", `String "https://example.com/");
-              ("title", `String "Example");
-              ("origin", `String "agent");
-              ("state", `String "with_human");
-              ("owner", `String "human");
-              ("generation", `Int 2);
-              ("dialog", `Null);
-              ("expires", assoc [ ("stage", `String "close"); ("in_s", `Int 30) ]);
-            ]))
-  in
-  Alcotest.(check bool)
-    "an expiry carries its stage as a wire string" true
-    (match expiring.expires with
-    | Some expires -> P.Stage.to_string expires.stage = "close" && expires.in_s = 30
-    | None -> false);
-  (* hand-r4t1: [TabInfo.reason] is [key?] — present while a handoff waits on the tab,
-     absent from every tab nobody is waiting on, which is what [list --all] reads. *)
-  let waiting_json =
-    assoc
-      [
-        ("tab", `String "t_9xk");
-        ("url", `String "https://example.com/");
-        ("title", `String "Example");
-        ("origin", `String "agent");
-        ("state", `String "with_human");
-        ("owner", `String "dsh:test");
-        ("generation", `Int 2);
-        ("dialog", `Null);
-        ("expires", `Null);
-        ("reason", `String "captcha");
-      ]
-  in
-  let waiting = assert_ok "waiting tab info" (P.tab_info_of_yojson waiting_json) in
-  Alcotest.(check (option string))
-    "the reason is read back" (Some "captcha") waiting.reason;
-  Alcotest.(check string)
-    "TabInfo with a reason names its fields"
-    (Yojson.Safe.to_string waiting_json)
-    (Yojson.Safe.to_string (P.yojson_of_tab_info waiting));
-  Alcotest.(check (option string))
-    "a tab nobody waits on carries no reason key" None
-    (assert_ok "a tab info without a reason" (P.tab_info_of_yojson tab_json)).reason;
+  Alcotest.(check string) "capability" "t_9xk" (P.Handle.to_string tab.tab);
+  Alcotest.(check int) "age" 5 tab.age_s;
+  Alcotest.(check bool) "no hold" false tab.with_human;
+  let encoded = P.yojson_of_tab_info tab in
+  Alcotest.(check bool) "nullable label" true (field "label" encoded = `Null);
+  Alcotest.(check int) "idle" 2 tab.idle_s;
   let snapshot = assert_ok "snapshot" (P.snapshot_of_yojson snapshot_json) in
   Alcotest.(check int) "one row" 1 (List.length snapshot.rows);
   let row = List.hd snapshot.rows in
@@ -800,7 +682,6 @@ let config_text ?(headless = false) ?window_size binary profile =
      cap = 8\n\
      [expiry]\n\
      idle_s = 1800\n\
-     unclaimed_s = 3600\n\
      tombstone_s = 3600\n\
      [models]\n\
      api_key = \"file-secret\"\n\
@@ -1038,7 +919,7 @@ let config_check_cli () =
       Alcotest.(check bool) "unknown key named" true (contains "oops" error))
 
 let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_status
-    expected_command expected_owner =
+    expected_command =
   with_temp (fun runtime ->
       let dir = Filename.concat runtime "leash" in
       Unix.mkdir dir 0o700;
@@ -1063,14 +944,13 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
             |> List.filter (fun item ->
                 not
                   (String.starts_with ~prefix:"XDG_RUNTIME_DIR=" item
-                  || String.starts_with ~prefix:"XDG_CONFIG_HOME=" item
-                  || String.starts_with ~prefix:"DSH_SESSION_ID=" item))
+                  || String.starts_with ~prefix:"XDG_CONFIG_HOME=" item))
           in
           let env =
             Array.of_list
               (("XDG_RUNTIME_DIR=" ^ runtime)
               :: ("XDG_CONFIG_HOME=" ^ Filename.concat runtime "config")
-              :: "DSH_SESSION_ID=test-l1" :: env)
+              :: env)
           in
           let pid =
             Unix.create_process_env binary
@@ -1088,7 +968,6 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
           Alcotest.(check string)
             "command" expected_command
             (P.command_name decoded.command);
-          Alcotest.(check string) "owner" expected_owner (P.Owner.to_string decoded.owner);
           (match on_command with None -> () | Some check -> check decoded.command);
           let output = Unix.out_channel_of_descr (Unix.dup peer) in
           output_string output (reply ^ "\n");
@@ -1116,90 +995,31 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
           Unix.close (if expected_status = 0 then err_read else out_read)))
 
 let socket_cli () =
-  socket_cli_case [ "status" ]
-    "{\"ok\":true,\"result\":{\"generation\":1,\"tabs\":{\"open\":0,\"cap\":8},\"chrome\":\"running\",\"uptime_s\":1.0}}"
-    0 "status" "dsh:test-l1";
+  socket_cli_case [ "status" ] "{\"ok\":true,\"result\":{}}" 0 "status";
   socket_cli_case
-    [ "new"; "--owner"; "human"; "https://example.com" ]
-    (Yojson.Safe.to_string
-       (P.encode_reply
-          (P.Failure
-             (P.make_error
-                (assert_ok "tab-cap code" (P.Error_code.of_string "tab-cap"))
-                ~message:"full"))))
-    75 "new" "human";
-  socket_cli_case [ "list"; "--table" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list"
-    "dsh:test-l1";
-  (* tab-ok2i: each observed row is one readable line in --table mode. *)
+    ~on_command:(function
+      | P.New { label = Some "Research"; _ } -> () | _ -> Alcotest.fail "label")
+    [ "new"; "--label"; "Research" ]
+    (Yojson.Safe.to_string (P.encode_reply (P.Success tab_json)))
+    0 "new";
+  socket_cli_case
+    ~on_command:(function
+      | P.Take { title = Some "Inbox"; _ } -> () | _ -> Alcotest.fail "selector")
+    [ "take"; "--title"; "Inbox" ]
+    (Yojson.Safe.to_string (P.encode_reply (P.Success tab_json)))
+    0 "take";
+  socket_cli_case [ "close"; "t_9xk" ] "{\"ok\":true,\"result\":{\"closed\":true}}" 0
+    "close";
+  socket_cli_case
+    ~expected_lines:
+      [ "LABEL\tURL\tTITLE\tORIGIN\tAGE_S\tIDLE_S\tCLOSES_IN_S\tWITH_HUMAN" ]
+    [ "list"; "--table" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list";
   socket_cli_case
     ~expected_lines:
       [ "INDEX\tROLE\tNAME\tVALUE\tSTATE"; "0\tbutton\tSave\t1\tdisabled,required" ]
     [ "snap"; "t_9xk"; "--table" ]
-    (Yojson.Safe.to_string (assoc [ ("ok", `Bool true); ("result", snapshot_json) ]))
-    0 "snap" "dsh:test-l1";
-  (* own-0pnk: the CLI's --force reaches the wire for release and close, and only there. *)
-  socket_cli_case
-    ~on_command:(function
-      | P.Release { force = Some true; _ } -> ()
-      | _ -> Alcotest.fail "release --force did not ask for force")
-    [ "release"; "t_9xk"; "--force" ]
-    "{\"ok\":true,\"result\":{\"released\":true}}" 0 "release" "dsh:test-l1";
-  socket_cli_case
-    ~on_command:(function
-      | P.Close { force = Some true; _ } -> ()
-      | _ -> Alcotest.fail "close --force did not ask for force")
-    [ "close"; "t_9xk"; "--force" ]
-    "{\"ok\":true,\"result\":{\"closed\":true}}" 0 "close" "dsh:test-l1";
-  (* own-82jd: --all is the listing flag the ownership stories use. *)
-  socket_cli_case
-    ~on_command:(function
-      | P.List_tabs { all = true } -> ()
-      | _ -> Alcotest.fail "list --all did not ask for every tab")
-    [ "list"; "--all" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list" "dsh:test-l1";
-  (* own-82jd hand-r4t1: the table names every owner's tab by origin, state and owner,
-     and shows what the tab the human holds is waiting for. *)
-  socket_cli_case
-    ~expected_lines:
-      [
-        "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER\tREASON";
-        "t_9xk\thttps://example.com/\tExample Domain\tagent\towned\tdsh:test-l1\t-";
-        "t_9xk2\thttps://example.com/login\tSign \
-         in\tagent\twith_human\tdsh:test-l1\tcaptcha";
-      ]
-    [ "list"; "--all"; "--table" ]
-    (Yojson.Safe.to_string
-       (assoc
-          [
-            ("ok", `Bool true);
-            ( "result",
-              assoc
-                [
-                  ( "tabs",
-                    `List
-                      [
-                        assoc
-                          [
-                            ("tab", `String "t_9xk");
-                            ("url", `String "https://example.com/");
-                            ("title", `String "Example Domain");
-                            ("origin", `String "agent");
-                            ("state", `String "owned");
-                            ("owner", `String "dsh:test-l1");
-                          ];
-                        assoc
-                          [
-                            ("tab", `String "t_9xk2");
-                            ("url", `String "https://example.com/login");
-                            ("title", `String "Sign in");
-                            ("origin", `String "agent");
-                            ("state", `String "with_human");
-                            ("owner", `String "dsh:test-l1");
-                            ("reason", `String "captcha");
-                          ];
-                      ] );
-                ] );
-          ]))
-    0 "list" "dsh:test-l1"
+    (Yojson.Safe.to_string (P.encode_reply (P.Success snapshot_json)))
+    0 "snap"
 
 let cli_usage () =
   let binary =
@@ -1487,9 +1307,6 @@ let config_defaults () =
   Alcotest.(check int)
     "svc-x8rp ADR-0005's idle" 1800
     (C.Seconds.to_int default.C.expiry.idle_s);
-  Alcotest.(check int)
-    "svc-x8rp ADR-0005's unclaimed" 3600
-    (C.Seconds.to_int default.C.expiry.unclaimed_s);
   Alcotest.(check string)
     "svc-x8rp the commented file is the same defaults"
     (Yojson.Safe.to_string (C.yojson_of_t default))
@@ -1506,7 +1323,6 @@ let config_defaults () =
       "workspace";
       "cap";
       "idle_s";
-      "unclaimed_s";
       "tombstone_s";
       "socket";
       "systemone_endpoint";
@@ -1705,13 +1521,7 @@ let socket_config_cli () =
           Unix.close configured_listener;
           Unix.close override_listener)
         (fun () ->
-          let env =
-            [
-              ("XDG_CONFIG_HOME", config_home);
-              ("XDG_RUNTIME_DIR", runtime);
-              ("DSH_SESSION_ID", "svc-o4wt");
-            ]
-          in
+          let env = [ ("XDG_CONFIG_HOME", config_home); ("XDG_RUNTIME_DIR", runtime) ] in
           let reply = "{\"ok\":true,\"result\":{\"tabs\":[]}}" in
           let status, output, _ = run_cli_at configured_listener ~env [ "list" ] reply in
           Alcotest.(check bool)
@@ -1740,8 +1550,7 @@ let client_help =
   [
     ([ "new" ], [ "URL" ]);
     ([ "list" ], []);
-    ([ "claim" ], [ "TAB" ]);
-    ([ "release" ], [ "TAB" ]);
+    ([ "take" ], []);
     ([ "close" ], [ "TAB" ]);
     ([ "status" ], []);
     ([ "snap" ], [ "TAB" ]);
@@ -1784,9 +1593,7 @@ let help_matrix () =
       Alcotest.(check bool)
         (name ^ " --help lists the client options")
         true
-        (List.for_all
-           (fun flag -> contains flag output)
-           [ "--config"; "--owner"; "--socket" ]))
+        (List.for_all (fun flag -> contains flag output) [ "--config"; "--socket" ]))
     client_help;
   List.iter
     (fun argv ->
@@ -1813,11 +1620,7 @@ let help_scope () =
     && contains "--table" (help [ "snap" ])
     && (not (contains "--table" (help [ "new" ])))
     && not (contains "--table" (help [ "text" ])));
-  Alcotest.(check bool)
-    "svc-hi4f only release and close force ownership" true
-    (contains "--force" (help [ "release" ])
-    && contains "--force" (help [ "close" ])
-    && not (contains "--force" (help [ "new" ])));
+
   Alcotest.(check bool)
     "svc-hi4f press names its row option and click has none" true
     (contains "--index" (help [ "press" ]) && not (contains "--index" (help [ "click" ])));

@@ -59,10 +59,7 @@ type chrome = {
 *)
 
 type tabs = { cap : Tab_cap.t }
-(** [cap] defaults to 32 (ADR-0005). *)
-
-type expiry = { idle_s : Seconds.t; unclaimed_s : Seconds.t; tombstone_s : Seconds.t }
-(** The defaults are ADR-0005's 1800 and 3600 seconds, and an hour of tombstone. *)
+type expiry = { idle_s : Seconds.t; tombstone_s : Seconds.t }
 
 type control = { socket : Text.t }
 (** svc-o4wt: the control socket the service listens on and the CLI connects to, a full

@@ -42,7 +42,6 @@ headless = true
 cap = 12
 [expiry]
 idle_s = 3600
-unclaimed_s = 3600
 tombstone_s = 3600
 [models]
 jev_model = "typesafe/jev-1.13-20260917"
@@ -96,7 +95,7 @@ for _ in $(seq 1 100); do
 done
 if [[ ! -S "$socket" ]]; then echo "ERROR: control socket did not appear" >&2; exit 1; fi
 for _ in $(seq 1 100); do
-  if "$leash" status --owner live >/dev/null 2>&1; then break; fi
+  if "$leash" status >/dev/null 2>&1; then break; fi
   sleep 0.1
 done
 if ! browser_alive >/dev/null; then echo 'ERROR: no headless Chrome with the test profile' >&2; exit 1; fi

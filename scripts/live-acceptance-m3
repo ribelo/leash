@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Live L14 gate: milestone-3 ownership, claim/release, expiry and disposition through
+# Live gate: handles, popups, and one-rule expiry through
 # the real CLI/service/headless-Chrome. Chrome is always headless (--headless=new is
 # asserted on the browser command line); never run headed on this machine.
 #
-# Three phases, one service each: ownership (long idle), popups (long idle, on its
+# Three phases, one service each: capabilities (long idle), popups (long idle, on its
 # own Chrome because the opener-holding click can leave late uncloseable debris),
-# then expiry (idle 5 s, unclaimed 12 s, sweep 1 s). The sweep override is the test-only route
+# then expiry (idle 5 s, sweep 1 s). The sweep override is the test-only route
 # LEASH_SWEEP_INTERVAL_S (production always uses the 30 s contract default); a bad
 # value fails fast before Chrome launches, proved as phase 0.
 #
@@ -69,7 +69,6 @@ headless = true
 cap = 12
 [expiry]
 idle_s = $3
-unclaimed_s = $4
 tombstone_s = 3600
 [models]
 jev_model = "not-used"
@@ -113,7 +112,7 @@ start_phase() {
   done
   if [[ ! -S "$socket" ]]; then echo "ERROR ($1): control socket did not appear" >&2; exit 1; fi
   for _ in $(seq 1 100); do
-    if "$leash" status --owner live >/dev/null 2>&1; then break; fi
+    if "$leash" status >/dev/null 2>&1; then break; fi
     sleep 0.1
   done
   if ! browser_alive "$current_profile" >/dev/null; then
@@ -129,9 +128,9 @@ stop_phase() {
     echo "ERROR ($1): Chrome remains after Leash exited" >&2; exit 1; fi
   echo "Chrome ($1): gone"
 }
-start_phase ownership 3600 3600 ""
-python3 scripts/live-acceptance-m3.py "$leash" "$root" ownership
-stop_phase ownership
+start_phase capabilities 3600 3600 ""
+python3 scripts/live-acceptance-m3.py "$leash" "$root" capabilities
+stop_phase capabilities
 start_phase popups 3600 3600 ""
 python3 scripts/live-acceptance-m3.py "$leash" "$root" popups
 stop_phase popups

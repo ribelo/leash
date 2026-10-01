@@ -41,9 +41,6 @@ let contains haystack needle =
   let rec scan at = at + n <= h && (String.sub haystack at n = needle || scan (at + 1)) in
   n = 0 || scan 0
 
-let owner name =
-  match P.Owner.of_string name with Ok value -> value | Error why -> Alcotest.fail why
-
 let text_value value =
   match Config.Text.of_string value with
   | Ok text -> text
@@ -327,9 +324,7 @@ let scripted ~model ?reply_model steps =
 (* ---------- The control seam ---------- *)
 
 let raw ?models ?decide ?model tabs command =
-  let wire =
-    P.encode_request { owner = owner "alice"; command } |> Yojson.Safe.to_string
-  in
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   let answer =
     Leash.Control.handle ?model ?decide
       ?models_status:(Option.map (fun models () -> Models.status models) models)
@@ -341,7 +336,8 @@ let raw ?models ?decide ?model tabs command =
 
 (* The tab the drive works on: created at a url, so the load wait populates its url and
    title from the document the fake reports. *)
-let new_tab tabs = tab (result (raw tabs (P.New { url = Some "https://example.com/" })))
+let new_tab tabs =
+  tab (result (raw tabs (P.New { url = Some "https://example.com/"; label = None })))
 
 let drive models tabs handle goal =
   raw ~model:jev_model
@@ -642,7 +638,6 @@ headless = true
 cap = 8
 [expiry]
 idle_s = 1800
-unclaimed_s = 3600
 tombstone_s = 3600
 |}
   in

@@ -41,7 +41,6 @@ headless = true
 cap = 4
 [expiry]
 idle_s = 3600
-unclaimed_s = 3600
 tombstone_s = 3600
 [models]
 jev_model = "typesafe/jev-1.13-20260917"
@@ -100,5 +99,5 @@ for _ in $(seq 1 50); do
   if "$leash" status --config "$config" >/dev/null 2>&1; then break; fi
   sleep 0.2
 done
-"$leash" playbook check books.toscrape.com --owner live-m10 >/dev/null
+"$leash" playbook check books.toscrape.com >/dev/null
 python3 scripts/live-acceptance-m10.py "$leash" "$root" "$log"

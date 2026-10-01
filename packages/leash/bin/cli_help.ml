@@ -10,7 +10,7 @@ let exit_doc = function
   | 69 -> "Service, browser, or model unavailable."
   | 70 -> "Internal failure or invalid service response."
   | 75 -> "Retryable timeout or tab capacity limit."
-  | 77 -> "Filesystem or socket permission, or tab ownership refused."
+  | 77 -> "Filesystem or socket permission, or tab capability refused."
   | 124 -> "Command-line parsing failed; the command did not run."
   | _ -> invalid_arg "undocumented CLI exit class"
 
@@ -25,7 +25,7 @@ let all_exits =
   exit_infos codes
 
 let docs = function
-  | "new" | "list" | "claim" | "release" | "close" | "handoff" | "resume" -> "TABS"
+  | "new" | "list" | "take" | "close" | "handoff" | "resume" -> "TABS"
   | "snap" | "text" | "shot" | "downloads" -> "OBSERVE"
   | "nav" | "click" | "fill" | "press" | "select" | "scroll" | "wait" | "upload" | "hover"
   | "check" | "uncheck" | "dialog" ->
@@ -68,14 +68,15 @@ let top_man =
        its private Unix socket. Only skill install may ask for local installation \
        consent; use --force or --no-input in automation.";
     `P
-      "Set --owner NAME, or let DSH_SESSION_ID supply the dsh:SESSION_ID default. \
-       Successful JSON goes to stdout; every failure is one compact JSON object on \
-       stderr, even with --pretty.";
-    `S "FIRST STEPS";
-    `P "leash status --owner my-agent";
-    `P "leash list --all (inspect shared ownership without granting access)";
-    `P "leash new https://example.com --owner my-agent";
-    `P "leash snap TAB --owner my-agent --limit 20";
+      "Handles are secret capabilities; save the handle from leash new or leash take. \
+       leash list never reveals handles.";
+    `P
+      "agent tabs close after 30 idle minutes; your tabs are never closed unless an \
+       agent takes one";
+    `P "leash status";
+    `P "leash list --table";
+    `P "leash new https://example.com --label research";
+    `P "leash snap TAB --limit 20";
     `S "SERVICE";
     `I
       ( "serve",

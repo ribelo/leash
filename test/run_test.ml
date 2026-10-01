@@ -129,11 +129,13 @@ let tab_info () =
       url = "https://site-a.example/";
       title = "A page";
       origin = ok (P.Origin.of_string "agent");
-      state = ok (P.State.of_string "owned");
-      owner = Some (ok (P.Owner.of_string "alice"));
+      label = None;
+      age_s = 0;
+      idle_s = 0;
+      closes_in_s = Some 1800;
+      with_human = false;
       generation = 1;
       dialog = None;
-      expires = None;
       loaded = None;
       reason = None;
     }

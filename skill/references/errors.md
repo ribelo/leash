@@ -2,7 +2,7 @@
 
 ## Read the record, then follow its hint
 
-Every failed CLI invocation writes **one compact JSON record** on stderr, including argument parsing, local configuration, connection, ownership, and browser/model failures:
+Every failed CLI invocation writes **one compact JSON record** on stderr, including argument parsing, local configuration, connection, capability, and browser/model failures:
 
 ```json
 {"code":"stale-snapshot","message":"the snapshot or target row is no longer current","hint":"read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the row is gone, navigate back or re-find it before acting","detail":{"snapshot":null}}
@@ -15,11 +15,12 @@ This table matches `leash help errors` (daily-c4cl, daily-9ggi).
 | code | exit | meaning | hint |
 | --- | --- | --- | --- |
 | `invalid-request` | 64 | malformed JSON, unknown command, or bad arguments | fix the request; `leash <command> --help` names the arguments and one example |
-| `not-owner` | 77 | the tab is owned by another caller, or unowned and the command needs an owner | read detail.state and detail.owner: unowned means `leash claim TAB` if permitted; owned means use your own tab with `leash new` or ask that owner to release it; `leash list --all` shows live ownership - never impersonate another owner |
-| `already-owned` | 77 | claim on a tab that is not unowned | `leash list --all` shows its owner; use your own tab with `leash new` or ask the owner to release it |
+| `ambiguous` | 66 | take matches several tabs; detail.matches lists them without handles | narrow the URL, title or label selector |
+| `no-match` | 66 | take matches no tab | read `leash list` and use a matching URL prefix, title or label |
+| `taken` | 77 | the tab already has a live handle | ask the holder for the handle |
 | `with-human` | 77 | the tab is handed to the human; commands are refused until resume | the human holds this tab; wait, or return it with `leash resume TAB` |
-| `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_owner, closed_by_ttl, closed_externally, or browser_lost | the handle is dead; read detail.disposition, then open a new tab with `leash new` |
-| `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; `leash list --all` shows live handles |
+| `tab-gone` | 66 | the handle names a closed tab; detail.disposition is closed_by_handle, closed_by_idle, closed_externally, or browser_lost | open a new tab with `leash new` |
+| `unknown-tab` | 66 | no tab and no tombstone for the handle | that handle is not a tab; open a new tab with `leash new`, or ask the holder for the handle |
 | `stale-snapshot` | 65 | the snapshot id or target row no longer matches the current page | read detail.snapshot; re-snap with `leash snap TAB` and use its id and row; if the row is gone, navigate back or re-find it before acting |
 | `no-such-row` | 66 | the index is not in the snapshot | that index is not in the snapshot; `leash snap TAB` and use a listed index |
 | `body-unavailable` | 66 | net body or request has no body to read, or Chrome has evicted it | that body is gone; `leash net TAB` and read a request that still has one |
@@ -45,8 +46,8 @@ This table matches `leash help errors` (daily-c4cl, daily-9ggi).
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |
 | `service-stopped` | 69 | the leash unit is installed but inactive | `systemctl --user start leash`, then `leash status`; a brief service-restarting (75) right after start is normal - retry; tabs and snapshots from before the stop are gone, so re-open them |
 | `service-restarting` | 75 | the leash unit is activating or auto-restarting, or Chrome's generation is being relaunched | Leash is restarting; retry `leash status` in a few seconds |
-| `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its owner and mode, or pass --socket |
-| `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's owner and mode, or pass another path |
+| `socket-permission` | 77 | the CLI was denied access to the control socket | the control socket is not readable; check its permissions, or pass --socket |
+| `permission-denied` | 77 | the CLI was denied access to a filesystem path | check the path's permissions, or pass another path |
 | `config-invalid` | 65 | the configuration file is missing, unreadable, or invalid | fix the reported problems; `leash config check` lists every one with the config path |
 | `usage` | 64 | the command was invoked wrongly; the arguments do not match its synopsis | `leash <command> --help` shows the arguments and an example |
 | `cli-parse` | 124 | Cmdliner rejected the command line; the command did not run | the command line did not parse; `leash <command> --help` shows the accepted form |
@@ -61,7 +62,7 @@ Exit 75 is **not** permission to replay any action. A timeout, connection loss, 
 All commands classify a missing socket using the same systemd observation: `not-installed` (69) means no user unit, `service-stopped` (69) means an installed inactive unit, `service-restarting` (75) means activating/auto-restarting, and `service-unreachable` (69) means the active or unknown service still has no usable socket. Follow that code's hint; an absent unit needs installation, not repeated start attempts.
 
 1. Read `detail.socket` and check the intended endpoint/configuration. Do not redirect to another browser or create a parallel service against the same profile.
-2. Check `systemctl --user status leash`. If starting the installed service is authorized, run `systemctl --user start leash`, then `leash status` with your owner.
+2. Check `systemctl --user status leash`. If starting the installed service is authorized, run `systemctl --user start leash`, then `leash status` with the same handle.
 3. If setup fails, use `leash config check` and the service journal. A deliberate custom service needs the matching `--socket PATH` or `--config FILE` on client calls.
 4. After reconnection, inspect live tabs before repeating work that may already have been sent.
 
@@ -69,27 +70,27 @@ For `browser-unavailable`, Chrome is restarting: check status again after a shor
 
 ### Stale snapshot (65) or no-such-row (66)
 
-Every `stale-snapshot` has the same message and `detail.snapshot`: the current ID, or null if no current table exists. A newer snap or navigation invalidates older IDs; input that leaves the page unchanged keeps the current ID valid. The target row may still have changed role/name, disappeared, or belong to a previous document. Run `leash snap TAB` again using the same owner. Choose the intended row from the new role/name/value/state and use its actual `index` with the **new `snapshot` ID**. If the intended row is gone, re-find it on the current page, or navigate back when appropriate and snap again. Do not merely substitute a new ID into an old guessed index. Filtering/pagination does not renumber rows. For indexed eval, refresh both `--snapshot` and `--index`. Indexed scroll/text use the current table rather than accepting a snapshot argument.
+Every `stale-snapshot` has the same message and `detail.snapshot`: the current ID, or null if no current table exists. A newer snap or navigation invalidates older IDs; input that leaves the page unchanged keeps the current ID valid. The target row may still have changed role/name, disappeared, or belong to a previous document. Run `leash snap TAB` again using the same handle. Choose the intended row from the new role/name/value/state and use its actual `index` with the **new `snapshot` ID**. If the intended row is gone, re-find it on the current page, or navigate back when appropriate and snap again. Do not merely substitute a new ID into an old guessed index. Filtering/pagination does not renumber rows. For indexed eval, refresh both `--snapshot` and `--index`. Indexed scroll/text use the current table rather than accepting a snapshot argument.
 
 If the page keeps moving, narrow the snapshot or wait for a concrete stable condition. `row-not-actionable` means disabled, covered, invisible, or wrong-kind input: inspect the obstruction/control, scroll if needed, and use `upload` for a file input. Do not bypass it with synthetic eval clicks.
 
 ### Tab gone (66)
 
-Read `detail.disposition`: `closed_by_owner`, `closed_by_ttl`, `closed_externally`, or `browser_lost`. The handle is dead; `claim` cannot resurrect it. Use `leash list --all` to orient, then `leash new URL` if a replacement is still needed and authorized. A profile login may persist, but the tab's in-memory/page state may not.
+Read `detail.disposition`: `closed_by_handle`, `closed_by_idle`, `closed_externally`, or `browser_lost`. The handle is dead; it cannot be resurrected. Use `leash list` to orient, then `leash new URL` if a replacement is still needed and authorized. A profile login may persist, but the tab's in-memory/page state may not.
 
-For `unknown-tab`, obtain a real live handle from `list --all` or `new`; do not invent one. Before reopening/repeating a checkout, message, or other submission, verify whether it completed elsewhere.
+For `unknown-tab`, obtain a real live handle from `new`, `take`, or its holder; do not invent one. Before reopening/repeating a checkout, message, or other submission, verify whether it completed elsewhere.
 
-### Not owner / already-owned (77)
+### Take refused
 
-Read `detail.state` and `detail.owner` first: `unowned` / null means no owner; `owned` / a name identifies the other caller. Verify that your `--owner` or `DSH_SESSION_ID` has not changed, then run `leash list --all`. If the intended tab is unowned and the task permits it, `leash claim TAB` takes it. If another caller owns it, ask them to run `leash release TAB` or open your own tab with `leash new URL`. The omitted-owner default is `dsh:<DSH_SESSION_ID>`. `already-owned` on claim is a state refusal, not an invitation to impersonate the owner. Never use force-close/release to steal the tab.
+`ambiguous` includes handle-free metadata for each matching tab: narrow the URL, title, or exact label. `no-match` means refresh the listing. `taken` means a capability already exists; ask its holder to share that handle or open another tab. A human hold must not be bypassed.
 
 ### With the human (77)
 
-Use `list --all` to see the handoff reason. Wait for the human's Done/resume signal. Call `leash resume TAB` only after they finish or explicitly authorize returning control. Then collect the blocked handoff result and take a fresh snapshot. Do not resume automatically merely because your next command was refused. For handoff timeout inspect `detail.warnings`; failed focus/notification may explain why the human never saw the request.
+Use `list` to see the human hold. Wait for the human's Done/resume signal. Call `leash resume TAB` only after they finish or explicitly authorize returning control. Then collect the blocked handoff result and take a fresh snapshot. Do not resume automatically merely because your next command was refused. For handoff timeout inspect `detail.warnings`; failed focus/notification may explain why the human never saw the request.
 
 ### Tab cap (75)
 
-Check `leash status` and `leash list`. Close only your own unneeded disposable tabs, then retry `new` (or reuse an appropriate owned tab via `drive --tab`). If all tabs are needed or belong to others, ask the operator. Do not force-close another owner's tab or silently raise the service cap. Installed playbook syntax checks also need temporary-tab capacity.
+Check `leash status` and `leash list`. Close only your own unneeded disposable tabs, then retry `new` (or reuse an appropriate tab whose handle you have via `drive --tab`). If all tabs are needed or belong to others, ask the operator. Do not close a tab without the handle and authorization or silently raise the service cap. Installed playbook syntax checks also need temporary-tab capacity.
 
 ## Other failures
 
@@ -105,5 +106,5 @@ Check `leash status` and `leash list`. Close only your own unneeded disposable t
 - **`too-large`:** narrow text, rows, input, expression, argument, files, or script output. Do not discard the declared output shape or size bound.
 - **`url-refused`:** use http/https without credentialed userinfo, or `about:blank`. Do not bypass the restriction with another command.
 - **`invalid-request` / `usage` / `cli-parse`:** consult the exact command help and correct its arguments. `cli-parse` means the command did not run; it is safe to correct parsing without worrying about that invocation's dispatch. A drive `--url` that is not http(s) without userinfo, or a `--max-steps` of 0 or less, is `usage` and names a correct example. That is not a missing playbook.
-- **`socket-permission` / `permission-denied`:** inspect the named path's owner/mode or choose a permitted path. Do not make the private socket/profile world-readable or switch to another user's service.
+- **`socket-permission` / `permission-denied`:** inspect the named path's permissions or choose a permitted path. Do not make the private socket or profile world-readable.
 - **`internal` / `invalid-response`:** check status and retry an observation once if safe. If it persists, report the code/message and relevant nonsecret context as a defect. Do not dump page content or automatically replay a dispatched mutation.

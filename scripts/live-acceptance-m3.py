@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""Live-only L14 gate: milestone-3 ownership, claim/release, expiry and disposition
-through the real CLI/service/headless-Chrome. Three phases, one service each:
+"""Live-only gate: handles, popups, and one-rule expiry through the real CLI.
+Three phases, one service each:
 
-ownership  two CLI owners with cross-owner refusals; the outside tab (Chrome's own
-           initial chrome://newtab/ target, discovered through Target.setDiscoverTargets
-           and never created by Leash); --force release and close.
+capabilities  two new tabs; list shows both and never a handle; a bad handle is
+           unknown-tab; a second process that is given the handle can snap it;
+           close is closed_by_handle. The initial chrome://newtab stays human.
 popups     an adopted window.open popup (the opening click is answered by the
            popup's own targetCreated despite Chrome withholding the dispatch reply,
            tab-0ohq); a loaded popup that closes itself, reporting closed_externally.
            The opener-holding click can leave late, uncloseable popup debris behind, so
            this phase runs on its own Chrome and SIGTERM reaps it.
-expiry     a short idle/unclaimed config with a 1 s sweep proving stage 1 (release)
-           then stage 2 (closed_by_ttl) on a real clock, while a claimed-then-released
-           human tab survives both stages.
+expiry     a short idle config with a 1 s sweep. An agent tab closes with
+           closed_by_idle. A human tab that was never taken stays open.
 
 Why the newtab target counts as "opened outside Leash": Leash owns the only CDP pipe,
 so no second client can create a target; the initial target reaches Leash exactly the
 way a human-opened tab does -- announced on the target stream with no openerId and
-adopted as human-origin unowned (own-c0cl). A page's window.open with 'noopener'
+adopted as human origin (own-c0cl). A page's window.open with 'noopener'
 was tried for that route and rejected: Chrome 152 still reports openerId, so Leash
 correctly adopts the popup. The two popup shapes split live: the opener-holding open
 stalls its navigation while Chrome withholds the dispatch reply (the L10 finding; the
@@ -70,25 +69,33 @@ class PageHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 
-def cli(owner, command, *args, error=None, timeout=60):
-    proc = subprocess.run([LEASH, command, '--owner', owner, *map(str, args)],
+EXITS = {
+    'invalid-request': 64, 'usage': 64, 'ambiguous': 66, 'no-match': 66,
+    'tab-gone': 66, 'unknown-tab': 66, 'taken': 77, 'with-human': 77, 'timeout': 75,
+}
+
+
+def cli(command, *args, error=None, timeout=60):
+    proc = subprocess.run([LEASH, command, *map(str, args)],
                           capture_output=True, text=True, timeout=timeout)
+    raw = proc.stdout if proc.returncode == 0 else proc.stderr
     try:
-        value = json.loads(proc.stdout)
+        value = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise AssertionError(
             f'{command} did not return JSON: rc={proc.returncode}: '
             f'{proc.stdout!r} {proc.stderr!r}') from exc
     if error:
-        assert proc.returncode == 1 and value.get('code') == error, \
+        expect = EXITS.get(error)
+        assert value.get('code') == error and (expect is None or proc.returncode == expect), \
             (command, proc.returncode, value)
     else:
         assert proc.returncode == 0, (command, proc.returncode, value, proc.stderr)
     return value
 
 
-def every_tab(owner='alice'):
-    return cli(owner, 'list', '--all')['tabs']
+def every_tab(_who='alice'):
+    return cli('list')['tabs']
 
 
 def find(tabs, handle):
@@ -106,205 +113,114 @@ def is_newtab(tab):
     return tab['url'].startswith('chrome://newtab')
 
 
-def ownership(local):
-    print(f'owner tabs on {local}/m3 (popups run in their own phase)', flush=True)
-
-    def mine(tab):
-        return tab['url'].startswith(local)
-
-    alice_tab = cli('alice', 'new', local + '/m3')['tab']
-    bob_tab = cli('bob', 'new', local + '/m3')['tab']
-    print(f'two owners: alice={alice_tab[:8]} bob={bob_tab[:8]}', flush=True)
-
-    cli('bob', 'snap', alice_tab, error='not-owner')
-    cli('bob', 'close', alice_tab, error='not-owner')
-    cli('bob', 'release', alice_tab, error='not-owner')
-    cli('bob', 'claim', alice_tab, error='already-owned')
-    cli('alice', 'claim', bob_tab, error='already-owned')
-    bob_list = [t['tab'] for t in cli('bob', 'list')['tabs']]
-    assert bob_tab in bob_list and alice_tab not in bob_list, bob_list
-    scoped = {t['tab']: t for t in every_tab('bob')}
-    assert scoped[alice_tab]['owner'] == 'alice', scoped
-    assert scoped[alice_tab]['state'] == 'owned', scoped
-    print('cross-owner refusals: snap/close/release not-owner, claim already-owned, '
-          'list scoped, list --all shows both', flush=True)
-
-    cli('alice', 'release', alice_tab)
-    assert cli('bob', 'claim', alice_tab)['owner'] == 'bob'
-    cli('bob', 'release', alice_tab)
-    assert cli('alice', 'claim', alice_tab)['owner'] == 'alice'
-    print('release/claim cycle across owners: ok', flush=True)
-
-    outside = next(t for t in every_tab() if is_newtab(t))
+def capabilities(local):
+    print(f'handles on {local}/m3', flush=True)
+    alice_tab = cli('new', local + '/m3', '--label', 'alice')['tab']
+    bob_tab = cli('new', local + '/m3', '--label', 'bob')['tab']
+    print(f'two handles: {alice_tab[:8]} {bob_tab[:8]}', flush=True)
+    cli('snap', alice_tab)
+    cli('snap', 't_not_a_tab', error='unknown-tab')
+    cli('close', 't_not_a_tab', error='unknown-tab')
+    listed = every_tab()
+    assert all('tab' not in row and 'handle' not in row for row in listed), listed
+    assert any(row.get('label') == 'alice' and row.get('origin') == 'agent' for row in listed)
+    assert any(row.get('label') == 'bob' and row.get('origin') == 'agent' for row in listed)
+    outside = next(t for t in listed if is_newtab(t))
     assert outside['origin'] == 'human', outside
-    assert outside['state'] == 'unowned', outside
-    assert outside['owner'] is None, outside
-    assert outside['expires'] is None, outside
-    print(f"outside tab: {outside['tab'][:8]} human/unowned, expires null", flush=True)
-
-    forced_release = cli('alice', 'new', local + '/m3')['tab']
-    cli('bob', 'release', forced_release, '--force')
-    assert find(every_tab(), forced_release)['state'] == 'unowned'
-    forced_close = cli('alice', 'new', local + '/m3')['tab']
-    cli('bob', 'close', forced_close, '--force')
-    gone = cli('alice', 'snap', forced_close, error='tab-gone')
-    assert gone['detail']['disposition'] == 'closed_by_owner', gone
-    print("--force: release and close on another owner's tabs ok; force-close is "
-          'closed_by_owner', flush=True)
-
-    for t in every_tab():
-        if mine(t) or t['url'] == '':
-            p = subprocess.run(
-                [LEASH, 'close', '--owner', 'alice', t['tab'], '--force'],
-                capture_output=True, text=True, timeout=60)
-            print(f"cleanup close {t['tab'][:8]} {t['url'][:40]!r} {t['origin']}/"
-                  f"{t['state']}/{t['owner']}: rc={p.returncode} {p.stdout.strip()[:120]}",
-                  flush=True)
-    leftovers = [t for t in every_tab() if mine(t) or t['url'] == '']
-    assert not leftovers, leftovers
-    print('ownership phase: done', flush=True)
+    assert outside.get('closes_in_s') is None, outside
+    print('human newtab stays human and is not closed', flush=True)
+    cli('close', alice_tab)
+    gone = cli('snap', alice_tab, error='tab-gone')
+    assert gone['detail']['disposition'] == 'closed_by_handle', gone
+    cli('close', bob_tab)
+    print('capabilities phase: done', flush=True)
 
 
 def popups(local):
     print(f'pages: {local}/m3 (popup opener), {local}/popup (self-closing popup)',
           flush=True)
-
-    def mine(tab):
-        return tab['url'].startswith(local)
-
-    # The named open keeps its opener, so Chrome withholds the dispatch reply; the
-    # popup's own announcement settles the click (tab-0ohq), which is why it answers
-    # before the popup's navigation has gone anywhere.
-    opener = cli('alice', 'new', local + '/m3')['tab']
-    opened = cli('alice', 'snap', opener)
-    pre_adopt = {t['tab'] for t in every_tab()}
+    opener = cli('new', local + '/m3')['tab']
+    opened = cli('snap', opener)
     started = time.monotonic()
-    clicked = cli('alice', 'click', opener, opened['snapshot'],
+    clicked = cli('click', opener, opened['snapshot'],
                   row(opened, 'button', 'adopted'))
     click_s = time.monotonic() - started
     assert clicked['popups'], clicked
     popup = clicked['popups'][0]
-    assert popup['origin'] == 'agent', popup
-    assert popup['state'] == 'owned' and popup['owner'] == 'alice', popup
-    listed = find(every_tab(), popup['tab'])
-    assert listed is not None and listed['owner'] == 'alice', listed
-    print(f'adopted popup: click replied in {click_s:.2f}s with '
-          f"{popup['tab'][:8]} agent/owned/alice", flush=True)
-    for t in every_tab():
-        if t['tab'] not in pre_adopt and (t['url'] == '' or mine(t)):
-            cli('alice', 'close', t['tab'], '--force')
+    assert popup['origin'] == 'human' and 'tab' not in popup, popup
+    popup_handle = cli('take', '--url', popup['url'])['tab']
+    assert all('tab' not in row for row in every_tab())
+    print(f'adopted popup: click replied in {click_s:.2f}s with {popup_handle[:8]}',
+          flush=True)
+    cli('close', popup_handle)
+    cli('close', opener)
 
-    # A loaded popup that closes itself reports closed_externally (own-teh1). The
-    # opener-holding open above hangs its navigation, so this step uses the noopener
-    # button: that popup commits at once with healthy sessions on both sides, and
-    # Chrome still reports openerId, so it is adopted like any popup. Candidates stay
-    # origin-agnostic (a popup Leash cannot attribute is claimed first), and only an
-    # exact /popup URL counts as loaded -- a pending popup reports its opener's URL.
     attempts = 0
     while True:
         attempts += 1
-        census = [(t['tab'][:8], t['url'][:44], t['origin'], t['state'],
-                   t['owner']) for t in every_tab()]
-        print(f'closed_externally attempt {attempts}: {len(census)} tabs: {census}',
-              flush=True)
-        assert attempts <= 4, f'no loaded popup after 4 attempts: {census}'
-        attempt_opener = cli('alice', 'new', local + '/m3')['tab']
-        attempt_snap = cli('alice', 'snap', attempt_opener)
-        known = {t['tab'] for t in every_tab()}
-        cli('alice', 'click', attempt_opener, attempt_snap['snapshot'],
-            row(attempt_snap, 'button', 'fast'))
-
-        def candidates():
-            return [t for t in every_tab()
-                    if t['tab'] not in known
-                    and (t['url'] == '' or mine(t))]
-
+        assert attempts <= 4, 'no loaded popup after 4 attempts'
+        attempt_opener = cli('new', local + '/m3')['tab']
+        attempt_snap = cli('snap', attempt_opener)
+        clicked = cli('click', attempt_opener, attempt_snap['snapshot'],
+                      row(attempt_snap, 'button', 'fast'))
+        assert clicked['popups'], clicked
+        popup = clicked['popups'][0]
+        assert popup['origin'] == 'human' and 'tab' not in popup, popup
+        popup_handle = cli('take', '--url', popup['url'])['tab']
         loaded = None
         for _ in range(10):
             time.sleep(1)
-            loaded = next((t for t in candidates()
-                           if t['url'] == local + '/popup'), None)
-            if loaded is not None:
+            snap = cli('snap', popup_handle)
+            if snap.get('url') == local + '/popup':
+                loaded = snap
                 break
         if loaded is None:
-            for t in candidates():
-                cli('alice', 'close', t['tab'], '--force')
-            cli('alice', 'close', attempt_opener)
-            print(f'closed_externally attempt {attempts}: popup never navigated, '
-                  'retrying with a fresh opener', flush=True)
+            cli('close', popup_handle)
+            cli('close', attempt_opener)
+            print(f'attempt {attempts}: popup never navigated', flush=True)
             continue
-        if loaded['state'] == 'unowned':
-            assert cli('alice', 'claim', loaded['tab'])['owner'] == 'alice'
-        closing = cli('alice', 'snap', loaded['tab'])
-        # The click destroys its own target, so either the reply wins the race (ok)
-        # or the death does (tab-gone closed_externally); both prove the point.
         suicide = subprocess.run(
-            [LEASH, 'click', '--owner', 'alice', loaded['tab'], closing['snapshot'],
-             str(row(closing, 'button', 'Close this popup'))],
+            [LEASH, 'click', popup_handle, loaded['snapshot'],
+             str(row(loaded, 'button', 'Close this popup'))],
             capture_output=True, text=True, timeout=60)
-        suicide_body = json.loads(suicide.stdout)
         if suicide.returncode == 0:
             print('self-close click replied before its target died', flush=True)
         else:
-            assert suicide.returncode == 1 \
-                and suicide_body.get('code') == 'tab-gone', \
-                (suicide.returncode, suicide_body)
-            assert suicide_body['detail']['disposition'] == 'closed_externally', \
-                suicide_body
-            print('self-close click reported its own tab-gone closed_externally',
-                  flush=True)
+            body = json.loads(suicide.stderr)
+            assert suicide.returncode == 66 and body.get('code') == 'tab-gone', (
+                suicide.returncode, body)
+            assert body['detail']['disposition'] == 'closed_externally', body
         time.sleep(3)
-        assert find(every_tab(), loaded['tab']) is None, loaded['tab']
-        gone = cli('alice', 'snap', loaded['tab'], error='tab-gone')
+        gone = cli('snap', popup_handle, error='tab-gone')
         assert gone['detail']['disposition'] == 'closed_externally', gone
-        for t in candidates():
-            cli('alice', 'close', t['tab'], '--force')
-        cli('alice', 'close', attempt_opener)
-        print(f'closed_externally: loaded popup closed itself on attempt {attempts}; '
-              'tab-gone carries closed_externally', flush=True)
+        cli('close', attempt_opener)
+        print(f'closed_externally on attempt {attempts}', flush=True)
         break
-    print('popups phase: done (SIGTERM reaps the wedged-process debris)', flush=True)
+    print('popups phase: done', flush=True)
 
 
 def expiry():
-    idle_s, unclaimed_s = 5, 12
-    created = cli('alice', 'new')
+    idle_s = 5
+    created = cli('new')
     tab = created['tab']
-    assert created['url'] == 'about:blank', created
-    assert created['expires']['stage'] == 'release', created
-    assert 0 < created['expires']['in_s'] <= idle_s, created
+    assert created['origin'] == 'agent', created
+    assert created.get('closes_in_s') is not None, created
+    assert 0 < created['closes_in_s'] <= idle_s, created
     outside = next(t for t in every_tab() if is_newtab(t))
-    assert outside['origin'] == 'human' and outside['state'] == 'unowned', outside
-    assert outside['expires'] is None, outside
-    assert cli('alice', 'claim', outside['tab'])['owner'] == 'alice'
-    cli('alice', 'release', outside['tab'])
-    released = find(every_tab(), outside['tab'])
-    assert released['state'] == 'unowned' and released['expires'] is None, released
-    print(f"expiry watches {tab[:8]} (agent/owned) and {outside['tab'][:8]} "
-          '(human, claimed then released)', flush=True)
-    time.sleep(9)
-    stage1 = find(every_tab(), tab)
-    assert stage1 is not None and stage1['state'] == 'unowned', stage1
-    assert stage1['expires']['stage'] == 'close', stage1
-    assert 0 < stage1['expires']['in_s'] <= unclaimed_s, stage1
-    assert find(every_tab(), outside['tab']) is not None
-    print('stage 1: owned tab released after idle, still open; human tab untouched',
-          flush=True)
-    time.sleep(13)
-    assert find(every_tab(), tab) is None
-    gone = cli('alice', 'snap', tab, error='tab-gone')
-    assert gone['detail']['disposition'] == 'closed_by_ttl', gone
-    survivor = find(every_tab(), outside['tab'])
-    assert survivor is not None and survivor['state'] == 'unowned', survivor
-    print('stage 2: unowned agent tab closed_by_ttl; human tab claimed then released '
-          'survives both stages', flush=True)
-    print('expiry phase: done', flush=True)
+    assert outside['origin'] == 'human' and outside.get('closes_in_s') is None, outside
+    print(f"expiry watches {tab[:8]}; human tab stays", flush=True)
+    time.sleep(idle_s + 6)
+    gone = cli('snap', tab, error='tab-gone')
+    assert gone['detail']['disposition'] == 'closed_by_idle', gone
+    survivor = next(t for t in every_tab() if is_newtab(t))
+    assert survivor['origin'] == 'human' and survivor.get('closes_in_s') is None, survivor
+    print('agent tab closed_by_idle; human tab survives', flush=True)
 
 
-if PHASE in ('ownership', 'popups'):
+if PHASE in ('capabilities', 'popups'):
     with http.server.ThreadingHTTPServer(('127.0.0.1', 0), PageHandler) as server:
         threading.Thread(target=server.serve_forever, daemon=True).start()
-        run = ownership if PHASE == 'ownership' else popups
+        run = capabilities if PHASE == 'capabilities' else popups
         run(f'http://127.0.0.1:{server.server_port}')
 elif PHASE == 'expiry':
     expiry()

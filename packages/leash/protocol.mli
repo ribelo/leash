@@ -35,16 +35,6 @@ module Snapshot_id : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
-(** The requester: ["dsh:<session>"], ["human"], or an operator's choice. *)
-module Owner : sig
-  type t
-
-  val of_string : string -> (t, string) result
-  val to_string : t -> string
-  val t_of_yojson : Yojson.Safe.t -> (t, string) result
-  val yojson_of_t : t -> Yojson.Safe.t
-end
-
 module Origin : sig
   type t
 
@@ -54,25 +44,7 @@ module Origin : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
-module State : sig
-  type t
-
-  val of_string : string -> (t, string) result
-  val to_string : t -> string
-  val t_of_yojson : Yojson.Safe.t -> (t, string) result
-  val yojson_of_t : t -> Yojson.Safe.t
-end
-
 module Popup_state : sig
-  type t
-
-  val of_string : string -> (t, string) result
-  val to_string : t -> string
-  val t_of_yojson : Yojson.Safe.t -> (t, string) result
-  val yojson_of_t : t -> Yojson.Safe.t
-end
-
-module Stage : sig
   type t
 
   val of_string : string -> (t, string) result
@@ -177,8 +149,8 @@ module Chrome_phase : sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
-(** Why a tab is gone: the tombstone's disposition (ADR-0005). It is the closed set
-    [closed_by_owner], [closed_by_ttl], [closed_externally], [browser_lost] that a
+(** Why a tab is gone: the tombstone's disposition (ADR-0010). It is the closed set
+    [closed_by_handle], [closed_by_idle], [closed_externally], [browser_lost] that a
     [tab-gone] reply carries in [detail.disposition]. *)
 module Disposition : sig
   type t
@@ -223,11 +195,6 @@ module Error_code : sig
       tab-separated line per {!all} (daily-pb5a). *)
 end
 
-type expires = { stage : Stage.t; in_s : int }
-
-val expires_of_yojson : Yojson.Safe.t -> (expires, string) result
-val yojson_of_expires : expires -> Yojson.Safe.t
-
 type dialog = { kind : Dialog_kind.t; message : string; default_prompt : string option }
 
 val dialog_of_yojson : Yojson.Safe.t -> (dialog, string) result
@@ -235,41 +202,53 @@ val yojson_of_dialog : dialog -> Yojson.Safe.t
 
 type tab_info = {
   tab : Handle.t;
+  label : string option;
   url : string;
   title : string;
   origin : Origin.t;
-  state : State.t;
-  owner : Owner.t option;
+  age_s : int;
+  idle_s : int;
+  closes_in_s : int option;
+  with_human : bool;
+  reason : string option;
   generation : int;
   dialog : dialog option;
-  expires : expires option;
   loaded : bool option;
+}
+
+type tab_listing = {
+  label : string option;
+  url : string;
+  title : string;
+  origin : Origin.t;
+  age_s : int;
+  idle_s : int;
+  closes_in_s : int option;
+  with_human : bool;
   reason : string option;
 }
-(** [owner] and [expires] are [T|null]: both keys are always on the wire and read [null]
-    when there is no value. [reason] is [key?]: it is present exactly while a handoff is
-    waiting on the tab and carries the reason the human was given, so [list --all] shows
-    which tabs wait on the human and why (hand-r4t1). *)
 
+val tab_listing_of_yojson : Yojson.Safe.t -> (tab_listing, string) result
+val yojson_of_tab_listing : tab_listing -> Yojson.Safe.t
 val tab_info_of_yojson : Yojson.Safe.t -> (tab_info, string) result
 val yojson_of_tab_info : tab_info -> Yojson.Safe.t
 
 type popup_info = {
-  tab : Handle.t;
+  tab : Handle.t option;
+  label : string option;
   url : string;
   title : string;
   origin : Origin.t;
+  age_s : int;
+  idle_s : int;
+  closes_in_s : int option;
+  with_human : bool;
+  reason : string option;
   state : Popup_state.t;
-  owner : Owner.t option;
   generation : int;
   dialog : dialog option;
-  expires : expires option;
-  reason : string option;
   opener_url : string;
 }
-(** field-drpx: popup readiness is independent of ownership. Empty/about:blank targets are
-    opening until the settle window ends, then blank; opener_url identifies the page that
-    opened them. *)
 
 val popup_info_of_yojson : Yojson.Safe.t -> (popup_info, string) result
 val yojson_of_popup_info : popup_info -> Yojson.Safe.t
@@ -383,17 +362,13 @@ type step = {
 val step_of_yojson : Yojson.Safe.t -> (step, string) result
 val yojson_of_step : step -> Yojson.Safe.t
 
-type new_args = { url : string option }
-type list_args = { all : bool }
+type new_args = { url : string option; label : string option }
+type take_args = { url : string option; title : string option; label : string option }
+
+val take_args_of_yojson : Yojson.Safe.t -> (take_args, string) result
+val yojson_of_take_args : take_args -> Yojson.Safe.t
+
 type tab_args = { tab : Handle.t }
-
-type force_args = { tab : Handle.t; force : bool option }
-(** The arguments of the two commands a caller may force (own-0pnk): [force] is honoured
-    only for [release] and [close], and is a [key?] field — omitted when the caller does
-    not ask for it. *)
-
-val force_args_of_yojson : Yojson.Safe.t -> (force_args, string) result
-val yojson_of_force_args : force_args -> Yojson.Safe.t
 
 type snap_args = {
   tab : Handle.t;
@@ -537,7 +512,7 @@ type run_args = {
   out : string option;
 }
 (** L31 run-9ypy: one mission over the installed playbooks. [tab] is [key?]: a run given
-    one reuses it, after checking ownership and that no dialog is open, and a run given
+    one reuses it, after checking the handle and that no dialog is open, and a run given
     none opens a tab of its own — the one the [final] snapshot names — and leaves it open.
     [max_procedures] defaults to 40 and [deadline_s] to 900; [dry_run] asks the two levels
     and reports without acting (run-fp7i). [expect] is the mission's own expectations —
@@ -598,7 +573,7 @@ type status_result = {
 val status_result_of_yojson : Yojson.Safe.t -> (status_result, string) result
 val yojson_of_status_result : status_result -> Yojson.Safe.t
 
-type list_result = { tabs : tab_info list }
+type list_result = { tabs : tab_listing list }
 
 type download_info = {
   id : string;
@@ -617,10 +592,8 @@ val yojson_of_downloads_result : downloads_result -> Yojson.Safe.t
 val list_result_of_yojson : Yojson.Safe.t -> (list_result, string) result
 val yojson_of_list_result : list_result -> Yojson.Safe.t
 
-type released_result = { released : bool }
 type closed_result = { closed : bool }
 
-val yojson_of_released_result : released_result -> Yojson.Safe.t
 val yojson_of_closed_result : closed_result -> Yojson.Safe.t
 
 type resumed_result = { resumed : bool }
@@ -656,7 +629,7 @@ type net_entry = {
 (** hard-xg6y: one request of a tab's ring. [status], [mime], [size] and [duration_ms] are
     [T|null] (a request still in flight or one that failed has no response); [error] is
     [key?] and carries Chrome's error text for a failed load. Everything here is page data
-    for the owner and never reaches a log line. *)
+    for the handle holder and never reaches a log line. *)
 
 type net_result = { requests : net_entry list }
 
@@ -934,11 +907,11 @@ val stale_snapshot : Snapshot_id.t option -> error
     [detail.snapshot], or [null] when no snapshot is current. *)
 
 val tab_gone : Disposition.t -> error
-(** own-teh1: the one [tab-gone] error, carrying the disposition that closed the tab in
-    [detail.disposition] — [closed_by_owner], [closed_by_ttl], [closed_externally], or
-    [browser_lost]. Every path that reports a closed tab says it this way: a tombstone, a
-    dispatch this tab's death settled (tab-0ohq), and the browser lookup that probe makes.
-*)
+(** own-teh1 hand-s4cq: the one [tab-gone] error, carrying the disposition that closed the
+    tab in [detail.disposition] — [closed_by_handle], [closed_by_idle],
+    [closed_externally], or [browser_lost]. The hint is [open a new tab with `leash new`].
+    Every path that reports a closed tab says it this way: a tombstone, a dispatch this
+    tab's death settled (tab-0ohq), and the browser lookup that probe makes. *)
 
 type reply =
   | Success of Yojson.Safe.t
@@ -951,10 +924,9 @@ val decode_reply : Yojson.Safe.t -> (reply, string) result
 
 type command =
   | New of new_args
-  | List_tabs of list_args
-  | Claim of tab_args
-  | Release of force_args
-  | Close of force_args
+  | List_tabs
+  | Take of take_args
+  | Close of tab_args
   | Status
   | Snap of snap_args
   | Text of text_args
@@ -995,12 +967,12 @@ val command_of_args : cmd:string -> Yojson.Safe.t -> (command, string) result
 (** The command table: the wire name, the derived argument decode, and the derived
     argument encode. [Status] takes an empty object and nothing else. *)
 
-type request = { owner : Owner.t; command : command }
+type request = { command : command }
 
 val version : int
 val encode_request : request -> Yojson.Safe.t
 
 val decode_request : Yojson.Safe.t -> (request, string) result
-(** The envelope: ["v"] must be {!version}, ["owner"] must be non-empty, ["cmd"] must be
-    one of the commands above, and ["args"] must decode into that command's record. An
-    unknown envelope field or argument is refused by name. *)
+(** The envelope: ["v"] must be {!version}, ["cmd"] must be one of the commands above, and
+    ["args"] must decode into that command's record. There is no caller field. An unknown
+    envelope field or argument is refused by name. hand-scaz hand-w85z. *)

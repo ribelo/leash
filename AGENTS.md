@@ -57,4 +57,4 @@ nix develop -c scripts/caps-gate   # delegates to the gate installed with ox_cap
 - Dialogs are never auto-answered.
 - Actions are never retried automatically; only pre-dispatch observation may retry.
 - Human-origin tabs are never auto-closed.
-- The control socket is owner-only (0600) in a verified private runtime directory.
+- The control socket is mode 0600 in a verified private runtime directory.

@@ -133,7 +133,7 @@ let request_json (request : Run.plan_request) =
     ]
 
 (* run-2tt3: the expectations the planner attached must be verifiable. A sentence the
-   grammar does not claim becomes a judgment question, which is fine; a sentence naming a
+   grammar does not recognize becomes a judgment question, which is fine; a sentence naming a
    page kind the playbook does not declare is an authoring mistake the DONE guard would
    refuse later, so it is refused now, while the retry can still correct the reply. *)
 let check_expectations (book : Playbook.t option) sentences =

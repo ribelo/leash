@@ -90,7 +90,8 @@ let top_help path =
       "PLAYBOOKS";
       "SERVICE";
       "SKILL";
-      "--all";
+      "take";
+      "your tabs are never closed unless an agent takes one";
     ];
   print_endline
     "top-level help groups tabs, observe, act, network/debug, missions, playbooks, \
@@ -320,13 +321,27 @@ let () =
   | [ _; "check-help"; path ] -> check_help path
   | [ _; "top-help"; path ] -> top_help path
   | [ _; "list-help"; path ] ->
-      let text = read_file path in
-      if not (contains text "--all") then failwith "daily-9ggi list help omits --all";
-      if not (contains text "unowned") then failwith "daily-9ggi list help omits scope";
-      print_endline "daily-9ggi list --all includes unowned and other owners"
+      let text =
+        read_file path |> String.split_on_char '\n' |> List.map String.trim
+        |> String.concat " "
+      in
+      let rule =
+        "agent tabs close after 30 idle minutes; your tabs are never closed unless an \
+         agent takes one"
+      in
+      if not (contains text rule) then failwith "hand-3v5u list help omits the tab rule";
+      if contains text "--all" then failwith "list help still documents --all";
+      print_endline "hand-3v5u list help states the tab rule and never shows handles"
   | [ _; "error-help"; path ] -> error_help path
   | [ _; "drive-help"; path ] -> drive_help path
   | [ _; "capture"; path; request_file; ready ] -> capture path request_file ready
+  | [ _; "anonymous-request"; path ] ->
+      let json = read_file path |> Yojson.Safe.from_string in
+      let keys =
+        match json with `Assoc f -> List.map fst f |> List.sort String.compare | _ -> []
+      in
+      if keys <> [ "args"; "cmd"; "v" ] then failwith "hand-scaz extra request fields";
+      print_endline "hand-scaz only v, cmd and args, even in a harness environment"
   | [ _; "drive-request"; path ] -> drive_request path
   | [ _; "inspect-init"; path; stdout; stderr ] -> inspect_init path stdout stderr
   | [ _; "skill-outcome"; action; path; stdout; stderr ] ->

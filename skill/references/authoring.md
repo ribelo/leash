@@ -20,7 +20,7 @@ A playbook is a directory `~/.config/leash/playbooks/<site>/` holding `playbook.
 4. **Add a script only where bulk reading or a file is needed.** Navigation, search, forms and pagination are goals. A script reads; it does not click, scroll, fetch other pages or change the page. Declare `description` (one sentence: when JEV should choose it), `pages` and `returns` beside it.
 5. **Declare every argument with its source** (table below).
 6. **Write `expect` sentences** from the checker vocabulary (below). Every procedure's `expect` names the page kind it lands on.
-7. `leash playbook check ./DIR` until clean; install by copying the directory; `leash playbook check <site> --owner O` (adds JS syntax).
+7. `leash playbook check ./DIR` until clean; install by copying the directory; `leash playbook check <site>` (adds JS syntax).
 8. `leash playbook test <site>/<script> --tab TAB` on a real page of each kind the script is for. Compare the count with what you see. An empty list is a valid result (an empty cart); throw when the page is the wrong one.
 9. A `--dry-run` mission: shows which book and first procedure are chosen, with their probabilities. It spends model calls, acts on nothing, does not open `--url`, and always reads `status: blocked`. It cannot catch a control that is on another page.
 10. A live mission with `--out`; then read the trace: `procedures[].slug` and `outcome`, each drive's `steps[].operation` and `probabilities.op`, `data.scripts`, `collected`, `mission_expectations`. Scrolls alternating with BLOCKED near 0.5, ending "no available action toward the goal", means the control is not on this page or the goal does not name it. Fix the playbook before blaming the model.
@@ -143,11 +143,11 @@ Why each choice:
 ```sh
 leash playbook check ./books.toscrape.com
 cp -r ./books.toscrape.com ~/.config/leash/playbooks/
-leash playbook check books.toscrape.com --owner me
-TAB=$(leash new https://books.toscrape.com/catalogue/category/books/mystery_3/index.html --owner me | jq -er .tab)
-leash playbook test books.toscrape.com/list-page --tab "$TAB" --owner me    # expect 20 records
-leash drive 'collect every book title and price in the Mystery category' --dry-run --owner me
-leash drive 'collect every book title and price in the Mystery category' --out /tmp/mystery.jsonl --owner me
+leash playbook check books.toscrape.com
+TAB=$(leash new https://books.toscrape.com/catalogue/category/books/mystery_3/index.html | jq -er .tab)
+leash playbook test books.toscrape.com/list-page --tab "$TAB"    # expect 20 records
+leash drive 'collect every book title and price in the Mystery category' --dry-run
+leash drive 'collect every book title and price in the Mystery category' --out /tmp/mystery.jsonl
 ```
 
 Then check `collected` against the site, `status` = `done`, and each procedure `verified`.

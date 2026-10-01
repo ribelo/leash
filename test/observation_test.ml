@@ -6,9 +6,6 @@ module S = Leash__Snapshot_source
 module J = Leash__Jev_request
 module Fake = Leash_test_support.Fake_browser
 
-let owner name =
-  match P.Owner.of_string name with Ok value -> value | Error e -> Alcotest.fail e
-
 let operation name =
   match P.Operation.of_string name with Ok value -> value | Error e -> Alcotest.fail e
 
@@ -161,7 +158,7 @@ let rig f =
               f env sw tabs fake)))
 
 let new_tab tabs =
-  match Leash.Tabs.new_tab tabs ~owner:(owner "alice") ~url:None with
+  match Leash.Tabs.new_tab tabs ~url:None with
   | Ok info -> info.P.tab
   | Error e -> Alcotest.fail e.P.message
 
@@ -196,7 +193,7 @@ let drive ?text_helper tabs decisions =
         Ok next
     | [] -> Alcotest.fail "the drive asked for another decision"
   in
-  Leash.Tabs.drive ~decide ?text_helper tabs ~owner:(owner "alice") ~model:"fixture"
+  Leash.Tabs.drive ~decide ?text_helper tabs ~model:"fixture"
     P.
       {
         tab = new_tab tabs;

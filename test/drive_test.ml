@@ -471,17 +471,20 @@ let dialog_popup_error () =
   let popup =
     P.
       {
-        tab = handle;
+        tab = Some handle;
         url = "https://example.org/popup";
         title = "Popup";
         origin =
           (match Origin.of_string "agent" with Ok x -> x | Error _ -> assert false);
+        label = None;
+        age_s = 0;
+        idle_s = 0;
+        closes_in_s = Some 1800;
+        with_human = false;
         state =
           (match Popup_state.of_string "ready" with Ok x -> x | Error _ -> assert false);
-        owner = None;
         generation = 1;
         dialog = None;
-        expires = None;
         reason = None;
         opener_url = "https://example.org/";
       }

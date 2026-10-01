@@ -1,7 +1,6 @@
-L42 local bundle operations use neither a service nor a DSH owner. Installation
+L42 local bundle operations use neither a service nor a tab handle. Installation
 preserves modified bundles until consent, and dry-run has no filesystem effects.
 
-  $ unset DSH_SESSION_ID
   $ tmp=$(mktemp -d /tmp/leash-l42-XXXXXX)
   $ case "$tmp" in /tmp/leash-l42-*) ;; *) exit 1;; esac
   $ trap 'chmod -R u+rwx "${tmp:?}"; rm -rf "${tmp:?}"' EXIT
@@ -49,7 +48,7 @@ stamp, modified contents (even with a matching stamp), and force repair.
   $ test ! -e "$HOME/.agents/skills"
   $ check usage leash skill install --no-input
   usage: exit 64, JSON-only stderr, hint, empty stdout
-  $ status_skill() { expected="$1"; rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve "$tmp/control.sock" success "$tmp/ready" & peer=$!; while test ! -f "$tmp/ready"; do :; done; leash status --owner test --socket "$tmp/control.sock" >out 2>err; code=$?; wait "$peer"; test "$code" -eq 0 && ./daily_cli_fixture.exe status-skill "$expected" out err; }
+  $ status_skill() { expected="$1"; rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve "$tmp/control.sock" success "$tmp/ready" & peer=$!; while test ! -f "$tmp/ready"; do :; done; leash status --socket "$tmp/control.sock" >out 2>err; code=$?; wait "$peer"; test "$code" -eq 0 && ./daily_cli_fixture.exe status-skill "$expected" out err; }
   $ status_skill missing
   status: skill missing, running version and commit, service fields retained
   $ outcome installed "$HOME/.agents/skills/leash" leash skill install --force

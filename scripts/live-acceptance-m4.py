@@ -4,18 +4,18 @@ real CLI/service/headless-Chrome. One service, sequential handoffs, each on a
 fresh tab:
 
 handoff-resume  two CLIs: the agent (alice) hands off and blocks, the human
-                (--owner human) resumes, and the agent's handoff answers
-                {resumed: true, url, title}. While it waits the owner's own
-                actions are refused with with-human, and list --all shows
+                leash resume HANDLE finishes it, and the agent's handoff answers
+                {resumed: true, url, title}. While it waits, commands on the handle
+                actions are refused with with-human, and list shows
                 with_human with the reason (hand-lz3p hand-0sja hand-nisr
                 hand-r4t1).
 timeout         handoff --timeout-s 3 with nobody resuming answers timeout and
-                the tab is owned again (hand-lmd5).
-disconnect      killing the agent's handoff client restores ownership without
+                the tab is actionable again (hand-lmd5).
+disconnect      killing the agent's handoff client clears with_human without
                 any resume (client disconnect ends the wait).
 no-handoff      resume on a tab nobody waits on answers no-handoff, including
                 a tab whose handoff already ended (hand-szz7).
-not-owner       handoff on another owner's tab answers not-owner (hand-beip).
+unknown-tab     handoff on a handle that was never minted answers unknown-tab.
 auto-done       the stand-in notifier printing "done" resumes the tab with no
                 CLI resume (hand-phof: the Done action is a resume).
 focus-argv      the stand-in focus command received the substituted tab,
@@ -64,25 +64,38 @@ class PageHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 
-def cli(owner, command, *args, error=None, timeout=60):
-    proc = subprocess.run([LEASH, command, "--owner", owner, *map(str, args)],
+EXITS = {
+    "invalid-request": 64, "usage": 64, "no-handoff": 64, "timeout": 75,
+    "unknown-tab": 66, "tab-gone": 66, "with-human": 77,
+}
+
+
+HANDLES = []
+
+
+def cli(command, *args, error=None, timeout=60):
+    proc = subprocess.run([LEASH, command, *map(str, args)],
                           capture_output=True, text=True, timeout=timeout)
+    raw = proc.stdout if proc.returncode == 0 else proc.stderr
     try:
-        value = json.loads(proc.stdout)
+        value = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise AssertionError(
             f"{command} did not return JSON: rc={proc.returncode}: "
             f"{proc.stdout!r} {proc.stderr!r}") from exc
     if error:
-        assert proc.returncode == 1 and value.get("code") == error, \
+        expect = EXITS.get(error)
+        assert value.get("code") == error and (expect is None or proc.returncode == expect), \
             (command, proc.returncode, value)
     else:
         assert proc.returncode == 0, (command, proc.returncode, value, proc.stderr)
+    if not error and command in ("new", "take"):
+        HANDLES.append(value["tab"])
     return value
 
 
-def handoff_async(owner, tab, reason, timeout_s=None):
-    argv = [LEASH, "handoff", "--owner", owner, tab, reason]
+def handoff_async(tab, reason, timeout_s=None):
+    argv = [LEASH, "handoff", tab, reason]
     if timeout_s is not None:
         argv += ["--timeout-s", str(timeout_s)]
     return subprocess.Popen(argv, stdout=subprocess.PIPE,
@@ -100,24 +113,33 @@ def handoff_result(proc, timeout=120):
     return proc.returncode, value
 
 
-def every_tab(owner="alice"):
-    return cli(owner, "list", "--all")["tabs"]
+def every_tab(_who="alice"):
+    return cli("list")["tabs"]
 
 
-def find(tabs, handle):
-    return next((t for t in tabs if t["tab"] == handle), None)
+def held(handle):
+    proc = subprocess.run([LEASH, "snap", handle], capture_output=True, text=True, timeout=60)
+    if proc.returncode == 0:
+        return False
+    try:
+        return json.loads(proc.stderr).get("code") == "with-human"
+    except json.JSONDecodeError:
+        return False
 
 
-def wait_state(handle, want, timeout=20):
+def wait_held(handle, want, timeout=20):
     deadline = time.monotonic() + timeout
-    seen = None
     while time.monotonic() < deadline:
-        seen = find(every_tab(), handle)
-        if seen is not None and seen["state"] == want:
-            return seen
+        if held(handle) == want:
+            return
         time.sleep(0.2)
-    raise AssertionError(
-        f"tab {handle[:8]} never reached {want}; last saw {seen}")
+    raise AssertionError(f"tab {handle[:8]} with_human did not become {want}")
+
+
+def human_row():
+    rows = [row for row in every_tab() if row.get("with_human")]
+    assert len(rows) == 1, rows
+    return rows[0]
 
 
 def read_log(path):
@@ -146,68 +168,65 @@ def main():
     print(f"pages: {local}/m4 (title 'M4 gate')", flush=True)
 
     # handoff-resume: agent blocks, human resumes, reply carries url/title.
-    tab = cli("alice", "new", local + "/m4")["tab"]
+    tab = cli("new", local + "/m4")["tab"]
     reason = "please confirm the M4 gate page"
-    proc = handoff_async("alice", tab, reason)
-    waiting = wait_state(tab, "with_human")
-    assert waiting["owner"] == "alice", waiting
+    proc = handoff_async(tab, reason)
+    wait_held(tab, True)
+    waiting = human_row()
     assert waiting.get("reason") == reason, waiting
-    cli("alice", "snap", tab, error="with-human")
-    cli("alice", "text", tab, error="with-human")
-    assert cli("human", "resume", tab) == {"resumed": True}
+    assert "tab" not in waiting, waiting
+    cli("snap", tab, error="with-human")
+    cli("text", tab, error="with-human")
+    assert cli("resume", tab) == {"resumed": True}
     rc, answered = handoff_result(proc)
     assert rc == 0, (rc, answered)
     assert answered.get("resumed") is True, answered
     assert answered.get("url") == local + "/m4", answered
     assert answered.get("title") == "M4 gate", answered
     assert "warnings" not in answered, answered
-    owned = find(every_tab(), tab)
-    assert owned["state"] == "owned" and owned["owner"] == "alice", owned
-    assert owned.get("reason", "-") in (None, "-", ""), owned
+    assert not any(row.get("with_human") for row in every_tab())
     print(f"handoff-resume: human resumed {tab[:8]}, agent got url/title, "
-          "tab owned again", flush=True)
+          "tab actionable again", flush=True)
 
     # no-handoff: the ended handoff above leaves nothing to resume.
-    cli("human", "resume", tab, error="no-handoff")
+    cli("resume", tab, error="no-handoff")
     print("no-handoff: resume after the handoff ended answers no-handoff",
           flush=True)
 
-    # timeout: short deadline answers timeout, tab owned again.
-    slow = cli("alice", "new", local + "/m4")["tab"]
+    # timeout: short deadline answers timeout, tab actionable again.
+    slow = cli("new", local + "/m4")["tab"]
     started = time.monotonic()
-    timed_out = cli("alice", "handoff", slow, "nobody will answer this",
+    timed_out = cli("handoff", slow, "nobody will answer this",
                     "--timeout-s", 3, error="timeout", timeout=60)
     elapsed = time.monotonic() - started
     assert 2 <= elapsed <= 30, elapsed
-    restored = find(every_tab(), slow)
-    assert restored["state"] == "owned" and restored["owner"] == "alice", restored
-    cli("alice", "snap", slow)
+    assert not held(slow)
+    cli("snap", slow)
     print(f"timeout: --timeout-s 3 answered timeout in {elapsed:.1f}s, "
-          "tab owned again", flush=True)
+          "tab actionable again", flush=True)
 
-    # disconnect: killing the waiting client restores ownership.
-    dropped = cli("alice", "new", local + "/m4")["tab"]
-    proc = handoff_async("alice", dropped, "the agent goes away")
-    wait_state(dropped, "with_human")
+    # disconnect: killing the waiting client clears the human hold.
+    dropped = cli("new", local + "/m4")["tab"]
+    proc = handoff_async(dropped, "the agent goes away")
+    wait_held(dropped, True)
     proc.send_signal(signal.SIGKILL)
     assert proc.wait(timeout=30) == -signal.SIGKILL, proc.returncode
-    back = wait_state(dropped, "owned", timeout=20)
-    assert back["owner"] == "alice", back
-    cli("alice", "snap", dropped)
-    print("disconnect: killed handoff client, tab owned again, snap works",
+    wait_held(dropped, False, timeout=20)
+    cli("snap", dropped)
+    print("disconnect: killed handoff client, tab actionable again, snap works",
           flush=True)
 
-    # no-handoff on a tab never handed off, and not-owner handoff.
-    fresh = cli("alice", "new", local + "/m4")["tab"]
-    cli("alice", "resume", fresh, error="no-handoff")
-    cli("bob", "handoff", fresh, "taking someone else's tab",
-        error="not-owner")
-    print("no-handoff: fresh tab; not-owner: bob cannot hand off alice's tab",
+    # no-handoff on a tab never handed off; a missing handle is unknown-tab.
+    fresh = cli("new", local + "/m4")["tab"]
+    cli("resume", fresh, error="no-handoff")
+    cli("handoff", "t_not_a_tab", "missing capability",
+        error="unknown-tab")
+    print("no-handoff: fresh tab; unknown-tab: a missing handle cannot hand off",
           flush=True)
 
     # auto-done: the stand-in notifier printing "done" resumes with no CLI.
-    auto = cli("alice", "new", local + "/m4")["tab"]
-    proc = handoff_async("alice", auto, "auto-done: approve from the tray")
+    auto = cli("new", local + "/m4")["tab"]
+    proc = handoff_async(auto, "auto-done: approve from the tray")
     rc, answered = handoff_result(proc, timeout=60)
     assert rc == 0, (rc, answered)
     assert answered.get("resumed") is True, answered
@@ -224,20 +243,20 @@ def main():
           "notify got the reason", flush=True)
 
     # warnings: each failing stand-in warns but the handoff still succeeds.
-    failing_focus = cli("alice", "new", local + "/m4")["tab"]
-    proc = handoff_async("alice", failing_focus, "fail-focus induction")
-    wait_state(failing_focus, "with_human")
+    failing_focus = cli("new", local + "/m4")["tab"]
+    proc = handoff_async(failing_focus, "fail-focus induction")
+    wait_held(failing_focus, True)
     wait_warning(failing_focus, "focus")
-    assert cli("human", "resume", failing_focus) == {"resumed": True}
+    assert cli("resume", failing_focus) == {"resumed": True}
     rc, answered = handoff_result(proc)
     assert rc == 0, (rc, answered)
     assert answered.get("resumed") is True, answered
     assert any("focus" in w for w in answered.get("warnings", [])), answered
-    failing_notify = cli("alice", "new", local + "/m4")["tab"]
-    proc = handoff_async("alice", failing_notify, "fail-notify induction")
-    wait_state(failing_notify, "with_human")
+    failing_notify = cli("new", local + "/m4")["tab"]
+    proc = handoff_async(failing_notify, "fail-notify induction")
+    wait_held(failing_notify, True)
     wait_warning(failing_notify, "notify")
-    assert cli("human", "resume", failing_notify) == {"resumed": True}
+    assert cli("resume", failing_notify) == {"resumed": True}
     rc, answered = handoff_result(proc)
     assert rc == 0, (rc, answered)
     assert answered.get("resumed") is True, answered
@@ -245,9 +264,8 @@ def main():
     print("warnings: failing focus and notify each warned, handoff succeeded",
           flush=True)
 
-    for row in every_tab():
-        if row["url"].startswith(local):
-            cli("alice", "close", row["tab"], "--force")
+    for handle in HANDLES:
+        cli("close", handle)
     leftovers = [t for t in every_tab() if t["url"].startswith(local)]
     assert not leftovers, leftovers
     print("milestone-4 headless live acceptance: done", flush=True)

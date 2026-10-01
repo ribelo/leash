@@ -20,7 +20,7 @@ OWNER = "live-m7"
 
 def cli(*args, timeout=60):
     p = subprocess.run([LEASH, *map(str, args),
-                        *([] if args[0] == "playbook" else ["--owner", OWNER])],
+                        *[]],
                        text=True, capture_output=True, timeout=timeout)
     OUTPUTS.extend((p.stdout, p.stderr))
     assert KEY not in p.stdout and KEY not in p.stderr, "API key leaked in CLI output"

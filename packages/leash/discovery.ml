@@ -1,17 +1,5 @@
 module P = Protocol
 
-let human =
-  match P.Origin.of_string "human" with Ok origin -> origin | Error _ -> assert false
-
-type creator = { origin : P.Origin.t; owner : P.Owner.t option }
-
-(* own-c0cl own-ehqa: a target with no opener — a tab the human opened in the Chrome UI, a
-   tab a page opened in a window of its own, anything whose opener Leash never saw — is
-   human origin and nobody's, so an agent can claim it. A target whose opener is a known
-   tab is its opener's: the same origin and the same owner, because ownership follows
-   cause. The rule runs once per target; later reports never rewrite what it decided. *)
-let born = function None -> { origin = human; owner = None } | Some creator -> creator
-
 type target = {
   id : string;
   session : string option;

@@ -24,9 +24,6 @@ let count key json =
 let list key json =
   match get key json with `List xs -> xs | _ -> Alcotest.failf "%s is not a list" key
 
-let owner name =
-  match P.Owner.of_string name with Ok x -> x | Error e -> Alcotest.fail e
-
 let handle_of json =
   match P.Handle.t_of_yojson (get "tab" json) with
   | Ok x -> x
@@ -45,8 +42,11 @@ let result = function
   | P.Success json -> json
   | P.Failure e -> Alcotest.failf "%s: %s" (P.Error_code.to_string e.code) e.message
 
-let request tabs who command =
-  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+let unknown_handle =
+  match P.Handle.of_string "t_unknown" with Ok h -> h | Error e -> failwith e
+
+let request tabs _client command =
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   match P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire)) with
   | Ok x -> x
   | Error e -> Alcotest.fail e
@@ -145,7 +145,8 @@ let many_tabs fake =
 let enum_area name =
   match P.Storage_area.of_string name with Ok x -> x | Error e -> Alcotest.fail e
 
-let new_tab tabs who = handle_of (result (request tabs who (P.New { url = None })))
+let new_tab tabs who =
+  handle_of (result (request tabs who (P.New { url = None; label = None })))
 
 (* ---------- The page the fake answers ---------- *)
 
@@ -539,7 +540,9 @@ let net_ring () =
       check_code "hard-xg6y limit bound" "invalid-request"
         (net_list tabs "alice" a ~limit:501);
       (* Owner-bound like every tab command. *)
-      check_code "hard-xg6y owner-bound" "not-owner" (net_list tabs "bob" a);
+      ignore (result (net_list tabs "second" a));
+      check_code "hand-scaz net needs the handle" "unknown-tab"
+        (net_list tabs "second" unknown_handle);
       (* A redirect ends its hop; the followed request keeps the id. *)
       started fake ~session:"session-2" "hop" "http://127.0.0.1:8080/old";
       net_event fake ~session:"session-2" "Network.requestWillBeSent"
@@ -640,8 +643,9 @@ let net_body () =
       check_code "hard-ovbx evicted by Chrome" "body-unavailable" (body "gone");
       check_code "hard-ovbx still in flight" "body-unavailable" (body "pending");
       check_code "hard-ovbx unknown id" "unknown-request" (body "nothing");
-      check_code "hard-ovbx owner-bound" "not-owner"
-        (request tabs "bob" (P.Net_body { tab = a; id = "json" })))
+      ignore (result (request tabs "second" (P.Net_body { tab = a; id = "json" })));
+      check_code "hand-scaz net body needs the handle" "unknown-tab"
+        (request tabs "second" (P.Net_body { tab = unknown_handle; id = "json" })))
 
 let net_request () =
   rig (fun _ _ tabs fake ->
@@ -698,8 +702,8 @@ let net_request () =
         (request tabs "alice" (P.Net_request { tab = a; id = "post" }));
       check_code "hard-vq5s unknown id" "unknown-request"
         (request tabs "alice" (P.Net_request { tab = a; id = "nothing" }));
-      check_code "hard-vq5s owner-bound" "not-owner"
-        (request tabs "bob" (P.Net_request { tab = a; id = "post" })))
+      check_code "hand-scaz net request needs the handle" "unknown-tab"
+        (request tabs "second" (P.Net_request { tab = unknown_handle; id = "post" })))
 
 (* ---------- waits: hard-sr9v hard-sckn ---------- *)
 
@@ -749,7 +753,7 @@ let wait_args ?(until = None) ?(timeout_ms = 60_000) handle =
 let long_wait () =
   (* hard-sr9v: an hour is the bound, and the listener's budget follows it. *)
   let budget command =
-    match Leash.Control.budget (Ok P.{ owner = owner "alice"; command }) with
+    match Leash.Control.budget (Ok P.{ command }) with
     | Some d -> Ox.Duration.to_ms d
     | None -> Alcotest.fail "no budget"
   in
@@ -806,7 +810,7 @@ let long_wait () =
       page.ready <- true;
       ignore (result (pump env waiting));
       page.ready <- false;
-      (* hard-sr9v: polling is the owner's activity. The wait below outlasts the idle clock's
+      (* hard-sr9v: polling is the handle holder's activity. The wait below outlasts the idle clock's
          thirty minutes twice over and the tab is still counting down from a recent poll,
          not from the start. *)
       let hour =
@@ -819,22 +823,22 @@ let long_wait () =
         done;
         Ox_test.advance env#clock (Ox.Duration.seconds 60)
       done;
-      let info =
-        List.hd
-          (list "tabs"
-             (P.yojson_of_list_result
-                (Leash.Tabs.list tabs ~owner:(owner "alice") ~all:false)))
-      in
+      let info = List.hd (list "tabs" (P.yojson_of_list_result (Leash.Tabs.list tabs))) in
       (match !hour with
       | None -> ()
       | Some (P.Success _) -> Alcotest.fail "the wait succeeded early"
       | Some (P.Failure e) ->
           Alcotest.failf "the wait ended: %s %s" (P.Error_code.to_string e.code) e.message);
+      let remaining =
+        match get "closes_in_s" info with
+        | `Float seconds -> seconds
+        | `Int seconds -> float_of_int seconds
+        | _ -> Alcotest.fail "missing idle close countdown"
+      in
       Alcotest.(check bool)
-        (Printf.sprintf "hard-sr9v a wait counts as owner activity (%d s left)"
-           (count "in_s" (get "expires" info)))
-        true
-        (count "in_s" (get "expires" info) > 1000);
+        (Printf.sprintf "hand-0ibq hard-sr9v a wait counts as activity (%.0f s left)"
+           remaining)
+        true (remaining > 1000.);
       page.ready <- true;
       ignore (result (pump env hour)))
 
@@ -975,7 +979,9 @@ let upload () =
       let big = temp_file ~size:(26 * 1024 * 1024) () in
       check_code "hard-o3za at most 50 MiB" "too-large" (upload [ big; big ]);
       Sys.remove big;
-      check_code "hard-o3za owner-bound" "not-owner" (upload ~who:"bob" [ one ]);
+      check_code "hand-scaz upload needs the handle" "unknown-tab"
+        (request tabs "second"
+           (P.Upload { tab = unknown_handle; snapshot = s; index = 3; paths = [ one ] }));
       Alcotest.(check int)
         "hard-o3za nothing reached the browser" before
         (List.length (calls fake "DOM.setFileInputFiles"));
@@ -1078,7 +1084,17 @@ let hover () =
       check_code "hard-v1gs covered row" "row-not-actionable" (hover 2);
       page.hit <- None;
       check_code "hard-v1gs no such row" "no-such-row" (hover 9);
-      check_code "hard-v1gs owner-bound" "not-owner" (hover ~who:"bob" 2);
+      check_code "hand-scaz hover needs the handle" "unknown-tab"
+        (request tabs "second"
+           (P.Hover
+              {
+                tab = unknown_handle;
+                snapshot = s;
+                index = 2;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }));
       page.loader <- "loader-2";
       check_code "hard-v1gs the page navigated" "stale-snapshot" (hover 2);
       Alcotest.(check int)
@@ -1170,7 +1186,10 @@ let cookies_and_storage () =
           obj []);
       page.url <- "http://127.0.0.1:8080/app";
       page.origin <- "http://127.0.0.1:8080";
-      let a = handle_of (result (request tabs "alice" (P.New { url = Some page.url }))) in
+      let a =
+        handle_of
+          (result (request tabs "alice" (P.New { url = Some page.url; label = None })))
+      in
       Fake.on_method fake "Network.getCookies" (fun _ ->
           obj
             [
@@ -1224,8 +1243,9 @@ let cookies_and_storage () =
       Alcotest.(check (list string))
         "hard-ufb7 for the tab's URL" [ page.url ]
         (List.map (function `String s -> s | _ -> "") (list "urls" asked));
-      check_code "hard-ufb7 cookies are owner-bound" "not-owner"
-        (request tabs "bob" (P.Cookies { tab = a }));
+      ignore (result (request tabs "second" (P.Cookies { tab = a })));
+      check_code "hand-scaz cookies need the handle" "unknown-tab"
+        (request tabs "second" (P.Cookies { tab = unknown_handle }));
       (* Storage. *)
       Fake.on_method fake "DOMStorage.getDOMStorageItems" (fun request ->
           let local =
@@ -1261,7 +1281,9 @@ let cookies_and_storage () =
       Alcotest.(check string)
         "hard-ufb7 by security origin" "http://127.0.0.1:8080"
         (text "securityOrigin" (get "storageId" asked));
-      check_code "hard-ufb7 storage is owner-bound" "not-owner" (storage "bob" "local");
+      ignore (result (storage "second" "local"));
+      check_code "hand-scaz storage needs the handle" "unknown-tab"
+        (request tabs "second" (P.Storage { tab = unknown_handle; area = area "local" }));
       (* Read-only: nothing here writes. *)
       let written =
         Fake.received fake
@@ -1392,7 +1414,7 @@ let listen ?(reporter = Ox_observability.Logger.Reporter.writer ignore) ~runtime
 let connect env sw path = Eio.Net.connect ~sw env#net (`Unix path)
 
 let send_line flow command who =
-  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   Eio.Flow.copy_string (wire ^ "\n") flow
 
 let read_reply reader =

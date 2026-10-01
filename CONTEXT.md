@@ -32,37 +32,35 @@ The command-line client agents and humans use. Every command maps to exactly one
 **Live view**:
 The managed Chrome's own window, pinned by a niri window rule to a dedicated workspace. There is no streamed viewer in this version.
 
-### Tabs and ownership
+### Tabs and handles
 
 **Tab**:
-One CDP page target in the managed Chrome, as Leash knows it: a handle, an origin, an owner state, and the latest snapshot.
+One CDP page target in the managed Chrome, as Leash knows it: a handle or none, an origin, a with-human flag, and the latest snapshot.
 
 **Handle**:
-The opaque, unguessable token that names a tab in the control protocol. Bound to one browser generation. Not a bookmark: a handle never outlives the tab or the generation.
+The opaque 128-bit capability that names a tab in the control protocol. Holding it is the only way to act on that tab. `list` never shows one. Bound to one browser generation. Not a bookmark: a handle never outlives the tab or the generation.
+_Avoid_: caller identity
 
 **Origin**:
-Who created a tab. `Agent` for tabs created through the control protocol, `Human` for tabs opened in the Chrome UI or by a page (popups). Origin never changes and decides whether a tab may ever be auto-closed.
+Who a tab belongs to for the close rule. `agent` for a tab opened through the protocol, or a human tab an agent has taken. `human` for a tab opened in the Chrome UI or by a page, until an agent takes it. Taking flips the origin to `agent` and does not flip back.
 
-**Owner**:
-The string that identifies the client that currently holds a tab. The CLI defaults it from the DSH session id and accepts an explicit override. Ownership is cooperative: it prevents accidents, not attacks.
+**Label**:
+A free string set by `new` and shown by `list`, so a person can recognise a tab. A label is for finding, never for acting.
 
-**Owner state**:
-`Unowned` (claimable by anyone), `Owned` (by one owner), or `With_human` (owned, but handed to the human; agent actions are refused). See the ADR on ownership.
+**Take**:
+The command that mints a handle for exactly one tab matching a URL prefix, a title substring, or an exact label, and sets that tab's origin to `agent`. Several matches are ambiguous. None is no match. A tab that already has a live handle is taken. A tab with the human is not take-able.
 
-**Claim / release**:
-`claim` takes an unowned tab for an owner. `release` returns an owned tab to unowned without closing it.
+**With human**:
+A flag on a tab, not a state machine. Handoff sets it; resume clears it. While it is set, commands on the handle are refused and idleness is paused.
 
 **Idle**:
-An owned tab on which no owner action has happened for the idle duration. Handoff pauses idleness.
+Time since the handle was last used. Handoff pauses it.
 
-**Stage-1 expiry**:
-An owned tab that stays idle for the idle duration is released.
-
-**Stage-2 expiry**:
-An unowned tab of `Agent` origin that stays unclaimed for the unclaimed duration is closed. Human-origin tabs are never auto-closed.
+**Idle close**:
+An agent tab whose handle has not been used for the idle duration is closed. A human tab is never closed by Leash.
 
 **Disposition**:
-Why a tab is gone: `Closed_by_owner`, `Closed_by_ttl`, `Closed_externally`, or `Browser_lost`. Kept as a tombstone so a later request on the handle reports the reason.
+Why a tab is gone: `closed_by_handle`, `closed_by_idle`, `closed_externally`, or `browser_lost`. Kept as a tombstone so a later request on the handle reports the reason.
 
 **Tab cap**:
 The maximum number of open tabs in the managed Chrome. Creating a tab past the cap fails at once; nothing queues.
@@ -88,7 +86,7 @@ A snapshot whose page has since navigated or whose table no longer matches the l
 One of the operations that changes a tab: navigate, click, fill, press, select, scroll, dialog. Actions on one tab are serialized; different tabs run concurrently.
 
 **Dialog**:
-A JavaScript alert/confirm/prompt/beforeunload that blocks the page. Leash never answers one on its own; it is reported and the owner answers it with the dialog action.
+A JavaScript alert/confirm/prompt/beforeunload that blocks the page. Leash never answers one on its own; it is reported and the holder of the handle answers it with the dialog action.
 
 **Debug log**:
 A bounded per-tab ring of console messages, uncaught exceptions, and failed requests.
@@ -96,15 +94,15 @@ A bounded per-tab ring of console messages, uncaught exceptions, and failed requ
 ### Human handoff
 
 **Handoff**:
-The owner's request that the human take over a tab: the live view is raised, a desktop notification carries the reason, the tab enters `With_human`, and the request blocks until resume or timeout.
+A request, keyed on the handle, that the human do something on that tab: a desktop notification carries the reason, the tab is with the human, and the request blocks until resume or timeout.
 
 **Resume**:
-The human's signal (notification action or `leash resume`) that returns a handed-off tab to its owner.
+The human's signal (notification action or `leash resume HANDLE`) that clears with-human and returns the tab to whoever holds the handle.
 
 ### Drive
 
 **Drive**:
-One request that runs the JEV loop on one tab toward one goal until `done`, `blocked`, the step cap, the deadline, or an error, and returns the trace and a final snapshot. Leash never claims the goal is achieved.
+One request that runs the JEV loop on one tab toward one goal until `done`, `blocked`, the step cap, the deadline, or an error, and returns the trace and a final snapshot. Leash never asserts that the goal is achieved.
 
 **Goal**:
 The natural-language task the outer agent hands to one drive. A goal is one step; a `run` mission is the multi-step form, which Leash interprets through playbooks (milestone 7).
@@ -146,5 +144,5 @@ The ordered record of a drive's steps: the row chosen, the operation and its pro
 **Ox**:
 The effect-oriented OCaml framework Leash is built on. Anything that is an effect-shaped resource, stream, or lifecycle concern and does not name the browser belongs in Ox, not in Leash. See the ADR on the Ox boundary.
 
-**Service owner**:
-The one lexical scope in the Leash service that acquires the managed Chrome, the CDP session, the tab registry, the model clients, and the control listener in dependency order and releases them in reverse. There is no component tree (ADR-0007).
+**Service scope**:
+The one lexical scope in the Leash service that acquires the managed Chrome, the CDP session, the tab registry, the model clients, and the control listener in dependency order and closes them in reverse. There is no component tree (ADR-0007).

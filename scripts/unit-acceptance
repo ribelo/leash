@@ -197,7 +197,7 @@ if [[ ! -S "$socket" ]]; then echo "ERROR: the control socket did not appear" >&
 # svc-gxhu: the health check is one request the CLI answers 0 for while the service
 # is up; Chrome has to be running for the service to be healthy.
 for _ in $(seq 1 200); do
-  if "$leash" status --owner unit-acceptance --config "$config" >"$root/status.json" 2>&1; then break; fi
+  if "$leash" status --config "$config" >"$root/status.json" 2>&1; then break; fi
   sleep 0.1
 done
 python3 - "$root/status.json" <<'PY'
@@ -228,7 +228,7 @@ if [[ "$running" -ne 1 ]]; then
   echo "ERROR: svc-5wm8 $running instances run the unit's command line" >&2
   exit 1
 fi
-"$leash" status --owner unit-acceptance --config "$config" >"$root/status-after.json"
+"$leash" status --config "$config" >"$root/status-after.json"
 python3 - "$root/status-after.json" "$generation" <<'PY'
 import json, sys
 report = json.load(open(sys.argv[1]))
@@ -238,11 +238,11 @@ PY
 echo "svc-5wm8 second instance: refused ($second_status: $(head -1 "$root/second.log")), first still serving generation $generation"
 
 # svc-f4op notel-1stb: the last record logged before the stop. This command's record
-# names the owner below, and the SIGTERM follows at once, so the record is in the queue or
+# names the command below, and the SIGTERM follows at once, so the record is in the queue or
 # in flight when the Door releases its root switch — and with the collector's slow
 # acknowledgement it cannot have been settled before then. Leash calls no shutdown and no
 # flush; the exporter's own release hook is what drains it (notel-1stb).
-"$leash" status --owner otlp-last --config "$config" >"$root/otlp-last.json"
+"$leash" status --config "$config" >"$root/otlp-last.json"
 sigterm_at="$(python3 -c 'import time; print(time.time())')"
 
 # svc-dit8: SIGTERM is the stop the unit performs, and SuccessExitStatus=0 says it is
@@ -270,7 +270,7 @@ echo "svc-dit8 SIGTERM: exit 0 (SuccessExitStatus=0), socket and Chrome gone"
 
 # svc-gxhu: with the service stopped the health check fails, which is what a
 # Restart=on-failure unit and its operator read.
-if "$leash" status --owner unit-acceptance --config "$config" >/dev/null 2>&1; then
+if "$leash" status --config "$config" >/dev/null 2>&1; then
   echo "ERROR: svc-gxhu status answered after the service stopped" >&2
   exit 1
 fi
@@ -301,7 +301,7 @@ def attr(record, key):
 def is_last(record):
     return (
         (record.get("body") or {}).get("stringValue") == "control command"
-        and attr(record, "owner") == "otlp-last"
+        and attr(record, "cmd") == "status"
     )
 
 
@@ -372,7 +372,7 @@ if [[ ! -S "$default_socket" ]]; then
   echo "ERROR: svc-x8rp the control socket did not appear" >&2
   exit 1
 fi
-if ! "${default_env[@]}" "$leash" status --owner unit-acceptance >"$default_root/status.json" 2>"$default_root/status.err"; then
+if ! "${default_env[@]}" "$leash" status >"$default_root/status.json" 2>"$default_root/status.err"; then
   echo "ERROR: svc-x8rp leash status failed against the no-config service" >&2
   cat "$default_root/status.err" >&2
   exit 1

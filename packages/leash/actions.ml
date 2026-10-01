@@ -21,7 +21,6 @@ type tab = {
   session : string;
   target : string;  (** The tab's Chrome target id: what a popup's [openerId] names. *)
   handle : P.Handle.t;
-  owner : P.Owner.t;
       (** The caller: the acted-on tab was reached through it, so a popup it opened is the
           caller's and no one else's (tab-8k2g). *)
   page : unit -> string * string;
@@ -31,17 +30,13 @@ type tab = {
       (** field-jkx6: the current table was derived from the DOM, not the AX tree.
           Revalidation then identifies the row by backend node, not by accessible role and
           name. *)
-  popup : P.tab_info -> P.popup_info;
-      (** field-drpx: the registry's popup readiness for a tab this action opened. *)
   dialog : unit -> P.dialog option;
   dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
       (** One pending acknowledgement of the tab (tab-0ohq): created before a trusted
           input is dispatched and woken by the registry when the popup that input opened
           appears, or when the tab's own target dies. *)
-  all_tabs : unit -> (P.tab_info * string option) list;
-      (** Every tab in the registry, all owners, ordered by handle, paired with the target
-          id of the tab that opened it when Chrome reports one ([openerId]). *)
+  all_tabs : unit -> (P.popup_info * string * string option) list;
   engage : unit -> unit;
       (** Turn the page's focus emulation on for the rest of this operation (tab-8la3,
           chrome-9ex7). Called before anything the page sees -- focus, input, the settle
@@ -148,8 +143,7 @@ let dispatch cdp tab method_ params =
   | `Reply (Error _) ->
       fail "browser-unavailable" "Chrome did not answer; try again shortly"
 
-let handles tab =
-  List.map (fun ((info : P.tab_info), _) -> P.Handle.to_string info.tab) (tab.all_tabs ())
+let handles tab = List.map (fun (_, id, _) -> id) (tab.all_tabs ())
 
 let stale tab _message =
   P.stale_snapshot (Option.map (fun (id, _, _) -> id) (tab.snapshot ()))
@@ -764,16 +758,12 @@ let clamp ~width ~height (x, y) =
 let result tab before =
   if tab.dialog () = None then tab.refresh ();
   let url, title = tab.page () in
-  (* tab-8k2g: only a tab that was not there when the action began, that Chrome says
-     this tab opened, and that the caller owns. Another agent's concurrent tab has
-     another opener, or another owner, and is never reported as this caller's. *)
+
   let popups =
     tab.all_tabs ()
-    |> List.filter_map (fun ((info : P.tab_info), opener) ->
-        let fresh = not (List.mem (P.Handle.to_string info.tab) before) in
-        if fresh && opener = Some tab.target && info.owner = Some tab.owner then
-          Some (tab.popup info)
-        else None)
+    |> List.filter_map (fun ((info : P.popup_info), id, opener) ->
+        let fresh = not (List.mem id before) in
+        if fresh && opener = Some tab.target then Some info else None)
   in
   P.
     {

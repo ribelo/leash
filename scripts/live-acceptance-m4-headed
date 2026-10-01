@@ -57,7 +57,6 @@ headless = false
 cap = 12
 [expiry]
 idle_s = 3600
-unclaimed_s = 3600
 tombstone_s = 3600
 [models]
 jev_model = "not-used"
@@ -92,7 +91,7 @@ for _ in $(seq 1 100); do
   fi
   sleep 0.1
 done
-new="$("$leash" new --owner headed-probe)"
+new="$("$leash" new)"
 tab="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["tab"])' <<< "$new")"
 echo "opened tab $tab (about:blank)"
 echo
@@ -104,13 +103,13 @@ echo "2. A desktop notification should appear with this reason:"
 echo "     Headed acceptance: please press Done in this notification"
 echo "   and a Done button. Note whether the text and the button are there."
 echo "3. Either click Done in the notification, or run this in another terminal:"
-echo "     XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR $leash resume --owner human $tab"
+echo "     XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR $leash resume $tab"
 echo "   The handoff below waits up to 5 minutes, then times out (a timeout is a"
 echo "   recorded result, not a crash — but prefer Done so the action path is tested)."
 echo "-------------------------------"
 echo
 reason="Headed acceptance: please press Done in this notification"
-"$leash" handoff --owner headed-probe "$tab" "$reason" --timeout-s 300 >"$root/handoff.json" 2>"$root/handoff.err" &
+"$leash" handoff "$tab" "$reason" --timeout-s 300 >"$root/handoff.json" 2>"$root/handoff.err" &
 handoff_pid=$!
 sleep 3
 if [[ -n "$have_niri" ]]; then niri msg --json windows >"$niri_after" 2>/dev/null || echo '[]' >"$niri_after"; else echo '[]' >"$niri_after"; fi
@@ -142,7 +141,7 @@ if kill -0 "$handoff_pid" 2>/dev/null; then
   echo "(still waiting; stopping the handoff now — result will be timeout)"
   kill -TERM "$handoff_pid" || :
   wait "$handoff_pid" || :
-  handoff_out="(client stopped by the script; service restored ownership on disconnect)"
+  handoff_out="(client stopped by the script; service cleared with_human on disconnect)"
 else
   wait "$handoff_pid" || :
   handoff_out="$(cat "$root/handoff.json")"

@@ -36,9 +36,6 @@ let contains haystack needle =
   let rec scan at = at + n <= h && (String.sub haystack at n = needle || scan (at + 1)) in
   n = 0 || scan 0
 
-let owner name =
-  match P.Owner.of_string name with Ok value -> value | Error e -> Alcotest.fail e
-
 let direction name =
   match P.Direction.of_string name with Ok value -> value | Error e -> Alcotest.fail e
 
@@ -61,8 +58,8 @@ let result = function
   | P.Failure error ->
       Alcotest.failf "%s: %s" (P.Error_code.to_string error.code) error.message
 
-let request tabs who command =
-  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+let request tabs _client command =
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   match P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire)) with
   | Ok reply -> reply
   | Error e -> Alcotest.fail e
@@ -442,7 +439,9 @@ let params json = member "params" json
 let session json =
   match E.string_member "sessionId" json with Some id -> id | None -> ""
 
-let new_tab_for tabs who = tab (result (request tabs who (P.New { url = None })))
+let new_tab_for tabs who =
+  tab (result (request tabs who (P.New { url = None; label = None })))
+
 let new_tab tabs = new_tab_for tabs "alice"
 
 let snap tabs handle =
@@ -1380,9 +1379,10 @@ let popups () =
       in
       Alcotest.(check string)
         "tab-tm6c the popup's url" "https://example.com/popup" (text "url" popup);
-      Alcotest.(check string) "tab-8k2g owned by the caller" "alice" (text "owner" popup);
       Alcotest.(check string)
-        "tab-8k2g inherits the opener's origin" "agent" (text "origin" popup))
+        "hand-x3hi tab-8k2g popup starts human" "human" (text "origin" popup);
+      Alcotest.(check string)
+        "hand-x3hi popup does not inherit agent access" "human" (text "origin" popup))
 
 (* tab-8k2g: a tab another agent's tab opened while this action was in flight is not this
    caller's popup, even though it appeared in the same moment. *)
@@ -1402,7 +1402,7 @@ let popups_exact () =
       let alice = new_tab_for tabs "alice" in
       let acted_on = Printf.sprintf "target-%d" !created in
       let bob = new_tab_for tabs "bob" in
-      Alcotest.(check bool) "tab-8k2g two owners, two tabs" true (alice <> bob);
+      Alcotest.(check bool) "tab-8k2g two capabilities, two tabs" true (alice <> bob);
       let id = snapshot_id (snap tabs alice) in
       Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
           if
@@ -1438,16 +1438,21 @@ let popups_exact () =
       Alcotest.(check string)
         "tab-8k2g it is the acted tab's popup" "https://example.com/alice-popup"
         (text "url" popup);
-      Alcotest.(check string) "tab-8k2g owned by the caller" "alice" (text "owner" popup);
-      let list_of who =
-        result (request tabs who (P.List_tabs { all = false })) |> member "tabs" |> list
-      in
+      Alcotest.(check string)
+        "hand-x3hi tab-8k2g popup starts human" "human" (text "origin" popup);
+      let list_of who = result (request tabs who P.List_tabs) |> member "tabs" |> list in
       Alcotest.(check int)
-        "tab-8k2g the popup is alice's tab too" 2
+        "hand-x3hi list shows both tabs and both popups" 4
         (List.length (list_of "alice"));
-      Alcotest.(check int)
-        "tab-8k2g the peer keeps its own popup" 2
-        (List.length (list_of "bob")))
+      Alcotest.(check bool)
+        "hand-x3hi every connection sees the same handle-free list" true
+        (list_of "alice" = list_of "bob");
+      List.iter
+        (fun row ->
+          Alcotest.(check bool)
+            "hand-x3hi list has no handle" true
+            (E.member "tab" row = None))
+        (list_of "alice"))
 
 (* hard-dljv hard-owci: the opening event during dispatch beats CDP settlement. *)
 let dialog_during_dispatch () =
@@ -1507,7 +1512,7 @@ let dialog () =
         if n = 0 then Alcotest.fail "the dialog was not delivered"
         else
           match
-            Leash.Tabs.snap tabs ~owner:(owner "alice")
+            Leash.Tabs.snap tabs
               { tab = handle; match_ = None; limit = None; offset = None }
           with
           | Ok snapshot when snapshot.dialog <> None -> ()
@@ -1632,7 +1637,7 @@ let serialization () =
           after
       in
       Alcotest.(check (list string))
-        "tab-hxld one tab's actions do not interleave"
+        "tab-hxld hand-0wo8 one handle's actions do not interleave across connections"
         [ "session-1"; "session-1"; "session-1"; "session-1" ]
         (List.map session events);
       Alcotest.(check (list int))
@@ -1863,7 +1868,8 @@ let popup_acknowledged () =
       let popup = List.hd popups in
       Alcotest.(check string)
         "tab-0ohq the popup it opened" "https://example.com/popup" (text "url" popup);
-      Alcotest.(check string) "tab-8k2g owned by the caller" "alice" (text "owner" popup);
+      Alcotest.(check string)
+        "hand-x3hi tab-8k2g popup starts human" "human" (text "origin" popup);
       Alcotest.(check (list string))
         "tab-1lhx press then release, once each"
         [ "mousePressed"; "mouseReleased" ]
@@ -2201,7 +2207,7 @@ let popup_readiness url dialog expected () =
       Alcotest.(check string)
         "field-drpx opener context" opener_url (text "opener_url" popup);
       Alcotest.(check string)
-        "field-drpx ownership is separate" "alice" (text "owner" popup);
+        "hand-x3hi field-drpx popup starts human" "human" (text "origin" popup);
       Alcotest.(check string) "field-drpx original URL retained" url (text "url" popup))
 
 let row_args ~tab ~snapshot ~index ?(snap = None) ?(match_ = None) ?(limit = None) () :

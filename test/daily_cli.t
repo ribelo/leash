@@ -1,7 +1,6 @@
 Daily CLI failures are exactly one structured record; the helper checks the whole
 stderr stream, the canonical class, a one-line hint, and empty stdout.
 
-  $ unset DSH_SESSION_ID
   $ export XDG_CONFIG_HOME="$PWD/config" XDG_RUNTIME_DIR="$PWD/runtime" XDG_STATE_HOME="$PWD/state"
   $ mkdir -p "$XDG_CONFIG_HOME" "$XDG_RUNTIME_DIR" "$XDG_STATE_HOME"
   $ tmp=$(mktemp -d /tmp/leash-l41-XXXXXX)
@@ -9,30 +8,33 @@ stderr stream, the canonical class, a one-line hint, and empty stdout.
   $ trap 'chmod 700 "$tmp/denied" 2>/dev/null; rm -rf "${tmp:?}"' EXIT
   $ check() { expected="$1"; shift; "$@" >out 2>err; status=$?; ./daily_cli_fixture.exe inspect "$expected" "$status" out err; }
 
-Service down, permission denied, usage, invalid request, and Cmdliner parsing all
-use that same client envelope, including --pretty.
+hand-scaz / hand-w85z: service down, permission denied, usage, invalid request,
+and Cmdliner parsing use that same client envelope, including --pretty. The
+removed caller flag below must be rejected rather than silently ignored.
 
   $ printf 'load=loaded\nactive=active\nsub=running\nbinary=present\n' > "$tmp/active.fixture"
-  $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash status --owner test --socket "$tmp/missing.sock" --pretty
+  $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash status --socket "$tmp/missing.sock" --pretty
   service-unreachable: exit 69, JSON-only stderr, hint, empty stdout
   $ mkdir "$tmp/denied"; chmod 000 "$tmp/denied"
-  $ check socket-permission leash status --owner test --socket "$tmp/denied/control.sock"
+  $ check socket-permission leash status --socket "$tmp/denied/control.sock"
   socket-permission: exit 77, JSON-only stderr, hint, empty stdout
   $ chmod 700 "$tmp/denied"
-  $ check usage leash status --socket "$tmp/missing.sock"
+  $ check cli-parse leash status --owner gone --socket "$tmp/missing.sock"
+  cli-parse: exit 124, JSON-only stderr, hint, empty stdout
+  $ check cli-parse leash claim t_dead
+  cli-parse: exit 124, JSON-only stderr, hint, empty stdout
+  $ check cli-parse leash release t_dead
+  cli-parse: exit 124, JSON-only stderr, hint, empty stdout
+  $ check usage leash snap
   usage: exit 64, JSON-only stderr, hint, empty stdout
-  $ check usage leash status --owner '   ' --socket "$tmp/missing.sock"
-  usage: exit 64, JSON-only stderr, hint, empty stdout
-  $ check usage leash snap --owner test
-  usage: exit 64, JSON-only stderr, hint, empty stdout
-  $ leash click t_9xk --owner test >out 2>err; test $? -eq 64
+  $ leash click t_9xk >out 2>err; test $? -eq 64
   $ grep -q 'click: SNAPSHOT is missing; usage: click TAB SNAPSHOT INDEX' err
-  $ leash click t_9xk '' 7 --owner test >out 2>err; test $? -eq 64
+  $ leash click t_9xk '' 7 >out 2>err; test $? -eq 64
   $ grep -q 'SNAPSHOT is missing' err
-  $ printf 's3cret-field-5sdo' | leash fill t_9xk s_1 1 --stdin --owner test --socket "$tmp/missing.sock" >out 2>err; test $? -ne 0
+  $ printf 's3cret-field-5sdo' | leash fill t_9xk s_1 1 --stdin --socket "$tmp/missing.sock" >out 2>err; test $? -ne 0
   $ grep -q 's3cret-field-5sdo' out err && exit 1 || true
   $ printf '%65537s' x > "$tmp/big-fill"
-  $ check too-large leash fill t_9xk s_1 1 --argument-file "$tmp/big-fill" --owner test --socket "$tmp/missing.sock"
+  $ check too-large leash fill t_9xk s_1 1 --argument-file "$tmp/big-fill" --socket "$tmp/missing.sock"
   too-large: exit 65, JSON-only stderr, hint, empty stdout
   $ check cli-parse leash status --bogus
   cli-parse: exit 124, JSON-only stderr, hint, empty stdout
@@ -81,7 +83,7 @@ Local authoring errors also use the envelope; no service is contacted.
 Every service failure class, including a malformed peer, takes the same stderr
 boundary. The peer is local and private; it has no Chrome dependency.
 
-  $ peer() { code="$1"; expected="${2:-$code}"; rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve "$tmp/control.sock" "$code" "$tmp/ready" & pid=$!; while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || return 1; sleep 0.01; done; check "$expected" leash snap t_fixture --owner test --socket "$tmp/control.sock" --pretty; wait "$pid"; }
+  $ peer() { code="$1"; expected="${2:-$code}"; rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve "$tmp/control.sock" "$code" "$tmp/ready" & pid=$!; while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || return 1; sleep 0.01; done; check "$expected" leash snap t_fixture --socket "$tmp/control.sock" --pretty; wait "$pid"; }
   $ peer invalid-request
   invalid-request: exit 64, JSON-only stderr, hint, empty stdout
   $ peer stale-snapshot
@@ -102,18 +104,30 @@ boundary. The peer is local and private; it has no Chrome dependency.
   timeout: exit 75, JSON-only stderr, hint, empty stdout
   $ peer tab-cap
   tab-cap: exit 75, JSON-only stderr, hint, empty stdout
-  $ peer not-owner
-  not-owner: exit 77, JSON-only stderr, hint, empty stdout
+  $ peer ambiguous
+  ambiguous: exit 66, JSON-only stderr, hint, empty stdout
+  $ peer no-match
+  no-match: exit 66, JSON-only stderr, hint, empty stdout
+  $ peer taken
+  taken: exit 77, JSON-only stderr, hint, empty stdout
   $ peer with-human
   with-human: exit 77, JSON-only stderr, hint, empty stdout
-  $ peer already-owned
-  already-owned: exit 77, JSON-only stderr, hint, empty stdout
 
 Success still emits its unwrapped compact result, and never writes stderr.
 
   $ rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve "$tmp/control.sock" success "$tmp/ready" & pid=$!
   $ while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || exit 1; sleep 0.01; done
-  $ HOME="$tmp/empty-home" leash status --owner test --socket "$tmp/control.sock" >out 2>err
+  $ HOME="$tmp/empty-home" leash status --socket "$tmp/control.sock" >out 2>err
   $ ./daily_cli_fixture.exe status-skill missing out err
   status: skill missing, running version and commit, service fields retained
   $ wait "$pid"; test ! -s err
+
+hand-scaz: an old harness variable cannot become a protocol identity.
+
+  $ rm -f "$tmp/ready" "$tmp/control.sock"
+  $ ./daily_cli_fixture.exe capture "$tmp/control.sock" "$tmp/request" "$tmp/ready" & pid=$!
+  $ while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || exit 1; sleep 0.01; done
+  $ DSH_SESSION_ID=legacy leash status --socket "$tmp/control.sock" >out 2>err
+  $ wait "$pid"; test ! -s err
+  $ ./daily_cli_fixture.exe anonymous-request "$tmp/request"
+  hand-scaz only v, cmd and args, even in a harness environment

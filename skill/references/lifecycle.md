@@ -3,7 +3,7 @@
 ## Check the service before browser work
 
 ```sh
-leash status --owner browser-example
+leash status
 systemctl --user status leash
 ```
 
@@ -13,7 +13,7 @@ If the service is down, start the installed user unit when authorized:
 
 ```sh
 systemctl --user start leash
-leash status --owner browser-example
+leash status
 ```
 
 A brief `service-restarting` (75) right after start is normal: retry `leash status` after a short delay until running; do not launch a competing service.
@@ -32,30 +32,28 @@ These fields cannot identify who restarted it. Check `journalctl --user -u leash
 
 Production defaults to **headed** Chrome, on Leash's dedicated profile and desktop workspace. That allows the human to log in, inspect the actual page, and use handoff. `chrome.headless = true` in the TOML configuration runs without a visible window; it is useful for unattended work but cannot provide a visible human handoff. This is a service setting, not a `new` or `drive` flag. Do not toggle it or restart a shared service without authorization. The profile, cookies, and logins are shared across Leash's tabs, not with the user's everyday browser.
 
-## Keep one owner identity
+## Tab capabilities
 
-Every service request needs an owner. Explicit `--owner NAME` wins over the automatic `dsh:$DSH_SESSION_ID` identity. Outside DSH, choose a unique, stable name and pass it on every call. Do not use another session's name to work around ownership. Local help, configuration, skill installation, and local playbook inspection do not require a service owner.
-
-## Tab lifecycle
+A tab handle is the only credential. Share it intentionally; the CLI neither reads nor sends a session identity. Commands on one tab serialize where they did before, even across connections.
 
 | Command | Use |
 | --- | --- |
-| `leash new [URL]` | Open an owned agent-origin tab; omitted URL starts blank. Read `tab` from the reply. |
-| `leash list` | List your tabs, including ones handed to the human. |
-| `leash list --all` | Inspect every tab's handle, URL, title, origin, state, owner, and handoff reason. This does not grant access. |
-| `leash claim TAB` | Take an unowned tab you are permitted to use. |
-| `leash release TAB` | Leave your tab open but unowned. |
-| `leash close TAB` | Close your tab. |
+| `leash new [URL] [--label TEXT]` | Create an agent tab; read its handle from the reply. |
+| `leash list [--table]` | All tabs: label, URL, title, origin, age, idle time, seconds to close, and human hold; never handles. |
+| `leash take --url PREFIX` | Take exactly one permitted tab matching a case-insensitive URL prefix. |
+| `leash take --title TEXT` | Match a case-insensitive title substring. |
+| `leash take --label TEXT` | Match the whole label, case-insensitively; labels need not be unique. |
+| `leash close TAB` | Close a tab for which you have the handle, unless it is handed to the human. |
 
-Add `--owner NAME` unless using the DSH default. `list --all --table` is convenient for orientation. Page reads as well as actions need ownership. Human-created tabs in the **managed** Chrome are discoverable as `origin: human`, `state: unowned`; claim only the one the user intends you to use. A popup from your tab is normally owned by you; inspect action replies' `popups` and `list` rather than opening a duplicate.
-
-`--force` exists only on `release` and `close` for tab operations. It overrides another owner and a human hold; every use is logged. It is an operator cleanup tool, not an agent recovery shortcut. Ask the owner/operator instead.
+`ambiguous` returns handle-free matches; narrow the selector. `no-match` asks you to check the listing. `taken` means a live capability already exists: ask the holder for it. A human hold refuses take. Chrome UI tabs and page popups are human and have no capability until taken; a popup never inherits its opener capability. Taking a human tab changes its origin permanently to agent.
 
 ### Expiry and lost handles
 
-By default, an idle owned tab is released after 1800 seconds. An unclaimed agent-origin tab is closed after another 3600 seconds. `expires` reports its next stage and remaining seconds; configured durations can differ. Human-origin tabs are never auto-closed; `with_human` pauses expiry. Owner activity resets idleness.
+agent tabs close after 30 idle minutes; your tabs are never closed unless an agent takes one
 
-Do not assume a handle survives a long pause or browser restart. `not-owner` after idling may mean the tab was released: inspect `list --all`, then claim it if still unowned and appropriate. `tab-gone` includes `detail.disposition` (`closed_by_owner`, `closed_by_ttl`, `closed_externally`, or `browser_lost`); open a replacement only if the task still requires it. Never replay a potentially completed submission merely because its tab vanished.
+Agent tabs close in a single stage after `expiry.idle_s` (default 1800 seconds). Handle use resets idleness; handoff pauses expiry and resume, timeout, or cancellation restarts the clock. `closes_in_s` is null for human or handed-off tabs. There is no force-close escape hatch.
+
+`tab-gone` records `closed_by_handle`, `closed_by_idle`, `closed_externally`, or `browser_lost`. Its hint is “open a new tab with `leash new`”. A restart makes restored targets human and old handles dead. Never replay a potentially completed submission because its tab vanished.
 
 ## Install or refresh this skill from the binary
 

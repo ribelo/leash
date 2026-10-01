@@ -10,7 +10,6 @@ let get name = function
   | _ -> `Null
 
 let ok = function Ok value -> value | Error why -> Alcotest.fail why
-let owner = ok (P.Owner.of_string "alice")
 
 let result = function
   | P.Success value -> value
@@ -21,7 +20,7 @@ let failure = function
   | P.Success _ -> Alcotest.fail "expected failure"
 
 let request tabs command =
-  let wire = Yojson.Safe.to_string (P.encode_request { owner; command }) in
+  let wire = Yojson.Safe.to_string (P.encode_request { command }) in
   ok (P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire)))
 
 let rig f =
@@ -96,7 +95,7 @@ let script_sessions fake =
       obj [ ("result", obj [ ("value", `Int 42) ]) ])
 
 let new_tab tabs =
-  let reply = result (request tabs (P.New { url = None })) in
+  let reply = result (request tabs (P.New { url = None; label = None })) in
   let info = ok (P.tab_info_of_yojson reply) in
   Alcotest.(check bool) "field-m5jw blank new is loaded" true (info.loaded = Some true);
   info.tab
@@ -258,7 +257,8 @@ let browser_timeout () =
       let before = creates () in
       Fake.withhold (fake ()) "Target.createTarget" (fun _ -> true);
       let cell = ref None in
-      Eio.Fiber.fork ~sw (fun () -> cell := Some (request tabs (P.New { url = None })));
+      Eio.Fiber.fork ~sw (fun () ->
+          cell := Some (request tabs (P.New { url = None; label = None })));
       wait_until "field-cde7 create not dispatched" (fun () -> creates () > before);
       let e = failure (advance_until env#clock "field-cde7 browser deadline" cell) in
       Alcotest.(check string)
@@ -286,20 +286,22 @@ let load_timeout_retains_handle () =
       let cell = ref None in
       Eio.Fiber.fork ~sw (fun () ->
           cell :=
-            Some (request tabs (P.New { url = Some "https://example.com/requested" })));
+            Some
+              (request tabs
+                 (P.New { url = Some "https://example.com/requested"; label = None })));
       wait_until "field-m5jw navigate not dispatched" (fun () ->
           seen fake "field-session-1" "Page.navigate");
-      let listed = result (request tabs (P.List_tabs { all = true })) in
+      let listed = result (request tabs P.List_tabs) in
       let registered =
         match get "tabs" listed with
         | `List [ tab ] -> tab
         | _ -> Alcotest.fail "field-m5jw target absent while loading"
       in
-      let info = ok (P.tab_info_of_yojson registered) in
       Alcotest.(check bool)
-        "field-m5jw ordinary list omits loaded" true (info.loaded = None);
-      let handle = info.tab in
+        "hand-x3hi field-m5jw list omits handle and loaded" true
+        (get "tab" registered = `Null && get "loaded" registered = `Null);
       let created = result (advance_until env#clock "field-m5jw load deadline" cell) in
+      let handle = (ok (P.tab_info_of_yojson created)).tab in
       Alcotest.(check bool)
         "field-m5jw unfinished load is successful" true
         (get "loaded" created = `Bool false);
@@ -314,8 +316,7 @@ let load_timeout_retains_handle () =
         (get "title" created = str "Challenge");
       Alcotest.(check bool)
         "field-m5jw close still works" true
-        (get "closed" (result (request tabs (P.Close { tab = handle; force = None })))
-        = `Bool true))
+        (get "closed" (result (request tabs (P.Close { tab = handle }))) = `Bool true))
 
 let () =
   Alcotest.run "frozen-tab"

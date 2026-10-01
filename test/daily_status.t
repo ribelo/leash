@@ -2,13 +2,13 @@ Status names not-installed, stopped and restarting without systemd, and a
 healthy reply reports version, Chrome, a boolean key and the skill. The probe is
 a fixture file; systemctl is not on this PATH.
 
-  $ unset DSH_SESSION_ID LEASH_INSTALL_FIXTURE
+  $ unset LEASH_INSTALL_FIXTURE
   $ export XDG_CONFIG_HOME="$PWD/config" XDG_RUNTIME_DIR="$PWD/runtime" XDG_STATE_HOME="$PWD/state" HOME="$PWD/empty-home" PATH="$PWD/no-systemd:$PATH"
   $ mkdir -p "$XDG_CONFIG_HOME" "$XDG_RUNTIME_DIR" "$XDG_STATE_HOME" "$HOME" "$PWD/no-systemd"
   $ tmp=$(mktemp -d /tmp/leash-l43-XXXXXX)
   $ case "$tmp" in /tmp/leash-l43-*) ;; *) exit 1;; esac
   $ trap 'rm -rf "${tmp:?}"' EXIT
-  $ probe() { printf '%s\n' "$1" > "$tmp/state.fixture"; LEASH_INSTALL_FIXTURE="$tmp/state.fixture" leash status --owner test --socket "$tmp/missing.sock" >out 2>err; ./daily_cli_fixture.exe status-down "$2" out err; }
+  $ probe() { printf '%s\n' "$1" > "$tmp/state.fixture"; LEASH_INSTALL_FIXTURE="$tmp/state.fixture" leash status --socket "$tmp/missing.sock" >out 2>err; ./daily_cli_fixture.exe status-down "$2" out err; }
 
 No unit and no binary, no unit with a binary still present, an inactive unit,
 an auto-restart, and an active unit whose socket is dead.
@@ -47,7 +47,7 @@ code, with the status fields in the error detail and no pid.
   > JSON
   $ rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve-result "$tmp/control.sock" "$tmp/restart.json" "$tmp/ready" & pid=$!
   $ while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || exit 1; sleep 0.01; done
-  $ leash status --owner test --socket "$tmp/control.sock" >out 2>err
+  $ leash status --socket "$tmp/control.sock" >out 2>err
   [75]
   $ ./daily_cli_fixture.exe status-restart out err
   service-restarting: chrome generation relaunch, Leash is restarting; retry `leash status` in a few seconds
@@ -61,7 +61,7 @@ skill, and never the key.
   > JSON
   $ rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve-result "$tmp/control.sock" "$tmp/healthy.json" "$tmp/ready" & pid=$!
   $ while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || exit 1; sleep 0.01; done
-  $ leash status --owner test --socket "$tmp/control.sock" >out 2>err
+  $ leash status --socket "$tmp/control.sock" >out 2>err
   $ ./daily_cli_fixture.exe status-healthy out err
   healthy: version 0.0.0 chrome running generation 7 pid 4242 headed key_present skill missing
   $ wait "$pid"

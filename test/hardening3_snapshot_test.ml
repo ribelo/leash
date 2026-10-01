@@ -11,9 +11,6 @@ let field key = function `Assoc xs -> List.assoc_opt key xs | _ -> None
 let get key json =
   match field key json with Some x -> x | None -> Alcotest.fail ("missing " ^ key)
 
-let owner text =
-  match P.Owner.of_string text with Ok x -> x | Error e -> Alcotest.fail e
-
 let tab json =
   match P.Handle.t_of_yojson (get "tab" json) with
   | Ok x -> x
@@ -27,8 +24,8 @@ let result = function
   | P.Success json -> json
   | P.Failure e -> Alcotest.failf "%s: %s" (P.Error_code.to_string e.code) e.message
 
-let request tabs who command =
-  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+let request tabs _client command =
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   match P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire)) with
   | Ok x -> x
   | Error e -> Alcotest.fail e
@@ -180,7 +177,7 @@ let evaluate fake count =
         obj [ ("result", obj [ ("objectId", str "fallback") ]) ]
       else obj [ ("result", value (`Bool true)) ])
 
-let fresh tabs = tab (request tabs "alice" (P.New { url = None }) |> result)
+let fresh tabs = tab (request tabs "alice" (P.New { url = None; label = None }) |> result)
 
 let snap tabs h =
   request tabs "alice"

@@ -40,7 +40,6 @@ type tab = {
   target : string;
       (** The tab's Chrome target id: the [openerId] a popup of this tab carries. *)
   handle : Protocol.Handle.t;
-  owner : Protocol.Owner.t;
       (** The caller, which a popup must be owned by to be reported. *)
   page : unit -> string * string;
       (** The registry's current url and title for the tab. *)
@@ -54,18 +53,13 @@ type tab = {
       (** field-jkx6: true when the current table came from the DOM fallback. Revalidation
           then keeps the loader, disabled and hit-test checks and identifies the row by
           backend node ([DOM.describeNode]) instead of the AX role and name. *)
-  popup : Protocol.tab_info -> Protocol.popup_info;
-      (** field-drpx: map a freshly opened tab to the popup record the reply reports. *)
   dialog : unit -> Protocol.dialog option;
   dialog_race : Dialog_race.t;
   acknowledge : unit -> Dispatch.t;
       (** One pending acknowledgement of this tab (tab-0ohq tab-gjo0): taken before a
           trusted input is dispatched and woken by the registry when the popup that input
           opened appears, or when the tab's own target dies. *)
-  all_tabs : unit -> (Protocol.tab_info * string option) list;
-      (** Every tab in the registry, all owners, ordered by handle, paired with the target
-          id of the tab that opened it when Chrome reports one ([openerId]): the action's
-          own popups are the fresh entries whose opener is its own target id. *)
+  all_tabs : unit -> (Protocol.popup_info * string * string option) list;
   engage : unit -> unit;
       (** Turn the page's focus emulation on for the rest of the operation (tab-8la3,
           chrome-9ex7): called just before the first thing the page can see -- a focus, an

@@ -41,9 +41,6 @@ let contains haystack needle =
   let rec scan start = start + width <= hay && (at start 0 || scan (start + 1)) in
   width = 0 || scan 0
 
-let owner name =
-  match P.Owner.of_string name with Ok x -> x | Error e -> Alcotest.fail e
-
 let handle text =
   match P.Handle.of_string text with Ok h -> h | Error e -> Alcotest.fail e
 
@@ -63,33 +60,25 @@ let code = function
 let check_code label expected reply = Alcotest.(check string) label expected (code reply)
 
 (* One request, exactly as the CLI sends it. *)
-let request tabs who command =
-  let wire = P.encode_request { owner = owner who; command } |> Yojson.Safe.to_string in
+let request tabs _client command =
+  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   match P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire)) with
   | Ok x -> x
   | Error e -> Alcotest.fail e
 
 let listed tabs =
-  match get "tabs" (result (request tabs "alice" (P.List_tabs { all = true }))) with
+  match get "tabs" (result (request tabs "alice" P.List_tabs)) with
   | `List rows -> rows
   | other -> Alcotest.failf "tabs: %s" (Yojson.Safe.to_string other)
 
-let find handle rows =
-  let wanted = P.Handle.to_string handle in
-  List.find_opt (fun row -> get "tab" row = str wanted) rows
+let with_human row =
+  match field "with_human" row with Some (`Bool true) -> true | _ -> false
 
-let row tabs handle =
-  match find handle (listed tabs) with
-  | Some row -> row
-  | None -> Alcotest.failf "tab %s is gone" (P.Handle.to_string handle)
+let with_human_count tabs = List.length (List.filter with_human (listed tabs))
 
-let state tabs handle =
-  match find handle (listed tabs) with Some row -> text "state" row | None -> "gone"
+let handle_new tabs =
+  handle_of (result (request tabs "alice" (P.New { url = None; label = None })))
 
-let owner_of tabs handle =
-  match get "owner" (row tabs handle) with `String s -> Some s | _ -> None
-
-let handle_new tabs = handle_of (result (request tabs "alice" (P.New { url = None })))
 let reply = function None -> Alcotest.fail "no reply" | Some reply -> reply
 let answered cell = match !cell with Some _ -> true | None -> false
 let advance env seconds = Ox_test.advance env#clock (Ox.Duration.seconds seconds)
@@ -236,7 +225,7 @@ let focus_raises_the_view () =
           cell :=
             Some
               (request tabs "alice" (P.Handoff { tab = h; reason; timeout_s = Some 60 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       until 1000 "both desktop commands run" (fun () ->
           List.length (commands process) = 2);
       let activated =
@@ -267,7 +256,7 @@ let focus_raises_the_view () =
 (* hand-phof: the notification prints the Done action's name on stdout when the human
    clicks it, and that alone hands the tab back — no [leash resume] anywhere in this test.
    The line is a chunk due two seconds after the spawn, so it arrives while the handoff
-   waits, and the notifier is the human's resume (hand-0sja): the tab is its owner's
+   waits, and the notifier is the human's resume (hand-0sja): the tab accepts agent actions
    again. The test below this one is the same chunk with nobody clicking. *)
 let notification_done_resumes () =
   rig
@@ -288,10 +277,11 @@ let notification_done_resumes () =
           answered cell);
       let answer = result (reply !cell) in
       Alcotest.(check bool) "hand-phof resumed" true (get "resumed" answer = `Bool true);
+      Alcotest.(check int)
+        "hand-fr87 the tab is actionable again" 0 (with_human_count tabs);
       Alcotest.(check string)
-        "hand-phof the tab is the agent's again" "owned" (state tabs h);
-      Alcotest.(check (option string))
-        "hand-phof and still alice's" (Some "alice") (owner_of tabs h);
+        "hand-fr87 it is still an agent tab" "agent"
+        (match listed tabs with [ row ] -> text "origin" row | _ -> "");
       Alcotest.(check (list string))
         "hand-phof the notification carries the agent's reason" [ "sh"; "2fa code" ]
         (last (commands process));
@@ -331,8 +321,8 @@ let notifier_stopped_before_printing () =
            (List.filter
               (fun (record : Logger.record) -> contains record.msg "already ended")
               (Logger.Memory.records log)));
-      Alcotest.(check string)
-        "hand-phof and the tab is still the agent's" "owned" (state tabs h))
+      Alcotest.(check int)
+        "hand-fr87 and the tab is actionable again" 0 (with_human_count tabs))
 
 (* hand-rg9h: a human-facing step that fails is a warning and a log line, never a handoff
    failure — the tab still goes to the human and still comes back. *)
@@ -348,7 +338,7 @@ let focus_failure_is_a_warning () =
             Some
               (request tabs "alice"
                  (P.Handoff { tab = h; reason = "captcha"; timeout_s = Some 60 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       ignore (result (request tabs "human" (P.Resume { tab = h })));
       until 1000 "the blocked request answer" (fun () -> answered cell);
       let answer = result (reply !cell) in
@@ -374,7 +364,7 @@ let notify_failure_is_a_warning () =
             Some
               (request tabs "alice"
                  (P.Handoff { tab = h; reason = "captcha"; timeout_s = Some 60 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       until 1000 "the notification fail" (fun () ->
           List.exists
             (fun (record : Logger.record) -> contains record.msg "notify: exited 1")
@@ -396,7 +386,7 @@ let focus_timeout_is_a_warning () =
             Some
               (request tabs "alice"
                  (P.Handoff { tab = h; reason = "captcha"; timeout_s = Some 60 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       (* the command has to be running before its five seconds are spent, or the deadline
          the test advances past was never registered *)
       until 1000 "the focus command run" (fun () -> List.length (commands process) = 1);
@@ -419,7 +409,7 @@ let activate_failure_is_a_warning () =
             Some
               (request tabs "alice"
                  (P.Handoff { tab = h; reason = "captcha"; timeout_s = Some 60 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       ignore (result (request tabs "human" (P.Resume { tab = h })));
       until 1000 "the blocked request answer" (fun () -> answered cell);
       Alcotest.(check (list string))
@@ -439,7 +429,7 @@ let missing_binary_is_a_warning () =
             Some
               (request tabs "alice"
                  (P.Handoff { tab = h; reason = "captcha"; timeout_s = Some 60 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       ignore (result (request tabs "human" (P.Resume { tab = h })));
       until 1000 "the blocked request answer" (fun () -> answered cell);
       let answer = warnings (result (reply !cell)) in
@@ -461,7 +451,7 @@ let timeout_carries_the_warnings () =
             Some
               (request tabs "alice"
                  (P.Handoff { tab = h; reason = "captcha"; timeout_s = Some 30 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       (* the human-facing steps have their own five seconds; let them finish — the
          notification running means the focus step is done — before the deadline takes the
          clock away from them *)
@@ -488,7 +478,7 @@ let the_notifier_is_stopped () =
             Some
               (request tabs "alice"
                  (P.Handoff { tab = h; reason = "captcha"; timeout_s = Some 60 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       until 1000 "its notification run" (fun () -> List.length (commands process) = 2);
       ignore (result (request tabs "human" (P.Resume { tab = h })));
       until 1000 "the blocked request answer" (fun () -> answered cell);
@@ -502,7 +492,7 @@ let the_notifier_is_stopped () =
               (request tabs "alice"
                  (P.Handoff { tab = second; reason = "captcha"; timeout_s = Some 30 })));
       until 1000 "the second handoff reach the human" (fun () ->
-          state tabs second = "with_human");
+          with_human_count tabs >= 1);
       until 1000 "its notification run" (fun () ->
           terminations process = 1 && List.length (commands process) = 4);
       advance env 30;
@@ -530,7 +520,7 @@ let focus_finds_the_chrome_window () =
             Some
               (request tabs "alice"
                  (P.Handoff { tab = h; reason = "captcha"; timeout_s = Some 60 })));
-      until 1000 "the handoff reach the human" (fun () -> state tabs h = "with_human");
+      until 1000 "the handoff reach the human" (fun () -> with_human_count tabs >= 1);
       until 1000 "the focus command run" (fun () -> List.length (commands process) = 2);
       Alcotest.(check (list string))
         "hand-04rb the window is looked for with niri's own list"

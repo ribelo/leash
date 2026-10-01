@@ -72,17 +72,24 @@ let table ~caps command result =
   | "list" ->
       (* hand-r4t1: REASON is what the tab is waiting on the human for, "-" on every tab
          nobody is waiting on, so a human who stepped away can see what is asked. *)
-      Cap_stdlib.print_endline ~caps "TAB\tURL\tTITLE\tORIGIN\tSTATE\tOWNER\tREASON";
+      Cap_stdlib.print_endline ~caps
+        "LABEL\tURL\tTITLE\tORIGIN\tAGE_S\tIDLE_S\tCLOSES_IN_S\tWITH_HUMAN";
       List.iter
         (fun row ->
-          Cap_stdlib.printf ~caps "%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
-            (cell (field "tab" row))
-            (cell (field "url" row))
-            (cell (field "title" row))
-            (cell (field "origin" row))
-            (cell (field "state" row))
-            (cell (field "owner" row))
-            (cell (field "reason" row)))
+          Cap_stdlib.print_endline ~caps
+            (String.concat "\t"
+               (List.map
+                  (fun key -> cell (field key row))
+                  [
+                    "label";
+                    "url";
+                    "title";
+                    "origin";
+                    "age_s";
+                    "idle_s";
+                    "closes_in_s";
+                    "with_human";
+                  ])))
         tabs
   | "snap" ->
       Cap_stdlib.print_endline ~caps "INDEX\tROLE\tNAME\tVALUE\tSTATE";
@@ -101,8 +108,7 @@ let table ~caps command result =
 (* svc-hi4f: the options every command shares and the request fields it must not carry —
    the CLI's own, peeled off here so a command's table entry lists exactly what goes on
    the wire. *)
-let cli_options =
-  [ "owner"; "pretty"; "table"; "config"; "socket"; "argument_file"; "stdin" ]
+let cli_options = [ "pretty"; "table"; "config"; "socket"; "argument_file"; "stdin" ]
 
 (* svc-o4wt svc-x8rp: --socket wins for one call; otherwise the CLI reads the same
    configuration the service does — --config, or $XDG_CONFIG_HOME/leash/config.toml — and
@@ -311,13 +317,6 @@ let exchange ~caps ~send ~base ~config ~socket request =
             (report ~caps ~detail "invalid-response"
                "the service returned unreadable JSON"))
 
-let owner_of ~caps ~owner =
-  match owner with
-  | Some owner when String.trim owner <> "" -> Some owner
-  | Some _ | None ->
-      Option.bind (Cap_sys.getenv_opt ~caps "DSH_SESSION_ID") (fun id ->
-          if id = "" then None else Some ("dsh:" ^ id))
-
 (* fly-nolf fly-hc3l: --url is an explicit http(s) start; --max-steps is a positive
    executed-action cap. Both fail here, before a socket connect, as the L41 usage record.
    The host check matches the service: scheme, no userinfo, no control characters. *)
@@ -464,128 +463,116 @@ and perform_wire ~caps ~send ~base command fields positionals options =
   let pretty = flag "pretty" and use_table = flag "table" in
   if use_table && pretty then usage ~caps "--table and --pretty cannot both be given"
   else
-    match owner_of ~caps ~owner:(text "owner") with
-    | None -> usage ~caps "set --owner or DSH_SESSION_ID"
-    | Some owner -> (
-        let encode_pos key value =
-          if List.mem key [ "index"; "option" ] then
-            match int_of_string_opt value with
-            | Some number -> Ok (key, `Int number)
-            | None -> Error (key ^ " must be an integer")
-          else Ok (key, str value)
+    let encode_pos key value =
+      if List.mem key [ "index"; "option" ] then
+        match int_of_string_opt value with
+        | Some number -> Ok (key, `Int number)
+        | None -> Error (key ^ " must be an integer")
+      else Ok (key, str value)
+    in
+    let fields =
+      List.map2 encode_pos (List.filteri (fun n _ -> n < actual) fields) positionals
+    in
+    let rec collect = function
+      | [] -> Ok []
+      | Error e :: _ -> Error e
+      | Ok x :: xs -> Result.map (fun tail -> x :: tail) (collect xs)
+    in
+    match collect fields with
+    | Error why -> usage ~caps why
+    | Ok fields -> (
+        let options =
+          try
+            Ok
+              (List.map
+                 (fun (key, value) ->
+                   if List.mem key [ "argument"; "until" ] then
+                     match value with
+                     | `String text -> (key, Yojson.Safe.from_string text)
+                     | _ -> assert false
+                   else (key, value))
+                 request)
+          with Yojson.Json_error why -> Error ("invalid JSON option: " ^ why)
         in
-        let fields =
-          List.map2 encode_pos (List.filteri (fun n _ -> n < actual) fields) positionals
-        in
-        let rec collect = function
-          | [] -> Ok []
-          | Error e :: _ -> Error e
-          | Ok x :: xs -> Result.map (fun tail -> x :: tail) (collect xs)
-        in
-        match collect fields with
+        match options with
         | Error why -> usage ~caps why
-        | Ok fields -> (
+        | Ok options -> (
             let options =
-              try
-                Ok
-                  (List.map
-                     (fun (key, value) ->
-                       if List.mem key [ "argument"; "until" ] then
-                         match value with
-                         | `String text -> (key, Yojson.Safe.from_string text)
-                         | _ -> assert false
-                       else (key, value))
-                     request)
-              with Yojson.Json_error why -> Error ("invalid JSON option: " ^ why)
+              if command <> "wait" then options
+              else
+                let condition_names =
+                  [ "url_prefix"; "text"; "index_gone"; "dialog"; "changed_since" ]
+                in
+                let conditions, rest =
+                  List.partition (fun (key, _) -> List.mem key condition_names) options
+                in
+                let previous =
+                  match List.assoc_opt "until" rest with
+                  | Some (`Assoc fields) ->
+                      List.filter
+                        (fun (key, _) -> not (List.mem_assoc key conditions))
+                        fields
+                  | _ -> []
+                in
+                let rest = List.remove_assoc "until" rest in
+                let timeout =
+                  match List.assoc_opt "timeout" rest with
+                  | Some value when not (List.mem_assoc "timeout_ms" rest) ->
+                      [ ("timeout_ms", value) ]
+                  | _ -> []
+                in
+                let rest = List.remove_assoc "timeout" rest in
+                (("until", obj (conditions @ previous)) :: timeout) @ rest
             in
-            match options with
+            let prepared =
+              if command <> "drive" then Ok options else drive_request_options options
+            in
+            match prepared with
             | Error why -> usage ~caps why
             | Ok options -> (
-                let options =
-                  if command <> "wait" then options
-                  else
-                    let condition_names =
-                      [ "url_prefix"; "text"; "index_gone"; "dialog"; "changed_since" ]
-                    in
-                    let conditions, rest =
-                      List.partition
-                        (fun (key, _) -> List.mem key condition_names)
-                        options
-                    in
-                    let previous =
-                      match List.assoc_opt "until" rest with
-                      | Some (`Assoc fields) ->
-                          List.filter
-                            (fun (key, _) -> not (List.mem_assoc key conditions))
-                            fields
-                      | _ -> []
-                    in
-                    let rest = List.remove_assoc "until" rest in
-                    let timeout =
-                      match List.assoc_opt "timeout" rest with
-                      | Some value when not (List.mem_assoc "timeout_ms" rest) ->
-                          [ ("timeout_ms", value) ]
-                      | _ -> []
-                    in
-                    let rest = List.remove_assoc "timeout" rest in
-                    (("until", obj (conditions @ previous)) :: timeout) @ rest
-                in
-                let prepared =
-                  if command <> "drive" then Ok options else drive_request_options options
-                in
-                match prepared with
+                let args = obj (fields @ options) in
+                match P.command_of_args ~cmd:command args with
                 | Error why -> usage ~caps why
-                | Ok options -> (
-                    let args = obj (fields @ options) in
-                    match P.command_of_args ~cmd:command args with
-                    | Error why -> usage ~caps why
-                    | Ok decoded -> (
-                        match P.Owner.of_string owner with
-                        | Error why -> usage ~caps why
-                        | Ok owner -> (
-                            let request =
-                              P.encode_request P.{ owner; command = decoded }
+                | Ok decoded -> (
+                    let request = P.encode_request P.{ command = decoded } in
+                    match
+                      exchange ~caps ~send ~base ~config:(text "config")
+                        ~socket:(text "socket") request
+                    with
+                    | Error status -> status
+                    | Ok (P.Failure error) -> emit_error ~caps error
+                    | Ok (P.Success body) -> (
+                        let roots =
+                          if command <> "status" then Ok []
+                          else
+                            Result.map configured_roots
+                              (load_config ~caps ~config:(text "config"))
+                        in
+                        match roots with
+                        | Error message -> report ~caps "config-invalid" message
+                        | Ok roots ->
+                            let body =
+                              if command <> "status" then body
+                              else enrich_status ~caps ~roots body
                             in
-                            match
-                              exchange ~caps ~send ~base ~config:(text "config")
-                                ~socket:(text "socket") request
-                            with
-                            | Error status -> status
-                            | Ok (P.Failure error) -> emit_error ~caps error
-                            | Ok (P.Success body) -> (
-                                let roots =
-                                  if command <> "status" then Ok []
-                                  else
-                                    Result.map configured_roots
-                                      (load_config ~caps ~config:(text "config"))
-                                in
-                                match roots with
-                                | Error message -> report ~caps "config-invalid" message
-                                | Ok roots ->
-                                    let body =
-                                      if command <> "status" then body
-                                      else enrich_status ~caps ~roots body
-                                    in
-                                    if
-                                      command = "status"
-                                      && assoc_field "chrome" body
-                                         = Some (`String "restarting")
-                                    then
-                                      let body =
-                                        match body with
-                                        | `Assoc fields -> obj (put "pid" `Null fields)
-                                        | other -> other
-                                      in
-                                      report ~caps ~detail:body "service-restarting"
-                                        "Chrome is restarting"
-                                    else (
-                                      if use_table then table ~caps command body
-                                      else
-                                        Cap_stdlib.print_endline ~caps
-                                          (if pretty then
-                                             Yojson.Safe.pretty_to_string body
-                                           else Yojson.Safe.to_string body);
-                                      0))))))))
+                            if
+                              command = "status"
+                              && assoc_field "chrome" body = Some (`String "restarting")
+                            then
+                              let body =
+                                match body with
+                                | `Assoc fields -> obj (put "pid" `Null fields)
+                                | other -> other
+                              in
+                              report ~caps ~detail:body "service-restarting"
+                                "Chrome is restarting"
+                            else (
+                              if use_table then table ~caps command body
+                              else
+                                Cap_stdlib.print_endline ~caps
+                                  (if pretty then Yojson.Safe.pretty_to_string body
+                                   else Yojson.Safe.to_string body);
+                              0))))))
 
 (* svc-hi4f: the table is the CLI's contract. Every command names its positionals in the
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
@@ -609,7 +596,6 @@ let pos_opt field docv = { field; docv; optional = true; many = false }
 
 (* hard-o3za: the trailing positionals, one or more (the files `upload` sets). *)
 let pos_many field docv = { field; docv; optional = false; many = true }
-let owner_opt = opt "owner" Str "NAME" "Request owner (default dsh:\\$DSH_SESSION_ID)."
 let pretty_opt = opt "pretty" Bool "" "Indent JSON output."
 let table_opt = opt "table" Bool "" "Render list and snap rows as a table."
 
@@ -617,7 +603,7 @@ let config_opt =
   opt "config" Str "FILE" "TOML configuration file the control socket is read from."
 
 let socket_opt = opt "socket" Str "PATH" "Control socket path; overrides control.socket."
-let shared_options = [ owner_opt; pretty_opt; config_opt; socket_opt ]
+let shared_options = [ pretty_opt; config_opt; socket_opt ]
 
 let option_term { name; kind; docv; doc } =
   let long = String.map (fun c -> if c = '_' then '-' else c) name in
@@ -739,7 +725,7 @@ let playbook_command ~caps ~send ~base ~run_owned =
       (Cli_help.local_info "list" ~doc:"List validated installed site playbooks."
          ~examples:[ "leash playbook list" ])
       Term.(
-        const (fun _owner () () ->
+        const (fun () () ->
             owned (fun () ->
                 match Leash.Playbook.list ~caps () with
                 | Error message -> invalid_playbook ~caps message
@@ -750,13 +736,6 @@ let playbook_command ~caps ~send ~base ~run_owned =
                           book.playbook.description)
                       books;
                     0))
-        $ Arg.(
-            value
-            & opt (some string) None
-            & info [ "owner" ]
-                ~doc:
-                  "Caller identity (accepted for consistency; local listing needs no \
-                   owner).")
         $ const ())
   in
   let show =
@@ -807,34 +786,26 @@ let playbook_command ~caps ~send ~base ~run_owned =
             print (`List []);
             0)
           else
-            match owner_of ~caps ~owner:(text "owner") with
-            | None -> usage ~caps "set --owner or DSH_SESSION_ID"
-            | Some owner -> (
-                match P.Owner.of_string owner with
-                | Error why -> usage ~caps why
-                | Ok owner -> (
-                    let request =
-                      P.encode_request
-                        P.{ owner; command = Playbook_check { playbook = target } }
-                    in
-                    match
-                      exchange ~caps ~send ~base ~config:(text "config")
-                        ~socket:(text "socket") request
-                    with
-                    | Error status -> status
-                    | Ok (P.Failure error) -> emit_error ~caps error
-                    | Ok (P.Success result) ->
-                        let scripts =
-                          match field "scripts" result with `List xs -> xs | _ -> []
-                        in
-                        if List.for_all (fun s -> field "ok" s = `Bool true) scripts then (
-                          print (`List scripts);
-                          0)
-                        else
-                          report ~caps
-                            ~detail:(obj [ ("scripts", `List scripts) ])
-                            "script-invalid"
-                            "one or more playbook scripts did not compile")))
+            let request =
+              P.encode_request P.{ command = Playbook_check { playbook = target } }
+            in
+            match
+              exchange ~caps ~send ~base ~config:(text "config") ~socket:(text "socket")
+                request
+            with
+            | Error status -> status
+            | Ok (P.Failure error) -> emit_error ~caps error
+            | Ok (P.Success result) ->
+                let scripts =
+                  match field "scripts" result with `List xs -> xs | _ -> []
+                in
+                if List.for_all (fun s -> field "ok" s = `Bool true) scripts then (
+                  print (`List scripts);
+                  0)
+                else
+                  report ~caps
+                    ~detail:(obj [ ("scripts", `List scripts) ])
+                    "script-invalid" "one or more playbook scripts did not compile")
     in
     Cmd.v
       (Cli_help.command_info "check"
@@ -905,33 +876,38 @@ let commands ~caps ~send ~base ~run_owned =
         examples)
     [
       ( "new",
-        "Open an agent-owned tab.",
+        "Open an agent tab. agent tabs close after 30 idle minutes; your tabs are never \
+         closed unless an agent takes one",
         [ pos_opt "url" "URL" ],
-        [],
-        [ "leash new https://example.com" ] );
+        [ opt "label" Str "TEXT" "Free label shown by list. It is not a capability." ],
+        [
+          "leash new https://example.com";
+          "leash new https://example.com --label research";
+        ] );
       ( "downloads",
         "List downloads started by this tab.",
         [ pos "tab" "TAB" ],
         [],
         [ "leash downloads t_9xk" ] );
       ( "list",
-        "List this caller's tabs; --all also shows unowned tabs and other owners.",
+        "List all tabs without handles; agent tabs close after 30 idle minutes; your \
+         tabs are never closed unless an agent takes one",
+        [],
+        [ table_opt ],
+        [ "leash list"; "leash list --table" ] );
+      ( "take",
+        "Take exactly one human tab matching one selector and return its handle.",
         [],
         [
-          opt "all" Bool "" "Include every tab with its origin, state and owner.";
-          table_opt;
+          opt "url" Str "PREFIX" "Case-insensitive URL prefix.";
+          opt "title" Str "TEXT" "Case-insensitive title substring.";
+          opt "label" Str "TEXT" "Case-insensitive exact label.";
         ],
-        [ "leash list"; "leash list --all --table" ] );
-      ("claim", "Claim an unowned tab.", [ pos "tab" "TAB" ], [], [ "leash claim t_9xk" ]);
-      ( "release",
-        "Release a tab (own tab; --force for any).",
-        [ pos "tab" "TAB" ],
-        [ opt "force" Bool "" "Ignore ownership; every use is logged." ],
-        [ "leash release t_9xk" ] );
+        [ "leash take --url https://example.com/"; "leash take --title Login" ] );
       ( "close",
-        "Close a tab (own tab; --force for any).",
+        "Close a tab using its handle.",
         [ pos "tab" "TAB" ],
-        [ opt "force" Bool "" "Ignore ownership; every use is logged." ],
+        [],
         [ "leash close t_9xk" ] );
       ( "status",
         "Report version, Chrome, the model key and the installed skill.",
@@ -1213,7 +1189,7 @@ let program env (config : Leash.Config.t) sw =
             Error (`Service "LEASH_SWEEP_INTERVAL_S must be a positive integer"))
   in
   (* svc-x8rp: the default profile is [$XDG_DATA_HOME/leash/profile], which a first run
-     has not created; the owner makes it 0700 before Chrome starts, the way the listener
+     has not created; the service scope makes it 0700 before Chrome starts, the way the listener
      makes its own runtime directory. The validator accepted what it can create. *)
   let* () =
     match
@@ -1239,7 +1215,6 @@ let program env (config : Leash.Config.t) sw =
      to them and the sweep applies them. *)
   let seconds duration = Ox.Duration.seconds (Leash.Config.Seconds.to_int duration) in
   let idle = seconds config.expiry.idle_s in
-  let unclaimed = seconds config.expiry.unclaimed_s in
   (* hand-04rb hand-phof hand-rg9h: the two human-facing commands a handoff runs go through
      Ox's child process, and the registry turns whatever they report into warnings. *)
   let desktop =
@@ -1263,7 +1238,7 @@ let program env (config : Leash.Config.t) sw =
     Leash.Tabs.create ~sw ~download_dir
       ~cap:(Leash.Config.Tab_cap.to_int config.tabs.cap)
       ~tombstone_s:(Leash.Config.Seconds.to_int config.expiry.tombstone_s)
-      ~idle ~unclaimed
+      ~idle
       {
         Leash.Tabs.chrome;
         clock = base#clock;
@@ -1272,13 +1247,13 @@ let program env (config : Leash.Config.t) sw =
         caps = (env.caps :> Leash.Tabs.caps);
       }
   in
-  (* own-uo77 own-hslp: the sweep is one more service in the owner, released with the
+  (* own-uo77 own-hslp: the sweep is one more service in the service scope, closed with the
      switch. *)
   let _expiry =
-    Leash.Expiry.create ~sw ?interval:sweep_interval ~idle ~unclaimed ~clock:base#clock
+    Leash.Expiry.create ~sw ?interval:sweep_interval ~idle ~clock:base#clock
       ~logger:env.logger tabs
   in
-  (* drive-e7oi drive-yqxg: the models service is one more scoped resource in the owner,
+  (* drive-e7oi drive-yqxg: the models service is one more resource in the service scope,
      created before the listener that hands its Decide to every drive. Without a key it
      still exists — status reports that — and a drive refuses at its first Decide. *)
   let models =
@@ -1427,7 +1402,7 @@ let diagnostic ~config_path ~kind ~message =
   in
   Yojson.Safe.to_string (P.yojson_of_error record) ^ "\n"
 
-(* daily-yd8s daily-ulmi: local bundle operations do not require an owner or service. *)
+(* daily-yd8s daily-ulmi: local bundle operations do not require the browser service. *)
 let skill_command ~caps ~run_owned =
   let owned run = run_owned (fun _sw -> protect ~caps run) in
   let path =
@@ -1563,15 +1538,26 @@ let help_command ~caps =
   let topic = Arg.(value & pos 0 (some string) None & info [] ~docv:"TOPIC") in
   let run topic () =
     match topic with
+    | Some "handles" ->
+        Cap_stdlib.print_endline ~caps
+          "Handles are secret capabilities: save the handle returned by leash new or \
+           leash take, and pass it to tab commands. Share that handle only when you \
+           intend to share access. leash list never reveals handles.\n\
+           agent tabs close after 30 idle minutes; your tabs are never closed unless an \
+           agent takes one";
+        0
     | Some "errors" ->
         Cap_stdlib.print_endline ~caps P.error_help;
         0
     | None ->
         Cap_stdlib.print_endline ~caps
-          "Use leash --help, leash COMMAND --help, or leash help errors.";
+          "Use leash --help, leash COMMAND --help, leash help handles, or leash help \
+           errors.";
         0
     | Some _ ->
-        usage ~caps "unknown help topic; run leash help errors or leash COMMAND --help"
+        usage ~caps
+          "unknown help topic; run leash help handles or leash help errors or leash \
+           COMMAND --help"
   in
   Cmd.v
     (Cli_help.local_info "help"
@@ -1589,8 +1575,7 @@ let orientation env () =
         try
           let response =
             send ~timeout_s:0.25 ~base:env.Ox_app.Env.base path
-              (obj
-                 [ ("owner", str "orientation"); ("cmd", str "status"); ("args", obj []) ])
+              (obj [ ("cmd", str "status"); ("args", obj []) ])
           in
           match P.decode_reply (Yojson.Safe.from_string response) with
           | Ok (P.Success _) -> "running"
@@ -1605,8 +1590,9 @@ let orientation env () =
      Service: %s\n\
      Start: systemctl --user start leash\n\
      Begin: leash status; leash new https://example.com; leash snap TAB\n\
-     Set --owner NAME or DSH_SESSION_ID. Help: leash --help; leash COMMAND --help; leash \
-     help errors\n"
+     agent tabs close after 30 idle minutes; your tabs are never closed unless an agent \
+     takes one\n\
+     Help: leash --help; leash COMMAND --help; leash help errors\n"
     state;
   0
 

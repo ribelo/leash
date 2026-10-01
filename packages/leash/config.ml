@@ -88,13 +88,8 @@ let default_profile_dir = "$XDG_DATA_HOME/leash/profile"
 let default_workspace = "leash"
 let default_window_size = "1366,900"
 let default_socket = "$XDG_RUNTIME_DIR/leash/control.sock"
-
-(* ADR-0005: a tab cap of 32, half an hour idle before stage 1 releases, an hour unclaimed
-   before stage 2 closes (own-uo77 own-hslp own-ay3s), and an hour of tombstone
-   (chrome-akz4). *)
 let default_cap = 32
 let default_idle_s = 1800
-let default_unclaimed_s = 3600
 let default_tombstone_s = 3600
 
 type chrome = {
@@ -113,7 +108,6 @@ type tabs = { cap : Tab_cap.t [@json.default default_cap] } [@@deriving yojson]
 
 type expiry = {
   idle_s : Seconds.t; [@json.default default_idle_s]
-  unclaimed_s : Seconds.t; [@json.default default_unclaimed_s]
   tombstone_s : Seconds.t; [@json.default default_tombstone_s]
 }
 [@@deriving yojson]
@@ -311,14 +305,7 @@ let default_chrome =
   }
 
 let default_tabs = { cap = default_cap }
-
-let default_expiry =
-  {
-    idle_s = default_idle_s;
-    unclaimed_s = default_unclaimed_s;
-    tombstone_s = default_tombstone_s;
-  }
-
+let default_expiry = { idle_s = default_idle_s; tombstone_s = default_tombstone_s }
 let default_control = { socket = default_socket }
 
 (* daily-c4cl: configured roots replace automatic agent-directory discovery. *)
@@ -381,8 +368,7 @@ let default_toml =
 # cap = %d
 #
 # [expiry]
-# idle_s = %d                # stage 1 releases a tab idle this long
-# unclaimed_s = %d           # stage 2 closes an unclaimed agent tab this long after
+# idle_s = %d                # agent tabs close after this many idle seconds
 # tombstone_s = %d           # a closed handle answers tab-gone this long
 #
 # [control]
@@ -418,8 +404,8 @@ let default_toml =
 # notify_command = %s
 |}
     default_binary default_profile_dir default_workspace default_cap default_idle_s
-    default_unclaimed_s default_tombstone_s default_socket default_systemone_endpoint
-    default_jev_model default_chat_base_url default_text_model default_planner_model
+    default_tombstone_s default_socket default_systemone_endpoint default_jev_model
+    default_chat_base_url default_text_model default_planner_model
     default_planner_reasoning default_jev_timeout default_text_timeout
     default_planner_timeout
     (toml_array default_focus_command)
@@ -852,12 +838,11 @@ let collect json =
         match List.assoc_opt "expiry" fields with
         | None -> []
         | Some json ->
-            collect_object (child "" "expiry") json
-              ~known:[ "idle_s"; "unclaimed_s"; "tombstone_s" ] (fun fields ->
+            collect_object (child "" "expiry") json ~known:[ "idle_s"; "tombstone_s" ]
+              (fun fields ->
                 let pointer = child "" "expiry" in
                 let seconds pointer json = decode_with pointer Seconds.t_of_yojson json in
                 field_errors pointer "idle_s" fields seconds
-                @ field_errors pointer "unclaimed_s" fields seconds
                 @ field_errors pointer "tombstone_s" fields seconds)
       in
       let socket, control_errors =
