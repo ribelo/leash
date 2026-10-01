@@ -191,8 +191,12 @@ module Error_code : sig
   (** One line: when this code is used. *)
 
   val error_help : string
-  (** The [leash help errors] table: a [# code exit meaning hint] header, then one
-      tab-separated line per {!all} (daily-pb5a). *)
+  (** Tab-separated table: a [# code exit meaning hint] header, then one line per {!all}
+      (daily-pb5a). *)
+
+  val topic_markdown : string
+  (** Markdown source of [docs/help/errors.md] and [leash help errors]. Same rows as
+      {!error_help}, so the topic cannot drift from this module (hdoc-ztwo). *)
 end
 
 type dialog = { kind : Dialog_kind.t; message : string; default_prompt : string option }
@@ -470,7 +474,8 @@ type upload_args = {
   index : int;
   paths : string list;
 }
-(** hard-o3za: absolute, readable regular files; at most 10 and 50 MiB together. *)
+(** hard-o3za hard-qimz: absolute, readable regular files; at most 10 and 10 GiB together.
+*)
 
 type hover_args = {
   tab : Handle.t;

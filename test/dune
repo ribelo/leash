@@ -399,3 +399,8 @@
  (name daily_skill_install_test)
  (modules daily_skill_install_test)
  (libraries leash_cli_support ox_test alcotest unix yojson))
+
+(test
+ (name help_topics_test)
+ (modules help_topics_test)
+ (libraries leash leash_cli_support alcotest))

@@ -98,11 +98,134 @@ let top_help path =
      service and skill"
 
 let error_help path =
-  let actual = String.trim (read_file path) in
-  if actual <> String.trim P.error_help then
-    failwith "leash help errors is not the full canonical table";
+  let actual = read_file path in
+  if contains actual "\x1b" then failwith "help errors contains ANSI";
+  List.iter
+    (fun code ->
+      let name = P.Error_code.to_string code in
+      let exit = string_of_int (P.Error_code.exit_code code) in
+      if not (contains actual name) then failwith (name ^ " missing from help errors");
+      if not (contains actual exit) then failwith (name ^ " exit missing from help errors");
+      if not (contains actual (P.Error_code.meaning code)) then
+        failwith (name ^ " meaning missing from help errors");
+      if not (contains actual (P.Error_code.hint code)) then
+        failwith (name ^ " hint missing from help errors"))
+    P.Error_code.all;
   Printf.printf "all %d error codes, exit classes, meanings and hints are discoverable\n"
     (List.length P.Error_code.all)
+
+let help_topics path =
+  let text = read_file path in
+  List.iter
+    (fun topic ->
+      if not (contains text topic) then failwith ("help list missing " ^ topic))
+    [ "handles"; "playbooks"; "authoring"; "expectations"; "drive"; "scripts"; "errors" ];
+  print_endline
+    "help lists handles, playbooks, authoring, expectations, drive, scripts, errors"
+
+let run_leash args =
+  let cmd = Filename.quote_command "leash" args in
+  let channel = Unix.open_process_in cmd in
+  let text = In_channel.input_all channel in
+  match Unix.close_process_in channel with
+  | Unix.WEXITED 0 -> text
+  | Unix.WEXITED code ->
+      failwith (Printf.sprintf "leash %s exited %d" (String.concat " " args) code)
+  | _ -> failwith "leash help walk failed"
+
+let is_option_line line =
+  String.length line > 8
+  && String.sub line 0 7 = "       "
+  && line.[7] = '-'
+  && line.[8] <> ' '
+
+let option_name line =
+  let trimmed = String.trim line in
+  let stop =
+    let rec go i =
+      if i >= String.length trimmed then i
+      else match trimmed.[i] with ' ' | '[' | '=' -> i | _ -> go (i + 1)
+    in
+    go 0
+  in
+  String.sub trimmed 0 stop
+
+let option_docs text =
+  let lines = String.split_on_char '\n' text in
+  let options_section name = name = "OPTIONS" || name = "COMMON OPTIONS" in
+  let rec go i inside acc =
+    if i >= List.length lines then List.rev acc
+    else
+      let line = List.nth lines i in
+      if line <> "" && line.[0] <> ' ' then go (i + 1) (options_section line) acc
+      else if (not inside) || not (is_option_line line) then go (i + 1) inside acc
+      else
+        let rec doc j parts =
+          if j >= List.length lines then (String.concat " " (List.rev parts), j)
+          else
+            let next = List.nth lines j in
+            if next = "" || is_option_line next then
+              (String.concat " " (List.rev parts), j)
+            else doc (j + 1) (String.trim next :: parts)
+        in
+        let doc, next = doc (i + 1) [] in
+        go next inside ((option_name line, String.trim doc) :: acc)
+  in
+  go 0 false []
+
+let rec walk_command prefix =
+  let text = run_leash (prefix @ [ "--help=plain" ]) in
+  List.iter
+    (fun (name, doc) ->
+      if doc = "" then
+        failwith
+          (Printf.sprintf "empty option doc: leash %s %s" (String.concat " " prefix) name))
+    (option_docs text);
+  let lines = String.split_on_char '\n' text in
+  let commands =
+    let rec go i acc =
+      if i + 1 >= List.length lines then List.rev acc
+      else
+        let line = List.nth lines i in
+        let next = List.nth lines (i + 1) in
+        let trimmed = String.trim line in
+        let is_cmd =
+          String.length line > 7
+          && String.sub line 0 7 = "       "
+          && trimmed <> ""
+          && trimmed.[0] <> '-'
+          && (not (String.contains trimmed '/'))
+          && String.length next > 11
+          && String.sub next 0 11 = "           "
+        in
+        if not is_cmd then go (i + 1) acc
+        else
+          let name =
+            match String.split_on_char ' ' trimmed with name :: _ -> name | [] -> ""
+          in
+          let ok =
+            name <> ""
+            && String.length name <= 32
+            && String.for_all
+                 (function 'a' .. 'z' | '0' .. '9' | '-' -> true | _ -> false)
+                 name
+            && not (List.mem name acc)
+          in
+          if ok then go (i + 1) (name :: acc) else go (i + 1) acc
+    in
+    go 0 []
+  in
+  List.iter (fun name -> walk_command (prefix @ [ name ])) commands
+
+let option_docs_file path =
+  let text = read_file path in
+  List.iter
+    (fun (name, doc) -> if doc = "" then failwith ("empty option doc: " ^ name))
+    (option_docs text)
+
+let walk_options () =
+  walk_command [];
+  print_endline "every option on every command has a one-line doc"
 
 let inspect_init path stdout stderr =
   if read_file stdout <> path ^ "\n" then
@@ -333,6 +456,8 @@ let () =
       if contains text "--all" then failwith "list help still documents --all";
       print_endline "hand-3v5u list help states the tab rule and never shows handles"
   | [ _; "error-help"; path ] -> error_help path
+  | [ _; "help-topics"; path ] -> help_topics path
+  | [ _; "option-docs"; path ] -> option_docs_file path
   | [ _; "drive-help"; path ] -> drive_help path
   | [ _; "capture"; path; request_file; ready ] -> capture path request_file ready
   | [ _; "anonymous-request"; path ] ->

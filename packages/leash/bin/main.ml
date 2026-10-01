@@ -857,6 +857,16 @@ let playbook_command ~caps ~send ~base ~run_owned =
   in
   Cmd.group
     (Cli_help.command_info "playbook" ~doc:"Inspect, validate and grow site playbooks."
+       ~man:
+         [
+           `S "DESCRIPTION";
+           `Pre
+             "A playbook is a directory that describes one site: pages, procedures, and \
+              scripts.\n\
+              The operator writes it. A model never does. JEV follows it when a mission \
+              fits.\n\
+              Format, example, and every loader refusal: leash help playbooks";
+         ]
        ~examples:[ "leash playbook list"; "leash playbook check ./my-playbook" ])
     [ list; show; check; test; accept ]
 
@@ -866,7 +876,7 @@ let snap_opts =
     opt "snap" Bool "" "After settling, include a fresh snapshot in the reply.";
     opt "match" Str "TEXT"
       "With --snap, keep rows whose role, name or value contains TEXT.";
-    opt "limit" Int "N" "With --snap, at most N rows (default 120).";
+    opt "limit" Int "N" "With --snap, at most N rows, default 120, max 1000.";
   ]
 
 let commands ~caps ~send ~base ~run_owned =
@@ -921,8 +931,9 @@ let commands ~caps ~send ~base ~run_owned =
         [ pos "tab" "TAB" ],
         [
           opt "match" Str "TEXT" "Keep rows whose role, name or value contains TEXT.";
-          opt "limit" Int "N" "At most N rows (default 120).";
-          opt "offset" Int "N" "Skip the first N rows.";
+          opt "limit" Int "N" "At most N rows, default 120, max 1000.";
+          opt "offset" Int "N"
+            "Skip the first N rows, default 0. A negative offset is refused.";
           table_opt;
         ],
         [ "leash snap t_9xk --match Save --limit 10" ] );
@@ -943,7 +954,7 @@ let commands ~caps ~send ~base ~run_owned =
         "Show the console, exception and failed-request ring.",
         [ pos "tab" "TAB" ],
         [
-          opt "limit" Int "N" "At most N entries (default 200).";
+          opt "limit" Int "N" "At most N entries, default and maximum 200.";
           opt "clear" Bool "" "Discard the ring after reading it.";
         ],
         [ "leash debug t_9xk --limit 10" ] );
@@ -1036,7 +1047,8 @@ let commands ~caps ~send ~base ~run_owned =
           "leash wait t_9xk --changed-since s_3 --timeout-ms 600000";
         ] );
       ( "upload",
-        "Set PATH... on the file input at INDEX of SNAPSHOT.",
+        "Set PATH... on the file input at INDEX of SNAPSHOT. At most 10 files, 10 GiB \
+         together.",
         [
           pos "tab" "TAB";
           pos "snapshot" "SNAPSHOT";
@@ -1044,7 +1056,7 @@ let commands ~caps ~send ~base ~run_owned =
           pos_many "paths" "PATH";
         ],
         [],
-        [ "leash upload t_9xk s_3 12 /home/me/report.pdf" ] );
+        [ "leash upload t_9xk s_3 12 /tmp/report.pdf" ] );
       ( "hover",
         "Move the mouse to the row at INDEX of SNAPSHOT.",
         [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "index" "INDEX" ],
@@ -1095,7 +1107,10 @@ let commands ~caps ~send ~base ~run_owned =
          notification that stays until they click Done; run this as a background job and \
          keep working. Actions on the tab answer with-human until then.",
         [ pos "tab" "TAB"; pos "reason" "REASON" ],
-        [ opt "timeout_s" Int "S" "Seconds before the handoff ends (default 900)." ],
+        [
+          opt "timeout_s" Int "S"
+            "Seconds before the handoff ends, default 900. Zero or negative uses 900.";
+        ],
         [ "leash handoff t_9xk 'The captcha needs you'" ] );
       ( "resume",
         "Resume a tab a handoff is waiting on.",
@@ -1107,10 +1122,11 @@ let commands ~caps ~send ~base ~run_owned =
         [ pos "site" "SITE-OR-URL" ],
         [
           opt "goal" Str "TEXT" "What to learn (default: explore this site).";
-          opt "max_turns" Int "N" "At most N planner turns (default 20).";
-          opt "max_steps" Int "N" "At most N operator steps (default 100).";
-          opt "deadline_s" Int "S" "Seconds for discovery (default 900).";
-          opt "max_cost" Float "USD" "Reported model cost cap in USD (default 1).";
+          opt "max_turns" Int "N" "At most N planner turns, default 20. Must be positive.";
+          opt "max_steps" Int "N"
+            "At most N operator steps, default 100. Must be positive.";
+          opt "deadline_s" Int "S" "Seconds for discovery, default 900. Must be positive.";
+          opt "max_cost" Float "USD" "Reported model cost cap in USD, default 1.";
         ],
         [ "leash discover https://example.com --goal 'Find the documentation'" ] );
     ]
@@ -1118,6 +1134,13 @@ let commands ~caps ~send ~base ~run_owned =
       command ~caps ~send ~base ~run_owned
         ~man:
           [
+            `S "DESCRIPTION";
+            `Pre
+              "Drive runs one mission on one tab until done, blocked, a cap, a deadline, \
+               or an error.\n\
+               It may follow an installed playbook or act on the page. Leash never \
+               asserts the goal.\n\
+               Lanes, options, and how to read a trace: leash help drive";
             `S "ROUTING";
             `P "max-steps default 60.";
             `P
@@ -1538,66 +1561,70 @@ let skill_command ~caps ~run_owned =
        ~examples:[ "leash skill show"; "leash skill install --dry-run" ])
     [ install; show ]
 
+(* hdoc-ztwo hdoc-8c12 hdoc-em5c: topics are embedded markdown. This command never
+   opens the control socket. errors is rendered from Protocol.Error_code. *)
+let help_topics =
+  let preferred =
+    [ "handles"; "playbooks"; "authoring"; "expectations"; "drive"; "scripts"; "errors" ]
+  in
+  let present =
+    Leash_cli_support.Leash_help_data.topics
+    |> List.map (fun (path, _) -> Filename.chop_suffix path ".md")
+    |> List.sort_uniq String.compare
+  in
+  List.filter (fun name -> List.mem name present) preferred
+  @ List.filter (fun name -> not (List.mem name preferred)) present
+
+let help_body name =
+  if String.equal name "errors" then Leash.Protocol.Error_code.topic_markdown
+  else List.assoc (name ^ ".md") Leash_cli_support.Leash_help_data.topics
+
 let help_command ~caps =
-  let topic = Arg.(value & pos 0 (some string) None & info [] ~docv:"TOPIC") in
+  let topic =
+    Arg.(
+      value
+      & pos 0 (some string) None
+      & info [] ~docv:"TOPIC" ~doc:"Topic to print. Omit to list topics.")
+  in
   let run topic () =
     match topic with
-    | Some "handles" ->
-        Cap_stdlib.print_endline ~caps
-          "Handles are secret capabilities: save the handle returned by leash new or \
-           leash take, and pass it to tab commands. Share that handle only when you \
-           intend to share access. leash list never reveals handles.\n\
-           agent tabs close after 30 idle minutes; human tabs are never closed unless an \
-           agent takes one";
-        0
-    | Some "errors" ->
-        Cap_stdlib.print_endline ~caps P.error_help;
-        0
     | None ->
-        Cap_stdlib.print_endline ~caps
-          "Use leash --help, leash COMMAND --help, leash help handles, or leash help \
-           errors.";
+        Cap_stdlib.print_endline ~caps (String.concat "\n" help_topics);
         0
-    | Some _ ->
+    | Some name when List.mem name help_topics ->
+        Cap_stdlib.printf ~caps "%s"
+          (Leash_cli_support.Help_render.render (help_body name));
+        0
+    | Some name ->
         usage ~caps
-          "unknown help topic; run leash help handles or leash help errors or leash \
-           COMMAND --help"
+          (Printf.sprintf "unknown help topic %s; topics: %s" name
+             (String.concat ", " help_topics))
   in
   Cmd.v
     (Cli_help.local_info "help"
-       ~doc:"Discover help topics without contacting the service."
-       ~examples:[ "leash help errors"; "leash click --help" ])
+       ~doc:"Print a help topic, or list topics. Does not contact the service."
+       ~examples:[ "leash help"; "leash help playbooks"; "leash help errors" ])
     Term.(const run $ topic)
 
-(* daily-k9cs: a bounded read-only probe, not config loading followed by service start. *)
+(* hdoc-fixp: one paragraph. Documentation does not probe the service. *)
 let orientation env () =
   let caps = env.Ox_app.Env.caps in
-  let state =
-    match service_socket ~caps ~config:None ~socket:None with
-    | Error _ -> "unknown (run leash config check)"
-    | Ok path -> (
-        try
-          let response =
-            send ~timeout_s:0.25 ~base:env.Ox_app.Env.base path
-              (obj [ ("cmd", str "status"); ("args", obj []) ])
-          in
-          match P.decode_reply (Yojson.Safe.from_string response) with
-          | Ok (P.Success _) -> "running"
-          | Ok (P.Failure _) -> "reachable, but not healthy (run leash status)"
-          | Error _ -> "reachable, but returned an invalid reply"
-        with
-        | Eio.Cancel.Cancelled _ as exn -> raise exn
-        | _ -> "unreachable")
+  let paragraph =
+    String.concat " "
+      [
+        "Leash is a local browser service: one managed Chrome that agents share with the \
+         human, driven by the leash command.";
+        "leash new returns a handle you must keep; it is the only way to act on that \
+         tab, and leash list never shows one.";
+        "agent tabs close after 30 idle minutes; human tabs are never closed unless an \
+         agent takes one.";
+        "Models are OpenRouter and need an API key, OPENROUTER_API_KEY in the service's \
+         environment or models.api_key in the config; the key is the operator's, not the \
+         agent's.";
+        "Start with leash status, leash new https://example.com, and leash snap TAB.";
+      ]
   in
-  Cap_stdlib.printf ~caps
-    "Leash: local managed Chrome for agents.\n\
-     Service: %s\n\
-     Start: systemctl --user start leash\n\
-     Begin: leash status; leash new https://example.com; leash snap TAB\n\
-     agent tabs close after 30 idle minutes; human tabs are never closed unless an agent \
-     takes one\n\
-     Help: leash --help; leash COMMAND --help; leash help errors\n"
-    state;
+  Cap_stdlib.print_endline ~caps paragraph;
   0
 
 (* ^ncaps-4tjy: only the Door mints; its owned-code runner preserves each command's

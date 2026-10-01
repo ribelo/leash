@@ -976,8 +976,8 @@ let upload () =
       check_code "hard-o3za no files" "invalid-request" (upload []);
       check_code "hard-o3za at most ten files" "invalid-request"
         (upload (List.init 11 (fun _ -> one)));
-      let big = temp_file ~size:(26 * 1024 * 1024) () in
-      check_code "hard-o3za at most 50 MiB" "too-large" (upload [ big; big ]);
+      let big = temp_file ~size:(6 * 1024 * 1024 * 1024) () in
+      check_code "hard-qimz at most 10 GiB" "too-large" (upload [ big; big ]);
       Sys.remove big;
       check_code "hand-scaz upload needs the handle" "unknown-tab"
         (request tabs "second"

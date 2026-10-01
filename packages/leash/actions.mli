@@ -137,7 +137,7 @@ val upload :
   Protocol.upload_args ->
   (Protocol.action_result, Protocol.error) result
 (** hard-o3za: sets absolute, readable files on a [file-input] row with
-    [DOM.setFileInputFiles]. At most 10 files and 50 MiB (a path that is not an absolute
+    [DOM.setFileInputFiles]. At most 10 files and 10 GiB (a path that is not an absolute
     readable regular file is [invalid-request], the total [too-large]); the row is
     revalidated as an [<input type=file>] rather than by role and name, and several files
     need [multiple]. Every other action refuses a [file-input] row with

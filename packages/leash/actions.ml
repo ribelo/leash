@@ -985,12 +985,12 @@ let hover ~cdp tab (args : P.hover_args) =
           in
           settle cdp tab ~combobox:false))
 
-(* hard-o3za: the files are the caller's, named by absolute path, and must be readable
-   regular files here — the service and Chrome are one user's processes on one machine.
-   At most ten, fifty MiB together; each limit is refused before anything reaches the
-   browser. *)
+(* hard-o3za hard-qimz: the files are the caller's, named by absolute path, and must
+   be readable regular files here — the service and Chrome are one user's processes on
+   one machine. At most ten, 10 GiB together; sizes are int64 so a multi-gigabyte file
+   is not truncated. Each limit is refused before anything reaches the browser. *)
 let max_upload_files = 10
-let max_upload_bytes = 50 * 1024 * 1024
+let max_upload_bytes = Int64.mul 10L (Int64.mul 1024L (Int64.mul 1024L 1024L))
 
 let check_files ~caps paths =
   if paths = [] || List.length paths > max_upload_files then
@@ -1004,18 +1004,18 @@ let check_files ~caps paths =
           else
             match
               try
-                let stat = Unix.stat path in
-                if stat.Unix.st_kind <> Unix.S_REG then None
+                let stat = Unix.LargeFile.stat path in
+                if stat.Unix.LargeFile.st_kind <> Unix.S_REG then None
                 else (
                   close_in (Ox_caps.Cap_stdlib.open_in_bin ~caps path);
-                  Some stat.Unix.st_size)
+                  Some stat.Unix.LargeFile.st_size)
               with Unix.Unix_error _ | Sys_error _ -> None
             with
             | None -> fail "invalid-request" "upload paths must be readable regular files"
-            | Some size -> sizes (total + size) rest)
+            | Some size -> sizes (Int64.add total size) rest)
     in
-    let* total = sizes 0 paths in
-    if total > max_upload_bytes then fail "too-large" "the files are over 50 MiB together"
+    let* total = sizes 0L paths in
+    if total > max_upload_bytes then fail "too-large" "the files are over 10 GiB together"
     else Ok ()
 
 (* The row must still be the file input the snapshot saw. Its role and name cannot be

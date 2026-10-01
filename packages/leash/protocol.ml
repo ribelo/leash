@@ -540,6 +540,28 @@ module Error_code = struct
         (hint code)
     in
     String.concat "\n" (header :: List.map line all) ^ "\n"
+
+  (* hdoc-ztwo: the help topic is this markdown, not a hand-kept table. *)
+  let topic_markdown =
+    let intro =
+      String.concat "\n"
+        [
+          "# Errors";
+          "";
+          "Each row is one code the service or the CLI can return. The wire object is";
+          "`{code,message,hint,detail?}`. Exit status is the class, not 1. Field meaning";
+          "is in the other topics; this table is the code, when it is used, and the next";
+          "action.";
+          "";
+        ]
+      ^ "\n"
+    in
+    let header = "| code | exit | meaning | hint |\n| --- | --- | --- | --- |\n" in
+    let row code =
+      Printf.sprintf "| `%s` | %d | %s | %s |\n" (to_string code) (exit_code code)
+        (meaning code) (hint code)
+    in
+    intro ^ header ^ String.concat "" (List.map row all)
 end
 
 let error_help = Error_code.error_help
