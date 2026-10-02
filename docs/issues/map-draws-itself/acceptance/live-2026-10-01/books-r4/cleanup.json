@@ -1,0 +1,14 @@
+{
+  "service_exit": 0,
+  "profile_processes_after_service": [
+    {
+      "pid": 3937064,
+      "headless": true,
+      "pipe": false,
+      "argv": [
+        "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=gpu-process --headless=new --ozone-platform=headless --use-angle=swiftshader-webgl --crashpad-handler-pid=3937022 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --gpu-preferences=YAAAAAAAAAAgAAAEAAAAAAAAAAAAAGAASAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAMAAAAAQAAAAAAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files --field-trial-handle=3,i,13798159088145019915,141496775009521331,262144 --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported,ExtensionsManifestV3Only,EyeDropper,PaintHolding,WebRtcAllowInputVolumeAdjustment --variations-seed-version --pseudonymization-salt-handle=7,i,12101152688352732326,4674140684695293353,4 --trace-process-track-uuid=3190708988185955192"
+      ]
+    }
+  ],
+  "loopback_server_closed": true
+}

@@ -1,0 +1,337 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "250"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.178221857000608,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+    "title": "Wrocław to anywhere | Explore",
+    "page_kind": {
+      "name": "explore",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "button",
+        "name": "Main menu",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "link",
+        "name": "Google"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Skip to main content"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Accessibility feedback"
+      },
+      {
+        "index": 5,
+        "role": "link",
+        "name": "Explore"
+      },
+      {
+        "index": 6,
+        "role": "link",
+        "name": "Flights"
+      },
+      {
+        "index": 7,
+        "role": "link",
+        "name": "Hotels"
+      },
+      {
+        "index": 8,
+        "role": "link",
+        "name": "Vacation rentals"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Change appearance",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 11,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 12,
+        "role": "combobox",
+        "name": "Change ticket type. Round trip",
+        "value": "Round trip",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 13,
+        "role": "button",
+        "name": "1 passenger"
+      },
+      {
+        "index": 14,
+        "role": "combobox",
+        "name": "Change seating class. Economy",
+        "value": "Economy",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 15,
+        "role": "combobox",
+        "name": "Where from?",
+        "value": "Wrocław",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 16,
+        "role": "combobox",
+        "name": "Where to?",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 17,
+        "role": "button",
+        "name": "1-week trip in the next 6 months"
+      },
+      {
+        "index": 18,
+        "role": "button",
+        "name": "All filters (1)"
+      },
+      {
+        "index": 19,
+        "role": "button",
+        "name": "Flights only, Travel mode, Selected"
+      },
+      {
+        "index": 20,
+        "role": "button",
+        "name": "Clear Travel mode"
+      },
+      {
+        "index": 21,
+        "role": "button",
+        "name": "Stops, Not selected"
+      },
+      {
+        "index": 22,
+        "role": "button",
+        "name": "Price, Not selected"
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Airlines, Not selected"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "Duration, Not selected"
+      },
+      {
+        "index": 25,
+        "role": "button",
+        "name": "Bags, Not selected"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "About these results"
+      },
+      {
+        "index": 27,
+        "role": "button",
+        "name": "Paris Nov 16 – 22 Ryanair Nonstop · 2 hr 5 min 213 Polish zlotys"
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Paris Nov 16 – 22 Ryanair Nonstop · 2 hr 5 min 213 Polish zlotys"
+      },
+      {
+        "index": 29,
+        "role": "heading",
+        "name": "Paris"
+      },
+      {
+        "index": 30,
+        "role": "button",
+        "name": "London Oct 22 – 31 Ryanair Nonstop · 2 hr 20 min 130 Polish zlotys"
+      },
+      {
+        "index": 31,
+        "role": "button",
+        "name": "London Oct 22 – 31 Ryanair Nonstop · 2 hr 20 min 130 Polish zlotys"
+      },
+      {
+        "index": 32,
+        "role": "heading",
+        "name": "London"
+      },
+      {
+        "index": 33,
+        "role": "button",
+        "name": "Rome Nov 1 – 8 Ryanair Nonstop · 2 hr 223 Polish zlotys"
+      },
+      {
+        "index": 34,
+        "role": "button",
+        "name": "Rome Nov 1 – 8 Ryanair Nonstop · 2 hr 223 Polish zlotys"
+      },
+      {
+        "index": 35,
+        "role": "heading",
+        "name": "Rome"
+      },
+      {
+        "index": 36,
+        "role": "button",
+        "name": "Barcelona Dec 10 – 16 Wizz Air Nonstop · 2 hr 45 min 338 Polish zlotys"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Barcelona Dec 10 – 16 Wizz Air Nonstop · 2 hr 45 min 338 Polish zlotys"
+      },
+      {
+        "index": 38,
+        "role": "heading",
+        "name": "Barcelona"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "​English (United States)"
+      },
+      {
+        "index": 40,
+        "role": "button",
+        "name": "PLN"
+      },
+      {
+        "index": 41,
+        "role": "button",
+        "name": "Paris 213 Polish zlotys"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "Rome 223 Polish zlotys"
+      },
+      {
+        "index": 43,
+        "role": "button",
+        "name": "Barcelona 338 Polish zlotys"
+      },
+      {
+        "index": 44,
+        "role": "button",
+        "name": "Lisbon 346 Polish zlotys"
+      },
+      {
+        "index": 45,
+        "role": "button",
+        "name": "Athens 408 Polish zlotys"
+      },
+      {
+        "index": 46,
+        "role": "button",
+        "name": "Vienna 716 Polish zlotys"
+      },
+      {
+        "index": 47,
+        "role": "button",
+        "name": "Dublin 269 Polish zlotys"
+      },
+      {
+        "index": 48,
+        "role": "button",
+        "name": "Hamburg 706 Polish zlotys"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Warsaw 294 Polish zlotys"
+      },
+      {
+        "index": 50,
+        "role": "button",
+        "name": "Chișinău 138 Polish zlotys"
+      },
+      {
+        "index": 51,
+        "role": "button",
+        "name": "Map camera controls",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 52,
+        "role": "button",
+        "name": "Zoom in"
+      },
+      {
+        "index": 53,
+        "role": "button",
+        "name": "Zoom out"
+      },
+      {
+        "index": 54,
+        "role": "button",
+        "name": "Keyboard shortcuts"
+      },
+      {
+        "index": 55,
+        "role": "link",
+        "name": "Terms (opens in new tab)"
+      },
+      {
+        "index": 56,
+        "role": "button",
+        "name": "View smaller map"
+      }
+    ],
+    "total": 56,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

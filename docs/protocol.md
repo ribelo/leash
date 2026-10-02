@@ -4,7 +4,7 @@ The Leash service listens on the `control.socket` path its configuration names �
 
 Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec. Meaning of each field and error is `leash help`, not this file: [handles](help/handles.md) (tab, handle, origin, label, idle, take), [playbooks](help/playbooks.md) (playbook JSON), [authoring](help/authoring.md) (how to write one), [expectations](help/expectations.md) (checker sentences), [drive](help/drive.md) (mission, lanes, trace), [scripts](help/scripts.md) (script, pages, returns, args), [errors](help/errors.md) (every code).
 
-## Durable drive traces (L51)
+## Durable drive traces (L51, L53)
 
 A successful trace write adds `trace_path` to the drive result; an error reply
 adds `error.detail.trace_path`. The path exists before reply encoding. Disabled
@@ -13,9 +13,29 @@ the drive outcome. `Protocol.drive_trace` is the version-1 derived safe durable
 projection, not the live result type, to exclude handles, page text, records, and
 raw state. It records headers, the page-kind path (declared kinds win; otherwise
 inferred), `inferred_pages` (`{name, url_pattern}`[], default empty), procedures,
-redacted steps, URL/title, and a `compiled` marker (default false). See [traces](help/traces.md)
-for the exact schema and local `traces list/show/prune` commands; those commands
-do not introduce wire verbs or contact the service.
+steps, URL/title, and a `compiled` marker (default false). Operator and planner
+steps share one chronological sequence, renumbered from 1; a failed planner
+action is retained with its error code, including on a partial-failure trace.
+The safe step shape is:
+
+```
+TraceStep = {n: int, operation: string, source: "operator"|"planner",
+             non_repeatable: bool, error?: string, target?: {role, label}, text?: string,
+             operations: [{key, probability: number}], targets: [{key, probability: number}],
+             after: {url, title}, elapsed_ms: int}
+```
+
+`source` defaults to `"operator"` and `non_repeatable` to false when decoding an
+older trace. Operator operations use the lower-case `Operation` names below;
+planner operations use their protocol command names. Planner probability lists
+are empty; operator lists retain only finite probabilities for known operations
+and numeric row keys or `NONE`. `non_repeatable` marks input that must not be
+replayed. Safe means capability-free projection, not anonymization: target
+labels and ordinary input text are retained. No full snapshot, snapshot id,
+tab handle, command envelope, page text, collected records or operator state
+is copied into these steps. See [traces](help/traces.md) for the full schema
+and local `traces list/show/prune` commands; those commands do not introduce
+wire verbs or contact the service.
 
 ## Envelope
 
@@ -45,7 +65,7 @@ Tab lifecycle:
 | `list` | `{}` | `{tabs: TabListing[]}` | [errors](help/errors.md) |
 | `take` | exactly one of `{url}`, `{title}`, `{label}` | `TabInfo` | [errors](help/errors.md) |
 | `close` | `{tab}` | `{closed: true}` | [errors](help/errors.md) |
-| `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` | [errors](help/errors.md) |
+| `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null, learning?: LearningStatus}` | [errors](help/errors.md) |
 
 `pid` is the actual managed Chrome child PID, not the Leash service PID or a
 `/proc` profile search. It is null whenever that child is not running, including
@@ -135,7 +155,7 @@ Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [-
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string}` | [errors](help/errors.md) |
+| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], installed: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string}` | [errors](help/errors.md) |
 
 `--url` is `start_url`: an optional explicit `http://` or `https://` URL with no userinfo. It opens a drive-owned tab; it does not replace an already populated `--tab`. The CLI rejects a bad scheme, `about:blank`, userinfo, or a non-positive `--max-steps` before it connects, as `usage` (64), and the message names a correct example. `--max-steps` is the on-the-fly executed-action cap (default 60, omitted on the wire when the caller accepts the default); the prediction cap is twice that value, including discarded stale decisions. `--max-procedures` is the playbook-lane cap (default 40). `--deadline-s` is the whole-mission budget (default 900). All three must be positive when present.
 
@@ -178,7 +198,21 @@ OperatorMetrics = {actions, predictions, text_calls, observation_calls,
 
 `page.text` is viewport text, at most 6000 characters, including visible titles, prices and records. `omitted_elements` counts action candidates beyond the 250 offered. This is the observation JEV used. It is not a normalized schema, not proof of exhaustive collection across pagination or offscreen content, and not a prepared script result. Prepared script payloads still bypass every model. `history` records executed input, including an uncertain mutation that must not be replayed. `predictions` includes discarded stale decisions. `usage` on a prediction or text call is the provider object, or null when that call reported none.
 
-`model_calls` counts actual attempted provider requests, including retries and failed attempts. `data.model_calls_by_kind` gives the same count by provider role; absent roles made no calls. `data.reported_cost` is the sum of costs providers returned, including answers later rejected. `data.cost_unreported` counts requests with no returned cost. `model_cost` is that sum when `cost_unreported` is 0, and `null` when any counted call is unpriced. `null` is unknown, not zero. Text-helper memo hits and deterministic checks make no model call.
+`model_calls` counts actual attempted provider requests, including retries and
+failed attempts. L53 includes post-drive learning compilation, validation retries
+and confirmation work in the top-level count and `model_cost`; durable trace
+`model_calls` and `cost` are updated with those totals too. `model_cost` sums
+provider-reported costs, including answers later rejected, and is `null` when
+any counted call has no valid reported cost. `null` is unknown, not zero.
+Text-helper memo hits and deterministic checks make no model call.
+
+`data.model_calls_by_kind`, `data.reported_cost` and `data.cost_unreported`
+are the drive-loop ledger before post-trace learning: attempted requests by
+provider role (absent roles made no calls), reported cost sum, and count of
+unpriced requests respectively. They do not include that later learning work
+and are not a breakdown of the final learning-inclusive totals. Nested
+`Usage.cost` is a number with zero substituted for absent provider cost; use
+`model_cost`, not that fallback, to distinguish a priced run from unknown cost.
 
 A successful control reply is not proof the mission succeeded. Read `status`, `reason`, `operator_state` and, when present, the tagged file.
 
@@ -228,7 +262,8 @@ Download     = {id: string, suggested_name: string, mime: string, state: "in_pro
                  path is null until Chrome reports a completed filePath; MIME is inferred from the extension when Chrome does not report one
 DebugEntry   = {at: iso8601, kind: "console"|"exception"|"request-failed", level?: string, text: string}
 Step         = {n: int, snapshot: id, operation: Operation, index: int|null, probabilities: {op: {..}, target: {..}},
-                text?: string, after: {url, title}, elapsed_ms: int}
+                non_repeatable: bool, target?: {role, label}, text?: string, after: {url, title}, elapsed_ms: int}
+                 non_repeatable defaults to false when decoding an older step
 Operation    = "click"|"type_text"|"select"|"scroll_up"|"scroll_down"|"wait"|"done"|"blocked"
 status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
                  The operator action cap is the mission max_steps (default 60); the
@@ -251,8 +286,8 @@ PlaybookChoice = {source: "jev"|"planner"|"route", key: string|null, probabiliti
                  extr-uhnc confidence review does not gate this lane). JEV preserves its own
                  distribution and confidence. A route entry has source "route", key "operator",
                  and a note; its probabilities are empty and its confidence is null.
-                 Planner turns remain for explicit discovery and applicable playbook repair,
-                 not for on-the-fly execution or NONE review. No unvalidated planner text is executable.
+                 Planner turns remain for applicable installed-playbook escalation and repair,
+                 not for initial on-the-fly routing or NONE review. No unvalidated planner text is executable.
 RunScript   = {script, url, records: int, bytes: int, elapsed_ms: int, error?: string}
                  one script call of a procedure's `script:` step (extr-8o1h): the page it ran on, the records it produced,
                  the size of its result, and — when the call was rejected — why; empty for a procedure with no script step
@@ -260,7 +295,13 @@ RunExpectation = {sentence, checker: "page_kind"|"text"|"download"|"no_dialog"|"
                   passed: bool, score: float|null}
                  score is the JEV score a judgment expectation was given, null where code decided it
 PlannerTurn = {n: int, trigger: "blocked"|"failed"|"arguments",
-               answer: "procedure"|"handoff"|"fail", reason?: string, usage: Usage|null}
+               answer: "procedure"|"continue"|"handoff"|"fail", steps: PlannerStep[],
+               reason?: string, usage: Usage|null}
+                 steps defaults to [] when decoding an older turn
+PlannerStep = {n: int, command: "click"|"fill"|"press"|"scroll"|"nav",
+               non_repeatable: bool, target?: {role, label}, text?: string,
+               after: {url, title}, elapsed_ms: int, error?: string}
+                 non_repeatable defaults to false; error is the failed action's protocol error code
 Usage       = {input_tokens: int, output_tokens: int, cost: float}
 status (run) = "done"|"blocked"|"failed"|"handoff"|"limit"|"deadline"|"error"
                max_steps defaults to 60; max_procedures defaults to 40; deadline_s defaults to 900;
@@ -269,7 +310,54 @@ Models       = {configured: bool, jev_model: string, text_model: string,
                 systemone_endpoint: string, chat_base_url: string}
                  the models section as configured; configured is whether an API key is present,
                  and no field ever carries the key
+LearningStatus = {mode: "off"|"draft"|"auto", drafts: int,
+                  sites: [{site, last_compile: string|null,
+                           installed_by_replay: int, installed_by_agreement: int}]}
+Provenance   = {traces: string[], model, time, tries: int, last_failure?: string,
+                path: string[], repeatable: bool, reason, gate, repair: bool}
 ```
+
+### Learning results and provenance (L53)
+
+`status.learning` is omitted when no learning runtime is attached, not encoded
+as null. `mode` reports the configured policy, `drafts` the current count of
+pending learned procedures, and `sites` the known installed, draft or previously compiled
+sites. `last_compile` is the last compile attempt's UTC timestamp, or null.
+The two installed counts reflect current procedure provenance gates containing
+`replay` or `agreement`, not lifetime installation counts.
+
+The drive result's `installed` lists procedure slugs automatically installed
+during this request, including repairs; it is not the whole library. An omitted
+`installed` decodes as []. `proposals` lists proposal paths produced during
+the request; an automatically installed proposal may already have been consumed.
+Use `status.learning.drafts` for pending learned procedures, not `proposals.length`.
+
+`Provenance` is the optional `provenance` object on a learned procedure in
+playbook or draft JSON, not a field of `RunProcedure`. It records source trace
+paths, the compiler model, a UTC timestamp, the failed replay count and
+optional last failure, the page-kind path, repeatability and its reason, the
+validation gate, and whether this is a repair. Current gate values are `replay`,
+`agreement` and `agreement-repair`; the codec's field is a string.
+
+### Planner Continue (L53)
+
+The planner model request includes the actual offered `snapshot` and the
+configured `planner_actions` cap (default 5, configuration range 1..20).
+A reply may be `{"answer":"continue","actions":[...]}`, with each action an
+ordinary `{v:1, cmd, args}` request from the five-command `PlannerStep`
+allowlist. This is a planner answer, not a new control-socket verb. Only
+Continue may carry actions. Missing or empty `actions` returns directly to JEV
+on the current page without a planner action.
+
+The whole batch is validated before dispatch and must fit the configured cap
+and remaining mission action budget. Every action names the offered tab;
+click, fill and press name the offered snapshot and row, and press requires an
+index. Scroll may name an offered row. Nav stays on the current HTTP(S)
+authority without userinfo. Actions use the ordinary locked protocol paths;
+a changed snapshot requires a unique role/name rebind, and protected actions
+are refused. A dry run dispatches none. Remaining deadline and action budget
+apply between actions. `PlannerTurn.steps` retains ordered action evidence
+and errors; after a successful batch a fresh observation returns control to JEV.
 
 Rules:
 
@@ -304,9 +392,12 @@ Rules:
   `<operation>_target` head per offered operation, and only the head the chosen
   operation selects is validated. A distribution that does not answer the offered
   criteria is `model-unavailable` with `code: "invalid-response"`.
-- `drive` reuses a supplied tab and does not overwrite an already populated page with
-  `start_url`. With no tab it opens one (`tab` is `key?`; the tab it opened is the one
-  `final` names). `start_url`, when present, is the explicit http(s) page that tab opens
+- `drive` reuses a supplied tab, leaves it open on every outcome, and does not
+  overwrite an already populated page with `start_url`. With no tab it opens
+  one (`tab` is `key?`; the tab it opened is the one `final` names) and closes
+  it on every non-handoff outcome. An owned handoff tab stays open until
+  `resume` closes it; resuming a supplied tab does not close it. `start_url`,
+  when present, is the explicit http(s) page that tab opens
   before the operator starts. On a blank tab with no `start_url`, one unambiguous http(s)
   URL in the mission is the bootstrap; none or several is `blocked` with the missing-start
   reason, not a playbook failure and not a model call. It authorizes the handle and then holds
@@ -389,7 +480,7 @@ Rules:
   script from a loaded playbook directory. No model output is ever any of them: a model chooses a playbook, a procedure, a
   criterion or an argument value, and an argument value travels as JSON in the call's `arguments`, never in the function
   text. A script is a `Playbook.script`, a type only the loader can build, and `Reading.script` is the one function that
-  hands one to the browser; a discovery proposal or planner answer cannot carry scripts, and a planner procedure may only
+  hands one to the browser; a learned draft or planner answer cannot carry scripts, and a planner procedure may only
   name one the playbook already has (extr-k40c).
 - `dry_run: true` asks the playbook and the procedure levels and reports the chosen
   playbook, the chosen procedure with its choice and resolved checkers, and ends

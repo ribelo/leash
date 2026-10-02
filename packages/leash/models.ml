@@ -323,6 +323,16 @@ let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
    L32's Luna over the second chat client (run-d99l), with the configured model and
    reasoning; without a key there is no client and the turn refuses before anything is
    sent, as the two choice levels do. *)
+let learning t (config : Config.learning) request =
+  match t.planner_chat with
+  | None -> Error "learning planner: no API key configured"
+  | Some client ->
+      Planner.learning ~client ~logger:t.logger
+        ~model:(Config.Text.to_string config.planner_model)
+        ~reasoning:(Config.Text.to_string config.planner_reasoning)
+        ~deadline:(Ox.Duration.seconds (Config.Seconds.to_int t.config.planner_timeout))
+        request
+
 let levels (t : t) : Run.levels =
   Run.
     {

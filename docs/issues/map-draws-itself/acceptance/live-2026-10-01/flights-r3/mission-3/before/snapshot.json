@@ -1,0 +1,211 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "250"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.533995023004536,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/travel/flights?hl=en",
+    "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+    "page_kind": {
+      "name": "flights",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "button",
+        "name": "Main menu",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "link",
+        "name": "Google"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Skip to main content"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Accessibility feedback"
+      },
+      {
+        "index": 5,
+        "role": "link",
+        "name": "Explore"
+      },
+      {
+        "index": 6,
+        "role": "link",
+        "name": "Flights"
+      },
+      {
+        "index": 7,
+        "role": "link",
+        "name": "Hotels"
+      },
+      {
+        "index": 8,
+        "role": "link",
+        "name": "Vacation rentals"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Change appearance",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 11,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 12,
+        "role": "heading",
+        "name": "Flights"
+      },
+      {
+        "index": 13,
+        "role": "combobox",
+        "name": "Change ticket type. Round trip",
+        "value": "Round trip",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "1 passenger, change number of passengers."
+      },
+      {
+        "index": 15,
+        "role": "combobox",
+        "name": "Change seating class. Economy",
+        "value": "Economy",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 16,
+        "role": "combobox",
+        "name": "Where from?",
+        "value": "Wrocław",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 17,
+        "role": "button",
+        "name": "Swap origin and destination.",
+        "state": [
+          "disabled"
+        ]
+      },
+      {
+        "index": 18,
+        "role": "combobox",
+        "name": "Where to? ",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 19,
+        "role": "textbox",
+        "name": "Departure"
+      },
+      {
+        "index": 20,
+        "role": "textbox",
+        "name": "Return"
+      },
+      {
+        "index": 21,
+        "role": "button",
+        "name": "Explore destinations"
+      },
+      {
+        "index": 22,
+        "role": "heading",
+        "name": "Flexible? Discover the best flight deals with AI"
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Explore deals with AI"
+      },
+      {
+        "index": 24,
+        "role": "heading",
+        "name": "Find and book cheap flights worldwide and track prices"
+      },
+      {
+        "index": 25,
+        "role": "heading",
+        "name": "Find cheap flights from Poland to anywhere"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "Learn more about this section"
+      },
+      {
+        "index": 27,
+        "role": "tab",
+        "name": "Wrocław",
+        "state": [
+          "selected"
+        ]
+      },
+      {
+        "index": 28,
+        "role": "tab",
+        "name": "Warsaw"
+      },
+      {
+        "index": 29,
+        "role": "tab",
+        "name": "Kraków"
+      },
+      {
+        "index": 30,
+        "role": "tab",
+        "name": "Gdańsk"
+      }
+    ],
+    "total": 30,
+    "offset": 0,
+    "truncated": false,
+    "settled": false,
+    "source": "ax",
+    "reason": "document-changing",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

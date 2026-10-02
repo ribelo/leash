@@ -62,6 +62,9 @@ val handoff_timeout : int option -> Ox.Duration.t
     fifteen minutes when it names none. [Control.budget] derives the handler's budget from
     this same function. *)
 
+val close_after_resume : t -> Protocol.Handle.t -> (unit, Protocol.error) result
+(** map-puhi: mark a drive-owned tab for closure when its handoff resumes. *)
+
 val resume : t -> Protocol.Handle.t -> (Protocol.resumed_result, Protocol.error) result
 val close : t -> Protocol.Handle.t -> (Protocol.closed_result, Protocol.error) result
 
@@ -117,6 +120,8 @@ val drive :
 val run :
   ?on_page:(url:string -> kind:string option -> pattern:string option -> unit) ->
   ?on_step:(Protocol.step -> unit) ->
+  ?on_planner_step:(Protocol.planner_step -> unit) ->
+  ?planner_actions:int ->
   ?levels:Run.levels ->
   ?model:string ->
   ?decide:
@@ -124,7 +129,7 @@ val run :
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
-  ?discovery:Run.discovery * int ->
+  ?learning:Learning.t ->
   ?meter:meter ->
   t ->
   tab:Protocol.Handle.t ->

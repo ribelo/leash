@@ -1,0 +1,18 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,50000)}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.03015995500027202,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps?hl=en",
+      "title": "Google Maps",
+      "text": "Search Google Maps\n\n\nThis area\nHeavy traffic in this area\nMuch slower than usual\n\n\nRestaurants\n\nHotels\n\nThings to do\n\nMuseums\n\nTransit\n\nPharmacies\n\nATMs\n\n\nSaved\n\nRecents\n\nGet app\nSign in\n\n\n\n\n Layers\nMap data ©2026 GooglePolandTermsPrivacySend Product Feedback\n\t500 m "
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

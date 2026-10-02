@@ -1,0 +1,19 @@
+{
+  "command": [
+    "new",
+    "about:blank"
+  ],
+  "exit_code": 75,
+  "elapsed_s": 1.199230242993508,
+  "reply": {
+    "code": "timeout",
+    "message": "new ran for its full handler budget of 1000 ms",
+    "hint": "retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB`",
+    "detail": {
+      "command": "new",
+      "budget_ms": 1000
+    }
+  },
+  "stdout": null,
+  "stderr": null
+}

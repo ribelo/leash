@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "recovered_post_mortem": true,
+  "no_reruns": true,
+  "files_scanned": 250,
+  "files_scope": "live-2026-10-02 excluding audit.json itself (tarball archived out pre-landing; see archive_location)",
+  "evidence_bytes_pre_audit": 9814121,
+  "evidence_bytes_post_archive_incl_audit": 5326556,
+  "archive_location": "system-temp dir leash-l53-build-provenance, file live-2026-10-02-source-before-build.tar.gz (4490286 B, sha 6f083c724ed0d9cb53ae1a8722759cc105ceb230abc5c19edc49f62d9cdbd79a verified match, not for commit; hashes retained in provenance/manifest)",
+  "credential_present_for_exact_key_audit": true,
+  "exact_key_result": "PASS via secret-env 2026-10-02 ~01:46+02 over 684 files (all three acceptance dirs to be committed), 0 hits, key never printed, exit 0",
+  "secret_files_api_key_prefix": [],
+  "capability_files": [],
+  "unredacted_tab_snapshot_handle_files": [],
+  "private_temp_path_leak_files": [],
+  "user_profile_leak_files": [],
+  "invalid_json_or_jsonl": [],
+  "private_root_marker_files_expected": 32,
+  "temporary_roots_remaining": 0,
+  "temporary_root_check": "glob for harness mkdtemp prefix under system temp dir: no matches",
+  "profile_browser_pids_remaining_harness_private": [],
+  "profile_browser_check": "scanned /proc cmdlines for harness prefix: only the scanning shell matched; no harness private profile processes. Real user profile /home/ribelo/.local/share/leash/profile and nix-store leash serve remain and were left untouched (not killed).",
+  "per_gate_cleanup": {
+    "books": {
+      "service_exit": 0,
+      "profile_processes_after_service": [],
+      "loopback_server_closed": true
+    },
+    "maps": {
+      "service_exit": 0,
+      "profile_processes_after_service": [],
+      "loopback_server_closed": true
+    },
+    "flights": {
+      "service_exit": 0,
+      "profile_processes_after_service": [],
+      "loopback_server_closed": true
+    },
+    "form": {
+      "service_exit": 0,
+      "profile_processes_after_service": [],
+      "loopback_server_closed": true,
+      "submissions_after_browser_shutdown": 2
+    }
+  },
+  "form_submissions": 2,
+  "form_tokens": [
+    "alpha-test",
+    "beta-test"
+  ],
+  "third_replay_posts": 0,
+  "flights_goal_reevaluation": "saved mission-2 goal_verified true is false positive (bare currency selector + Loading, zero priced amounts); current priced-amount regex returns false; gate labeled failed",
+  "harness_offline_tests": "10/10 pass on current scripts/live-acceptance-l53-test.py (postdates evidence; offline only, no models/browser)",
+  "prior_campaign_preserved": "docs/issues/map-draws-itself/acceptance/live-2026-10-01 untouched",
+  "product_edits": 0,
+  "commits": 0,
+  "commit_advice": "Safe to commit on exact-key-scan evidence; tarball archived out (hashes retained), do not commit archives."
+}

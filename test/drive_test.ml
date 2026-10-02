@@ -543,13 +543,13 @@ let metric result key =
   | `Int value -> value
   | _ -> Alcotest.fail key
 
-let fly_run ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
+let fly_run ?label ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(dry_run = false) ?(max_steps = None)
     ?(observe = fun () -> Ok (observation "Initial"))
     ?(text_value = fun _ -> Alcotest.fail "unexpected helper") ~decide ~act () =
   let handler = D.{ observe; decide; text_value; act } in
   match
-    D.run ~validate ~coverage ~usage ~handler
+    D.run ?label ~validate ~coverage ~usage ~handler
       ~now:(fun () -> 0.)
       ~model:"test"
       ~args:{ (args ()) with P.max_steps }
@@ -830,6 +830,87 @@ let fly_unsupported () =
     | Some reason -> contains reason "leash fill" && contains reason "never types"
     | None -> false)
 
+let semantic_request_real_reply () =
+  let result =
+    fly_run
+      ~label:(fun ~url:_ ~title:_ ~text:_ ->
+        D.{ kind = "home"; source = "inferred"; url = "home" })
+      ~decide:(fun request ->
+        let page = J.body request |> json_member "state" |> json_member "page" in
+        Alcotest.(check bool)
+          "kind-ir9l request alone uses shown URL" true
+          (json_member "url" page = `String "home");
+        Ok (decision "done"))
+      ~act:(fun _ _ ~text:_ -> Alcotest.fail "unexpected action")
+      ()
+  in
+  let page = state result |> json_member "page" in
+  Alcotest.(check bool)
+    "trace-qe8c reply preserves real URL" true
+    (json_member "url" page = `String "https://example.org");
+  Alcotest.(check bool)
+    "kind-ir9l reply keeps kind separately" true
+    (json_member "page_kind" page = `String "home")
+
+let bounded_pre_action_risk () =
+  let actions = ref 0 in
+  let target =
+    P.
+      {
+        index = 1;
+        role = "button";
+        name = "OK";
+        value = None;
+        state = None;
+        options = None;
+      }
+  in
+  let initial =
+    {
+      (observation ~rows:[ target ] "Settings") with
+      D.text = "Delete account PRIVATE-BODY";
+    }
+  in
+  let current = ref initial in
+  let handler =
+    D.
+      {
+        observe = (fun () -> Ok !current);
+        decide =
+          (fun _ ->
+            Ok (if !actions = 0 then decision ~index:1 "click" else decision "done"));
+        text_value = (fun _ -> Ok None);
+        act =
+          (fun _ _ ~text:_ ->
+            incr actions;
+            current := observation ~rows:[ target ] "Settings";
+            Ok
+              P.
+                {
+                  tab = handle;
+                  url = "https://example.org";
+                  title = "Settings";
+                  snapshot = None;
+                  dialog = None;
+                  popups = [];
+                  via = None;
+                });
+      }
+  in
+  let result =
+    match
+      D.run ~handler ~now:(fun () -> 0.) ~model:"fake" ~args:(args ()) ~dry_run:false ()
+    with
+    | Ok result -> result
+    | Error e -> Alcotest.fail e.P.message
+  in
+  Alcotest.(check bool)
+    "map-yzqp neutral OK retains destructive pre-action context" true
+    (List.hd result.steps).P.non_repeatable;
+  Alcotest.(check bool)
+    "map-yzqp durable step never includes raw page body" false
+    (contains (Yojson.Safe.to_string (P.yojson_of_drive_result result)) "PRIVATE-BODY")
+
 let () =
   Alcotest.run "drive"
     [
@@ -837,6 +918,7 @@ let () =
         List.map
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
+            ("map-yzqp bounded pre-action safety evidence", bounded_pre_action_risk);
             ("fly-hc3l fly-fl7u fly-vzzw budgets", fly_budgets);
             ("fly-vnf1 bounded BLOCKED frontier rescue", fly_blocked_frontier);
             ("fly-g0uh unsupported partial evidence", fly_unsupported);
@@ -844,6 +926,7 @@ let () =
             ("fly-vzzw fresh terminal", fly_terminal_refresh);
             ("fly-4lmg fly-4mio fly-2pn7 observation bound", fly_observation_bound);
             ("fly-g0uh fly-9e0f fly-u9eg fly-gn5z state", fly_structured_state);
+            ("kind-ir9l trace-qe8c shown request real reply", semantic_request_real_reply);
             ("done", done_path);
             ("pbk-eyya goal until", until_reached);
             ("daily-9ggi blocked reasons", blocked_reasons);

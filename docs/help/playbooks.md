@@ -1,6 +1,6 @@
 # Playbooks
 
-A playbook describes one site. It is a directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/`, holding `playbook.json` and the files beside it (usually `~/.config/leash/playbooks/<name>/` when that variable is unset). The operator or an agent writes it. A model never does. Nothing but `playbook.json` and the script files may sit in that directory: another `.json` file beside `playbook.json` is refused. A `.json` file left in the playbooks root is not a playbook.
+A playbook describes one site. It is a directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/`, holding `playbook.json` and the files beside it (usually `~/.config/leash/playbooks/<name>/` when that variable is unset). The operator or an agent writes it. Learning can also compile and install validated procedures from completed mission traces; it never creates script code. Nothing but `playbook.json` and the script files may sit in that directory: another `.json` file beside `playbook.json` is refused. A `.json` file left in the playbooks root is not a playbook.
 
 Install by copying the directory. `leash playbook list` lists validated installed books. `leash playbook show NAME` prints one, including script text. `leash playbook check ./DIR` validates a directory and skips JavaScript compilation. `leash playbook check NAME` does the same for an installed name and compiles each script in a blank tab. `leash playbook accept FILE` merges a reviewed proposal. The format below is what `check` accepts.
 
@@ -12,7 +12,7 @@ Install by copying the directory. `leash playbook list` lists validated installe
 
 `description` is one non-empty string. JEV reads it when choosing a book.
 
-`pages` is the list of page kinds. Each has `name` (a unique lowercase slug: `a-z`, `0-9`, `-`, `_`), `description`, and at least one of `url_pattern` or `text_marker`. `url_pattern` matches the whole URL; `*` matches any characters, including `?` and `#`; without `*` it is exact. `text_marker` is a case-insensitive substring of the page text. `null` means that recogniser is absent.
+`pages` is the list of page kinds. Each has `name` (a unique lowercase slug: `a-z`, `0-9`, `-`, `_`), `description`, and at least one of `url_pattern` or `text_marker`. `url_pattern` matches the whole URL; `*` matches any characters, including `?` and `#`; without `*` it is exact. `text_marker` is a case-insensitive substring of the page text. `null` means that recogniser is absent. `repeatable` defaults to `true`; set it to `false` for irreversible pages such as checkout or upload, overriding inferred safety.
 
 `shapes` is an object of shape name (a lowercase slug) to a shape. A shape is `string`, `number`, `boolean`, `url`, an object of field to shape, or a one-element array for a list. A field name ending in `?` is optional. Nesting is at most eight deep. See `leash help scripts`.
 
@@ -311,3 +311,15 @@ returns must be a record or a list of records
 ```
 
 The two lines with long runs of spaces are exact. A symlink that resolves outside the playbook directory is the "resolves outside" message. A unix error on a script file is `file PATH: ` plus the system message.
+
+## Learning from completed missions
+
+`[learning]` in the service configuration sets `mode = "off" | "draft" | "auto"` (default `draft`), `successes = 2`, `planner_model = "openai/gpt-6-luna"`, `planner_reasoning = "max"`, `max_tries = 3`, `retire_after = 5`, and `planner_actions = 5`. `off` does not compile or try drafts. `draft` writes proposals below `$XDG_STATE_HOME/leash/proposed/` without installing them. `auto` offers repeatable proposals as visibly marked `draft:` procedure choices on the next matching page kind. A verified trial installs only when that mission ends `done`; its drive reply includes `installed: [slug]`.
+
+Compilation needs completed traces with the same normalized page-kind path, with no installed procedure covering it. The compiler receives observed operations and accessible role/label targets from operator and planner actions, and must turn differing typed values into declared arguments. A new site receives inferred pages and an entry URL as well as its first procedure. The authored loader validates the draft; a refused draft gets one correction turn, then is dropped with the validation reason.
+
+Repeatable procedures use `gate: "replay"`. A submit, Enter, or click on a path whose kind or observed text marks payment, checkout confirmation, upload, posting, sending, or deletion is non-repeatable. Authored `repeatable: false` pages override inference. Their drafts are never offered for a trial: independent completed traces must agree in path and operations/role/label, and the compiler must confirm the generalization before `auto` installs with `gate: "agreement"`. Non-repeatable repairs use `gate: "agreement-repair"` only when the existing kinds and action targets occur in the failing snapshot; no replay is allowed.
+
+A failed draft keeps its failure and try count for bounded refinement and is archived after `max_tries`. An installed procedure that fails expectations twice receives a same-slug repair. A repeatable repair must pass its own trial before replacement; the prior version is archived. After `retire_after` consecutive failed missions without successful repair, the procedure is retired and excluded from selection.
+
+`leash status` reports the mode, waiting drafts, last compile per site, and installed replay/agreement counts. `leash playbook show NAME` includes each learned procedure's provenance: source traces, model, time, tries, last failure, normalized path, repeatability reason, and gate. Archived versions and retirement reasons live below `proposed/retired/`.

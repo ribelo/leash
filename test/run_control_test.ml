@@ -101,9 +101,7 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
                   checks,
                 observe () ));
         plan =
-          (fun _ ->
-            Ok
-              { answer = Fail "collection failed"; expect = []; usage = None; pages = [] });
+          (fun _ -> Ok { answer = Fail "collection failed"; expect = []; usage = None });
         propose = (fun ~site:_ _ -> assert false);
         hand_off = (fun ~reason:_ -> assert false);
         script =

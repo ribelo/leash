@@ -39,6 +39,21 @@ Always pass `--expect` with a concrete sentence the result must satisfy. Without
 
 A drive reply is large. Write it to a file and read the fields below. Do not paste the whole reply into the chat.
 
+## Prefer drive for goals
+
+Drive learns reusable procedures from successful missions; manual commands do not. Use
+manual commands for inspection and for steps drive cannot do. Learning defaults to draft:
+proposals are reported, not silently installed; `learning.mode = "off"` disables learning.
+With `--tab HANDLE`, the supplied tab stays open whatever the outcome. Without `--tab`,
+drive opens and closes its own tab on success, failure, blocked, deadline, or error. A
+handoff keeps that owned tab until resume, which closes it; a supplied tab stays open.
+
+The planner can answer `continue` with up to `learning.planner_actions` ordinary
+click/fill/press/scroll/nav actions naming rows from its snapshot. They use the public
+revalidation path, never raw JavaScript. They appear in `planner_turns[].steps` and in
+durable trace steps with `source: "planner"`, including a failed attempt. Control then
+returns to JEV on the current page.
+
 ## Lanes
 
 Playbooks are optional. A missing book never blocks a usable browser task and never requires you to author one first.
@@ -65,7 +80,7 @@ Exit 0 means the service answered. It does not mean the mission succeeded. Read:
 - `steps[].operation`, `index`, and `probabilities.op` — what JEV picked and how sure it was.
 - `collected` — how many validated script records were streamed.
 - `mission_expectations` — the DONE guard, each sentence, checker, and whether it passed.
-- `operator_state.page.text` — on the fly, the answer is the page, at most 6000 characters of viewport text. `page.coverage` is a `+`-joined string starting with `viewport`. `page.page_kind` is the kind JEV was shown (`page.page_kind_source` is `declared` or `inferred`); in the playbook-less lane `page.url` is that kind, not the raw URL. The snapshot inside the same object still has the raw URL.
+- `operator_state.page.text` — on the fly, the answer is the page, at most 6000 characters of viewport text. `page.coverage` is a `+`-joined string starting with `viewport`. `page.page_kind` is the kind JEV was shown (`page.page_kind_source` is `declared` or `inferred`); `page.url` and the snapshot retain the actual browser URL.
 - `output_kinds` — `script-record`, `operator-state`, or both.
 - `model_cost` — null when any call is unpriced. `data.reported_cost` is the known subtotal.
 - `final` — the last snapshot.

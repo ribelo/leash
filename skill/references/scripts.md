@@ -2,7 +2,7 @@
 
 A script is prepared JavaScript that belongs to a playbook. It is a `.js` file beside `playbook.json`, or a short inline `source`. A `script:` step runs it in the tab's page. Its result is validated against a declared `returns` shape. Only scripts from a loaded playbook directory are handed to the page's JavaScript engine by a run.
 
-`eval` is a different thing: the agent's own one-off function body. A model never writes a script. A model may choose a script the playbook already has, or an argument value. The argument value travels as JSON, never inside the function text. A discovery proposal cannot carry scripts.
+`eval` is a different thing: the agent's own one-off function body. A model never writes a script. A model may choose a script the playbook already has, or an argument value. The argument value travels as JSON, never inside the function text. A learned draft cannot carry scripts.
 
 A script is the body of an async function of `args`, an object of strings. It may `await fetch` the site's own endpoints with the page's cookies. Collection scripts should read, not click, scroll, or change the page. A navigate control script may read same-site pages or endpoints to find a destination, but should return the URL rather than mutate the current page. Leash performs the navigation after validation. Throw when the page is the wrong one; an empty list is a valid result (an empty cart).
 

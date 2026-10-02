@@ -1,0 +1,11 @@
+{
+  "build_exit_code": 0,
+  "verified_after_build_at": "2026-10-02T01:35:21.454683+02:00",
+  "binary_path": "/home/ribelo/projects/ribelo/leash/_build_form_final/default/packages/leash/bin/main.exe",
+  "binary_sha256": "b1c03e61f3afbfe237d009c0343ff71beb10eca3c8c95b4a2a5a8b1b863da635",
+  "binary_bytes": 16039808,
+  "source_changes_during_build": [],
+  "manifest_files_rechecked": 336,
+  "diff_against_head_sha256_after_build": "b98bd1c21f611d2d5c0821d621e93bfa1beeff4b096efda6501d933ea39feb4f",
+  "diff_stable": true
+}

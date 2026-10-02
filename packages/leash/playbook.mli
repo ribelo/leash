@@ -3,6 +3,7 @@ type page = {
   description : string;
   url_pattern : string option;
   text_marker : string option;
+  repeatable : bool;
 }
 
 (* pbk-eyya: [until] sentences end the step as soon as all hold after an executed action;
@@ -43,7 +44,21 @@ type arg_decl = { name : string; source : arg_source }
     [{"from":"mission"}], [{"from":"mission","optional":true}] or [{"const":<value>}]. A
     list of names is the old form and is refused. *)
 
+type provenance = {
+  traces : string list;
+  model : string;
+  time : string;
+  tries : int;
+  last_failure : string option;
+  path : string list;
+  repeatable : bool;
+  reason : string;
+  gate : string;
+  repair : bool;
+}
+
 type procedure = {
+  provenance : provenance option;
   slug : string;
   description : string;
   args : arg_decl list option;
@@ -120,6 +135,10 @@ type script = private {
     function that hands script text to the browser, takes one. Model output can therefore
     never become a script. *)
 
+type draft = { procedure : procedure; pages : page list; revision : string }
+(** L53 map-b3kk: procedure and executable page vocabulary from the same immutable
+    full-book revision, captured together before the selection question. *)
+
 type loaded = {
   file : string;  (** The path of [playbook.json]. *)
   dir : string option;
@@ -150,8 +169,20 @@ val checker_name : checker -> string
 val resolve : page list -> string -> (checker, string) result
 val page_kind : page list -> url:string -> text:string -> string option
 val procedure_of_yojson : Yojson.Safe.t -> (procedure, string) result
-
 val yojson_of_procedure : procedure -> Yojson.Safe.t
+val non_repeatable_context : string -> bool
+val non_repeatable_action : context:string -> string -> bool
+val procedure_repeatable : t -> context:string -> procedure -> bool
+
+val draft_revision : t -> string
+(** Content identity of the entire immutable proposal, including its page definitions. *)
+
+val atomic_write_json :
+  caps:< Ox_caps.Cap.fs_write ; .. > ->
+  mode:int ->
+  string ->
+  Yojson.Safe.t ->
+  (unit, string) result
 (** The procedure as the playbook's own JSON: what a planner's reply is decoded into
     (run-rq6i) and what a proposal file carries (run-m0r8). *)
 
@@ -216,19 +247,44 @@ val proposed_directory : caps:< Ox_caps.Cap.env ; .. > -> unit -> string
     unset), where a run writes the procedures the planner wrote and verified. The playbook
     directory is never written by a run. *)
 
-val propose_book :
-  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_write ; .. > -> t -> (string, string) result
-(** Write a complete discovery proposal to XDG state, without installing it. *)
-
 val propose :
-  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_write ; .. > ->
+  ?book:t ->
+  ?revision:string ->
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
   site:string ->
   procedure ->
   (string, string) result
 (** run-m0r8: write one proposed procedure to [<proposed_directory>/<site>-<slug>.json],
     0600, and answer the path written. *)
 
+val retire :
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
+  site:string ->
+  slug:string ->
+  (unit, string) result
+
+val retire_draft :
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
+  file:string ->
+  revision:string ->
+  site:string ->
+  slug:string ->
+  (unit, string) result
+(** map-b3kk: pin failed-trial retirement to the inspected draft revision, under the same
+    transaction as its installation. *)
+
+val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
+
+val archive_proposal :
+  revision:string ->
+  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
+  string ->
+  (unit, string) result
+(** map-b3kk: archive only the inspected draft revision, under the install lock. *)
+
 val accept :
+  ?revision:string ->
+  ?consume:bool ->
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
   string ->
   (accepted, string) result
@@ -236,7 +292,7 @@ val accept :
     replacing the same one and appending otherwise — and write that playbook back. The
     merged playbook must validate first, and a site served by no playbook, by more than
     one, or by an invalid merge is refused with nothing written. This is the operator's
-    command: a run never merges a proposal itself. *)
+    command and the learning auto gate share this validated merge path. *)
 
 (* run-k8bx: restart every step from the beginning after the first failed check. *)
 val retry_once : execute:(unit -> unit) -> verify:(unit -> bool) -> bool

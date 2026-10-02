@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 12
 ---
 
@@ -35,3 +35,9 @@ With no playbook, Leash infers a page kind from the URL's shape (path segments w
 ## Out of Scope
 
 Learning kinds across sessions (the compiler persists them into a playbook instead).
+
+## Measurement and boundary repairs — 2026-10-01
+
+The five-state quotes.toscrape.com comparison scored **5/5 for both inferred kinds and raw URL**, with identical history; neither shape showed an accuracy advantage. Without history both scored 2/5. See [measurement](measurement-2026-10-01.md). This does not support attributing the earlier L30 improvement to page kinds alone.
+
+Live findings fixed: non-web pages are excluded, returned state retains the real URL, only model input substitutes semantic kinds, probabilities retain their values, and session sibling generalization canonicalizes mappings. Compiler projections translate abstract placeholders and names to loader-valid wildcard patterns/slugs, preserving explicit ports. Google Maps still shows cross-run vocabulary instability; that is an open learning-gate finding, not a claimed inference success.

@@ -317,6 +317,94 @@ type traces = {
 
 let default_traces = { enabled = true; retention = Traces.Retention.default }
 
+(* map-0by0 map-igfx map-h5ym map-3qag: learning has independent budgets. *)
+module Learning_mode = struct
+  type t = Off | Draft | Auto
+
+  let to_string = function Off -> "off" | Draft -> "draft" | Auto -> "auto"
+
+  let t_of_yojson = function
+    | `String "off" -> Ok Off
+    | `String "draft" -> Ok Draft
+    | `String "auto" -> Ok Auto
+    | _ -> Error "expected off, draft, or auto"
+
+  let yojson_of_t t = `String (to_string t)
+end
+
+type learning = {
+  mode : Learning_mode.t;
+  successes : int;
+  planner_model : Text.t;
+  planner_reasoning : Text.t;
+  max_tries : int;
+  retire_after : int;
+  planner_actions : int;
+}
+
+let default_learning =
+  {
+    mode = Learning_mode.Draft;
+    successes = 2;
+    planner_model = "openai/gpt-6-luna";
+    planner_reasoning = "max";
+    max_tries = 3;
+    retire_after = 5;
+    planner_actions = 5;
+  }
+
+let learning_of_yojson = function
+  | `Assoc fields ->
+      let ( let* ) = Result.bind in
+      let field name decode default =
+        match List.assoc_opt name fields with
+        | None -> Ok default
+        | Some json ->
+            Result.map_error (fun why -> "learning." ^ name ^ ": " ^ why) (decode json)
+      in
+      let bounded maximum = function
+        | `Int n when n >= 1 && n <= maximum -> Ok n
+        | _ -> Error (Printf.sprintf "expected an integer between 1 and %d" maximum)
+      in
+      let* mode = field "mode" Learning_mode.t_of_yojson default_learning.mode in
+      let* successes = field "successes" (bounded 100) default_learning.successes in
+      let* planner_model =
+        field "planner_model" Text.t_of_yojson default_learning.planner_model
+      in
+      let* planner_reasoning =
+        field "planner_reasoning" Text.t_of_yojson default_learning.planner_reasoning
+      in
+      let* max_tries = field "max_tries" (bounded 100) default_learning.max_tries in
+      let* retire_after =
+        field "retire_after" (bounded 100) default_learning.retire_after
+      in
+      let* planner_actions =
+        field "planner_actions" (bounded 20) default_learning.planner_actions
+      in
+      Ok
+        {
+          mode;
+          successes;
+          planner_model;
+          planner_reasoning;
+          max_tries;
+          retire_after;
+          planner_actions;
+        }
+  | _ -> Error "learning: expected an object"
+
+let yojson_of_learning (v : learning) =
+  `Assoc
+    [
+      ("mode", Learning_mode.yojson_of_t v.mode);
+      ("successes", `Int v.successes);
+      ("planner_model", Text.yojson_of_t v.planner_model);
+      ("planner_reasoning", Text.yojson_of_t v.planner_reasoning);
+      ("max_tries", `Int v.max_tries);
+      ("retire_after", `Int v.retire_after);
+      ("planner_actions", `Int v.planner_actions);
+    ]
+
 type skill = { roots : Text.t list [@json.default []] } [@@deriving yojson]
 
 let default_skill = { roots = [] }
@@ -340,6 +428,7 @@ type t = {
   handoff : handoff; [@json.default default_handoff]
   skill : skill; [@json.default default_skill]
   traces : traces; [@json.default default_traces]
+  learning : learning; [@json.default default_learning]
 }
 [@@deriving yojson]
 
@@ -354,6 +443,7 @@ let default : t =
     handoff = default_handoff;
     skill = default_skill;
     traces = default_traces;
+    learning = default_learning;
   }
 
 let toml_array values =
@@ -414,6 +504,15 @@ let default_toml =
 # [traces.retention]
 # count = 20                  # per site, 1..10000
 # days = 30                   # 1..3650; uncompiled done traces are never pruned
+#
+# [learning]
+# mode = "draft"             # off: no learning; draft: proposals; auto: gated install
+# successes = 2              # done traces with matching page-kind paths
+# planner_model = "openai/gpt-6-luna"
+# planner_reasoning = "max"
+# max_tries = 3              # failed draft trials before dropping
+# retire_after = 5           # consecutive failed missions without successful repair
+# planner_actions = 5        # maximum actions in a planner continue turn
 #
 # [handoff]
 # focus_command = %s
@@ -856,6 +955,7 @@ let collect json =
               "handoff";
               "skill";
               "traces";
+              "learning";
             ]
           fields
       in
@@ -1007,6 +1107,48 @@ let collect json =
                         in
                         if errors = [] then Ok Traces.Retention.default else Error errors))
       in
+      let learning_errors =
+        let pointer = child "" "learning" in
+        match List.assoc_opt "learning" fields with
+        | None -> []
+        | Some json ->
+            collect_object pointer json
+              ~known:
+                [
+                  "mode";
+                  "successes";
+                  "planner_model";
+                  "planner_reasoning";
+                  "max_tries";
+                  "retire_after";
+                  "planner_actions";
+                ] (fun section ->
+                field_errors pointer "mode" section (fun p j ->
+                    decode_with p Learning_mode.t_of_yojson j)
+                @ List.concat_map
+                    (fun (key, maximum) ->
+                      field_errors pointer key section (fun p j ->
+                          match j with
+                          | `Int n when n >= 1 && n <= maximum -> Ok ()
+                          | _ ->
+                              Error
+                                [
+                                  issue p
+                                    (Printf.sprintf "expected an integer between 1 and %d"
+                                       maximum);
+                                ]))
+                    [
+                      ("successes", 100);
+                      ("max_tries", 100);
+                      ("retire_after", 100);
+                      ("planner_actions", 20);
+                    ]
+                @ List.concat_map
+                    (fun key ->
+                      field_errors pointer key section (fun p j ->
+                          decode_with p Text.t_of_yojson j))
+                    [ "planner_model"; "planner_reasoning" ])
+      in
       let handoff_errors =
         match List.assoc_opt "handoff" fields with
         | None -> []
@@ -1020,7 +1162,8 @@ let collect json =
       {
         errors =
           unknown @ chrome_errors @ tabs_errors @ expiry_errors @ control_errors
-          @ otlp_errors @ models_errors @ handoff_errors @ skill_errors @ traces_errors;
+          @ otlp_errors @ models_errors @ handoff_errors @ skill_errors @ traces_errors
+          @ learning_errors;
         binary;
         profile_dir;
         socket;

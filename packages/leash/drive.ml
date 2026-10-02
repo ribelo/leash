@@ -127,13 +127,17 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
       "observation_ms", integer !observation_ms; "prediction_ms", integer !prediction_ms;
       "text_helper_ms", integer !helper_ms; "input_ms", metric "input_ms" !input_ms;
       "settle_ms", metric "settle_ms" 0; "elapsed_ms", integer (ms (now () -. started)) ] in
-    let shown = Option.map (fun label -> label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text) label in
+    let shown =
+      if Page_kind.is_page ~url:page.snapshot.url then
+        Option.map (fun label -> label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text) label
+      else None in
     let state = `Assoc [
       "status", string name; "reason", optional_string reason;
       "error", (match error with None -> `Null | Some error -> P.yojson_of_error error);
       "initial_recent_actions", `List (List.map J.yojson_of_recent_action initial_recent);
       "page", `Assoc [ "snapshot", P.yojson_of_snapshot page.snapshot;
-        "url", string (match shown with Some shown -> shown.url | None -> page.snapshot.url);
+        (* trace-qe8c kind-ir9l: only model requests substitute the kind. *)
+        "url", string page.snapshot.url;
         "title", string page.snapshot.title;
         "page_kind", (match shown with Some shown -> string shown.kind | None -> `Null);
         "page_kind_source", (match shown with Some shown -> string shown.source | None -> `Null);
@@ -184,7 +188,11 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
   in
   let record_step (page : observation) (next : observation) choice text steps =
     let text = redact_password page choice.J.index text in
-    let recorded = P.{ n = List.length steps + 1; snapshot = page.snapshot.snapshot;
+    let recorded = P.{
+        non_repeatable = Playbook.non_repeatable_action
+          ~context:(page.snapshot.url ^ " " ^ page.snapshot.title ^ " " ^ page.text)
+          (P.Operation.to_string choice.J.operation);
+        n = List.length steps + 1; snapshot = page.snapshot.snapshot;
         operation = choice.J.operation; index = choice.index;
         probabilities = J.trace_probabilities choice;
         target = Option.bind choice.index (fun index ->

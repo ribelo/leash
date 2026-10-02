@@ -11,13 +11,15 @@ Help is offline and short first contact is not the full manual.
   $ grep -q 'OPENROUTER_API_KEY in the service'\''s environment or models.api_key in the config' orient
   $ grep -q "the key is the operator's" orient
   $ grep -q 'OpenRouter' orient
-  $ grep -q 'leash status, leash new https://example.com, and leash snap TAB' orient
+  $ grep -q 'Prefer leash drive MISSION for a goal: it learns; manual commands do not' orient
+  $ grep -q 'Start with leash status and leash help drive' orient
   $ printf 'bare leash is one paragraph and does not need the service\n'
   bare leash is one paragraph and does not need the service
   $ leash --help=plain >help 2>err
+  $ test "$(grep -c '^[ ]*discover[ ]' help)" -eq 0
   $ ./daily_cli_fixture.exe top-help help; test ! -s err
   top-level help groups tabs, observe, act, network/debug, missions, playbooks, service and skill
-  $ for cmd in new downloads list take close status snap text shot debug eval nav click fill press select scroll wait upload hover check uncheck net cookies storage dialog handoff resume drive discover playbook traces serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
+  $ for cmd in new downloads list take close status snap text shot debug eval nav click fill press select scroll wait upload hover check uncheck net cookies storage dialog handoff resume drive playbook traces serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in list show check test accept; do leash playbook "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in list show prune; do leash traces "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in install show; do leash skill "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done

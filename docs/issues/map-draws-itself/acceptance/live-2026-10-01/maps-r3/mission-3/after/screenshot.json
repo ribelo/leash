@@ -1,0 +1,22 @@
+{
+  "command": [
+    "shot",
+    "[redacted]",
+    "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-01/maps-r3/mission-3/after/page.png"
+  ],
+  "exit_code": 75,
+  "elapsed_s": 30.009800196996366,
+  "reply": {
+    "code": "renderer-unresponsive",
+    "message": "browser operation timed out",
+    "hint": "the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off",
+    "detail": {
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkyOS4wIKXMDSoASAFQAw%3D%3D",
+      "title": "Eiffel Tower - Google Maps",
+      "entries": []
+    }
+  },
+  "stdout": null,
+  "stderr": null
+}

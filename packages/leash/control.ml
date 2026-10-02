@@ -1,5 +1,7 @@
 module P = Protocol
 
+let ( let* ) = Result.bind
+
 type caps = < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network >
 
 type ('clock, 'net) deps = {
@@ -33,7 +35,7 @@ let unsupported = err "invalid-request" "this command is not available yet"
 (* L19: the status reply is the registry's plus the models section, which only the
    listener's models service knows. A dispatch that was given no models service reports
    [null] there rather than inventing a configuration. *)
-let report ?models_status ?chrome_pid tabs =
+let report ?learning ?models_status ?chrome_pid tabs =
   let report = Tabs.report tabs in
   let models = Option.map (fun models -> models ()) models_status in
   let running =
@@ -43,12 +45,14 @@ let report ?models_status ?chrome_pid tabs =
   {
     report with
     P.models;
+    learning = Option.map Learning.status learning;
     pid;
     key_present = (match models with Some models -> models.configured | None -> false);
   }
 
-let dispatch ?traces ?logger ?(model = "unconfigured") ?models ?levels ?decide
-    ?text_helper ?installed ?models_status ?chrome_pid tabs (request : P.request) =
+let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfigured")
+    ?models ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs
+    (request : P.request) =
   let meter = Tabs.meter () in
   let decide, text_helper =
     match models with
@@ -109,74 +113,8 @@ let dispatch ?traces ?logger ?(model = "unconfigured") ?models ?levels ?decide
   | P.Resume args -> lift P.yojson_of_resumed_result (Tabs.resume tabs args.tab)
   | P.List_tabs -> success (P.yojson_of_list_result (Tabs.list tabs))
   | P.Status ->
-      success (P.yojson_of_status_result (report ?models_status ?chrome_pid tabs))
-  | P.Discover args -> (
-      let turns = Option.value ~default:20 args.max_turns in
-      let steps = Option.value ~default:100 args.max_steps in
-      let deadline_s = Option.value ~default:900 args.deadline_s in
-      let cost = Option.value ~default:1. args.max_cost in
-      if
-        turns <= 0 || steps <= 0 || deadline_s <= 0
-        || (not (Float.is_finite cost))
-        || cost <= 0.
-      then
-        err "invalid-request" "discovery limits must be positive and cost must be finite"
-      else
-        let entry =
-          if
-            String.starts_with ~prefix:"https://" args.site
-            || String.starts_with ~prefix:"http://" args.site
-          then args.site
-          else "https://" ^ args.site
-        in
-        let offset = if String.starts_with ~prefix:"https://" entry then 8 else 7 in
-        let authority = String.sub entry offset (String.length entry - offset) in
-        let host =
-          match String.split_on_char '/' authority with head :: _ -> head | [] -> ""
-        in
-        if
-          host = "" || String.contains host '@' || String.contains host ' '
-          || String.contains host ':'
-        then
-          err "invalid-request"
-            "discover requires a valid HTTP(S) site or URL without credentials or port"
-        else
-          let seed =
-            Playbook.
-              {
-                site = host;
-                entry;
-                description = "Discovered " ^ host;
-                pages = [];
-                procedures = [];
-                shapes = None;
-                scripts = None;
-              }
-          in
-          match Playbook.of_json ~file:"discovery seed" (Playbook.yojson_of_t seed) with
-          | Error why -> err "invalid-request" why
-          | Ok book -> (
-              match Tabs.new_tab tabs ~url:(Some entry) with
-              | Error error -> failure error
-              | Ok info ->
-                  let run_args =
-                    P.
-                      {
-                        tab = Some info.tab;
-                        mission = Option.value ~default:("Explore " ^ host) args.goal;
-                        max_steps = Some steps;
-                        start_url = None;
-                        max_procedures = Some turns;
-                        deadline_s = Some deadline_s;
-                        dry_run = Some false;
-                        expect = None;
-                        out = None;
-                      }
-                  in
-                  lift P.yojson_of_run_result
-                    (Tabs.run ~meter ?levels ~model ?decide ?text_helper ?installed
-                       ~discovery:(Run.{ book; max_steps = steps; max_cost = cost }, turns)
-                       tabs ~tab:info.tab run_args)))
+      success
+        (P.yojson_of_status_result (report ?learning ?models_status ?chrome_pid tabs))
   | P.Drive args ->
       (* trace-qe8c trace-uovo: persist a projection before reply encoding, including
          errors during tab acquisition. No trace I/O is performed without a store. *)
@@ -189,6 +127,9 @@ let dispatch ?traces ?logger ?(model = "unconfigured") ?models ?levels ?decide
         Option.iter (fun c -> Traces.page c ~url ~kind ~pattern) capture
       in
       let on_step step = Option.iter (fun c -> Traces.step c step) capture in
+      let on_planner_step step =
+        Option.iter (fun c -> Traces.planner_step c step) capture
+      in
       let keep outcome =
         match (traces, capture) with
         | Some store, Some capture ->
@@ -214,7 +155,14 @@ let dispatch ?traces ?logger ?(model = "unconfigured") ?models ?levels ?decide
                     | Ok _ -> ()
                     | Error why -> warn "drive trace retention failed" why);
                     match outcome with
-                    | Ok result -> Ok { result with P.trace_path = Some path }
+                    | Ok result ->
+                        let result =
+                          Option.fold ~none:result
+                            ~some:(fun learning ->
+                              Learning.after_trace learning ~store ~file:path trace result)
+                            learning
+                        in
+                        Ok { result with P.trace_path = Some path }
                     | Error error ->
                         let fields =
                           match error.P.detail with
@@ -248,8 +196,11 @@ let dispatch ?traces ?logger ?(model = "unconfigured") ?models ?levels ?decide
               in
               let outcome =
                 try
-                  Tabs.run ~on_page ~on_step ~meter ?levels ~model ?decide ?text_helper
-                    ?installed tabs ~tab args
+                  let* () =
+                    if args.P.tab = None then Tabs.close_after_resume tabs tab else Ok ()
+                  in
+                  Tabs.run ?learning ~planner_actions ~on_page ~on_step ~on_planner_step
+                    ~meter ?levels ~model ?decide ?text_helper ?installed tabs ~tab args
                 with exn ->
                   cleanup ();
                   raise exn
@@ -280,15 +231,15 @@ let with_command ?logger (request : P.request) f =
         logger;
       f ())
 
-let handle ?traces ?(model = "unconfigured") ?models ?levels ?decide ?text_helper
-    ?installed ?models_status ?chrome_pid ?logger tabs line =
+let handle ?learning ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?models
+    ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid ?logger tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
-            dispatch ?traces ?logger ~model ?models ?levels ?decide ?text_helper
-              ?installed ?models_status ?chrome_pid tabs request)
+            dispatch ?learning ~planner_actions ?traces ?logger ~model ?models ?levels
+              ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -329,8 +280,6 @@ let budget (request : (P.request, string) result) =
            + 1000))
   | Ok { command = P.Handoff args; _ } ->
       Some (Ox.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
-  | Ok { command = P.Discover args; _ } ->
-      Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 75))
   | Ok { command = P.Drive args; _ } ->
       (* run-vspj run-obtt: a run's budget is its deadline plus the margin its last steps
          need — the procedure's own bounded expectation wait (at most 30 s), a planner
@@ -420,8 +369,8 @@ let on_peer_error logger error =
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
-let create ?traces ?(model = "unconfigured") ?models ?levels ?decide ?text_helper
-    ?installed ?chrome_pid ~sw ~path deps =
+let create ?learning ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?models
+    ?levels ?decide ?text_helper ?installed ?chrome_pid ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -430,9 +379,9 @@ let create ?traces ?(model = "unconfigured") ?models ?levels ?decide ?text_helpe
       match request with
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
-              dispatch ?traces ~logger:deps.logger ~model ?models ?levels ?decide
-                ?text_helper ?installed ~models_status:deps.models_status ?chrome_pid
-                deps.tabs request)
+              dispatch ?learning ~planner_actions ?traces ~logger:deps.logger ~model
+                ?models ?levels ?decide ?text_helper ?installed
+                ~models_status:deps.models_status ?chrome_pid deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply

@@ -1,0 +1,64 @@
+{
+  "site": "127.0.0.1",
+  "entry": "http://127.0.0.1:41943/message-compose",
+  "description": "Learned 127.0.0.1",
+  "pages": [
+    {
+      "name": "message-compose",
+      "description": "Inferred message-compose",
+      "url_pattern": "http://127.0.0.1:41943/message-compose",
+      "repeatable": true
+    },
+    {
+      "name": "message-posted",
+      "description": "Inferred message-posted",
+      "url_pattern": "http://127.0.0.1:41943/message-posted",
+      "repeatable": true
+    }
+  ],
+  "procedures": [
+    {
+      "provenance": {
+        "traces": [
+          "<PRIVATE_ROOT>/state/leash/traces/127.0.0.1/2026-10-01T23:35:40.852109Z-done.json",
+          "<PRIVATE_ROOT>/state/leash/traces/127.0.0.1/2026-10-01T23:35:37.852845Z-done.json"
+        ],
+        "model": "openai/gpt-6-luna",
+        "time": "2026-10-01T23:35:59.822475Z",
+        "tries": 0,
+        "path": [
+          "message-compose",
+          "message-posted"
+        ],
+        "repeatable": false,
+        "reason": "submission action on an irreversible page kind or observed title",
+        "gate": "agreement",
+        "repair": false
+      },
+      "slug": "post-test-message",
+      "description": "Post a test message.",
+      "args": {
+        "message": {
+          "from": "mission"
+        }
+      },
+      "steps": [
+        {
+          "goal": "Type {message} in the textbox named Test message",
+          "until": [
+            "the page is message-compose"
+          ]
+        },
+        {
+          "goal": "Click the button named Post test message",
+          "until": [
+            "the page is message-posted"
+          ]
+        }
+      ],
+      "expect": [
+        "the page is message-posted"
+      ]
+    }
+  ]
+}

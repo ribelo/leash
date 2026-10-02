@@ -1,0 +1,14 @@
+{
+  "gate": "flights",
+  "passed": false,
+  "missions_recorded": 2,
+  "failures": [
+    "Mission 2: drive not done (exit 0, status error, reason the click action (outcome uncertain; not replayed) failed (row-not-actionable): the row is covered at its click point)"
+  ],
+  "elapsed_s": 37.4123010635376,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

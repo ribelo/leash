@@ -1,0 +1,18 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,50000)}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.00299838199862279,
+  "reply": {
+    "value": {
+      "url": "http://127.0.0.1:41943/message-compose",
+      "title": "Harmless message posting acceptance",
+      "text": "Harmless message posting form\n\nLocal synthetic test only. Nothing is sent outside this test server.\n\nTest messagePost test message"
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

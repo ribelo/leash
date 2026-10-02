@@ -1,0 +1,53 @@
+{
+  "site": "toscrape.com",
+  "entry": "https://books.toscrape.com/",
+  "description": "Learned toscrape.com",
+  "pages": [
+    {
+      "name": "books-slug",
+      "description": "Inferred books-<slug>",
+      "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+      "repeatable": true
+    },
+    {
+      "name": "home",
+      "description": "Inferred home",
+      "url_pattern": "https://books.toscrape.com/",
+      "repeatable": true
+    }
+  ],
+  "procedures": [
+    {
+      "provenance": {
+        "traces": [
+          "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-01T22:24:53.661381Z-done.json",
+          "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-01T22:24:51.021492Z-done.json"
+        ],
+        "model": "openai/gpt-6-luna",
+        "time": "2026-10-01T22:25:02.674303Z",
+        "tries": 0,
+        "path": [
+          "home",
+          "books-slug"
+        ],
+        "repeatable": true,
+        "reason": "no irreversible submission in the observed path",
+        "gate": "replay",
+        "repair": false
+      },
+      "slug": "open-mystery-category",
+      "description": "Open the Mystery book category.",
+      "steps": [
+        {
+          "goal": "Click the link named Mystery",
+          "until": [
+            "the page is books-slug"
+          ]
+        }
+      ],
+      "expect": [
+        "the page is books-slug"
+      ]
+    }
+  ]
+}

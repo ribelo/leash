@@ -84,3 +84,14 @@ Feeding past traces to JEV at run time (rejected, ADR-0011); cross-site procedur
 ## Further Notes
 
 Operator, 2026-10-01: automatic means create and install; three config states; Luna at maximum reasoning; `drive` is what agents should use; test on non-critical sites (Google Flights, Google Maps, books.toscrape.com), with Amazon and Allegro as the hard cases. Coordinator's departure, with the operator's trust: install is gated by the site (a draft must drive one mission successfully as a procedure), not by compile — a wrong generalization installed blind would cost every future mission and nobody would see it. Threshold `successes` defaults to 2; set to 1 to compile from a single run.
+
+## Acceptance checkpoint — 2026-10-02 (not complete)
+
+Repository gates pass after independent review repairs: immutable draft revision/page binding, conservative repeatability across repair, authored pins, no planner-mediated unsafe replay, complete agreement target checks, draft dry-run, and locked acceptance. Learning costs are included in mission and durable trace totals.
+
+- **Replay gate passes on Books:** four missions, total costs $0.000434154, $0.000954754, $0.000281820, $0.000282366. Mission 2 compiled; mission 3 selected and verified the draft then installed; mission 4 used the installed procedure. [Evidence](acceptance/live-2026-10-02/README.md).
+- **Agreement gate passes on a harmless form:** two independent submissions, alpha-test and beta-test, and exactly two server writes after browser shutdown. Agreement installed without a third submission; 9 total model calls, $0.001727862 including compilation. Explicit-port preservation fixed the earlier validation failure. [Evidence](acceptance/live-2026-10-02-form-final/README.md).
+- **Maps remains failed:** successful page goals produced inconsistent page-kind paths, and ambient safety detection marked search actions non-repeatable. No compilation occurred. Strict agreement has not been weakened.
+- **Flights remains failed:** mission 2 hit a covered click point; destination prices were not loaded. The harness originally mistook the PLN currency selector for a priced result; the report corrects that false positive.
+
+The required two-Google-site learning curves and real-site repair evidence remain open. L53 is not complete; L55/L54 have not started. Failure-history counters are still per-site/per-slug and are not cross-process transactions.

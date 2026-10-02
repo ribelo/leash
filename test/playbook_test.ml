@@ -130,6 +130,7 @@ let grammar () =
             description = "";
             url_pattern = Some "https://allegro.pl/oferta/*";
             text_marker = None;
+            repeatable = true;
           };
       ]
       s
@@ -168,6 +169,7 @@ let grammar () =
         description = "";
         url_pattern = Some "https://allegro.pl/oferta/*";
         text_marker = None;
+        repeatable = true;
       }
   in
   Alcotest.(check (option string))
@@ -189,6 +191,7 @@ let example_title_is_not_body () =
         description = "";
         url_pattern = Some "https://example.com/";
         text_marker = Some title;
+        repeatable = true;
       }
   in
   let body = "This domain is for use in documentation examples." in
@@ -229,6 +232,7 @@ let consent_cleared () =
           description = "privacy overlay";
           url_pattern = None;
           text_marker = Some "privacy overlay";
+          repeatable = true;
         };
     ]
   in

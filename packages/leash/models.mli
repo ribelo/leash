@@ -111,6 +111,8 @@ val score :
     {!Questions.score_levels} and must be a finite number in [0, 1]; anything else is
     [invalid-response]. The caller compares it against its threshold. *)
 
+val learning : t -> Config.learning -> Yojson.Safe.t -> (Yojson.Safe.t, string) result
+
 val levels : t -> Run.levels
 (** run-7blx run-w7ke run-d99l: the run's three upper-level calls over this one service.
     [plan] is L32's planner turn — {!Planner} over the configured [planner_model], at the

@@ -706,6 +706,7 @@ type trace_target = {
 [@@deriving yojson]
 
 type step = {
+  non_repeatable : bool; [@json.default false]
   n : int;
   snapshot : Snapshot_id.t;
   operation : Operation.t;
@@ -892,17 +893,6 @@ type run_args = {
 }
 [@@deriving yojson]
 
-(* run-3vat run-xda7: the bounded planner-led discovery request. *)
-type discover_args = {
-  site : string;
-  goal : string option;
-  max_turns : int option;
-  max_steps : int option;
-  deadline_s : int option;
-  max_cost : float option;
-}
-[@@deriving yojson]
-
 (* ---------- Per-command results ---------- *)
 
 type tab_counts = { open_ : int; [@json.key "open"] cap : int } [@@deriving yojson]
@@ -928,6 +918,7 @@ type status_result = {
   version : string;
   pid : int option; [@json.null]
   headed : bool;
+  learning : Yojson.Safe.t option;
   key_present : bool;
 }
 [@@deriving yojson]
@@ -1128,6 +1119,7 @@ type run_script = {
 [@@deriving yojson]
 
 type run_procedure = {
+  revision : string option; [@json.default None]
   slug : string;
   site : string;
   planned : bool;
@@ -1146,10 +1138,23 @@ type run_procedure = {
    [handoff] or [fail] — with the trigger it was taken at and what it cost. L32's planner
    is Luna, so [usage] is the tokens and provider-reported cost summed across both
    calls if a correction was needed; absent provider cost contributes zero. *)
+type planner_step = {
+  non_repeatable : bool; [@json.default false]
+  n : int;
+  command : string;
+  target : trace_target option;
+  text : string option;
+  after : after;
+  elapsed_ms : int;
+  error : string option;
+}
+[@@deriving yojson]
+
 type planner_turn = {
   n : int;
   trigger : string;
   answer : string;
+  steps : planner_step list; [@json.default []]
   reason : string option;
   usage : run_usage option; [@json.null]
 }
@@ -1167,6 +1172,7 @@ type run_result = {
   mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
   proposals : string list;
+  installed : string list; [@json.default []]
   collected : int;
   data : Yojson.Safe.t;
   model_calls : int;
@@ -1299,7 +1305,6 @@ type command =
   | Resume of tab_args
   | Drive of run_args
   | Downloads of tab_args
-  | Discover of discover_args
   | Net of net_args
   | Net_body of net_entry_args
   | Net_request of net_entry_args
@@ -1335,7 +1340,6 @@ let command_name = function
   | Resume _ -> "resume"
   | Drive _ -> "drive"
   | Downloads _ -> "downloads"
-  | Discover _ -> "discover"
   | Net _ -> "net"
   | Net_body _ -> "net_body"
   | Net_request _ -> "net_request"
@@ -1371,7 +1375,6 @@ let args_to_json = function
   | Resume args -> yojson_of_tab_args args
   | Drive args -> yojson_of_run_args args
   | Downloads args -> yojson_of_tab_args args
-  | Discover args -> yojson_of_discover_args args
   | Net args -> yojson_of_net_args args
   | Net_body args | Net_request args -> yojson_of_net_entry_args args
   | Upload args -> yojson_of_upload_args args
@@ -1416,7 +1419,6 @@ let command_of_args ~cmd args =
   | "resume" -> with_args tab_args_of_yojson (fun args -> Resume args)
   | "drive" -> with_args run_args_of_yojson (fun args -> Drive args)
   | "downloads" -> with_args tab_args_of_yojson (fun args -> Downloads args)
-  | "discover" -> with_args discover_args_of_yojson (fun args -> Discover args)
   | "net" -> with_args net_args_of_yojson (fun args -> Net args)
   | "net_body" -> with_args net_entry_args_of_yojson (fun args -> Net_body args)
   | "net_request" -> with_args net_entry_args_of_yojson (fun args -> Net_request args)
@@ -1473,3 +1475,66 @@ let decode_request json =
   let* args = required "request" "args" fields in
   let* command = command_of_args ~cmd args in
   Ok { command }
+
+(* map-7xrq map-3qag: reuse the public action protocol, never a JS escape hatch. *)
+type planner_action = command
+
+let planner_action_of_yojson json =
+  Result.bind (decode_request json) (fun request ->
+      match request.command with
+      | Click _ | Fill _ | Press _ | Scroll _ | Nav _ -> Ok request.command
+      | _ -> Error "continue accepts only click, fill, press, scroll and nav")
+
+let yojson_of_planner_action command = encode_request { command }
+
+let check_planner_action (page : snapshot) action =
+  let named index = List.exists (fun (row : row) -> row.index = index) page.rows in
+  let row snapshot index =
+    if snapshot <> page.snapshot then Error "continue action names a different snapshot"
+    else if not (named index) then Error "continue action names no offered row"
+    else Ok ()
+  in
+  let same_tab tab check =
+    if tab <> page.tab then Error "continue action names a different tab" else check ()
+  in
+  let host url =
+    match String.index_opt url ':' with
+    | Some i when i + 3 <= String.length url && String.sub url i 3 = "://" ->
+        let scheme = String.lowercase_ascii (String.sub url 0 i) in
+        let rest = String.sub url (i + 3) (String.length url - i - 3) in
+        let stop =
+          List.fold_left
+            (fun stop c ->
+              match String.index_opt rest c with Some i -> min stop i | None -> stop)
+            (String.length rest) [ '/'; '?'; '#' ]
+        in
+        let authority = String.sub rest 0 stop in
+        if
+          (scheme = "http" || scheme = "https")
+          && authority <> ""
+          && not (String.contains authority '@')
+        then Some (String.lowercase_ascii authority)
+        else None
+    | _ -> None
+  in
+  match action with
+  | Click args -> same_tab args.tab (fun () -> row args.snapshot args.index)
+  | Fill args -> same_tab args.tab (fun () -> row args.snapshot args.index)
+  | Press args ->
+      same_tab args.tab (fun () ->
+          match args.index with
+          | Some index -> row args.snapshot index
+          | None -> Error "continue press must name an offered row")
+  | Scroll args ->
+      same_tab args.tab (fun () ->
+          match args.index with
+          | Some index when not (named index) ->
+              Error "continue scroll names no offered row"
+          | _ -> Ok ())
+  | Nav args ->
+      same_tab args.tab (fun () ->
+          match (host page.url, host args.url) with
+          | Some before, Some after when before = after -> Ok ()
+          | _ ->
+              Error "continue nav must stay on the current HTTP(S) site without userinfo")
+  | _ -> Error "continue accepts only click, fill, press, scroll and nav"

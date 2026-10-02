@@ -1,0 +1,18 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,50000)}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.018138000996259507,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps?hl=en",
+      "title": "Google Maps",
+      "text": "Search Google Maps\n\n\n\n\nSaved\n\nRecents\n\nGet app\n\t"
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

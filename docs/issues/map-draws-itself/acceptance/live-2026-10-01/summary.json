@@ -1,0 +1,340 @@
+{
+  "story": "L53",
+  "campaign": "2026-10-01 frozen repeatable live campaign",
+  "acceptance_passed": false,
+  "frozen_binary": {
+    "path": "/home/ribelo/projects/ribelo/leash/_build_l53_live/default/packages/leash/bin/main.exe",
+    "sha256": "5800430639fbb9a50c5f758c034036239511d1d0fc01cf2874d9be750efd5fdc",
+    "head_and_embedded_commit": "b2e1b915bbd1fa43fc09e5a1346d0a0245619562",
+    "built_at": "2026-10-01T22:00:59+02:00",
+    "exact_dirty_build_source_snapshot_available": false,
+    "source_uncertainty": "Uncommitted integrated source was not snapshotted before build. Later diff is not build input and has been removed. Binary frozen throughout; does not claim latest safety-fixed tree."
+  },
+  "isolation": {
+    "private_xdg": true,
+    "private_profile": true,
+    "private_socket": true,
+    "no_seeded_playbooks": true,
+    "learning_mode": "auto",
+    "required_successes": 2,
+    "credential_source": "secret-env ai --",
+    "headless_evidence": "Main /proc argv headless=new and remote-debugging-pipe; config headless=true; independent zero-model startup reports HeadlessChrome/152.0.0.0"
+  },
+  "cost_scope": "Drive result model meter only. Learning compiler runs after result meter finalization; its usage/cost is not included and Info usage logging is filtered by the Warn journal. Do not treat these as total campaign spend.",
+  "gates": [
+    {
+      "gate": "books",
+      "evidence_directory": "books-r6",
+      "acceptance_passed": false,
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 2,
+          "model_calls_by_kind": {
+            "operator": 2
+          },
+          "mission_cost_usd": 0.000434154,
+          "reported_cost_usd": 0.000434154,
+          "cost_unreported": 0,
+          "elapsed_s": 1.6273853479942773,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 2,
+          "model_calls_by_kind": {
+            "operator": 2
+          },
+          "mission_cost_usd": 0.000434154,
+          "reported_cost_usd": 0.000434154,
+          "cost_unreported": 0,
+          "elapsed_s": 28.146463115001097,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 3,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 2,
+          "model_calls_by_kind": {
+            "operator": 2
+          },
+          "mission_cost_usd": 0.000434154,
+          "reported_cost_usd": 0.000434154,
+          "cost_unreported": 0,
+          "elapsed_s": 29.160129196003254,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 4,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 2,
+          "model_calls_by_kind": {
+            "operator": 2
+          },
+          "mission_cost_usd": 0.000434154,
+          "reported_cost_usd": 0.000434154,
+          "cost_unreported": 0,
+          "elapsed_s": 29.22080608700344,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        }
+      ],
+      "learning_compiler_warnings": [
+        {
+          "line": 1,
+          "message": "learning: learning compile dropped: every navigation needs an explicit the page is <kind> until expectation"
+        },
+        {
+          "line": 2,
+          "message": "learning: learning compile dropped: every navigation needs an explicit the page is <kind> until expectation"
+        },
+        {
+          "line": 3,
+          "message": "learning: learning compile dropped: every navigation needs an explicit the page is <kind> until expectation"
+        }
+      ],
+      "failures": [
+        "After two independently successful missions: no actual generated draft in private proposed store",
+        "Draft lacks provenance of two successful traces",
+        "Generated draft is not classified repeatable with replay gate",
+        "Third mission: no JEV-selected generated draft with nonempty passing expectations",
+        "Third mission: successful replay did not install and report an actual playbook",
+        "Fourth mission: installed procedure was not actually used with passing expectations",
+        "Fourth mission: lower fully-reported model cost than both on-the-fly baselines not demonstrated",
+        "Installed playbook lacks replay-gate provenance"
+      ],
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true
+      }
+    },
+    {
+      "gate": "maps",
+      "evidence_directory": "maps-r3",
+      "acceptance_passed": false,
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 12,
+          "model_calls_by_kind": {
+            "text_helper": 1,
+            "operator": 11
+          },
+          "mission_cost_usd": 0.0014680539999999999,
+          "reported_cost_usd": 0.0014680539999999999,
+          "cost_unreported": 0,
+          "elapsed_s": 12.15217482400476,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 7,
+          "model_calls_by_kind": {
+            "text_helper": 1,
+            "operator": 6
+          },
+          "mission_cost_usd": 0.001252024,
+          "reported_cost_usd": 0.001252024,
+          "cost_unreported": 0,
+          "elapsed_s": 6.691275019999011,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 3,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 7,
+          "model_calls_by_kind": {
+            "text_helper": 1,
+            "operator": 6
+          },
+          "mission_cost_usd": 0.0012454920000000002,
+          "reported_cost_usd": 0.0012454920000000002,
+          "cost_unreported": 0,
+          "elapsed_s": 50.55510920899542,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 4,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 6,
+          "model_calls_by_kind": {
+            "text_helper": 1,
+            "operator": 5
+          },
+          "mission_cost_usd": 0.000971374,
+          "reported_cost_usd": 0.000971374,
+          "cost_unreported": 0,
+          "elapsed_s": 5.8588908100064145,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        }
+      ],
+      "learning_compiler_warnings": [
+        {
+          "line": 1,
+          "message": "learning: learning compile dropped: invalid response: response.choices.[0]: choice.message: message.content: expected string, got null, got {\"id\":\"gen-1790885863-WGLoAFmJ4FOlmrVmfKfD\",\"object\":\"chat.completion\",\"created\":1790885863,\"model\":\"openai/gpt-6-luna\",\"provider\":\"OpenAI\",\"system_fingerprint\":null,\"service_tier\":\"default\",\"choices\"..."
+        }
+      ],
+      "failures": [
+        "After two independently successful missions: no actual generated draft in private proposed store",
+        "Draft lacks provenance of two successful traces",
+        "Generated draft is not classified repeatable with replay gate",
+        "Third mission: no JEV-selected generated draft with nonempty passing expectations",
+        "Third mission: successful replay did not install and report an actual playbook",
+        "Fourth mission: installed procedure was not actually used with passing expectations",
+        "Installed playbook lacks replay-gate provenance"
+      ],
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true
+      }
+    },
+    {
+      "gate": "flights",
+      "evidence_directory": "flights-r3",
+      "acceptance_passed": false,
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 8,
+          "model_calls_by_kind": {
+            "operator": 8
+          },
+          "mission_cost_usd": 0.00139419,
+          "reported_cost_usd": 0.00139419,
+          "cost_unreported": 0,
+          "elapsed_s": 11.094565212995803,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 5,
+          "model_calls_by_kind": {
+            "operator": 5
+          },
+          "mission_cost_usd": 0.001172766,
+          "reported_cost_usd": 0.001172766,
+          "cost_unreported": 0,
+          "elapsed_s": 6.038924464999582,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 3,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 3,
+          "model_calls_by_kind": {
+            "operator": 3
+          },
+          "mission_cost_usd": 0.000629286,
+          "reported_cost_usd": 0.000629286,
+          "cost_unreported": 0,
+          "elapsed_s": 42.76326496600086,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        },
+        {
+          "number": 4,
+          "status": "done",
+          "exit_code": 0,
+          "independent_goal_verified": true,
+          "model_calls": 7,
+          "model_calls_by_kind": {
+            "operator": 7
+          },
+          "mission_cost_usd": 0.001346478,
+          "reported_cost_usd": 0.001346478,
+          "cost_unreported": 0,
+          "elapsed_s": 47.368540349001705,
+          "proposals": 0,
+          "installed": 0,
+          "actual_procedures": 0
+        }
+      ],
+      "learning_compiler_warnings": [
+        {
+          "line": 1,
+          "message": "learning: learning compile dropped: every navigation needs an explicit the page is <kind> until expectation"
+        },
+        {
+          "line": 2,
+          "message": "learning: learning compile dropped: invalid response: response.choices.[0]: choice.message: message.content: expected string, got null, got {\"id\":\"gen-1790885908-otuPget2bAGWA56aTFut\",\"object\":\"chat.completion\",\"created\":1790885908,\"model\":\"openai/gpt-6-luna\",\"provider\":\"OpenAI\",\"system_fingerprint\":null,\"service_tier\":\"default\",\"choices\"..."
+        }
+      ],
+      "failures": [
+        "After two independently successful missions: no actual generated draft in private proposed store",
+        "Draft lacks provenance of two successful traces",
+        "Generated draft is not classified repeatable with replay gate",
+        "Third mission: no JEV-selected generated draft with nonempty passing expectations",
+        "Third mission: successful replay did not install and report an actual playbook",
+        "Fourth mission: installed procedure was not actually used with passing expectations",
+        "Fourth mission: lower fully-reported model cost than both on-the-fly baselines not demonstrated",
+        "Installed playbook lacks replay-gate provenance"
+      ],
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true
+      }
+    }
+  ],
+  "nonrepeatable_form": {
+    "status": "held",
+    "missions_executed": 0,
+    "reason": "Delegating agent suspended nonrepeatable acceptance pending safety fixes/approval; frozen binary predates fixes."
+  },
+  "diagnostic": {
+    "path": "browser-diagnostic",
+    "startup_passed": true,
+    "model_calls": 0,
+    "acceptance_passed": false
+  }
+}

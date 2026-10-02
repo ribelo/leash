@@ -141,6 +141,8 @@ let loads ?title fake =
 let lifecycle () =
   rig (fun _ _ _ tabs fake ->
       loads (fake ());
+      Fake.on_method (fake ()) "Target.getTargetInfo" (fun _ ->
+          document ~title:"Example" ~url:"https://example.com");
       let info =
         result
           (request tabs "alice"
@@ -786,6 +788,43 @@ let second_instance () =
             "svc-5wm8 the first instance still answers after the refusal" true
             (get "ok" reply = `Bool true)))
 
+let non_web_tab_labels () =
+  rig (fun _ _ _ tabs fake ->
+      let agent =
+        result (request tabs "alice" (P.New { url = None; label = None })) |> tab
+      in
+      Fake.emit (fake ()) ~method_:"Target.attachedToTarget"
+        ~params:
+          (obj
+             [
+               ("sessionId", str "human-session");
+               ( "targetInfo",
+                 obj
+                   [
+                     ("targetId", str "human-target");
+                     ("type", str "page");
+                     ("url", str "chrome://newtab/");
+                     ("title", str "New Tab");
+                   ] );
+             ]);
+      let rec await n =
+        if n = 0 then Alcotest.fail "kind-a7uy human newtab was not adopted"
+        else
+          match get "tabs" (result (request tabs "alice" P.List_tabs)) with
+          | `List rows when List.length rows = 2 ->
+              List.iter
+                (fun row ->
+                  Alcotest.(check bool)
+                    "kind-a7uy about:blank and human chrome://newtab have no kind" true
+                    (field "page_kind" row = None))
+                rows
+          | _ ->
+              Eio.Fiber.yield ();
+              await (n - 1)
+      in
+      await 1000;
+      ignore (result (request tabs "alice" (P.Close { tab = agent }))))
+
 let human () =
   rig (fun _ _ _ tabs fake ->
       let agent =
@@ -1028,14 +1067,8 @@ let snapshot () =
       let first = snap () in
       Alcotest.(check bool) "tab-of0i settled" true (get "settled" first = `Bool true);
       Alcotest.(check bool)
-        "kind-tdrv snap shows a page kind and its source" true
-        (match get "page_kind" first with
-        | `Assoc fields -> (
-            match (List.assoc_opt "name" fields, List.assoc_opt "source" fields) with
-            | Some (`String name), Some (`String source) ->
-                name <> "" && (source = "declared" || source = "inferred")
-            | _ -> false)
-        | _ -> false);
+        "kind-a7uy blank snapshot has no page kind" true
+        (field "page_kind" first = None);
       Alcotest.(check int)
         "tab-tmoc field-vji1 visible rows including cross-origin frame" 3
         (get "total" first |> function `Int n -> n | _ -> -1);
@@ -1254,7 +1287,7 @@ let drive_dry_run () =
         |> Yojson.Safe.to_string
       in
       let reply =
-        Leash.Control.handle ~model:"fixture-model" ~decide tabs wire
+        Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide tabs wire
         |> Yojson.Safe.from_string |> P.decode_reply
       in
       let reply =
@@ -1868,8 +1901,7 @@ let decide_done ~deadline:_ (_ : Jev.request) =
 (* L32 run-w7ke: the planner answer a test scripts; production's Luna is exercised in
    test/planner_test.ml, and the run's own wiring for a proposal here. *)
 let levels_with
-    ?(plan =
-      Run.{ answer = Fail "nothing left to plan"; expect = []; usage = None; pages = [] })
+    ?(plan = Run.{ answer = Fail "nothing left to plan"; expect = []; usage = None })
     answers questions =
   let remaining = ref answers in
   Run.
@@ -1912,7 +1944,7 @@ let levels_with
       plan = (fun ~deadline:_ _ -> Ok plan);
     }
 
-let run_wire ?(who = "alice") ?expect ?tab mission =
+let run_wire ?(who = "alice") ?expect ?tab ?max_steps ?deadline_s mission =
   P.encode_request
     {
       command =
@@ -1920,10 +1952,10 @@ let run_wire ?(who = "alice") ?expect ?tab mission =
           {
             tab;
             mission;
-            max_steps = None;
+            max_steps;
             start_url = None;
             max_procedures = None;
-            deadline_s = None;
+            deadline_s;
             dry_run = None;
             expect;
             out = None;
@@ -2236,7 +2268,6 @@ let drive_temporary_cleanup () =
             answer = Handoff "Please sign in with your credentials";
             expect = [];
             usage = None;
-            pages = [];
           }
       in
       let levels = levels_with ~plan [ "automationexercise.com"; "DONE" ] (ref []) in
@@ -2255,7 +2286,104 @@ let drive_temporary_cleanup () =
         "daily-9ggi human tab preserved" true
         (match listed with
         | `List [ tab ] -> get "with_human" tab = `Bool true
-        | _ -> false))
+        | _ -> false);
+      ignore (result (request tabs "alice" (P.Resume { tab = tab (get "final" body) })));
+      Alcotest.(check bool)
+        "map-puhi owned handoff closes after resume" true
+        (get "tabs" (result (request tabs "alice" P.List_tabs)) = `List []))
+
+(* L53 map-puhi: drive owns only tabs it opened, including terminal limits and handoffs. *)
+let drive_tab_lifecycle () =
+  List.iter
+    (fun supplied ->
+      List.iter
+        (fun outcome ->
+          rig (fun env sw _ tabs fake ->
+              let f = fake () in
+              page_script f (fixture "unlabelled-controls-chrome.json") "Catalogue";
+              document_at ~title:"Catalogue" ~url:product_url f;
+              let supplied_tab =
+                if supplied then
+                  Some
+                    (tab
+                       (result
+                          (request tabs "alice"
+                             (P.New { url = Some product_url; label = None }))))
+                else None
+              in
+              let installed =
+                if outcome = "handoff" then
+                  [
+                    (match
+                       Leash.Playbook.load ~caps:(Ox_test.powerbox ())
+                         "../examples/playbooks/automationexercise.com"
+                     with
+                    | Ok book -> book
+                    | Error why -> Alcotest.fail why);
+                  ]
+                else []
+              in
+              let plan =
+                Run.{ answer = Handoff "Please inspect this"; expect = []; usage = None }
+              in
+              let levels =
+                levels_with ~plan [ "automationexercise.com"; "DONE" ] (ref [])
+              in
+              let decide ~deadline request =
+                if outcome = "error" then
+                  Error
+                    (P.make_error
+                       (Result.get_ok (P.Error_code.of_string "model-unavailable"))
+                       ~message:"provider stopped")
+                else (
+                  if outcome = "deadline" then Eio.Time.sleep env#clock 2.;
+                  Result.map
+                    (fun (d : Jev.decision) ->
+                      if outcome = "limit" then
+                        {
+                          d with
+                          operation = Result.get_ok (P.Operation.of_string "scroll_down");
+                        }
+                      else if outcome = "blocked" then
+                        {
+                          d with
+                          operation = Result.get_ok (P.Operation.of_string "blocked");
+                        }
+                      else d)
+                    (decide_done ~deadline request))
+              in
+              let body =
+                with_ticking_clock env sw (fun () ->
+                    Leash.Control.handle ~model:"fixture-model" ~installed ~levels ~decide
+                      tabs
+                      (run_wire ?tab:supplied_tab ~max_steps:1
+                         ~deadline_s:(if outcome = "deadline" then 1 else 3600)
+                         "Inspect https://automationexercise.com/product_details/1")
+                    |> Yojson.Safe.from_string |> P.decode_reply |> decoded)
+              in
+              Alcotest.(check string)
+                ("map-puhi ending " ^ outcome)
+                outcome
+                (match get "status" body with `String name -> name | _ -> "");
+              let listing () =
+                match get "tabs" (result (request tabs "alice" P.List_tabs)) with
+                | `List tabs -> tabs
+                | _ -> assert false
+              in
+              Alcotest.(check int)
+                "only supplied or handed-off tab remains"
+                (if supplied || outcome = "handoff" then 1 else 0)
+                (List.length (listing ()));
+              if outcome = "handoff" then (
+                ignore
+                  (result
+                     (request tabs "alice" (P.Resume { tab = tab (get "final" body) })));
+                Alcotest.(check int)
+                  "resume closes only drive-owned handoff"
+                  (if supplied then 1 else 0)
+                  (List.length (listing ())))))
+        [ "done"; "blocked"; "error"; "limit"; "deadline"; "handoff" ])
+    [ false; true ]
 
 let run_refusals () =
   rig (fun _ _ _ tabs fake ->
@@ -2404,12 +2532,13 @@ let run_proposal () =
                     ];
                   expect = [ "the page is post-add" ];
                   expect_timeout_s = None;
+                  provenance = None;
                   repeat = None;
                   max_steps = None;
                   deadline_s = None;
                 }
           in
-          let plan = Run.{ answer = planned; expect = []; usage = None; pages = [] } in
+          let plan = Run.{ answer = planned; expect = []; usage = None } in
           let levels = levels_with ~plan answers questions in
           let reply =
             with_ticking_clock env sw (fun () ->
@@ -2455,118 +2584,6 @@ let run_proposal () =
 
 (* L33 run-3vat run-xda7: command enters production Tabs.run through Control,
    writes a whole proposed playbook and leaves the installed directory untouched. *)
-let discover_proposal () =
-  let state = Filename.temp_file "leash-discover" "" in
-  Sys.remove state;
-  Unix.mkdir state 0o700;
-  let previous = Sys.getenv_opt "XDG_STATE_HOME" in
-  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME" state;
-  Fun.protect
-    ~finally:(fun () ->
-      (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME"
-        (Option.value ~default:"" previous))
-    (fun () ->
-      rig (fun env sw _ tabs fake ->
-          let f = fake () in
-          page_script f (fixture "unlabelled-controls-chrome.json") modal_text;
-          document_at ~title:"Blue Top" ~url:product_url f;
-          let proc =
-            Leash.Playbook.
-              {
-                slug = "browse";
-                description = "Browse page";
-                args = None;
-                steps = [ Goal { goal = "Look at page"; hint = None; until = None } ];
-                expect = [ "the page is product" ];
-                expect_timeout_s = None;
-                repeat = None;
-                max_steps = None;
-                deadline_s = None;
-              }
-          in
-          let plan =
-            Run.
-              {
-                answer = Procedure proc;
-                expect = [];
-                usage = None;
-                pages =
-                  [
-                    Leash.Playbook.
-                      {
-                        name = "product";
-                        description = "Product page";
-                        url_pattern =
-                          Some "https://automationexercise.com/product_details/*";
-                        text_marker = None;
-                      };
-                  ];
-              }
-          in
-          let questions = ref [] in
-          let pending =
-            ref
-              [
-                plan;
-                Run.{ answer = Fail "explored"; expect = []; usage = None; pages = [] };
-              ]
-          in
-          let base = levels_with ~plan [ "browse" ] questions in
-          let levels =
-            {
-              base with
-              Run.plan =
-                (fun ~deadline:_ _ ->
-                  match !pending with
-                  | [] -> Alcotest.fail "too many discovery planner turns"
-                  | first :: rest ->
-                      pending := rest;
-                      Ok first);
-            }
-          in
-          let command =
-            P.Discover
-              {
-                site = product_url;
-                goal = Some "Learn product page";
-                max_turns = Some 4;
-                max_steps = Some 10;
-                deadline_s = Some 180;
-                max_cost = Some 1.;
-              }
-          in
-          let reply =
-            with_ticking_clock env sw (fun () ->
-                Leash.Control.handle ~model:"fixture-model" ~levels ~decide:decide_done
-                  tabs
-                  (P.encode_request { command } |> Yojson.Safe.to_string))
-            |> Yojson.Safe.from_string |> P.decode_reply
-          in
-          let body = decoded reply in
-          (match get "proposals" body with
-          | `List [ `String path ] ->
-              Alcotest.(check bool)
-                "full playbook proposal exists" true (Sys.file_exists path);
-              (* A proposal is one JSON file, not a playbook directory. *)
-              let proposed =
-                match Leash.Playbook.of_json ~file:path (Yojson.Safe.from_file path) with
-                | Ok book -> book.playbook
-                | Error why -> Alcotest.fail why
-              in
-              Alcotest.(check int) "proposed page kinds" 1 (List.length proposed.pages);
-              Alcotest.(check int)
-                "verified procedure" 1
-                (List.length proposed.procedures)
-          | _ -> Alcotest.fail "discovery omitted complete proposal");
-          Alcotest.(check bool)
-            "not installed" false
-            (Sys.file_exists
-               (Filename.concat
-                  (Filename.concat state "leash/playbooks")
-                  "automationexercise.com.json"))))
-
-(* hard-6eei hard-92ik hard-s719 hard-tsva hard-t6cq hard-owci: an event
-   emitted before Chrome answers navigation still returns an answerable tab. *)
 let dialog_interruptions () =
   rig (fun _ sw _ tabs fake ->
       let fake = fake () in
@@ -3415,10 +3432,46 @@ let durable_drive_traces () =
             | Ok trace -> trace
             | Error why -> Alcotest.fail why
           in
+          (* trace-qe8c: Chrome's pushed tab-strip title is not its document title. *)
+          Fake.on_method f "Runtime.evaluate" (fun request ->
+              match get "expression" (get "params" request) with
+              | `String expression when contains expression "leash-operator-read" ->
+                  let value =
+                    match operator_observation ~text:modal_text with
+                    | `Assoc fields ->
+                        `Assoc
+                          (("title", str "Blue Top")
+                          :: ("url", str product_url)
+                          :: List.remove_assoc "title" (List.remove_assoc "url" fields))
+                    | value -> value
+                  in
+                  obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]
+              | _ ->
+                  page_evaluate ~text:modal_text
+                    (fixture "unlabelled-controls-chrome.json")
+                    request);
+          Fake.on_method f "Target.getTargets" (fun _ ->
+              obj
+                [
+                  ( "targetInfos",
+                    `List
+                      [ get "targetInfo" (document ~title:"Blue Top" ~url:product_url) ]
+                  );
+                ]);
+          Fake.emit f ~method_:"Target.targetInfoChanged"
+            ~params:
+              (document ~title:"automationexercise.com/product_details/1" ~url:product_url);
+          Eio.Fiber.yield ();
           let body =
             invoke ~traces:store (run_wire ~tab:h "inspect the current page") |> decoded
           in
           let trace = saved body in
+          Alcotest.(check bool)
+            "trace-qe8c final reply has document title" true
+            (get "title" (get "final" body) = str "Blue Top");
+          Alcotest.(check (option string))
+            "trace-qe8c final trace has document title" (Some "Blue Top")
+            (Option.map (fun (p : P.Trace.trace_page) -> p.title) trace.final);
           Alcotest.(check string)
             "trace-qe8c public on-the-fly success" "done" trace.outcome;
           Alcotest.(check string)
@@ -3553,6 +3606,8 @@ let () =
             shared_handle_over_socket;
           Alcotest.test_case "tab-x4v0 large text over socket" `Quick
             large_text_over_socket;
+          Alcotest.test_case "kind-a7uy kind-tdrv non-web tab labels" `Quick
+            non_web_tab_labels;
           Alcotest.test_case "human-origin shutdown" `Quick human;
           Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
           Alcotest.test_case "tab-bw4j pseudo-icon click safety" `Quick pseudo_icon_hit;
@@ -3563,10 +3618,10 @@ let () =
             run_mission;
           Alcotest.test_case "daily-9ggi temporary drive tabs" `Quick
             drive_temporary_cleanup;
+          Alcotest.test_case "map-puhi all drive tab lifecycles" `Quick
+            drive_tab_lifecycle;
           Alcotest.test_case "run-fwl8 run refusals" `Quick run_refusals;
           Alcotest.test_case "run-rq6i run-m0r8 planner proposal" `Quick run_proposal;
-          Alcotest.test_case "run-3vat run-xda7 discover proposal" `Quick
-            discover_proposal;
         ] );
       ( "L37 scripts",
         [

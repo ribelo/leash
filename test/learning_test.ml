@@ -1,0 +1,1222 @@
+(* map-0by0 map-w62c map-cnee map-bjon map-6xcy map-6m3c map-2l5q
+   map-tval map-rz4w map-yzqp map-wm4v map-nh2e map-itbt map-pd0q
+   map-b3kk map-igfx map-2ga3 map-ptnk map-lnwr map-h5ym:
+   fake compiler, durable evidence, temp XDG; no model or Chrome. *)
+module L = Leash.Learning
+module B = Leash.Playbook
+module C = Leash.Config
+module T = Leash.Traces
+module P = Leash.Protocol
+module Trace = P.Trace
+
+let caps = Ox_test.powerbox ()
+let ok = function Ok x -> x | Error why -> Alcotest.fail why
+let bool name value = Alcotest.(check bool) name true value
+
+let rec remove path =
+  match Unix.lstat path with
+  | exception Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+  | st when st.Unix.st_kind = Unix.S_DIR ->
+      Array.iter (fun name -> remove (Filename.concat path name)) (Sys.readdir path);
+      Unix.rmdir path
+  | _ -> Unix.unlink path
+
+let temp f =
+  let dir = Filename.temp_file "leash-map-" "" in
+  Unix.unlink dir;
+  Unix.mkdir dir 0o700;
+  let keys = [ "XDG_CONFIG_HOME"; "XDG_STATE_HOME" ] in
+  let old = List.map (fun k -> (k, Sys.getenv_opt k)) keys in
+  List.iter (fun key -> (Unix.putenv [@alert "-unsafe_multidomain"]) key dir) keys;
+  Fun.protect
+    ~finally:(fun () ->
+      List.iter
+        (fun (k, v) ->
+          (Unix.putenv [@alert "-unsafe_multidomain"]) k (Option.value ~default:"" v))
+        old;
+      remove dir)
+    (fun () -> f dir)
+
+let snap () =
+  P.
+    {
+      snapshot = ok (Snapshot_id.of_string "s_test");
+      tab = ok (Handle.of_string "t_test");
+      url = "https://example.com/catalog";
+      title = "Catalog";
+      page_kind = None;
+      rows = [];
+      total = 0;
+      offset = 0;
+      truncated = false;
+      settled = true;
+      source = Ax;
+      reason = None;
+      dialog = None;
+    }
+
+let result ?(status = "done") ?(procedures = []) () =
+  P.
+    {
+      status = ok (Run_status.of_string status);
+      site = Some "example.com";
+      procedures;
+      mission_expectations = [];
+      playbook_choices = [];
+      planner_turns = [];
+      proposals = [];
+      installed = [];
+      collected = 0;
+      data = `Null;
+      model_calls = 0;
+      model_cost = Some 0.;
+      operator_steps = [];
+      operator_state = None;
+      output_kinds = [];
+      final = snap ();
+      reason = None;
+      trace_path = None;
+    }
+
+let entry ?revision ?(attempts = 1) ?(outcome = "verified") slug =
+  P.
+    {
+      revision;
+      slug;
+      site = "example.com";
+      planned = false;
+      attempts;
+      choice = { key = slug; probabilities = `Assoc []; confidence = 1.; usage = None };
+      drives = [];
+      scripts = [];
+      expectations =
+        [
+          {
+            sentence = "the page is catalog";
+            checker = "page_kind";
+            passed = outcome = "verified";
+            score = None;
+          };
+        ];
+      outcome;
+      elapsed_ms = 1;
+      reason = None;
+    }
+
+let step ?text ?(operation = "click") ?(label = "View") () =
+  Trace.
+    {
+      n = 1;
+      non_repeatable = false;
+      operation;
+      source = "operator";
+      error = None;
+      target = Some { role = "button"; label };
+      text;
+      operations = [];
+      targets = [];
+      after = { url = "https://example.com/catalog"; title = "Catalog" };
+      elapsed_ms = 1;
+    }
+
+let trace ?(kinds = [ "catalog" ]) ?(steps = [ step () ]) ?(outcome = "done") time =
+  Trace.
+    {
+      version = 1;
+      time = T.timestamp time;
+      site = "example.com";
+      mission = "inspect catalog";
+      outcome;
+      cost = Some 0.;
+      duration_ms = 1;
+      model_calls = 0;
+      start_url = Some "https://example.com/catalog";
+      page_kind_path = kinds;
+      inferred_pages =
+        [ { name = "catalog"; url_pattern = "https://example.com/catalog" } ];
+      compiled = false;
+      procedures = [];
+      steps;
+      final = Some { url = "https://example.com/catalog"; title = "Catalog" };
+      error_code = None;
+    }
+
+let page ?(repeatable = true) () =
+  B.
+    {
+      name = "catalog";
+      description = "catalog";
+      url_pattern = Some "https://example.com/catalog*";
+      text_marker = None;
+      repeatable;
+    }
+
+let procedure ?(slug = "inspect") ?(goal = "Click the button named View") ?(args = [])
+    ?(until = [ "the page is catalog" ]) () =
+  B.
+    {
+      slug;
+      description = "inspect catalog";
+      steps = [ Goal { goal; hint = None; until = Some until } ];
+      expect = [ "the page is catalog" ];
+      args = Some args;
+      provenance = None;
+      expect_timeout_s = None;
+      repeat = None;
+      max_steps = None;
+      deadline_s = None;
+    }
+
+let book ?(repeatable = true) proc =
+  B.
+    {
+      site = "example.com";
+      entry = "https://example.com/catalog";
+      description = "catalog";
+      pages = [ page ~repeatable () ];
+      procedures = [ proc ];
+      scripts = None;
+      shapes = None;
+    }
+
+let answer ?(confirm = true) proc =
+  `Assoc [ ("procedure", B.yojson_of_procedure proc); ("confirm", `Bool confirm) ]
+
+let install_authored ?(repeatable = true) proc =
+  ignore
+    (ok
+       (B.accept ~caps
+          (ok (B.propose ~book:(book ~repeatable proc) ~caps ~site:"example.com" proc))))
+
+let save store trace = ok (T.write store trace)
+
+let after learning store trace result =
+  let file = save store trace in
+  L.after_trace learning ~store ~file trace result
+
+let store root = T.create ~caps ~root:(Filename.concat root "evidence") ()
+let configure mode = { C.default_learning with mode }
+let drafts learning = L.drafts learning ~site:"example.com" ~kind:(Some "catalog")
+
+let trial learning ?attempts ?outcome slug =
+  entry ~revision:(List.hd (drafts learning)).revision ?attempts ?outcome slug
+
+let defaults () =
+  Alcotest.(check int) "map-w62c successes" 2 C.default.learning.successes;
+  Alcotest.(check string)
+    "map-0by0 draft default" "draft"
+    (C.Learning_mode.to_string C.default.learning.mode);
+  List.iter
+    (fun field ->
+      bool "map-0by0 rejected invalid config"
+        (Result.is_error (C.t_of_yojson (`Assoc [ ("learning", `Assoc [ field ]) ]))))
+    [
+      ("mode", `String "unsafe");
+      ("successes", `Int 0);
+      ("max_tries", `Int 0);
+      ("retire_after", `Int (-1));
+      ("planner_actions", `Int 21);
+    ]
+
+let pure () =
+  Alcotest.(check (list string))
+    "map-cnee normalize kinds" [ "catalog"; "detail" ]
+    (L.path [ "unknown"; "catalog"; "catalog"; ""; "detail" ]);
+  bool "map-nh2e typed values may differ"
+    (L.agreement
+       [
+         trace ~steps:[ step ~text:"one" () ] 1.; trace ~steps:[ step ~text:"two" () ] 2.;
+       ]);
+  bool "map-nh2e labels must agree"
+    (not (L.agreement [ trace 1.; trace ~steps:[ step ~label:"Delete" () ] 2. ]));
+  bool "map-nh2e configured one-trace threshold can agree" (L.agreement [ trace 1. ]);
+  bool "map-yzqp normal catalog repeatable" (fst (L.classify [ page () ] [ trace 1. ]));
+  bool "map-wm4v authored false wins"
+    (not (fst (L.classify [ page ~repeatable:false () ] [ trace 1. ])));
+  bool "map-yzqp target delete prevents replay"
+    (not (fst (L.classify [] [ trace ~steps:[ step ~label:"Delete" () ] 1. ])))
+
+let draft_compile () =
+  temp (fun root ->
+      let calls = ref 0 in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun _ ->
+            incr calls;
+            Ok (answer (procedure ())))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      Alcotest.(check int) "map-w62c wait for threshold" 0 !calls;
+      let r =
+        after learning store (trace ~kinds:[ "catalog"; "catalog" ] 2.) (result ())
+      in
+      Alcotest.(check int) "map-bjon compile once" 1 !calls;
+      Alcotest.(check int) "map-6m3c proposal written" 1 (List.length r.proposals);
+      bool "map-tval draft does not install"
+        (r.installed = [] && ok (B.list ~caps ()) = []);
+      bool "map-6m3c private proposal" ((Unix.stat (List.hd r.proposals)).st_perm = 0o600);
+      bool "map-tval draft does not offer" (drafts learning = []);
+      let proposed =
+        ok
+          (B.of_json ~file:(List.hd r.proposals)
+             (Yojson.Safe.from_file (List.hd r.proposals)))
+      in
+      let p = Option.get (List.hd proposed.playbook.procedures).provenance in
+      bool "map-2l5q durable provenance"
+        (List.length p.traces = 2 && p.gate = "replay" && p.repeatable && p.tries = 0);
+      bool "map-6m3c inferred pages persisted"
+        (List.map (fun (p : B.page) -> p.name) proposed.playbook.pages = [ "catalog" ]);
+      bool "map-bjon evidence marked compiled"
+        (List.for_all (fun file -> (ok (T.read ~caps file)).compiled) p.traces))
+
+let validation () =
+  temp (fun root ->
+      let calls = ref 0 and retry = ref false in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun request ->
+            incr calls;
+            if !calls = 1 then Ok (answer (procedure ~goal:"type {missing}" ()))
+            else (
+              retry := Yojson.Safe.Util.member "validation_errors" request <> `String "";
+              Ok (answer (procedure ()))))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      let r = after learning store (trace 2.) (result ()) in
+      bool "map-rz4w exactly one validation retry"
+        (!calls = 2 && !retry && List.length r.proposals = 1))
+
+let parameters () =
+  temp (fun root ->
+      let warnings = ref [] and calls = ref 0 in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~warn:(fun s -> warnings := s :: !warnings)
+          ~planner:(fun _ ->
+            incr calls;
+            Ok (answer (procedure ())))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace ~steps:[ step ~text:"one" () ] 1.) (result ()));
+      let r =
+        after learning store (trace ~steps:[ step ~text:"two" () ] 2.) (result ())
+      in
+      bool "map-6xcy refuse unparameterized values after bounded retry"
+        (!calls = 2 && r.proposals = [] && !warnings <> []))
+
+let replay () =
+  temp (fun root ->
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ -> Ok (answer (procedure ())))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      ignore (after learning store (trace 2.) (result ()));
+      bool "map-b3kk same first kind offers" (List.length (drafts learning) = 1);
+      bool "map-b3kk other kind never offers"
+        (L.drafts learning ~site:"example.com" ~kind:(Some "detail") = []);
+      bool "map-b3kk temporary new book"
+        (List.length (L.books learning []) = 1
+        && (List.hd (L.books learning [])).playbook.procedures = []);
+      let r =
+        after learning store (trace ~outcome:"blocked" 3.)
+          (result ~status:"blocked" ~procedures:[ trial learning "draft:inspect" ] ())
+      in
+      bool "map-igfx verified but unfinished cannot install" (r.installed = []);
+      let r =
+        after learning store (trace 4.)
+          (result ~procedures:[ trial learning "draft:inspect" ] ())
+      in
+      bool "map-igfx done replay installs without third submission"
+        (r.installed = [ "inspect" ] && drafts learning = []);
+      let installed = List.hd (ok (B.list ~caps ())) in
+      bool "map-2ga3 install remembers gate"
+        ((Option.get (List.hd installed.playbook.procedures).provenance).gate = "replay"))
+
+let tries () =
+  temp (fun root ->
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ -> Ok (answer (procedure ())))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      ignore (after learning store (trace 2.) (result ()));
+      for i = 1 to 3 do
+        ignore
+          (after learning store
+             (trace ~outcome:"blocked" (float (i + 2)))
+             (result ~status:"blocked"
+                ~procedures:[ trial learning ~outcome:"failed" "draft:inspect" ]
+                ()))
+      done;
+      bool "map-pd0q max three failed tries" (drafts learning = []);
+      bool "map-pd0q drop does not install" (ok (B.list ~caps ()) = []);
+      let retired = Filename.concat (B.proposed_directory ~caps ()) "retired" in
+      bool "map-pd0q failed evidence retained"
+        (Sys.file_exists retired && Array.length (Sys.readdir retired) = 1))
+
+let agreement_gate () =
+  temp (fun root ->
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ ->
+            Ok (answer (procedure ~goal:"Click the button named Delete" ())))
+          ()
+      in
+      let store = store root and steps = [ step ~label:"Delete" () ] in
+      ignore (after learning store (trace ~steps 1.) (result ()));
+      let r = after learning store (trace ~steps 2.) (result ()) in
+      bool "map-itbt agreement installs with no trial"
+        (r.installed = [ "inspect" ] && drafts learning = []);
+      let b = List.hd (ok (B.list ~caps ())) in
+      let p = Option.get (List.hd b.playbook.procedures).provenance in
+      bool "map-2ga3 agreement provenance" (p.gate = "agreement" && not p.repeatable))
+
+let repair () =
+  temp (fun root ->
+      install_authored (procedure ());
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ ->
+            Ok
+              (answer
+                 (procedure ~slug:"wrong-name" ~goal:"Click the button named Updated" ())))
+          ()
+      in
+      let store = store root in
+      ignore
+        (after learning store (trace ~outcome:"blocked" 1.)
+           (result ~status:"blocked"
+              ~procedures:[ entry ~attempts:2 ~outcome:"failed" "inspect" ]
+              ()));
+      let p = (List.hd (drafts learning)).procedure in
+      bool "map-ptnk repair keeps slug and waits"
+        (p.slug = "inspect" && (Option.get p.provenance).repair);
+      let unchanged =
+        after learning store (trace 1.5) (result ~procedures:[ entry "inspect" ] ())
+      in
+      bool "map-pd0q original success cannot bypass repair trial"
+        (unchanged.installed = [] && drafts learning <> []);
+      let r =
+        after learning store (trace 2.)
+          (result ~procedures:[ trial learning "draft:inspect" ] ())
+      in
+      bool "map-lnwr verified repair replaces"
+        (r.installed = [ "inspect" ] && drafts learning = []);
+      let b = List.hd (ok (B.list ~caps ())) in
+      bool "map-lnwr old procedure archived"
+        (Array.length
+           (Sys.readdir (Filename.concat (B.proposed_directory ~caps ()) "retired"))
+        = 1);
+      bool "map-lnwr replacement readable"
+        (match (List.hd b.playbook.procedures).steps with
+        | [ B.Goal g ] -> g.goal = "Click the button named Updated"
+        | _ -> false))
+
+let retire () =
+  temp (fun root ->
+      install_authored (procedure ());
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ -> Error "no repair")
+          ()
+      in
+      let store = store root in
+      for i = 1 to 5 do
+        ignore
+          (after learning store
+             (trace ~outcome:"blocked" (float i))
+             (result ~status:"blocked"
+                ~procedures:[ entry ~outcome:"failed" "inspect" ]
+                ()))
+      done;
+      bool "map-h5ym retired procedure excluded"
+        ((List.hd (ok (B.list ~caps ()))).playbook.procedures = []);
+      bool "map-h5ym retirement archived"
+        (Array.length
+           (Sys.readdir (Filename.concat (B.proposed_directory ~caps ()) "retired"))
+        = 1))
+
+let off () =
+  temp (fun root ->
+      let called = ref false in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Off)
+          ~planner:(fun _ ->
+            called := true;
+            Error "must not call")
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      ignore (after learning store (trace 2.) (result ()));
+      bool "map-0by0 off neither compiles nor persists proposals"
+        ((not !called) && not (Sys.file_exists (B.proposed_directory ~caps ()))))
+
+let permanent_invalid () =
+  temp (fun root ->
+      let count = ref 0 and warnings = ref [] in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun _ ->
+            incr count;
+            Ok (answer (procedure ~goal:"Click the button {missing}" ())))
+          ~warn:(fun why -> warnings := why :: !warnings)
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      let r = after learning store (trace 2.) (result ()) in
+      bool "map-6xcy two invalid drafts dropped with reason"
+        (!count = 2 && r.proposals = [] && !warnings <> []))
+
+let confirmation () =
+  temp (fun root ->
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ ->
+            Ok
+              (answer ~confirm:false
+                 (procedure ~goal:"Click the button named Checkout" ())))
+          ()
+      in
+      let store = store root in
+      let risky n = trace ~steps:[ step ~label:"Checkout" () ] n in
+      ignore (after learning store (risky 1.) (result ()));
+      let r = after learning store (risky 2.) (result ()) in
+      bool "map-nh2e no confirmation means no installation"
+        (r.installed = [] && r.proposals = [] && ok (B.list ~caps ()) = []))
+
+let nonrepeatable_repair () =
+  temp (fun root ->
+      install_authored ~repeatable:false (procedure ());
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ ->
+            Ok (answer (procedure ~goal:"Click the button named View" ())))
+          ()
+      in
+      let snap =
+        P.
+          {
+            (snap ()) with
+            rows =
+              [
+                {
+                  index = 1;
+                  role = "button";
+                  name = "View";
+                  value = None;
+                  state = None;
+                  options = None;
+                };
+              ];
+            total = 1;
+          }
+      in
+      let r =
+        after learning (store root) (trace ~outcome:"blocked" 1.)
+          {
+            (result ~status:"blocked"
+               ~procedures:[ entry ~attempts:2 ~outcome:"failed" "inspect" ]
+               ())
+            with
+            P.final = snap;
+          }
+      in
+      let proc = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
+      bool "map-itbt observed non-repeatable repair installs without replay"
+        (r.installed = [ "inspect" ]
+        && (Option.get proc.provenance).gate = "agreement-repair"))
+
+let unsafe_repair () =
+  temp (fun root ->
+      install_authored ~repeatable:false (procedure ());
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ ->
+            Ok (answer (procedure ~goal:"Click the button named Absent" ())))
+          ()
+      in
+      let r =
+        after learning (store root) (trace ~outcome:"blocked" 1.)
+          (result ~status:"blocked"
+             ~procedures:[ entry ~attempts:2 ~outcome:"failed" "inspect" ]
+             ())
+      in
+      bool "map-itbt unknown target cannot pass by naming the kind"
+        (r.installed = [] && r.proposals = []))
+
+let resets () =
+  temp (fun root ->
+      install_authored (procedure ());
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ -> Error "no repair")
+          ()
+      in
+      let store = store root in
+      let fail n =
+        ignore
+          (after learning store (trace ~outcome:"blocked" n)
+             (result ~status:"blocked"
+                ~procedures:[ entry ~outcome:"failed" "inspect" ]
+                ()))
+      in
+      fail 1.;
+      fail 2.;
+      fail 3.;
+      fail 4.;
+      ignore (after learning store (trace 5.) (result ~procedures:[ entry "inspect" ] ()));
+      fail 6.;
+      fail 7.;
+      fail 8.;
+      fail 9.;
+      bool "map-b3kk verified installed mission resets consecutive retirement counter"
+        ((List.hd (ok (B.list ~caps ()))).playbook.procedures <> []))
+
+let status_gates () =
+  temp (fun root ->
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ -> Ok (answer (procedure ())))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      ignore (after learning store (trace 2.) (result ()));
+      ignore
+        (after learning store (trace 3.)
+           (result ~procedures:[ trial learning "draft:inspect" ] ()));
+      let member = Yojson.Safe.Util.member in
+      let site =
+        match member "sites" (L.status learning) with
+        | `List [ site ] -> site
+        | _ -> Alcotest.fail "missing site status"
+      in
+      bool "map-b3kk installed replay counted"
+        (member "installed_by_replay" site = `Int 1
+        && member "installed_by_agreement" site = `Int 0
+        && member "last_compile" site <> `Null))
+
+let legacy_trace () =
+  let json =
+    match Trace.yojson_of_t (trace 1.) with
+    | `Assoc fields -> `Assoc (List.filter (fun (k, _) -> k <> "start_url") fields)
+    | _ -> assert false
+  in
+  bool "map-cnee legacy durable trace lacks optional entry URL"
+    ((ok (Trace.t_of_yojson json)).start_url = None)
+
+let navigation_until () =
+  temp (fun root ->
+      let proc = { (procedure ()) with B.expect = [ "the page is detail" ] } in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun _ -> Ok (answer proc))
+          ()
+      in
+      let navigated n =
+        let t = trace ~kinds:[ "catalog"; "detail" ] n in
+        {
+          t with
+          Trace.steps =
+            [
+              {
+                (step ~operation:"nav" ()) with
+                after = { url = "https://example.com/detail"; title = "Detail" };
+              };
+            ];
+          inferred_pages =
+            t.inferred_pages
+            @ [ { name = "detail"; url_pattern = "https://example.com/detail" } ];
+        }
+      in
+      let store = store root in
+      ignore (after learning store (navigated 1.) (result ()));
+      let r = after learning store (navigated 2.) (result ()) in
+      bool "map-bjon navigation requires per-step until, not global expect"
+        (r.proposals = []))
+
+let constant_argument () =
+  temp (fun root ->
+      let proc =
+        procedure ~goal:"Type {query} in the button named View"
+          ~args:[ B.{ name = "query"; source = Const (`String "one") } ]
+          ()
+      in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun _ -> Ok (answer proc))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace ~steps:[ step ~text:"one" () ] 1.) (result ()));
+      let r =
+        after learning store (trace ~steps:[ step ~text:"two" () ] 2.) (result ())
+      in
+      bool "map-bjon differing evidence needs mission argument, not a constant"
+        (r.proposals = []))
+
+let authored_mode () =
+  temp (fun root ->
+      install_authored (procedure ());
+      let loaded = List.hd (ok (B.list ~caps ())) in
+      Unix.chmod loaded.file 0o640;
+      let file =
+        ok
+          (B.propose ~caps ~site:"example.com"
+             (procedure ~goal:"Click the button named Updated" ()))
+      in
+      ignore (ok (B.accept ~caps file));
+      bool "map-lnwr atomic replacement preserves authored permissions"
+        ((Unix.stat loaded.file).st_perm = 0o640);
+      ignore root)
+
+let mission_counter () =
+  temp (fun root ->
+      install_authored (procedure ());
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ -> Error "no repair")
+          ()
+      in
+      let store = store root in
+      for i = 1 to 3 do
+        ignore
+          (after learning store
+             (trace ~outcome:"blocked" (float i))
+             (result ~status:"blocked"
+                ~procedures:
+                  [ entry ~outcome:"failed" "inspect"; entry ~outcome:"failed" "inspect" ]
+                ()))
+      done;
+      bool "map-h5ym two attempts in one mission count only one retirement failure"
+        ((List.hd (ok (B.list ~caps ()))).playbook.procedures <> []))
+
+let stale_trial_revision () =
+  temp (fun root ->
+      let calls = ref 0 in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ ->
+            incr calls;
+            Ok
+              (answer
+                 (procedure
+                    ~goal:
+                      (if !calls = 1 then "Click the button named View"
+                       else "Click the button named New")
+                    ())))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      ignore (after learning store (trace 2.) (result ()));
+      let old = trial learning "draft:inspect" in
+      let newer =
+        after learning store (trace ~outcome:"blocked" 3.)
+          (result ~status:"blocked" ~procedures:[ { old with P.outcome = "failed" } ] ())
+      in
+      let current = List.hd (drafts learning) in
+      bool "map-w62c failed trial recompiled a distinct revision"
+        (Some current.revision <> old.revision);
+      ignore (after learning store (trace 4.) (result ~procedures:[ old ] ()));
+      bool "map-w62c stale successful trial cannot install" (ok (B.list ~caps ()) = []);
+      bool "map-w62c stale trial cannot alter a new revision"
+        ((List.hd (drafts learning)).revision = current.revision);
+      ignore
+        (after learning store
+           (trace ~outcome:"blocked" 4.5)
+           (result ~status:"blocked" ~procedures:[ { old with P.outcome = "failed" } ] ()));
+      bool "map-w62c stale failure cannot consume new tries"
+        ((List.hd (drafts learning)).revision = current.revision);
+      (match
+         B.accept ~revision:(Option.get old.revision) ~caps (List.hd newer.proposals)
+       with
+      | Error _ -> ()
+      | Ok _ -> Alcotest.fail "map-w62c locked installer accepted stale revision");
+      let installed =
+        after learning store (trace 5.)
+          (result ~procedures:[ trial learning "draft:inspect" ] ())
+      in
+      bool "map-w62c exact current revision installs" (installed.installed = [ "inspect" ]))
+
+let agreement_all_targets () =
+  List.iter
+    (fun (compound, duplicate) ->
+      temp (fun root ->
+          let authored = book ~repeatable:false (procedure ()) in
+          let file = root ^ "/authored.json" in
+          ok (B.atomic_write_json ~caps ~mode:0o600 file (B.yojson_of_t authored));
+          ignore (ok (B.accept ~caps file));
+          let valid = procedure ~goal:"Click the button named View" () in
+          let candidate =
+            if compound then
+              procedure
+                ~goal:"Click the button named View and then click the button named Absent"
+                ()
+            else
+              {
+                valid with
+                B.steps =
+                  valid.steps
+                  @ [
+                      B.Goal
+                        {
+                          goal = "Click the button named Absent";
+                          hint = None;
+                          until = Some [ "the page is catalog" ];
+                        };
+                    ];
+              }
+          in
+          let learning =
+            L.create ~caps
+              ~config:(configure C.Learning_mode.Auto)
+              ~planner:(fun _ -> Ok (answer candidate))
+              ()
+          in
+          let row =
+            P.
+              {
+                index = 1;
+                role = "button";
+                name = "View";
+                value = None;
+                state = None;
+                options = None;
+              }
+          in
+          let final =
+            {
+              (snap ()) with
+              P.rows = (if duplicate then [ row; { row with index = 2 } ] else [ row ]);
+            }
+          in
+          let r =
+            after learning (store root) (trace ~outcome:"blocked" 1.)
+              {
+                (result ~status:"blocked"
+                   ~procedures:[ entry ~outcome:"failed" "inspect" ]
+                   ())
+                with
+                P.final;
+              }
+          in
+          bool "map-itbt every required exact target must agree" (r.installed = []);
+          bool "map-itbt uncertain compound goals fail closed" (drafts learning = [])))
+    [ (false, false); (true, false); (true, true) ]
+
+let bounded_risk_agreement () =
+  List.iter
+    (fun (pinned, previously_repeatable) ->
+      temp (fun root ->
+          let old =
+            {
+              (procedure ()) with
+              B.provenance =
+                Some
+                  B.
+                    {
+                      traces = [];
+                      path = [ "catalog" ];
+                      model = "test";
+                      time = "earlier";
+                      repeatable = previously_repeatable;
+                      reason = "earlier classified trial";
+                      tries = 0;
+                      last_failure = None;
+                      gate = "replay";
+                      repair = false;
+                    };
+            }
+          in
+          ignore
+            (ok
+               (B.accept ~consume:true ~caps
+                  (ok
+                     (B.propose
+                        ~book:(book ~repeatable:(not pinned) old)
+                        ~caps ~site:"example.com" old))));
+          let learning =
+            L.create ~caps
+              ~config:(configure C.Learning_mode.Auto)
+              ~planner:(fun _ ->
+                Ok (answer (procedure ~goal:"Click the button named View" ())))
+              ()
+          in
+          let trace =
+            trace ~outcome:"blocked"
+              ~steps:
+                [
+                  {
+                    (step ()) with
+                    Trace.non_repeatable = (not pinned) && previously_repeatable;
+                  };
+                ]
+              1.
+          in
+          let row =
+            P.
+              {
+                index = 1;
+                role = "button";
+                name = "View";
+                value = None;
+                state = None;
+                options = None;
+              }
+          in
+          let final = { (snap ()) with P.rows = [ row ]; title = "Settings" } in
+          let r =
+            after learning (store root) trace
+              {
+                (result ~status:"blocked"
+                   ~procedures:
+                     [
+                       entry
+                         ~attempts:(if previously_repeatable then 1 else 2)
+                         ~outcome:"failed" "inspect";
+                     ]
+                   ())
+                with
+                P.final;
+              }
+          in
+          bool "map-yzqp pre-action risk does not become a replay draft"
+            (drafts learning = []);
+          bool "map-itbt one unsafe failure may repair by snapshot agreement"
+            (r.installed = [ "inspect" ]);
+          let proc = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
+          match proc.provenance with
+          | Some p ->
+              bool "map-yzqp bounded bit remains authoritative"
+                ((not p.repeatable) && p.gate = "agreement-repair")
+          | None -> Alcotest.fail "map-yzqp repaired provenance missing"))
+    [ (true, true); (false, true); (false, false) ]
+
+let inferred_navigation_patterns () =
+  temp (fun root ->
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun request ->
+            let parsed =
+              ok
+                (B.t_of_yojson
+                   (match request with
+                   | `Assoc fields -> List.assoc "playbook" fields
+                   | _ -> assert false))
+            in
+            bool "map-bjon inferred declared patterns are executable"
+              (List.for_all
+                 (fun (p : B.page) ->
+                   not (String.contains (Option.get p.url_pattern) '<'))
+                 parsed.pages);
+            Ok
+              (answer
+                 {
+                   (procedure ~goal:"Click the link named Mystery"
+                      ~until:[ "the page is books-slug" ] ())
+                   with
+                   B.expect = [ "the page is books-slug" ];
+                 }))
+          ()
+      in
+      let make time =
+        let t = trace ~kinds:[ "home"; "books-<slug>" ] time in
+        {
+          t with
+          Trace.start_url = Some "https://example.com/";
+          inferred_pages =
+            [
+              { name = "home"; url_pattern = "https://example.com/" };
+              {
+                name = "books-<slug>";
+                url_pattern =
+                  "https://example.com/catalogue/category/books/<slug>/index.html";
+              };
+            ];
+          steps =
+            [
+              {
+                (step ()) with
+                Trace.after =
+                  {
+                    url =
+                      "https://example.com/catalogue/category/books/mystery_3/index.html?sort=title#books";
+                    title = "Mystery";
+                  };
+              };
+            ];
+        }
+      in
+      let store = store root in
+      ignore (after learning store (make 1.) (result ()));
+      let compiled = after learning store (make 2.) (result ()) in
+      bool "map-bjon real books navigation validates without weakening until"
+        (compiled.proposals <> []);
+      bool "map-bjon compiler produces a replay draft"
+        (L.drafts learning ~site:"example.com" ~kind:(Some "home") <> []))
+
+(* map-2l5q map-b3kk: isolated processes share complete JSON and one install transaction. *)
+let atomic_and_cross_process_install () =
+  temp (fun dir ->
+      let p = procedure () in
+      let first = book p in
+      let file = ok (B.propose ~caps ~book:first ~site:first.site p) in
+      let old_revision = B.draft_revision first in
+      let newer = { p with B.description = "replacement revision" } in
+      let replacement = book newer in
+      ignore (ok (B.propose ~caps ~book:replacement ~site:first.site newer));
+      (match B.propose ~revision:old_revision ~caps ~book:first ~site:first.site p with
+      | Error _ -> ()
+      | Ok _ -> Alcotest.fail "stale failure rewrote replacement");
+      (match B.archive_proposal ~revision:old_revision ~caps file with
+      | Error _ -> ()
+      | Ok _ -> Alcotest.fail "stale retirement archived replacement");
+      Alcotest.(check bool) "replacement remains" true (Sys.file_exists file);
+      Alcotest.(check bool)
+        "proposals never create an authored map directory" false
+        (Sys.file_exists (B.directory ~caps ()));
+      ignore (ok (C.ensure_dir ~caps (B.directory ~caps ())));
+      let lock =
+        Unix.openfile
+          (Filename.concat (B.directory ~caps ()) ".install.lock")
+          [ Unix.O_CREAT; Unix.O_WRONLY ]
+          0o600
+      in
+      let child fn =
+        match Unix.fork () with 0 -> Unix._exit (try fn () with _ -> 3) | pid -> pid
+      in
+      let rec wait pid =
+        try snd (Unix.waitpid [] pid)
+        with Unix.Unix_error (Unix.EINTR, _, _) -> wait pid
+      in
+      let finished label pid =
+        match wait pid with Unix.WEXITED 0 -> () | _ -> Alcotest.fail label
+      in
+      Unix.lockf lock Unix.F_TLOCK 0;
+      Fun.protect
+        ~finally:(fun () ->
+          Unix.lockf lock Unix.F_ULOCK 0;
+          Unix.close lock)
+        (fun () ->
+          let pid =
+            child (fun () ->
+                match B.accept ~caps file with
+                | Error why
+                  when String.starts_with ~prefix:"playbook installation is busy" why ->
+                    0
+                | _ -> 2)
+          in
+          finished "another process bypassed the install lock" pid);
+      ignore
+        (ok (B.accept ~revision:(B.draft_revision replacement) ~consume:true ~caps file));
+      Alcotest.(check bool)
+        "accepted revision consumed under lock" false (Sys.file_exists file);
+      let other = procedure ~slug:"other" () in
+      let other_file = ok (B.propose ~caps ~book:(book other) ~site:first.site other) in
+      ignore (ok (B.accept ~caps other_file));
+      let installed = List.hd (ok (B.list ~caps ())) in
+      Alcotest.(check int)
+        "serialized merges retain both procedures" 2
+        (List.length installed.playbook.procedures);
+      let other_revision = B.draft_revision (book other) in
+      let changed = { other with B.description = "new repair candidate" } in
+      ignore (ok (B.propose ~caps ~book:(book changed) ~site:first.site changed));
+      (match
+         B.retire_draft ~file:other_file ~revision:other_revision ~caps ~site:first.site
+           ~slug:other.slug
+       with
+      | Error _ -> ()
+      | Ok () -> Alcotest.fail "stale failure retired an installed procedure");
+      let installed = List.hd (ok (B.list ~caps ())) in
+      Alcotest.(check int)
+        "stale retirement leaves installed map unchanged" 2
+        (List.length installed.playbook.procedures);
+      let target = Filename.concat dir "atomic.json" in
+      let payload worker =
+        `Assoc [ ("worker", `Int worker); ("body", `String (String.make 32768 'x')) ]
+      in
+      ignore (ok (B.atomic_write_json ~caps ~mode:0o600 target (payload 0)));
+      let spawn worker =
+        child (fun () ->
+            for _ = 1 to 20 do
+              match B.atomic_write_json ~caps ~mode:0o600 target (payload worker) with
+              | Ok () -> ()
+              | Error _ -> raise Exit
+            done;
+            0)
+      in
+      let left = spawn 1 and right = spawn 2 in
+      let statuses = ref [] in
+      Fun.protect
+        ~finally:(fun () -> statuses := List.map wait [ left; right ])
+        (fun () ->
+          for _ = 1 to 40 do
+            let json = Yojson.Safe.from_file target in
+            Alcotest.(check int)
+              "atomic readers see a complete document" 32768
+              Yojson.Safe.Util.(json |> member "body" |> to_string |> String.length)
+          done);
+      List.iter
+        (function Unix.WEXITED 0 -> () | _ -> Alcotest.fail "atomic writer failed")
+        !statuses;
+      Alcotest.(check int)
+        "private atomic file" 0o600
+        ((Unix.stat target).st_perm land 0o777);
+      Alcotest.(check bool)
+        "unique temporary files cleaned up" false
+        (Array.exists (String.ends_with ~suffix:".tmp") (Sys.readdir dir)))
+
+let bounded_provider_metadata () =
+  let raw =
+    `Assoc
+      [
+        ( "choices",
+          `List
+            [
+              `Assoc
+                [
+                  ("finish_reason", `String "length");
+                  ( "message",
+                    `Assoc [ ("content", `Null); ("reasoning", `String "SECRET-PRIVATE") ]
+                  );
+                ];
+            ] );
+        ( "usage",
+          `Assoc
+            [
+              ("prompt_tokens", `Int 17);
+              ("completion_tokens", `Int 4096);
+              ("total_tokens", `Int 4113);
+              ("cost", `Float 0.2);
+              ("completion_tokens_details", `Assoc [ ("reasoning_tokens", `Int 4096) ]);
+            ] );
+        ("private", `String (String.make 10000 'S'));
+      ]
+  in
+  let metadata = Leash__Planner.learning_response_metadata raw in
+  let fields = match metadata with `Assoc fields -> fields | _ -> assert false in
+  bool "map-ptnk null diagnostics retain finish reason"
+    (List.assoc "finish_reason" fields = `String "length");
+  bool "map-ptnk null diagnostics retain billed cost"
+    (List.assoc "cost" fields = `Float 0.2);
+  let encoded = Yojson.Safe.to_string metadata in
+  bool "map-ptnk diagnostics never preserve raw response or reasoning"
+    ((not (String.contains encoded 'S')) && String.length encoded < 400)
+
+let learning_cost_accounting () =
+  List.iter
+    (fun reported ->
+      temp (fun root ->
+          let calls = ref 0 in
+          let learning =
+            L.create ~caps
+              ~config:(configure C.Learning_mode.Auto)
+              ~planner:(fun _ ->
+                incr calls;
+                Leash__Model_usage.start "planner";
+                Leash__Model_usage.report "planner" reported;
+                Ok
+                  (answer
+                     (procedure
+                        ~until:
+                          (if !calls = 1 then [ "unsupported" ]
+                           else [ "the page is catalog" ])
+                        ())))
+              ()
+          in
+          let store = store root in
+          ignore (after learning store (trace 1.) (result ()));
+          let current = trace 2. in
+          let file = save store current in
+          let r =
+            L.after_trace learning ~store ~file current
+              { (result ()) with P.model_calls = 3; model_cost = Some 0.5 }
+          in
+          let durable = ok (Trace.t_of_yojson (Yojson.Safe.from_file file)) in
+          Alcotest.(check int) "map-ptnk durable total calls" 5 durable.model_calls;
+          Alcotest.(check (option (float 0.000001)))
+            "map-ptnk durable unknown semantics"
+            (Option.map (fun cost -> 0.5 +. (2. *. cost)) reported)
+            durable.cost;
+          Alcotest.(check bool)
+            "map-ptnk compiled marker is preserved" true durable.compiled;
+          Alcotest.(check int)
+            "map-ptnk totals include compiler and validation retry" 5 r.model_calls;
+          Alcotest.(check (option (float 0.000001)))
+            "map-ptnk unknown cost never becomes free"
+            (Option.map (fun cost -> 0.5 +. (2. *. cost)) reported)
+            r.model_cost))
+    [ Some 0.2; None ]
+
+let () =
+  Eio_main.run (fun _ ->
+      Alcotest.run "learning"
+        [
+          ( "map",
+            List.map
+              (fun (name, f) -> Alcotest.test_case name `Quick f)
+              [
+                ("atomic and cross-process installation", atomic_and_cross_process_install);
+                ("bounded provider metadata", bounded_provider_metadata);
+                ("stale trial revision", stale_trial_revision);
+                ("all repair targets", agreement_all_targets);
+                ("bounded risk agreement", bounded_risk_agreement);
+                ("inferred navigation patterns", inferred_navigation_patterns);
+                ("total learning cost", learning_cost_accounting);
+                ("config", defaults);
+                ("path and classification", pure);
+                ("draft compile", draft_compile);
+                ("validation retry", validation);
+                ("parameterization", parameters);
+                ("replay", replay);
+                ("try budget", tries);
+                ("agreement", agreement_gate);
+                ("repair", repair);
+                ("retire", retire);
+                ("off", off);
+                ("invalid twice", permanent_invalid);
+                ("confirmation", confirmation);
+                ("nonrepeatable repair", nonrepeatable_repair);
+                ("unsafe repair", unsafe_repair);
+                ("counter resets", resets);
+                ("status gates", status_gates);
+                ("legacy trace", legacy_trace);
+                ("navigation until", navigation_until);
+                ("constant argument", constant_argument);
+                ("authored mode", authored_mode);
+                ("mission counter", mission_counter);
+              ] );
+        ])

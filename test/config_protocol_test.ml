@@ -598,8 +598,22 @@ let drive_result () =
   let step = match result.steps with [ step ] -> step | _ -> Alcotest.fail "one step" in
   Alcotest.(check string) "operation" "type_text" (P.Operation.to_string step.operation);
   Alcotest.(check (option int)) "index null is None" None step.index;
+  Alcotest.(check bool) "map-itbt legacy step has no risk bit" false step.non_repeatable;
+  let expected =
+    match json with
+    | `Assoc fields ->
+        `Assoc
+          (List.map
+             (function
+               | "steps", `List [ `Assoc fields ] ->
+                   ("steps", `List [ `Assoc (("non_repeatable", `Bool false) :: fields) ])
+               | field -> field)
+             fields)
+    | _ -> assert false
+  in
   Alcotest.(check string)
-    "Step names its fields" (Yojson.Safe.to_string json)
+    "Step names its fields including bounded risk"
+    (Yojson.Safe.to_string expected)
     (Yojson.Safe.to_string (P.yojson_of_drive_result result));
   let without_text = Yojson.Safe.to_string (P.yojson_of_step { step with text = None }) in
   Alcotest.(check bool)

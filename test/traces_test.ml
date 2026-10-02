@@ -36,6 +36,7 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time 
       duration_ms = 200;
       model_calls = 2;
       page_kind_path = [ "catalog" ];
+      start_url = None;
       inferred_pages = [];
       compiled;
       procedures = [];
@@ -243,7 +244,8 @@ let scripted_steps () =
               option = None;
               confidence = 1.;
               target_confidence = None;
-              operation_probabilities = [ (op, 1.) ];
+              operation_probabilities =
+                [ (String.uppercase_ascii op, 1.); ("NOT_AN_OPERATION", 0.) ];
               target_probabilities = [ ("1", 1.) ];
               targets = [];
             }
@@ -302,6 +304,12 @@ let scripted_steps () =
     "trace-qe8c partial capture after failure" (List.length result.steps)
     (List.length saved.steps);
   let first = List.hd saved.steps in
+  Alcotest.(check (list (pair string (float 0.))))
+    "trace-zbb9 upper-case JEV operation probabilities survive canonically"
+    [ ("type_text", 1.) ]
+    (List.map
+       (fun (p : P.Trace.trace_probability) -> (p.key, p.probability))
+       first.operations);
   Alcotest.(check (option string))
     "trace-zbb9 ordinary helper text retained" (Some "alice") first.text;
   Alcotest.(check (option string))
@@ -321,6 +329,96 @@ let scripted_steps () =
       let path = ok (T.write store saved) in
       bool "trace-lg58 safe captured roundtrip" (ok (T.read ~caps path) = saved))
 
+let inferred_capture () =
+  let c = T.capture ~mission:"tags" ~now:0. in
+  List.iter
+    (fun url -> T.page c ~url ~kind:(Some "home") ~pattern:(Some url))
+    [ "about:blank"; "chrome://newtab/"; "data:text/html,Hello"; "file:///tmp/page" ];
+  T.page c ~url:"https://quotes.toscrape.com/tag/love/" ~kind:(Some "love")
+    ~pattern:(Some "https://quotes.toscrape.com/tag/love");
+  T.page c ~url:"https://quotes.toscrape.com/tag/humor/" ~kind:(Some "tag-<slug>")
+    ~pattern:(Some "https://quotes.toscrape.com/tag/<slug>");
+  let trace =
+    T.finish c ~now:1.
+      (Error (P.make_error (ok (P.Error_code.of_string "internal")) ~message:"fixture"))
+  in
+  Alcotest.(check (list string))
+    "trace-iqqz merged header excludes non-web kinds" [ "tag-<slug>" ]
+    trace.page_kind_path;
+  Alcotest.(check (list (pair string string)))
+    "kind-s1k2 earlier draft entry merged"
+    [ ("tag-<slug>", "https://quotes.toscrape.com/tag/<slug>") ]
+    (List.map
+       (fun (p : P.Trace.inferred_page) -> (p.name, p.url_pattern))
+       trace.inferred_pages)
+
+(* L53 map-3qag: a failed planner detour shares the durable chronological trace. *)
+let planner_steps () =
+  let c = T.capture ~mission:"inspect catalogue" ~now:0. in
+  let after = P.{ url = "https://books.toscrape.com/"; title = "Catalogue" } in
+  let operator : P.step =
+    P.
+      {
+        non_repeatable = false;
+        n = 1;
+        snapshot = ok (Snapshot_id.of_string "s_test");
+        operation = ok (Operation.of_string "done");
+        index = None;
+        probabilities = P.{ op = `Assoc []; target = `Assoc [] };
+        target = None;
+        text = None;
+        after;
+        elapsed_ms = 3;
+      }
+  in
+  T.step c operator;
+  T.planner_step c
+    P.
+      {
+        non_repeatable = false;
+        n = 1;
+        command = "click";
+        target = Some { target_role = "button"; target_label = "Browse" };
+        text = None;
+        after;
+        elapsed_ms = 8;
+        error = None;
+      };
+  T.planner_step c
+    P.
+      {
+        non_repeatable = false;
+        n = 2;
+        command = "fill";
+        target = Some { target_role = "textbox"; target_label = "Search" };
+        text = Some "alice@example.com";
+        after;
+        elapsed_ms = 9;
+        error = Some "stale-snapshot";
+      };
+  let trace =
+    T.finish c ~now:1.
+      (Error
+         (P.make_error (ok (P.Error_code.of_string "stale-snapshot")) ~message:"changed"))
+  in
+  Alcotest.(check (list int))
+    "mixed steps numbered once" [ 1; 2; 3 ]
+    (List.map (fun (s : P.Trace.trace_step) -> s.n) trace.steps);
+  Alcotest.(check (list string))
+    "operator and detour chronology"
+    [ "operator"; "planner"; "planner" ]
+    (List.map (fun (s : P.Trace.trace_step) -> s.source) trace.steps);
+  Alcotest.(check (list (option string)))
+    "failed attempt remains evidence"
+    [ None; None; Some "stale-snapshot" ]
+    (List.map (fun (s : P.Trace.trace_step) -> s.error) trace.steps);
+  Alcotest.(check (option string))
+    "ordinary planner input retained" (Some "alice@example.com")
+    (List.nth trace.steps 2).text;
+  let roundtrip = ok (P.drive_trace_of_yojson (P.yojson_of_drive_trace trace)) in
+  Alcotest.(check int)
+    "durable wire retains planner steps" 3 (List.length roundtrip.steps)
+
 let () =
   Alcotest.run "L51 traces"
     [
@@ -333,6 +431,8 @@ let () =
             ("trace-dqr2 retention", retention);
             ("trace-szpg config", config);
             ("trace-iqqz failure projection", capture);
+            ("trace-iqqz kind-s1k2 inferred header canonicalization", inferred_capture);
             ("trace-zbb9 trace-uovo acknowledged target", scripted_steps);
+            ("map-3qag mixed planner trace and partial failure", planner_steps);
           ] );
     ]

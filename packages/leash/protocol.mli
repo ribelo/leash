@@ -378,6 +378,7 @@ type trace_target = {
 [@@deriving yojson]
 
 type step = {
+  non_repeatable : bool;
   n : int;
   snapshot : Snapshot_id.t;
   operation : Operation.t;
@@ -552,16 +553,6 @@ type run_args = {
     the L30 guard) — which L32's planner attaches on its first turn and which a caller may
     state directly. It is a [key?] list: omitted when the mission carries none. *)
 
-type discover_args = {
-  site : string;
-  goal : string option;
-  max_turns : int option;
-  max_steps : int option;
-  deadline_s : int option;
-  max_cost : float option;
-}
-(** run-3vat run-xda7: URL or site and bounded learning goal. *)
-
 type tab_counts = { open_ : int; cap : int }
 
 val tab_counts_of_yojson : Yojson.Safe.t -> (tab_counts, string) result
@@ -593,6 +584,7 @@ type status_result = {
   version : string;
   pid : int option; [@json.null]
   headed : bool;
+  learning : Yojson.Safe.t option;
   key_present : bool;
 }
 (** [models] is [T|null]: the service's models section, which every service the Door
@@ -842,6 +834,7 @@ val run_script_of_yojson : Yojson.Safe.t -> (run_script, string) result
 val yojson_of_run_script : run_script -> Yojson.Safe.t
 
 type run_procedure = {
+  revision : string option;
   slug : string;
   site : string;
   planned : bool;
@@ -865,10 +858,25 @@ type run_procedure = {
 val run_procedure_of_yojson : Yojson.Safe.t -> (run_procedure, string) result
 val yojson_of_run_procedure : run_procedure -> Yojson.Safe.t
 
+type planner_step = {
+  non_repeatable : bool;
+  n : int;
+  command : string;
+  target : trace_target option;
+  text : string option;
+  after : after;
+  elapsed_ms : int;
+  error : string option;
+}
+
+val planner_step_of_yojson : Yojson.Safe.t -> (planner_step, string) result
+val yojson_of_planner_step : planner_step -> Yojson.Safe.t
+
 type planner_turn = {
   n : int;
   trigger : string;
   answer : string;
+  steps : planner_step list;
   reason : string option;
   usage : run_usage option; [@json.null]
 }
@@ -890,6 +898,7 @@ type run_result = {
   mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
   proposals : string list;
+  installed : string list;
   collected : int;
   data : Yojson.Safe.t;
   model_calls : int;
@@ -985,7 +994,6 @@ type command =
   | Resume of tab_args
   | Drive of run_args
   | Downloads of tab_args
-  | Discover of discover_args
   | Net of net_args
   | Net_body of net_entry_args
   | Net_request of net_entry_args
@@ -1016,3 +1024,10 @@ val decode_request : Yojson.Safe.t -> (request, string) result
 (** The envelope: ["v"] must be {!version}, ["cmd"] must be one of the commands above, and
     ["args"] must decode into that command's record. There is no caller field. An unknown
     envelope field or argument is refused by name. hand-scaz hand-w85z. *)
+
+type planner_action = command
+(** map-7xrq map-3qag: the existing protocol envelope, restricted to planner actions. *)
+
+val planner_action_of_yojson : Yojson.Safe.t -> (planner_action, string) result
+val yojson_of_planner_action : planner_action -> Yojson.Safe.t
+val check_planner_action : snapshot -> planner_action -> (unit, string) result

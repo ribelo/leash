@@ -8,13 +8,15 @@
     effort: the system message is {!Questions.planner}, the user message is the
     {!Run.plan_request} as JSON — the mission, the playbook in its own schema, the trace,
     the arguments known and the observed page with its text bounded — and the reply must
-    decode into exactly one of three answers: [procedure] (a new procedure in the
-    playbook's schema, to run now), [handoff] (a reason for the human) or [fail] (a reason
-    for the operator). A reply that does not decode, or that names a procedure this
-    playbook cannot run, is shown back with its refusal and asked once more; a second
-    refusal ends the turn as [model-unavailable] with [detail.code = "invalid-response"].
-    A turn's first reply may also attach the mission's expectations (run-2tt3), each of
-    which must resolve against the playbook's own page kinds.
+    decode into a supported answer: [procedure] (a new procedure in the playbook's schema,
+    to run now), [handoff] (a reason for the human), [fail] (a reason for the operator),
+    or [continue] (an optional bounded list of ordinary actions targeting the supplied
+    snapshot before returning to JEV). A reply that does not decode, or that names a
+    procedure this playbook cannot run, is shown back with its refusal and asked once
+    more; a second refusal ends the turn as [model-unavailable] with
+    [detail.code = "invalid-response"]. A turn's first reply may also attach the mission's
+    expectations (run-2tt3), each of which must resolve against the playbook's own page
+    kinds.
 
     The chat client is the models service's — one transport for every model, as with
     {!Text_helper} — and this module owns the prompt, the fail-closed decode and the
@@ -36,6 +38,21 @@ type t = {
 
     The cost of a turn rides on the reply (run-obtt): the tokens and provider-reported
     cost summed over the calls the turn took; absent cost contributes zero. *)
+
+val learning_response_metadata : Yojson.Safe.t -> Yojson.Safe.t
+(** map-ptnk: allowlisted finish reason, content shape, output budget, tokens and cost; no
+    message content, reasoning text, request body or arbitrary provider fields. *)
+
+val learning_prompt_version : string
+
+val learning :
+  client:Ox_ai_chat.t ->
+  model:string ->
+  reasoning:string ->
+  logger:Ox_observability.Logger.t ->
+  deadline:Ox.Duration.t ->
+  Yojson.Safe.t ->
+  (Yojson.Safe.t, string) result
 
 val create :
   now:(unit -> float) ->

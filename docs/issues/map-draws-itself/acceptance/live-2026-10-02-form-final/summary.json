@@ -1,0 +1,103 @@
+{
+  "story": "L53",
+  "campaign": "2026-10-02-form-final form-only acceptance after explicit-port fix",
+  "acceptance_passed": true,
+  "gate": "form",
+  "missions_recorded": 2,
+  "missions": [
+    {
+      "number": 1,
+      "token": "alpha-test",
+      "status": "done",
+      "exit_code": 0,
+      "goal_verified": true,
+      "model_calls": 4,
+      "model_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 3
+      },
+      "model_cost_usd": 0.000230486,
+      "cost_unreported": 0,
+      "proposals": 0,
+      "installed": []
+    },
+    {
+      "number": 2,
+      "token": "beta-test",
+      "status": "done",
+      "exit_code": 0,
+      "goal_verified": true,
+      "model_calls": 5,
+      "model_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 3,
+        "learning": 1
+      },
+      "model_cost_usd": 0.001497376,
+      "run_only_cost_usd": 0.000228826,
+      "learning_cost_usd": 0.00126855,
+      "cost_unreported": 0,
+      "proposals": 1,
+      "installed": [
+        "post-test-message"
+      ]
+    }
+  ],
+  "totals": {
+    "model_calls": 9,
+    "model_cost_usd": 0.001727862,
+    "fully_reported": true
+  },
+  "agreement": {
+    "slug": "post-test-message",
+    "gate": "agreement",
+    "repeatable": false,
+    "traces": 2,
+    "tries": 0,
+    "path": [
+      "message-compose",
+      "message-posted"
+    ],
+    "untils_explicit": true,
+    "port_scoped_patterns": true
+  },
+  "harmlessness": {
+    "submissions": [
+      "alpha-test",
+      "beta-test"
+    ],
+    "count": 2,
+    "third_replay_posts": 0,
+    "submissions_after_browser_shutdown": 2
+  },
+  "frozen_binary": {
+    "path": "/home/ribelo/projects/ribelo/leash/_build_form_final/default/packages/leash/bin/main.exe",
+    "sha256": "b1c03e61f3afbfe237d009c0343ff71beb10eca3c8c95b4a2a5a8b1b863da635",
+    "bytes": 16039808,
+    "built_mtime": "2026-10-02T01:35:04+02:00"
+  },
+  "provenance": {
+    "recorded_before_build_at": "2026-10-02T01:34:34.502796+02:00",
+    "head": "b2e1b915bbd1fa43fc09e5a1346d0a0245619562",
+    "source_file_count": 336,
+    "source_manifest_sha256": "b4cf1563b7d17a9d89fd11d98dc119d2ca34a15b75b71aa8be78e80c4f9654e0",
+    "source_archive_sha256": "8dfe35893a5342c6a2e07f2146f7f928e0a187a60082ea39066abb42a4aa03ff",
+    "diff_sha256": "b98bd1c21f611d2d5c0821d621e93bfa1beeff4b096efda6501d933ea39feb4f",
+    "diff_stable": true
+  },
+  "isolation": {
+    "private_xdg": true,
+    "private_profile": true,
+    "headless": true,
+    "seeded_playbooks": 0,
+    "credential_source": "secret-env ai --"
+  },
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  },
+  "mission_wording_changed": false,
+  "product_code_changed": false,
+  "prior_evidence_preserved": true
+}

@@ -6,8 +6,11 @@ type trace_page = { url : string; title : string }
 type trace_probability = { key : string; probability : float }
 
 type trace_step = {
+  non_repeatable : bool;
   n : int;
   operation : string;
+  source : string;
+  error : string option;
   target : trace_target option;
   text : string option;
   operations : trace_probability list;
@@ -36,6 +39,7 @@ type t = {
   cost : float option; [@json.null]
   duration_ms : int;
   model_calls : int;
+  start_url : string option;
   page_kind_path : string list;
   inferred_pages : inferred_page list;
       (** kind-dnye: generalized pattern to name, first-seen. Empty when every kind was
@@ -48,4 +52,6 @@ type t = {
 }
 
 val t_of_yojson : Yojson.Safe.t -> (t, string) result
+val yojson_of_trace_target : trace_target -> Yojson.Safe.t
+val yojson_of_trace_page : trace_page -> Yojson.Safe.t
 val yojson_of_t : t -> Yojson.Safe.t

@@ -363,6 +363,15 @@ let drive_request_options options =
   match options with
   | Error _ as error -> error
   | Ok options -> (
+      (* trace-qe8c: output belongs to the caller, not the service cwd. *)
+      let options =
+        List.map
+          (function
+            | "out", `String path when Filename.is_relative path ->
+                ("out", `String (Filename.concat (Sys.getcwd ()) path))
+            | field -> field)
+          options
+      in
       match List.assoc_opt "max_steps" options with
       | None -> Ok options
       | Some (`Int n) when n > 0 -> Ok options
@@ -1275,18 +1284,6 @@ let commands ~caps ~send ~base ~run_owned =
         [ pos "tab" "TAB" ],
         [],
         [ "leash resume t_9xk" ] );
-      ( "discover",
-        "Explore SITE with the planner; write a proposed playbook without applying it.",
-        [ pos "site" "SITE-OR-URL" ],
-        [
-          opt "goal" Str "TEXT" "What to learn (default: explore this site).";
-          opt "max_turns" Int "N" "At most N planner turns, default 20. Must be positive.";
-          opt "max_steps" Int "N"
-            "At most N operator steps, default 100. Must be positive.";
-          opt "deadline_s" Int "S" "Seconds for discovery, default 900. Must be positive.";
-          opt "max_cost" Float "USD" "Reported model cost cap in USD, default 1.";
-        ],
-        [ "leash discover https://example.com --goal 'Find the documentation'" ] );
     ]
   @ [
       command ~caps ~send ~base ~run_owned
@@ -1446,13 +1443,19 @@ let program env (config : Leash.Config.t) sw =
     Leash.Models.create ~sw ~net:base#net ~clock:base#clock ~logger:env.logger
       config.models
   in
+  let learning =
+    Leash.Learning.create ~caps:env.caps ~config:config.learning
+      ~planner:(Leash.Models.learning models config.learning)
+      ~warn:(fun why -> Ox_observability.Logger.warn env.logger ("learning: " ^ why))
+      ()
+  in
   Eio.Switch.on_release sw (fun () -> Leash.Tabs.stop tabs);
   let status_query = Ox_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in
   (* svc-o4wt: the listener owns the configured socket path; validation refused anything
      that is not a real absolute path, so the variable is resolved by now. *)
   let socket = Leash.Config.Text.to_string config.control.socket in
   let* _control =
-    Leash.Control.create
+    Leash.Control.create ~learning ~planner_actions:config.learning.planner_actions
       ~chrome_pid:(fun () -> (Leash.Chrome.status chrome).pid)
       ~models
       ~model:(Leash.Config.Text.to_string config.models.jev_model)
@@ -1811,7 +1814,9 @@ let orientation env () =
         "Models are OpenRouter and need an API key, OPENROUTER_API_KEY in the service's \
          environment or models.api_key in the config; the key is the operator's, not the \
          agent's.";
-        "Start with leash status, leash new https://example.com, and leash snap TAB.";
+        "Prefer leash drive MISSION for a goal: it learns; manual commands do not. Use \
+         manual commands for inspection and for steps drive cannot do. Start with leash \
+         status and leash help drive.";
       ]
   in
   Cap_stdlib.print_endline ~caps paragraph;

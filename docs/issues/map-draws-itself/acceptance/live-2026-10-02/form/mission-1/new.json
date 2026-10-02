@@ -1,0 +1,28 @@
+{
+  "command": [
+    "new",
+    "http://127.0.0.1:36089/message-compose"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.04613190999953076,
+  "reply": {
+    "tab": "[redacted capability]",
+    "label": null,
+    "url": "http://127.0.0.1:36089/message-compose",
+    "title": "Harmless message posting acceptance",
+    "page_kind": {
+      "name": "message-compose",
+      "source": "inferred"
+    },
+    "origin": "agent",
+    "age_s": 0,
+    "idle_s": 0,
+    "closes_in_s": 3600,
+    "with_human": false,
+    "generation": 1,
+    "dialog": null,
+    "loaded": true
+  },
+  "stdout": null,
+  "stderr": ""
+}

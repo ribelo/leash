@@ -99,6 +99,7 @@ type plan_trigger =
 
 type plan_answer =
   | Procedure of Playbook.procedure
+  | Continue_actions of Protocol.planner_action list
   | Handoff of string
   | Fail of string
       (** What a planner turn may answer (run-rq6i, L32): a procedure to run now, a
@@ -108,7 +109,6 @@ type plan_reply = {
   answer : plan_answer;
   expect : string list;
   usage : Protocol.run_usage option;
-  pages : Playbook.page list;  (** Newly proposed discovery page kinds. *)
 }
 (** One planner turn's answer with what came beside it (run-rq6i run-2tt3 run-obtt):
     [expect] is the mission's own expectations the planner attached on its first turn —
@@ -123,6 +123,8 @@ type plan_request = {
   playbook : Playbook.t option;
   recent : (string * string) list;
   arguments : (string * string) list;
+  snapshot : Protocol.snapshot;
+  planner_actions : int;
   page_kind : string option;
   title : string;
   url : string;
@@ -215,9 +217,6 @@ val of_args : Protocol.run_args -> args
 (** The wire arguments with their defaults: 40 procedures, 900 seconds, no dry run, three
     planner turns, no mission expectations. *)
 
-type discovery = { book : Playbook.loaded; max_steps : int; max_cost : float }
-(** The seed book is temporary and is never installed by discovery. *)
-
 val unsafe_action : string -> string option
 (** The protected action class (payment, deletion, messaging) in a goal or row label. *)
 
@@ -226,9 +225,13 @@ val loop :
   now:(unit -> float) ->
   installed:Playbook.loaded list ->
   ?page_kinds:Page_kind.session ->
-  ?discovery:discovery ->
+  ?drafts:(site:string -> kind:string option -> Playbook.draft list) ->
   ?on_book:(Playbook.loaded option -> unit) ->
   ?on_record:(Yojson.Safe.t -> (unit, Protocol.error) result) ->
+  ?planner_actions:int ->
+  ?planner_action:
+    (Protocol.planner_action -> (Protocol.action_result, Protocol.error) result) ->
+  ?on_planner_step:(Protocol.planner_step -> unit) ->
   ?pause_ms:(int -> unit) ->
   args ->
   (Protocol.run_result, Protocol.error) result

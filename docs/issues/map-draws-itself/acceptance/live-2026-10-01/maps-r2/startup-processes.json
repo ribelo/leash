@@ -1,0 +1,50 @@
+[
+  {
+    "pid": 3940085,
+    "headless": true,
+    "pipe": true,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true --simulate-outdated-no-au=Tue, 31 Dec 2099 23:59:59 GMT --ozone-platform=wayland --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled,ExtensionsManifestV3Only,WebRtcAllowInputVolumeAdjustment --user-data-dir=<PRIVATE_ROOT>/profile --no-first-run --no-default-browser-check --hide-crash-restore-bubble --remote-debugging-pipe --disable-blink-features=AutomationControlled --test-type --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --class=leash --headless=new --window-size=1366,900 --noerrdialogs --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl"
+    ]
+  },
+  {
+    "pid": 3940340,
+    "headless": false,
+    "pipe": true,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=renderer --top-chrome-webui --crashpad-handler-pid=3940111 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --disable-background-timer-throttling --remote-debugging-pipe --test-type --ozone-platform=headless --disable-gpu-compositing --disable-blink-features=AutomationControlled --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=5 --launch-time-ticks=50343543390 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,1225473772203034343,2920896464697070484,262144 --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported,ExtensionsManifestV3Only,EyeDropper,PaintHolding,WebRtcAllowInputVolumeAdjustment --variations-seed-version --pseudonymization-salt-handle=7,i,4630617186025223374,10967840872648338339,4 --trace-process-track-uuid=3190708990997080739"
+    ]
+  },
+  {
+    "pid": 3940357,
+    "headless": false,
+    "pipe": true,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=renderer --crashpad-handler-pid=3940111 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --disable-background-timer-throttling --remote-debugging-pipe --test-type --ozone-platform=headless --disable-gpu-compositing --disable-blink-features=AutomationControlled --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=6 --launch-time-ticks=50343567446 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,1225473772203034343,2920896464697070484,262144 --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported,ExtensionsManifestV3Only,EyeDropper,PaintHolding,WebRtcAllowInputVolumeAdjustment --variations-seed-version --pseudonymization-salt-handle=7,i,4630617186025223374,10967840872648338339,4 --trace-process-track-uuid=3190708991934122588"
+    ]
+  },
+  {
+    "pid": 3940377,
+    "headless": false,
+    "pipe": true,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=renderer --crashpad-handler-pid=3940111 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --disable-background-timer-throttling --remote-debugging-pipe --test-type --ozone-platform=headless --disable-gpu-compositing --disable-blink-features=AutomationControlled --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=8 --launch-time-ticks=50343583718 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,1225473772203034343,2920896464697070484,262144 --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported,ExtensionsManifestV3Only,EyeDropper,PaintHolding,WebRtcAllowInputVolumeAdjustment --variations-seed-version --pseudonymization-salt-handle=7,i,4630617186025223374,10967840872648338339,4 --trace-process-track-uuid=3190708993808206286"
+    ]
+  },
+  {
+    "pid": 3940612,
+    "headless": false,
+    "pipe": true,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=renderer --crashpad-handler-pid=3940111 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --disable-background-timer-throttling --remote-debugging-pipe --test-type --ozone-platform=headless --disable-gpu-compositing --disable-blink-features=AutomationControlled --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=9 --launch-time-ticks=50344245597 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,1225473772203034343,2920896464697070484,262144 --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported,ExtensionsManifestV3Only,EyeDropper,PaintHolding,WebRtcAllowInputVolumeAdjustment --variations-seed-version --pseudonymization-salt-handle=7,i,4630617186025223374,10967840872648338339,4 --trace-process-track-uuid=3190708994745248135"
+    ]
+  },
+  {
+    "pid": 3940994,
+    "headless": false,
+    "pipe": true,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=renderer --crashpad-handler-pid=3940111 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --disable-background-timer-throttling --remote-debugging-pipe --test-type --ozone-platform=headless --disable-gpu-compositing --disable-blink-features=AutomationControlled --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=12 --launch-time-ticks=50348164209 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,1225473772203034343,2920896464697070484,262144 --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported,ExtensionsManifestV3Only,EyeDropper,PaintHolding,WebRtcAllowInputVolumeAdjustment --variations-seed-version --pseudonymization-salt-handle=7,i,4630617186025223374,10967840872648338339,4 --trace-process-track-uuid=3190708997556373682"
+    ]
+  }
+]

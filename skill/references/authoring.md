@@ -1,6 +1,6 @@
 # Authoring a playbook
 
-Write one when a site will be driven again, or when a mission needs validated records rather than the operator's bounded page state. `leash discover` can propose a playbook; that is propose-and-accept, not this procedure. A model never writes the playbook. You do.
+Write one when a site will be driven again, or when a mission needs validated records rather than the operator's bounded page state. Prefer `leash drive` for goals: successful traces can produce learning drafts. This topic covers explicit manual authoring, not the learning path.
 
 The format, the worked example, and every loader refusal are in `leash help playbooks`. Checker sentences are in `leash help expectations`. Scripts are in `leash help scripts`.
 

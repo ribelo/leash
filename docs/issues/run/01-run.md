@@ -62,11 +62,13 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 32. As an operator, I want a planner-written procedure that ran and passed its expectations to be written to `$XDG_STATE_HOME/leash/proposed/<site>-<slug>.json` and reported in the run result, and `leash playbook accept <file>` to merge it into the site's playbook, so that the playbook grows from experience under my eye. ^run-m0r8
 33. As an operator, I want the planner model, its reasoning effort and its endpoint configurable (`[models].planner`, default `openai/gpt-6-luna` via OpenRouter), so that the fallback can be tuned or replaced. ^run-d99l
 
-### Discovery
+### Discovery — superseded
 
-34. As an operator, I want `leash discover <site> "<what to learn>"` to open the site and run the loop with the planner in the lead — proposing a procedure, running it through the operator level, verifying its expectations, revising on failure — until the learning goal is met or a turn cap is reached, writing the result as a proposed playbook, so that a site's know-how is produced by the system, not typed by me. ^run-3vat
-35. As an operator, I want discovery to stop and hand off at anything that looks like payment, account deletion, or sending a message, unless the learning goal names it, so that learning never spends money or speaks for me. ^run-tt9z
-36. As an operator, I want a discovery run's cost and turns reported and capped (default 20 planner turns), so that it is bounded like everything else. ^run-xda7
+The discovery spec and its command stories are superseded by [The map draws itself](../map-draws-itself/01-map-draws-itself.md), L53 (`map-gkww`). Exploration now uses `drive`; `discover` is no longer a command.
+
+- **Retired by L53 (`map-gkww`).** As an operator, I want `leash discover <site> "<what to learn>"` to open the site and run the loop with the planner in the lead — proposing a procedure, running it through the operator level, verifying its expectations, revising on failure — until the learning goal is met or a turn cap is reached, writing the result as a proposed playbook, so that a site's know-how is produced by the system, not typed by me. ^run-3vat
+- **Retired by L53 (`map-gkww`).** As an operator, I want discovery to stop and hand off at anything that looks like payment, account deletion, or sending a message, unless the learning goal names it, so that learning never spends money or speaks for me. ^run-tt9z
+- **Retired by L53 (`map-gkww`).** As an operator, I want a discovery run's cost and turns reported and capped (default 20 planner turns), so that it is bounded like everything else. ^run-xda7
 
 ### Architecture and tests
 
@@ -76,7 +78,7 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 40. As a maintainer, I want the state sent to each JEV level measured before the shape is pinned — three state sizes on real playbook page states (title+URL; plus page kind and recent procedures; plus page text), recording which chooses correctly and the transfer limit if Allegro is unavailable — so that story 18's shape is evidence, not belief. ^run-snk4
 41. As an operator, I want `run` to reuse `drive`, `wait`, `snap`, `nav`, `handoff` internally through the same service paths the CLI uses, so that nothing in `run` bypasses ownership, budgets or safety defaults. ^run-shgh
 42. As an agent, I want the same JEV model and endpoint used for all three levels (configured once), so that there is one model to reason about; if measurement shows the upper levels need the planner instead, that is a handler swap recorded in the spec. ^run-7blx
-43. As an operator, I want `leash run` and `leash discover` in the `leash` skill with the minimize-output guidance, so that agents use missions where they used to script steps. ^run-tpnf
+- **Retired by L53 (`map-gkww`).** As an operator, I want `leash run` and `leash discover` in the `leash` skill with the minimize-output guidance, so that agents use missions where they used to script steps. ^run-tpnf
 44. As an operator, I want an example playbook shipped for `allegro.pl` (find product, open offer, add to cart, dismiss upsell, go to cart) and one for a second site used in live acceptance, so that a first run works and the format has a worked example. ^run-seqo
 
 ## Implementation Decisions

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "new",
+    "about:blank"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.023681120997935068,
+  "reply": {
+    "tab": "[redacted capability]",
+    "label": null,
+    "url": "about:blank",
+    "title": "about:blank",
+    "origin": "agent",
+    "age_s": 0,
+    "idle_s": 0,
+    "closes_in_s": 3600,
+    "with_human": false,
+    "generation": 1,
+    "dialog": null,
+    "loaded": true
+  },
+  "stdout": null,
+  "stderr": ""
+}

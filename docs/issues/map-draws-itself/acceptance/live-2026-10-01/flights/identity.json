@@ -1,0 +1,10 @@
+{
+  "gate": "flights",
+  "start_unix": 1790885321.921923,
+  "binary_sha256": "5800430639fbb9a50c5f758c034036239511d1d0fc01cf2874d9be750efd5fdc",
+  "seeded_playbooks": 0,
+  "private_xdg": true,
+  "headless": true,
+  "model_key_source": "secret-env ai --",
+  "git_head": "b2e1b915bbd1fa43fc09e5a1346d0a0245619562"
+}

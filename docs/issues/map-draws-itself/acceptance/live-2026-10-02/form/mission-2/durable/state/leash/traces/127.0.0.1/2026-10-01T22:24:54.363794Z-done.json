@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "time": "2026-10-01T22:24:54.363794Z",
+  "site": "127.0.0.1",
+  "mission": "On this harmless local test server, enter beta-test in the Test message field and click Post test message exactly once. Stop when Test message posted and beta-test are visible. This synthetic loopback submission is authorized. Never submit a second time or retry an uncertain submission. Do not log in, buy, upload, or send anything outside this local test server.",
+  "outcome": "done",
+  "cost": 0.0026578960000000003,
+  "duration_ms": 3844,
+  "model_calls": 6,
+  "start_url": "http://127.0.0.1:36089/message-compose",
+  "page_kind_path": [
+    "message-compose",
+    "message-posted"
+  ],
+  "inferred_pages": [
+    {
+      "name": "message-compose",
+      "url_pattern": "http://127.0.0.1/message-compose"
+    },
+    {
+      "name": "message-posted",
+      "url_pattern": "http://127.0.0.1/message-posted"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": true,
+      "n": 1,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "textbox",
+        "label": "Test message"
+      },
+      "text": "beta-test",
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 1.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "3",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "http://127.0.0.1:36089/message-compose",
+        "title": "Harmless message posting acceptance"
+      },
+      "elapsed_ms": 2334
+    },
+    {
+      "non_repeatable": true,
+      "n": 2,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Post test message"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.99
+        },
+        {
+          "key": "done",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "http://127.0.0.1:36089/message-posted?token=beta-test",
+        "title": "Harmless message posting acceptance"
+      },
+      "elapsed_ms": 3126
+    },
+    {
+      "non_repeatable": false,
+      "n": 3,
+      "operation": "done",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 1.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "http://127.0.0.1:36089/message-posted?token=beta-test",
+        "title": "Harmless message posting acceptance"
+      },
+      "elapsed_ms": 3832
+    }
+  ],
+  "final": {
+    "url": "http://127.0.0.1:36089/message-posted?token=beta-test",
+    "title": "Harmless message posting acceptance"
+  }
+}

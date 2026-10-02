@@ -14,6 +14,7 @@ module P = Protocol
    they never shadow the loop's own answers. *)
 type kind =
   | Procedure_answer [@json.name "procedure"]
+  | Continue_answer [@json.name "continue"]
   | Handoff_answer [@json.name "handoff"]
   | Fail_answer [@json.name "fail"]
 [@@deriving yojson]
@@ -24,9 +25,9 @@ type kind =
 type reply = {
   answer : kind;
   procedure : Playbook.procedure option;
+  actions : P.planner_action list option;
   reason : string option;
   expect : string list option;
-  pages : Playbook.page list option;
 }
 [@@deriving yojson]
 
@@ -120,6 +121,8 @@ let request_json (request : Run.plan_request) =
       ( "arguments",
         `Assoc
           (List.map (fun (name, value) -> (name, `String value)) request.Run.arguments) );
+      ("planner_actions", `Int request.Run.planner_actions);
+      ("snapshot", P.yojson_of_snapshot request.Run.snapshot);
       ( "page",
         `Assoc
           [
@@ -165,52 +168,11 @@ let check_expectations (book : Playbook.t option) sentences =
 let answer_of (request : Run.plan_request) (reply : reply) :
     (Run.plan_reply, string) result =
   let expect = Option.value ~default:[] reply.expect in
-  let pages = Option.value ~default:[] reply.pages in
-  let playbook =
-    Option.map
-      (fun (book : Playbook.t) -> { book with pages = book.pages @ pages })
-      request.Run.playbook
-  in
-  let validate_pages =
-    match playbook with
-    | None when pages <> [] -> Error "page kinds require a chosen site"
-    | None -> Ok ()
-    | Some _ when pages = [] -> Ok ()
-    | Some book ->
-        (* pbk-eyya: only the page kinds are the planner's to add. A file script cannot be
-           re-resolved without the playbook directory, so the check runs the loader over the
-           pages alone, beside one placeholder goal procedure the loader requires. *)
-        let pages_only =
-          match Playbook.yojson_of_t book with
-          | `Assoc fields ->
-              `Assoc
-                (List.map
-                   (fun (key, value) ->
-                     match key with
-                     | "scripts" | "shapes" -> (key, `Null)
-                     | "procedures" ->
-                         ( key,
-                           `List
-                             [
-                               `Assoc
-                                 [
-                                   ("slug", `String "planner-pages");
-                                   ("description", `String "Page kinds check.");
-                                   ( "steps",
-                                     `List [ `Assoc [ ("goal", `String "Look.") ] ] );
-                                   ("expect", `List [ `String "no dialog is open" ]);
-                                 ];
-                             ] )
-                     | _ -> (key, value))
-                   fields)
-          | other -> other
-        in
-        Result.map (fun _ -> ()) (Playbook.of_json ~file:"planner page kinds" pages_only)
-  in
+  let playbook = request.Run.playbook in
   let one_of_three =
     "answer exactly one of procedure, handoff or fail with the reason it needs"
   in
-  match Result.bind validate_pages (fun () -> check_expectations playbook expect) with
+  match check_expectations playbook expect with
   | Error why -> Error why
   | Ok () -> (
       let no_procedure name (procedure : Playbook.procedure option) =
@@ -229,6 +191,27 @@ let answer_of (request : Run.plan_request) (reply : reply) :
             Error (Printf.sprintf "the answer is %s but the reply carries no reason" name)
       in
       match reply.answer with
+      | _ when reply.answer <> Continue_answer && reply.actions <> None ->
+          Error "only continue may carry actions"
+      | Continue_answer -> (
+          match (reply.procedure, reply.reason, reply.actions) with
+          | None, None, actions
+            when List.length (Option.value ~default:[] actions)
+                 <= request.Run.planner_actions ->
+              let actions = Option.value ~default:[] actions in
+              let checked =
+                List.fold_left
+                  (fun result action ->
+                    Result.bind result (fun () ->
+                        P.check_planner_action request.Run.snapshot action))
+                  (Ok ()) actions
+              in
+              Result.map
+                (fun () ->
+                  Run.{ answer = Continue_actions actions; expect; usage = None })
+                checked
+          | None, None, _ -> Error "continue exceeds planner_actions"
+          | _ -> Error "continue cannot carry procedure or reason")
       | Procedure_answer -> (
           match (reply.procedure, reply.reason) with
           | None, _ -> Error "the answer is procedure but the reply carries no procedure"
@@ -246,22 +229,21 @@ let answer_of (request : Run.plan_request) (reply : reply) :
                     Playbook.check_procedure ~file:"the planner's reply" book proc
                   with
                   | Error why -> Error why
-                  | Ok () ->
-                      Ok Run.{ answer = Run.Procedure proc; expect; usage = None; pages })
+                  | Ok () -> Ok Run.{ answer = Run.Procedure proc; expect; usage = None })
               ))
       | Handoff_answer -> (
           match no_procedure "handoff" reply.procedure with
           | Error why -> Error why
           | Ok () ->
               Result.map
-                (fun why -> Run.{ answer = Run.Handoff why; expect; usage = None; pages })
+                (fun why -> Run.{ answer = Run.Handoff why; expect; usage = None })
                 (with_reason "handoff"))
       | Fail_answer -> (
           match no_procedure "fail" reply.procedure with
           | Error why -> Error why
           | Ok () ->
               Result.map
-                (fun why -> Run.{ answer = Run.Fail why; expect; usage = None; pages })
+                (fun why -> Run.{ answer = Run.Fail why; expect; usage = None })
                 (with_reason "fail")))
 
 (* run-rq6i: the reply as the loop can use it, or the sentence saying why it cannot. The
@@ -403,3 +385,93 @@ let create ~now ~client ~model ~reasoning ~logger () =
               ())
   in
   { plan; choose }
+
+(* map-bjon map-6xcy map-nh2e: separate versioned compiler turn. *)
+let learning_prompt_version = "map-2"
+
+let learning_prompt =
+  {|You compile a browser procedure from successful traces, or repair one against a failing trace and snapshot. Prompt map-2. Return a JSON object {"procedure": <one procedure>, "confirm": true|false}. The procedure uses exactly the supplied playbook schema: slug, description, steps of {"goal": human language, "until": [sentences]}, expect, optional args. Describe actions using accessible roles and labels, never row indices. Replace EVERY typed value that differs between traces with a {named_arg}; declare args as {"named_arg":{"from":"mission"}} (not a literal string source). EACH goal that causes navigation, including a click/press/submit that changes URL, must carry its OWN until ["the page is <destination-kind>"]. Use the supplied after_kind of the step with navigation:true, not its before kind, and do not put the destination check only on a later goal. Checker sentences: "the page is <kind>", "the page is not <kind>", "the text contains <text>", "no dialog is open", "a <role> named <name> is present", "a file was downloaded". Use the supplied page names. Do not invent scripts, selectors, or kinds. Each step includes kind, operation, target role/name, argument-candidate text and observed result; planner and operator source actions are both evidence. Do not include provenance: the service owns it. For non-repeatable paths, confirm only if independent traces agree in path, operations and target role+label, with only typed values different. Use one action per goal, with exact templates such as "Click the button named View" or "Type {query} in the textbox named Search". Do not combine multiple actions in one goal. For non-repeatable repair, confirm only if EVERY required action target matches exactly one role+label row in the failing snapshot; do not rerun the mission. On validation_errors, fix those errors. Never infer success from your own answer.|}
+
+(* map-ptnk: the provider may reject null message.content before returning a
+   completion. Log only an allowlisted, bounded envelope summary, never its body. *)
+let learning_response_metadata json =
+  let get name = function
+    | `Assoc fields -> Option.value ~default:`Null (List.assoc_opt name fields)
+    | _ -> `Null
+  in
+  let choice = match get "choices" json with `List (first :: _) -> first | _ -> `Null in
+  let usage = get "usage" json in
+  let count value = match value with `Int n when n >= 0 -> `Int n | _ -> `Null in
+  let finish =
+    match get "finish_reason" choice with
+    | `String ("length" | "stop" | "content_filter" | "tool_calls" | "function_call") as
+      reason ->
+        reason
+    | _ -> `String "unknown"
+  in
+  let content =
+    match get "content" (get "message" choice) with
+    | `Null -> "null-or-missing"
+    | `String _ -> "string"
+    | _ -> "other"
+  in
+  let cost =
+    match get "cost" usage with
+    | `Float f when Float.is_finite f && f >= 0. -> `Float f
+    | `Int n when n >= 0 -> `Float (float_of_int n)
+    | _ -> `Null
+  in
+  `Assoc
+    [
+      ("finish_reason", finish);
+      ("content_kind", `String content);
+      ("max_output_tokens", `Int max_tokens);
+      ("prompt_tokens", count (get "prompt_tokens" usage));
+      ("completion_tokens", count (get "completion_tokens" usage));
+      ("total_tokens", count (get "total_tokens" usage));
+      ( "reasoning_tokens",
+        count (get "reasoning_tokens" (get "completion_tokens_details" usage)) );
+      ("cost", cost);
+    ]
+
+let learning ~client ~model ~reasoning ~logger ~deadline request =
+  let reasoning =
+    match String.lowercase_ascii (trim reasoning) with
+    | "none" | "off" | "disabled" -> `Disabled
+    | effort -> `Effort effort
+  in
+  let open Ox_ai_chat.Types in
+  let messages =
+    [
+      { role = System; content = learning_prompt };
+      { role = User; content = Yojson.Safe.to_string request };
+    ]
+  in
+  Model_usage.start "planner";
+  match
+    Ox_ai_chat.complete client ~deadline ~model ~messages ~max_tokens ~json_object:true
+      ~reasoning ()
+  with
+  | Error (`Invalid_response issue) ->
+      let metadata = learning_response_metadata issue.Ox_json.got in
+      let cost =
+        match metadata with
+        | `Assoc fields -> (
+            match List.assoc "cost" fields with `Float cost -> Some cost | _ -> None)
+        | _ -> None
+      in
+      Model_usage.report "planner" cost;
+      Ox_observability.Logger.warn logger
+        ~fields:
+          [
+            ( "response_metadata",
+              Ox_observability.Logger.String (Yojson.Safe.to_string metadata) );
+          ]
+        "learning planner invalid response";
+      Error "learning planner returned an invalid response; see bounded response metadata"
+  | Error error -> Error (Model_error.of_eta error).P.message
+  | Ok completion -> (
+      log_usage logger completion;
+      Model_usage.report "planner" completion.Ox_ai_chat.Codecs.usage.cost;
+      try Ok (Yojson.Safe.from_string completion.Ox_ai_chat.Codecs.content)
+      with Yojson.Json_error why -> Error ("invalid learning JSON: " ^ why))

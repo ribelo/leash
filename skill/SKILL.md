@@ -9,6 +9,10 @@ Use Leash to inspect, debug, or drive pages in its managed Chrome. It is not the
 
 This skill is guidance, not permission. Stay inside the user's request.
 
+## Choose the learning path
+
+Prefer `leash drive MISSION` for a goal: it learns reusable procedures; manual commands do not. Use manual commands for inspection and for steps drive cannot do. Drive with `--tab HANDLE` leaves that tab open; without it, drive opens and closes its own tab (a handoff keeps it until resume).
+
 ## Handle
 
 `leash new` and `leash take` return a handle. Keep it: it is the only way to act on that tab. There is no owner and no session default. `leash list` never shows a handle. Share a handle only when you mean to share the tab.

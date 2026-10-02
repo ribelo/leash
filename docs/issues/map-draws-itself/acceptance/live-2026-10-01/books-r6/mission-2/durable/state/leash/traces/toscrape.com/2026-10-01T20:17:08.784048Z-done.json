@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "time": "2026-10-01T20:17:08.784048Z",
+  "site": "toscrape.com",
+  "mission": "Open the Mystery category on books.toscrape.com and stop when the page heading is Mystery and books are listed. Do not add anything to the basket. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+  "outcome": "done",
+  "cost": 0.000434154,
+  "duration_ms": 1622,
+  "model_calls": 2,
+  "start_url": "https://books.toscrape.com/",
+  "page_kind_path": [
+    "home",
+    "books-<slug>"
+  ],
+  "inferred_pages": [
+    {
+      "name": "home",
+      "url_pattern": "https://books.toscrape.com/"
+    },
+    {
+      "name": "books-<slug>",
+      "url_pattern": "https://books.toscrape.com/catalogue/category/books/<slug>/index.html"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "n": 1,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "link",
+        "label": "Mystery"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 1.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.03
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.97
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+        "title": "Mystery | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 869
+    },
+    {
+      "n": 2,
+      "operation": "done",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 1.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.0
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+        "title": "Mystery | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 1543
+    }
+  ],
+  "final": {
+    "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+    "title": "Mystery | Books to Scrape - Sandbox"
+  }
+}

@@ -6,8 +6,11 @@ type trace_page = { url : string; title : string } [@@deriving yojson]
 type trace_probability = { key : string; probability : float } [@@deriving yojson]
 
 type trace_step = {
+  non_repeatable : bool; [@json.default false]
   n : int;
   operation : string;
+  source : string; [@json.default "operator"]
+  error : string option;
   target : trace_target option;
   text : string option;
   operations : trace_probability list;
@@ -37,6 +40,7 @@ type t = {
   cost : float option; [@json.null]
   duration_ms : int;
   model_calls : int;
+  start_url : string option; [@json.default None]
   page_kind_path : string list;
   inferred_pages : inferred_page list; [@json.default []]
   compiled : bool; [@json.default false]

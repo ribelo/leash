@@ -1,0 +1,5 @@
+{
+  "url": "https://books.toscrape.com/",
+  "mission": "Open the Mystery category on books.toscrape.com and stop when the page heading is Mystery and books are listed. Do not add anything to the basket. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+  "unchanged_across_four_missions": true
+}

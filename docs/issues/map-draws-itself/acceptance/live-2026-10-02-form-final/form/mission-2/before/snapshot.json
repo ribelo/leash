@@ -1,0 +1,53 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "250"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.009393938998982776,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "http://127.0.0.1:41943/message-compose",
+    "title": "Harmless message posting acceptance",
+    "page_kind": {
+      "name": "message-compose",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "heading",
+        "name": "Harmless message posting form"
+      },
+      {
+        "index": 2,
+        "role": "paragraph",
+        "name": "Local synthetic test only. Nothing is sent outside this test server."
+      },
+      {
+        "index": 3,
+        "role": "textbox",
+        "name": "Test message",
+        "state": [
+          "required"
+        ]
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Post test message"
+      }
+    ],
+    "total": 4,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

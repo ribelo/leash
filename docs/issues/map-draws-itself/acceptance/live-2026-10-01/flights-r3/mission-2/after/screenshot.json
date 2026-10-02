@@ -1,0 +1,15 @@
+{
+  "command": [
+    "shot",
+    "[redacted]",
+    "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-01/flights-r3/mission-2/after/page.png"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 1.7389455730008194,
+  "reply": {
+    "path": "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-01/flights-r3/mission-2/after/page.png",
+    "bytes": 540667
+  },
+  "stdout": null,
+  "stderr": ""
+}

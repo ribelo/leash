@@ -1,0 +1,252 @@
+{
+  "story": "L53",
+  "campaign": "2026-10-02 repaired live campaign (recovered post-mortem, no reruns)",
+  "recovered": true,
+  "prior_campaign_preserved": "docs/issues/map-draws-itself/acceptance/live-2026-10-01",
+  "acceptance_passed": false,
+  "frozen_binary": {
+    "path": "/home/ribelo/projects/ribelo/leash/_build_l53_repaired_20261002/default/packages/leash/bin/main.exe",
+    "sha256": "5176fd7ebeac09ec60c1997f336549a40f60e5866c172a34f63bdec45344006f",
+    "bytes": 16039168,
+    "built_mtime": "2026-10-02T00:22:57+02:00",
+    "head": "b2e1b915bbd1fa43fc09e5a1346d0a0245619562",
+    "prebuild_recorded_at": "2026-10-02T00:22:28.370471+02:00",
+    "source_manifest_sha256": "6065195742868c8cf672ee30954ae35dd4cb2c26dd9cd5c309cce901dec6168a",
+    "source_archive_sha256": "6f083c724ed0d9cb53ae1a8722759cc105ceb230abc5c19edc49f62d9cdbd79a",
+    "diff_sha256_stable_across_build": "17286622c345b1d4e01dec87a88c4f989b60a7751880c8889582cf706e5d7bfe",
+    "source_file_count": 336,
+    "post_build_drift_noted": "frozen-learning.ml differs from current packages/leash/learning.ml (2026-10-02 00:31:53+02); provenance is tarball+manifest, not current tree"
+  },
+  "isolation": {
+    "private_xdg": true,
+    "private_profile": true,
+    "private_socket": true,
+    "no_seeded_playbooks": true,
+    "learning_mode": "auto",
+    "required_successes": 2,
+    "credential_source": "secret-env ai --",
+    "headless_evidence": "per-gate startup-processes.json main browser --headless=new + --remote-debugging-pipe; startup-browser-useragent.json cross-check"
+  },
+  "cost_scope": "Per-mission total run-plus-learning model_cost from drive reply; all missions cost_unreported=0. Excludes zero-model startup/diagnostic and prior campaign. Not whole-project billing.",
+  "harness_caveat": "scripts/live-acceptance-l53.py mtime 2026-10-02 00:34:48+02 postdates evidence (last 00:25:14+02); runtime logic inferred, not proven identical. Flights bare-PLN fix + offline test postdate campaign.",
+  "gates": [
+    {
+      "gate": "books",
+      "evidence_directory": "books",
+      "acceptance_passed": true,
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 2,
+          "model_calls_by_kind": {
+            "operator": 2
+          },
+          "model_cost_usd": 0.000434154,
+          "cost_unreported": 0,
+          "proposals": 0,
+          "installed": 0
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 3,
+          "model_calls_by_kind": {
+            "operator": 2,
+            "learning": 1
+          },
+          "model_cost_usd": 0.000954754,
+          "cost_unreported": 0,
+          "proposals": 1,
+          "installed": 0
+        },
+        {
+          "number": 3,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 4,
+          "model_calls_by_kind": {
+            "operator": 1,
+            "playbook": 1,
+            "procedure": 2
+          },
+          "model_cost_usd": 0.00028182,
+          "cost_unreported": 0,
+          "proposals": 0,
+          "installed": 1,
+          "used": "draft:open-mystery-category verified, expectation the page is books-slug passed"
+        },
+        {
+          "number": 4,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 4,
+          "model_calls_by_kind": {
+            "operator": 1,
+            "playbook": 1,
+            "procedure": 2
+          },
+          "model_cost_usd": 0.000282366,
+          "cost_unreported": 0,
+          "proposals": 0,
+          "installed": 0,
+          "used": "open-mystery-category verified, expectation passed; cheaper than both baselines"
+        }
+      ],
+      "failures": [],
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true
+      }
+    },
+    {
+      "gate": "maps",
+      "evidence_directory": "maps",
+      "acceptance_passed": false,
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 13,
+          "model_cost_usd": 0.001881022,
+          "cost_unreported": 0,
+          "page_kind_path": [
+            "m",
+            "maps",
+            "maps-2",
+            "place-<slug>"
+          ]
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 8,
+          "model_cost_usd": 0.00136467,
+          "cost_unreported": 0,
+          "page_kind_path": [
+            "maps",
+            "maps-2",
+            "maps-<slug>"
+          ]
+        }
+      ],
+      "failures": [
+        "After two independently successful missions: no actual generated draft in private proposed store",
+        "Draft lacks provenance of two successful traces",
+        "Generated draft is not classified repeatable with replay gate"
+      ],
+      "diagnosis": "Page-kind path divergence (consent vs no-consent, place-<slug> vs maps-<slug>) plus Search type/click marked non_repeatable in both traces; no compile attempted (empty service log).",
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true
+      }
+    },
+    {
+      "gate": "flights",
+      "evidence_directory": "flights",
+      "acceptance_passed": false,
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 8,
+          "model_cost_usd": 0.001317624,
+          "cost_unreported": 0
+        },
+        {
+          "number": 2,
+          "status": "error",
+          "exit_code": 0,
+          "reason": "the click action (outcome uncertain; not replayed) failed (row-not-actionable): the row is covered at its click point",
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": false,
+          "model_calls": 3,
+          "model_cost_usd": 0.000540918,
+          "cost_unreported": 0,
+          "reevaluation": "after-visible shows Loading results + bare PLN selector, zero PLN <amount>; saved true is false positive from bare-PLN check; current harness regex returns false"
+        }
+      ],
+      "failures": [
+        "Mission 2: drive not done (exit 0, status error, reason the click action (outcome uncertain; not replayed) failed (row-not-actionable): the row is covered at its click point)"
+      ],
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true
+      }
+    },
+    {
+      "gate": "form",
+      "evidence_directory": "form",
+      "acceptance_passed": false,
+      "harmlessness_passed": true,
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 4,
+          "model_cost_usd": 0.000228166,
+          "cost_unreported": 0,
+          "submissions": [
+            "alpha-test"
+          ]
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "exit_code": 0,
+          "goal_verified_saved": true,
+          "goal_verified_reevaluated": true,
+          "model_calls": 6,
+          "model_calls_by_kind": {
+            "text_helper": 1,
+            "operator": 3,
+            "learning": 2
+          },
+          "model_cost_usd": 0.002657896,
+          "cost_unreported": 0,
+          "learning_cost_usd": 0.0024266,
+          "submissions": [
+            "alpha-test",
+            "beta-test"
+          ]
+        }
+      ],
+      "failures": [
+        "After two form submissions: no actual installed agreement procedure reported",
+        "Installed form procedure lacks nonrepeatable two-trace agreement provenance"
+      ],
+      "diagnosis": "Exactly 2 authorized POSTs and no third; agreement compile (initial + retry = 2 learning calls) dropped with missing explicit the page is <kind> until expectation (1 service warn).",
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true,
+        "submissions_after_browser_shutdown": 2
+      }
+    }
+  ]
+}

@@ -826,6 +826,24 @@ let chat_timeout ~kind ~attempt ~expected () =
                  title = "Books";
                  url = "https://example.com";
                  text = "Books";
+                 planner_actions = 5;
+                 snapshot =
+                   Leash.Protocol.
+                     {
+                       snapshot = Result.get_ok (Snapshot_id.of_string "s_test");
+                       tab = Result.get_ok (Handle.of_string "t_test");
+                       url = "https://example.com";
+                       title = "Books";
+                       page_kind = None;
+                       rows = [];
+                       total = 0;
+                       offset = 0;
+                       truncated = false;
+                       settled = true;
+                       source = Ax;
+                       reason = None;
+                       dialog = None;
+                     };
                })
       in
       let error =

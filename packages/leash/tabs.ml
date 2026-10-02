@@ -153,6 +153,7 @@ type tab = {
           chrome-9ex7): emulation is on exactly while this is positive. *)
   mutable opener : string option;
       (** The target id of the tab that opened this one, Chrome's [openerId]. *)
+  mutable close_on_resume : bool;  (** map-puhi: only a drive-owned tab. *)
   mutable settlements : (Dispatch.outcome -> unit) list;
       (** The dispatches currently waiting on an acknowledgement (tab-0ohq tab-gjo0): a
           trusted input's reply or an [eval]'s may never come because its handler opened a
@@ -361,6 +362,7 @@ let new_record ~fresh ~generation ~at ~id ~session ~origin ~label ~url ~title ~o
     counter_installed = false;
     focus_holders = 0;
     opener;
+    close_on_resume = false;
     settlements = [];
     reading = Reading.create ();
   }
@@ -549,16 +551,18 @@ let installed_books t =
   match Playbook.list ~caps:t.caps () with Ok books -> books | Error _ -> []
 
 let page_label ~books ~url ~title =
-  match
-    List.find_map
-      (fun (book : Playbook.loaded) ->
-        Playbook.page_kind book.playbook.pages ~url ~text:"")
-      books
-  with
-  | Some name -> Some P.{ name; source = Declared }
-  | None ->
-      let inferred = Page_kind.infer ~url ~title in
-      Some P.{ name = inferred.name; source = Inferred }
+  if not (Page_kind.is_page ~url) then None
+  else
+    match
+      List.find_map
+        (fun (book : Playbook.loaded) ->
+          Playbook.page_kind book.playbook.pages ~url ~text:"")
+        books
+    with
+    | Some name -> Some P.{ name; source = Declared }
+    | None ->
+        let inferred = Page_kind.infer ~url ~title in
+        Some P.{ name = inferred.name; source = Inferred }
 
 let listing_of t ?(books = installed_books t) (entry : entry) : P.tab_listing =
   {
@@ -1057,13 +1061,22 @@ let hand_over t ~reason handle =
   let* entry, _ = begin_handoff t ~reason handle in
   Ok (info_of t entry)
 
+let close_after_resume t handle =
+  let* tab = peek t ~access:Act handle in
+  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+      tab.close_on_resume <- true;
+      Ok ())
+
 let resume t handle =
   let* tab = peek t ~access:Resume handle in
-  Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-      (* hand-0sja own-ay3s: the resume resets the tab's idle clock, so the human's work
-         does not expire the agent's tab a moment later. *)
-      let* _ = transition t (Resume { handle; at = now t }) in
-      Ok P.{ resumed = true })
+  let* () =
+    Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
+        (* hand-0sja own-ay3s: resume resets the idle clock of a supplied tab. *)
+        let* _ = transition t (Resume { handle; at = now t }) in
+        Ok ())
+  in
+  if tab.close_on_resume then Result.map (fun _ -> P.{ resumed = true }) (close t handle)
+  else Ok P.{ resumed = true }
 
 (* hand-04rb: every human-facing step a handoff waits on is bounded by five seconds — the
    browser call that raises the view here, and the window lookup and focus command inside
@@ -1483,6 +1496,8 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
       else Ok (rows, settled, source, reason, loader_id, guard)
     in
     let* rows, settled, source, reason, loader_id, guard = attempt (attempts - 1) in
+    (* trace-qe8c: targetInfoChanged may hold the tab-strip URL, not the document title. *)
+    refresh_titles t;
     let snapshot =
       enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ~caps:t.caps))
     in
@@ -1893,7 +1908,6 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
     ?(text_helper = fun () -> Text_helper.unavailable)
-    ?(guard = fun (_ : P.snapshot) (_ : Jev_request.decision) -> None)
     ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?reached ?label t ~model
     tab (args : P.drive_args) =
   (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
@@ -2054,70 +2068,64 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
     let snapshot = page.snapshot.snapshot in
     let index = Option.value ~default:0 choice.index in
     let op = P.Operation.to_string choice.operation in
-    match guard page.snapshot choice with
-    | Some kind ->
-        Error (error "invalid-request" ("discovery stopped before " ^ kind ^ " action"))
-    | None -> (
-        let started_act = now t in
-        let outcome =
-          match op with
-          | "click" ->
-              Actions.click ~settle_after:false ~cdp view
+    let started_act = now t in
+    let outcome =
+      match op with
+      | "click" ->
+          Actions.click ~settle_after:false ~cdp view
+            P.
+              {
+                tab = args.tab;
+                snapshot;
+                index;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }
+      | "select" ->
+          Actions.select ~settle_after:false ~check_hit:true ~cdp view
+            P.
+              {
+                tab = args.tab;
+                snapshot;
+                index;
+                option = Option.value ~default:0 choice.option;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }
+      | "scroll_down" -> Actions.operator_scroll ~cdp view ~down:true
+      | "scroll_up" -> Actions.operator_scroll ~cdp view ~down:false
+      | "wait" ->
+          t.sleep Snapshot_source.wait_s;
+          Ok (idle ())
+      | "type_text" -> (
+          match text with
+          | Some value ->
+              Actions.fill ~settle_after:false ~check_hit:true ~blur_after:false ~cdp view
                 P.
                   {
                     tab = args.tab;
                     snapshot;
                     index;
+                    text = value;
                     snap = None;
                     match_ = None;
                     limit = None;
                   }
-          | "select" ->
-              Actions.select ~settle_after:false ~check_hit:true ~cdp view
-                P.
-                  {
-                    tab = args.tab;
-                    snapshot;
-                    index;
-                    option = Option.value ~default:0 choice.option;
-                    snap = None;
-                    match_ = None;
-                    limit = None;
-                  }
-          | "scroll_down" -> Actions.operator_scroll ~cdp view ~down:true
-          | "scroll_up" -> Actions.operator_scroll ~cdp view ~down:false
-          | "wait" ->
-              t.sleep Snapshot_source.wait_s;
-              Ok (idle ())
-          | "type_text" -> (
-              match text with
-              | Some value ->
-                  Actions.fill ~settle_after:false ~check_hit:true ~blur_after:false ~cdp
-                    view
-                    P.
-                      {
-                        tab = args.tab;
-                        snapshot;
-                        index;
-                        text = value;
-                        snap = None;
-                        match_ = None;
-                        limit = None;
-                      }
-              | None ->
-                  Error
-                    (error "internal"
-                       "a type_text step reached the browser without a value"))
-          | _ -> Error (error "invalid-request" "unsupported drive operation")
-        in
-        add_ms meter.input_ms started_act (now t);
-        match outcome with
-        | Ok acted when op <> "wait" ->
-            (* Return the acknowledged input before settlement so Drive records it
+          | None ->
+              Error
+                (error "internal" "a type_text step reached the browser without a value"))
+      | _ -> Error (error "invalid-request" "unsupported drive operation")
+    in
+    add_ms meter.input_ms started_act (now t);
+    match outcome with
+    | Ok acted when op <> "wait" ->
+        (* Return the acknowledged input before settlement so Drive records it
                even if the next observation is cancelled or fails (fly-4mio). *)
-            pending_settle := Some (op = "type_text" && row_role page index = "combobox");
-            Ok acted
-        | other -> other)
+        pending_settle := Some (op = "type_text" && row_role page index = "combobox");
+        Ok acted
+    | other -> other
   in
   (* fly-4mio: acquire already retries ten times at 20 ms. One Drive attempt,
      or the two loops would nest to a hundred observations. *)
@@ -2165,14 +2173,15 @@ let no_levels : Run.levels =
                "no model client is configured for the run's planner"));
     }
 
-let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_levels)
+let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
+    ?(on_planner_step = fun _ -> ()) ?(planner_actions = 5) ?(levels = no_levels)
     ?(model = "unconfigured")
     ?(decide =
       fun ~deadline:_ _ ->
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable) ?discovery ?meter t ~tab ?installed
+    ?(text_helper = fun () -> Text_helper.unavailable) ?learning ?meter t ~tab ?installed
     (args : P.run_args) =
   let handle = tab in
   let* tab = peek t ~access:Act handle in
@@ -2192,17 +2201,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
           let browser = reading_browser t ~session tab cdp in
           let started = now t in
           let run_args = Run.of_args args in
-          let run_args =
-            match discovery with
-            | None -> run_args
-            | Some (_, turns) -> { run_args with Run.max_plans = turns }
-          in
-          let discovered =
-            ref
-              (Option.map
-                 (fun ((seed : Run.discovery), _) -> seed.book.playbook)
-                 discovery)
-          in
           let budget = float_of_int run_args.Run.deadline_s in
           let remaining () =
             Ox.Duration.ms
@@ -2233,7 +2231,10 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
               | Page_kind.Inferred -> Some inferred.url_pattern
               | Page_kind.Declared -> None
             in
-            on_page ~url:snapshot.url ~kind:(Some inferred.name) ~pattern
+            on_page ~url:snapshot.url
+              ~kind:
+                (if Page_kind.is_page ~url:snapshot.url then Some inferred.name else None)
+              ~pattern:(if Page_kind.is_page ~url:snapshot.url then pattern else None)
           in
           let label ~url ~title ~text =
             let inferred, source =
@@ -2246,7 +2247,9 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
                   (match source with
                   | Page_kind.Declared -> "declared"
                   | Page_kind.Inferred -> "inferred");
-                url = (if !trace_book = None then inferred.name else url);
+                url =
+                  (if !trace_book = None && Page_kind.is_page ~url then inferred.name
+                   else url);
               }
           in
           let traced (snapshot : P.snapshot) text =
@@ -2254,7 +2257,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
             classify snapshot text
           in
           let on_book book =
-            trace_book := if discovery = None then book else None;
+            trace_book := book;
             Option.iter (fun (snapshot, text) -> classify snapshot text) !trace_page
           in
           let observe () =
@@ -2295,6 +2298,30 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
                       (List.rev tab.downloads);
                   snapshot;
                 }
+          in
+          (* map-3qag: the run already holds the tab lock; use the same row
+             revalidation, hit-test, input and settle path as public actions. *)
+          let planner_action command =
+            let view = action_view t ~session tab cdp in
+            match command with
+            | P.Click args -> Actions.click ~cdp view args
+            | P.Fill args -> Actions.fill ~check_hit:true ~cdp view args
+            | P.Press args -> Actions.press ~cdp view args
+            | P.Scroll args -> Actions.scroll ~cdp view args
+            | P.Nav args ->
+                let* _ = navigate_locked t ~tab args.url in
+                Ok
+                  P.
+                    {
+                      tab = handle;
+                      url = tab.url;
+                      title = tab.title;
+                      snapshot = None;
+                      dialog = tab.dialog;
+                      popups = [];
+                      via = None;
+                    }
+            | _ -> Error (error "invalid-request" "unsupported planner action")
           in
           (* run-l06s run-vbys run-xqh8: the checkers first and the JEV score only where no
              checker applies. The score is one model call per unchanged page — the bounded
@@ -2407,29 +2434,9 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
                     (text_helper ()).Text_helper.complete ~deadline:(remaining ()) context);
                 step =
                   (fun request ->
-                    let guard snapshot choice =
-                      match discovery with
-                      | None -> None
-                      | Some _ -> (
-                          let operation =
-                            P.Operation.to_string choice.Jev_request.operation
-                          in
-                          if
-                            operation = "wait" || operation = "scroll_down"
-                            || operation = "scroll_up"
-                          then None
-                          else
-                            match
-                              List.find_opt
-                                (fun (row : P.row) -> Some row.index = choice.index)
-                                snapshot.P.rows
-                            with
-                            | None -> Some "unrecognized target"
-                            | Some row -> Run.unsafe_action (row.name ^ " " ^ row.role))
-                    in
                     drive_locked ~recent:request.Run.recent ?meter ?on_step
                       ~observed:(fun page -> traced page.Drive.snapshot page.text)
-                      ~decide ~text_helper ~guard ~label
+                      ~decide ~text_helper ~label
                       ~scripts:(fun page ->
                         request.Run.script_offers ~url:page.Drive.snapshot.url
                           ~text:page.text)
@@ -2451,33 +2458,15 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
                           dry_run = Some request.Run.dry_run;
                         });
                 verify;
-                plan =
-                  (fun request ->
-                    let* reply = levels.Run.plan ~deadline:(remaining ()) request in
-                    (match !discovered with
-                    | None -> ()
-                    | Some book ->
-                        discovered :=
-                          Some { book with Playbook.pages = book.pages @ reply.Run.pages });
-                    Ok reply);
+                plan = (fun request -> levels.Run.plan ~deadline:(remaining ()) request);
                 (* run-m0r8: a planner-written procedure that ran and passed its
                    expectations is written to XDG state here; the playbook the operator
                    authored is never written by a run, only by [playbook accept]. *)
                 propose =
                   (fun ~site proc ->
-                    match !discovered with
-                    | Some book ->
-                        discovered :=
-                          Some
-                            { book with Playbook.procedures = book.procedures @ [ proc ] };
-                        Ok
-                          (Filename.concat
-                             (Playbook.proposed_directory ~caps:t.caps ())
-                             (site ^ ".json"))
-                    | None -> (
-                        match Playbook.propose ~caps:t.caps ~site proc with
-                        | Ok path -> Ok path
-                        | Error why -> Error (error "internal" why)));
+                    match Playbook.propose ~caps:t.caps ~site proc with
+                    | Ok path -> Ok path
+                    | Error why -> Error (error "internal" why));
                 hand_off =
                   (fun ~reason ->
                     let* entry, _ = begin_handoff_locked t ~reason tab in
@@ -2530,13 +2519,24 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
             | None -> Playbook.list ~caps:t.caps ()
           with
           | Error why -> Error (error "invalid-request" why)
-          | Ok books -> (
+          | Ok books ->
+              let books =
+                Option.fold ~none:books
+                  ~some:(fun learning -> Learning.books learning books)
+                  learning
+              in
+              let drafts =
+                Option.fold
+                  ~none:(fun ~site:_ ~kind:_ -> [])
+                  ~some:(fun learning -> Learning.drafts learning)
+                  learning
+              in
               let execute on_record =
-                Run.loop ~handler ~on_book ~on_record
+                Run.loop ~handler ~on_book ~on_record ~drafts ~planner_action
+                  ~on_planner_step ~planner_actions
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)
-                  ~page_kinds:kinds ~installed:books ?discovery:(Option.map fst discovery)
-                  run_args
+                  ~page_kinds:kinds ~installed:books run_args
               in
               let* result =
                 match args.P.out with
@@ -2556,12 +2556,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step ?(levels = no_
                               with Sys_error why -> Error (error "internal" why)))
                     with Sys_error why -> Error (error "invalid-request" why))
               in
-              match !discovered with
-              | None -> Ok result
-              | Some book -> (
-                  match Playbook.propose_book ~caps:t.caps book with
-                  | Error why -> Error (error "internal" why)
-                  | Ok path -> Ok { result with P.proposals = [ path ] }))))
+              Ok result))
 
 (* extr-mp5z extr-lslp: the playbook commands that need a page. The script is looked up in
    the playbook directory by name — nothing on the wire carries script text — and [installed]
@@ -2691,6 +2686,7 @@ let report t : P.status_result =
     pid = None;
     headed = chrome.headed;
     key_present = false;
+    learning = None;
   }
 
 let status t =

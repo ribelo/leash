@@ -1,0 +1,14 @@
+{
+  "gate": "books",
+  "passed": false,
+  "missions_recorded": 0,
+  "failures": [
+    "RuntimeError: Private Chrome warm-up failed"
+  ],
+  "elapsed_s": 5.52321982383728,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

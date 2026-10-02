@@ -47,6 +47,7 @@ val capture : mission:string -> now:float -> capture
    not added to the header mapping. *)
 val page : capture -> url:string -> kind:string option -> pattern:string option -> unit
 val step : capture -> Protocol.step -> unit
+val planner_step : capture -> Protocol.planner_step -> unit
 
 val finish :
   capture ->

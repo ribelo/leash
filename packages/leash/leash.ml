@@ -8,6 +8,7 @@ module Cdp = Cdp
 module Chrome = Chrome
 module Download_setup = Download_setup
 module Config = Config
+module Learning = Learning
 module Telemetry = Telemetry
 module Desktop = Desktop
 module Models = Models

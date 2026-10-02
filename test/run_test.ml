@@ -50,8 +50,8 @@ let observation ?(url = "https://site-a.example/") ?(title = "A page") ?(text = 
       snapshot = snapshot ~url ~title ?dialog ();
     }
 
-let page ?url_pattern ?text_marker name =
-  B.{ name; description = name ^ " page"; url_pattern; text_marker }
+let page ?url_pattern ?text_marker ?(repeatable = true) name =
+  B.{ name; description = name ^ " page"; url_pattern; text_marker; repeatable }
 
 let goal ?hint ?until text = B.Goal B.{ goal = text; hint; until }
 let use ?args ?optional slug = B.Use B.{ use = slug; args; optional }
@@ -67,6 +67,7 @@ let procedure ?(args = []) ?(expect = []) ?max_steps ?deadline_s ~slug ~descript
       steps;
       expect;
       expect_timeout_s = None;
+      provenance = None;
       repeat = None;
       max_steps;
       deadline_s;
@@ -177,7 +178,7 @@ type harness = {
 let harness ?(books = [ "site-a.example" ]) ?(procs = [ "step" ])
     ?(verifies = [ [ expectation "the page is a" "page_kind" ] ]) ?(drives = [ drive () ])
     ?(observations = [ observation () ]) ?(verification_observations = [])
-    ?(plans = [ R.{ answer = Fail "no plan"; expect = []; usage = None; pages = [] } ])
+    ?(plans = [ R.{ answer = Fail "no plan"; expect = []; usage = None } ])
     ?(values = [ ("product", "Blue Top") ]) ?(tick = 0.) () =
   let last = match observations with [] -> observation () | first :: _ -> first in
   {
@@ -335,8 +336,8 @@ let args ?(mission = "buy the thing") ?(max_procedures = 40) ?(deadline_s = 900)
       start_url;
     }
 
-let run ?(installed = []) ?discovery h run_args =
-  R.loop ~handler:(handler h) ~now:(fun () -> h.clock) ~installed ?discovery run_args
+let run ?(installed = []) h run_args =
+  R.loop ~handler:(handler h) ~now:(fun () -> h.clock) ~installed run_args
 
 let status_of (result : P.run_result) = P.Run_status.to_string result.P.status
 
@@ -596,7 +597,7 @@ let failed_retry_trace () =
           [ expectation "the page is a" "page_kind" ~passed:false ];
           [ expectation "the page is a" "page_kind" ~passed:false ];
         ]
-      ~plans:[ R.{ answer = Fail "nothing left"; expect = []; usage = None; pages = [] } ]
+      ~plans:[ R.{ answer = Fail "nothing left"; expect = []; usage = None } ]
       ()
   in
   let result = ran (run ~installed:[ site_a ] h (args ())) in
@@ -702,16 +703,7 @@ let added_modal () =
              not satisfy it: this is the L30 finding, in the loop. *)
           [ expectation "the page is cart" "page_kind" ~passed:false ];
         ]
-      ~plans:
-        [
-          R.
-            {
-              answer = Fail "nothing left to plan";
-              expect = [];
-              usage = None;
-              pages = [];
-            };
-        ]
+      ~plans:[ R.{ answer = Fail "nothing left to plan"; expect = []; usage = None } ]
       ()
   in
   let result =
@@ -814,16 +806,7 @@ let recorded () =
              DONE here is refused by the mission's expectation. *)
           [ expectation "the page is cart" "page_kind" ~passed:false ];
         ]
-      ~plans:
-        [
-          R.
-            {
-              answer = Fail "nothing left to plan";
-              expect = [];
-              usage = None;
-              pages = [];
-            };
-        ]
+      ~plans:[ R.{ answer = Fail "nothing left to plan"; expect = []; usage = None } ]
       ()
   in
   let result =
@@ -968,16 +951,7 @@ let endings () =
     (List.mem "verify" verifying.ops);
   let handoff =
     harness ~procs:[ "BLOCKED" ]
-      ~plans:
-        [
-          R.
-            {
-              answer = Handoff "the captcha needs you";
-              expect = [];
-              usage = None;
-              pages = [];
-            };
-        ]
+      ~plans:[ R.{ answer = Handoff "the captcha needs you"; expect = []; usage = None } ]
       ()
   in
   let ended = ran (run ~installed:[ site_a ] handoff (args ())) in
@@ -1004,7 +978,7 @@ let operations () =
     harness ~procs:[ "step" ]
       ~drives:[ drive ~status:"error" ~reason:"the action failed" () ]
       ~verifies:[ [ expectation "the page is a" "page_kind" ~passed:false ] ]
-      ~plans:[ R.{ answer = Fail "nothing left"; expect = []; usage = None; pages = [] } ]
+      ~plans:[ R.{ answer = Fail "nothing left"; expect = []; usage = None } ]
       ()
   in
   let result = ran (run ~installed:[ with_arg ] failing (args ())) in
@@ -1021,6 +995,19 @@ let operations () =
     failing.asked
 
 (* extr-andy: no installed playbook delegates to the operator, without asking JEV. *)
+let no_playbook_state () =
+  let h = harness ~books:[ "none" ] () in
+  ignore (ran (run ~installed:[ site_a ] h (args ())));
+  let question = List.hd h.questions in
+  Alcotest.(check string)
+    "kind-ir9l no-book state carries inferred kind" "home"
+    (field_string "page_kind" question.R.state);
+  Alcotest.(check bool)
+    "kind-ir9l no-book state omits URL, not a duplicate kind" false
+    (match question.R.state with
+    | `Assoc fields -> List.mem_assoc "url" fields
+    | _ -> true)
+
 let no_playbook () =
   let h = harness () in
   h.drives <- [ drive () ];
@@ -1038,6 +1025,7 @@ let fallback_mission_expectations () =
   let operator_step =
     P.
       {
+        non_repeatable = false;
         n = 1;
         snapshot = snapshot_id;
         operation = ok (Operation.of_string "click");
@@ -1148,102 +1136,6 @@ let fallback_mission_stops () =
       Alcotest.(check int)
         "unknown kind not sent to verifier" 0
         (List.length h.verification_checks)
-
-(* L33 run-3vat run-xda7: the first discovery turn is planner-led and a verified
-   draft is reported without installing it. The next turn sees learned page kinds. *)
-let discovery_plans_first () =
-  let draft =
-    procedure ~slug:"browse" ~description:"Browse catalog" ~expect:[ "catalog visible" ]
-      [ goal "Open catalog" ]
-  in
-  let h =
-    harness ~procs:[ "browse" ]
-      ~verifies:[ [ expectation "catalog visible" "page_kind" ] ]
-      ~plans:
-        [
-          R.
-            {
-              answer = Procedure draft;
-              expect = [];
-              usage = None;
-              pages = [ page ~url_pattern:"https://site-a.example/*" "catalog" ];
-            };
-          R.{ answer = Fail "explored"; expect = []; usage = None; pages = [] };
-        ]
-      ()
-  in
-  let seed = book ~site:"site-a.example" ~entry:"https://site-a.example/" [] in
-  let discovery = R.{ book = seed; max_steps = 5; max_cost = 1. } in
-  let result = ran (run ~discovery h (args ~max_plans:2 ())) in
-  check_status "planner finished exploration" "blocked" result;
-  Alcotest.(check (list string))
-    "planner precedes procedure selection" [ "plan"; "choose" ]
-    ( List.filter (fun op -> op = "choose" || op = "plan") (List.rev h.ops) |> fun ops ->
-      List.filteri (fun i _ -> i < 2) ops );
-  Alcotest.(check (list (pair string string)))
-    "verified proposal"
-    [ ("site-a.example", "browse") ]
-    h.proposed;
-  Alcotest.(check int) "two planner turns" 2 (List.length h.plan_requests);
-  let next = List.nth h.plan_requests 1 in
-  Alcotest.(check bool)
-    "learned page kind is reused" true
-    (match next.R.playbook with
-    | Some book -> List.exists (fun (p : B.page) -> p.name = "catalog") book.pages
-    | None -> false)
-
-(* L33 run-tt9z run-tpnf: protected action intent stops before the fake browser
-   receives a goal, even when the mission asks for exactly that action. *)
-let discovery_hard_stops () =
-  List.iter
-    (fun (label, goal_text) ->
-      let draft =
-        procedure ~slug:"danger" ~description:goal_text ~expect:[ "page visible" ]
-          [ goal goal_text ]
-      in
-      let h =
-        harness ~procs:[ "danger" ]
-          ~plans:[ R.{ answer = Procedure draft; expect = []; usage = None; pages = [] } ]
-          ()
-      in
-      let seed = book ~site:"site-a.example" ~entry:"https://site-a.example/" [] in
-      let result =
-        ran
-          (run
-             ~discovery:R.{ book = seed; max_steps = 3; max_cost = 1. }
-             h (args ~mission:goal_text ()))
-      in
-      check_status label "blocked" result;
-      Alcotest.(check int) (label ^ " no browser action") 0 (List.length h.steps))
-    [
-      ("payment", "Pay now"); ("deletion", "Delete account"); ("messaging", "Send message");
-    ]
-
-let discovery_cost () =
-  let draft =
-    procedure ~slug:"browse" ~description:"Browse" ~expect:[ "page visible" ]
-      [ goal "Browse" ]
-  in
-  let h =
-    harness
-      ~plans:
-        [
-          R.
-            {
-              answer = Procedure draft;
-              expect = [];
-              usage = Some P.{ input_tokens = 10; output_tokens = 10; cost = 2. };
-              pages = [];
-            };
-        ]
-      ()
-  in
-  let seed = book ~site:"site-a.example" ~entry:"https://site-a.example/" [] in
-  let result =
-    ran (run ~discovery:R.{ book = seed; max_steps = 3; max_cost = 1. } h (args ()))
-  in
-  check_status "reported cost cap" "limit" result;
-  Alcotest.(check int) "no browser steps" 0 (List.length h.steps)
 
 (* ---------- L37: script steps ---------- *)
 
@@ -1739,14 +1631,8 @@ let incomplete_collection_refuses_done () =
     harness ~procs:[ "collect"; "DONE" ] ~verifies:[ bad; bad; good ]
       ~plans:
         [
-          R.{ answer = Procedure recovery; expect = []; usage = None; pages = [] };
-          R.
-            {
-              answer = Fail "collection is incomplete";
-              expect = [];
-              usage = None;
-              pages = [];
-            };
+          R.{ answer = Procedure recovery; expect = []; usage = None };
+          R.{ answer = Fail "collection is incomplete"; expect = []; usage = None };
         ]
       ()
   in
@@ -1872,6 +1758,7 @@ let l45_progress () =
   let prior =
     P.
       {
+        non_repeatable = false;
         n = 1;
         snapshot = snapshot_id;
         operation = ok (Operation.of_string "click");
@@ -2147,9 +2034,7 @@ let script_choice () =
               Ok
                 ( List.map (fun (sentence, _) -> expectation sentence "page_kind") checks,
                   observation () ));
-          plan =
-            (fun _ ->
-              Ok { answer = Fail "no plan"; expect = []; usage = None; pages = [] });
+          plan = (fun _ -> Ok { answer = Fail "no plan"; expect = []; usage = None });
           propose = (fun ~site:_ _ -> Alcotest.fail "no proposal");
           hand_off = (fun ~reason:_ -> Alcotest.fail "no handoff");
           script = (fun _ ~args -> scripts args);
@@ -2241,9 +2126,476 @@ let script_choice () =
     | Some reason -> contains_text "q" reason
     | None -> false)
 
+(* L53 map-7xrq map-3qag: planner detours are ordinary bounded actions, then JEV. *)
+let planner_continue () =
+  let row index role name =
+    P.{ index; role; name; value = None; state = None; options = None }
+  in
+  let rows = [ row 1 "textbox" "Search"; row 2 "button" "Browse" ] in
+  let observed =
+    { (observation ()) with R.snapshot = { (snapshot ()) with P.rows; total = 2 } }
+  in
+  let page : P.click_args =
+    P.
+      {
+        tab = handle;
+        snapshot = snapshot_id;
+        index = 1;
+        snap = None;
+        match_ = None;
+        limit = None;
+      }
+  in
+  let actions =
+    [
+      P.Fill
+        {
+          tab = handle;
+          snapshot = snapshot_id;
+          index = 1;
+          text = "ocaml";
+          snap = None;
+          match_ = None;
+          limit = None;
+        };
+      P.Click { page with index = 2 };
+    ]
+  in
+  let make observations actions =
+    harness ~procs:[ "DONE" ] ~observations
+      ~plans:[ R.{ answer = Continue_actions actions; expect = []; usage = None } ]
+      ()
+  in
+  let execute ?(cap = 2) ?(max_steps = 60) ?(observations = [ observed ])
+      ?(dry_run = false) ?(deadline_s = 900) ?(advance_clock = 0.) ?after_first ?fail_at
+      actions =
+    let h = make observations actions and called = ref [] and captured = ref [] in
+    let planner_action command =
+      called := !called @ [ command ];
+      h.clock <- h.clock +. advance_clock;
+      if List.length !called = 1 then
+        Option.iter (fun fresh -> h.observations <- [ fresh ]) after_first;
+      if fail_at = Some (List.length !called) then
+        Error
+          (P.make_error (ok (P.Error_code.of_string "stale-snapshot")) ~message:"changed")
+      else
+        Ok
+          P.
+            {
+              tab = handle;
+              url = observed.url;
+              title = observed.title;
+              snapshot = None;
+              dialog = None;
+              via = None;
+              popups = [];
+            }
+    in
+    let result =
+      R.loop ~handler:(handler h)
+        ~now:(fun () -> h.clock)
+        ~installed:[ site_a ] ~planner_actions:cap ~planner_action
+        ~on_planner_step:(fun step -> captured := !captured @ [ step ])
+        (args ~mission:"Inspect the catalogue" ~max_steps ~dry_run ~deadline_s ())
+    in
+    (result, h, !called, !captured)
+  in
+  let result, h, called, captured = execute actions in
+  let result = ran result in
+  check_status "map-7xrq returns to JEV and completes" "done" result;
+  Alcotest.(check int) "all actions dispatched" 2 (List.length called);
+  Alcotest.(check int) "JEV resumes once" 1 (List.length h.steps);
+  Alcotest.(check int)
+    "cap supplied to planner" 2 (List.hd h.plan_requests).planner_actions;
+  Alcotest.(check bool)
+    "actual offered rows supplied" true
+    ((List.hd h.plan_requests).snapshot.rows = rows);
+  Alcotest.(check (list string))
+    "map-3qag chronological commands" [ "fill"; "click" ]
+    (List.map (fun (s : P.planner_step) -> s.command) captured);
+  Alcotest.(check int)
+    "turn includes actions" 2
+    (List.length (List.hd result.planner_turns).steps);
+  let result, h, _, _ = execute [] in
+  check_status "optional empty detour resumes JEV" "done" (ran result);
+  Alcotest.(check int) "empty actions resume operator" 1 (List.length h.steps);
+  let result, h, called, captured = execute ~fail_at:2 actions in
+  Alcotest.(check bool) "action failure preserved" true (Result.is_error result);
+  Alcotest.(check int) "no operator after failed action" 0 (List.length h.steps);
+  Alcotest.(check int) "partial actions attempted" 2 (List.length called);
+  Alcotest.(check (list (option string)))
+    "partial steps retain failure"
+    [ None; Some "stale-snapshot" ]
+    (List.map (fun (s : P.planner_step) -> s.error) captured);
+  List.iter
+    (fun bad ->
+      let result, _, called, _ = execute bad in
+      Alcotest.(check bool) "invalid detour refused" true (Result.is_error result);
+      Alcotest.(check int) "invalid actions never dispatch" 0 (List.length called))
+    [
+      actions @ actions;
+      [ P.Click { page with index = 99 } ];
+      [ P.Click { page with snapshot = ok (P.Snapshot_id.of_string "s_old") } ];
+      [ P.Click { page with tab = ok (P.Handle.of_string "t_other") } ];
+      [ P.Nav { tab = handle; url = "https://other.example/" } ];
+    ];
+  let result, _, called, captured = execute ~max_steps:1 actions in
+  check_status "remaining mission budget bounds detour" "limit" (ran result);
+  Alcotest.(check int) "only budgeted action attempted" 1 (List.length called);
+  Alcotest.(check int) "only budgeted action traced" 1 (List.length captured);
+  let duplicate =
+    {
+      observed with
+      snapshot =
+        {
+          observed.snapshot with
+          rows = rows @ [ { (List.nth rows 1) with P.index = 3 } ];
+          total = 3;
+        };
+    }
+  in
+  let result, _, called, _ =
+    execute ~observations:[ duplicate ] [ P.Click { page with index = 2 } ]
+  in
+  check_status "offered index works even with a duplicate name" "done" (ran result);
+  Alcotest.(check int) "initial row identity retained" 1 (List.length called);
+  let fresh =
+    {
+      duplicate with
+      snapshot =
+        { duplicate.snapshot with snapshot = ok (P.Snapshot_id.of_string "s_fresh") };
+    }
+  in
+  let result, _, called, _ = execute ~after_first:fresh actions in
+  Alcotest.(check bool)
+    "changed duplicate target is refused" true (Result.is_error result);
+  Alcotest.(check int) "ambiguous later action never dispatches" 1 (List.length called);
+  List.iter
+    (fun label ->
+      let protected =
+        {
+          observed with
+          snapshot =
+            {
+              observed.snapshot with
+              rows = [ List.hd rows; { (List.nth rows 1) with P.name = label } ];
+            };
+        }
+      in
+      let result, _, called, captured =
+        execute ~observations:[ protected ] [ P.Click { page with index = 2 } ]
+      in
+      Alcotest.(check bool) "protected action refused" true (Result.is_error result);
+      Alcotest.(check int) "protected action never dispatches" 0 (List.length called);
+      Alcotest.(check int) "protected attempt remains evidence" 1 (List.length captured))
+    [ "Pay now"; "Delete account"; "Send message" ];
+  let result, _, called, _ = execute ~dry_run:true actions in
+  check_status "dry run remains observational" "blocked" (ran result);
+  Alcotest.(check int) "dry run sends no planner actions" 0 (List.length called);
+  let result, _, called, captured = execute ~deadline_s:1 ~advance_clock:2. actions in
+  check_status "deadline checked between detour actions" "deadline" (ran result);
+  Alcotest.(check int) "deadline prevents second dispatch" 1 (List.length called);
+  Alcotest.(check int) "deadline retains first action trace" 1 (List.length captured)
+
+(* map-yzqp map-itbt: a failed non-repeatable attempt must not reach ANY planner
+   recovery path, even a same-slug replacement, alternate procedure, or Continue. *)
+(* map-yzqp map-itbt: risk survives optional/nested composition, a changed kind,
+   and an unfillable later step following a partially completed procedure. *)
+let nonrepeatable_composition () =
+  let risk =
+    P.
+      {
+        non_repeatable = true;
+        n = 1;
+        snapshot = snapshot_id;
+        operation = ok (Operation.of_string "click");
+        index = Some 1;
+        target = Some { target_role = "button"; target_label = "OK" };
+        text = None;
+        probabilities = { op = `Assoc []; target = `Assoc [] };
+        after = { url = "https://site-a.example/changed"; title = "neutral" };
+        elapsed_ms = 1;
+      }
+  in
+  List.iter
+    (fun (label, steps, status) ->
+      let child =
+        procedure ~slug:"child" ~description:"Inspect the button"
+          ~expect:[ "the page is a" ]
+          [ goal "Click the button named OK" ]
+      in
+      let outer =
+        procedure ~slug:"step" ~description:"Inspect settings" ~expect:[ "the page is a" ]
+          steps
+      in
+      let installed =
+        book ~site:"site-a.example" ~entry:"https://site-a.example/"
+          ~pages:
+            [
+              page ~url_pattern:"https://site-a.example/" "a";
+              page ~url_pattern:"https://site-a.example/changed" "b";
+            ]
+          [
+            outer;
+            child;
+            procedure
+              ~args:[ mission "missing" ]
+              ~slug:"later" ~description:"Inspect another item"
+              [ goal "Inspect {missing}" ];
+          ]
+      in
+      let h =
+        harness ~procs:[ "step" ]
+          ~drives:[ drive ~status ~steps:[ risk ] () ]
+          ~observations:
+            [ observation (); observation ~url:"https://site-a.example/changed" () ]
+          ~verifies:[ [ expectation "the page is a" "page_kind" ] ]
+          ~plans:[ R.{ answer = Continue_actions []; expect = []; usage = None } ]
+          ()
+      in
+      let actions = ref 0 in
+      let result =
+        ran
+          (R.loop ~handler:(handler h)
+             ~now:(fun () -> h.clock)
+             ~installed:[ installed ]
+             ~planner_action:(fun _ ->
+               incr actions;
+               assert false)
+             (args ()))
+      in
+      check_status label "blocked" result;
+      Alcotest.(check int) "one risky drive, no optional fallback" 1 (List.length h.steps);
+      Alcotest.(check int)
+        "no planner after changed-kind or partial failure" 0 (List.length h.plan_requests);
+      Alcotest.(check int) "no Continue after unsafe composition" 0 !actions)
+    [
+      ("optional blocked child", [ use ~optional:true "child" ], "blocked");
+      ("nested partial child", [ use "child"; use "later" ], "done");
+      ("partial direct drive", [ goal "Click the button named OK"; use "later" ], "done");
+    ]
+
+let nonrepeatable_no_recovery () =
+  let proc =
+    procedure ~slug:"step" ~description:"Inspect settings" ~expect:[ "the page is a" ]
+      [ goal "Click the button named OK" ]
+  in
+  let provenance repeatable =
+    B.
+      {
+        traces = [];
+        model = "fixture";
+        time = "now";
+        tries = 0;
+        last_failure = None;
+        path = [ "a" ];
+        repeatable;
+        reason = "fixture";
+        gate = "trial";
+        repair = false;
+      }
+  in
+  let guarded_step =
+    P.
+      {
+        non_repeatable = true;
+        n = 1;
+        snapshot = snapshot_id;
+        operation = ok (Operation.of_string "click");
+        index = Some 1;
+        target = Some { target_role = "button"; target_label = "OK" };
+        text = None;
+        probabilities = { op = `Assoc []; target = `Assoc [] };
+        after = { url = "https://site-a.example/"; title = "Settings" };
+        elapsed_ms = 1;
+      }
+  in
+  let click =
+    P.Click
+      P.
+        {
+          tab = handle;
+          snapshot = snapshot_id;
+          index = 1;
+          snap = None;
+          match_ = None;
+          limit = None;
+        }
+  in
+  let choices =
+    [
+      R.Procedure proc;
+      R.Procedure { proc with B.slug = "alternate" };
+      R.Continue_actions [ click ];
+    ]
+  in
+  List.iter
+    (fun (label, pinned, evidence, provenance) ->
+      List.iter
+        (fun answer ->
+          List.iter
+            (fun status ->
+              let proc = { proc with B.provenance } in
+              let installed =
+                book ~site:"site-a.example" ~entry:"https://site-a.example/"
+                  ~pages:
+                    [
+                      page ~repeatable:(not pinned)
+                        ~url_pattern:"https://site-a.example/*" "a";
+                    ]
+                  [ proc ]
+              in
+              let h =
+                harness ~procs:[ "step" ]
+                  ~drives:
+                    [
+                      drive ~status ~steps:(if evidence then [ guarded_step ] else []) ();
+                    ]
+                  ~verifies:[ [ expectation ~passed:false "the page is a" "page_kind" ] ]
+                  ~plans:[ R.{ answer; expect = []; usage = None } ]
+                  ()
+              in
+              let actions = ref 0 in
+              let result =
+                ran
+                  (R.loop ~handler:(handler h)
+                     ~now:(fun () -> h.clock)
+                     ~installed:[ installed ]
+                     ~planner_action:(fun _ ->
+                       incr actions;
+                       assert false)
+                     (args ~mission:"Inspect settings" ()))
+              in
+              check_status label "blocked" result;
+              Alcotest.(check int) "map-yzqp only one attempt" 1 (List.length h.steps);
+              Alcotest.(check int)
+                "map-itbt no planner turn" 0 (List.length h.plan_requests);
+              Alcotest.(check int) "map-itbt no Continue action" 0 !actions;
+              Alcotest.(check int)
+                "map-yzqp no hidden replay" 1 (List.hd result.procedures).attempts)
+            [ "done"; "blocked" ])
+        choices)
+    [
+      ("authored false without provenance", true, false, None);
+      ("authored false beats optimistic provenance", true, false, Some (provenance true));
+      ("learned false", false, false, Some (provenance false));
+      ("pre-action risk survives neutral after page", false, true, None);
+    ]
+
+(* map-b3kk: the selected immutable offer is used in both dry run and execution,
+   even if another drive compiles a new same-slug draft while the vote is pending. *)
+let immutable_draft_selection () =
+  let sentence = "the page is books-slug" in
+  let home = page ~url_pattern:"https://site-a.example/" "home" in
+  let destination =
+    "https://site-a.example/catalogue/category/books/mystery_3/index.html?sort=title#books"
+  in
+  let pages =
+    [
+      home;
+      page ~url_pattern:"https://site-a.example/catalogue/category/books/*/index.html"
+        "books-slug";
+    ]
+  in
+  let installed =
+    book ~site:"site-a.example" ~entry:"https://site-a.example/" ~pages:[ home ] []
+  in
+  let original =
+    procedure ~slug:"step" ~description:"Inspect old view" ~expect:[ sentence ]
+      [ goal ~until:[ sentence ] "Click the link named Old" ]
+  in
+  let replacement =
+    { original with B.steps = [ goal ~until:[ sentence ] "Click the link named New" ] }
+  in
+  List.iter
+    (fun dry_run ->
+      let current = ref B.{ procedure = original; pages; revision = "old-revision" } in
+      let h =
+        harness ~procs:[ "draft:step"; "DONE" ]
+          ~drives:[ drive ~url:destination () ]
+          ~observations:[ observation (); observation ~url:destination () ]
+          ~verifies:[ [ expectation sentence "page_kind" ] ]
+          ()
+      in
+      let base = handler h in
+      let handler =
+        {
+          base with
+          R.choose =
+            (fun q ->
+              (if q.R.name = "select_procedure" then
+                 current :=
+                   B.
+                     {
+                       procedure = replacement;
+                       pages =
+                         [
+                           home;
+                           page ~url_pattern:"https://site-a.example/other-books/*"
+                             "books-slug";
+                         ];
+                       revision = "new-revision";
+                     });
+              base.choose q);
+        }
+      in
+      let result =
+        ran
+          (R.loop ~handler
+             ~now:(fun () -> h.clock)
+             ~installed:[ installed ]
+             ~drafts:(fun ~site:_ ~kind:_ -> [ !current ])
+             (args ~mission:"Inspect catalogue" ~expect:[ sentence ] ~dry_run ()))
+      in
+      let entry = List.hd result.procedures in
+      Alcotest.(check (option string))
+        "map-b3kk immutable offered digest" (Some "old-revision") entry.revision;
+      Alcotest.(check string) "map-b3kk draft slug" "draft:step" entry.slug;
+      Alcotest.(check (list string))
+        "map-bjon draft expect uses code page_kind" [ "page_kind" ]
+        (List.map (fun (e : P.run_expectation) -> e.checker) entry.expectations);
+      if dry_run then (
+        Alcotest.(check string) "map-b3kk dry run planned only" "planned" entry.outcome;
+        Alcotest.(check int) "map-b3kk dry run has no effects" 0 (List.length h.steps);
+        Alcotest.(check int)
+          "map-b3kk dry run never proposes/installs" 0 (List.length h.proposed))
+      else (
+        check_status "map-bjon installed home plus draft books-slug" "done" result;
+        Alcotest.(check string)
+          "map-b3kk executed the offered procedure" "Click the link named Old"
+          (List.hd h.steps).goal;
+        Alcotest.(check bool)
+          "map-bjon draft checks do not fall back to judgment" true
+          (List.exists
+             (fun checks -> List.mem (sentence, B.Page_kind "books-slug") checks)
+             h.verification_checks);
+        let reached = Option.get (List.hd h.steps).reached in
+        Alcotest.(check bool)
+          "map-bjon original revision destination until holds" true
+          (reached ~start_url:installed.playbook.entry
+             (snapshot ~url:destination ())
+             ~text:"");
+        Alcotest.(check bool)
+          "map-b3kk later revision vocabulary is not adopted" false
+          (reached ~start_url:installed.playbook.entry
+             (snapshot ~url:"https://site-a.example/other-books/new" ())
+             ~text:"")))
+    [ true; false ]
+
 let () =
   Alcotest.run "L31 run"
     [
+      ( "L53",
+        [
+          Alcotest.test_case "map-yzqp map-itbt unsafe composition" `Quick
+            nonrepeatable_composition;
+          Alcotest.test_case "map-yzqp map-itbt nonrepeatable cannot recover" `Quick
+            nonrepeatable_no_recovery;
+          Alcotest.test_case "map-b3kk immutable draft normal and dry-run" `Quick
+            immutable_draft_selection;
+          Alcotest.test_case "map-7xrq map-3qag bounded continuation" `Quick
+            planner_continue;
+        ] );
       ( "L45",
         [
           Alcotest.test_case "fly-2akp zero/one/many NONE operator routes" `Quick
@@ -2308,6 +2660,7 @@ let () =
           Alcotest.test_case "run-fp7i dry run" `Quick dry;
           Alcotest.test_case "run-klp9 endings" `Quick endings;
           Alcotest.test_case "run-vj48 run-7blx operations" `Quick operations;
+          Alcotest.test_case "kind-ir9l no-book model state" `Quick no_playbook_state;
           Alcotest.test_case "run-9ypy no playbook" `Quick no_playbook;
           Alcotest.test_case "daily-v6ez fallback DONE verifies expectations" `Quick
             fallback_mission_expectations;
@@ -2315,10 +2668,5 @@ let () =
             fallback_starting_page;
           Alcotest.test_case "daily-v6ez fallback stops and unknown page kinds" `Quick
             fallback_mission_stops;
-          Alcotest.test_case "run-3vat run-xda7 discovery planner" `Quick
-            discovery_plans_first;
-          Alcotest.test_case "run-tt9z run-tpnf discovery stops" `Quick
-            discovery_hard_stops;
-          Alcotest.test_case "run-tpnf cost" `Quick discovery_cost;
         ] );
     ]

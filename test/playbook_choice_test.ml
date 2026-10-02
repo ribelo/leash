@@ -227,8 +227,11 @@ let question_on_wire ~url () =
           let kind = if url = "about:blank" then "blank" else "home" in
           check_json "kind-ir9l inferred kind before a book is chosen" (`String kind)
             (get "page_kind" state);
-          check_json "kind-ir9l playbook-less lane shows the kind in place of the raw URL"
-            (`String kind) (get "url" state);
+          Alcotest.(check bool)
+            "kind-ir9l upper state omits raw and substituted URL" true
+            (match state with
+            | `Assoc fields -> not (List.mem_assoc "url" fields)
+            | _ -> false);
           check_json "plain mission without host"
             (`String "collect every book in the Travel category") (get "mission" state);
           match !asked with

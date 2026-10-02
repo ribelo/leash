@@ -1,0 +1,10 @@
+{
+  "gate": "form",
+  "start_unix": 1790893481.8374982,
+  "binary_sha256": "5176fd7ebeac09ec60c1997f336549a40f60e5866c172a34f63bdec45344006f",
+  "seeded_playbooks": 0,
+  "private_xdg": true,
+  "headless": true,
+  "model_key_source": "secret-env ai --",
+  "git_head": "b2e1b915bbd1fa43fc09e5a1346d0a0245619562"
+}

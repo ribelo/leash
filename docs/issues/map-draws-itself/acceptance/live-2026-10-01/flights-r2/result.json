@@ -1,0 +1,14 @@
+{
+  "gate": "flights",
+  "passed": false,
+  "missions_recorded": 0,
+  "failures": [
+    "RuntimeError: Private Chrome is not verified headless-over-pipe"
+  ],
+  "elapsed_s": 7.1766135692596436,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

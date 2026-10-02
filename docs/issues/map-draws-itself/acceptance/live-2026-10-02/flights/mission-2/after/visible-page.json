@@ -1,0 +1,18 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,50000)}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005657131994666997,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+      "title": "Wrocław to anywhere | Explore",
+      "text": "Skip to main content\nAccessibility feedback\nExplore\nFlights\nHotels\nVacation rentals\nChange appearance\nSign in\nExplore\nLoading results\nRound trip\n1\nEconomy\nWrocław\nWhere to?\n1-week trip in the next 6 months\nAll filters (1)\nFlights only\nStops\nPrice\nAirlines\nDuration\nBags\nLoading results\n​English (United States)\nPLN\nKeyboard shortcuts\nMap data ©2026\nTerms"
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

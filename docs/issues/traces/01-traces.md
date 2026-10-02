@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 12
 ---
 
@@ -39,3 +39,7 @@ Every drive writes its trace to `$XDG_STATE_HOME/leash/traces/<site>/<timestamp>
 ## Out of Scope
 
 Remote storage; traces of non-drive commands.
+
+## Live verification — 2026-10-01
+
+Both public drive lanes wrote private redacted trace files with matching costs and calls; offline list/show/prune worked after service shutdown. See [live evidence](live-2026-10-01.md). Subsequent regressions preserve uppercase JEV operation probabilities and resolve relative output paths against the caller.

@@ -1,0 +1,18 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,50000)}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.008189076004782692,
+  "reply": {
+    "value": {
+      "url": "https://books.toscrape.com/",
+      "title": "All products | Books to Scrape - Sandbox",
+      "text": "Books to Scrape We love being scraped!\nHome All products\nBooks\nTravel\nMystery\nHistorical Fiction\nSequential Art\nClassics\nPhilosophy\nRomance\nWomens Fiction\nFiction\nChildrens\nReligion\nNonfiction\nMusic\nDefault\nScience Fiction\nSports and Games\nAdd a comment\nFantasy\nNew Adult\nYoung Adult\nScience\nPoetry\nParanormal\nArt\nPsychology\nAutobiography\nParenting\nAdult Fiction\nHumor\nHorror\nHistory\nFood and Drink\nChristian Fiction\nBusiness\nBiography\nThriller\nContemporary\nSpirituality\nAcademic\nSelf Help\nHistorical\nChristian\nSuspense\nShort Stories\nNovels\nHealth\nPolitics\nCultural\nErotica\nCrime\nAll products\n1000 results - showing 1 to 20.\nWarning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.\n\n    \n\nA Light in the ...\n\n£51.77\n\n In stock\n\nAdd to basket\n\n    \n\nTipping the Velvet\n\n£53.74\n\n In stock\n\nAdd to basket\n\n    \n\nSoumission\n\n£50.10\n\n In stock\n\nAdd to basket\n\n    \n\nSharp Objects\n\n£47.82\n\n In stock\n\nAdd to basket\n\n    \n\nSapiens: A Brief History ...\n\n£54.23\n\n In stock\n\nAdd to basket\n\n    \n\nThe Requiem Red\n\n£22.65\n\n In stock\n\nAdd to basket\n\n    \n\nThe Dirty Little Secrets ...\n\n£33.34\n\n In stock\n\nAdd to basket\n\n    \n\nThe Coming Woman: A ...\n\n£17.93\n\n In stock\n\nAdd to basket\n\n    \n\nThe Boys in the ...\n\n£22.60\n\n In stock\n\nAdd to basket\n\n    \n\nThe Black Maria\n\n£52.15\n\n In stock\n\nAdd to basket\n\n    \n\nStarving Hearts (Triangular Trade ...\n\n£13.99\n\n In stock\n\nAdd to basket\n\n    \n\nShakespeare's Sonnets\n\n£20.66\n\n In stock\n\nAdd to basket\n\n    \n\nSet Me Free\n\n£17.46\n\n In stock\n\nAdd to basket\n\n    \n\nScott Pilgrim's Precious Little ...\n\n£52.29\n\n In stock\n\nAdd to basket\n\n    \n\nRip it Up and ...\n\n£35.02\n\n In stock\n\nAdd to basket\n\n    \n\nOur Band Could Be ...\n\n£57.25\n\n In stock\n\nAdd to basket\n\n    \n\nOlio\n\n£23.88\n\n In stock\n\nAdd to basket\n\n    \n\nMesaerion: The Best Science ...\n\n£37.59\n\n In stock\n\nAdd to basket\n\n    \n\nLibertarianism for Beginners\n\n£51.33\n\n In stock\n\nAdd to basket\n\n    \n\nIt's Only the Himalayas\n\n£45.17\n\n In stock\n\nAdd to basket\nPage 1 of 50\nnext"
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

@@ -1,0 +1,21 @@
+{
+  "gate": "flights",
+  "passed": false,
+  "missions_recorded": 4,
+  "failures": [
+    "After two independently successful missions: no actual generated draft in private proposed store",
+    "Draft lacks provenance of two successful traces",
+    "Generated draft is not classified repeatable with replay gate",
+    "Third mission: no JEV-selected generated draft with nonempty passing expectations",
+    "Third mission: successful replay did not install and report an actual playbook",
+    "Fourth mission: installed procedure was not actually used with passing expectations",
+    "Fourth mission: lower fully-reported model cost than both on-the-fly baselines not demonstrated",
+    "Installed playbook lacks replay-gate provenance"
+  ],
+  "elapsed_s": 135.7117726802826,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

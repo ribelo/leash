@@ -55,3 +55,14 @@ key is never url.
   $ wait "$pid"
   $ ./daily_cli_fixture.exe drive-request "$tmp/request"
   mission=Open Travel start_url=absent max_steps=absent tab=t_9xk out=absent
+
+trace-qe8c: --out is interpreted in the caller's cwd before crossing the socket.
+
+  $ rm -f "$tmp/ready" "$tmp/request" "$tmp/control.sock"
+  $ ./daily_cli_fixture.exe capture "$tmp/control.sock" "$tmp/request" "$tmp/ready" & pid=$!
+  $ while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || exit 1; sleep 0.01; done
+  $ timeout 15 leash drive 'Read this page' --tab t_9xk --out out.jsonl --socket "$tmp/control.sock" >out 2>err
+  $ test ! -s err
+  $ wait "$pid"
+  $ ./daily_cli_fixture.exe drive-relative-out "$tmp/request"
+  trace-qe8c relative out resolved against caller cwd

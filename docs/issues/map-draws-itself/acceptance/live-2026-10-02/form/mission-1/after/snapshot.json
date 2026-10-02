@@ -1,0 +1,45 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "250"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.01073193099728087,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "http://127.0.0.1:36089/message-posted?token=alpha-test",
+    "title": "Harmless message posting acceptance",
+    "page_kind": {
+      "name": "message-posted",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "heading",
+        "name": "Test message posted"
+      },
+      {
+        "index": 2,
+        "role": "paragraph",
+        "name": "Recorded synthetic token: alpha-test"
+      },
+      {
+        "index": 3,
+        "role": "paragraph",
+        "name": "No external message was sent."
+      }
+    ],
+    "total": 3,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

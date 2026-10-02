@@ -31,7 +31,7 @@ let docs = function
   | "check" | "uncheck" | "dialog" ->
       "ACT"
   | "net" | "debug" | "eval" | "cookies" | "storage" -> "NETWORK AND DEBUG"
-  | "drive" | "discover" -> "MISSIONS"
+  | "drive" -> "MISSIONS"
   | "playbook" -> "PLAYBOOKS"
   | _ -> "SERVICE"
 
@@ -40,7 +40,7 @@ let exits name =
   match name with
   | "status" -> exit_infos (List.sort Int.compare (75 :: common))
   | "list" -> exit_infos common
-  | "new" | "discover" -> exit_infos (List.sort Int.compare (75 :: common))
+  | "new" -> exit_infos (List.sort Int.compare (75 :: common))
   | _ -> exit_infos (List.sort Int.compare (66 :: 75 :: common))
 
 let local_exits = exit_infos [ 0; 64; 65; 70; 77; 124 ]
@@ -77,8 +77,9 @@ let top_man =
        agent takes one";
     `P "leash status";
     `P "leash list --table";
-    `P "leash new https://example.com --label research";
-    `P "leash snap TAB --limit 20";
+    `P "Prefer leash drive MISSION for a goal: it learns; manual commands do not.";
+    `P "Use manual commands for inspection and for steps drive cannot do.";
+    `P "leash drive 'Open the documentation' --url https://example.com";
     `S "SERVICE";
     `I
       ( "serve",

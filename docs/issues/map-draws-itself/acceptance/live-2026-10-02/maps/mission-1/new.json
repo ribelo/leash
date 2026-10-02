@@ -1,0 +1,28 @@
+{
+  "command": [
+    "new",
+    "https://www.google.com/maps?hl=en"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 2.0309518909998587,
+  "reply": {
+    "tab": "[redacted capability]",
+    "label": null,
+    "url": "https://consent.google.com/m?continue=https://www.google.com/maps?hl%3Den&gl=PL&m=0&pc=m&uxe=eomtm&cm=2&hl=en&src=1",
+    "title": "Before you continue to Google Maps",
+    "page_kind": {
+      "name": "m",
+      "source": "inferred"
+    },
+    "origin": "agent",
+    "age_s": 2,
+    "idle_s": 2,
+    "closes_in_s": 3598,
+    "with_human": false,
+    "generation": 1,
+    "dialog": null,
+    "loaded": true
+  },
+  "stdout": null,
+  "stderr": ""
+}

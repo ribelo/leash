@@ -447,7 +447,10 @@ let drive_request path =
   let out =
     match List.assoc_opt "out" fields with
     | None -> "absent"
-    | Some (`String text) when String.ends_with ~suffix:"out.jsonl" text -> "present"
+    | Some (`String text) when String.ends_with ~suffix:"out.jsonl" text ->
+        if Filename.is_relative text then
+          failwith "trace-qe8c relative output crossed the socket";
+        "present"
     | Some _ -> "unexpected"
   in
   Printf.printf "mission=%s start_url=%s max_steps=%s tab=%s out=%s\n" (show "mission")
@@ -485,6 +488,13 @@ let () =
       if keys <> [ "args"; "cmd"; "v" ] then failwith "hand-scaz extra request fields";
       print_endline "hand-scaz only v, cmd and args, even in a harness environment"
   | [ _; "drive-request"; path ] -> drive_request path
+  | [ _; "drive-relative-out"; path ] ->
+      let json = read_file path |> String.trim |> Yojson.Safe.from_string in
+      if
+        field "out" (field "args" json)
+        <> `String (Filename.concat (Sys.getcwd ()) "out.jsonl")
+      then failwith "trace-qe8c output was not resolved against caller cwd";
+      print_endline "trace-qe8c relative out resolved against caller cwd"
   | [ _; "inspect-init"; path; stdout; stderr ] -> inspect_init path stdout stderr
   | [ _; "skill-outcome"; action; path; stdout; stderr ] ->
       skill_outcome action path stdout stderr

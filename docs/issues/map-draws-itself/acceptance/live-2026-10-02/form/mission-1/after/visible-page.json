@@ -1,0 +1,18 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,50000)}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.0060415069965529256,
+  "reply": {
+    "value": {
+      "url": "http://127.0.0.1:36089/message-posted?token=alpha-test",
+      "title": "Harmless message posting acceptance",
+      "text": "Test message posted\n\nRecorded synthetic token: alpha-test\n\nNo external message was sent."
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

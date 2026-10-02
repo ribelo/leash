@@ -1,0 +1,5 @@
+{
+  "url": "https://www.google.com/travel/flights?hl=en",
+  "mission": "On Google Flights, open Explore and stop when the Explore destinations map and destination flight prices are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+  "unchanged_across_four_missions": true
+}

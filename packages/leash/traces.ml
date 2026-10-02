@@ -307,14 +307,17 @@ let write t (trace : P.drive_trace) =
         in
         save 0)
 
+type captured_step = Operator of P.step | Planner of P.planner_step
+
 type capture = {
   mission : string;
   started : float;
   mutable first : string option;
-  mutable kinds : string list;
-  mutable pages : (string * string) list;
+  mutable start_url : string option;
+  mutable kinds : (string * string * bool) list;
+  page_kinds : Page_kind.session;
   mutable last_page : (string * string option) option;
-  mutable steps : P.step list;
+  mutable steps : captured_step list;
 }
 
 let capture ~mission ~now =
@@ -322,36 +325,42 @@ let capture ~mission ~now =
     mission;
     started = now;
     first = None;
+    start_url = None;
     kinds = [];
-    pages = [];
+    page_kinds = Page_kind.session ();
     last_page = None;
     steps = [];
   }
 
 let page t ~url ~kind ~pattern =
   if t.first = None then t.first <- site url;
-  (match (pattern, kind) with
-  | Some pattern, Some name
-    when not (List.exists (fun (seen, _) -> seen = pattern) t.pages) ->
-      t.pages <- (pattern, name) :: t.pages
-  | _ -> ());
-  if t.last_page <> Some (url, kind) then (
-    Option.iter (fun k -> t.kinds <- k :: t.kinds) kind;
-    t.last_page <- Some (url, kind))
+  if t.start_url = None && site url <> None then t.start_url <- Some url;
+  (* kind-a7uy kind-dnye: capture owns the same inference history as the drive;
+     replay at finish canonicalizes earlier kinds after a sibling merge. *)
+  if Page_kind.is_page ~url then (
+    let inferred = Option.is_some pattern in
+    if inferred then ignore (Page_kind.observe t.page_kinds ~url ~title:"");
+    if t.last_page <> Some (url, kind) then (
+      Option.iter (fun k -> t.kinds <- (url, k, inferred) :: t.kinds) kind;
+      t.last_page <- Some (url, kind)))
 
 (* trace-zbb9: Drive publishes acknowledged execution before observing, then
    refines that same step with its after-page. Do not count the refinement twice. *)
 let step t (step : P.step) =
   t.steps <-
     (match t.steps with
-    | previous :: rest when previous.P.n = step.n && previous.snapshot = step.snapshot ->
-        step :: rest
-    | _ -> step :: t.steps)
+    | Operator previous :: rest
+      when previous.P.n = step.n && previous.snapshot = step.snapshot ->
+        Operator step :: rest
+    | _ -> Operator step :: t.steps)
 
-let probability key_ok = function
+let planner_step t step = t.steps <- Planner step :: t.steps
+
+let probability ?(normalize = Fun.id) key_ok = function
   | `Assoc fields ->
       List.filter_map
         (fun (key, value) ->
+          let key = normalize key in
           if not (key_ok key) then None
           else
             let number =
@@ -370,17 +379,40 @@ let safe_step n (s : P.step) : P.Trace.trace_step =
   {
     n;
     operation = P.Operation.to_string s.operation;
+    source = "operator";
+    non_repeatable = s.non_repeatable;
+    error = None;
     target =
       Option.map
         (fun t -> P.Trace.{ role = t.P.target_role; label = t.target_label })
         s.target;
     text = s.text;
     operations =
-      probability (fun key -> Result.is_ok (P.Operation.of_string key)) s.probabilities.op;
+      probability ~normalize:String.lowercase_ascii
+        (fun key -> Result.is_ok (P.Operation.of_string key))
+        s.probabilities.op;
     targets =
       probability
         (fun key -> key = "NONE" || Option.is_some (int_of_string_opt key))
         s.probabilities.target;
+    after = { url = s.after.url; title = s.after.title };
+    elapsed_ms = s.elapsed_ms;
+  }
+
+let safe_planner_step n (s : P.planner_step) : P.Trace.trace_step =
+  {
+    n;
+    operation = s.command;
+    source = "planner";
+    non_repeatable = s.non_repeatable;
+    error = s.error;
+    target =
+      Option.map
+        (fun t -> P.Trace.{ role = t.P.target_role; label = t.target_label })
+        s.target;
+    text = s.text;
+    operations = [];
+    targets = [];
     after = { url = s.after.url; title = s.after.title };
     elapsed_ms = s.elapsed_ms;
   }
@@ -436,7 +468,12 @@ let finish t ~now outcome =
           })
       procedures
   in
-  let steps = List.rev t.steps |> List.mapi (fun i s -> safe_step (i + 1) s) in
+  let steps =
+    List.rev t.steps
+    |> List.mapi (fun i -> function
+      | Operator s -> safe_step (i + 1) s
+      | Planner s -> safe_planner_step (i + 1) s)
+  in
   P.Trace.
     {
       version = 1;
@@ -447,9 +484,24 @@ let finish t ~now outcome =
       cost;
       duration_ms = max 0 (int_of_float ((now -. t.started) *. 1000.));
       model_calls;
-      page_kind_path = List.rev t.kinds;
+      start_url = t.start_url;
+      page_kind_path =
+        List.rev t.kinds
+        |> List.map (fun (url, kind, inferred) ->
+            if inferred then (Page_kind.observe t.page_kinds ~url ~title:"").name
+            else kind)
+        |> List.fold_left
+             (fun path kind ->
+               match path with
+               | previous :: _ when previous = kind -> path
+               | _ -> kind :: path)
+             []
+        |> List.rev;
       inferred_pages =
-        List.rev_map (fun (url_pattern, name) -> P.Trace.{ name; url_pattern }) t.pages;
+        List.map
+          (fun (page : Page_kind.draft_page) ->
+            P.Trace.{ name = page.name; url_pattern = page.url_pattern })
+          (Page_kind.inferred_pages t.page_kinds);
       compiled = false;
       procedures;
       steps;

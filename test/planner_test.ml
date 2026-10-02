@@ -83,6 +83,7 @@ let page name url_pattern =
       description = name ^ " page";
       url_pattern = Some url_pattern;
       text_marker = None;
+      repeatable = true;
     }
 
 let goal text = B.Goal B.{ goal = text; hint = None; until = None }
@@ -97,6 +98,7 @@ let procedure ?(args = []) ?(expect = [ "the page is home" ]) ~slug ~description
       steps;
       expect;
       expect_timeout_s = None;
+      provenance = None;
       repeat = None;
       max_steps = None;
       deadline_s = None;
@@ -484,6 +486,8 @@ let plan_request ?(trigger = R.Blocked) ?(reason = "the procedure level answered
       title = "Site A";
       url = home_url;
       text = home_text;
+      snapshot = snapshot ();
+      planner_actions = 5;
     }
 
 (* daily-9ggi: formatting correction cannot obtain another full turn budget. *)
@@ -1259,9 +1263,8 @@ let missing_key () =
         "run-d99l nothing was sent" 0
         (List.length (Fake.requests server)))
 
-(* L33 run-xda7: accepting an isolated complete proposal installs a new site only
-   after explicit operator acceptance. *)
-let discover_accept () =
+(* map-2l5q: a draft playbook installs a new site only after explicit acceptance. *)
+let draft_playbook_accept () =
   with_xdg (fun root ->
       let draft =
         B.
@@ -1276,6 +1279,7 @@ let discover_accept () =
                   description = "Home page";
                   url_pattern = Some "https://new.example/*";
                   text_marker = None;
+                  repeatable = true;
                 };
               ];
             procedures =
@@ -1287,6 +1291,7 @@ let discover_accept () =
                   steps = [ Goal { goal = "Inspect home"; hint = None; until = None } ];
                   expect = [ "the page is home" ];
                   expect_timeout_s = None;
+                  provenance = None;
                   repeat = None;
                   max_steps = None;
                   deadline_s = None;
@@ -1296,7 +1301,11 @@ let discover_accept () =
             scripts = None;
           }
       in
-      let path = ok (B.propose_book ~caps:(Ox_test.powerbox ()) draft) in
+      let path =
+        ok
+          (B.propose ~book:draft ~caps:(Ox_test.powerbox ()) ~site:draft.site
+             (List.hd draft.procedures))
+      in
       let target =
         Filename.concat
           (Filename.concat (B.directory ~caps:(Ox_test.powerbox ()) ()) "new.example")
@@ -1313,9 +1322,80 @@ let discover_accept () =
         (List.length loaded.playbook.procedures);
       ignore root)
 
+(* L53 map-7xrq: reply validation shares ordinary protocol request decoding. *)
+let continue_codec () =
+  let action = P.Nav { tab = handle; url = cart_url } in
+  let envelope = P.encode_request { command = action } in
+  let answer actions =
+    obj
+      ([ ("answer", str "continue") ]
+      @ match actions with None -> [] | Some actions -> [ ("actions", `List actions) ])
+  in
+  let call content f =
+    let content = Yojson.Safe.to_string content in
+    rig ~contents:[ content; content ] (fun _ _ models server _ ->
+        let reply =
+          (Models.levels models).R.plan ~deadline:(Ox.Duration.seconds 30)
+            { (plan_request ()) with R.planner_actions = 1 }
+        in
+        f reply;
+        let body = Yojson.Safe.from_string (List.hd (Fake.requests server)).Fake.body in
+        let user = message 1 body |> Yojson.Safe.from_string in
+        Alcotest.(check bool)
+          "planner receives offered snapshot" true
+          (field "snapshot" user <> None);
+        Alcotest.(check bool)
+          "planner receives configured cap" true
+          (field "planner_actions" user = Some (`Int 1)))
+  in
+  List.iter
+    (fun json ->
+      call json (function
+        | Ok { R.answer = Continue_actions actions; _ } ->
+            Alcotest.(check bool) "valid detour decoded" true (List.length actions <= 1)
+        | _ -> Alcotest.fail "continue refused"))
+    [ answer None; answer (Some []); answer (Some [ envelope ]) ];
+  List.iter
+    (fun json ->
+      call json (fun result ->
+          Alcotest.(check bool) "invalid continue rejected" true (Result.is_error result)))
+    [
+      answer (Some [ envelope; envelope ]);
+      answer
+        (Some
+           [
+             P.encode_request
+               { command = P.Nav { tab = handle; url = "https://other.example/" } };
+           ]);
+      answer
+        (Some
+           [
+             P.encode_request
+               {
+                 command =
+                   P.Nav { tab = ok (P.Handle.of_string "t_other"); url = home_url };
+               };
+           ]);
+      answer
+        (Some
+           [
+             obj
+               [
+                 ("v", `Int 1);
+                 ("cmd", str "eval");
+                 ("args", obj [ ("tab", str "t_test"); ("expression", str "alert(1)") ]);
+               ];
+           ]);
+      obj [ ("answer", str "continue"); ("procedure", procedure_json ()) ];
+      obj
+        [ ("answer", str "fail"); ("reason", str "why"); ("actions", `List [ envelope ]) ];
+    ]
+
 let () =
   Alcotest.run "L32 planner"
     [
+      ( "L53",
+        [ Alcotest.test_case "map-7xrq continue protocol codec" `Quick continue_codec ] );
       ( "L32",
         [
           Alcotest.test_case "daily-9ggi correction budget" `Quick correction_budget;
@@ -1329,7 +1409,8 @@ let () =
           Alcotest.test_case "run-2tt3 mission expectations" `Quick expectations;
           Alcotest.test_case "run-m0r8 proposals" `Quick proposals;
           Alcotest.test_case "run-m0r8 accept" `Quick accept_rules;
-          Alcotest.test_case "run-xda7 discover acceptance" `Quick discover_accept;
+          Alcotest.test_case "map-2l5q draft playbook acceptance" `Quick
+            draft_playbook_accept;
           Alcotest.test_case "run-d99l configurable planner" `Quick config_test;
           Alcotest.test_case "run-d99l missing key" `Quick missing_key;
         ] );

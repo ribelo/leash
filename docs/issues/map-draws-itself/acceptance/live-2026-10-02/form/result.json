@@ -1,0 +1,16 @@
+{
+  "gate": "form",
+  "passed": false,
+  "missions_recorded": 2,
+  "failures": [
+    "After two form submissions: no actual installed agreement procedure reported",
+    "Installed form procedure lacks nonrepeatable two-trace agreement provenance"
+  ],
+  "elapsed_s": 49.58527112007141,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true,
+    "submissions_after_browser_shutdown": 2
+  }
+}

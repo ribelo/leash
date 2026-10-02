@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "files_scanned": 370,
+  "credential_present_for_exact_key_audit": true,
+  "secret_files": [],
+  "capability_files": [],
+  "invalid_json_or_jsonl": [],
+  "temporary_roots_remaining": 0,
+  "profile_browser_pids_remaining": [],
+  "form_guard_created_evidence": false,
+  "evidence_bytes": 8125335
+}
