@@ -148,6 +148,18 @@ type tab = {
   mutable main_frame : string option;
   mutable downloads : P.download_info list;
   mutable counter_installed : bool;
+  mutable same_document : int;
+      (** Main-frame [Page.navigatedWithinDocument] events. A post-action settle compares
+          this with the count it saw at dispatch, so a [history.pushState] is a transition
+          even though it is not a cross-document navigation. *)
+  mutable net_seq : int;  (** Monotonic id of [Network.requestWillBeSent] on this tab. *)
+  mutable armed_net : int;
+  mutable armed_doc : int;
+      (** [net_seq] and [same_document] just before an input dispatch. Settle treats a
+          request or same-document navigation after these as caused by that action, even
+          if the event is processed before settle starts. *)
+  inflight : (string, int) Hashtbl.t;
+      (** Request id to the [net_seq] that started it, while the request is in flight. *)
   mutable focus_holders : int;
       (** The agent operations running on this tab with focus emulation on (tab-8la3,
           chrome-9ex7): emulation is on exactly while this is positive. *)
@@ -364,6 +376,11 @@ let new_record ~fresh ~generation ~at ~id ~session ~origin ~label ~url ~title ~o
     main_frame = None;
     downloads = [];
     counter_installed = false;
+    same_document = 0;
+    net_seq = 0;
+    armed_net = 0;
+    armed_doc = 0;
+    inflight = Hashtbl.create 8;
     focus_holders = 0;
     opener;
     close_on_resume = false;
@@ -1722,6 +1739,18 @@ let action_view t ~session tab cdp : Actions.tab =
     acknowledge = (fun () -> acknowledge tab);
     engage = (fun () -> ());
     sleep = t.sleep;
+    same_document = (fun () -> tab.same_document);
+    net_seq = (fun () -> tab.net_seq);
+    requests_since =
+      (fun since ->
+        Hashtbl.to_seq tab.inflight |> Seq.exists (fun (_, seq) -> seq > since));
+    reread = (fun () -> refresh_from_target cdp tab);
+    arm_transition =
+      (fun () ->
+        tab.armed_doc <- tab.same_document;
+        tab.armed_net <- tab.net_seq);
+    armed_document = (fun () -> tab.armed_doc);
+    armed_net = (fun () -> tab.armed_net);
     all_tabs =
       (fun () ->
         let entries = (snapshot t).entries in
@@ -2914,6 +2943,36 @@ let inspect t json =
                   let pending = tab.page_loads in
                   tab.page_loads <- [];
                   List.iter (fun resolve -> Eio.Promise.resolve resolve ()) pending))))
+  | Some "Page.navigatedWithinDocument", Some params ->
+      iter_tabs t (fun (tab : tab) ->
+          if tab.session = text "sessionId" json then
+            let frame = text "frameId" params in
+            let main =
+              match (tab.main_frame, frame) with
+              | None, _ -> true
+              | Some id, Some frame -> id = frame
+              | Some _, None -> false
+            in
+            if main then (
+              tab.same_document <- tab.same_document + 1;
+              Option.iter (fun url -> tab.url <- url) (text "url" params)))
+  | Some "Network.requestWillBeSent", Some params -> (
+      match text "requestId" params with
+      | None -> ()
+      | Some id ->
+          iter_tabs t (fun (tab : tab) ->
+              if tab.session = text "sessionId" json then (
+                tab.net_seq <- tab.net_seq + 1;
+                Hashtbl.replace tab.inflight id tab.net_seq)))
+  | ( Some
+        ( "Network.loadingFinished" | "Network.loadingFailed"
+        | "Network.requestServedFromCache" ),
+      Some params ) -> (
+      match text "requestId" params with
+      | None -> ()
+      | Some id ->
+          iter_tabs t (fun (tab : tab) ->
+              if tab.session = text "sessionId" json then Hashtbl.remove tab.inflight id))
   | _ -> ()
 
 let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())

@@ -1,3 +1,5 @@
+[@@@warning "-26"]
+
 (* map-0by0 map-w62c map-cnee map-bjon map-6xcy map-6m3c map-2l5q
    map-tval map-rz4w map-yzqp map-wm4v map-nh2e map-itbt map-pd0q
    map-b3kk map-igfx map-2ga3 map-ptnk map-lnwr map-h5ym:
@@ -192,10 +194,34 @@ let install_authored ?(repeatable = true) proc =
           (ok (B.propose ~book:(book ~repeatable proc) ~caps ~site:"example.com" proc))))
 
 let save store trace = ok (T.write store trace)
+let learning_switch = ref None
+
+let learning_sw () =
+  match !learning_switch with
+  | Some sw -> sw
+  | None -> Alcotest.fail "learning switch is not running"
 
 let after learning store trace result =
   let file = save store trace in
-  L.after_trace learning ~store ~file trace result
+  let replied = L.after_trace learning ~store ~file trace result in
+  L.await_pending learning;
+  replied
+
+let proposal_files () =
+  let root = B.proposed_directory ~caps () in
+  match Sys.readdir root with
+  | exception Sys_error _ -> []
+  | names ->
+      Array.to_list names
+      |> List.filter (fun name -> Filename.check_suffix name ".json")
+      |> List.map (Filename.concat root)
+      |> List.sort String.compare
+
+let installed_slugs () =
+  List.concat_map
+    (fun (book : B.loaded) ->
+      List.map (fun (proc : B.procedure) -> proc.slug) book.playbook.procedures)
+    (ok (B.list ~caps ()))
 
 let store root = T.create ~caps ~root:(Filename.concat root "evidence") ()
 let configure mode = { C.default_learning with mode }
@@ -206,6 +232,7 @@ let trial learning ?attempts ?outcome slug =
 
 let defaults () =
   Alcotest.(check int) "map-w62c successes" 2 C.default.learning.successes;
+  Alcotest.(check int) "learning timeout default" 900 C.default.learning.timeout_s;
   Alcotest.(check string)
     "map-0by0 draft default" "draft"
     (C.Learning_mode.to_string C.default.learning.mode);
@@ -219,6 +246,8 @@ let defaults () =
       ("max_tries", `Int 0);
       ("retire_after", `Int (-1));
       ("planner_actions", `Int 21);
+      ("timeout_s", `Int 59);
+      ("timeout_s", `Int 3601);
     ]
 
 let pure () =
@@ -246,7 +275,7 @@ let draft_compile () =
   temp (fun root ->
       let calls = ref 0 in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Draft)
           ~planner:(fun _ ->
             incr calls;
@@ -260,15 +289,17 @@ let draft_compile () =
         after learning store (trace ~kinds:[ "catalog"; "catalog" ] 2.) (result ())
       in
       Alcotest.(check int) "map-bjon compile once" 1 !calls;
-      Alcotest.(check int) "map-6m3c proposal written" 1 (List.length r.proposals);
+      Alcotest.(check int) "map-6m3c proposal written" 1 (List.length (proposal_files ()));
       bool "map-tval draft does not install"
-        (r.installed = [] && ok (B.list ~caps ()) = []);
-      bool "map-6m3c private proposal" ((Unix.stat (List.hd r.proposals)).st_perm = 0o600);
+        (installed_slugs () = [] && ok (B.list ~caps ()) = []);
+      bool "map-6m3c private proposal"
+        ((Unix.stat (List.hd (proposal_files ()))).st_perm = 0o600);
       bool "map-tval draft does not offer" (drafts learning = []);
       let proposed =
         ok
-          (B.of_json ~file:(List.hd r.proposals)
-             (Yojson.Safe.from_file (List.hd r.proposals)))
+          (B.of_json
+             ~file:(List.hd (proposal_files ()))
+             (Yojson.Safe.from_file (List.hd (proposal_files ()))))
       in
       let p = Option.get (List.hd proposed.playbook.procedures).provenance in
       bool "map-2l5q durable provenance"
@@ -282,7 +313,7 @@ let validation () =
   temp (fun root ->
       let calls = ref 0 and retry = ref false in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Draft)
           ~planner:(fun request ->
             incr calls;
@@ -294,15 +325,15 @@ let validation () =
       in
       let store = store root in
       ignore (after learning store (trace 1.) (result ()));
-      let r = after learning store (trace 2.) (result ()) in
+      let _ = after learning store (trace 2.) (result ()) in
       bool "map-rz4w exactly one validation retry"
-        (!calls = 2 && !retry && List.length r.proposals = 1))
+        (!calls = 2 && !retry && List.length (proposal_files ()) = 1))
 
 let parameters () =
   temp (fun root ->
       let warnings = ref [] and calls = ref 0 in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Draft)
           ~warn:(fun s -> warnings := s :: !warnings)
           ~planner:(fun _ ->
@@ -316,12 +347,12 @@ let parameters () =
         after learning store (trace ~steps:[ step ~text:"two" () ] 2.) (result ())
       in
       bool "map-6xcy refuse unparameterized values after bounded retry"
-        (!calls = 2 && r.proposals = [] && !warnings <> []))
+        (!calls = 2 && proposal_files () = [] && !warnings <> []))
 
 let replay () =
   temp (fun root ->
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ -> Ok (answer (procedure ())))
           ()
@@ -339,13 +370,13 @@ let replay () =
         after learning store (trace ~outcome:"blocked" 3.)
           (result ~status:"blocked" ~procedures:[ trial learning "draft:inspect" ] ())
       in
-      bool "map-igfx verified but unfinished cannot install" (r.installed = []);
+      bool "map-igfx verified but unfinished cannot install" (installed_slugs () = []);
       let r =
         after learning store (trace 4.)
           (result ~procedures:[ trial learning "draft:inspect" ] ())
       in
       bool "map-igfx done replay installs without third submission"
-        (r.installed = [ "inspect" ] && drafts learning = []);
+        (installed_slugs () = [ "inspect" ] && drafts learning = []);
       let installed = List.hd (ok (B.list ~caps ())) in
       bool "map-2ga3 install remembers gate"
         ((Option.get (List.hd installed.playbook.procedures).provenance).gate = "replay"))
@@ -353,7 +384,7 @@ let replay () =
 let tries () =
   temp (fun root ->
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ -> Ok (answer (procedure ())))
           ()
@@ -378,7 +409,7 @@ let tries () =
 let agreement_gate () =
   temp (fun root ->
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ ->
             Ok (answer (procedure ~goal:"Click the button named Delete" ())))
@@ -386,9 +417,9 @@ let agreement_gate () =
       in
       let store = store root and steps = [ step ~label:"Delete" () ] in
       ignore (after learning store (trace ~steps 1.) (result ()));
-      let r = after learning store (trace ~steps 2.) (result ()) in
+      let _ = after learning store (trace ~steps 2.) (result ()) in
       bool "map-itbt agreement installs with no trial"
-        (r.installed = [ "inspect" ] && drafts learning = []);
+        (installed_slugs () = [ "inspect" ] && drafts learning = []);
       let b = List.hd (ok (B.list ~caps ())) in
       let p = Option.get (List.hd b.playbook.procedures).provenance in
       bool "map-2ga3 agreement provenance" (p.gate = "agreement" && not p.repeatable))
@@ -397,7 +428,7 @@ let repair () =
   temp (fun root ->
       install_authored (procedure ());
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ ->
             Ok
@@ -418,13 +449,15 @@ let repair () =
         after learning store (trace 1.5) (result ~procedures:[ entry "inspect" ] ())
       in
       bool "map-pd0q original success cannot bypass repair trial"
-        (unchanged.installed = [] && drafts learning <> []);
+        (drafts learning <> []
+        && (List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures).provenance
+           = None);
       let r =
         after learning store (trace 2.)
           (result ~procedures:[ trial learning "draft:inspect" ] ())
       in
       bool "map-lnwr verified repair replaces"
-        (r.installed = [ "inspect" ] && drafts learning = []);
+        (installed_slugs () = [ "inspect" ] && drafts learning = []);
       let b = List.hd (ok (B.list ~caps ())) in
       bool "map-lnwr old procedure archived"
         (Array.length
@@ -439,7 +472,7 @@ let retire () =
   temp (fun root ->
       install_authored (procedure ());
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ -> Error "no repair")
           ()
@@ -464,7 +497,7 @@ let off () =
   temp (fun root ->
       let called = ref false in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Off)
           ~planner:(fun _ ->
             called := true;
@@ -481,7 +514,7 @@ let permanent_invalid () =
   temp (fun root ->
       let count = ref 0 and warnings = ref [] in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Draft)
           ~planner:(fun _ ->
             incr count;
@@ -491,14 +524,14 @@ let permanent_invalid () =
       in
       let store = store root in
       ignore (after learning store (trace 1.) (result ()));
-      let r = after learning store (trace 2.) (result ()) in
+      let _ = after learning store (trace 2.) (result ()) in
       bool "map-6xcy two invalid drafts dropped with reason"
-        (!count = 2 && r.proposals = [] && !warnings <> []))
+        (!count = 2 && proposal_files () = [] && !warnings <> []))
 
 let confirmation () =
   temp (fun root ->
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ ->
             Ok
@@ -509,15 +542,15 @@ let confirmation () =
       let store = store root in
       let risky n = trace ~steps:[ step ~label:"Checkout" () ] n in
       ignore (after learning store (risky 1.) (result ()));
-      let r = after learning store (risky 2.) (result ()) in
+      let _ = after learning store (risky 2.) (result ()) in
       bool "map-nh2e no confirmation means no installation"
-        (r.installed = [] && r.proposals = [] && ok (B.list ~caps ()) = []))
+        (installed_slugs () = [] && proposal_files () = [] && ok (B.list ~caps ()) = []))
 
 let nonrepeatable_repair () =
   temp (fun root ->
       install_authored ~repeatable:false (procedure ());
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ ->
             Ok (answer (procedure ~goal:"Click the button named View" ())))
@@ -553,14 +586,14 @@ let nonrepeatable_repair () =
       in
       let proc = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
       bool "map-itbt observed non-repeatable repair installs without replay"
-        (r.installed = [ "inspect" ]
+        (installed_slugs () = [ "inspect" ]
         && (Option.get proc.provenance).gate = "agreement-repair"))
 
 let unsafe_repair () =
   temp (fun root ->
       install_authored ~repeatable:false (procedure ());
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ ->
             Ok (answer (procedure ~goal:"Click the button named Absent" ())))
@@ -572,14 +605,27 @@ let unsafe_repair () =
              ~procedures:[ entry ~attempts:2 ~outcome:"failed" "inspect" ]
              ())
       in
+      let repaired =
+        List.exists
+          (fun file ->
+            match
+              (List.hd
+                 (ok (B.of_json ~file (Yojson.Safe.from_file file))).playbook.procedures)
+                .provenance
+            with
+            | Some p -> p.repair
+            | None -> false)
+          (proposal_files ())
+      in
+      let kept = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
       bool "map-itbt unknown target cannot pass by naming the kind"
-        (r.installed = [] && r.proposals = []))
+        ((not repaired) && kept.provenance = None))
 
 let resets () =
   temp (fun root ->
       install_authored (procedure ());
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ -> Error "no repair")
           ()
@@ -607,7 +653,7 @@ let resets () =
 let status_gates () =
   temp (fun root ->
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ -> Ok (answer (procedure ())))
           ()
@@ -642,7 +688,7 @@ let navigation_until () =
   temp (fun root ->
       let proc = { (procedure ()) with B.expect = [ "the page is detail" ] } in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Draft)
           ~planner:(fun _ -> Ok (answer proc))
           ()
@@ -665,9 +711,9 @@ let navigation_until () =
       in
       let store = store root in
       ignore (after learning store (navigated 1.) (result ()));
-      let r = after learning store (navigated 2.) (result ()) in
+      let _ = after learning store (navigated 2.) (result ()) in
       bool "map-bjon navigation requires per-step until, not global expect"
-        (r.proposals = []))
+        (proposal_files () = []))
 
 let constant_argument () =
   temp (fun root ->
@@ -677,7 +723,7 @@ let constant_argument () =
           ()
       in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Draft)
           ~planner:(fun _ -> Ok (answer proc))
           ()
@@ -688,7 +734,7 @@ let constant_argument () =
         after learning store (trace ~steps:[ step ~text:"two" () ] 2.) (result ())
       in
       bool "map-bjon differing evidence needs mission argument, not a constant"
-        (r.proposals = []))
+        (proposal_files () = []))
 
 let authored_mode () =
   temp (fun root ->
@@ -709,7 +755,7 @@ let mission_counter () =
   temp (fun root ->
       install_authored (procedure ());
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ -> Error "no repair")
           ()
@@ -731,7 +777,7 @@ let stale_trial_revision () =
   temp (fun root ->
       let calls = ref 0 in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun _ ->
             incr calls;
@@ -766,7 +812,7 @@ let stale_trial_revision () =
       bool "map-w62c stale failure cannot consume new tries"
         ((List.hd (drafts learning)).revision = current.revision);
       (match
-         B.accept ~revision:(Option.get old.revision) ~caps (List.hd newer.proposals)
+         B.accept ~revision:(Option.get old.revision) ~caps (List.hd (proposal_files ()))
        with
       | Error _ -> ()
       | Ok _ -> Alcotest.fail "map-w62c locked installer accepted stale revision");
@@ -774,7 +820,7 @@ let stale_trial_revision () =
         after learning store (trace 5.)
           (result ~procedures:[ trial learning "draft:inspect" ] ())
       in
-      bool "map-w62c exact current revision installs" (installed.installed = [ "inspect" ]))
+      bool "map-w62c exact current revision installs" (installed_slugs () = [ "inspect" ]))
 
 let agreement_all_targets () =
   List.iter
@@ -806,7 +852,7 @@ let agreement_all_targets () =
               }
           in
           let learning =
-            L.create ~caps
+            L.create ~sw:(learning_sw ()) ~caps
               ~config:(configure C.Learning_mode.Auto)
               ~planner:(fun _ -> Ok (answer candidate))
               ()
@@ -838,7 +884,8 @@ let agreement_all_targets () =
                 P.final;
               }
           in
-          bool "map-itbt every required exact target must agree" (r.installed = []);
+          let kept = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
+          bool "map-itbt every required exact target must agree" (kept.provenance = None);
           bool "map-itbt uncertain compound goals fail closed" (drafts learning = [])))
     [ (false, false); (true, false); (true, true) ]
 
@@ -863,6 +910,8 @@ let bounded_risk_agreement () =
                       last_failure = None;
                       gate = "replay";
                       repair = false;
+                      model_calls = 0;
+                      model_cost = None;
                     };
             }
           in
@@ -874,7 +923,7 @@ let bounded_risk_agreement () =
                         ~book:(book ~repeatable:(not pinned) old)
                         ~caps ~site:"example.com" old))));
           let learning =
-            L.create ~caps
+            L.create ~sw:(learning_sw ()) ~caps
               ~config:(configure C.Learning_mode.Auto)
               ~planner:(fun _ ->
                 Ok (answer (procedure ~goal:"Click the button named View" ())))
@@ -921,7 +970,7 @@ let bounded_risk_agreement () =
           bool "map-yzqp pre-action risk does not become a replay draft"
             (drafts learning = []);
           bool "map-itbt one unsafe failure may repair by snapshot agreement"
-            (r.installed = [ "inspect" ]);
+            (installed_slugs () = [ "inspect" ]);
           let proc = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
           match proc.provenance with
           | Some p ->
@@ -933,7 +982,7 @@ let bounded_risk_agreement () =
 let inferred_navigation_patterns () =
   temp (fun root ->
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Auto)
           ~planner:(fun request ->
             let parsed =
@@ -988,9 +1037,9 @@ let inferred_navigation_patterns () =
       in
       let store = store root in
       ignore (after learning store (make 1.) (result ()));
-      let compiled = after learning store (make 2.) (result ()) in
+      let _ = after learning store (make 2.) (result ()) in
       bool "map-bjon real books navigation validates without weakening until"
-        (compiled.proposals <> []);
+        (proposal_files () <> []);
       bool "map-bjon compiler produces a replay draft"
         (L.drafts learning ~site:"example.com" ~kind:(Some "home") <> []))
 
@@ -1148,7 +1197,7 @@ let learning_cost_accounting () =
       temp (fun root ->
           let calls = ref 0 in
           let learning =
-            L.create ~caps
+            L.create ~sw:(learning_sw ()) ~caps
               ~config:(configure C.Learning_mode.Auto)
               ~planner:(fun _ ->
                 incr calls;
@@ -1171,20 +1220,43 @@ let learning_cost_accounting () =
             L.after_trace learning ~store ~file current
               { (result ()) with P.model_calls = 3; model_cost = Some 0.5 }
           in
+          L.await_pending learning;
           let durable = ok (Trace.t_of_yojson (Yojson.Safe.from_file file)) in
-          Alcotest.(check int) "map-ptnk durable total calls" 5 durable.model_calls;
+          let learning_cost = Option.map (fun cost -> 2. *. cost) reported in
+          Alcotest.(check int) "reply does not wait for learning calls" 3 r.model_calls;
           Alcotest.(check (option (float 0.000001)))
-            "map-ptnk durable unknown semantics"
-            (Option.map (fun cost -> 0.5 +. (2. *. cost)) reported)
-            durable.cost;
+            "reply does not fold learning cost" (Some 0.5) r.model_cost;
+          Alcotest.(check int) "durable trace keeps its own calls" 0 durable.model_calls;
+          Alcotest.(check (option (float 0.000001)))
+            "durable trace keeps its own cost" (Some 0.) durable.cost;
           Alcotest.(check bool)
             "map-ptnk compiled marker is preserved" true durable.compiled;
+          let proposed =
+            ok
+              (B.of_json
+                 ~file:(List.hd (proposal_files ()))
+                 (Yojson.Safe.from_file (List.hd (proposal_files ()))))
+          in
+          let provenance = Option.get (List.hd proposed.playbook.procedures).provenance in
           Alcotest.(check int)
-            "map-ptnk totals include compiler and validation retry" 5 r.model_calls;
+            "provenance counts compiler and validation retry" 2 provenance.model_calls;
           Alcotest.(check (option (float 0.000001)))
-            "map-ptnk unknown cost never becomes free"
-            (Option.map (fun cost -> 0.5 +. (2. *. cost)) reported)
-            r.model_cost))
+            "unknown learning cost stays unknown" learning_cost provenance.model_cost;
+          let site =
+            match Yojson.Safe.Util.member "sites" (L.status learning) with
+            | `List (site :: _) -> site
+            | _ -> Alcotest.fail "status omitted the site"
+          in
+          Alcotest.(check int)
+            "status counts learning calls" 2
+            (Yojson.Safe.Util.to_int (Yojson.Safe.Util.member "learning_calls" site));
+          Alcotest.(check (option (float 0.000001)))
+            "status records learning cost" learning_cost
+            (match Yojson.Safe.Util.member "learning_cost" site with
+            | `Null -> None
+            | `Float value -> Some value
+            | `Int value -> Some (float_of_int value)
+            | other -> Alcotest.fail (Yojson.Safe.to_string other))))
     [ Some 0.2; None ]
 
 (* map-cnee map-ngyr: the two Google Maps done traces from the 2026-10-02 live
@@ -1268,7 +1340,7 @@ let google_paths () =
   temp (fun root ->
       let calls = ref 0 in
       let learning =
-        L.create ~caps
+        L.create ~sw:(learning_sw ()) ~caps
           ~config:(configure C.Learning_mode.Draft)
           ~planner:(fun _ ->
             incr calls;
@@ -1279,11 +1351,11 @@ let google_paths () =
       let store = store root in
       ignore (after learning store first (result ()));
       Alcotest.(check int) "map-cnee one live path does not compile" 0 !calls;
-      let compiled = after learning store second (result ()) in
+      let _ = after learning store second (result ()) in
       Alcotest.(check int) "map-cnee the two live paths compile" 1 !calls;
       Alcotest.(check int)
         "map-cnee a proposal is written" 1
-        (List.length compiled.proposals);
+        (List.length (proposal_files ()));
       ignore
         (after learning store
            (maps_trace ~kinds:[ "maps"; "place-<slug>"; "search-<slug>" ] 8.)
@@ -1292,41 +1364,44 @@ let google_paths () =
 
 let () =
   Eio_main.run (fun _ ->
-      Alcotest.run "learning"
-        [
-          ( "map",
-            List.map
-              (fun (name, f) -> Alcotest.test_case name `Quick f)
-              [
-                ("atomic and cross-process installation", atomic_and_cross_process_install);
-                ("bounded provider metadata", bounded_provider_metadata);
-                ("stale trial revision", stale_trial_revision);
-                ("all repair targets", agreement_all_targets);
-                ("bounded risk agreement", bounded_risk_agreement);
-                ("inferred navigation patterns", inferred_navigation_patterns);
-                ("total learning cost", learning_cost_accounting);
-                ("config", defaults);
-                ("path and classification", pure);
-                ("google live paths", google_paths);
-                ("draft compile", draft_compile);
-                ("validation retry", validation);
-                ("parameterization", parameters);
-                ("replay", replay);
-                ("try budget", tries);
-                ("agreement", agreement_gate);
-                ("repair", repair);
-                ("retire", retire);
-                ("off", off);
-                ("invalid twice", permanent_invalid);
-                ("confirmation", confirmation);
-                ("nonrepeatable repair", nonrepeatable_repair);
-                ("unsafe repair", unsafe_repair);
-                ("counter resets", resets);
-                ("status gates", status_gates);
-                ("legacy trace", legacy_trace);
-                ("navigation until", navigation_until);
-                ("constant argument", constant_argument);
-                ("authored mode", authored_mode);
-                ("mission counter", mission_counter);
-              ] );
-        ])
+      Eio.Switch.run (fun sw ->
+          learning_switch := Some sw;
+          Alcotest.run "learning"
+            [
+              ( "map",
+                List.map
+                  (fun (name, f) -> Alcotest.test_case name `Quick f)
+                  [
+                    ( "atomic and cross-process installation",
+                      atomic_and_cross_process_install );
+                    ("bounded provider metadata", bounded_provider_metadata);
+                    ("stale trial revision", stale_trial_revision);
+                    ("all repair targets", agreement_all_targets);
+                    ("bounded risk agreement", bounded_risk_agreement);
+                    ("inferred navigation patterns", inferred_navigation_patterns);
+                    ("total learning cost", learning_cost_accounting);
+                    ("config", defaults);
+                    ("path and classification", pure);
+                    ("google live paths", google_paths);
+                    ("draft compile", draft_compile);
+                    ("validation retry", validation);
+                    ("parameterization", parameters);
+                    ("replay", replay);
+                    ("try budget", tries);
+                    ("agreement", agreement_gate);
+                    ("repair", repair);
+                    ("retire", retire);
+                    ("off", off);
+                    ("invalid twice", permanent_invalid);
+                    ("confirmation", confirmation);
+                    ("nonrepeatable repair", nonrepeatable_repair);
+                    ("unsafe repair", unsafe_repair);
+                    ("counter resets", resets);
+                    ("status gates", status_gates);
+                    ("legacy trace", legacy_trace);
+                    ("navigation until", navigation_until);
+                    ("constant argument", constant_argument);
+                    ("authored mode", authored_mode);
+                    ("mission counter", mission_counter);
+                  ] );
+            ]))

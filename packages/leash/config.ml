@@ -359,7 +359,14 @@ type learning = {
   max_tries : int;
   retire_after : int;
   planner_actions : int;
+  timeout_s : int;
 }
+
+let default_learning_timeout_s = 900
+
+let learning_timeout_s_of_yojson = function
+  | `Int n when n >= 60 && n <= 3600 -> Ok n
+  | _ -> Error "expected an integer between 60 and 3600"
 
 let default_learning =
   {
@@ -370,6 +377,7 @@ let default_learning =
     max_tries = 3;
     retire_after = 5;
     planner_actions = 5;
+    timeout_s = default_learning_timeout_s;
   }
 
 let learning_of_yojson = function
@@ -400,6 +408,9 @@ let learning_of_yojson = function
       let* planner_actions =
         field "planner_actions" (bounded 20) default_learning.planner_actions
       in
+      let* timeout_s =
+        field "timeout_s" learning_timeout_s_of_yojson default_learning.timeout_s
+      in
       Ok
         {
           mode;
@@ -409,6 +420,7 @@ let learning_of_yojson = function
           max_tries;
           retire_after;
           planner_actions;
+          timeout_s;
         }
   | _ -> Error "learning: expected an object"
 
@@ -422,6 +434,7 @@ let yojson_of_learning (v : learning) =
       ("max_tries", `Int v.max_tries);
       ("retire_after", `Int v.retire_after);
       ("planner_actions", `Int v.planner_actions);
+      ("timeout_s", `Int v.timeout_s);
     ]
 
 type skill = { roots : Text.t list [@json.default []] } [@@deriving yojson]
@@ -536,6 +549,7 @@ let default_toml =
 # max_tries = 3              # failed draft trials before dropping
 # retire_after = 5           # consecutive failed missions without successful repair
 # planner_actions = 5        # maximum actions in a planner continue turn
+# timeout_s = 900             # compile/confirm/repair deadline, 60..3600; not planner_timeout
 #
 # [handoff]
 # timeout_s = 300            # bounded human wait in seconds
@@ -1160,6 +1174,7 @@ let collect json =
                   "max_tries";
                   "retire_after";
                   "planner_actions";
+                  "timeout_s";
                 ] (fun section ->
                 field_errors pointer "mode" section (fun p j ->
                     decode_with p Learning_mode.t_of_yojson j)
@@ -1181,6 +1196,10 @@ let collect json =
                       ("retire_after", 100);
                       ("planner_actions", 20);
                     ]
+                @ field_errors pointer "timeout_s" section (fun p j ->
+                    match j with
+                    | `Int n when n >= 60 && n <= 3600 -> Ok ()
+                    | _ -> Error [ issue p "expected an integer between 60 and 3600" ])
                 @ List.concat_map
                     (fun key ->
                       field_errors pointer key section (fun p j ->

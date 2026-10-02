@@ -20,22 +20,25 @@
     observed option index (tab-5deq); a scroll is a wheel event one viewport tall at the
     page's center or the row's (tab-8dop). Settlement is bounded (tab-p3x1): after a fill
     into a combobox up to two hundred milliseconds of animation frames polling for visible
-    suggestions, otherwise two animation frames bounded by fifty milliseconds. Each action
-    replies with the tab's url and title after the action, the dialogs state, and the tabs
-    it opened (tab-tm6c). A popup is a tab that was not in the registry when the action
-    began, whose Chrome [openerId] is the acted-on tab, and that the caller owns, so
-    another agent's concurrent tab is never reported as this caller's (tab-8k2g). Chrome
-    withholds the reply of the trusted input that opens a popup (docs/cdp-shapes.md, L10),
-    so every input dispatch is settled by whichever comes first: its own reply, the popup
-    Chrome reports with this tab as its opener, or this tab's target destroyed (tab-0ohq).
-    Nothing has a fixed dispatch bound -- the CDP call's deadline is the only one -- and
-    nothing is ever sent twice (tab-1lhx). A page that answers nothing by that deadline is
-    [browser-unavailable], unless the browser no longer knows the target: then the handler
-    closed the tab, and the action reports [tab-gone] with [closed_externally] (own-teh1).
-    [action_result.snapshot] is always [null] in this version: settling takes no snapshot,
-    and a caller that wants a fresh table asks for one with [snap]. The registry runs
-    actions under the tab's lock, so one tab's actions proceed in arrival order while
-    another tab's are unaffected (tab-hxld). *)
+    suggestions. An input action then waits, polling about every 50 ms and never longer
+    than 1.5 s, while the page is in transition — a same-document navigation, a URL
+    change, or a network request the action started that is still in flight — and returns
+    on the first quiet poll. Each action replies with the tab's url and title after the
+    action, the dialogs state, and the tabs it opened (tab-tm6c). A popup is a tab that
+    was not in the registry when the action began, whose Chrome [openerId] is the acted-on
+    tab, and that the caller owns, so another agent's concurrent tab is never reported as
+    this caller's (tab-8k2g). Chrome withholds the reply of the trusted input that opens a
+    popup (docs/cdp-shapes.md, L10), so every input dispatch is settled by whichever comes
+    first: its own reply, the popup Chrome reports with this tab as its opener, or this
+    tab's target destroyed (tab-0ohq). Nothing has a fixed dispatch bound -- the CDP
+    call's deadline is the only one -- and nothing is ever sent twice (tab-1lhx). A page
+    that answers nothing by that deadline is [browser-unavailable], unless the browser no
+    longer knows the target: then the handler closed the tab, and the action reports
+    [tab-gone] with [closed_externally] (own-teh1). [action_result.snapshot] is always
+    [null] in this version: settling takes no snapshot, and a caller that wants a fresh
+    table asks for one with [snap]. The registry runs actions under the tab's lock, so one
+    tab's actions proceed in arrival order while another tab's are unaffected (tab-hxld).
+*)
 
 type tab = {
   session : string;  (** The tab's flat page session. *)
@@ -67,6 +70,17 @@ type tab = {
           chrome-9ex7): called just before the first thing the page can see -- a focus, an
           input, the settle -- and never for a request refused before that. *)
   sleep : float -> unit;  (** A bounded wait that dispatches no input. *)
+  same_document : unit -> int;
+      (** Main-frame same-document navigations observed on this tab. *)
+  net_seq : unit -> int;  (** How many network requests this tab has started. *)
+  requests_since : int -> bool;
+      (** Whether a request started after that sequence is still in flight. *)
+  reread : unit -> unit;
+      (** Pull the committed URL from the target, without waiting for a load. *)
+  arm_transition : unit -> unit;
+      (** Remember the navigation and request counts before an input is dispatched. *)
+  armed_document : unit -> int;
+  armed_net : unit -> int;
 }
 
 val click :
@@ -164,5 +178,7 @@ val operator_scroll :
 val operator_settle :
   cdp:Cdp.t -> tab -> autocomplete:bool -> (unit, Protocol.error) result
 (** fly-2pn7: after confirmed input. Autocomplete waits up to 200 ms for a visible option;
-    other input waits two frames or 50 ms. A page that stops answering ends the wait, not
+    every input then waits for a same-document navigation, URL change, or in-flight
+    request the action started, polling about every 50 ms and never longer than 1.5 s. A
+    quiet page returns on that first check. A page that stops answering ends the wait, not
     the action. *)

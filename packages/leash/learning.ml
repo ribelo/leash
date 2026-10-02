@@ -9,19 +9,95 @@ type caps =
 
 type planner = Yojson.Safe.t -> (Yojson.Safe.t, string) result
 
+type meter = {
+  mutable calls : int;
+  mutable reports : int;
+  mutable cost : float;
+  mutable unknown : bool;
+}
+
 type t = {
   caps : caps;
   config : Config.learning;
   planner : planner;
   warn : string -> unit;
-  lock : Eio.Mutex.t;
+  sw : Eio.Switch.t;
+  locks : Eio.Mutex.t;
+  sites : (string, Eio.Mutex.t) Hashtbl.t;
+  pending_mu : Eio.Mutex.t;
+  pending_done : Eio.Condition.t;
+  mutable pending : int;
 }
 
-let create ~caps ~config ?(planner = fun _ -> Error "learning planner unavailable")
+let create ~sw ~caps ~config ?(planner = fun _ -> Error "learning planner unavailable")
     ?(warn = fun _ -> ()) () =
-  { caps :> caps; config; planner; warn; lock = Eio.Mutex.create () }
+  {
+    caps :> caps;
+    config;
+    planner;
+    warn;
+    sw;
+    locks = Eio.Mutex.create ();
+    sites = Hashtbl.create 8;
+    pending_mu = Eio.Mutex.create ();
+    pending_done = Eio.Condition.create ();
+    pending = 0;
+  }
+
+let site_lock t site =
+  Eio.Mutex.use_rw ~protect:true t.locks (fun () ->
+      match Hashtbl.find_opt t.sites site with
+      | Some lock -> lock
+      | None ->
+          let lock = Eio.Mutex.create () in
+          Hashtbl.add t.sites site lock;
+          lock)
+
+let await_pending t =
+  Eio.Mutex.use_rw ~protect:true t.pending_mu (fun () ->
+      while t.pending > 0 do
+        Eio.Condition.await t.pending_done t.pending_mu
+      done)
+
+let finish_pending t =
+  Eio.Mutex.use_rw ~protect:true t.pending_mu (fun () ->
+      t.pending <- t.pending - 1;
+      if t.pending = 0 then Eio.Condition.broadcast t.pending_done)
+
+let schedule t ~site work =
+  Eio.Mutex.use_rw ~protect:true t.pending_mu (fun () -> t.pending <- t.pending + 1);
+  match
+    Eio.Fiber.fork ~sw:t.sw (fun () ->
+        Fun.protect
+          ~finally:(fun () -> finish_pending t)
+          (fun () ->
+            try Eio.Mutex.use_rw ~protect:true (site_lock t site) work with
+            | Eio.Cancel.Cancelled _ as exn -> raise exn
+            | exn -> t.warn (Printexc.to_string exn)))
+  with
+  | () -> ()
+  | exception exn ->
+      finish_pending t;
+      raise exn
 
 let config t = t.config
+let empty_meter () = { calls = 0; reports = 0; cost = 0.; unknown = false }
+
+let observe_usage meter = function
+  | Model_usage.Start _ -> meter.calls <- meter.calls + 1
+  | Model_usage.Reported (_, value) -> (
+      meter.reports <- meter.reports + 1;
+      match value with
+      | Some value when Float.is_finite value && value >= 0. ->
+          meter.cost <- meter.cost +. value
+      | _ -> meter.unknown <- true)
+
+let priced meter =
+  if meter.calls = 0 then Some 0.
+  else if meter.unknown || meter.reports <> meter.calls then None
+  else Some meter.cost
+
+let account_key site = "account:" ^ site
 let ( let* ) = Result.bind
 
 let get key = function
@@ -55,6 +131,16 @@ let update t key value =
   | Error why -> t.warn why
 
 let counter t key = match List.assoc_opt key (state t) with Some (`Int n) -> n | _ -> 0
+
+let record_account t site meter =
+  let cost = match priced meter with Some value -> `Float value | None -> `Null in
+  update t (account_key site)
+    (`Assoc [ ("model_calls", `Int meter.calls); ("model_cost", cost) ])
+
+let account_field site fields name =
+  match List.assoc_opt (account_key site) fields with
+  | Some (`Assoc account) -> List.assoc_opt name account
+  | _ -> None
 
 (* map-cnee: the matching path is the distinct kinds in first-visit order.
    Consecutive repeats and later revisits both collapse (A,B,A,B is A,B). [unknown]
@@ -297,14 +383,24 @@ let status t =
                      | _ -> n)
                    0 procedures
                in
+               let fields = state t in
+               let calls =
+                 match account_field site fields "model_calls" with
+                 | Some (`Int n) -> n
+                 | _ -> 0
+               in
                `Assoc
                  [
                    ("site", `String site);
                    ( "last_compile",
                      Option.value ~default:`Null
-                       (List.assoc_opt ("compile:" ^ site) (state t)) );
+                       (List.assoc_opt ("compile:" ^ site) fields) );
                    ("installed_by_replay", `Int (count "replay"));
                    ("installed_by_agreement", `Int (count "agreement"));
+                   ("learning_calls", `Int calls);
+                   ( "learning_cost",
+                     Option.value ~default:`Null (account_field site fields "model_cost")
+                   );
                  ])
              sites) );
     ]
@@ -598,8 +694,11 @@ let install ?revision t file slug (result : P.run_result) =
         P.installed = List.sort_uniq String.compare (slug :: result.installed);
       }
 
-let compile ?prior ?revision t ~files ~traces ~existing ~repair ~snapshot
+let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
     (result : P.run_result) =
+  let planner request =
+    Model_usage.with_meter (observe_usage meter) (fun () -> t.planner request)
+  in
   let first =
     List.hd (List.sort (fun (a : Trace.t) b -> String.compare a.time b.time) traces)
   in
@@ -684,11 +783,11 @@ let compile ?prior ?revision t ~files ~traces ~existing ~repair ~snapshot
     else Ok proc
   in
   let answer =
-    let* json = t.planner (request "") in
+    let* json = planner (request "") in
     match decode json with
     | Ok proc -> Ok proc
     | Error why ->
-        let* json = t.planner (request why) in
+        let* json = planner (request why) in
         decode json
   in
   update t ("compile:" ^ first.site)
@@ -722,6 +821,8 @@ let compile ?prior ?revision t ~files ~traces ~existing ~repair ~snapshot
               Option.fold ~none:(repair <> None)
                 ~some:(fun (p : B.provenance) -> p.repair)
                 prior;
+            model_calls = meter.calls;
+            model_cost = priced meter;
           }
       in
       let proc = { proc with B.provenance = Some provenance } in
@@ -751,309 +852,266 @@ let compile ?prior ?revision t ~files ~traces ~existing ~repair ~snapshot
             install ~revision:(B.draft_revision book) t file proc.slug result
           else result)
 
-let after_trace_unmetered t ~store ~file trace result =
+let after_trace_unmetered t ~meter ~store ~file trace result =
   if t.config.mode = Config.Learning_mode.Off || trace.Trace.site = "unknown" then result
   else
-    Eio.Mutex.use_rw ~protect:true t.lock (fun () ->
-        let installed =
-          match B.list ~caps:t.caps () with
-          | Ok b -> b
+    let installed =
+      match B.list ~caps:t.caps () with
+      | Ok b -> b
+      | Error why ->
+          t.warn why;
+          []
+    in
+    let existing =
+      List.find_opt (fun (b : B.loaded) -> b.playbook.site = trace.site) installed
+    in
+    let done_ = P.Run_status.to_string result.P.status = "done" in
+    let retired = ref [] in
+    let result =
+      List.fold_left
+        (fun result draft ->
+          if draft.book.playbook.site <> trace.site then result
+          else
+            match
+              ( List.find_opt
+                  (fun (p : P.run_procedure) ->
+                    p.site = trace.site
+                    && p.slug = "draft:" ^ draft.proc.slug
+                    && (not p.planned)
+                    && p.revision = Some (B.draft_revision draft.book.playbook))
+                  result.P.procedures,
+                draft.proc.provenance )
+            with
+            | Some attempted, Some provenance
+              when t.config.mode = Config.Learning_mode.Auto && provenance.repeatable ->
+                if
+                  done_
+                  && attempted.outcome = "verified"
+                  && List.for_all
+                       (fun (e : P.run_expectation) -> e.passed)
+                       attempted.expectations
+                then
+                  install ?revision:attempted.revision t draft.file draft.proc.slug result
+                else if attempted.outcome = "failed" then (
+                  let tries = provenance.tries + 1 in
+                  if provenance.repair then (
+                    let key = "fail:" ^ trace.site ^ ":" ^ draft.proc.slug in
+                    let failures = counter t key + 1 in
+                    update t key (`Int failures);
+                    if failures >= t.config.retire_after then
+                      match
+                        B.retire_draft ~caps:t.caps ~file:draft.file
+                          ~revision:(B.draft_revision draft.book.playbook)
+                          ~site:trace.site ~slug:draft.proc.slug
+                      with
+                      | Ok () -> retired := draft.proc.slug :: !retired
+                      | Error why -> t.warn why);
+                  if tries >= t.config.max_tries || List.mem draft.proc.slug !retired then (
+                    (match archive t draft with Ok () -> () | Error why -> t.warn why);
+                    result)
+                  else
+                    let p =
+                      {
+                        provenance with
+                        B.tries;
+                        last_failure =
+                          Some
+                            (Option.value ~default:"expectation failed" attempted.reason);
+                      }
+                    in
+                    let proc = { draft.proc with B.provenance = Some p } in
+                    match
+                      persist
+                        ~revision:(B.draft_revision draft.book.playbook)
+                        t
+                        { draft.book.playbook with B.procedures = [ proc ] }
+                        proc
+                    with
+                    | Error why ->
+                        t.warn why;
+                        result
+                    | Ok _ ->
+                        let updated =
+                          {
+                            draft.book.playbook with
+                            B.scripts = None;
+                            procedures = [ proc ];
+                          }
+                        in
+                        compile ~prior:p ~revision:(B.draft_revision updated) t ~meter
+                          ~files:(p.traces @ [ file ]) ~traces:[ trace ]
+                          ~existing:(Some draft.book) ~repair:(Some proc)
+                          ~snapshot:result.final result)
+                else result
+            | _ -> result)
+        result (proposals t)
+    in
+    let pending = proposals t in
+    let attempts =
+      List.filter
+        (fun (p : P.run_procedure) ->
+          (not p.planned) && not (String.starts_with ~prefix:"draft:" p.slug))
+        result.procedures
+    in
+    let missions =
+      List.sort_uniq
+        (fun (a : P.run_procedure) b -> compare (a.site, a.slug) (b.site, b.slug))
+        attempts
+    in
+    List.iter
+      (fun (p : P.run_procedure) ->
+        let same_outcome outcome =
+          List.exists
+            (fun (q : P.run_procedure) ->
+              q.site = p.site && q.slug = p.slug && q.outcome = outcome)
+            attempts
+        in
+        let key = "fail:" ^ p.site ^ ":" ^ p.slug in
+        if
+          same_outcome "verified"
+          || (p.site = trace.site && List.mem p.slug result.installed)
+        then (
+          update t key (`Int 0);
+          update t ("repair-fail:" ^ p.site ^ ":" ^ p.slug) (`Int 0))
+        else if same_outcome "failed" then (
+          let failures = counter t key + 1 in
+          update t key (`Int failures);
+          if failures >= t.config.retire_after then
+            match B.retire ~caps:t.caps ~site:p.site ~slug:p.slug with
+            | Ok () -> retired := p.slug :: !retired
+            | Error why -> t.warn why))
+      missions;
+    List.iter
+      (fun draft ->
+        if List.mem draft.proc.slug !retired && draft.book.playbook.site = trace.site then
+          match archive t draft with Ok () -> () | Error why -> t.warn why)
+      pending;
+    let failing =
+      List.find_opt
+        (fun (p : P.run_procedure) ->
+          p.outcome = "failed"
+          && (not (String.starts_with ~prefix:"draft:" p.slug))
+          && (p.attempts >= 2
+             || counter t ("fail:" ^ p.site ^ ":" ^ p.slug) >= 2
+             || not
+                  (fst
+                     (classify
+                        (Option.fold ~none:[]
+                           ~some:(fun (b : B.loaded) -> b.playbook.pages)
+                           existing)
+                        [ trace ])))
+          && not (List.mem p.slug !retired))
+        result.procedures
+    in
+    match (failing, existing) with
+    | _ when result.installed <> [] -> result
+    | Some failure, Some book
+      when not
+             (List.exists
+                (fun d -> d.book.playbook.site = trace.site && d.proc.slug = failure.slug)
+                pending) -> (
+        match
+          List.find_opt
+            (fun (p : B.procedure) -> p.slug = failure.slug)
+            book.playbook.procedures
+        with
+        | Some proc ->
+            compile t ~meter ~files:[ file ] ~traces:[ trace ] ~existing
+              ~repair:(Some proc) ~snapshot:result.final result
+        | None -> result)
+    | _ when done_ ->
+        let candidates =
+          match Traces.list store ~site:trace.site ~outcome:"done" () with
+          | Ok rows -> rows
           | Error why ->
               t.warn why;
               []
         in
-        let existing =
-          List.find_opt (fun (b : B.loaded) -> b.playbook.site = trace.site) installed
-        in
-        let done_ = P.Run_status.to_string result.P.status = "done" in
-        let retired = ref [] in
-        let result =
-          List.fold_left
-            (fun result draft ->
-              if draft.book.playbook.site <> trace.site then result
-              else
-                match
-                  ( List.find_opt
-                      (fun (p : P.run_procedure) ->
-                        p.site = trace.site
-                        && p.slug = "draft:" ^ draft.proc.slug
-                        && (not p.planned)
-                        && p.revision = Some (B.draft_revision draft.book.playbook))
-                      result.P.procedures,
-                    draft.proc.provenance )
-                with
-                | Some attempted, Some provenance
-                  when t.config.mode = Config.Learning_mode.Auto && provenance.repeatable
-                  ->
-                    if
-                      done_
-                      && attempted.outcome = "verified"
-                      && List.for_all
-                           (fun (e : P.run_expectation) -> e.passed)
-                           attempted.expectations
-                    then
-                      install ?revision:attempted.revision t draft.file draft.proc.slug
-                        result
-                    else if attempted.outcome = "failed" then (
-                      let tries = provenance.tries + 1 in
-                      if provenance.repair then (
-                        let key = "fail:" ^ trace.site ^ ":" ^ draft.proc.slug in
-                        let failures = counter t key + 1 in
-                        update t key (`Int failures);
-                        if failures >= t.config.retire_after then
-                          match
-                            B.retire_draft ~caps:t.caps ~file:draft.file
-                              ~revision:(B.draft_revision draft.book.playbook)
-                              ~site:trace.site ~slug:draft.proc.slug
-                          with
-                          | Ok () -> retired := draft.proc.slug :: !retired
-                          | Error why -> t.warn why);
-                      if tries >= t.config.max_tries || List.mem draft.proc.slug !retired
-                      then (
-                        (match archive t draft with
-                        | Ok () -> ()
-                        | Error why -> t.warn why);
-                        result)
-                      else
-                        let p =
-                          {
-                            provenance with
-                            B.tries;
-                            last_failure =
-                              Some
-                                (Option.value ~default:"expectation failed"
-                                   attempted.reason);
-                          }
-                        in
-                        let proc = { draft.proc with B.provenance = Some p } in
-                        match
-                          persist
-                            ~revision:(B.draft_revision draft.book.playbook)
-                            t
-                            { draft.book.playbook with B.procedures = [ proc ] }
-                            proc
-                        with
-                        | Error why ->
-                            t.warn why;
-                            result
-                        | Ok _ ->
-                            let updated =
-                              {
-                                draft.book.playbook with
-                                B.scripts = None;
-                                procedures = [ proc ];
-                              }
-                            in
-                            compile ~prior:p ~revision:(B.draft_revision updated) t
-                              ~files:(p.traces @ [ file ]) ~traces:[ trace ]
-                              ~existing:(Some draft.book) ~repair:(Some proc)
-                              ~snapshot:result.final result)
-                    else result
-                | _ -> result)
-            result (proposals t)
-        in
-        let pending = proposals t in
-        let attempts =
+        let current_path = matching_path trace in
+        let candidates =
           List.filter
-            (fun (p : P.run_procedure) ->
-              (not p.planned) && not (String.starts_with ~prefix:"draft:" p.slug))
-            result.procedures
+            (fun (_, t) ->
+              matching_path t = current_path
+              && current_path <> []
+              && steps t <> []
+              && not t.compiled)
+            candidates
         in
-        let missions =
-          List.sort_uniq
-            (fun (a : P.run_procedure) b -> compare (a.site, a.slug) (b.site, b.slug))
-            attempts
-        in
-        List.iter
-          (fun (p : P.run_procedure) ->
-            let same_outcome outcome =
+        let covered =
+          match existing with
+          | None -> false
+          | Some b ->
               List.exists
-                (fun (q : P.run_procedure) ->
-                  q.site = p.site && q.slug = p.slug && q.outcome = outcome)
-                attempts
-            in
-            let key = "fail:" ^ p.site ^ ":" ^ p.slug in
-            if
-              same_outcome "verified"
-              || (p.site = trace.site && List.mem p.slug result.installed)
-            then (
-              update t key (`Int 0);
-              update t ("repair-fail:" ^ p.site ^ ":" ^ p.slug) (`Int 0))
-            else if same_outcome "failed" then (
-              let failures = counter t key + 1 in
-              update t key (`Int failures);
-              if failures >= t.config.retire_after then
-                match B.retire ~caps:t.caps ~site:p.site ~slug:p.slug with
-                | Ok () -> retired := p.slug :: !retired
-                | Error why -> t.warn why))
-          missions;
-        List.iter
-          (fun draft ->
-            if List.mem draft.proc.slug !retired && draft.book.playbook.site = trace.site
-            then match archive t draft with Ok () -> () | Error why -> t.warn why)
-          pending;
-        let failing =
-          List.find_opt
-            (fun (p : P.run_procedure) ->
-              p.outcome = "failed"
-              && (not (String.starts_with ~prefix:"draft:" p.slug))
-              && (p.attempts >= 2
-                 || counter t ("fail:" ^ p.site ^ ":" ^ p.slug) >= 2
-                 || not
-                      (fst
-                         (classify
-                            (Option.fold ~none:[]
-                               ~some:(fun (b : B.loaded) -> b.playbook.pages)
-                               existing)
-                            [ trace ])))
-              && not (List.mem p.slug !retired))
-            result.procedures
+                (fun (p : B.procedure) ->
+                  match p.provenance with
+                  | Some prov -> prov.path = current_path
+                  | None ->
+                      List.exists
+                        (fun (saved : Trace.trace_procedure) ->
+                          saved.outcome = "verified" && saved.procedure = p.slug
+                          && not saved.planned)
+                        trace.procedures)
+                b.playbook.procedures
         in
-        match (failing, existing) with
-        | _ when result.installed <> [] -> result
-        | Some failure, Some book
-          when not
-                 (List.exists
-                    (fun d ->
-                      d.book.playbook.site = trace.site && d.proc.slug = failure.slug)
-                    pending) -> (
+        let pending =
+          List.exists
+            (fun d ->
+              d.book.playbook.site = trace.site
+              && Option.fold ~none:false
+                   ~some:(fun p -> p.B.path = current_path)
+                   d.proc.provenance)
+            pending
+        in
+        let candidates =
+          let traces = List.map snd candidates in
+          let pages =
+            match existing with
+            | Some book -> book.playbook.pages
+            | None -> inferred_pages traces
+          in
+          if fst (classify pages traces) then candidates
+          else
+            let groups =
+              List.fold_left
+                (fun groups ((_, trace) as item) ->
+                  let same, different =
+                    List.partition
+                      (fun group ->
+                        match group with
+                        | (_, head) :: _ -> signature head = signature trace
+                        | [] -> false)
+                      groups
+                  in
+                  let group = List.concat same @ [ item ] in
+                  group :: different)
+                [] candidates
+            in
             match
               List.find_opt
-                (fun (p : B.procedure) -> p.slug = failure.slug)
-                book.playbook.procedures
+                (fun group ->
+                  List.length group >= t.config.successes
+                  && agreement (List.map snd group))
+                groups
             with
-            | Some proc ->
-                compile t ~files:[ file ] ~traces:[ trace ] ~existing ~repair:(Some proc)
-                  ~snapshot:result.final result
-            | None -> result)
-        | _ when done_ ->
-            let candidates =
-              match Traces.list store ~site:trace.site ~outcome:"done" () with
-              | Ok rows -> rows
-              | Error why ->
-                  t.warn why;
-                  []
-            in
-            let current_path = matching_path trace in
-            let candidates =
-              List.filter
-                (fun (_, t) ->
-                  matching_path t = current_path
-                  && current_path <> []
-                  && steps t <> []
-                  && not t.compiled)
-                candidates
-            in
-            let covered =
-              match existing with
-              | None -> false
-              | Some b ->
-                  List.exists
-                    (fun (p : B.procedure) ->
-                      match p.provenance with
-                      | Some prov -> prov.path = current_path
-                      | None ->
-                          List.exists
-                            (fun (saved : Trace.trace_procedure) ->
-                              saved.outcome = "verified" && saved.procedure = p.slug
-                              && not saved.planned)
-                            trace.procedures)
-                    b.playbook.procedures
-            in
-            let pending =
-              List.exists
-                (fun d ->
-                  d.book.playbook.site = trace.site
-                  && Option.fold ~none:false
-                       ~some:(fun p -> p.B.path = current_path)
-                       d.proc.provenance)
-                pending
-            in
-            let candidates =
-              let traces = List.map snd candidates in
-              let pages =
-                match existing with
-                | Some book -> book.playbook.pages
-                | None -> inferred_pages traces
-              in
-              if fst (classify pages traces) then candidates
-              else
-                let groups =
-                  List.fold_left
-                    (fun groups ((_, trace) as item) ->
-                      let same, different =
-                        List.partition
-                          (fun group ->
-                            match group with
-                            | (_, head) :: _ -> signature head = signature trace
-                            | [] -> false)
-                          groups
-                      in
-                      let group = List.concat same @ [ item ] in
-                      group :: different)
-                    [] candidates
-                in
-                match
-                  List.find_opt
-                    (fun group ->
-                      List.length group >= t.config.successes
-                      && agreement (List.map snd group))
-                    groups
-                with
-                | Some group -> group
-                | None -> []
-            in
-            if List.length candidates < t.config.successes || covered || pending then
-              result
-            else
-              let candidates =
-                List.filteri (fun i _ -> i < t.config.successes) candidates
-              in
-              compile t ~files:(List.map fst candidates) ~traces:(List.map snd candidates)
-                ~existing ~repair:None ~snapshot:result.final result
-        | _ -> result)
+            | Some group -> group
+            | None -> []
+        in
+        if List.length candidates < t.config.successes || covered || pending then result
+        else
+          let candidates = List.filteri (fun i _ -> i < t.config.successes) candidates in
+          compile t ~meter ~files:(List.map fst candidates)
+            ~traces:(List.map snd candidates) ~existing ~repair:None
+            ~snapshot:result.final result
+    | _ -> result
 
-(* map-ptnk: learning is billed after the browser run; compiler, retry and
-   confirmation requests still belong to that mission's total-work curve. *)
+(* Compile, confirmation and repair run after the reply, on the service switch,
+   serialized per site. Their cost is learning state and proposal provenance, not the
+   reply or the durable mission totals. *)
 let after_trace t ~store ~file trace result =
-  let calls = ref 0 and reports = ref 0 and cost = ref 0. and unknown = ref false in
-  let meter = function
-    | Model_usage.Start _ -> incr calls
-    | Model_usage.Reported (_, value) -> (
-        incr reports;
-        match value with
-        | Some value when Float.is_finite value && value >= 0. -> cost := !cost +. value
-        | _ -> unknown := true)
-  in
-  let learned =
-    Model_usage.with_meter meter (fun () ->
-        after_trace_unmetered t ~store ~file trace result)
-  in
-  if !calls = 0 then learned
-  else
-    let model_cost =
-      if !unknown || !reports <> !calls then None
-      else
-        match result.P.model_cost with
-        | Some before -> Some (before +. !cost)
-        | None when result.model_calls = 0 -> Some !cost
-        | None -> None
-    in
-    let learned =
-      { learned with P.model_calls = result.model_calls + !calls; model_cost }
-    in
-    (* map-ptnk: durable mission accounting includes compile, validation retry and
-       confirmation work; keep any compiled marker written during that work. *)
-    (match read t file with
-    | Ok json -> (
-        match Trace.t_of_yojson json with
-        | Ok durable -> (
-            let durable =
-              { durable with Trace.cost = model_cost; model_calls = learned.model_calls }
-            in
-            match write t file (Trace.yojson_of_t durable) with
-            | Ok () -> ()
-            | Error why -> t.warn why)
-        | Error why -> t.warn why)
-    | Error why -> t.warn why);
-    learned
+  if t.config.mode = Config.Learning_mode.Off || trace.Trace.site = "unknown" then result
+  else (
+    schedule t ~site:trace.site (fun () ->
+        let meter = empty_meter () in
+        ignore (after_trace_unmetered t ~meter ~store ~file trace result);
+        if meter.calls > 0 then record_account t trace.site meter);
+    result)

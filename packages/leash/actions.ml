@@ -44,6 +44,13 @@ type tab = {
   sleep : float -> unit;
       (** A bounded wait that dispatches no input. Used only to re-check a fully
           transparent cover. *)
+  same_document : unit -> int;
+  net_seq : unit -> int;
+  requests_since : int -> bool;
+  reread : unit -> unit;
+  arm_transition : unit -> unit;
+  armed_document : unit -> int;
+  armed_net : unit -> int;
 }
 
 (* One CDP call. Only pre-dispatch observation may be repeated inside this module, and
@@ -601,10 +608,39 @@ let settle_suggestions cdp tab =
   in
   poll 10
 
+(* A same-document navigation can land hundreds of milliseconds after the input
+   acknowledgement. Poll while one is in progress, the URL is still moving, or a request
+   started by this action is in flight. A quiet page returns on the first check, so a
+   click that changes nothing does not wait out the bound. *)
+let transition_bound_s = 1.5
+let transition_poll_s = 0.05
+
+let wait_for_transition tab =
+  let url () = fst (tab.page ()) in
+  let started = tab.armed_net () in
+  let armed_doc = tab.armed_document () in
+  Eio.Fiber.yield ();
+  (* A quiet action does not read the target again. Cross-document loads already do that
+     in [refresh]; an extra read here changes the count those tests pin. *)
+  if not (tab.requests_since started || tab.same_document () > armed_doc) then ()
+  else
+    let rec loop elapsed last_url last_doc =
+      tab.reread ();
+      let url = url () in
+      let doc = tab.same_document () in
+      let moving = url <> last_url || doc <> last_doc || tab.requests_since started in
+      if (not moving) || elapsed +. transition_poll_s > transition_bound_s then ()
+      else (
+        tab.sleep transition_poll_s;
+        loop (elapsed +. transition_poll_s) url doc)
+    in
+    loop 0. (url ()) (tab.same_document ())
+
 let settle cdp tab ~combobox =
   tab.engage ();
   if combobox then settle_suggestions cdp tab
   else ignore (evaluate ~deadline:(Ox.Duration.ms 50) cdp tab frames_expression);
+  wait_for_transition tab;
   Ok ()
 
 let focus_row cdp tab backend =
@@ -831,6 +867,7 @@ let result tab before =
 
 let with_result tab dispatch =
   let before = handles tab in
+  tab.arm_transition ();
   match
     Dialog_race.first tab.dialog_race (fun () ->
         let* () = dispatch () in
@@ -1243,9 +1280,8 @@ let operator_scroll ~cdp tab ~down =
 
 let operator_settle ~cdp tab ~autocomplete =
   let bound = if autocomplete then 200 else 50 in
-  match
-    evaluate ~deadline:(Ox.Duration.ms bound) cdp tab
-      (Snapshot_source.settle_expression ~autocomplete)
-  with
-  | Error _ -> Ok ()
-  | Ok _ -> Ok ()
+  ignore
+    (evaluate ~deadline:(Ox.Duration.ms bound) cdp tab
+       (Snapshot_source.settle_expression ~autocomplete));
+  wait_for_transition tab;
+  Ok ()

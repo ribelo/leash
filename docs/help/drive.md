@@ -42,8 +42,9 @@ A drive reply is large. Write it to a file and read the fields below. Do not pas
 ## Prefer drive for goals
 
 Drive learns reusable procedures from successful missions; manual commands do not. Use
-manual commands for inspection and for steps drive cannot do. Learning defaults to draft:
-proposals are reported, not silently installed; `learning.mode = "off"` disables learning.
+manual commands for inspection and for steps drive cannot do. Learning defaults to draft and runs after the reply, so the reply's `model_calls`,
+`model_cost`, `proposals` and `installed` do not include that compile. `status` reports
+it; `learning.mode = "off"` disables learning.
 With `--tab HANDLE`, the supplied tab stays open whatever the outcome. Without `--tab`,
 drive opens and closes its own tab on success, failure, blocked, deadline, or error. A
 planner handoff waits at most `handoff.timeout_s` (300 seconds by default). On expiry,
@@ -100,7 +101,7 @@ Exit 0 means the service answered. It does not mean the mission succeeded. Read:
 - `mission_expectations` — the DONE guard, each sentence, checker, and whether it passed.
 - `operator_state.page.text` — on the fly, the answer is the page, at most 6000 characters of viewport text. `page.coverage` is a `+`-joined string starting with `viewport`. `page.page_kind` is the kind JEV was shown (`page.page_kind_source` is `declared` or `inferred`); `page.url` and the snapshot retain the actual browser URL.
 - `output_kinds` — `script-record`, `operator-state`, or both.
-- `model_cost` — null when any call is unpriced. `data.reported_cost` is the known subtotal.
+- `model_cost` — the drive's own calls; null when any of those is unpriced. Learning compile cost is not included. `data.reported_cost` is the known subtotal of the same calls.
 - `final` — the last snapshot.
 
 `--out` lines are tagged. `{"kind":"script-record","source":"playbook",...}` has the record under `.record`. `{"kind":"operator-state","source":"operator","state":...}` is one terminal bounded observation, not a record list. A dry run writes neither.

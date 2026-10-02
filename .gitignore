@@ -5,3 +5,5 @@ _opam/
 result
 *.install
 _build_*/
+# OCaml 5 runtime-events ring files (<pid>.events) left by instrumented test runs.
+/*.events

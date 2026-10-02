@@ -198,20 +198,19 @@ OperatorMetrics = {actions, predictions, text_calls, observation_calls,
 
 `page.text` is viewport text, at most 6000 characters, including visible titles, prices and records. `omitted_elements` counts action candidates beyond the 250 offered. This is the observation JEV used. It is not a normalized schema, not proof of exhaustive collection across pagination or offscreen content, and not a prepared script result. Prepared script payloads still bypass every model. `history` records executed input, including an uncertain mutation that must not be replayed. `predictions` includes discarded stale decisions. `usage` on a prediction or text call is the provider object, or null when that call reported none.
 
-`model_calls` counts actual attempted provider requests, including retries and
-failed attempts. L53 includes post-drive learning compilation, validation retries
-and confirmation work in the top-level count and `model_cost`; durable trace
-`model_calls` and `cost` are updated with those totals too. `model_cost` sums
-provider-reported costs, including answers later rejected, and is `null` when
-any counted call has no valid reported cost. `null` is unknown, not zero.
-Text-helper memo hits and deterministic checks make no model call.
+`model_calls` counts attempted provider requests during the drive, including retries and
+failed attempts. It does not include post-reply learning compilation, validation retries,
+or confirmation. Those run after the reply, on a service fiber, and their calls and cost
+are recorded on the proposal's provenance and in `status.learning`, not in this reply or
+the durable trace totals. `model_cost` sums provider-reported costs of the counted drive
+calls, including answers later rejected, and is `null` when any counted call has no valid
+reported cost. `null` is unknown, not zero. Text-helper memo hits and deterministic
+checks make no model call.
 
 `data.model_calls_by_kind`, `data.reported_cost` and `data.cost_unreported`
-are the drive-loop ledger before post-trace learning: attempted requests by
-provider role (absent roles made no calls), reported cost sum, and count of
-unpriced requests respectively. They do not include that later learning work
-and are not a breakdown of the final learning-inclusive totals. Nested
-`Usage.cost` is a number with zero substituted for absent provider cost; use
+are that same drive ledger: attempted requests by provider role (absent roles made no
+calls), reported cost sum, and count of unpriced requests. They match the reply totals.
+Nested `Usage.cost` is a number with zero substituted for absent provider cost; use
 `model_cost`, not that fallback, to distinguish a priced run from unknown cost.
 
 A successful control reply is not proof the mission succeeded. Read `status`, `reason`, `operator_state` and, when present, the tagged file.
@@ -346,9 +345,11 @@ Models       = {configured: bool, jev_model: string, text_model: string,
                  and no field ever carries the key
 LearningStatus = {mode: "off"|"draft"|"auto", drafts: int,
                   sites: [{site, last_compile: string|null,
-                           installed_by_replay: int, installed_by_agreement: int}]}
+                           installed_by_replay: int, installed_by_agreement: int,
+                           learning_calls: int, learning_cost: number|null}]}
 Provenance   = {traces: string[], model, time, tries: int, last_failure?: string,
-                path: string[], repeatable: bool, reason, gate, repair: bool}
+                path: string[], repeatable: bool, reason, gate, repair: bool,
+                model_calls: int, model_cost: number|null}
 ```
 
 ### Learning results and provenance (L53)
@@ -358,19 +359,23 @@ as null. `mode` reports the configured policy, `drafts` the current count of
 pending learned procedures, and `sites` the known installed, draft or previously compiled
 sites. `last_compile` is the last compile attempt's UTC timestamp, or null.
 The two installed counts reflect current procedure provenance gates containing
-`replay` or `agreement`, not lifetime installation counts.
+`replay` or `agreement`, not lifetime installation counts. `learning_calls` and
+`learning_cost` are the latest post-reply compile, confirmation or repair for that
+site. `learning_cost` is null when that work has not run or any of its calls was unpriced.
 
-The drive result's `installed` lists procedure slugs automatically installed
-during this request, including repairs; it is not the whole library. An omitted
-`installed` decodes as []. `proposals` lists proposal paths produced during
-the request; an automatically installed proposal may already have been consumed.
-Use `status.learning.drafts` for pending learned procedures, not `proposals.length`.
+The drive result's `installed` and `proposals` are what the request produced before
+the reply. Learning compile, confirmation, repair and install run after the reply, so
+they are not listed there. `status.learning` and the proposal or playbook files show
+them once that work finishes. An omitted `installed` decodes as []. Use
+`status.learning.drafts` for pending learned procedures, not `proposals.length`.
 
 `Provenance` is the optional `provenance` object on a learned procedure in
 playbook or draft JSON, not a field of `RunProcedure`. It records source trace
 paths, the compiler model, a UTC timestamp, the failed replay count and
 optional last failure, the page-kind path, repeatability and its reason, the
-validation gate, and whether this is a repair. Current gate values are `replay`,
+validation gate, whether this is a repair, and the planner calls and reported cost of
+the compile or repair that wrote it. `model_calls` defaults to 0 when absent.
+`model_cost` is null when unknown. Current gate values are `replay`,
 `agreement` and `agreement-repair`; the codec's field is a string.
 
 ### Planner Continue (L53)

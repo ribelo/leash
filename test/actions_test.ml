@@ -2485,12 +2485,103 @@ let transparent_cover () =
         (List.length (calls fake "Input.dispatchMouseEvent"));
       Alcotest.(check bool) "tab-bw4j the lasting cover was re-checked" true (!probes >= 5))
 
+let target_info ~url ~title =
+  o
+    [
+      ( "targetInfo",
+        o
+          [
+            ("targetId", s "target-1");
+            ("type", s "page");
+            ("title", s title);
+            ("url", s url);
+          ] );
+    ]
+
+let mouse_release request =
+  match E.string_member "type" (member "params" request) with
+  | Some "mouseReleased" -> true
+  | _ -> false
+
+let spa_navigation () =
+  rig (fun env sw _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let url = ref "https://www.google.com/travel/flights?hl=en" in
+      let title = ref "Flights" in
+      Fake.on_method fake "Target.getTargetInfo" (fun _ ->
+          target_info ~url:!url ~title:!title);
+      Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
+          if mouse_release request then
+            Eio.Fiber.fork ~sw (fun () ->
+                Fake.emit ~session:"session-1" fake ~method_:"Network.requestWillBeSent"
+                  ~params:(Fake.event "Network.requestWillBeSent");
+                Eio.Time.sleep env#clock 0.3;
+                url := "https://www.google.com/travel/explore?hl=en";
+                title := "Explore";
+                Fake.emit ~session:"session-1" fake
+                  ~method_:"Page.navigatedWithinDocument"
+                  ~params:(o [ ("frameId", s "frame-1"); ("url", s !url) ]);
+                Fake.emit ~session:"session-1" fake ~method_:"Network.loadingFinished"
+                  ~params:(Fake.event "Network.loadingFinished"));
+          o []);
+      let reply =
+        tick env sw (fun () ->
+            result
+              (request tabs "alice"
+                 (P.Click (row_args ~tab:handle ~snapshot:id ~index:1 ()))))
+      in
+      Alcotest.(check string)
+        "pushState 300 ms after the click is in the reply" !url (text "url" reply);
+      let observed =
+        result
+          (request tabs "alice"
+             (P.Snap { tab = handle; match_ = None; limit = None; offset = None }))
+      in
+      Alcotest.(check string)
+        "pushState 300 ms after the click is in the next observation" !url
+        (text "url" observed))
+
+let quiet_click () =
+  rig (fun env sw _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      let handle = new_tab tabs in
+      let id = snapshot_id (snap tabs handle) in
+      let started = Eio.Time.now env#clock in
+      let cell = ref None in
+      Eio.Fiber.fork ~sw (fun () ->
+          cell :=
+            Some
+              (request tabs "alice"
+                 (P.Click (row_args ~tab:handle ~snapshot:id ~index:1 ()))));
+      let rec wait n =
+        match !cell with
+        | Some reply -> reply
+        | None when n = 0 ->
+            Alcotest.fail "a quiet click waited instead of the early-quiet check"
+        | None ->
+            Eio.Fiber.yield ();
+            wait (n - 1)
+      in
+      let reply = result (wait 2_000) in
+      let elapsed = Eio.Time.now env#clock -. started in
+      Alcotest.(check bool)
+        "a quiet click does not wait the 1.5 s bound" true (elapsed < 0.2);
+      Alcotest.(check bool)
+        "a quiet click still answers" true
+        (Yojson.Safe.Util.member "tab" reply <> `Null))
+
 let () =
   Alcotest.run "L7 actions"
     [
       ( "actions",
         [
           Alcotest.test_case "tab-bw4j tm6c j1z2 1lhx" `Quick click;
+          Alcotest.test_case "spa pushState after click" `Quick spa_navigation;
+          Alcotest.test_case "quiet click returns early" `Quick quiet_click;
           Alcotest.test_case "tab-bw4j transparent cover" `Quick transparent_cover;
           Alcotest.test_case "tab-bw4j scrolled document hit" `Quick scrolled_click;
           Alcotest.test_case "tab-1lhx" `Quick never_retried;

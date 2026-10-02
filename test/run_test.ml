@@ -2423,6 +2423,8 @@ let nonrepeatable_no_recovery () =
         reason = "fixture";
         gate = "trial";
         repair = false;
+        model_calls = 0;
+        model_cost = None;
       }
   in
   let guarded_step =

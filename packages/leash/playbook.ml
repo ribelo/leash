@@ -160,6 +160,8 @@ type provenance = {
   reason : string;
   gate : string;
   repair : bool;
+  model_calls : int; [@json.default 0]
+  model_cost : float option; [@json.null]
 }
 [@@deriving yojson]
 

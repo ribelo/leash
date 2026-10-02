@@ -55,6 +55,10 @@ type provenance = {
   reason : string;
   gate : string;
   repair : bool;
+  model_calls : int;
+      (** Planner calls spent compiling or repairing this procedure. Absent JSON is 0. *)
+  model_cost : float option;
+      (** Reported cost of those calls. [None] is unknown, including an unpriced call. *)
 }
 
 type procedure = {

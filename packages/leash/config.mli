@@ -143,6 +143,9 @@ type learning = {
   max_tries : int;
   retire_after : int;
   planner_actions : int;
+  timeout_s : int;
+      (** Deadline for one compile, confirmation or repair call. Independent of
+          [models.planner_timeout]. 60..3600, default 900. *)
 }
 
 val default_learning : learning

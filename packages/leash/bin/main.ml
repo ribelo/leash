@@ -1452,7 +1452,7 @@ let program env (config : Leash.Config.t) sw =
       config.models
   in
   let learning =
-    Leash.Learning.create ~caps:env.caps ~config:config.learning
+    Leash.Learning.create ~sw ~caps:env.caps ~config:config.learning
       ~planner:(Leash.Models.learning models config.learning)
       ~warn:(fun why -> Ox_observability.Logger.warn env.logger ("learning: " ^ why))
       ()

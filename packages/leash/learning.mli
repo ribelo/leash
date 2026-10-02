@@ -6,12 +6,15 @@ type planner = Yojson.Safe.t -> (Yojson.Safe.t, string) result
 type t
 
 val create :
+  sw:Eio.Switch.t ->
   caps:< caps ; .. > ->
   config:Config.learning ->
   ?planner:planner ->
   ?warn:(string -> unit) ->
   unit ->
   t
+(** [sw] owns the fibers that compile, confirm and repair after a drive reply. The reply
+    does not wait for them. They are cancelled when [sw] finishes. *)
 
 val config : t -> Config.learning
 
@@ -36,3 +39,10 @@ val after_trace :
   Trace.t ->
   Protocol.run_result ->
   Protocol.run_result
+(** Schedule learning for this trace and return [result] unchanged. Compile, confirmation
+    and repair run afterwards on [sw], serialized per site. Their cost is written to
+    learning state, proposal provenance and {!status}, not to this reply. *)
+
+val await_pending : t -> unit
+(** Wait until every learning fiber scheduled so far has finished. Tests use this to drive
+    the async path deterministically. A service does not call it. *)
