@@ -1313,6 +1313,167 @@ let drive_dry_run () =
              | _ -> false)
            (Fake.received fake)))
 
+(* tab-bw4j drive-y7v8: a click refused before any input is not an uncertain
+   outcome. JEV is shown the page again and may choose a different action. *)
+let refused_click_redecides () =
+  rig (fun _ _ _ tabs fake ->
+      let fake = fake () in
+      let fixture = fixture "unlabelled-controls-chrome.json" in
+      Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
+      Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
+      Fake.on_method fake "Page.getFrameTree" (fun _ -> get "frameTree" fixture);
+      Fake.on_method fake "Runtime.evaluate"
+        (page_evaluate ~text:"Example content" fixture);
+      Fake.on_method fake "Runtime.callFunctionOn" (fun _ ->
+          obj
+            [
+              ( "result",
+                obj
+                  [
+                    ( "value",
+                      obj [ ("y", `Int 0); ("viewport", `Int 400); ("height", `Int 1000) ]
+                    );
+                  ] );
+            ]);
+      Fake.on_method fake "Accessibility.getPartialAXTree" (fun _ ->
+          obj
+            [
+              ( "nodes",
+                `List
+                  [
+                    obj
+                      [
+                        ("role", obj [ ("value", str "button") ]);
+                        ("name", obj [ ("value", str "") ]);
+                      ];
+                  ] );
+            ]);
+      Fake.on_method fake "DOM.describeNode" (fun _ ->
+          obj
+            [
+              ( "node",
+                obj
+                  [
+                    ("nodeId", `Int 29);
+                    ("backendNodeId", `Int 29);
+                    ("nodeName", str "DIV");
+                  ] );
+            ]);
+      Fake.on_method fake "DOM.getContentQuads" (fun _ ->
+          obj
+            [
+              ( "quads",
+                `List
+                  [
+                    `List
+                      (List.map
+                         (fun x -> `Float x)
+                         [ 10.; 10.; 50.; 10.; 50.; 30.; 10.; 30. ]);
+                  ] );
+            ]);
+      Fake.on_method fake "Page.getLayoutMetrics" (fun _ ->
+          obj [ ("cssLayoutViewport", obj [ ("pageX", `Int 0); ("pageY", `Int 0) ]) ]);
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          obj [ ("backendNodeId", `Int 999) ]);
+      Fake.on_method fake "Target.getTargetInfo" (fun _ ->
+          obj
+            [
+              ( "targetInfo",
+                obj
+                  [
+                    ("targetId", str "target-1");
+                    ("type", str "page");
+                    ("title", str "Example");
+                    ("url", str "https://example.com/");
+                  ] );
+            ]);
+      Fake.on_method fake "Page.navigate" (fun request ->
+          let session =
+            match get "sessionId" request with `String s -> s | _ -> "session-1"
+          in
+          Fake.emit ~session fake ~method_:"Page.frameNavigated"
+            ~params:(Fake.event "Page.frameNavigated");
+          Fake.emit ~session fake ~method_:"Page.loadEventFired"
+            ~params:(Fake.event "Page.loadEventFired");
+          obj [ ("frameId", str "frame-1"); ("loaderId", str "loader-2") ]);
+      let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
+      let observed =
+        result
+          (request tabs "alice"
+             (P.Snap { tab = h; match_ = None; limit = None; offset = None }))
+      in
+      let rows = match get "rows" observed with `List rows -> rows | _ -> [] in
+      let index =
+        match
+          List.find_opt
+            (fun row -> get "role" row = str "button" && get "name" row = str "")
+            rows
+        with
+        | Some row -> ( match get "index" row with `Int i -> i | _ -> assert false)
+        | None -> Alcotest.fail "icon button absent from snapshot"
+      in
+      let decisions = ref 0 in
+      let decide ~deadline:_ (_ : Leash__Jev_request.request) =
+        incr decisions;
+        let operation =
+          match P.Operation.of_string (if !decisions = 1 then "click" else "done") with
+          | Ok operation -> operation
+          | Error _ -> assert false
+        in
+        Ok
+          Leash__Jev_request.
+            {
+              operation;
+              script = None;
+              index = Some index;
+              option = None;
+              confidence = 1.;
+              target_confidence = None;
+              operation_probabilities = [ (P.Operation.to_string operation, 1.) ];
+              target_probabilities = [];
+              targets = [];
+            }
+      in
+      let wire =
+        P.encode_request
+          {
+            command =
+              P.Drive
+                {
+                  tab = Some h;
+                  mission = "Open a result";
+                  max_steps = Some 4;
+                  start_url = Some "https://example.com/";
+                  max_procedures = None;
+                  expect = None;
+                  out = None;
+                  deadline_s = Some 30;
+                  dry_run = None;
+                };
+          }
+        |> Yojson.Safe.to_string
+      in
+      let reply =
+        Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide tabs wire
+        |> Yojson.Safe.from_string |> P.decode_reply
+      in
+      let reply =
+        match reply with Ok reply -> result reply | Error why -> Alcotest.fail why
+      in
+      let status = match get "status" reply with `String s -> s | _ -> "" in
+      let reason = match field "reason" reply with Some (`String s) -> s | _ -> "" in
+      if status <> "done" then
+        Alcotest.failf "status %s after %d decisions; reason %s" status !decisions reason;
+      Alcotest.(check int) "tab-bw4j JEV decides again" 2 !decisions;
+      Alcotest.(check bool)
+        "tab-bw4j the refusal dispatched no mouse input" false
+        (List.exists
+           (fun json -> field "method" json = Some (str "Input.dispatchMouseEvent"))
+           (Fake.received fake));
+      Alcotest.(check bool)
+        "tab-bw4j the refusal is not outcome uncertain" false
+        (contains (Yojson.Safe.to_string reply) "outcome uncertain"))
+
 (* tab-zc36: a control with an empty accessible name is what an agent still has to act on,
    so it keeps its row with its role, an empty name, and its value or placeholder. The AX
    and DOMSnapshot replies are the recorded headless Chrome 152 shapes for a page with an
@@ -3614,6 +3775,8 @@ let () =
           Alcotest.test_case "trace-qe8c trace-iqqz public durable drives" `Quick
             durable_drive_traces;
           Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;
+          Alcotest.test_case "tab-bw4j refused click is decided again" `Quick
+            refused_click_redecides;
           Alcotest.test_case "run-9ypy run-4j1v run-snk4 run-shgh run-7blx" `Quick
             run_mission;
           Alcotest.test_case "daily-9ggi temporary drive tabs" `Quick

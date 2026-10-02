@@ -1,0 +1,2 @@
+flights mission 1: exit=0 status=error goal=True model_calls=5 cost=0.00063021 proposals=0 installed=[]
+{"gate": "flights", "passed": false, "missions_recorded": 1, "failures": ["Mission 1: drive not done (exit 0, status error, reason the click action (outcome uncertain; not replayed) failed (row-not-actionable): the row is covered at its click point)"]}

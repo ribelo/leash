@@ -199,6 +199,8 @@ let parse_url url =
         else None
     | _ -> None
 
+let host url = match parse_url url with Some (_, host, _, _) -> Some host | None -> None
+
 let shape_of path =
   let pieces =
     String.split_on_char '/' path |> List.filter (fun s -> s <> "") |> List.map piece_of

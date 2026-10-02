@@ -222,6 +222,9 @@ let pure () =
   Alcotest.(check (list string))
     "map-cnee normalize kinds" [ "catalog"; "detail" ]
     (L.path [ "unknown"; "catalog"; "catalog"; ""; "detail" ]);
+  Alcotest.(check (list string))
+    "map-cnee revisits collapse to first visit" [ "catalog"; "detail" ]
+    (L.path [ "catalog"; "detail"; "catalog"; "detail" ]);
   bool "map-nh2e typed values may differ"
     (L.agreement
        [
@@ -1181,6 +1184,109 @@ let learning_cost_accounting () =
             r.model_cost))
     [ Some 0.2; None ]
 
+(* map-cnee map-ngyr: the two Google Maps done traces from the 2026-10-02 live
+   gate. The stored paths stay as recorded; the matching path drops the consent
+   host and collapses the search/place revisits. *)
+let maps_final =
+  "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1"
+
+let maps_page name pattern : Trace.inferred_page = { name; url_pattern = pattern }
+
+let maps_pages =
+  [
+    maps_page "m" "https://consent.google.com/m";
+    maps_page "maps" "https://www.google.com/maps";
+    maps_page "search-<slug>" "https://www.google.com/maps/search/<slug>*";
+    maps_page "place-<slug>" "https://www.google.com/maps/place/<slug>*";
+  ]
+
+let mission1_kinds =
+  "m" :: "maps"
+  :: List.concat (List.init 6 (fun _ -> [ "search-<slug>"; "place-<slug>" ]))
+
+let mission2_kinds = [ "maps"; "search-<slug>"; "place-<slug>" ]
+
+let maps_trace ?(kinds = mission2_kinds) ?(pages = maps_pages) ?(label = "View") time =
+  let stay = "https://www.google.com/maps" in
+  let t = trace ~kinds ~steps:[ step ~label () ] time in
+  {
+    t with
+    Trace.site = "google.com";
+    start_url = Some stay;
+    inferred_pages = pages;
+    steps = [ { (step ~label ()) with after = { url = stay; title = "Google Maps" } } ];
+    final = Some { url = maps_final; title = "Eiffel Tower - Google Maps" };
+  }
+
+let google_paths () =
+  let expected = [ "maps"; "search-slug"; "place-slug" ] in
+  let first = maps_trace ~kinds:mission1_kinds 1. in
+  let second = maps_trace ~kinds:mission2_kinds 2. in
+  Alcotest.(check int)
+    "map-cnee raw consent path is kept" 14
+    (List.length first.page_kind_path);
+  Alcotest.(check bool)
+    "map-cnee raw path still records the interstitial" true
+    (List.hd first.page_kind_path = "m");
+  Alcotest.(check (list string))
+    "map-cnee mission 1 matching path" expected (L.matching_path first);
+  Alcotest.(check (list string))
+    "map-cnee mission 2 matching path" expected (L.matching_path second);
+  bool "map-nh2e the two live paths agree when the actions do"
+    (L.agreement [ first; second ]);
+  bool "map-nh2e a different target still does not agree"
+    (not (L.agreement [ first; maps_trace ~kinds:mission2_kinds ~label:"Delete" 3. ]));
+  let swapped = maps_trace ~kinds:[ "maps"; "place-<slug>"; "search-<slug>" ] 4. in
+  bool "map-cnee a different distinct order does not match"
+    (L.matching_path swapped <> expected);
+  let extra =
+    maps_trace
+      ~kinds:[ "maps"; "search-<slug>"; "place-<slug>"; "reviews" ]
+      ~pages:(maps_pages @ [ maps_page "reviews" "https://www.google.com/maps/reviews" ])
+      5.
+  in
+  bool "map-cnee an extra same-host kind does not match"
+    (L.matching_path extra <> expected);
+  let same_host_gate =
+    maps_trace
+      ~kinds:[ "m"; "maps"; "search-<slug>"; "place-<slug>" ]
+      ~pages:(maps_page "m" "https://www.google.com/m" :: List.tl maps_pages)
+      6.
+  in
+  bool "map-cnee a kind on the final host is not dropped"
+    (List.mem "m" (L.matching_path same_host_gate));
+  let both_hosts =
+    maps_trace ~kinds:mission1_kinds
+      ~pages:(maps_pages @ [ maps_page "m" "https://www.google.com/m" ])
+      7.
+  in
+  bool "map-cnee a kind also seen on the final host stays"
+    (List.mem "m" (L.matching_path both_hosts));
+  temp (fun root ->
+      let calls = ref 0 in
+      let learning =
+        L.create ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun _ ->
+            incr calls;
+            let proc = procedure ~until:[ "the page is maps" ] () in
+            Ok (answer { proc with B.expect = [ "the page is maps" ] }))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store first (result ()));
+      Alcotest.(check int) "map-cnee one live path does not compile" 0 !calls;
+      let compiled = after learning store second (result ()) in
+      Alcotest.(check int) "map-cnee the two live paths compile" 1 !calls;
+      Alcotest.(check int)
+        "map-cnee a proposal is written" 1
+        (List.length compiled.proposals);
+      ignore
+        (after learning store
+           (maps_trace ~kinds:[ "maps"; "place-<slug>"; "search-<slug>" ] 8.)
+           (result ()));
+      Alcotest.(check int) "map-cnee a reordered path does not compile with them" 1 !calls)
+
 let () =
   Eio_main.run (fun _ ->
       Alcotest.run "learning"
@@ -1198,6 +1304,7 @@ let () =
                 ("total learning cost", learning_cost_accounting);
                 ("config", defaults);
                 ("path and classification", pure);
+                ("google live paths", google_paths);
                 ("draft compile", draft_compile);
                 ("validation retry", validation);
                 ("parameterization", parameters);

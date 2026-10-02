@@ -14,7 +14,15 @@ val create :
   t
 
 val config : t -> Config.learning
+
 val path : string list -> string list
+(** Distinct kinds in first-visit order, with [unknown] and empty names removed. *)
+
+val matching_path : Trace.t -> string list
+(** {!path} of the trace, excluding a kind observed only on a host other than the
+    mission's final page. The stored path is not rewritten. Compile and agreement compare
+    this list; operations and targets stay exact. *)
+
 val agreement : Trace.t list -> bool
 val classify : Playbook.page list -> Trace.t list -> bool * string
 val books : t -> Playbook.loaded list -> Playbook.loaded list

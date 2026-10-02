@@ -2416,12 +2416,82 @@ let password_fill_not_echoed () =
       Alcotest.(check string)
         "field-5sdo the page still receives the text" secret (text "text" inserted))
 
+(* tab-bw4j: a fully transparent cover is waited out, never clicked through.
+   The service clock is the test clock, so a fiber advances it while the click waits. *)
+let tick env sw f =
+  let stop = ref false in
+  Eio.Fiber.fork ~sw (fun () ->
+      let rec loop n =
+        if n = 0 || !stop then ()
+        else (
+          Ox_test.advance env#clock (Ox.Duration.ms 100);
+          loop (n - 1))
+      in
+      loop 5_000);
+  Fun.protect ~finally:(fun () -> stop := true) f
+
+let opacity_probe fake transparent =
+  Fake.on_method fake "Runtime.callFunctionOn" (fun request ->
+      let body = text "functionDeclaration" (params request) in
+      if contains body "getComputedStyle" then
+        o [ ("result", o [ ("type", s "boolean"); ("value", b transparent) ]) ]
+      else o [ ("result", o [ ("type", s "string"); ("value", s "c") ]) ])
+
+let click_index tabs handle =
+  request tabs "alice"
+    (P.Click
+       {
+         tab = handle;
+         snapshot = snapshot_id (snap tabs handle);
+         index = 1;
+         snap = None;
+         match_ = None;
+         limit = None;
+       })
+
+let transparent_cover () =
+  rig (fun env sw _ tabs fake ->
+      let fake = fake () in
+      script_page fake ();
+      opacity_probe fake true;
+      let hits = ref 0 in
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          incr hits;
+          let id = if !hits = 1 then 999 else 11 in
+          o [ ("backendNodeId", i id); ("nodeId", i id) ]);
+      let handle = new_tab tabs in
+      let before = List.length (calls fake "Input.dispatchMouseEvent") in
+      tick env sw (fun () -> ignore (result (click_index tabs handle)));
+      let events = calls fake "Input.dispatchMouseEvent" in
+      Alcotest.(check int)
+        "tab-bw4j a clearing transparent cover is clicked once" (before + 2)
+        (List.length events);
+      Alcotest.(check bool)
+        "tab-bw4j the cover was re-checked before the click" true (!hits >= 2);
+      script_page fake ();
+      opacity_probe fake true;
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          o [ ("backendNodeId", i 999); ("nodeId", i 999) ]);
+      let stuck = List.length (calls fake "Input.dispatchMouseEvent") in
+      let probes = ref 0 in
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          incr probes;
+          o [ ("backendNodeId", i 999); ("nodeId", i 999) ]);
+      tick env sw (fun () ->
+          check_code "tab-bw4j a transparent cover that stays is refused"
+            "row-not-actionable" (click_index tabs handle));
+      Alcotest.(check int)
+        "tab-bw4j a lasting cover dispatches no input" stuck
+        (List.length (calls fake "Input.dispatchMouseEvent"));
+      Alcotest.(check bool) "tab-bw4j the lasting cover was re-checked" true (!probes >= 5))
+
 let () =
   Alcotest.run "L7 actions"
     [
       ( "actions",
         [
           Alcotest.test_case "tab-bw4j tm6c j1z2 1lhx" `Quick click;
+          Alcotest.test_case "tab-bw4j transparent cover" `Quick transparent_cover;
           Alcotest.test_case "tab-bw4j scrolled document hit" `Quick scrolled_click;
           Alcotest.test_case "tab-1lhx" `Quick never_retried;
           Alcotest.test_case "tab-p3x1 0lax" `Quick fill;

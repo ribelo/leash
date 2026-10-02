@@ -1,0 +1,2196 @@
+{
+  "command": [
+    "drive",
+    "Search Google Maps for Eiffel Tower in Paris and open its place information. Stop when the place name Eiffel Tower and its Paris address are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "420",
+    "--max-steps",
+    "50",
+    "--max-procedures",
+    "15",
+    "--out",
+    "<PRIVATE_ROOT>/output-1.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 15.30121215500003,
+  "reply": {
+    "playbook_choices": [
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      }
+    ],
+    "status": "done",
+    "site": null,
+    "procedures": [],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 27
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.002915505999999999,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 28,
+    "model_cost": 0.002915505999999999,
+    "operator_steps": [
+      {
+        "non_repeatable": false,
+        "n": 1,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "SCROLL_DOWN": 0.18,
+            "DONE": 0.0,
+            "BLOCKED": 0.7,
+            "CLICK": 0.09,
+            "WAIT": 0.03
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://consent.google.com/m?continue=https://www.google.com/maps?hl%3Den&gl=PL&m=0&pc=m&uxe=eomtm&cm=2&hl=en&src=1",
+          "title": "Before you continue to Google Maps"
+        },
+        "elapsed_ms": 1612
+      },
+      {
+        "non_repeatable": false,
+        "n": 2,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 5,
+        "probabilities": {
+          "op": {
+            "CLICK": 1.0,
+            "BLOCKED": 0.0,
+            "WAIT": 0.0,
+            "DONE": 0.0,
+            "SCROLL_UP": 0.0
+          },
+          "target": {
+            "5": 1.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Reject all"
+        },
+        "after": {
+          "url": "https://www.google.com/maps?hl=en",
+          "title": "Google Maps"
+        },
+        "elapsed_ms": 2528
+      },
+      {
+        "non_repeatable": false,
+        "n": 3,
+        "snapshot": "[redacted capability]",
+        "operation": "type_text",
+        "index": 1,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.96,
+            "CLICK": 0.04,
+            "BLOCKED": 0.0,
+            "WAIT": 0.0
+          },
+          "target": {
+            "1": 1.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": "Search Google Maps"
+        },
+        "text": "Eiffel Tower in Paris",
+        "after": {
+          "url": "https://www.google.com/maps?hl=en",
+          "title": "Google Maps"
+        },
+        "elapsed_ms": 5530
+      },
+      {
+        "non_repeatable": false,
+        "n": 4,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.02,
+            "BLOCKED": 0.01,
+            "CLICK": 0.97,
+            "TYPE_TEXT": 0.0,
+            "DONE": 0.0
+          },
+          "target": {
+            "1": 0.15,
+            "2": 0.85,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "7": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps?hl=en",
+          "title": "Eiffel Tower in Paris - Google Maps"
+        },
+        "elapsed_ms": 5992
+      },
+      {
+        "non_repeatable": false,
+        "n": 5,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.45,
+            "WAIT": 0.31,
+            "DONE": 0.08,
+            "BLOCKED": 0.15,
+            "TYPE_TEXT": 0.01
+          },
+          "target": {
+            "1": 0.2,
+            "2": 0.78,
+            "3": 0.02,
+            "4": 0.0,
+            "5": 0.0,
+            "7": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Eiffel Tower - Google Maps"
+        },
+        "elapsed_ms": 7574
+      },
+      {
+        "non_repeatable": false,
+        "n": 6,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.48,
+            "BLOCKED": 0.19,
+            "WAIT": 0.22,
+            "DONE": 0.09,
+            "TYPE_TEXT": 0.02
+          },
+          "target": {
+            "1": 0.23,
+            "2": 0.73,
+            "3": 0.03,
+            "4": 0.01,
+            "5": 0.0,
+            "7": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Eiffel Tower - Google Maps"
+        },
+        "elapsed_ms": 8854
+      },
+      {
+        "non_repeatable": false,
+        "n": 7,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.19,
+            "TYPE_TEXT": 0.02,
+            "CLICK": 0.53,
+            "BLOCKED": 0.19,
+            "DONE": 0.07
+          },
+          "target": {
+            "1": 0.23,
+            "2": 0.75,
+            "3": 0.02,
+            "4": 0.0,
+            "5": 0.0,
+            "7": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Eiffel Tower - Google Maps"
+        },
+        "elapsed_ms": 10389
+      },
+      {
+        "non_repeatable": false,
+        "n": 8,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.2,
+            "CLICK": 0.52,
+            "BLOCKED": 0.19,
+            "DONE": 0.08,
+            "TYPE_TEXT": 0.01
+          },
+          "target": {
+            "1": 0.25,
+            "2": 0.72,
+            "3": 0.03,
+            "4": 0.0,
+            "5": 0.0,
+            "7": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Eiffel Tower - Google Maps"
+        },
+        "elapsed_ms": 11634
+      },
+      {
+        "non_repeatable": false,
+        "n": 9,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.51,
+            "BLOCKED": 0.19,
+            "TYPE_TEXT": 0.02,
+            "DONE": 0.05,
+            "WAIT": 0.23
+          },
+          "target": {
+            "1": 0.2,
+            "2": 0.77,
+            "3": 0.02,
+            "4": 0.01,
+            "5": 0.0,
+            "7": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Eiffel Tower - Google Maps"
+        },
+        "elapsed_ms": 13018
+      },
+      {
+        "non_repeatable": false,
+        "n": 10,
+        "snapshot": "[redacted capability]",
+        "operation": "done",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.0,
+            "WAIT": 0.0,
+            "TYPE_TEXT": 0.0,
+            "CLICK": 0.02,
+            "DONE": 0.98
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Eiffel Tower - Google Maps"
+        },
+        "elapsed_ms": 15229
+      }
+    ],
+    "operator_state": {
+      "status": "done",
+      "reason": null,
+      "error": null,
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Eiffel Tower - Google Maps",
+          "page_kind": {
+            "name": "place-<slug>",
+            "source": "inferred"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "combobox",
+              "name": "",
+              "value": "Eiffel Tower",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 2,
+              "role": "button",
+              "name": "Search"
+            },
+            {
+              "index": 3,
+              "role": "button",
+              "name": "Close"
+            },
+            {
+              "index": 4,
+              "role": "button",
+              "name": "Restaurants"
+            },
+            {
+              "index": 5,
+              "role": "button",
+              "name": "Hotels"
+            },
+            {
+              "index": 6,
+              "role": "button",
+              "name": "Things to do"
+            },
+            {
+              "index": 7,
+              "role": "button",
+              "name": "Transit"
+            },
+            {
+              "index": 8,
+              "role": "button",
+              "name": "Parking"
+            },
+            {
+              "index": 9,
+              "role": "button",
+              "name": "Pharmacies"
+            },
+            {
+              "index": 10,
+              "role": "button",
+              "name": "ATMs"
+            },
+            {
+              "index": 11,
+              "role": "button",
+              "name": "Next page"
+            },
+            {
+              "index": 12,
+              "role": "button",
+              "name": "Menu"
+            },
+            {
+              "index": 13,
+              "role": "button",
+              "name": "Saved"
+            },
+            {
+              "index": 14,
+              "role": "button",
+              "name": "Recents"
+            },
+            {
+              "index": 15,
+              "role": "button",
+              "name": "Eiffel Tower"
+            },
+            {
+              "index": 16,
+              "role": "button",
+              "name": "Get app"
+            },
+            {
+              "index": 17,
+              "role": "button",
+              "name": "Photo of Eiffel Tower"
+            },
+            {
+              "index": 18,
+              "role": "heading",
+              "name": "Eiffel Tower"
+            },
+            {
+              "index": 19,
+              "role": "heading",
+              "name": "Tour Eiffel"
+            },
+            {
+              "index": 20,
+              "role": "tab",
+              "name": "About Eiffel Tower"
+            },
+            {
+              "index": 21,
+              "role": "button",
+              "name": "Share"
+            },
+            {
+              "index": 22,
+              "role": "button",
+              "name": "Gustave Eiffel's iconic, wrought-iron 1889 tower, with steps and elevators to observation decks."
+            },
+            {
+              "index": 23,
+              "role": "button",
+              "name": "Address: Av. Gustave Eiffel, 75007 Paris, France "
+            },
+            {
+              "index": 24,
+              "role": "button",
+              "name": "Copy address"
+            },
+            {
+              "index": 25,
+              "role": "button",
+              "name": "Located in: Champ de Mars"
+            },
+            {
+              "index": 26,
+              "role": "button",
+              "name": "Hours Open · Closes 12 am Show open hours for the week",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 27,
+              "role": "link",
+              "name": "Website: toureiffel.paris "
+            },
+            {
+              "index": 28,
+              "role": "link",
+              "name": "Open website"
+            },
+            {
+              "index": 29,
+              "role": "button",
+              "name": "Copy website"
+            },
+            {
+              "index": 30,
+              "role": "button",
+              "name": "Plus code: V75V+8Q Paris, France"
+            },
+            {
+              "index": 31,
+              "role": "button",
+              "name": "Copy plus code"
+            },
+            {
+              "index": 32,
+              "role": "button",
+              "name": "Learn more about plus codes"
+            },
+            {
+              "index": 33,
+              "role": "button",
+              "name": "Collapse side panel"
+            },
+            {
+              "index": 34,
+              "role": "button",
+              "name": "Google apps",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 35,
+              "role": "link",
+              "name": "Sign in"
+            },
+            {
+              "index": 36,
+              "role": "button",
+              "name": "Show Your Location"
+            },
+            {
+              "index": 37,
+              "role": "button",
+              "name": "Zoom in"
+            },
+            {
+              "index": 38,
+              "role": "button",
+              "name": "Zoom out"
+            },
+            {
+              "index": 39,
+              "role": "button",
+              "name": "Browse Street View images"
+            },
+            {
+              "index": 40,
+              "role": "button",
+              "name": "Layers",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 41,
+              "role": "button",
+              "name": "Poland"
+            },
+            {
+              "index": 42,
+              "role": "button",
+              "name": "Terms"
+            },
+            {
+              "index": 43,
+              "role": "button",
+              "name": "Privacy"
+            },
+            {
+              "index": 44,
+              "role": "button",
+              "name": "Send Product Feedback"
+            },
+            {
+              "index": 45,
+              "role": "button",
+              "name": "50 m"
+            }
+          ],
+          "total": 45,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Eiffel Tower - Google Maps",
+        "page_kind": "place-<slug>",
+        "page_kind_source": "inferred",
+        "text": "Saved\nRecents\nEiffel Tower\nGet app\nSign in\nLayers\nMap data ©2026 Google\nPoland\nTerms\nPrivacy\nSend Product Feedback\n50 m",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [
+          "canvas"
+        ],
+        "can_scroll_down": false,
+        "can_scroll_up": false,
+        "coverage": "viewport",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": false,
+          "can_scroll_down": false,
+          "coverage": "viewport",
+          "unsupported_states": [
+            "canvas"
+          ]
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "SCROLL_DOWN": 0.18,
+                "DONE": 0.0,
+                "BLOCKED": 0.7,
+                "CLICK": 0.09,
+                "WAIT": 0.03
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://consent.google.com/m?continue=https://www.google.com/maps?hl%3Den&gl=PL&m=0&pc=m&uxe=eomtm&cm=2&hl=en&src=1",
+              "title": "Before you continue to Google Maps"
+            },
+            "elapsed_ms": 1612
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "blocked",
+          "rescue": true,
+          "input_ms": 986,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 2,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "CLICK": 1.0,
+                "BLOCKED": 0.0,
+                "WAIT": 0.0,
+                "DONE": 0.0,
+                "SCROLL_UP": 0.0
+              },
+              "target": {
+                "5": 1.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Reject all"
+            },
+            "after": {
+              "url": "https://www.google.com/maps?hl=en",
+              "title": "Google Maps"
+            },
+            "elapsed_ms": 2528
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 10,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 3,
+            "snapshot": "[redacted capability]",
+            "operation": "type_text",
+            "index": 1,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.96,
+                "CLICK": 0.04,
+                "BLOCKED": 0.0,
+                "WAIT": 0.0
+              },
+              "target": {
+                "1": 1.0
+              }
+            },
+            "target": {
+              "role": "combobox",
+              "label": "Search Google Maps"
+            },
+            "text": "Eiffel Tower in Paris",
+            "after": {
+              "url": "https://www.google.com/maps?hl=en",
+              "title": "Google Maps"
+            },
+            "elapsed_ms": 5530
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "type_text",
+          "rescue": false,
+          "input_ms": 17,
+          "settle_ms": 200
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 4,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.02,
+                "BLOCKED": 0.01,
+                "CLICK": 0.97,
+                "TYPE_TEXT": 0.0,
+                "DONE": 0.0
+              },
+              "target": {
+                "1": 0.15,
+                "2": 0.85,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "7": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps?hl=en",
+              "title": "Eiffel Tower in Paris - Google Maps"
+            },
+            "elapsed_ms": 5992
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 8,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 5,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.45,
+                "WAIT": 0.31,
+                "DONE": 0.08,
+                "BLOCKED": 0.15,
+                "TYPE_TEXT": 0.01
+              },
+              "target": {
+                "1": 0.2,
+                "2": 0.78,
+                "3": 0.02,
+                "4": 0.0,
+                "5": 0.0,
+                "7": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Eiffel Tower - Google Maps"
+            },
+            "elapsed_ms": 7574
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 7,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 6,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.48,
+                "BLOCKED": 0.19,
+                "WAIT": 0.22,
+                "DONE": 0.09,
+                "TYPE_TEXT": 0.02
+              },
+              "target": {
+                "1": 0.23,
+                "2": 0.73,
+                "3": 0.03,
+                "4": 0.01,
+                "5": 0.0,
+                "7": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Eiffel Tower - Google Maps"
+            },
+            "elapsed_ms": 8854
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 5,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 7,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.19,
+                "TYPE_TEXT": 0.02,
+                "CLICK": 0.53,
+                "BLOCKED": 0.19,
+                "DONE": 0.07
+              },
+              "target": {
+                "1": 0.23,
+                "2": 0.75,
+                "3": 0.02,
+                "4": 0.0,
+                "5": 0.0,
+                "7": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Eiffel Tower - Google Maps"
+            },
+            "elapsed_ms": 10389
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 5,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 8,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.2,
+                "CLICK": 0.52,
+                "BLOCKED": 0.19,
+                "DONE": 0.08,
+                "TYPE_TEXT": 0.01
+              },
+              "target": {
+                "1": 0.25,
+                "2": 0.72,
+                "3": 0.03,
+                "4": 0.0,
+                "5": 0.0,
+                "7": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Eiffel Tower - Google Maps"
+            },
+            "elapsed_ms": 11634
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 5,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 9,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.51,
+                "BLOCKED": 0.19,
+                "TYPE_TEXT": 0.02,
+                "DONE": 0.05,
+                "WAIT": 0.23
+              },
+              "target": {
+                "1": 0.2,
+                "2": 0.77,
+                "3": 0.02,
+                "4": 0.01,
+                "5": 0.0,
+                "7": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Eiffel Tower - Google Maps"
+            },
+            "elapsed_ms": 13018
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 5,
+          "settle_ms": 50
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "executed",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.18,
+              "DONE": 0.0,
+              "BLOCKED": 0.7,
+              "CLICK": 0.09,
+              "WAIT": 0.03
+            },
+            "target": {}
+          },
+          "confidence": 0.63,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 1793,
+            "output_tokens": 94,
+            "cost": 7.5306e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 523
+        },
+        {
+          "outcome": "executed",
+          "n": 2,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 1.0,
+              "BLOCKED": 0.0,
+              "WAIT": 0.0,
+              "DONE": 0.0,
+              "SCROLL_UP": 0.0
+            },
+            "target": {
+              "5": 1.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0
+            }
+          },
+          "confidence": 0.99,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 1966,
+            "output_tokens": 106,
+            "cost": 8.2572e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 433
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 3,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.02,
+              "DONE": 0.0,
+              "BLOCKED": 0.01,
+              "WAIT": 0.0,
+              "TYPE_TEXT": 0.97
+            },
+            "target": {
+              "2": 1.0
+            }
+          },
+          "confidence": 0.96,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2064,
+            "output_tokens": 115,
+            "cost": 8.6688e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 568
+        },
+        {
+          "outcome": "executed",
+          "n": 4,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 1,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.96,
+              "CLICK": 0.04,
+              "BLOCKED": 0.0,
+              "WAIT": 0.0
+            },
+            "target": {
+              "1": 1.0
+            }
+          },
+          "confidence": 0.95,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2323,
+            "output_tokens": 136,
+            "cost": 9.7566e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 998
+        },
+        {
+          "outcome": "executed",
+          "n": 5,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.02,
+              "BLOCKED": 0.01,
+              "CLICK": 0.97,
+              "TYPE_TEXT": 0.0,
+              "DONE": 0.0
+            },
+            "target": {
+              "1": 0.15,
+              "2": 0.85,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.97,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2369,
+            "output_tokens": 135,
+            "cost": 9.9498e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 317
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 6,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.55,
+              "DONE": 0.03,
+              "TYPE_TEXT": 0.0,
+              "WAIT": 0.34,
+              "BLOCKED": 0.08
+            },
+            "target": {
+              "1": 0.19,
+              "2": 0.81,
+              "3": 0.0,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.44,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2326,
+            "output_tokens": 128,
+            "cost": 9.7692e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 397
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 7,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.25,
+              "CLICK": 0.63,
+              "BLOCKED": 0.11,
+              "DONE": 0.01,
+              "TYPE_TEXT": 0.0
+            },
+            "target": {
+              "1": 0.14,
+              "2": 0.86,
+              "3": 0.0,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.53,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2330,
+            "output_tokens": 128,
+            "cost": 9.786e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 360
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 8,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.12,
+              "CLICK": 0.67,
+              "TYPE_TEXT": 0.02,
+              "WAIT": 0.18,
+              "DONE": 0.01
+            },
+            "target": {
+              "1": 0.18,
+              "2": 0.81,
+              "3": 0.01,
+              "4": 0.0,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.58,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2402,
+            "output_tokens": 135,
+            "cost": 0.000100884,
+            "retries": 0
+          },
+          "elapsed_ms": 364
+        },
+        {
+          "outcome": "executed",
+          "n": 9,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.45,
+              "WAIT": 0.31,
+              "DONE": 0.08,
+              "BLOCKED": 0.15,
+              "TYPE_TEXT": 0.01
+            },
+            "target": {
+              "1": 0.2,
+              "2": 0.78,
+              "3": 0.02,
+              "4": 0.0,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.31,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2402,
+            "output_tokens": 135,
+            "cost": 0.000100884,
+            "retries": 0
+          },
+          "elapsed_ms": 324
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 10,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.01,
+              "CLICK": 0.48,
+              "BLOCKED": 0.16,
+              "DONE": 0.12,
+              "WAIT": 0.23
+            },
+            "target": {
+              "1": 0.2,
+              "2": 0.79,
+              "3": 0.01,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.35,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2353,
+            "output_tokens": 128,
+            "cost": 9.8826e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 451
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 11,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.72,
+              "WAIT": 0.14,
+              "BLOCKED": 0.1,
+              "DONE": 0.01,
+              "TYPE_TEXT": 0.03
+            },
+            "target": {
+              "1": 0.18,
+              "2": 0.8200000000000001,
+              "3": 0.0,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.65,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2353,
+            "output_tokens": 128,
+            "cost": 9.8826e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 327
+        },
+        {
+          "outcome": "executed",
+          "n": 12,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.48,
+              "BLOCKED": 0.19,
+              "WAIT": 0.22,
+              "DONE": 0.09,
+              "TYPE_TEXT": 0.02
+            },
+            "target": {
+              "1": 0.23,
+              "2": 0.73,
+              "3": 0.03,
+              "4": 0.01,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.37,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2433,
+            "output_tokens": 135,
+            "cost": 0.000102186,
+            "retries": 0
+          },
+          "elapsed_ms": 391
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 13,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.06,
+              "WAIT": 0.22,
+              "CLICK": 0.54,
+              "TYPE_TEXT": 0.02,
+              "BLOCKED": 0.16
+            },
+            "target": {
+              "1": 0.2,
+              "2": 0.79,
+              "3": 0.01,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.41,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2384,
+            "output_tokens": 128,
+            "cost": 0.000100128,
+            "retries": 0
+          },
+          "elapsed_ms": 377
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 14,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.01,
+              "WAIT": 0.12,
+              "CLICK": 0.75,
+              "TYPE_TEXT": 0.03,
+              "BLOCKED": 0.09
+            },
+            "target": {
+              "1": 0.18,
+              "2": 0.82,
+              "3": 0.0,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.68,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2384,
+            "output_tokens": 128,
+            "cost": 0.000100128,
+            "retries": 0
+          },
+          "elapsed_ms": 333
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 15,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.13,
+              "BLOCKED": 0.11,
+              "DONE": 0.01,
+              "TYPE_TEXT": 0.03,
+              "CLICK": 0.72
+            },
+            "target": {
+              "1": 0.18,
+              "2": 0.81,
+              "3": 0.01,
+              "4": 0.0,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.64,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2464,
+            "output_tokens": 135,
+            "cost": 0.000103488,
+            "retries": 0
+          },
+          "elapsed_ms": 372
+        },
+        {
+          "outcome": "executed",
+          "n": 16,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.19,
+              "TYPE_TEXT": 0.02,
+              "CLICK": 0.53,
+              "BLOCKED": 0.19,
+              "DONE": 0.07
+            },
+            "target": {
+              "1": 0.23,
+              "2": 0.75,
+              "3": 0.02,
+              "4": 0.0,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.41,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2464,
+            "output_tokens": 135,
+            "cost": 0.000103488,
+            "retries": 0
+          },
+          "elapsed_ms": 326
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 17,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.18,
+              "TYPE_TEXT": 0.03,
+              "WAIT": 0.22,
+              "DONE": 0.05,
+              "CLICK": 0.52
+            },
+            "target": {
+              "1": 0.25,
+              "2": 0.74,
+              "3": 0.01,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.41,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2415,
+            "output_tokens": 128,
+            "cost": 0.00010143,
+            "retries": 0
+          },
+          "elapsed_ms": 342
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 18,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.09,
+              "WAIT": 0.1,
+              "TYPE_TEXT": 0.05,
+              "CLICK": 0.75,
+              "DONE": 0.01
+            },
+            "target": {
+              "1": 0.16,
+              "2": 0.84,
+              "3": 0.0,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.69,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2415,
+            "output_tokens": 128,
+            "cost": 0.00010143,
+            "retries": 0
+          },
+          "elapsed_ms": 353
+        },
+        {
+          "outcome": "executed",
+          "n": 19,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.2,
+              "CLICK": 0.52,
+              "BLOCKED": 0.19,
+              "DONE": 0.08,
+              "TYPE_TEXT": 0.01
+            },
+            "target": {
+              "1": 0.25,
+              "2": 0.72,
+              "3": 0.03,
+              "4": 0.0,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.39,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2495,
+            "output_tokens": 135,
+            "cost": 0.00010479,
+            "retries": 0
+          },
+          "elapsed_ms": 405
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 20,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.02,
+              "WAIT": 0.19,
+              "BLOCKED": 0.18,
+              "CLICK": 0.51,
+              "DONE": 0.1
+            },
+            "target": {
+              "1": 0.2,
+              "2": 0.79,
+              "3": 0.01,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.39,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2446,
+            "output_tokens": 128,
+            "cost": 0.000102732,
+            "retries": 0
+          },
+          "elapsed_ms": 342
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 21,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.72,
+              "WAIT": 0.13,
+              "BLOCKED": 0.11,
+              "DONE": 0.01,
+              "TYPE_TEXT": 0.03
+            },
+            "target": {
+              "1": 0.17,
+              "2": 0.83,
+              "3": 0.0,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.65,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2446,
+            "output_tokens": 128,
+            "cost": 0.000102732,
+            "retries": 0
+          },
+          "elapsed_ms": 438
+        },
+        {
+          "outcome": "executed",
+          "n": 22,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.51,
+              "BLOCKED": 0.19,
+              "TYPE_TEXT": 0.02,
+              "DONE": 0.05,
+              "WAIT": 0.23
+            },
+            "target": {
+              "1": 0.2,
+              "2": 0.77,
+              "3": 0.02,
+              "4": 0.01,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.38,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2526,
+            "output_tokens": 135,
+            "cost": 0.000106092,
+            "retries": 0
+          },
+          "elapsed_ms": 483
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 23,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.13,
+              "DONE": 0.06,
+              "CLICK": 0.64,
+              "BLOCKED": 0.15,
+              "TYPE_TEXT": 0.02
+            },
+            "target": {
+              "1": 0.22,
+              "2": 0.77,
+              "3": 0.01,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.54,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2477,
+            "output_tokens": 128,
+            "cost": 0.000104034,
+            "retries": 0
+          },
+          "elapsed_ms": 349
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 24,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.8,
+              "DONE": 0.01,
+              "TYPE_TEXT": 0.04,
+              "BLOCKED": 0.08,
+              "WAIT": 0.07
+            },
+            "target": {
+              "1": 0.15,
+              "2": 0.85,
+              "3": 0.0,
+              "4": 0.0,
+              "6": 0.0
+            }
+          },
+          "confidence": 0.75,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2477,
+            "output_tokens": 128,
+            "cost": 0.000104034,
+            "retries": 0
+          },
+          "elapsed_ms": 310
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 25,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.09,
+              "CLICK": 0.73,
+              "WAIT": 0.11,
+              "DONE": 0.04,
+              "TYPE_TEXT": 0.03
+            },
+            "target": {
+              "1": 0.15,
+              "2": 0.84,
+              "3": 0.01,
+              "4": 0.0,
+              "5": 0.0,
+              "7": 0.0
+            }
+          },
+          "confidence": 0.66,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2557,
+            "output_tokens": 135,
+            "cost": 0.000107394,
+            "retries": 0
+          },
+          "elapsed_ms": 313
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 26,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 7,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.42,
+              "WAIT": 0.18,
+              "BLOCKED": 0.3,
+              "DONE": 0.08,
+              "TYPE_TEXT": 0.02
+            },
+            "target": {
+              "1": 0.2,
+              "2": 0.38,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.38,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.04,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0
+            }
+          },
+          "confidence": 0.27,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3809,
+            "output_tokens": 244,
+            "cost": 0.000159978,
+            "retries": 0
+          },
+          "elapsed_ms": 387
+        },
+        {
+          "outcome": "terminal",
+          "n": 27,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.0,
+              "WAIT": 0.0,
+              "TYPE_TEXT": 0.0,
+              "CLICK": 0.02,
+              "DONE": 0.98
+            },
+            "target": {}
+          },
+          "confidence": 0.97,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5955,
+            "output_tokens": 429,
+            "cost": 0.00025011,
+            "retries": 0
+          },
+          "elapsed_ms": 472
+        }
+      ],
+      "text_calls": [
+        {
+          "field": "Search Google Maps",
+          "value": "Eiffel Tower in Paris",
+          "outcome": "value",
+          "usage": {
+            "input_tokens": 367,
+            "output_tokens": 67,
+            "cost": 2.473e-05,
+            "retries": null
+          },
+          "elapsed_ms": 1166
+        }
+      ],
+      "metrics": {
+        "actions": 9,
+        "predictions": 27,
+        "text_calls": 1,
+        "observation_calls": 28,
+        "observation_retries": 5,
+        "stale_decisions": 17,
+        "bootstrap_ms": 0,
+        "observation_ms": 1843,
+        "prediction_ms": 11055,
+        "text_helper_ms": 1166,
+        "input_ms": 1048,
+        "settle_ms": 600,
+        "elapsed_ms": 15229
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "Eiffel Tower - Google Maps",
+      "page_kind": {
+        "name": "place-<slug>",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "combobox",
+          "name": "",
+          "value": "Eiffel Tower",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 2,
+          "role": "button",
+          "name": "Search"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Close"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "Restaurants"
+        },
+        {
+          "index": 5,
+          "role": "button",
+          "name": "Hotels"
+        },
+        {
+          "index": 6,
+          "role": "button",
+          "name": "Things to do"
+        },
+        {
+          "index": 7,
+          "role": "button",
+          "name": "Transit"
+        },
+        {
+          "index": 8,
+          "role": "button",
+          "name": "Parking"
+        },
+        {
+          "index": 9,
+          "role": "button",
+          "name": "Pharmacies"
+        },
+        {
+          "index": 10,
+          "role": "button",
+          "name": "ATMs"
+        },
+        {
+          "index": 11,
+          "role": "button",
+          "name": "Next page"
+        },
+        {
+          "index": 12,
+          "role": "button",
+          "name": "Menu"
+        },
+        {
+          "index": 13,
+          "role": "button",
+          "name": "Saved"
+        },
+        {
+          "index": 14,
+          "role": "button",
+          "name": "Recents"
+        },
+        {
+          "index": 15,
+          "role": "button",
+          "name": "Eiffel Tower"
+        },
+        {
+          "index": 16,
+          "role": "button",
+          "name": "Get app"
+        },
+        {
+          "index": 17,
+          "role": "button",
+          "name": "Photo of Eiffel Tower"
+        },
+        {
+          "index": 18,
+          "role": "heading",
+          "name": "Eiffel Tower"
+        },
+        {
+          "index": 19,
+          "role": "heading",
+          "name": "Tour Eiffel"
+        },
+        {
+          "index": 20,
+          "role": "tab",
+          "name": "About Eiffel Tower"
+        },
+        {
+          "index": 21,
+          "role": "button",
+          "name": "Share"
+        },
+        {
+          "index": 22,
+          "role": "button",
+          "name": "Gustave Eiffel's iconic, wrought-iron 1889 tower, with steps and elevators to observation decks."
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Address: Av. Gustave Eiffel, 75007 Paris, France "
+        },
+        {
+          "index": 24,
+          "role": "button",
+          "name": "Copy address"
+        },
+        {
+          "index": 25,
+          "role": "button",
+          "name": "Located in: Champ de Mars"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "Hours Open · Closes 12 am Show open hours for the week",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 27,
+          "role": "link",
+          "name": "Website: toureiffel.paris "
+        },
+        {
+          "index": 28,
+          "role": "link",
+          "name": "Open website"
+        },
+        {
+          "index": 29,
+          "role": "button",
+          "name": "Copy website"
+        },
+        {
+          "index": 30,
+          "role": "button",
+          "name": "Plus code: V75V+8Q Paris, France"
+        },
+        {
+          "index": 31,
+          "role": "button",
+          "name": "Copy plus code"
+        },
+        {
+          "index": 32,
+          "role": "button",
+          "name": "Learn more about plus codes"
+        },
+        {
+          "index": 33,
+          "role": "button",
+          "name": "Collapse side panel"
+        },
+        {
+          "index": 34,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 35,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 36,
+          "role": "button",
+          "name": "Show Your Location"
+        },
+        {
+          "index": 37,
+          "role": "button",
+          "name": "Zoom in"
+        },
+        {
+          "index": 38,
+          "role": "button",
+          "name": "Zoom out"
+        },
+        {
+          "index": 39,
+          "role": "button",
+          "name": "Browse Street View images"
+        },
+        {
+          "index": 40,
+          "role": "button",
+          "name": "Layers",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 41,
+          "role": "button",
+          "name": "Poland"
+        },
+        {
+          "index": 42,
+          "role": "button",
+          "name": "Terms"
+        },
+        {
+          "index": 43,
+          "role": "button",
+          "name": "Privacy"
+        },
+        {
+          "index": 44,
+          "role": "button",
+          "name": "Send Product Feedback"
+        },
+        {
+          "index": 45,
+          "role": "button",
+          "name": "50 m"
+        }
+      ],
+      "total": 45,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-02T16:12:33.530036Z-done.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}

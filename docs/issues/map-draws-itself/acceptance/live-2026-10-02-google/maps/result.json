@@ -1,0 +1,16 @@
+{
+  "gate": "maps",
+  "passed": false,
+  "missions_recorded": 2,
+  "failures": [
+    "After two independently successful missions: no actual generated draft in private proposed store",
+    "Draft lacks provenance of two successful traces",
+    "Generated draft is not classified repeatable with replay gate"
+  ],
+  "elapsed_s": 38.29980397224426,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

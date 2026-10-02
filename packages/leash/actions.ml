@@ -41,6 +41,9 @@ type tab = {
       (** Turn the page's focus emulation on for the rest of this operation (tab-8la3,
           chrome-9ex7). Called before anything the page sees -- focus, input, the settle
           -- and never for a request refused before that. *)
+  sleep : float -> unit;
+      (** A bounded wait that dispatches no input. Used only to re-check a fully
+          transparent cover. *)
 }
 
 (* One CDP call. Only pre-dispatch observation may be repeated inside this module, and
@@ -455,6 +458,40 @@ let label_covers cdp tab ~target ~hit =
 
 type aim = { x : float; y : float; via : string option }
 
+(* Computed opacity 0, on the hit or an ancestor, is a transition layer: the
+   element still receives the hit test (pointer-events stay auto) but it is not a
+   cover to click through. A failed probe is not transparency. *)
+let fully_transparent_expression =
+  "function () { let node = this; while (node && node.nodeType === 1) { const opacity \
+   =    getComputedStyle(node).opacity; if (opacity === '0') return true; node =    \
+   node.parentElement; } return false; }"
+
+let fully_transparent cdp tab backend =
+  match
+    attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.resolveNode"
+      (E.object_ [ ("backendNodeId", Some (E.int backend)) ])
+  with
+  | Error _ -> false
+  | Ok resolved -> (
+      match E.Of_json.(at [ "object"; "objectId" ] string) resolved with
+      | Error _ -> false
+      | Ok object_id -> (
+          match
+            attempt ~deadline:call_deadline cdp ~session:tab.session
+              "Runtime.callFunctionOn"
+              (E.object_
+                 [
+                   ("objectId", Some (E.string object_id));
+                   ("functionDeclaration", Some (E.string fully_transparent_expression));
+                   ("returnByValue", Some (E.bool true));
+                 ])
+          with
+          | Error _ -> false
+          | Ok called -> (
+              match E.Of_json.(at [ "result"; "value" ] (try_or_none bool)) called with
+              | Ok (Some true) -> true
+              | _ -> false)))
+
 let classify cdp tab (target : target) x y =
   let* hit = hit_backend cdp tab ~x ~y in
   match hit with
@@ -466,20 +503,36 @@ let classify cdp tab (target : target) x y =
       match label_covers cdp tab ~target ~hit:id with
       | Error `Probe -> Ok `Probe_failed
       | Ok true -> Ok `Label
+      | Ok false when fully_transparent cdp tab id -> Ok `Transparent
       | Ok false -> Ok `Covered)
   | None -> Ok `Miss
 
+(* A fully transparent cover is re-checked, not clicked through and not aimed by
+   a coordinate. Twenty steps of 100 ms is the two-second bound. *)
+let transparent_step_s = 0.1
+let transparent_steps = 20
+
 let aim cdp tab (target : target) =
-  let once x y =
+  let poll () =
+    let* x, y = point cdp tab target.backend in
     let* kind = classify cdp tab target x y in
     match kind with
-    | `Direct -> Ok (Some { x; y; via = None })
-    | `Label -> Ok (Some { x; y; via = Some "label" })
+    | `Direct -> Ok (`Ready { x; y; via = None })
+    | `Label -> Ok (`Ready { x; y; via = Some "label" })
+    | `Transparent -> Ok `Wait
     | `Probe_failed -> fail "row-not-actionable" "the row is covered at its click point"
-    | `Covered | `Miss -> Ok None
+    | `Covered | `Miss -> Ok `Blocked
   in
-  let* x, y = point cdp tab target.backend in
-  match once x y with
+  let rec wait_clear left =
+    match poll () with
+    | Error e -> Error e
+    | Ok (`Ready point) -> Ok (Some point)
+    | Ok `Wait when left > 0 ->
+        tab.sleep transparent_step_s;
+        wait_clear (left - 1)
+    | Ok (`Wait | `Blocked) -> Ok None
+  in
+  match wait_clear transparent_steps with
   | Error e -> Error e
   | Ok (Some point) -> Ok point
   | Ok None -> (
@@ -493,11 +546,11 @@ let aim cdp tab (target : target) =
         | Error Timed_out -> unresponsive ()
         | Error _ -> Ok ()
       in
-      let* x, y = point cdp tab target.backend in
-      match once x y with
+      match poll () with
       | Error e -> Error e
-      | Ok (Some point) -> Ok point
-      | Ok None -> fail "row-not-actionable" "the row is covered at its click point")
+      | Ok (`Ready point) -> Ok point
+      | Ok (`Wait | `Blocked) ->
+          fail "row-not-actionable" "the row is covered at its click point")
 
 let mouse cdp tab ~type_ ~x ~y ~buttons =
   dispatch cdp tab "Input.dispatchMouseEvent"

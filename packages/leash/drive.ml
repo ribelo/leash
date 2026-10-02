@@ -266,9 +266,9 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
               let op = choice.J.operation in
               let terminal =
                 choice.J.script = None && (op = operation "done" || op = operation "blocked") in
-              let refresh () =
+              let refresh why =
                 incr stale;
-                update_prediction "stale; no input";
+                update_prediction why;
                 match observe_page () with
                 | Error error -> finish ~error ~reason:(failed "refresh stale observation" error) "error" steps page
                 | Ok next -> go next steps recent
@@ -311,7 +311,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
               else
                 let checked = if terminal || op = operation "type_text" then validate page else Ok () in
                 match checked with
-                | Error error when stale_error error -> refresh ()
+                | Error error when stale_error error -> refresh "stale; no input"
                 | Error error -> finish ~error ~reason:(failed "validate observation" error) "error" steps page
                 | Ok () when terminal ->
                     (* fly-vzzw: never accept an old terminal opinion, even after the last action. *)
@@ -372,7 +372,13 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                           let at = now () in
                           let answer = measured input_ms (fun () -> act t page choice text) in
                           match answer with
-                          | Error error when stale_error error -> refresh ()
+                          | Error error when stale_error error -> refresh "stale; no input"
+                          (* A click refused before dispatch sent no input. Re-observe
+                             and let JEV decide again; do not end as outcome uncertain. *)
+                          | Error error
+                            when op = operation "click"
+                                 && P.Error_code.to_string error.P.code = "row-not-actionable" ->
+                              refresh "refused; no input"
                           | Error error ->
                               update_prediction "input outcome uncertain; not replayed";
                               let step = record_step page page choice text steps in

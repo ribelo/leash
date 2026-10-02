@@ -1,0 +1,47 @@
+[
+  {
+    "pid": 66827,
+    "headless": true,
+    "pipe": true,
+    "browser_main": true,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true --simulate-outdated-no-au=Tue, 31 Dec 2099 23:59:59 GMT --ozone-platform=wayland --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled,ExtensionsManifestV3Only,WebRtcAllowInputVolumeAdjustment --user-data-dir=<PRIVATE_ROOT>/profile --no-first-run --no-default-browser-check --hide-crash-restore-bubble --remote-debugging-pipe --disable-blink-features=AutomationControlled --test-type --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --class=leash --headless=new --window-size=1366,900 --noerrdialogs --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl"
+    ]
+  },
+  {
+    "pid": 66844,
+    "headless": true,
+    "pipe": false,
+    "browser_main": false,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=zygote --no-zygote-sandbox --headless=new --crashpad-handler-pid=66836 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --no-first-run --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl"
+    ]
+  },
+  {
+    "pid": 66845,
+    "headless": true,
+    "pipe": false,
+    "browser_main": false,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=zygote --headless=new --crashpad-handler-pid=66836 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --no-first-run --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl"
+    ]
+  },
+  {
+    "pid": 66847,
+    "headless": true,
+    "pipe": false,
+    "browser_main": false,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=zygote --headless=new --crashpad-handler-pid=66836 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --no-first-run --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl"
+    ]
+  },
+  {
+    "pid": 66870,
+    "headless": true,
+    "pipe": false,
+    "browser_main": false,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --type=gpu-process --headless=new --ozone-platform=headless --use-angle=swiftshader-webgl --crashpad-handler-pid=66836 --enable-crash-reporter=, --noerrdialogs --user-data-dir=<PRIVATE_ROOT>/profile --change-stack-guard-on-fork=enable --gpu-preferences=YAAAAAAAAAAgAAAEAAAAAAAAAAAAAGAASAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAMAAAAAQAAAAAAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files --field-trial-handle=3,i,5865410094909067279,13142899865159057296,262144 --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Disabled,ExtensionManifestV2Unsupported,ExtensionsManifestV3Only,EyeDropper,PaintHolding,WebRtcAllowInputVolumeAdjustment --variations-seed-version --pseudonymization-salt-handle=7,i,18115873034054479580,5654965957973693930,4 --trace-process-track-uuid=3190708988185955192"
+    ]
+  }
+]

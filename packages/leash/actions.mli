@@ -8,8 +8,10 @@
     loader, a node that no longer resolves, or a different role or name refuse with
     [stale-snapshot]. A row that is disabled, has no layout box, or is covered at its
     click point (hit-tested with [DOM.getNodeForLocation]) refuses with
-    [row-not-actionable]. Nothing is ever retried (tab-1lhx), and an open dialog refuses
-    every action (tab-60kn).
+    [row-not-actionable]. A cover whose computed opacity is 0, on that element or an
+    ancestor, and that is not the target's label, is re-checked about every 100 ms for up
+    to 2 s before that refusal; it is never clicked through. Nothing is ever retried
+    (tab-1lhx), and an open dialog refuses every action (tab-60kn).
 
     Dispatch is trusted CDP input: a click is [Input.dispatchMouseEvent] press and
     release; a fill focuses the node with [DOM.focus], selects its content, inserts text
@@ -64,6 +66,7 @@ type tab = {
       (** Turn the page's focus emulation on for the rest of the operation (tab-8la3,
           chrome-9ex7): called just before the first thing the page can see -- a focus, an
           input, the settle -- and never for a request refused before that. *)
+  sleep : float -> unit;  (** A bounded wait that dispatches no input. *)
 }
 
 val click :

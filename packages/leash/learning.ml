@@ -56,17 +56,49 @@ let update t key value =
 
 let counter t key = match List.assoc_opt key (state t) with Some (`Int n) -> n | _ -> 0
 
+(* map-cnee: the matching path is the distinct kinds in first-visit order.
+   Consecutive repeats and later revisits both collapse (A,B,A,B is A,B). [unknown]
+   and empty names are not kinds. *)
 let path kinds =
-  let rec loop previous acc = function
+  let rec loop seen acc = function
     | [] -> List.rev acc
-    | ("unknown" | "") :: rest -> loop previous acc rest
-    | kind :: rest when Some (Page_kind.playbook_name kind) = previous ->
-        loop previous acc rest
+    | ("unknown" | "") :: rest -> loop seen acc rest
     | kind :: rest ->
         let kind = Page_kind.playbook_name kind in
-        loop (Some kind) (kind :: acc) rest
+        if List.mem kind seen then loop seen acc rest
+        else loop (kind :: seen) (kind :: acc) rest
   in
-  loop None [] kinds
+  loop [] [] kinds
+
+(* A kind observed only on a host other than the mission's final page — a consent
+   interstitial on consent.google.com, for example — is not part of the matching
+   path. The stored [page_kind_path] is left as recorded. A kind with no pattern, or
+   any pattern on the final host, stays: exclusion needs positive evidence. *)
+let foreign_only (trace : Trace.t) kind =
+  match trace.final with
+  | None -> false
+  | Some final -> (
+      match Page_kind.host final.url with
+      | None -> false
+      | Some final_host ->
+          let patterns =
+            List.filter
+              (fun (page : Trace.inferred_page) ->
+                Page_kind.playbook_name page.name = kind)
+              trace.inferred_pages
+          in
+          patterns <> []
+          && List.for_all
+               (fun (page : Trace.inferred_page) ->
+                 match Page_kind.host page.url_pattern with
+                 | Some host -> host <> final_host
+                 | None -> false)
+               patterns)
+
+let matching_path trace =
+  List.filter
+    (fun kind -> not (foreign_only trace kind))
+    (path trace.Trace.page_kind_path)
 
 let steps (trace : Trace.t) =
   if trace.steps <> [] then trace.steps
@@ -80,13 +112,13 @@ let agreement = function
   | first :: rest
     when first.Trace.outcome = "done"
          && List.for_all (fun t -> t.Trace.outcome = "done") rest ->
-      let p = path first.Trace.page_kind_path and actions = signature first in
+      let p = matching_path first and actions = signature first in
       p <> [] && actions <> []
       && List.for_all
            (fun trace ->
              trace.Trace.site = first.site && trace.error_code = None
              && List.for_all (fun (s : Trace.trace_step) -> s.error = None) (steps trace)
-             && path trace.page_kind_path = p
+             && matching_path trace = p
              && signature trace = actions)
            (first :: rest)
   | _ -> false
@@ -318,12 +350,11 @@ let trace_input trace =
   let declared = inferred_pages [ trace ] in
   let previous_url = ref trace.Trace.start_url in
   let before =
-    ref
-      (match path trace.Trace.page_kind_path with first :: _ -> first | _ -> "unknown")
+    ref (match matching_path trace with first :: _ -> first | _ -> "unknown")
   in
   `Assoc
     [
-      ("path", `List (List.map (fun s -> `String s) (path trace.page_kind_path)));
+      ("path", `List (List.map (fun s -> `String s) (matching_path trace)));
       ( "steps",
         `List
           (List.map
@@ -681,7 +712,7 @@ let compile ?prior ?revision t ~files ~traces ~existing ~repair ~snapshot
             tries = Option.fold ~none:0 ~some:(fun (p : B.provenance) -> p.tries) prior;
             last_failure = Option.bind prior (fun (p : B.provenance) -> p.last_failure);
             path =
-              Option.fold ~none:(path first.page_kind_path)
+              Option.fold ~none:(matching_path first)
                 ~some:(fun (p : B.provenance) -> p.path)
                 prior;
             repeatable;
@@ -903,11 +934,11 @@ let after_trace_unmetered t ~store ~file trace result =
                   t.warn why;
                   []
             in
-            let current_path = path trace.page_kind_path in
+            let current_path = matching_path trace in
             let candidates =
               List.filter
                 (fun (_, t) ->
-                  path t.Trace.page_kind_path = current_path
+                  matching_path t = current_path
                   && current_path <> []
                   && steps t <> []
                   && not t.compiled)

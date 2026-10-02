@@ -1713,6 +1713,7 @@ let action_view t ~session tab cdp : Actions.tab =
     dialog_race = dialog_race tab;
     acknowledge = (fun () -> acknowledge tab);
     engage = (fun () -> ());
+    sleep = t.sleep;
     all_tabs =
       (fun () ->
         let entries = (snapshot t).entries in

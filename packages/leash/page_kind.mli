@@ -49,6 +49,10 @@ type draft_page = { name : string; url_pattern : string }
 (** kind-s1k2: one entry of a draft [pages] section. The compiler writes the playbook;
     this value is not a playbook. *)
 
+val host : string -> string option
+(** The lowercase host of an HTTP(S) URL, without userinfo or port. Patterns keep a
+    trailing [*] in the path; that does not change the host. *)
+
 val playbook_name : string -> string
 (** map-bjon: convert abstract kind placeholders into valid playbook slug components:
     [books-<slug>] becomes [books-slug]. Inference itself keeps the abstract names. *)

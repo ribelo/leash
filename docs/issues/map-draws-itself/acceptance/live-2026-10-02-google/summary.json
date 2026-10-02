@@ -1,0 +1,157 @@
+{
+  "date": "2026-10-02",
+  "scope": "L53 Google learning gates; story 20 remaining sites; prior Books/form evidence not rerun",
+  "provenance": {
+    "git_head": "6794253bccc65a332844937f191f90705095fcbf",
+    "initial_tree_clean": true,
+    "binary_sha256": "e128fc3b671f3b7aa39c8f2a0d661140f780942e44c9509f5bcc63efebd8e6c8",
+    "build_exit": 0
+  },
+  "isolation": {
+    "seeded_playbooks": 0,
+    "learning_mode": "auto",
+    "successes": 2,
+    "private_headless": true,
+    "temp_xdg_and_profile": true,
+    "key_source": "secret-env ai --",
+    "mission_changes": 0,
+    "site_retries": 0,
+    "product_edits": 0,
+    "commits": 0
+  },
+  "sites": {
+    "maps": {
+      "passed": false,
+      "stopped_after_mission": 2,
+      "gates": {
+        "mission_1_done_and_independent_goal": "pass",
+        "mission_2_done_and_independent_goal": "pass",
+        "mission_2_compiles_draft": "fail",
+        "mission_3_jev_picks_draft_expectations_pass_and_installs": "not_run_upstream_failure",
+        "mission_4_uses_installed_procedure": "not_run_upstream_failure",
+        "installed_cost_reduction": "not_demonstrated"
+      },
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "independent_goal": true,
+          "goal_evidence": "Eiffel Tower title and Av. Gustave Eiffel, 75007 Paris, France visibly present",
+          "calls_by_kind": {
+            "operator": 27,
+            "text_helper": 1
+          },
+          "model_calls_total": 28,
+          "learning_calls": 0,
+          "cost_usd_total_including_learning": 0.002915506
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "independent_goal": true,
+          "goal_evidence": "Same title and full address independently visible in second final screenshot",
+          "calls_by_kind": {
+            "operator": 7,
+            "text_helper": 2
+          },
+          "model_calls_total": 9,
+          "learning_calls": 0,
+          "cost_usd_total_including_learning": 0.001317048
+        }
+      ],
+      "total_cost_usd": 0.004232554,
+      "cost_fully_reported": true,
+      "learning_cost_usd": 0,
+      "drafts": 0,
+      "installed": [],
+      "cause": "Compile trigger requires equal ordered normalized page-kind paths. First stored trace is m→maps→(search-<slug>→place-<slug>)×6; second is maps→search-<slug>→place-<slug>. Normalized playbook names replace <slug> with slug, leaving the mismatch unchanged. Consent-only prefix and repeated search/place loops both differ. All saved non_repeatable flags are false; safety is not blocking. No learning model call was made.",
+      "normalized_learning_paths": [
+        ["m", "maps", "search-slug", "place-slug", "search-slug", "place-slug", "search-slug", "place-slug", "search-slug", "place-slug", "search-slug", "place-slug", "search-slug", "place-slug"],
+        ["maps", "search-slug", "place-slug"]
+      ],
+      "source_checks": [
+        "packages/leash/learning.ml:59-69",
+        "packages/leash/learning.ml:906-915"
+      ],
+      "evidence": [
+        "maps/checkpoint-2/status.json",
+        "maps/checkpoint-2/state/leash/traces/google.com/2026-10-02T16:12:33.530036Z-done.json",
+        "maps/checkpoint-2/state/leash/traces/google.com/2026-10-02T16:12:49.995894Z-done.json",
+        "maps/mission-1/after/page.png",
+        "maps/mission-2/after/page.png"
+      ]
+    },
+    "flights": {
+      "passed": false,
+      "stopped_after_mission": 1,
+      "gates": {
+        "mission_1_done": "fail",
+        "mission_1_independent_page_goal": "pass_after_terminal_error",
+        "mission_2_compiles_draft": "not_run_upstream_failure",
+        "mission_3_jev_picks_draft_expectations_pass_and_installs": "not_run_upstream_failure",
+        "mission_4_uses_installed_procedure": "not_run_upstream_failure",
+        "installed_cost_reduction": "not_demonstrated"
+      },
+      "missions": [
+        {
+          "number": 1,
+          "status": "error",
+          "independent_goal": true,
+          "goal_evidence": "Final screenshot shows Explore destinations map with geographical tiles and destination prices Paris PLN 185, London PLN 130, Rome PLN 216; not a bare PLN check",
+          "calls_by_kind": {
+            "operator": 5
+          },
+          "model_calls_total": 5,
+          "learning_calls": 0,
+          "cost_usd_total_including_learning": 0.00063021
+        }
+      ],
+      "total_cost_usd": 0.00063021,
+      "cost_fully_reported": true,
+      "learning_cost_usd": 0,
+      "drafts": 0,
+      "installed": [],
+      "cause": "After successful Explore destinations navigation, JEV selects the already-selected Explore header link (row 5). Its point is intercepted by transparent viewport-wide DIV.KL4X6e.TuA45b under fixed TRANS-LAYER. Safety hit-test refuses click and terminal status is error; reached page goal does not supply a successful learning trace. No retry.",
+      "covered_click": {
+        "point_css": {
+          "x": 220.15625,
+          "y": 32
+        },
+        "covering_element": "DIV.KL4X6e.TuA45b",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 1366,
+          "height": 813
+        },
+        "opacity": 0,
+        "pointer_events": "auto",
+        "z_index": 1,
+        "parent": "TRANS-LAYER fixed inset:0 z-index:1000",
+        "target_transform": "none",
+        "hit_is_target_or_descendant": false,
+        "eval_command_elapsed_s": 0.02104701,
+        "point_method": "independently evaluated first content-rect center; no transform; border center agrees; not CDP quads recorded at dispatch"
+      },
+      "evidence": [
+        "flights/mission-1/drive.json",
+        "flights/mission-1/covered-click/element-from-point.json",
+        "flights/mission-1/covered-click/page.png",
+        "flights/mission-1/after/page.png"
+      ]
+    }
+  },
+  "total_cost_usd_all_sites": 0.004862764,
+  "cleanup": {
+    "maps_service_exit": 0,
+    "flights_service_exit": 0,
+    "private_profile_processes_remaining": 0,
+    "temporary_roots_removed_by_harness": true
+  },
+  "limitations": [
+    "Failed upstream gates prevent claiming compilation, installation, installed use or cost reduction on either site.",
+    "Read-only elementFromPoint observation is immediately after drive reply, not atomic inside dispatch; content center reconstructed from live DOM.",
+    "Learning cost is zero because no compile/verification/install was reached; all browser calls are included.",
+    "Private service logs are empty; diagnosis rests on structured replies, traces, eval and screenshots."
+  ]
+}
