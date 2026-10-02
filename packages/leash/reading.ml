@@ -540,10 +540,19 @@ type t = {
   mutable next : int;
   mutable length : int;
   net : Net_log.t;
+  mutable challenge_signal : string option;
 }
 
 let create () =
-  { entries = Array.make 200 None; next = 0; length = 0; net = Net_log.create () }
+  {
+    entries = Array.make 200 None;
+    next = 0;
+    length = 0;
+    net = Net_log.create ();
+    challenge_signal = None;
+  }
+
+let challenge_signal t = t.challenge_signal
 
 let push t entry =
   t.entries.(t.next) <- Some entry;
@@ -612,11 +621,17 @@ let observe t ~at json =
   | Some "Network.requestWillBeSent", Some params -> (
       match Option.bind (nested [ "request"; "url" ] D.string params) challenge with
       | Some (vendor, origin) ->
+          t.challenge_signal <- Some origin;
           emit "console" ~level:"warn" (vendor ^ " challenge loaded: " ^ origin)
       | None -> ())
   | Some "Page.frameNavigated", Some params -> (
+      (* notif-tdtz: debug history is not current challenge state. Navigation clears
+         an old document's signal; unrelated DOM mutations cannot prove clearance. *)
+      if nested [ "frame"; "parentId" ] D.string params = None then
+        t.challenge_signal <- None;
       match Option.bind (nested [ "frame"; "url" ] D.string params) challenge with
       | Some (vendor, origin) ->
+          t.challenge_signal <- Some origin;
           emit "console" ~level:"warn" (vendor ^ " challenge frame loaded: " ^ origin)
       | None -> ())
   | Some "Network.loadingFailed", Some params ->

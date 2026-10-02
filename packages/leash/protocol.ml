@@ -238,6 +238,7 @@ type run_status =
   | Run_blocked [@json.name "blocked"]
   | Run_failed [@json.name "failed"]
   | Run_handoff [@json.name "handoff"]
+  | Run_handoff_expired [@json.name "handoff-expired"]
   | Run_limit [@json.name "limit"]
   | Run_deadline [@json.name "deadline"]
   | Run_error [@json.name "error"]
@@ -1165,6 +1166,8 @@ type planner_turn = {
    the run never merges one; [final] is the last snapshot the run observed, whose [dialog]
    is what ended an [error]; [reason] names why the run stopped. *)
 type run_result = {
+  unattended : Yojson.Safe.t list; [@json.default []]
+  detail : Yojson.Safe.t option; [@json.default None]
   playbook_choices : playbook_choice list;
   status : Run_status.t;
   site : string option; [@json.null]

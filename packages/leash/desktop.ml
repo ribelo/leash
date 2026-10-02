@@ -15,10 +15,10 @@ let retirement_grace = Ox.Duration.seconds 5
    five-second retirement grace and its stdout read as lines, and answers [Ok] for a zero
    exit and [Error reason] for anything else. A command stopped because that switch was
    released is cancelled, not reported. *)
-let run_command ~caps ~clock ~mgr ~sw ~argv ~on_line =
+let run_command ~grace ~caps ~clock ~mgr ~sw ~argv ~on_line =
   try
     match
-      Ox_process.Child.spawn ~caps ~sw ~clock ~mgr ~argv ~grace:retirement_grace
+      Ox_process.Child.spawn ~caps ~sw ~clock ~mgr ~argv ~grace
         ~stdout:Ox_process.Child.Pipe ~fds:[] ()
     with
     | Error (`Invalid_fd descriptor) ->
@@ -148,7 +148,8 @@ let create ~(caps : caps) ~clock ~mgr commands =
   let run_bounded argv ~on_line =
     match
       Ox.Timeout.timeout ~clock step_timeout (fun () ->
-          Eio.Switch.run (fun sw -> run_command ~caps ~clock ~mgr ~sw ~argv ~on_line)
+          Eio.Switch.run (fun sw ->
+              run_command ~grace:retirement_grace ~caps ~clock ~mgr ~sw ~argv ~on_line)
           |> Result.map_error (fun message -> `Failed message))
     with
     | Ok () -> Ok ()
@@ -190,7 +191,7 @@ let create ~(caps : caps) ~clock ~mgr commands =
     match commands.notify_command with
     | [] -> Ok ()
     | command ->
-        run_command ~caps ~clock ~mgr ~sw
+        run_command ~grace:retirement_grace ~caps ~clock ~mgr ~sw
           ~argv:(List.map (render (values context)) command)
           ~on_line:(fun line ->
             if String.lowercase_ascii (String.trim line) = "done" then on_done ())
@@ -200,3 +201,20 @@ let create ~(caps : caps) ~clock ~mgr commands =
 let focus t context = t.focus context
 let notify t ~sw context ~on_done = t.notify ~sw context ~on_done
 let disabled = { focus = (fun _ -> Ok ()); notify = (fun ~sw:_ _ ~on_done:_ -> Ok ()) }
+
+(* notif-7pha: argv only, bounded best effort; no shell or notification action wait. *)
+let notifier ~(caps : caps) ~clock ~mgr ~command =
+ fun message ->
+  if command = [] then Ok ()
+  else
+    match
+      Ox.Timeout.timeout ~clock step_timeout (fun () ->
+          Eio.Switch.run (fun sw ->
+              run_command ~grace:Ox.Duration.zero ~caps ~clock ~mgr ~sw
+                ~argv:(List.map (render [ ("message", message) ]) command)
+                ~on_line:ignore)
+          |> Result.map_error (fun message -> `Failed message))
+    with
+    | Ok () -> Ok ()
+    | Error (`Failed message) -> Error message
+    | Error `Timeout -> Error "notification command timed out"

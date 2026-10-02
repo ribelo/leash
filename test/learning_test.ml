@@ -76,6 +76,8 @@ let result ?(status = "done") ?(procedures = []) () =
       final = snap ();
       reason = None;
       trace_path = None;
+      unattended = [];
+      detail = None;
     }
 
 let entry ?revision ?(attempts = 1) ?(outcome = "verified") slug =
@@ -122,6 +124,7 @@ let step ?text ?(operation = "click") ?(label = "View") () =
 let trace ?(kinds = [ "catalog" ]) ?(steps = [ step () ]) ?(outcome = "done") time =
   Trace.
     {
+      unattended = [];
       version = 1;
       time = T.timestamp time;
       site = "example.com";

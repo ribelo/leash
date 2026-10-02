@@ -11,7 +11,9 @@ This skill is guidance, not permission. Stay inside the user's request.
 
 ## Choose the learning path
 
-Prefer `leash drive MISSION` for a goal: it learns reusable procedures; manual commands do not. Use manual commands for inspection and for steps drive cannot do. Drive with `--tab HANDLE` leaves that tab open; without it, drive opens and closes its own tab (a handoff keeps it until resume).
+Prefer `leash drive MISSION` for a goal: it learns reusable procedures; manual commands do not. Use manual commands for inspection and for steps drive cannot do. Drive with `--tab HANDLE` leaves that tab open; without it, drive closes its own tab on ordinary endings. Handoff, handoff expiry, and unresolved challenge endings keep it open. Planner handoff waits at most five minutes by default, then clears `with_human` and leaves normal idle cleanup in charge.
+
+The planner owns interruptions. Its `notify` answer sends a non-blocking desktop message; JEV only blocks. CAPTCHA attempts use visible snapshot-row actions only, never raw JavaScript, invented coordinates, or external solvers. Attempts default to two planner turns before `captcha` handoff; expiry returns `blocked` with `detail.challenge`, not a promise the challenge was solved. See `leash help drive` for configuration and the `unattended` audit.
 
 ## Handle
 

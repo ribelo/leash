@@ -29,6 +29,10 @@ val create :
   cap:int ->
   tombstone_s:int ->
   ?download_dir:string ->
+  ?notify:(string -> (unit, string) result) ->
+  ?handoff_timeout_s:int ->
+  ?challenge_attempt:bool ->
+  ?challenge_turns:int ->
   ?idle:Ox.Duration.t ->
   'clock deps ->
   t
@@ -57,9 +61,11 @@ val handoff :
   Protocol.Handle.t ->
   (Protocol.handoff_result, Protocol.error) result
 
-val handoff_timeout : int option -> Ox.Duration.t
+val handoff_timeout_s : t -> int
+
+val handoff_timeout : ?default:int -> int option -> Ox.Duration.t
 (** hand-lmd5: the deadline a handoff runs on: the caller's [timeout_s], or the contract's
-    fifteen minutes when it names none. [Control.budget] derives the handler's budget from
+    five minutes when it names none. [Control.budget] derives the handler's budget from
     this same function. *)
 
 val close_after_resume : t -> Protocol.Handle.t -> (unit, Protocol.error) result

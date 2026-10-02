@@ -1,4 +1,21 @@
 (test
+ (name unattended_test)
+ (modules unattended_test)
+ (libraries
+  leash
+  leash_test_support
+  ox_test
+  ox
+  ox_process
+  ox_observability
+  eio
+  eio.unix
+  eio_main
+  yojson
+  str
+  alcotest))
+
+(test
  (name learning_test)
  (modules learning_test)
  (libraries leash ox_test eio_main yojson alcotest))

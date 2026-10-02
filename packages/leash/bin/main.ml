@@ -1276,7 +1276,8 @@ let commands ~caps ~send ~base ~run_owned =
         [ pos "tab" "TAB"; pos "reason" "REASON" ],
         [
           opt "timeout_s" Int "S"
-            "Seconds before the handoff ends, default 900. Zero or negative uses 900.";
+            "Seconds before the handoff ends; default handoff.timeout_s (300). Zero or \
+             negative uses config.";
         ],
         [ "leash handoff t_9xk 'The captcha needs you'" ] );
       ( "resume",
@@ -1419,6 +1420,13 @@ let program env (config : Leash.Config.t) sw =
   in
   let tabs =
     Leash.Tabs.create ~sw ~download_dir
+      ~notify:
+        (Leash.Desktop.notifier
+           ~caps:(env.caps :> Leash.Desktop.caps)
+           ~clock:base#clock ~mgr:base#process_mgr ~command:config.notify.command)
+      ~handoff_timeout_s:config.handoff.timeout_s
+      ~challenge_attempt:config.challenges.attempt
+      ~challenge_turns:config.challenges.turns
       ~cap:(Leash.Config.Tab_cap.to_int config.tabs.cap)
       ~tombstone_s:(Leash.Config.Seconds.to_int config.expiry.tombstone_s)
       ~idle

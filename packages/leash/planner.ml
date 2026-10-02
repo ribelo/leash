@@ -14,6 +14,7 @@ module P = Protocol
    they never shadow the loop's own answers. *)
 type kind =
   | Procedure_answer [@json.name "procedure"]
+  | Notify_answer [@json.name "notify"]
   | Continue_answer [@json.name "continue"]
   | Handoff_answer [@json.name "handoff"]
   | Fail_answer [@json.name "fail"]
@@ -27,6 +28,7 @@ type reply = {
   procedure : Playbook.procedure option;
   actions : P.planner_action list option;
   reason : string option;
+  message : string option;
   expect : string list option;
 }
 [@@deriving yojson]
@@ -37,10 +39,6 @@ type t = {
 }
 
 let default_deadline = Ox.Duration.seconds 30
-
-(* The reply holds a whole procedure: its steps, their goals and its expectations. The
-   text helper's 1024 is a value; this is a plan. *)
-let max_tokens = 4096
 
 (* The same page bound and character-boundary rule the text helper applies to the text it
    sends (drive-ls3c): a page is data, and a prompt is not the place to send 12 KiB of it. *)
@@ -170,7 +168,8 @@ let answer_of (request : Run.plan_request) (reply : reply) :
   let expect = Option.value ~default:[] reply.expect in
   let playbook = request.Run.playbook in
   let one_of_three =
-    "answer exactly one of procedure, handoff or fail with the reason it needs"
+    "answer exactly one of procedure, continue, notify, handoff or fail with the fields \
+     it needs"
   in
   match check_expectations playbook expect with
   | Error why -> Error why
@@ -193,6 +192,20 @@ let answer_of (request : Run.plan_request) (reply : reply) :
       match reply.answer with
       | _ when reply.answer <> Continue_answer && reply.actions <> None ->
           Error "only continue may carry actions"
+      | _ when reply.answer <> Notify_answer && reply.message <> None ->
+          Error "only notify may carry message"
+      | Notify_answer -> (
+          match (reply.message, reply.procedure, reply.reason) with
+          | Some message, None, None
+            when String.trim message <> ""
+                 && String.length message <= 1024
+                 && (not (String.contains message '\n'))
+                 && not (String.contains message '\r') ->
+              Ok Run.{ answer = Notify message; expect; usage = None }
+          | _ ->
+              Error
+                "notify requires one nonempty line (max 1024 bytes), without procedure \
+                 or reason")
       | Continue_answer -> (
           match (reply.procedure, reply.reason, reply.actions) with
           | None, None, actions
@@ -269,8 +282,8 @@ let create ~now ~client ~model ~reasoning ~logger () =
   let ask ~deadline messages =
     Model_usage.start "planner";
     match
-      Ox_ai_chat.complete client ~deadline ~model ~messages ~max_tokens ~json_object:true
-        ~reasoning ()
+      Ox_ai_chat.complete client ~deadline ~model ~messages ~json_object:true ~reasoning
+        ()
     with
     | Error error -> Error (Model_error.of_eta error)
     | Ok completion ->
@@ -357,7 +370,7 @@ let create ~now ~client ~model ~reasoning ~logger () =
     match
       Ox_ai_chat.complete client
         ~deadline:(Ox.Duration.min deadline default_deadline)
-        ~model ~messages ~max_tokens:1024 ~json_object:true ~reasoning ()
+        ~model ~messages ~json_object:true ~reasoning ()
     with
     | Error error ->
         record
@@ -425,7 +438,6 @@ let learning_response_metadata json =
     [
       ("finish_reason", finish);
       ("content_kind", `String content);
-      ("max_output_tokens", `Int max_tokens);
       ("prompt_tokens", count (get "prompt_tokens" usage));
       ("completion_tokens", count (get "completion_tokens" usage));
       ("total_tokens", count (get "total_tokens" usage));
@@ -449,8 +461,7 @@ let learning ~client ~model ~reasoning ~logger ~deadline request =
   in
   Model_usage.start "planner";
   match
-    Ox_ai_chat.complete client ~deadline ~model ~messages ~max_tokens ~json_object:true
-      ~reasoning ()
+    Ox_ai_chat.complete client ~deadline ~model ~messages ~json_object:true ~reasoning ()
   with
   | Error (`Invalid_response issue) ->
       let metadata = learning_response_metadata issue.Ox_json.got in

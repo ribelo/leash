@@ -31,6 +31,7 @@ type inferred_page = { name : string; url_pattern : string }
 (** kind-dnye kind-s1k2: one row of the session mapping in the trace header. *)
 
 type t = {
+  unattended : Yojson.Safe.t list;
   version : int;
   time : string;
   site : string;

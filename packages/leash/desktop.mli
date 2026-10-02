@@ -55,3 +55,13 @@ val notify :
 (** hand-phof: show the human the reason and the Done action, calling [on_done] when the
     Done action's name reaches stdout. Blocks for the command's whole life: the caller
     forks it on the handoff's switch so the handoff ending stops it. *)
+
+val notifier :
+  caps:caps ->
+  clock:'clock Eio.Time.clock ->
+  mgr:'mgr Eio_unix.Process.mgr ->
+  command:string list ->
+  string ->
+  (unit, string) result
+(** notif-7pha: non-blocking-kind notification, a five-second bounded command with
+    [{message}] substituted as one argv element; [] disables it. *)

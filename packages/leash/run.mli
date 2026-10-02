@@ -93,6 +93,7 @@ type plan_trigger =
   | Blocked
   | Failed
   | Arguments
+  | Challenge
       (** The three points JEV stopped and a planner turn is asked: the procedure level
           answered BLOCKED, a procedure failed its expectations twice, or a required
           argument could not be filled (run-w7ke). *)
@@ -100,6 +101,7 @@ type plan_trigger =
 type plan_answer =
   | Procedure of Playbook.procedure
   | Continue_actions of Protocol.planner_action list
+  | Notify of string
   | Handoff of string
   | Fail of string
       (** What a planner turn may answer (run-rq6i, L32): a procedure to run now, a
@@ -228,6 +230,10 @@ val loop :
   ?drafts:(site:string -> kind:string option -> Playbook.draft list) ->
   ?on_book:(Playbook.loaded option -> unit) ->
   ?on_record:(Yojson.Safe.t -> (unit, Protocol.error) result) ->
+  ?notify:(string -> (unit, string) result) ->
+  ?challenge:(observation -> string option) ->
+  ?challenge_attempt:bool ->
+  ?challenge_turns:int ->
   ?planner_actions:int ->
   ?planner_action:
     (Protocol.planner_action -> (Protocol.action_result, Protocol.error) result) ->

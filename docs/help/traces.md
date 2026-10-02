@@ -34,7 +34,7 @@ and exit 65. No service, browser, or model is needed.
 
 The version-1 derived Protocol.drive_trace projection contains time, site, mission,
 outcome, cost (number or null), duration_ms, model_calls, page_kind_path,
-inferred_pages, compiled, procedures, steps, final (URL/title or null), and optional
+inferred_pages, compiled, procedures, steps, unattended, final (URL/title or null), and optional
 error_code. inferred_pages is the session mapping: each `{name, url_pattern}` is a
 generalized URL and the name it was given, first-seen. A missing inferred_pages on an
 older file decodes as empty. Procedures
@@ -56,6 +56,15 @@ pages from inferred_pages.
 Persistence completes before reply encoding, so trace_path names an existing
 file. Errors expose error.detail.trace_path. Write/prune failures are logged and
 never change the drive outcome; a failed write omits the path.
+
+## Unattended audit
+
+`unattended` defaults to `[]` for older traces. Notification events record the one-line
+message, sent/failed outcome, failure text when present, and elapsed time.
+Handoff events record reason, elapsed wait, and resumed/expired/failed outcome. Challenge
+events record origin, whether attempts are enabled, turns used and the outcome. No tab
+handle, snapshot capability, raw page dump, or arbitrary model response is copied into
+these events. Messages are operator-facing content and may contain order IDs.
 
 ## Switch and retention
 

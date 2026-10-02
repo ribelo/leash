@@ -2,11 +2,11 @@
 
     L19 defined the seam; L22 fills it with ox's chat client: {!create} is one
     OpenAI-compatible completion over the service's {!Ox_ai_chat} client — [json_object]
-    on, reasoning off, [max_tokens] 1024, the pinned [Config.text_model] — whose system
-    message is {!Questions.text_value} and whose user message is jev's [field_context].
-    The reply must parse as [{"text": string | null}]. Everything the helper needs from a
-    drive is here, so the chat client stays out of this module and this module stays out
-    of the drive.
+    on, reasoning off, the pinned [Config.text_model] — whose system message is
+    {!Questions.text_value} and whose user message is jev's [field_context]. The reply
+    must parse as [{"text": string | null}]. Everything the helper needs from a drive is
+    here, so the chat client stays out of this module and this module stays out of the
+    drive.
 
     The shape is jev-ultrafast's [field_context] before it is written to the wire: the
     goal, the field the value goes into, the page the field is on, and the recent actions.

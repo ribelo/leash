@@ -891,6 +891,8 @@ val planner_turn_of_yojson : Yojson.Safe.t -> (planner_turn, string) result
 val yojson_of_planner_turn : planner_turn -> Yojson.Safe.t
 
 type run_result = {
+  unattended : Yojson.Safe.t list;
+  detail : Yojson.Safe.t option;
   playbook_choices : playbook_choice list;
   status : Run_status.t;
   site : string option; [@json.null]
