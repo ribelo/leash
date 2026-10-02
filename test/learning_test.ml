@@ -1269,6 +1269,48 @@ let learning_cost_accounting () =
 (* map-cnee map-ngyr: the two Google Maps done traces from the 2026-10-02 live
    gate. The stored paths stay as recorded; the matching path drops the consent
    host and collapses the search/place revisits. *)
+(* map-cnee: Flights live (google3) — a learned procedure verified from another entry
+   page must not trigger a second compile. *)
+let covered_by_use () =
+  temp (fun root ->
+      let calls = ref 0 in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun _ ->
+            incr calls;
+            Ok (answer (procedure ())))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      ignore (after learning store (trace 2.) (result ()));
+      ignore
+        (after learning store (trace 3.)
+           (result ~procedures:[ trial learning "draft:inspect" ] ()));
+      bool "map-cnee the draft installed" (installed_slugs () = [ "inspect" ]);
+      let compiled = !calls in
+      let used time =
+        {
+          (trace ~kinds:[ "home"; "catalog" ] time) with
+          Trace.procedures =
+            [
+              {
+                n = 1;
+                procedure = "inspect";
+                outcome = "verified";
+                planned = false;
+                steps = [];
+              };
+            ];
+        }
+      in
+      ignore (after learning store (used 4.) (result ~procedures:[ entry "inspect" ] ()));
+      ignore (after learning store (used 5.) (result ~procedures:[ entry "inspect" ] ()));
+      Alcotest.(check int)
+        "map-cnee runs that verified the installed procedure do not compile again"
+        compiled !calls)
+
 let maps_final =
   "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1"
 
@@ -1390,6 +1432,7 @@ let () =
                     ("config", defaults);
                     ("path and classification", pure);
                     ("google live paths", google_paths);
+                    ("map-cnee covered by verified use", covered_by_use);
                     ("draft compile", draft_compile);
                     ("validation retry", validation);
                     ("parameterization", parameters);

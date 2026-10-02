@@ -1046,14 +1046,19 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
           | Some b ->
               List.exists
                 (fun (p : B.procedure) ->
-                  match p.provenance with
-                  | Some prov -> prov.path = current_path
-                  | None ->
-                      List.exists
-                        (fun (saved : Trace.trace_procedure) ->
-                          saved.outcome = "verified" && saved.procedure = p.slug
-                          && not saved.planned)
-                        trace.procedures)
+                  (* map-cnee: a run that verified an installed procedure is covered by
+                     it, whatever page the procedure was entered from. The learned path
+                     starts where the compiled traces' procedure started, so a later run
+                     that reached it from another page (Flights: [flights; travel-slug]
+                     against a learned [travel-slug]) is not new evidence. *)
+                  (match p.provenance with
+                    | Some prov -> prov.path = current_path
+                    | None -> false)
+                  || List.exists
+                       (fun (saved : Trace.trace_procedure) ->
+                         saved.outcome = "verified" && saved.procedure = p.slug
+                         && not saved.planned)
+                       trace.procedures)
                 b.playbook.procedures
         in
         let pending =
