@@ -205,6 +205,13 @@ let after learning store trace result =
   let file = save store trace in
   let replied = L.after_trace learning ~store ~file trace result in
   L.await_pending learning;
+  (* map-w62c: once the work has finished, status says nothing is pending. *)
+  (match L.status learning with
+  | `Assoc fields ->
+      Alcotest.(check bool)
+        "map-w62c status pending is 0 after the work" true
+        (List.assoc_opt "pending" fields = Some (`Int 0))
+  | _ -> Alcotest.fail "status is an object");
   replied
 
 let proposal_files () =

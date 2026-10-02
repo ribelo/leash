@@ -343,7 +343,7 @@ Models       = {configured: bool, jev_model: string, text_model: string,
                 systemone_endpoint: string, chat_base_url: string}
                  the models section as configured; configured is whether an API key is present,
                  and no field ever carries the key
-LearningStatus = {mode: "off"|"draft"|"auto", drafts: int,
+LearningStatus = {mode: "off"|"draft"|"auto", pending: int, drafts: int,
                   sites: [{site, last_compile: string|null,
                            installed_by_replay: int, installed_by_agreement: int,
                            learning_calls: int, learning_cost: number|null}]}
@@ -355,7 +355,7 @@ Provenance   = {traces: string[], model, time, tries: int, last_failure?: string
 ### Learning results and provenance (L53)
 
 `status.learning` is omitted when no learning runtime is attached, not encoded
-as null. `mode` reports the configured policy, `drafts` the current count of
+as null. `pending` counts learning work (compile, confirmation, repair, install) still running after a drive replied; wait for 0 before judging what a mission taught. `mode` reports the configured policy, `drafts` the current count of
 pending learned procedures, and `sites` the known installed, draft or previously compiled
 sites. `last_compile` is the last compile attempt's UTC timestamp, or null.
 The two installed counts reflect current procedure provenance gates containing

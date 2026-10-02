@@ -364,6 +364,9 @@ let status t =
   `Assoc
     [
       ("mode", `String (Config.Learning_mode.to_string t.config.mode));
+      (* map-w62c: learning runs after the reply, so a caller (an agent, the live gates)
+         needs to see whether a compile is still running before the next mission. *)
+      ("pending", `Int (Eio.Mutex.use_ro t.pending_mu (fun () -> t.pending)));
       ("drafts", `Int (List.length (proposals t)));
       ( "sites",
         `List
