@@ -1,0 +1,59 @@
+{
+  "unattended": [],
+  "version": 1,
+  "time": "2026-10-02T19:32:23.014480Z",
+  "site": "google.com",
+  "mission": "On Google Flights, open Explore and stop when the Explore destinations map and destination flight prices are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+  "outcome": "done",
+  "cost": null,
+  "duration_ms": 0,
+  "model_calls": 0,
+  "start_url": "https://www.google.com/travel/flights?hl=en",
+  "page_kind_path": [
+    "travel-<slug>"
+  ],
+  "inferred_pages": [
+    {
+      "name": "travel-<slug>",
+      "url_pattern": "https://www.google.com/travel/<slug>"
+    }
+  ],
+  "compiled": true,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Explore destinations"
+      },
+      "operations": [],
+      "targets": [],
+      "after": {
+        "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 0
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "done",
+      "source": "operator",
+      "operations": [],
+      "targets": [],
+      "after": {
+        "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+        "title": "Wrocław to anywhere | Explore"
+      },
+      "elapsed_ms": 0
+    }
+  ],
+  "final": {
+    "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+    "title": "Wrocław to anywhere | Explore"
+  }
+}

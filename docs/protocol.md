@@ -13,7 +13,7 @@ the drive outcome. `Protocol.drive_trace` is the version-1 derived safe durable
 projection, not the live result type, to exclude handles, page text, records, and
 raw state. It records headers, the page-kind path (declared kinds win; otherwise
 inferred), `inferred_pages` (`{name, url_pattern}`[], default empty), procedures,
-steps, URL/title, unattended events (default `[]`), and a `compiled` marker (default false). Operator and planner
+steps, URL/title, `arguments` (`[name, value][]`, default `[]`), unattended events (default `[]`), and a `compiled` marker (default false). Only argument values feeding retained non-redacted typed steps are persisted. Operator and planner
 steps share one chronological sequence, renumbered from 1; a failed planner
 action is retained with its error code, including on a partial-failure trace.
 The safe step shape is:
@@ -348,7 +348,10 @@ LearningStatus = {mode: "off"|"draft"|"auto", pending: int, drafts: int,
                            installed_by_replay: int, installed_by_agreement: int,
                            learning_calls: int, learning_cost: number|null}]}
 Provenance   = {traces: string[], model, time, tries: int, last_failure?: string,
-                path: string[], repeatable: bool, reason, gate, repair: bool,
+                path: string[], entry_kind: string, exit_kind: string,
+                signature: [[operation: string, target: {role,label}|null]],
+                kind_mapping: [[raw_key: string, meaningful_name: string]],
+                repeatable: bool, reason, gate, repair: bool,
                 model_calls: int, model_cost: number|null}
 ```
 
@@ -372,10 +375,15 @@ them once that work finishes. An omitted `installed` decodes as []. Use
 `Provenance` is the optional `provenance` object on a learned procedure in
 playbook or draft JSON, not a field of `RunProcedure`. It records source trace
 paths, the compiler model, a UTC timestamp, the failed replay count and
-optional last failure, the page-kind path, repeatability and its reason, the
+optional last failure, the operation page-kind path, raw entry and exit kinds,
+the ordered action/role/label signature, raw-to-meaningful kind mappings, repeatability and its reason, the
 validation gate, whether this is a repair, and the planner calls and reported cost of
 the compile or repair that wrote it. `model_calls` defaults to 0 when absent.
-`model_cost` is null when unknown. Current gate values are `replay`,
+`model_cost` is null when unknown. Older provenance defaults `entry_kind` and `exit_kind` to `""`, and `signature` and `kind_mapping` to `[]`. Traces keep their raw kind keys; meaningful names and generalized patterns belong to the proposed book.
+
+Compilation requires `successes` independent stored successful traces with a matching entry kind and ordered action/role/label signature. Repeated matching operations within one trace count once; the compiled marker does not exclude evidence. Typed values and exit paths may differ. The transition action belongs to the departing operation, and DONE is an observation rather than an action. Consent and off-final-host entries are excluded; the first remaining observed URL becomes a new site's entry. The compiler receives feeding argument names and observation-based naming evidence, and must return an exit-kind check and meaningful result expectations. Learned top-level procedures require at least two goal steps, except directly `use:`-referenced children; the full-book loader enforces this too. Invalid compiler output receives one validation retry.
+
+Current gate values are `replay`,
 `agreement` and `agreement-repair`; the codec's field is a string.
 
 ### Planner Continue (L53)

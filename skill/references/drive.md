@@ -42,7 +42,7 @@ A drive reply is large. Write it to a file and read the fields below. Do not pas
 ## Prefer drive for goals
 
 Drive learns reusable procedures from successful missions; manual commands do not. Use
-manual commands for inspection and for steps drive cannot do. Learning defaults to draft and runs after the reply, so the reply's `model_calls`,
+manual commands for inspection and for steps drive cannot do. Learning matches single-entry-kind operations across independent successful traces, not complete mission paths; consent and off-final-host entry operations do not become procedures. Learned top-level procedures require two goal steps and meaningful result checks. Learning defaults to draft and runs after the reply, so the reply's `model_calls`,
 `model_cost`, `proposals` and `installed` do not include that compile. `status` reports
 it; `learning.mode = "off"` disables learning.
 With `--tab HANDLE`, the supplied tab stays open whatever the outcome. Without `--tab`,

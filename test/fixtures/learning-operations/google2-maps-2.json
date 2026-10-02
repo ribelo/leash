@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "time": "2026-10-02T17:35:16.306889Z",
+  "site": "google.com",
+  "mission": "Search Google Maps for Eiffel Tower in Paris and open its place information. Stop when the place name Eiffel Tower and its Paris address are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+  "outcome": "done",
+  "cost": null,
+  "duration_ms": 0,
+  "model_calls": 0,
+  "start_url": "https://www.google.com/maps?hl=en",
+  "page_kind_path": [
+    "maps",
+    "search-<slug>",
+    "place-<slug>"
+  ],
+  "inferred_pages": [
+    {
+      "name": "maps",
+      "url_pattern": "https://www.google.com/maps*"
+    },
+    {
+      "name": "search-<slug>",
+      "url_pattern": "https://www.google.com/maps/search/<slug>*"
+    },
+    {
+      "name": "place-<slug>",
+      "url_pattern": "https://www.google.com/maps/place/<slug>*"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search Google Maps"
+      },
+      "text": "Eiffel Tower",
+      "operations": [],
+      "targets": [],
+      "after": {
+        "url": "https://www.google.com/maps/@51.167232,16.5838848,14z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Google Maps"
+      },
+      "elapsed_ms": 0
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [],
+      "targets": [],
+      "after": {
+        "url": "https://www.google.com/maps/search/Eiffel+Tower/@51.167232,16.5838848,14z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Eiffel Tower - Google Maps"
+      },
+      "elapsed_ms": 0
+    },
+    {
+      "non_repeatable": false,
+      "n": 3,
+      "operation": "done",
+      "source": "operator",
+      "operations": [],
+      "targets": [],
+      "after": {
+        "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Eiffel Tower - Google Maps"
+      },
+      "elapsed_ms": 0
+    }
+  ],
+  "final": {
+    "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "Eiffel Tower - Google Maps"
+  },
+  "unattended": []
+}

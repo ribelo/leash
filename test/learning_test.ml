@@ -131,6 +131,7 @@ let trace ?(kinds = [ "catalog" ]) ?(steps = [ step () ]) ?(outcome = "done") ti
       time = T.timestamp time;
       site = "example.com";
       mission = "inspect catalog";
+      arguments = [];
       outcome;
       cost = Some 0.;
       duration_ms = 1;
@@ -162,7 +163,11 @@ let procedure ?(slug = "inspect") ?(goal = "Click the button named View") ?(args
     {
       slug;
       description = "inspect catalog";
-      steps = [ Goal { goal; hint = None; until = Some until } ];
+      steps =
+        [
+          Goal { goal; hint = None; until = Some until };
+          Goal { goal = "Observe the catalog page"; hint = None; until = None };
+        ];
       expect = [ "the page is catalog"; "catalog entries are shown" ];
       args = Some args;
       provenance = None;
@@ -184,8 +189,13 @@ let book ?(repeatable = true) proc =
       shapes = None;
     }
 
-let answer ?(confirm = true) proc =
-  `Assoc [ ("procedure", B.yojson_of_procedure proc); ("confirm", `Bool confirm) ]
+let answer ?(confirm = true) ?(kinds = [ ("catalog", "catalog") ]) proc =
+  `Assoc
+    [
+      ("kinds", `Assoc (List.map (fun (key, name) -> (key, `String name)) kinds));
+      ("procedure", B.yojson_of_procedure proc);
+      ("confirm", `Bool confirm);
+    ]
 
 let install_authored ?(repeatable = true) proc =
   ignore
@@ -472,7 +482,7 @@ let repair () =
         = 1);
       bool "map-lnwr replacement readable"
         (match (List.hd b.playbook.procedures).steps with
-        | [ B.Goal g ] -> g.goal = "Click the button named Updated"
+        | B.Goal g :: _ -> g.goal = "Click the button named Updated"
         | _ -> false))
 
 let retire () =
@@ -908,6 +918,10 @@ let bounded_risk_agreement () =
                   B.
                     {
                       traces = [];
+                      entry_kind = "";
+                      exit_kind = "";
+                      signature = [];
+                      kind_mapping = [];
                       path = [ "catalog" ];
                       model = "test";
                       time = "earlier";
@@ -1006,11 +1020,13 @@ let inferred_navigation_patterns () =
                  parsed.pages);
             Ok
               (answer
+                 ~kinds:[ ("home", "home"); ("books-<slug>", "books-category") ]
                  {
                    (procedure ~goal:"Click the link named Mystery"
-                      ~until:[ "the page is books-slug" ] ())
+                      ~until:[ "the page is books-category" ]
+                      ())
                    with
-                   B.expect = [ "the page is books-slug"; "book prices are shown" ];
+                   B.expect = [ "the page is books-category"; "book prices are shown" ];
                  }))
           ()
       in
@@ -1396,7 +1412,11 @@ let google_paths () =
             let proc = procedure ~until:[ "the page is maps" ] () in
             Ok
               (answer
-                 { proc with B.expect = [ "the page is maps"; "the place is shown" ] }))
+                 ~kinds:[ ("maps", "maps"); ("place-<slug>", "maps-place") ]
+                 {
+                   proc with
+                   B.expect = [ "the page is maps-place"; "the place is shown" ];
+                 }))
           ()
       in
       let store = store root in
@@ -1453,7 +1473,7 @@ let result_expectation () =
         && contains "destination prices are shown" !retry_reason);
       let request = Option.get !first in
       Alcotest.(check string)
-        "map-bjon compiler prompt" "map-3"
+        "map-bjon compiler prompt" "map-4"
         (match Yojson.Safe.Util.member "prompt_version" request with
         | `String version -> version
         | _ -> "");
@@ -1489,6 +1509,346 @@ let result_expectation () =
         && List.exists (( <> ) "the page is catalog") proc.expect);
       ignore root)
 
+(* map-op01–map-op06: scripted compiler protocol over minimized stored live evidence. *)
+let google_fixture name =
+  let path = "fixtures/learning-operations/" ^ name ^ ".json" in
+  Yojson.Safe.from_file (if Sys.file_exists path then path else "test/" ^ path)
+  |> Trace.t_of_yojson |> ok
+
+let google_procedure () =
+  {
+    (procedure ~slug:"search-place"
+       ~goal:
+         "Type {query} in the combobox named Search Google Maps, then click the button \
+          named Search"
+       ~args:[ B.{ name = "query"; source = From_mission { optional = false } } ]
+       ~until:[ "the page is maps-place" ] ())
+    with
+    B.steps =
+      [
+        B.Goal
+          {
+            goal = "Type {query} in the combobox named Search Google Maps";
+            hint = None;
+            until = Some [ "the page is maps-search" ];
+          };
+        B.Goal
+          {
+            goal = "Click the button named Search and read the place details";
+            hint = None;
+            until = Some [ "the page is maps-place" ];
+          };
+      ];
+    expect = [ "the page is maps-place"; "place details are shown" ];
+  }
+
+let google_operation_protocol () =
+  temp (fun root ->
+      let calls = ref 0 and attributed = ref false and errors = ref `Null in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun request ->
+            incr calls;
+            let input = Yojson.Safe.to_string request in
+            attributed := contains "names" input && contains "query" input;
+            errors := Yojson.Safe.Util.member "validation_errors" request;
+            Ok
+              (answer
+                 ~kinds:
+                   [
+                     ("maps", "maps-search");
+                     ("place-<slug>", "maps-place");
+                     ("search-<slug>", "maps-results");
+                   ]
+                 (google_procedure ())))
+          ()
+      in
+      let store = store root in
+      let trace n =
+        let trace = google_fixture ("google2-maps-" ^ n) in
+        let text =
+          List.find_map (fun (step : Trace.trace_step) -> step.text) trace.steps
+          |> Option.get
+        in
+        { trace with arguments = [ ("query", text) ] }
+      in
+      ignore (after learning store (trace "1") (result ()));
+      ignore (after learning store (trace "2") (result ()));
+      if !calls <> 1 || List.length (proposal_files ()) <> 1 then
+        Alcotest.failf "map-op03 calls=%d proposals=%d errors=%s status=%s" !calls
+          (List.length (proposal_files ()))
+          (Yojson.Safe.to_string !errors)
+          (Yojson.Safe.to_string (L.status learning));
+      bool "map-op01 feeding argument names reach compiler" !attributed;
+      bool "map-op04 raw runtime kind offers its named draft"
+        (List.length (L.drafts learning ~site:"google.com" ~kind:(Some "maps")) = 1);
+      let loaded = (List.hd (L.books learning [])).B.playbook in
+      bool "map-op05 new-site entry excludes consent"
+        (loaded.entry <> Option.get (trace "1").start_url);
+      let proc =
+        (List.hd (L.drafts learning ~site:"google.com" ~kind:(Some "maps"))).B.procedure
+      in
+      let p = Option.get proc.provenance in
+      bool "map-op04 meaningful name and raw mapping survive codec"
+        (List.assoc "maps" p.kind_mapping = "maps-search"
+        && p.entry_kind = "maps"
+        && List.length p.signature = 2))
+
+let repeated_operation_votes () =
+  temp (fun root ->
+      let calls = ref 0 in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun _ ->
+            incr calls;
+            Ok
+              (answer
+                 ~kinds:[ ("maps", "maps-search"); ("place-<slug>", "maps-place") ]
+                 (google_procedure ())))
+          ()
+      in
+      let a = google_fixture "google3-maps-1" in
+      let steps =
+        List.filter
+          (fun (s : Trace.trace_step) ->
+            s.operation <> "done"
+            && s.target <> Some Trace.{ role = "button"; label = "Reject all" })
+          a.steps
+      in
+      let steps =
+        List.filter (fun (s : Trace.trace_step) -> s.operation <> "scroll_down") steps
+      in
+      let typed =
+        List.find (fun (s : Trace.trace_step) -> s.operation = "type_text") steps
+      in
+      let click = List.find (fun (s : Trace.trace_step) -> s.operation = "click") steps in
+      let final = Option.get a.final and entry = typed.after in
+      let repeated =
+        {
+          a with
+          start_url = Some entry.url;
+          inferred_pages =
+            List.filter (fun (p : Trace.inferred_page) -> p.name <> "m") a.inferred_pages;
+          steps =
+            [
+              { typed with n = 1 };
+              { click with n = 2; after = final };
+              { click with n = 3; operation = "navigate"; target = None; after = entry };
+              { typed with n = 4 };
+              { click with n = 5; after = final };
+            ];
+          compiled = true;
+        }
+      in
+      let store = store root in
+      ignore (after learning store repeated (result ()));
+      bool "map-op03 two repeated segments in one stored trace do not meet successes"
+        (!calls = 0);
+      ignore (after learning store (google_fixture "google3-maps-2") (result ()));
+      bool "map-op03 previously compiled trace is still independent evidence"
+        (!calls = 1 && List.length (proposal_files ()) = 1))
+
+let named_consent_protocol () =
+  temp (fun root ->
+      let compiles = ref 0 in
+      let base = google_procedure () in
+      let proc =
+        {
+          base with
+          B.steps =
+            List.mapi
+              (fun n -> function
+                | B.Goal goal when n = 0 ->
+                    B.Goal { goal with until = Some [ "the page is consent" ] }
+                | step -> step)
+              base.steps;
+        }
+      in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun request ->
+            if Yojson.Safe.Util.member "task" request = `String "compile" then
+              incr compiles;
+            Ok
+              (answer ~kinds:[ ("maps", "consent"); ("place-<slug>", "maps-place") ] proc))
+          ()
+      in
+      let store = store root in
+      List.iter
+        (fun n ->
+          ignore (after learning store (google_fixture ("google3-maps-" ^ n)) (result ())))
+        [ "1"; "2" ];
+      bool "map-op05 a compiler-named consent entry is retried once and excluded"
+        (!compiles = 2 && proposal_files () = []))
+
+let pending_vocabulary_protocol () =
+  temp (fun root ->
+      ignore (install_authored ~repeatable:false (procedure ~slug:"authored" ()));
+      let named_page name repeatable =
+        {
+          (page ~repeatable ()) with
+          B.name;
+          description = name;
+          url_pattern = Some ("https://example.com/" ^ name);
+        }
+      in
+      List.iter
+        (fun (name, repeatable) ->
+          let proc =
+            {
+              (procedure ~slug:("pending-" ^ name) ~until:[ "the page is " ^ name ] ()) with
+              B.expect = [ "the page is " ^ name; name ^ " details are shown" ];
+              provenance =
+                Some
+                  B.
+                    {
+                      traces = [];
+                      model = "test";
+                      time = "earlier";
+                      tries = 0;
+                      last_failure = None;
+                      path = [ name ];
+                      entry_kind = name;
+                      exit_kind = name;
+                      signature = [];
+                      kind_mapping = [ (name, name) ];
+                      repeatable;
+                      reason = "fixture";
+                      gate = "replay";
+                      repair = false;
+                      model_calls = 0;
+                      model_cost = None;
+                    };
+            }
+          in
+          let pending =
+            { (book proc) with B.pages = [ page (); named_page name repeatable ] }
+          in
+          ignore (ok (B.propose ~caps ~book:pending ~site:"example.com" proc)))
+        [ ("account", true); ("checkout", false) ];
+      let original_files = proposal_files () in
+      let seen = ref None and calls = ref 0 in
+      let proc =
+        {
+          (procedure ~slug:"profile-operation"
+             ~until:[ "the page is profile-details" ]
+             ())
+          with
+          B.steps =
+            [
+              B.Goal
+                {
+                  goal = "Click the button named View";
+                  hint = None;
+                  until = Some [ "the page is profile-details" ];
+                };
+              B.Goal { goal = "Read the profile details"; hint = None; until = None };
+            ];
+          expect = [ "the page is profile-details"; "profile details are shown" ];
+        }
+      in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:{ (configure C.Learning_mode.Draft) with successes = 1 }
+          ~planner:(fun request ->
+            incr calls;
+            seen :=
+              Some
+                (ok
+                   (B.of_json ~file:"<map-op04 compiler seed>"
+                      (Yojson.Safe.Util.member "playbook" request)))
+                  .B.playbook;
+            Ok
+              (answer
+                 ~kinds:[ ("profile", "profile-details"); ("account", "renamed-account") ]
+                 proc))
+          ()
+      in
+      let observation =
+        Trace.{ url = "https://example.com/profile"; title = "Profile details" }
+      in
+      let trace =
+        {
+          (trace 1.) with
+          Trace.start_url = Some observation.url;
+          page_kind_path = [ "profile" ];
+          inferred_pages = [ Trace.{ name = "profile"; url_pattern = observation.url } ];
+          steps = [ { (step ()) with Trace.after = observation } ];
+          final = Some observation;
+        }
+      in
+      ignore (after learning (store root) trace (result ()));
+      bool "map-op04 all pending books contribute to one compiler seed" (!calls = 1);
+      let seed = Option.get !seen in
+      let names pages =
+        List.map (fun (p : B.page) -> p.name) pages |> List.sort String.compare
+      in
+      Alcotest.(check (list string))
+        "map-op04 installed and both pending vocabularies reach the compiler"
+        [ "account"; "catalog"; "checkout"; "profile" ]
+        (names seed.pages);
+      let file =
+        Filename.concat
+          (B.proposed_directory ~caps ())
+          "example.com-profile-operation.json"
+      in
+      let learned = ok (B.of_json ~file (Yojson.Safe.from_file file)) in
+      bool "map-op04 known names stay stable despite a compiler rename"
+        (names learned.playbook.pages
+        = [ "account"; "catalog"; "checkout"; "profile-details" ]);
+      List.iter
+        (fun name ->
+          let p = List.find (fun (p : B.page) -> p.name = name) learned.playbook.pages in
+          bool "map-op04 authored and pending non-repeatable pins are preserved"
+            (not p.repeatable))
+        [ "catalog"; "checkout" ];
+      Alcotest.(check (list string))
+        "map-op04 the complete compiler seed retains unrelated procedures"
+        [ "authored"; "pending-account"; "pending-checkout" ]
+        (List.map (fun (p : B.procedure) -> p.slug) seed.procedures
+        |> List.sort String.compare);
+      bool "map-op04 separate pending drafts survive compilation"
+        (List.length (proposal_files ()) = List.length original_files + 1))
+
+let flights_one_goal_protocol () =
+  temp (fun root ->
+      let calls = ref 0 and retry = ref false in
+      let proc =
+        {
+          (procedure ~slug:"explore" ~goal:"Click the button named Explore destinations"
+             ~until:[ "the page is flights-explore" ]
+             ())
+          with
+          B.steps =
+            [
+              B.Goal
+                {
+                  goal = "Click the button named Explore destinations";
+                  hint = None;
+                  until = Some [ "the page is flights-explore" ];
+                };
+            ];
+          expect = [ "the page is flights-explore"; "destination prices are shown" ];
+        }
+      in
+      let config = { (configure C.Learning_mode.Auto) with successes = 1 } in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps ~config
+          ~planner:(fun request ->
+            incr calls;
+            retry :=
+              !retry || Yojson.Safe.Util.member "validation_errors" request <> `String "";
+            Ok (answer ~kinds:[ ("travel-<slug>", "flights-explore") ] proc))
+          ()
+      in
+      ignore
+        (after learning (store root) (google_fixture "google3-flights-2") (result ()));
+      bool "map-op06 real one-click Explore output is retried once then dropped"
+        (!calls = 2 && !retry && proposal_files () = [] && installed_slugs () = []))
+
 let () =
   Eio_main.run (fun _ ->
       Eio.Switch.run (fun sw ->
@@ -1508,8 +1868,15 @@ let () =
                     ("inferred navigation patterns", inferred_navigation_patterns);
                     ("total learning cost", learning_cost_accounting);
                     ("config", defaults);
+                    ("map-op05 compiler-named consent is excluded", named_consent_protocol);
+                    ( "map-op04 pending vocabulary and authored pins",
+                      pending_vocabulary_protocol );
                     ("path and classification", pure);
                     ("google live paths", google_paths);
+                    ( "map-op01–05 real Google compiler protocol",
+                      google_operation_protocol );
+                    ("map-op03 independent operation votes", repeated_operation_votes);
+                    ("map-op06 real Explore one-goal rejection", flights_one_goal_protocol);
                     ("map-cnee covered by verified use", covered_by_use);
                     ("draft compile", draft_compile);
                     ("validation retry", validation);

@@ -2212,8 +2212,8 @@ let no_levels : Run.levels =
     }
 
 let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
-    ?(on_planner_step = fun _ -> ()) ?(planner_actions = 5) ?(levels = no_levels)
-    ?(model = "unconfigured")
+    ?(on_planner_step = fun _ -> ()) ?(on_arguments = fun _ -> ()) ?(planner_actions = 5)
+    ?(levels = no_levels) ?(model = "unconfigured")
     ?(decide =
       fun ~deadline:_ _ ->
         Error
@@ -2595,8 +2595,8 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
               in
               let execute on_record =
                 Run.loop ~handler ~on_book ~on_record ~drafts ~planner_action
-                  ~on_planner_step ~planner_actions ~notify:t.notify ~challenge
-                  ~challenge_attempt:t.challenge_attempt
+                  ~on_planner_step ~on_arguments ~planner_actions ~notify:t.notify
+                  ~challenge ~challenge_attempt:t.challenge_attempt
                   ~challenge_turns:t.challenge_turns
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)

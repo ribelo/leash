@@ -18,7 +18,16 @@
 (test
  (name learning_test)
  (modules learning_test)
+ (deps
+  (glob_files fixtures/learning-operations/*.json))
  (libraries leash ox_test eio_main yojson alcotest))
+
+(test
+ (name learning_operation_test)
+ (modules learning_operation_test)
+ (deps
+  (glob_files fixtures/learning-operations/*.json))
+ (libraries leash yojson alcotest))
 
 ; Eio_main picks io_uring on Linux; each ring pins locked memory against
 ; RLIMIT_MEMLOCK, and dune runs suites in parallel, so they fail with ENOMEM in

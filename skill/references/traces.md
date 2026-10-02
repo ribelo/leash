@@ -34,11 +34,11 @@ and exit 65. No service, browser, or model is needed.
 
 The version-1 derived Protocol.drive_trace projection contains time, site, mission,
 outcome, cost (number or null), duration_ms, model_calls, page_kind_path,
-inferred_pages, compiled, procedures, steps, unattended, final (URL/title or null), and optional
+inferred_pages, arguments, compiled, procedures, steps, unattended, final (URL/title or null), and optional
 error_code. inferred_pages is the session mapping: each `{name, url_pattern}` is a
 generalized URL and the name it was given, first-seen. A missing inferred_pages on an
 older file decodes as empty. Procedures
-have n, procedure, outcome, planned, and safe steps. Steps have n, operation,
+have n, procedure, outcome, planned, and safe steps. `arguments` is a list of `[name, value]` pairs (default `[]`): only bindings whose values occur in retained, non-redacted typed steps are saved; unused and password-marker bindings are discarded. Steps have n, operation, source (`operator` or `planner`, default `operator`), non_repeatable (default false), optional error code,
 optional target {role,label}, optional text, operations and targets probability
 lists ({key,probability}), after {url,title}, and elapsed_ms.
 

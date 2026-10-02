@@ -32,6 +32,7 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time 
       time = T.timestamp time;
       site;
       mission = "check catalog";
+      arguments = [];
       outcome;
       cost = Some 0.125;
       duration_ms = 200;
@@ -191,6 +192,8 @@ let capture () =
 
 let scripted_steps () =
   let c = T.capture ~mission:"fill search" ~now:0. in
+  T.arguments c
+    [ ("search", "alice"); ("token", "unused secret"); ("password", "[password]") ];
   let handle = ok (P.Handle.of_string "t_trace") in
   let sid = ok (P.Snapshot_id.of_string "s_trace") in
   let state = ref false in
@@ -304,6 +307,10 @@ let scripted_steps () =
   Alcotest.(check int)
     "trace-qe8c partial capture after failure" (List.length result.steps)
     (List.length saved.steps);
+  Alcotest.(check (list (pair string string)))
+    "map-op01 only feeding non-redacted arguments are durable"
+    [ ("search", "alice") ]
+    saved.arguments;
   let first = List.hd saved.steps in
   Alcotest.(check (list (pair string (float 0.))))
     "trace-zbb9 upper-case JEV operation probabilities survive canonically"
@@ -317,6 +324,7 @@ let scripted_steps () =
     "trace-zbb9 target from before action" (Some "Search")
     (Option.map (fun (t : P.Trace.trace_target) -> t.label) first.target);
   let redacted = T.capture ~mission:"password backstop" ~now:0. in
+  T.arguments redacted [ ("password", "[password]"); ("secret", "never persist") ];
   T.step redacted { (List.hd result.steps) with P.text = Some "[password]" };
   let password =
     T.finish redacted ~now:1.
@@ -325,6 +333,8 @@ let scripted_steps () =
   Alcotest.(check (option string))
     "trace-uovo literal password marker retained" (Some "[password]")
     (List.hd password.steps).text;
+  Alcotest.(check (list (pair string string)))
+    "map-op01 password and unrelated arguments do not leak" [] password.arguments;
   temp (fun root ->
       let store = T.create ~caps ~root () in
       let path = ok (T.write store saved) in

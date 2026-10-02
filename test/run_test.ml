@@ -2415,6 +2415,10 @@ let nonrepeatable_no_recovery () =
       {
         traces = [];
         model = "fixture";
+        entry_kind = "";
+        exit_kind = "";
+        signature = [];
+        kind_mapping = [];
         time = "now";
         tries = 0;
         last_failure = None;

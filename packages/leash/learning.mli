@@ -18,13 +18,20 @@ val create :
 
 val config : t -> Config.learning
 
+val operations :
+  ?mapping:(string * string) list ->
+  ?declared:Playbook.page list ->
+  Trace.t ->
+  Learning_operation.t list
+(** map-op01: pure done-trace segmentation; see {!Learning_operation}. *)
+
 val path : string list -> string list
 (** Distinct kinds in first-visit order, with [unknown] and empty names removed. *)
 
 val matching_path : Trace.t -> string list
 (** {!path} of the trace, excluding a kind observed only on a host other than the
-    mission's final page. The stored path is not rewritten. Compile and agreement compare
-    this list; operations and targets stay exact. *)
+    mission's final page. The stored path is not rewritten. Legacy repair agreement uses
+    this list; new operation agreement compares entry kind and exact action targets. *)
 
 val agreement : Trace.t list -> bool
 val classify : Playbook.page list -> Trace.t list -> bool * string

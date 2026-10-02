@@ -238,6 +238,7 @@ val loop :
   ?planner_action:
     (Protocol.planner_action -> (Protocol.action_result, Protocol.error) result) ->
   ?on_planner_step:(Protocol.planner_step -> unit) ->
+  ?on_arguments:((string * string) list -> unit) ->
   ?pause_ms:(int -> unit) ->
   args ->
   (Protocol.run_result, Protocol.error) result

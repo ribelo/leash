@@ -15,6 +15,8 @@ Prefer `leash drive MISSION` for a goal: it learns reusable procedures; manual c
 
 The planner owns interruptions. Its `notify` answer sends a non-blocking desktop message; JEV only blocks. CAPTCHA attempts use visible snapshot-row actions only, never raw JavaScript, invented coordinates, or external solvers. Attempts default to two planner turns before `captcha` handoff; expiry returns `blocked` with `detail.challenge`, not a promise the challenge was solved. See `leash help drive` for configuration and the `unattended` audit.
 
+Learning matches operations entered from one page kind across independent successful traces; complete paths may differ. Consent and off-final-host operations are excluded. Learned top-level procedures require two goals, an exit-kind expectation, and a meaningful result check. Wait for `status.learning.pending = 0`, then inspect drafts and provenance rather than treating the drive reply as compile evidence. Kind names come from observed titles and labels; raw trace keys and generalized URL patterns are preserved. See `leash help playbooks` and `leash help traces`.
+
 ## Handle
 
 `leash new` and `leash take` return a handle. Keep it: it is the only way to act on that tab. There is no owner and no session default. `leash list` never shows a handle. Share a handle only when you mean to share the tab.

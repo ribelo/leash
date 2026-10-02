@@ -126,6 +126,9 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
       let on_page ~url ~kind ~pattern =
         Option.iter (fun c -> Traces.page c ~url ~kind ~pattern) capture
       in
+      let on_arguments values =
+        Option.iter (fun c -> Traces.arguments c values) capture
+      in
       let on_step step = Option.iter (fun c -> Traces.step c step) capture in
       let on_planner_step step =
         Option.iter (fun c -> Traces.planner_step c step) capture
@@ -197,7 +200,8 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
               let outcome =
                 try
                   Tabs.run ?learning ~planner_actions ~on_page ~on_step ~on_planner_step
-                    ~meter ?levels ~model ?decide ?text_helper ?installed tabs ~tab args
+                    ~on_arguments ~meter ?levels ~model ?decide ?text_helper ?installed
+                    tabs ~tab args
                 with exn ->
                   cleanup ();
                   raise exn

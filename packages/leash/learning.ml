@@ -3,6 +3,9 @@ module P = Protocol
 module S = Ox_caps.Cap_sys
 module F = Ox_caps.Cap_stdlib
 module U = Ox_caps.Cap_unix
+module O = Learning_operation
+
+let operations = O.segment
 
 type caps =
   < Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.time >
@@ -314,7 +317,12 @@ let drafts t ~site ~kind =
                &&
                match (p.path, kind) with
                | first :: _, Some kind ->
-                   Page_kind.playbook_name first = Page_kind.playbook_name kind
+                   let named =
+                     Option.value ~default:kind (List.assoc_opt kind p.kind_mapping)
+                   in
+                   first = named
+                   || p.kind_mapping = []
+                      && Page_kind.playbook_name first = Page_kind.playbook_name kind
                | _ -> false ->
             Some
               B.
@@ -436,7 +444,7 @@ let inferred_pages traces =
        (fun (p : Page_kind.draft_page) ->
          B.
            {
-             name = Page_kind.playbook_name p.name;
+             name = p.name;
              description = "Inferred " ^ p.name;
              url_pattern = Some (Page_kind.playbook_pattern p.url_pattern);
              text_marker = None;
@@ -490,6 +498,13 @@ let trace_input trace =
                      Option.fold ~none:`Null
                        ~some:(fun text -> `Assoc [ ("arg_candidate", `String text) ])
                        s.text );
+                   ("source", `String s.source);
+                   ( "mission_arguments",
+                     `List
+                       (List.filter_map
+                          (fun (name, value) ->
+                            if s.text = Some value then Some (`String name) else None)
+                          trace.arguments) );
                    ("after", Trace.yojson_of_trace_page s.after);
                    ("error", Option.fold ~none:`Null ~some:(fun s -> `String s) s.error);
                  ])
@@ -511,6 +526,7 @@ let placeholders text =
 
 let validate_generalization book traces (proc : B.procedure) =
   let* () = B.check_procedure book proc in
+  let* () = B.check_goal_count ~minimum:2 book proc in
   let goals =
     List.filter_map (function B.Goal goal -> Some goal | _ -> None) proc.steps
   in
@@ -720,15 +736,47 @@ let install ?revision t file slug (result : P.run_result) =
         P.installed = List.sort_uniq String.compare (slug :: result.installed);
       }
 
-let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
-    (result : P.run_result) =
+let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~existing
+    ~repair ~snapshot (result : P.run_result) =
   let planner request =
     Model_usage.with_meter (observe_usage meter) (fun () -> t.planner request)
   in
-  let first =
-    List.hd (List.sort (fun (a : Trace.t) b -> String.compare a.time b.time) traces)
+  let traces = List.sort (fun (a : Trace.t) b -> String.compare a.time b.time) traces in
+  let first = List.hd traces in
+  let operation =
+    Option.map
+      (fun operation ->
+        let mapping =
+          Option.fold ~none:[]
+            ~some:(fun (book : B.loaded) -> Learning_pages.mapping book.playbook)
+            existing
+        in
+        let declared =
+          Option.fold ~none:[]
+            ~some:(fun (book : B.loaded) -> book.playbook.pages)
+            existing
+        in
+        match O.segment ~mapping ~declared first with
+        | representative :: _ -> representative
+        | [] -> operation)
+      operation
   in
   let pages = inferred_pages traces in
+  let known =
+    match existing with
+    | None -> []
+    | Some (b : B.loaded) ->
+        Learning_pages.mapping b.playbook
+        @ List.map (fun (p : B.page) -> (p.name, p.name)) b.playbook.pages
+        @ List.filter_map
+            (fun (page : B.page) ->
+              Option.map
+                (fun (old : B.page) -> (page.name, old.name))
+                (List.find_opt
+                   (fun (old : B.page) -> old.url_pattern = page.url_pattern)
+                   b.playbook.pages))
+            pages
+  in
   let seed =
     match existing with
     | Some (b : B.loaded) ->
@@ -740,7 +788,8 @@ let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
                 (fun (page : B.page) ->
                   not
                     (List.exists
-                       (fun (old : B.page) -> old.name = page.name)
+                       (fun (old : B.page) ->
+                         old.name = page.name || old.url_pattern = page.url_pattern)
                        b.playbook.pages))
                 pages;
         }
@@ -754,7 +803,7 @@ let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
                   (Option.fold ~none:""
                      ~some:(fun (p : Trace.trace_page) -> p.url)
                      first.final)
-                first.start_url;
+                (match entry_url with Some url -> Some url | None -> first.start_url);
             description = "Learned " ^ first.site;
             pages;
             procedures = [];
@@ -762,20 +811,74 @@ let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
             scripts = None;
           }
   in
-  let repeatable, reason = classify seed.pages traces in
+  let name_kind mapping key =
+    match
+      List.find_opt
+        (fun (raw, _) -> raw = key || Page_kind.playbook_name raw = key)
+        mapping
+    with
+    | Some (_, name) -> name
+    | None -> key
+  in
+  let classify_named (book : B.t) mapping =
+    classify book.B.pages
+      (List.map
+         (fun (trace : Trace.t) ->
+           {
+             trace with
+             page_kind_path = List.map (name_kind mapping) trace.page_kind_path;
+           })
+         traces)
+  in
+  let repeatable, reason = classify_named seed known in
   let repeatable, reason =
     match repair with
     | Some { B.provenance = Some p; _ } ->
         (p.repeatable && repeatable, if repeatable then p.reason else reason)
     | _ -> (repeatable, reason)
   in
-  let agreed = agreement traces in
+  let agreed =
+    match operation with
+    | None -> agreement traces
+    | Some operation ->
+        List.for_all
+          (fun (trace : Trace.t) ->
+            trace.outcome = "done" && trace.error_code = None
+            && List.for_all (fun (s : Trace.trace_step) -> s.error = None) (steps trace)
+            && signature trace = O.signature operation
+            &&
+            match trace.page_kind_path with
+            | entry :: _ -> entry = operation.entry_kind
+            | [] -> false)
+          traces
+  in
   let request errors =
     `Assoc
       [
         ("prompt_version", `String Planner.learning_prompt_version);
         ("task", `String (if repair = None then "compile" else "repair"));
         ("traces", `List (List.map trace_input traces));
+        ("page_observations", Learning_pages.observations traces);
+        ("kind_mapping", `Assoc (List.map (fun (key, name) -> (key, `String name)) known));
+        ( "operation",
+          Option.fold ~none:`Null
+            ~some:(fun (op : O.t) ->
+              `Assoc
+                [
+                  ("entry_kind", `String op.entry_kind);
+                  ("exit_kind", `String op.exit_kind);
+                  ( "arguments",
+                    `List
+                      (List.map
+                         (fun (n, names) ->
+                           `Assoc
+                             [
+                               ("step", `Int n);
+                               ("names", `List (List.map (fun name -> `String name) names));
+                             ])
+                         op.arguments) );
+                ])
+            operation );
         ("trace_files", `List (List.map (fun s -> `String s) files));
         ("playbook", B.yojson_of_t seed);
         ("repair", Option.fold ~none:`Null ~some:B.yojson_of_procedure repair);
@@ -791,7 +894,44 @@ let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
     let proc =
       match repair with Some old -> { proc with B.slug = old.slug } | None -> proc
     in
-    let* () = validate_generalization seed traces proc in
+    let* book, mapping = Learning_pages.name ~known seed json in
+    let* () =
+      match operation with
+      | Some op when name_kind mapping op.entry_kind = "consent" ->
+          Error "named consent operations cannot become procedures"
+      | _ -> Ok ()
+    in
+    let repeatable_now, reason_now = classify_named book mapping in
+    let repeatable = repeatable && repeatable_now in
+    let reason = if repeatable_now then reason else reason_now in
+    let* () = validate_generalization book traces proc in
+    let* () =
+      match operation with
+      | None -> Ok ()
+      | Some op ->
+          let expected_kind =
+            Option.value ~default:op.exit_kind (List.assoc_opt op.exit_kind mapping)
+          in
+          if
+            List.exists
+              (fun sentence ->
+                B.resolve book.pages sentence = Ok (B.Page_kind expected_kind))
+              proc.B.expect
+          then Ok ()
+          else Error ("operation expect must check exit kind " ^ expected_kind)
+    in
+    let* _ =
+      B.of_json ~file:"<learning>"
+        (B.yojson_of_t
+           {
+             book with
+             procedures =
+               proc
+               :: List.filter
+                    (fun (old : B.procedure) -> old.slug <> proc.slug)
+                    book.procedures;
+           })
+    in
     if
       (not repeatable) && repair = None
       && ((not agreed) || get "confirm" json <> `Bool true)
@@ -801,12 +941,12 @@ let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
          confirmation"
     else if
       (not repeatable) && repair <> None
-      && (get "confirm" json <> `Bool true || not (snapshot_agrees seed snapshot proc))
+      && (get "confirm" json <> `Bool true || not (snapshot_agrees book snapshot proc))
     then
       Error
         "agreement-repair needs existing page kinds and target rows in the failing \
          snapshot"
-    else Ok proc
+    else Ok (proc, book, mapping, repeatable, reason)
   in
   let answer =
     let* json = planner (request "") in
@@ -822,11 +962,16 @@ let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
   | Error why ->
       t.warn ("learning compile dropped: " ^ why);
       result
-  | Ok proc -> (
+  | Ok (proc, seed, mapping, repeatable, reason) -> (
       let gate =
         if repeatable then "replay"
         else if repair <> None then "agreement-repair"
         else "agreement"
+      in
+      let origin =
+        match prior with
+        | Some p -> Some p
+        | None -> Option.bind repair (fun (p : B.procedure) -> p.provenance)
       in
       let provenance =
         B.
@@ -837,9 +982,34 @@ let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
             tries = Option.fold ~none:0 ~some:(fun (p : B.provenance) -> p.tries) prior;
             last_failure = Option.bind prior (fun (p : B.provenance) -> p.last_failure);
             path =
-              Option.fold ~none:(matching_path first)
+              Option.fold
+                ~none:(List.map (name_kind mapping) (matching_path first))
                 ~some:(fun (p : B.provenance) -> p.path)
                 prior;
+            entry_kind =
+              Option.fold
+                ~none:
+                  (Option.fold ~none:""
+                     ~some:(fun (p : B.provenance) -> p.entry_kind)
+                     origin)
+                ~some:(fun (op : O.t) -> op.entry_kind)
+                operation;
+            exit_kind =
+              Option.fold
+                ~none:
+                  (Option.fold ~none:""
+                     ~some:(fun (p : B.provenance) -> p.exit_kind)
+                     origin)
+                ~some:(fun (op : O.t) -> op.exit_kind)
+                operation;
+            signature =
+              Option.fold
+                ~none:
+                  (Option.fold ~none:[]
+                     ~some:(fun (p : B.provenance) -> p.signature)
+                     origin)
+                ~some:O.signature operation;
+            kind_mapping = mapping;
             repeatable;
             reason;
             gate;
@@ -1046,6 +1216,8 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
               ~repair:(Some proc) ~snapshot:result.final result
         | None -> result)
     | _ when done_ ->
+        (* map-op03: one independent stored trace votes once for an operation.
+           compiled is historical provenance, not a whole-trace consumption bit. *)
         let candidates =
           match Traces.list store ~site:trace.site ~outcome:"done" () with
           | Ok rows -> rows
@@ -1053,86 +1225,109 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
               t.warn why;
               []
         in
-        let current_path = matching_path trace in
-        let candidates =
-          List.filter
-            (fun (_, t) ->
-              matching_path t = current_path
-              && current_path <> []
-              && steps t <> []
-              && not t.compiled)
-            candidates
+        let vocabulary =
+          Option.to_list existing
+          @ List.map
+              (fun draft -> draft.book)
+              (List.filter (fun draft -> draft.book.playbook.site = trace.site) pending)
         in
-        let covered =
-          match existing with
-          | None -> false
-          | Some b ->
-              List.exists
-                (fun (p : B.procedure) ->
-                  (* map-cnee: a run that verified an installed procedure is covered by
-                     it, whatever page the procedure was entered from. The learned path
-                     starts where the compiled traces' procedure started, so a later run
-                     that reached it from another page (Flights: [flights; travel-slug]
-                     against a learned [travel-slug]) is not new evidence. *)
-                  (match p.provenance with
-                    | Some prov -> prov.path = current_path
-                    | None -> false)
-                  || List.exists
-                       (fun (saved : Trace.trace_procedure) ->
-                         saved.outcome = "verified" && saved.procedure = p.slug
-                         && not saved.planned)
-                       trace.procedures)
-                b.playbook.procedures
+        let declared =
+          List.concat_map (fun (book : B.loaded) -> book.playbook.pages) vocabulary
         in
-        let pending =
-          List.exists
-            (fun d ->
-              d.book.playbook.site = trace.site
-              && Option.fold ~none:false
-                   ~some:(fun p -> p.B.path = current_path)
-                   d.proc.provenance)
-            pending
+        let mapping =
+          List.concat_map
+            (fun (book : B.loaded) -> Learning_pages.mapping book.playbook)
+            vocabulary
         in
-        let candidates =
-          let traces = List.map snd candidates in
-          let pages =
-            match existing with
-            | Some book -> book.playbook.pages
-            | None -> inferred_pages traces
-          in
-          if fst (classify pages traces) then candidates
-          else
-            let groups =
-              List.fold_left
-                (fun groups ((_, trace) as item) ->
-                  let same, different =
-                    List.partition
-                      (fun group ->
-                        match group with
-                        | (_, head) :: _ -> signature head = signature trace
-                        | [] -> false)
-                      groups
-                  in
-                  let group = List.concat same @ [ item ] in
-                  group :: different)
-                [] candidates
+        List.fold_left
+          (fun (result : P.run_result) (operation : O.t) ->
+            let pending =
+              proposals t |> List.filter (fun d -> d.book.playbook.site = trace.site)
             in
-            match
-              List.find_opt
-                (fun group ->
-                  List.length group >= t.config.successes
-                  && agreement (List.map snd group))
-                groups
-            with
-            | Some group -> group
-            | None -> []
-        in
-        if List.length candidates < t.config.successes || covered || pending then result
-        else
-          let candidates = List.filteri (fun i _ -> i < t.config.successes) candidates in
-          compile t ~meter ~files:(List.map fst candidates)
-            ~traces:(List.map snd candidates) ~existing ~repair:None
-            ~snapshot:result.final result
+            let installed =
+              match B.list ~caps:t.caps () with
+              | Ok books ->
+                  List.find_opt (fun (b : B.loaded) -> b.playbook.site = trace.site) books
+              | Error _ -> existing
+            in
+            let covered (proc : B.procedure) =
+              Option.fold ~none:false
+                ~some:(fun (p : B.provenance) ->
+                  p.entry_kind = operation.entry_kind
+                  && p.signature = O.signature operation)
+                proc.provenance
+            in
+            let covered =
+              Option.fold ~none:false
+                ~some:(fun (b : B.loaded) -> List.exists covered b.playbook.procedures)
+                installed
+              || List.exists (fun d -> covered d.proc) pending
+            in
+            let cohort =
+              List.filter_map
+                (fun (file, trace) ->
+                  Option.map
+                    (fun op -> (file, O.project trace op))
+                    (List.find_opt (O.agrees operation)
+                       (O.segment ~mapping ~declared trace)))
+                candidates
+              |> List.sort (fun (_, (a : Trace.t)) (_, (b : Trace.t)) ->
+                  String.compare a.time b.time)
+            in
+            if
+              covered || operation.entry_kind = ""
+              || List.length cohort < t.config.successes
+            then result
+            else
+              let cohort = List.filteri (fun i _ -> i < t.config.successes) cohort in
+              (* A preceding operation's proposal is also vocabulary for this site's map. *)
+              let existing =
+                match (installed, pending) with
+                | None, [] -> None
+                | base, _ ->
+                    let base =
+                      match base with Some book -> book | None -> (List.hd pending).book
+                    in
+                    let playbook =
+                      List.fold_left
+                        (fun (book : B.t) draft ->
+                          let add_page pages (page : B.page) =
+                            if
+                              List.exists
+                                (fun (old : B.page) ->
+                                  old.name = page.name
+                                  || old.url_pattern = page.url_pattern)
+                                pages
+                            then pages
+                            else pages @ [ page ]
+                          in
+                          let add_proc procs (proc : B.procedure) =
+                            if
+                              List.exists
+                                (fun (old : B.procedure) -> old.slug = proc.slug)
+                                procs
+                            then procs
+                            else procs @ [ proc ]
+                          in
+                          {
+                            book with
+                            pages =
+                              List.fold_left add_page book.pages draft.book.playbook.pages;
+                            procedures =
+                              List.fold_left add_proc book.procedures
+                                draft.book.playbook.procedures;
+                          })
+                        base.playbook pending
+                    in
+                    Some { base with playbook }
+              in
+              compile
+                ?entry_url:(O.first_entry ~mapping ~declared trace)
+                ~operation t ~meter ~files:(List.map fst cohort)
+                ~traces:(List.map snd cohort) ~existing ~repair:None
+                ~snapshot:result.final result)
+          result
+          (O.segment ~mapping ~declared trace)
     | _ -> result
 
 (* Compile, confirmation and repair run after the reply, on the service switch,

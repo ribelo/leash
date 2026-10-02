@@ -51,6 +51,10 @@ type provenance = {
   tries : int;
   last_failure : string option;
   path : string list;
+  entry_kind : string;
+  exit_kind : string;
+  signature : (string * Trace.trace_target option) list;
+  kind_mapping : (string * string) list;
   repeatable : bool;
   reason : string;
   gate : string;
@@ -242,6 +246,10 @@ val list :
 val show :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) result
 (** The installed playbook whose directory is called this. *)
+
+val check_goal_count :
+  minimum:int -> ?file:string -> t -> procedure -> (unit, string) result
+(** map-op06: the shared top-level goal-count rule; a use: sub-procedure is exempt. *)
 
 val check_procedure : ?file:string -> t -> procedure -> (unit, string) result
 (** run-rq6i run-m0r8: the loader's own rules for one procedure, applied to a procedure

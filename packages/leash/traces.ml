@@ -311,6 +311,7 @@ type captured_step = Operator of P.step | Planner of P.planner_step
 
 type capture = {
   mission : string;
+  mutable arguments : (string * string) list;
   started : float;
   mutable first : string option;
   mutable start_url : string option;
@@ -323,6 +324,7 @@ type capture = {
 let capture ~mission ~now =
   {
     mission;
+    arguments = [];
     started = now;
     first = None;
     start_url = None;
@@ -331,6 +333,13 @@ let capture ~mission ~now =
     last_page = None;
     steps = [];
   }
+
+let arguments t values =
+  List.iter
+    (fun (name, value) ->
+      t.arguments <-
+        (name, value) :: List.filter (fun pair -> pair <> (name, value)) t.arguments)
+    values
 
 let page t ~url ~kind ~pattern =
   if t.first = None then t.first <- site url;
@@ -522,6 +531,13 @@ let finish t ~now outcome =
       time = timestamp now;
       site = Option.value ~default:"unknown" t.first;
       mission = t.mission;
+      arguments =
+        List.rev t.arguments
+        |> List.filter (fun (_, value) ->
+            value <> "[password]"
+            && List.exists
+                 (fun (step : P.Trace.trace_step) -> step.text = Some value)
+                 steps);
       outcome = outcome_name;
       cost;
       duration_ms = max 0 (int_of_float ((now -. t.started) *. 1000.));

@@ -127,6 +127,7 @@ val run :
   ?on_page:(url:string -> kind:string option -> pattern:string option -> unit) ->
   ?on_step:(Protocol.step -> unit) ->
   ?on_planner_step:(Protocol.planner_step -> unit) ->
+  ?on_arguments:((string * string) list -> unit) ->
   ?planner_actions:int ->
   ?levels:Run.levels ->
   ?model:string ->

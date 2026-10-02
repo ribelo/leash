@@ -36,6 +36,7 @@ type t = {
   time : string;
   site : string;
   mission : string;
+  arguments : (string * string) list;
   outcome : string;
   cost : float option; [@json.null]
   duration_ms : int;
@@ -52,6 +53,7 @@ type t = {
   error_code : string option;
 }
 
+val trace_target_of_yojson : Yojson.Safe.t -> (trace_target, string) result
 val t_of_yojson : Yojson.Safe.t -> (t, string) result
 val yojson_of_trace_target : trace_target -> Yojson.Safe.t
 val yojson_of_trace_page : trace_page -> Yojson.Safe.t

@@ -37,6 +37,7 @@ type t = {
   time : string;
   site : string;
   mission : string;
+  arguments : (string * string) list; [@json.default []]
   outcome : string;
   cost : float option; [@json.null]
   duration_ms : int;

@@ -156,6 +156,10 @@ type provenance = {
   tries : int;
   last_failure : string option;
   path : string list;
+  entry_kind : string; [@json.default ""]
+  exit_kind : string; [@json.default ""]
+  signature : (string * Trace.trace_target option) list; [@json.default []]
+  kind_mapping : (string * string) list; [@json.default []]
   repeatable : bool;
   reason : string;
   gate : string;
@@ -486,6 +490,29 @@ let valid_name s =
    a runaway recursion the file's cycle walk would have caught — and its expectations can
    name a page kind the playbook does not declare. [file] only names the origin in the
    message. *)
+(* map-op06: share the loader's top-level/use distinction with learning. Authored
+   scripts and navigations retain their existing rule; learned operations need two goals. *)
+let check_goal_count ~minimum ?(file = "<procedure>") (book : t) (proc : procedure) =
+  let goals =
+    List.length (List.filter (function Goal _ -> true | _ -> false) proc.steps)
+  in
+  let sub =
+    List.exists
+      (fun (parent : procedure) ->
+        parent.slug <> proc.slug
+        && List.exists
+             (function Use step -> step.use = proc.slug | _ -> false)
+             parent.steps)
+      book.procedures
+  in
+  if goals >= minimum || sub then Ok ()
+  else
+    Error
+      (Printf.sprintf
+         "%s: procedure %s needs at least %d goal steps; fewer are allowed only as a \
+          use: sub-procedure"
+         file proc.slug minimum)
+
 let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
   let ( let* ) = Result.bind in
   let procedure = proc.slug in
@@ -1027,13 +1054,13 @@ let validate ~file ~dir (book : t) =
     if book.procedures = [] || List.exists has_goal book.procedures then
       let rec orphan = function
         | [] -> Ok ()
-        | proc :: rest when has_goal proc || List.mem proc.slug subs -> orphan rest
-        | proc :: _ ->
-            Error
-              (Printf.sprintf
-                 "%s: procedure %s has no goal step; a script-only procedure is \
-                  allowed                   only as a use: sub-procedure"
-                 file proc.slug)
+        | proc :: rest ->
+            let* () =
+              if proc.provenance <> None then check_goal_count ~minimum:2 ~file book proc
+              else if has_goal proc || List.mem proc.slug subs then Ok ()
+              else check_goal_count ~minimum:1 ~file book proc
+            in
+            orphan rest
       in
       orphan book.procedures
     else Error (file ^ ": " ^ script_only_message)

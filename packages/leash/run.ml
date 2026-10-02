@@ -476,7 +476,7 @@ type steps_outcome =
       (** The run ended inside a step: a dialog, or a planner turn a called procedure
           asked for. *)
 
-let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner_actions ~planner_action ~on_planner_step ~notify ~challenge ~challenge_attempt ~challenge_turns ~pause_ms ~now ~installed ~page_kinds ~drafts (args : args) : (P.run_result, P.error) result =
+let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner_actions ~planner_action ~on_planner_step ~on_arguments ~notify ~challenge ~challenge_attempt ~challenge_turns ~pause_ms ~now ~installed ~page_kinds ~drafts (args : args) : (P.run_result, P.error) result =
   let installed = installed_playbooks installed in
   (* map-yzqp: one mission-wide latch also survives successful nested uses. *)
   let unsafe = ref false in
@@ -804,13 +804,17 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
               go st (acc @ [ (name, value) ]) rest
           | Playbook.From_mission { optional } -> (
               match (List.assoc_opt name values, List.assoc_opt name st.known) with
-              | Some value, _ | None, Some value -> go st (acc @ [ (name, value) ]) rest
+              | Some value, _ | None, Some value ->
+                   on_arguments [ (name, value) ];
+                   go st (acc @ [ (name, value) ]) rest
               | None, None -> (
                   match ask_name st name with
                   | Error error -> Error error
                   | Ok (Unfilled _) when optional -> go st acc rest
                   | Ok (Unfilled _ as unfilled) -> Ok unfilled
-                  | Ok (Filled (st, answered)) -> go st (acc @ answered) rest)))
+                  | Ok (Filled (st, answered)) ->
+                       on_arguments answered;
+                       go st (acc @ answered) rest)))
     in
     go st [] declared
   in
@@ -2038,7 +2042,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
 let loop ~(handler : handler) ~now ~installed ?page_kinds ?(drafts = fun ~site:_ ~kind:_ -> []) ?(on_book = fun _ -> ()) ?(on_record = fun (_ : Yojson.Safe.t) -> Ok ())
     ?(notify = fun _ -> Ok ()) ?(challenge = fun _ -> None)
     ?(challenge_attempt = true) ?(challenge_turns = 2) ?(planner_actions = 5) ?(planner_action = fun _ -> Error (internal "planner actions unavailable"))
-    ?(on_planner_step = fun _ -> ()) ?(pause_ms = fun _ -> ()) (args : args) =
+    ?(on_planner_step = fun _ -> ()) ?(on_arguments = fun _ -> ()) ?(pause_ms = fun _ -> ()) (args : args) =
   if args.max_procedures < 1 || args.deadline_s < 1 || args.max_steps < 1 then
     Error (invalid "run max_steps, max_procedures and deadline_s must be positive")
   else if (match args.start_url with Some url -> not (valid_start_url url) | None -> false) then
@@ -2134,7 +2138,7 @@ let loop ~(handler : handler) ~now ~installed ?page_kinds ?(drafts = fun ~site:_
     in
     let outcome = Model_usage.with_meter meter (fun () ->
       let page_kinds = match page_kinds with Some session -> session | None -> Page_kind.session () in
-      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_book ~on_record ~planner_actions ~planner_action ~on_planner_step ~notify ~challenge ~challenge_attempt ~challenge_turns ~pause_ms ~now ~installed ~page_kinds ~drafts args) ()
+      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_book ~on_record ~planner_actions ~planner_action ~on_planner_step ~on_arguments ~notify ~challenge ~challenge_attempt ~challenge_turns ~pause_ms ~now ~installed ~page_kinds ~drafts args) ()
       {
         retc = Fun.id;
         exnc = raise;
