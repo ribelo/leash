@@ -46,13 +46,31 @@ manual commands for inspection and for steps drive cannot do. Learning defaults 
 proposals are reported, not silently installed; `learning.mode = "off"` disables learning.
 With `--tab HANDLE`, the supplied tab stays open whatever the outcome. Without `--tab`,
 drive opens and closes its own tab on success, failure, blocked, deadline, or error. A
-handoff keeps that owned tab until resume, which closes it; a supplied tab stays open.
+planner handoff waits at most `handoff.timeout_s` (300 seconds by default). On expiry,
+the result is `handoff-expired`; the tab stays open as an agent tab, `with_human` is
+cleared, and a second notification says "the agent gave up waiting; the tab is still open".
+Normal idle cleanup applies later. A resumed mission handoff also leaves the tab open.
 
 The planner can answer `continue` with up to `learning.planner_actions` ordinary
 click/fill/press/scroll/nav actions naming rows from its snapshot. They use the public
 revalidation path, never raw JavaScript. They appear in `planner_turns[].steps` and in
 durable trace steps with `source: "planner"`, including a failed attempt. Control then
 returns to JEV on the current page.
+
+JEV only answers `BLOCKED`; the planner owns every interruption. Its `notify` answer
+sends one line through `notify.command` without handing over the tab, then returns to
+the loop. Notifications and handoff waits are recorded in `unattended`; failed or
+unavailable notification commands never fail a mission.
+
+A detected CAPTCHA/bot challenge triggers the planner before JEV. With
+`challenges.attempt = true` (default), it may try ordinary actions on visible snapshot
+rows, bounded by `learning.planner_actions` per turn and `challenges.turns` (default 2).
+No raw JavaScript, invented coordinates, or external solver is allowed. Clearing the
+challenge returns to JEV. Disabling attempts or exhausting the bound hands off with
+reason `captcha`; its expiry ends `blocked` with `detail.challenge` naming the origin.
+Attempts, turns and outcomes are recorded in `unattended`. This is a bounded attempt,
+not a claim of measured live CAPTCHA success. Debug-only evidence is conservatively
+kept for that document until navigation; unrelated DOM mutations do not prove clearance.
 
 ## Lanes
 
@@ -73,7 +91,7 @@ A nested `use` child has its own `procedures[]` entry. It finishes before its pa
 
 Exit 0 means the service answered. It does not mean the mission succeeded. Read:
 
-- `status` — `done`, `blocked`, `failed`, `handoff`, `limit`, `deadline`, or `error`. An operator action cap is `limit`.
+- `status` — `done`, `blocked`, `failed`, `handoff`, `handoff-expired`, `limit`, `deadline`, or `error`. An operator action cap is `limit`.
 - `reason` — why it stopped, when present.
 - `playbook_choices` — decision order, including a JEV `NONE`.
 - `procedures[].slug`, `outcome` (`verified`, `failed`, `skipped`, `planned`), and `expectations`.

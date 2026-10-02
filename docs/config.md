@@ -31,6 +31,10 @@ decodes to the defaults it documents.
 | `models.jev_model` | `"typesafe/jev-1.13-20260917"` | The pinned decision model; a reply naming another model is refused (drive-e7oi). |
 | `models.chat_base_url` | `"https://openrouter.ai/api/v1"` | The text helper's base url (drive-ls3c). |
 | `models.text_model` | `"inception/mercury-2.5"` | The text helper's model (drive-ls3c). |
+| `handoff.timeout_s` | `300` | Positive human-wait deadline in seconds; expiry keeps the tab open and clears `with_human` (notif-oslv). |
+| `notify.command` | `["notify-send", "--urgency=normal", "Leash", "{message}"]` | Non-blocking planner notification argv; empty disables it. Failure is traced, not a mission failure (notif-7o8j, notif-7pha). |
+| `challenges.attempt` | `true` | Try detected CAPTCHA/bot challenges through ordinary visible snapshot rows before human handoff (notif-himb, notif-udh3). |
+| `challenges.turns` | `2` | Planner challenge-turn bound, 1–10; each continue also obeys `learning.planner_actions`. Exhaustion hands off as `captcha` (notif-p4yk, notif-tdtz). |
 | `handoff.focus_command` | empty | The argv template a handoff runs to raise the window; off by default because a handoff must not take focus (daily-n7on, operator 2026-10-01). For niri: `["niri", "msg", "action", "focus-window", "--id", "{window_id}"]` (hand-phof). |
 | `handoff.notify_command` | `notify-send --urgency=critical --app-name=Leash --action done=Done "Leash needs you" {reason}` | The argv template for the notification whose Done action resumes; critical so the daemon keeps it until answered; empty turns it off (hand-phof). |
 

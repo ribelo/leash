@@ -101,12 +101,26 @@ type models = {
     [chat_base_url + "/chat/completions"] route the planner would otherwise share with the
     text helper. All three are [models] keys, flat beside the model ids they tune. *)
 
-type handoff = { focus_command : string list; notify_command : string list }
+type handoff = {
+  timeout_s : int;
+  focus_command : string list;
+  notify_command : string list;
+}
+
 (** hand-04rb hand-phof hand-rg9h: the two desktop commands a handoff runs, each an argv
     template whose elements may carry [{tab}], [{reason}], [{url}], and [{title}], plus
     [{window_id}] for the focus command ({!Desktop}). The defaults are the spec's:
     [niri msg action focus-window --id {window_id}] and
-    [notify-send --action done=Done {reason}]. An empty list turns that step off. *)
+    [notify-send --action done=Done {reason}]. An empty list turns that step off.
+    [timeout_s] defaults to 300 and must be positive. *)
+
+type notify = { command : string list }
+(** notif-7pha: bounded best-effort argv template; [{message}] is not shell-expanded. An
+    empty command disables delivery. *)
+
+type challenges = { attempt : bool; turns : int }
+(** notif-udh3: ordinary-row planner detour, enabled by default; [turns] is 1–10 and
+    defaults to two, separately from the ordinary planner-turn budget. *)
 
 type otlp_header = { name : Text.t; value : Redact.t }
 (** A collector header; its value is redacted in config output. *)
@@ -149,6 +163,8 @@ type t = {
   otlp : otlp;
   models : models;
   handoff : handoff;
+  notify : notify;
+  challenges : challenges;
   skill : skill;
   traces : traces;
   learning : learning;

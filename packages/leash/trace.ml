@@ -32,6 +32,7 @@ type trace_procedure = {
 type inferred_page = { name : string; url_pattern : string } [@@deriving yojson]
 
 type t = {
+  unattended : Yojson.Safe.t list; [@json.default []]
   version : int;
   time : string;
   site : string;

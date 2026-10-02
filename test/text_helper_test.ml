@@ -461,10 +461,10 @@ let helper_rig ?(on_usage = fun _ -> ()) ?(replies = [ chat_reply (`String "hell
 
 (* ---------- The control seam ---------- *)
 
-let raw ?models ?decide ?text_helper tabs command =
+let raw ?models ?decide ?text_helper ?levels tabs command =
   let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   let answer =
-    Leash.Control.handle ?model:(Some jev_model) ?decide ?text_helper
+    Leash.Control.handle ?model:(Some jev_model) ?decide ?text_helper ?levels
       ?models_status:(Option.map (fun models () -> Models.status models) models)
       tabs wire
   in
@@ -475,8 +475,8 @@ let raw ?models ?decide ?text_helper tabs command =
 let new_tab tabs =
   tab (result (raw tabs (P.New { url = Some "https://example.com/"; label = None })))
 
-let drive models tabs handle goal =
-  raw ~models
+let drive ?levels models tabs handle goal =
+  raw ?levels ~models
     ~decide:(fun ~deadline request -> Models.decide ~deadline models request)
     ~text_helper:(fun () -> Models.text_helper models)
     tabs
@@ -621,11 +621,29 @@ let null_is_blocked () =
              ~chat_base_url:(Chat.url chat ""))
       in
       let handle = new_tab tabs in
-      let reply = result (drive models tabs handle goal) in
+      let levels =
+        {
+          (Models.levels models) with
+          Leash.Run.plan =
+            (fun ~deadline:_ _request ->
+              Ok
+                Leash.Run.
+                  {
+                    answer = Fail "required field value is missing";
+                    expect = [];
+                    usage = None;
+                  });
+        }
+      in
+      let reply = result (drive ~levels models tabs handle goal) in
       Alcotest.(check string) "drive-ls3c blocked" "blocked" (text "status" reply);
       Alcotest.(check (option string))
         "drive-ls3c the field is named"
-        (Some (Printf.sprintf "no value for field %S" "Search terms"))
+        (Some
+           (Printf.sprintf
+              "no value for field %S; the planner answered fail: required field value is \
+               missing"
+              "Search terms"))
         (match field "reason" reply with
         | Some (`String reason) -> Some reason
         | _ -> None);

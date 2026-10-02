@@ -13,7 +13,7 @@ the drive outcome. `Protocol.drive_trace` is the version-1 derived safe durable
 projection, not the live result type, to exclude handles, page text, records, and
 raw state. It records headers, the page-kind path (declared kinds win; otherwise
 inferred), `inferred_pages` (`{name, url_pattern}`[], default empty), procedures,
-steps, URL/title, and a `compiled` marker (default false). Operator and planner
+steps, URL/title, unattended events (default `[]`), and a `compiled` marker (default false). Operator and planner
 steps share one chronological sequence, renumbered from 1; a failed planner
 action is retained with its error code, including on a partial-failure trace.
 The safe step shape is:
@@ -155,11 +155,11 @@ Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [-
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], installed: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string}` | [errors](help/errors.md) |
+| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], installed: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string, unattended: UnattendedEvent[], detail?: {challenge: string}}` | [errors](help/errors.md) |
 
 `--url` is `start_url`: an optional explicit `http://` or `https://` URL with no userinfo. It opens a drive-owned tab; it does not replace an already populated `--tab`. The CLI rejects a bad scheme, `about:blank`, userinfo, or a non-positive `--max-steps` before it connects, as `usage` (64), and the message names a correct example. `--max-steps` is the on-the-fly executed-action cap (default 60, omitted on the wire when the caller accepts the default); the prediction cap is twice that value, including discarded stale decisions. `--max-procedures` is the playbook-lane cap (default 40). `--deadline-s` is the whole-mission budget (default 900). All three must be positive when present.
 
-Routing (fly-8xiq fly-mepw fly-yolk fly-2akp): no installed books means no playbook question and no planner call. One book is offered with `NONE` and is never forced. Many books are distinct identities plus `NONE`; an identity is `book:<loaded file>`, so two books for one site stay distinct. Books are never merged. A question holds at most 255 choices including `NONE`; a larger library uses bounded hierarchical choices and still offers `NONE`. Selecting `NONE`, or a procedure-level `NONE` or `BLOCKED`, enters the operator on the current page with the whole mission and retained progress. That is a successful route, not `BLOCKED`, not discovery, and not a planner review. No confidence-triggered planner reinterprets `NONE`.
+Routing (fly-8xiq fly-mepw fly-yolk fly-2akp): no installed books means no playbook question and no planner call. One book is offered with `NONE` and is never forced. Many books are distinct identities plus `NONE`; an identity is `book:<loaded file>`, so two books for one site stay distinct. Books are never merged. A question holds at most 255 choices including `NONE`; a larger library uses bounded hierarchical choices and still offers `NONE`. Selecting `NONE`, or a procedure-level `NONE`, enters the operator on the current page with the whole mission and retained progress. That is a successful route, not `BLOCKED`, not discovery, and not a planner review. No confidence-triggered planner reinterprets `NONE`.
 
 `output_kinds` is always present. It lists `script-record` when a prepared script produced records, then `operator-state` when the reply carries `operator_state`. `operator_state` is `key?`: omitted when the operator lane did not run. It is the bounded observed page, not validated script records, and the reply carries it without `--out`. On the fly, `data` is not a synthesized record list.
 
@@ -215,6 +215,40 @@ and are not a breakdown of the final learning-inclusive totals. Nested
 `model_cost`, not that fallback, to distinguish a priced run from unknown cost.
 
 A successful control reply is not proof the mission succeeded. Read `status`, `reason`, `operator_state` and, when present, the tagged file.
+
+## Unattended missions (L55)
+
+The planner owns every interruption; JEV `BLOCKED` routes to it and never directly
+notifies or hands off. Planner answers include `notify` with a non-empty, single-line
+`message` of at most 1024 bytes, and no actions/procedure/reason; it sends through
+`notify.command` and returns to the loop. Commands use argv substitution, never a
+shell, and are bounded to five seconds. An empty command disables delivery; command
+failure is audited without failing the mission.
+
+Handoffs default to `handoff.timeout_s = 300`. Expiry sends "the agent gave up waiting;
+the tab is still open" and ends `handoff-expired`, not a protocol error. Challenge
+expiry instead ends `blocked` with `detail.challenge` (origin). The tab stays open,
+`with_human` is cleared, and normal idle expiry restarts.
+
+Debug challenge signals and inferred challenge page kinds trigger bounded planner
+attempts before JEV. Defaults: `challenges.attempt = true`, `challenges.turns = 2`;
+turns must be 1–10. Only ordinary snapshot-row actions are available, at most
+`learning.planner_actions` per turn. No JavaScript, invented coordinates or external
+solver. Disappearance resumes JEV; disabled/exhausted attempts hand off as `captcha`.
+
+UnattendedEvent is one of:
+
+```text
+{kind: "notify", message, elapsed_ms, outcome: "sent"|"failed", error: string|null}
+{kind: "handoff", reason, elapsed_ms, outcome: "resumed"|"expired"|"failed"}
+{kind: "challenge", origin, attempt: bool, turns: int, outcome: string}
+```
+
+The ordered `unattended` list is carried by results and safe durable traces; older
+wire/trace records decode it as `[]`. Error detail preserves partial unattended
+audit too. It contains no handles or raw page state; notification text can include
+operator-facing facts such as an order ID. Live reCAPTCHA success rates are separate
+acceptance evidence, not implied by scripted protocol-seam tests.
 
 ## Types
 
@@ -395,8 +429,8 @@ Rules:
 - `drive` reuses a supplied tab, leaves it open on every outcome, and does not
   overwrite an already populated page with `start_url`. With no tab it opens
   one (`tab` is `key?`; the tab it opened is the one `final` names) and closes
-  it on every non-handoff outcome. An owned handoff tab stays open until
-  `resume` closes it; resuming a supplied tab does not close it. `start_url`,
+  it on ordinary terminal outcomes. Planner handoff, handoff expiry, and unresolved
+  challenge outcomes retain it; resuming a mission handoff never closes it. `start_url`,
   when present, is the explicit http(s) page that tab opens
   before the operator starts. On a blank tab with no `start_url`, one unambiguous http(s)
   URL in the mission is the bootstrap; none or several is `blocked` with the missing-start
@@ -487,7 +521,8 @@ Rules:
   `blocked`: it navigates nothing, executes no step, and never calls the text helper.
 - The endings are `done` (DONE verified), `blocked` (the loop stopped with nothing that
   can progress), `failed` (a procedure failed twice and the planner failed), `handoff`
-  (the planner asked for the human; the tab is left `with_human`), `limit` (the procedure
+  (the planner asked for the human, who resumed), `handoff-expired` (the configured
+  wait expired; the tab stays open with `with_human` cleared), `limit` (the procedure
   cap), `deadline` (the run deadline) and `error` (a dialog opened on the page — it is in
   `final.dialog`). A model or browser failure is a protocol **error**; when it is
   `model-unavailable` its `detail` carries the provider `code` and the trace completed so

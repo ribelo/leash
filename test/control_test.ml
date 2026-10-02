@@ -40,7 +40,7 @@ let contains text sub =
   in
   search 0
 
-let rig ?reporter ?download_dir f =
+let rig ?reporter ?download_dir ?handoff_timeout_s f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
@@ -75,7 +75,7 @@ let rig ?reporter ?download_dir f =
           }
       in
       let tabs =
-        Leash.Tabs.create ~sw ~cap:2 ~tombstone_s:3600 ?download_dir
+        Leash.Tabs.create ~sw ~cap:2 ~tombstone_s:3600 ?download_dir ?handoff_timeout_s
           {
             Leash.Tabs.chrome;
             clock = env#clock;
@@ -442,7 +442,7 @@ let budget () =
   (* L32 run-obtt: the margin covers the last expectation wait and a planner turn's
      correction call, so a run that stops at the planner still answers. *)
   Alcotest.(check int)
-    "run-obtt a run outlasts its deadline by the planner's correction call" 975_000
+    "notif-oslv handler includes planner and configured human wait" 1_275_000
     (ms
        (P.Drive
           {
@@ -2368,7 +2368,12 @@ let drive_temporary_cleanup () =
                 (decide_done ~deadline request)
           in
           let reply =
-            Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide tabs
+            Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide
+              ~levels:
+                (levels_with
+                   ~plan:Run.{ answer = Fail "scripted stop"; expect = []; usage = None }
+                   [] (ref []))
+              tabs
               (run_wire "Open https://example.com and inspect the page")
             |> Yojson.Safe.from_string |> P.decode_reply |> reply_of
           in
@@ -2411,7 +2416,7 @@ let drive_temporary_cleanup () =
       Alcotest.(check bool)
         "daily-9ggi exception closes temporary tab" true
         (listed = `List []));
-  rig (fun _ _ _ tabs fake ->
+  rig ~handoff_timeout_s:1 (fun env sw _ tabs fake ->
       let f = fake () in
       page_script f (fixture "unlabelled-controls-chrome.json") "Sign in";
       document_at ~title:"Sign in" ~url:product_url f;
@@ -2433,25 +2438,31 @@ let drive_temporary_cleanup () =
       in
       let levels = levels_with ~plan [ "automationexercise.com"; "DONE" ] (ref []) in
       let body =
-        Leash.Control.handle ~model:"fixture-model" ~installed:[ book ] ~levels
-          ~decide:decide_done tabs
-          (run_wire
-             "Inspect the catalogue at https://automationexercise.com/product_details/1")
-        |> Yojson.Safe.from_string |> P.decode_reply |> decoded
+        with_ticking_clock env sw (fun () ->
+            Leash.Control.handle ~model:"fixture-model" ~installed:[ book ] ~levels
+              ~decide:decide_done tabs
+              (run_wire
+                 "Inspect the catalogue at \
+                  https://automationexercise.com/product_details/1")
+            |> Yojson.Safe.from_string |> P.decode_reply |> decoded)
       in
       Alcotest.(check bool)
-        "daily-9ggi genuine handoff returned" true
-        (get "status" body = str "handoff");
+        "notif-oslv bounded handoff expires" true
+        (get "status" body = str "handoff-expired");
       let listed = result (request tabs "alice" P.List_tabs) |> get "tabs" in
       Alcotest.(check bool)
-        "daily-9ggi human tab preserved" true
+        "notif-oslv expired tab preserved without human lock" true
         (match listed with
-        | `List [ tab ] -> get "with_human" tab = `Bool true
+        | `List [ tab ] -> get "with_human" tab = `Bool false
         | _ -> false);
-      ignore (result (request tabs "alice" (P.Resume { tab = tab (get "final" body) })));
+      Alcotest.(check string)
+        "notif-oslv expired handoff cannot resume" "no-handoff"
+        (code (request tabs "alice" (P.Resume { tab = tab (get "final" body) })));
       Alcotest.(check bool)
-        "map-puhi owned handoff closes after resume" true
-        (get "tabs" (result (request tabs "alice" P.List_tabs)) = `List []))
+        "notif-oslv expired owned tab remains inspectable" true
+        (match get "tabs" (result (request tabs "alice" P.List_tabs)) with
+        | `List [ _ ] -> true
+        | _ -> false))
 
 (* L53 map-puhi: drive owns only tabs it opened, including terminal limits and handoffs. *)
 let drive_tab_lifecycle () =
@@ -2459,7 +2470,7 @@ let drive_tab_lifecycle () =
     (fun supplied ->
       List.iter
         (fun outcome ->
-          rig (fun env sw _ tabs fake ->
+          rig ~handoff_timeout_s:1 (fun env sw _ tabs fake ->
               let f = fake () in
               page_script f (fixture "unlabelled-controls-chrome.json") "Catalogue";
               document_at ~title:"Catalogue" ~url:product_url f;
@@ -2485,7 +2496,14 @@ let drive_tab_lifecycle () =
                 else []
               in
               let plan =
-                Run.{ answer = Handoff "Please inspect this"; expect = []; usage = None }
+                Run.
+                  {
+                    answer =
+                      (if outcome = "blocked" then Fail "scripted stop"
+                       else Handoff "Please inspect this");
+                    expect = [];
+                    usage = None;
+                  }
               in
               let levels =
                 levels_with ~plan [ "automationexercise.com"; "DONE" ] (ref [])
@@ -2524,7 +2542,7 @@ let drive_tab_lifecycle () =
               in
               Alcotest.(check string)
                 ("map-puhi ending " ^ outcome)
-                outcome
+                (if outcome = "handoff" then "handoff-expired" else outcome)
                 (match get "status" body with `String name -> name | _ -> "");
               let listing () =
                 match get "tabs" (result (request tabs "alice" P.List_tabs)) with
@@ -2536,12 +2554,12 @@ let drive_tab_lifecycle () =
                 (if supplied || outcome = "handoff" then 1 else 0)
                 (List.length (listing ()));
               if outcome = "handoff" then (
-                ignore
-                  (result
+                Alcotest.(check string)
+                  "notif-oslv expired handoff released" "no-handoff"
+                  (code
                      (request tabs "alice" (P.Resume { tab = tab (get "final" body) })));
                 Alcotest.(check int)
-                  "resume closes only drive-owned handoff"
-                  (if supplied then 1 else 0)
+                  "notif-oslv expiry preserves owned and supplied tabs" 1
                   (List.length (listing ())))))
         [ "done"; "blocked"; "error"; "limit"; "deadline"; "handoff" ])
     [ false; true ]

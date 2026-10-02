@@ -38,6 +38,10 @@ A popup opened by a page is human and does not inherit its opener's handle. Afte
 
 ## With the human
 
+Handoff defaults to `handoff.timeout_s` (300 seconds); `--timeout-s` overrides it.
+Planner mission handoff expiry ends `handoff-expired` (or `blocked` for a CAPTCHA),
+leaves the tab open, clears `with_human`, and restarts normal idle expiry.
+
 `handoff` asks the human to do something on the agent's tab: a login, a CAPTCHA, a choice only they can make. It is keyed on the handle. While the tab is with the human, commands on the handle are refused and idleness is paused. `resume` (the notification's Done action, or `leash resume HANDLE`) clears that flag and restarts the idle clock. Anyone with the handle may resume; an agent should do so only after the human says they are finished.
 
 ## When a handle is gone

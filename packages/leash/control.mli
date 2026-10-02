@@ -56,7 +56,8 @@ val policy : Ox_ipc.Listener.policy
     escaped), and 64 concurrent requests (hard-b1na) — up from ox_ipc's default of 16, so
     that long waits on many tabs never queue anyone else. *)
 
-val budget : (Protocol.request, string) result -> Ox.Duration.t option
+val budget :
+  ?handoff_timeout_s:int -> (Protocol.request, string) result -> Ox.Duration.t option
 (** The handler budget per decoded command. [new] with a url and [nav] outlast the
     registry's 30-second load wait (chrome-qnul, chrome-1yn9); a [handoff] outlasts its
     own deadline, {!Tabs.handoff_timeout}, plus a margin, so the listener never cancels

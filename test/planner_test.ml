@@ -648,27 +648,27 @@ let trigger_of (request : R.plan_request) = R.trigger_name request.R.trigger
 (* ---------- run-w7ke: the three triggers ---------- *)
 
 let triggers () =
-  (* fly-yolk: a procedure BLOCKED is the operator, not a planner turn.
+  (* notif-m37y: a procedure BLOCKED is decided by the planner, not the operator.
      The request shape of a real planner turn is checked in [prompt]. *)
   rig
     ~contents:[ fail_answer () ]
     (fun _env _sw models server _memory ->
       let h = harness ~procs:[ "BLOCKED" ] () in
       let result = ran (run h models (args ())) in
-      check_status "fly-yolk a BLOCKED procedure answer enters the operator" "done" result;
+      check_status "notif-m37y BLOCKED procedure reaches planner" "blocked" result;
       Alcotest.(check int)
-        "fly-yolk no planner turn" 0
+        "notif-m37y one planner turn" 1
         (List.length result.P.planner_turns);
       Alcotest.(check int)
-        "fly-yolk no planner call" 0
+        "notif-m37y one planner call" 1
         (List.length (Fake.requests server));
       Alcotest.(check bool)
-        "fly-yolk the route is the operator" true
+        "notif-m37y no automatic operator fallback" false
         (List.exists
            (fun (choice : P.playbook_choice) ->
              choice.source = "route" && choice.key = Some "operator")
            result.P.playbook_choices);
-      Alcotest.(check bool) "fly-yolk the operator ran" true (h.steps <> []));
+      Alcotest.(check bool) "notif-m37y operator did not run" false (h.steps <> []));
   (* run-w7ke: a procedure that failed its expectations twice. *)
   rig
     ~contents:[ fail_answer () ]
@@ -1391,9 +1391,43 @@ let continue_codec () =
         [ ("answer", str "fail"); ("reason", str "why"); ("actions", `List [ envelope ]) ];
     ]
 
+(* L55 notif-7o8j notif-tdtz: the decoder, not the loop, rejects mixed answers. *)
+let notify_codec () =
+  let call json check =
+    let content = Yojson.Safe.to_string json in
+    rig ~contents:[ content; content ] (fun _ _ models _ _ ->
+        check
+          ((Models.levels models).R.plan ~deadline:(Ox.Duration.seconds 30)
+             (plan_request ())))
+  in
+  call
+    (obj [ ("answer", str "notify"); ("message", str "Order 12345 placed") ])
+    (function
+      | Ok { R.answer = Notify message; _ } ->
+          Alcotest.(check string) "one-line message" "Order 12345 placed" message
+      | _ -> Alcotest.fail "notify refused");
+  List.iter
+    (fun fields ->
+      call
+        (obj (("answer", str "notify") :: fields))
+        (fun result ->
+          Alcotest.(check bool)
+            "invalid notify fails closed" true (Result.is_error result)))
+    [
+      [];
+      [ ("message", str " ") ];
+      [ ("message", str "two\nlines") ];
+      [ ("message", str (String.make 1025 'a')) ];
+      [ ("message", str "hi"); ("actions", `List []) ];
+      [ ("message", str "hi"); ("reason", str "mixed") ];
+      [ ("message", str "hi"); ("procedure", procedure_json ()) ];
+    ]
+
 let () =
   Alcotest.run "L32 planner"
     [
+      ( "L55",
+        [ Alcotest.test_case "notif-7o8j notif-tdtz notify codec" `Quick notify_codec ] );
       ( "L53",
         [ Alcotest.test_case "map-7xrq continue protocol codec" `Quick continue_codec ] );
       ( "L32",

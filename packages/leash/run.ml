@@ -76,12 +76,12 @@ type script_outcome =
     [Rejected] is a script that threw, whose result did not fit or was too large — the
     procedure's step failed, and the reason is in the trace. *)
 
-type plan_trigger = Blocked | Failed | Arguments
+type plan_trigger = Blocked | Failed | Arguments | Challenge
 (** run-w7ke (L32 wires the plan; L31 asks it and takes its answer): the three points JEV
     stopped — the procedure level answered BLOCKED, a procedure failed its expectations
     twice, or an argument the mission does not supply could not be filled. *)
 
-type plan_answer = Procedure of Playbook.procedure | Continue_actions of P.planner_action list | Handoff of string | Fail of string
+type plan_answer = Procedure of Playbook.procedure | Continue_actions of P.planner_action list | Notify of string | Handoff of string | Fail of string
 
 type plan_reply = {
   answer : plan_answer;
@@ -279,11 +279,12 @@ let installed_playbooks books =
    compares it by name rather than by constructor. *)
 let drive_is name (status : P.Drive_status.t) = P.Drive_status.to_string status = name
 
-let trigger_name = function Blocked -> "blocked" | Failed -> "failed" | Arguments -> "arguments"
+let trigger_name = function Blocked -> "blocked" | Failed -> "failed" | Arguments -> "arguments" | Challenge -> "challenge"
 
 let answer_name = function
   | Procedure _ -> "procedure"
   | Continue_actions _ -> "continue"
+  | Notify _ -> "notify"
   | Handoff _ -> "handoff"
   | Fail _ -> "fail"
 
@@ -302,6 +303,7 @@ let same_page (a : observation) (b : observation) =
   && a.rows = b.rows && a.dialog = b.dialog
 
 type state = {
+  unattended : Yojson.Safe.t list;
   steps_used : int;
   trace : P.run_procedure list;  (** Newest first. *)
   plans : P.planner_turn list;  (** Newest first. *)
@@ -356,6 +358,8 @@ let finish (st : state) status ?reason () =
   in
   P.
     {
+      unattended = List.rev st.unattended;
+      detail = None;
       status;
       site = Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook.Playbook.site) st.book;
       procedures = List.rev st.trace;
@@ -391,6 +395,7 @@ let with_trace (st : state) (error : P.error) =
         Some
           (`Assoc
             ([
+              ("unattended", `List (List.rev st.unattended));
               ( "site",
                 match st.book with
                 | Some book -> `String book.Playbook.playbook.Playbook.site
@@ -468,7 +473,7 @@ type steps_outcome =
       (** The run ended inside a step: a dialog, or a planner turn a called procedure
           asked for. *)
 
-let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner_actions ~planner_action ~on_planner_step ~pause_ms ~now ~installed ~page_kinds ~drafts (args : args) : (P.run_result, P.error) result =
+let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner_actions ~planner_action ~on_planner_step ~notify ~challenge ~challenge_attempt ~challenge_turns ~pause_ms ~now ~installed ~page_kinds ~drafts (args : args) : (P.run_result, P.error) result =
   let installed = installed_playbooks installed in
   (* map-yzqp: one mission-wide latch also survives successful nested uses. *)
   let unsafe = ref false in
@@ -477,6 +482,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
   let remaining () = max 1 (int_of_float (deadline -. now ())) in
   let empty observation =
     {
+      unattended = [];
       steps_used = 0;
       trace = [];
       playbook_choices = [];
@@ -504,6 +510,22 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
       observation;
     }
   in
+  (* notif-himb notif-p4yk: challenge turns have their own bounded budget. *)
+  let active_challenge = ref None in
+  let challenge_count = ref 0 in
+  let event st fields = {st with unattended = `Assoc fields :: st.unattended} in
+  let send st message =
+    let started = now () in
+    let outcome = notify message in
+    event st [("kind", `String "notify"); ("message", `String message);
+      ("elapsed_ms", `Int (ms (now () -. started)));
+      ("outcome", `String (if Result.is_ok outcome then "sent" else "failed"));
+      ("error", match outcome with Ok () -> `Null | Error why -> `String why)] in
+  let challenge_event st outcome =
+    event st [("kind", `String "challenge");
+      ("origin", `String (Option.value ~default:st.observation.url !active_challenge));
+      ("attempt", `Bool challenge_attempt); ("turns", `Int !challenge_count);
+      ("outcome", `String outcome)] in
   let dedupe_key = ref None in
   let seen = Hashtbl.create 128 in
   let accept_record ~book ~procedure ~script item =
@@ -810,7 +832,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
      verifies instead of the caller's list; every turn's cost rides in the trace
      (run-obtt). *)
   let rec planner (st : state) ~trigger ~reason =
-    if List.length st.plans >= args.max_plans then
+    if trigger <> Challenge && List.length (List.filter (fun (p : P.planner_turn) -> p.trigger <> "challenge") st.plans) >= args.max_plans then
       Ok
         (Finish
            (finish st
@@ -839,6 +861,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
           text = st.observation.text;
         }
       in
+      if trigger = Challenge then incr challenge_count;
       match plan t request with
       | Error error -> Error (with_trace st error)
       | Ok reply ->
@@ -852,6 +875,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                 reason =
                   (match reply.answer with
                   | Procedure _ | Continue_actions _ -> None
+                  | Notify message -> Some message
                   | Handoff why -> Some why
                   | Fail why -> Some why);
                 usage = reply.usage;
@@ -868,11 +892,16 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
             }
           in
           (match reply.answer with
+          | Notify message -> single_goal (send st message)
           | Continue_actions actions ->
               let original = request.snapshot in
               let checked = if List.length actions > planner_actions then
                 Error "continue exceeds learning.planner_actions"
-                else List.fold_left (fun result action -> Result.bind result (fun () -> P.check_planner_action original action)) (Ok ()) actions in
+                else List.fold_left (fun result action -> Result.bind result (fun () ->
+                  if trigger = Challenge then (match action with
+                    | P.Click _ | P.Fill _ | P.Press _ | P.Scroll {index = Some _; _} -> P.check_planner_action original action
+                    | _ -> Error "challenge continue accepts only actions on offered snapshot rows")
+                  else P.check_planner_action original action)) (Ok ()) actions in
               (match checked with
               | Error why -> Error (with_trace st (invalid why))
               | Ok () ->
@@ -935,11 +964,17 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                               error = (match outcome with Ok _ -> None | Error e -> Some (P.Error_code.to_string e.code))} in
                             let st = record {st with steps_used = st.steps_used + 1} step in
                             match outcome with
+                            | Error _ when !active_challenge <> None ->
+                                let st = challenge_event st "action-failed" in
+                                (match observe t () with
+                                | Ok observation -> single_goal {st with observation}
+                                | Error _ -> await_human st "captcha")
                             | Error error -> Error (with_trace st error)
                             | Ok _ -> (match observe t () with
                                 | Error error -> Error (with_trace st error)
                                 | Ok observation -> execute {st with observation} rest)) in
                   execute st actions)
+          | Fail _ when trigger = Challenge -> await_human st "captcha"
           | Fail why ->
               Ok
                 (Finish
@@ -947,10 +982,8 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                       (status (if trigger = Failed then "failed" else "blocked"))
                       ~reason:(Printf.sprintf "%s; the planner answered fail: %s" reason why)
                       ()))
-          | Handoff why -> (
-              match hand_off t ~reason:why with
-              | Error error -> Error (with_trace st error)
-              | Ok _ -> Ok (Finish (finish st (status "handoff") ~reason:why ())))
+          | Handoff why -> await_human st (if !active_challenge <> None then "captcha" else why)
+          | Procedure _ when trigger = Challenge -> await_human st "captcha"
           | Procedure proc -> (
               match st.book with
               | None ->
@@ -1660,6 +1693,11 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
   (* One turn: observe, ask the playbook level when a switch is due, ask the procedure
      level, and run what it chose. *)
   and next (st : state) =
+    match detected_challenge st with
+    | Some origin -> challenge_route st origin
+    | None -> next_ordinary st
+
+  and next_ordinary (st : state) =
     if now () >= deadline then
       Ok
         (Finish
@@ -1690,7 +1728,47 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
 
   (* extr-andy: a "none" playbook delegates the entire mission to the existing
      operator loop, not to the planner. It uses the same tab and action lock. *)
-  and single_goal (st : state) = single_goal_operator st
+  and single_goal (st : state) =
+    match detected_challenge st with
+    | Some origin -> challenge_route st origin
+    | None ->
+        let st = if !active_challenge <> None then (let st = challenge_event st "cleared" in active_challenge := None; st) else st in
+        single_goal_operator st
+
+  and detected_challenge st =
+    match challenge st.observation with
+    | Some origin -> Some origin
+    | None ->
+        let kind, _ = semantic st in
+        let text = String.lowercase_ascii (kind ^ " " ^ st.observation.title ^ " " ^ st.observation.text ^ " " ^ String.concat " " (List.map snd st.observation.rows)) in
+        let contains needle =
+          try ignore (Str.search_forward (Str.regexp_string needle) text 0); true with Not_found -> false in
+        if String.lowercase_ascii kind = "challenge" || List.exists contains ["captcha"; "bot challenge"; "verify you are human"; "i'm not a robot"; "just a moment"]
+        then Some (Option.value ~default:st.observation.url !active_challenge) else None
+
+  and challenge_route st origin =
+    let origin = Option.value ~default:origin (Snapshot_source.url_origin origin) in
+    if !active_challenge = None then (active_challenge := Some origin; challenge_count := 0);
+    if args.dry_run then Ok (Finish (finish (challenge_event st "dry-run") (status "blocked") ~reason:"challenge: dry run" ()))
+    else if not challenge_attempt || !challenge_count >= challenge_turns then await_human st "captcha"
+    else planner st ~trigger:Challenge ~reason:("challenge at " ^ origin ^ "; use only visible rows")
+
+  and await_human st reason =
+    let st = if !active_challenge <> None then challenge_event st "handoff" else st in
+    let started = now () in
+    let outcome = hand_off t ~reason in
+    let expired = match outcome with Error e -> P.Error_code.to_string e.code = "timeout" | _ -> false in
+    let st = event st [("kind", `String "handoff"); ("reason", `String reason);
+      ("elapsed_ms", `Int (ms (now () -. started)));
+      ("outcome", `String (if expired then "expired" else if Result.is_ok outcome then "resumed" else "failed"))] in
+    if expired then
+      let st = send st "the agent gave up waiting; the tab is still open" in
+      let st = if !active_challenge <> None then challenge_event st "expired" else st in
+      let result = finish st (status (if !active_challenge <> None then "blocked" else "handoff-expired")) ~reason () in
+      Ok (Finish {result with P.detail = Option.map (fun origin -> `Assoc [("challenge", `String origin)]) !active_challenge})
+    else match outcome with
+    | Error error -> Error (with_trace st error)
+    | Ok _ -> Ok (Finish (finish st (status "handoff") ~reason ()))
 
   and single_goal_operator (st : state) =
     let route = P.{ source = "route"; key = Some "operator"; probabilities = `Assoc [];
@@ -1723,6 +1801,14 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
            | Error error -> Error error
            | Ok [] -> Ok (attach (Finish (finish st ending ?reason:drive.reason ())))
            | Ok checks -> Result.map attach (check_done st ~mission:true checks))
+        else if not args.dry_run && (name = "blocked" || name = "handoff") then
+          (match observe t () with
+          | Error error -> Error (with_trace st error)
+          | Ok observation ->
+              let st = {st with observation} in
+              Result.map attach (match detected_challenge st with
+                | Some origin -> challenge_route st origin
+                | None -> planner st ~trigger:Blocked ~reason:(Option.value ~default:"JEV answered BLOCKED" drive.reason)))
         else Ok (attach (Finish (finish st ending ?reason:drive.reason ())))
 
   (* run-xh5d: a chosen book opens its entry on this tab unless that book is already
@@ -1782,7 +1868,8 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
             | Ok choice ->
                 let chosen = choice in
                 if choice.key = "DONE" then done_guard st ~pages:book.Playbook.playbook.pages
-                else if choice.key = "NONE" || choice.key = "BLOCKED" then single_goal st
+                else if choice.key = "BLOCKED" then planner st ~trigger:Blocked ~reason:"JEV procedure level answered BLOCKED"
+                else if choice.key = "NONE" then single_goal st
                 else
                   match
                     List.find_opt
@@ -1829,7 +1916,8 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                     match select_procedure t question with
                     | Error error -> Error (with_trace st error)
                     | Ok choice ->
-                        if choice.key = "NONE" || choice.key = "BLOCKED" then single_goal st
+                        if choice.key = "BLOCKED" then planner st ~trigger:Blocked ~reason:"JEV procedure level answered BLOCKED"
+                else if choice.key = "NONE" then single_goal st
                         else if choice.key = "DONE" then
                           Ok
                             (Finish
@@ -1934,7 +2022,8 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
 (* ---------- The handler ---------- *)
 
 let loop ~(handler : handler) ~now ~installed ?page_kinds ?(drafts = fun ~site:_ ~kind:_ -> []) ?(on_book = fun _ -> ()) ?(on_record = fun (_ : Yojson.Safe.t) -> Ok ())
-    ?(planner_actions = 5) ?(planner_action = fun _ -> Error (internal "planner actions unavailable"))
+    ?(notify = fun _ -> Ok ()) ?(challenge = fun _ -> None)
+    ?(challenge_attempt = true) ?(challenge_turns = 2) ?(planner_actions = 5) ?(planner_action = fun _ -> Error (internal "planner actions unavailable"))
     ?(on_planner_step = fun _ -> ()) ?(pause_ms = fun _ -> ()) (args : args) =
   if args.max_procedures < 1 || args.deadline_s < 1 || args.max_steps < 1 then
     Error (invalid "run max_steps, max_procedures and deadline_s must be positive")
@@ -2031,7 +2120,7 @@ let loop ~(handler : handler) ~now ~installed ?page_kinds ?(drafts = fun ~site:_
     in
     let outcome = Model_usage.with_meter meter (fun () ->
       let page_kinds = match page_kinds with Some session -> session | None -> Page_kind.session () in
-      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_book ~on_record ~planner_actions ~planner_action ~on_planner_step ~pause_ms ~now ~installed ~page_kinds ~drafts args) ()
+      Effect.Deep.match_with (fun () -> compute token ~direct_fill:handler.text_value ~direct_script:(fun script args -> handler.script script ~args) ~on_book ~on_record ~planner_actions ~planner_action ~on_planner_step ~notify ~challenge ~challenge_attempt ~challenge_turns ~pause_ms ~now ~installed ~page_kinds ~drafts args) ()
       {
         retc = Fun.id;
         exnc = raise;

@@ -287,13 +287,32 @@ let default_notify_command =
   ]
 
 type handoff = {
+  timeout_s : int; [@json.default 300]
   focus_command : string list; [@json.default default_focus_command]
   notify_command : string list; [@json.default default_notify_command]
 }
 [@@deriving yojson]
 
 let default_handoff =
-  { focus_command = default_focus_command; notify_command = default_notify_command }
+  {
+    timeout_s = 300;
+    focus_command = default_focus_command;
+    notify_command = default_notify_command;
+  }
+
+type notify = {
+  command : string list;
+      [@json.default [ "notify-send"; "--urgency=normal"; "Leash"; "{message}" ]]
+}
+[@@deriving yojson]
+
+let default_notify =
+  { command = [ "notify-send"; "--urgency=normal"; "Leash"; "{message}" ] }
+
+type challenges = { attempt : bool; [@json.default true] turns : int [@json.default 2] }
+[@@deriving yojson]
+
+let default_challenges = { attempt = true; turns = 2 }
 
 let default_chrome =
   {
@@ -426,6 +445,8 @@ type t = {
   otlp : otlp; [@json.default default_otlp]
   models : models; [@json.default default_models]
   handoff : handoff; [@json.default default_handoff]
+  notify : notify; [@json.default default_notify]
+  challenges : challenges; [@json.default default_challenges]
   skill : skill; [@json.default default_skill]
   traces : traces; [@json.default default_traces]
   learning : learning; [@json.default default_learning]
@@ -441,6 +462,8 @@ let default : t =
     otlp = default_otlp;
     models = default_models;
     handoff = default_handoff;
+    notify = default_notify;
+    challenges = default_challenges;
     skill = default_skill;
     traces = default_traces;
     learning = default_learning;
@@ -515,8 +538,17 @@ let default_toml =
 # planner_actions = 5        # maximum actions in a planner continue turn
 #
 # [handoff]
+# timeout_s = 300            # bounded human wait in seconds
 # focus_command = %s
 # notify_command = %s
+#
+# [notify]
+# command = ["notify-send", "--urgency=normal", "Leash", "{message}"]
+#                             # argv only; empty disables non-blocking notifications
+#
+# [challenges]
+# attempt = true             # try visible snapshot-row actions before human handoff
+# turns = 2                  # 1..10 planner challenge turns
 |}
     default_binary default_profile_dir default_workspace default_cap default_idle_s
     default_tombstone_s default_socket default_systemone_endpoint default_jev_model
@@ -801,6 +833,10 @@ let decode_option pointer of_yojson = function
       | Ok value -> Ok (Some value)
       | Error message -> Error [ issue pointer message ])
 
+let decode_positive_int pointer = function
+  | `Int n when n > 0 -> Ok n
+  | _ -> Error [ issue pointer "expected a positive integer" ]
+
 let decode_bool pointer = function
   | `Bool _ -> Ok ()
   | json -> Error [ issue pointer ("expected a bool, got " ^ show_json json) ]
@@ -953,6 +989,8 @@ let collect json =
               "otlp";
               "models";
               "handoff";
+              "notify";
+              "challenges";
               "skill";
               "traces";
               "learning";
@@ -1149,21 +1187,42 @@ let collect json =
                           decode_with p Text.t_of_yojson j))
                     [ "planner_model"; "planner_reasoning" ])
       in
+      let notify_errors =
+        match List.assoc_opt "notify" fields with
+        | None -> []
+        | Some json ->
+            collect_object "/notify" json ~known:[ "command" ] (fun section ->
+                field_errors "/notify" "command" section decode_string_list)
+      in
+      let challenges_errors =
+        match List.assoc_opt "challenges" fields with
+        | None -> []
+        | Some json ->
+            collect_object "/challenges" json ~known:[ "attempt"; "turns" ]
+              (fun section ->
+                field_errors "/challenges" "attempt" section decode_bool
+                @ field_errors "/challenges" "turns" section (fun p j ->
+                    match decode_positive_int p j with
+                    | Ok n when n <= 10 -> Ok n
+                    | Ok _ -> Error [ issue p "must be between 1 and 10" ]
+                    | Error e -> Error e))
+      in
       let handoff_errors =
         match List.assoc_opt "handoff" fields with
         | None -> []
         | Some json ->
             let pointer = child "" "handoff" in
-            collect_object pointer json ~known:[ "focus_command"; "notify_command" ]
-              (fun section ->
+            collect_object pointer json
+              ~known:[ "focus_command"; "notify_command"; "timeout_s" ] (fun section ->
                 field_errors pointer "focus_command" section decode_string_list
-                @ field_errors pointer "notify_command" section decode_string_list)
+                @ field_errors pointer "notify_command" section decode_string_list
+                @ field_errors pointer "timeout_s" section decode_positive_int)
       in
       {
         errors =
           unknown @ chrome_errors @ tabs_errors @ expiry_errors @ control_errors
           @ otlp_errors @ models_errors @ handoff_errors @ skill_errors @ traces_errors
-          @ learning_errors;
+          @ learning_errors @ notify_errors @ challenges_errors;
         binary;
         profile_dir;
         socket;

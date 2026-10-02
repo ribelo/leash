@@ -417,6 +417,37 @@ let safe_planner_step n (s : P.planner_step) : P.Trace.trace_step =
     elapsed_ms = s.elapsed_ms;
   }
 
+(* notif-udh3: keep only audit fields, never arbitrary raw error detail. *)
+let safe_unattended events =
+  let fields_by_kind =
+    [
+      ("notify", [ "kind"; "message"; "elapsed_ms"; "outcome"; "error" ]);
+      ("handoff", [ "kind"; "reason"; "elapsed_ms"; "outcome" ]);
+      ("challenge", [ "kind"; "origin"; "attempt"; "turns"; "outcome" ]);
+    ]
+  in
+  List.filter_map
+    (function
+      | `Assoc fields -> (
+          match List.assoc_opt "kind" fields with
+          | Some (`String kind) -> (
+              match List.assoc_opt kind fields_by_kind with
+              | None -> None
+              | Some allowed ->
+                  Some
+                    (`Assoc
+                       (List.filter
+                          (fun (key, value) ->
+                            List.mem key allowed
+                            &&
+                            match value with
+                            | `String _ | `Bool _ | `Int _ | `Null -> true
+                            | _ -> false)
+                          fields)))
+          | _ -> None)
+      | _ -> None)
+    events
+
 let finish t ~now outcome =
   let procedures, cost, model_calls, final, outcome_name, error_code =
     match outcome with
@@ -476,6 +507,17 @@ let finish t ~now outcome =
   in
   P.Trace.
     {
+      unattended =
+        (match outcome with
+          | Ok result -> result.P.unattended
+          | Error error -> (
+              match error.P.detail with
+              | Some (`Assoc fields) -> (
+                  match List.assoc_opt "unattended" fields with
+                  | Some (`List events) -> events
+                  | _ -> [])
+              | _ -> []))
+        |> safe_unattended;
       version = 1;
       time = timestamp now;
       site = Option.value ~default:"unknown" t.first;

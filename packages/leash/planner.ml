@@ -14,6 +14,7 @@ module P = Protocol
    they never shadow the loop's own answers. *)
 type kind =
   | Procedure_answer [@json.name "procedure"]
+  | Notify_answer [@json.name "notify"]
   | Continue_answer [@json.name "continue"]
   | Handoff_answer [@json.name "handoff"]
   | Fail_answer [@json.name "fail"]
@@ -27,6 +28,7 @@ type reply = {
   procedure : Playbook.procedure option;
   actions : P.planner_action list option;
   reason : string option;
+  message : string option;
   expect : string list option;
 }
 [@@deriving yojson]
@@ -168,7 +170,8 @@ let answer_of (request : Run.plan_request) (reply : reply) :
   let expect = Option.value ~default:[] reply.expect in
   let playbook = request.Run.playbook in
   let one_of_three =
-    "answer exactly one of procedure, handoff or fail with the reason it needs"
+    "answer exactly one of procedure, continue, notify, handoff or fail with the fields \
+     it needs"
   in
   match check_expectations playbook expect with
   | Error why -> Error why
@@ -191,6 +194,20 @@ let answer_of (request : Run.plan_request) (reply : reply) :
       match reply.answer with
       | _ when reply.answer <> Continue_answer && reply.actions <> None ->
           Error "only continue may carry actions"
+      | _ when reply.answer <> Notify_answer && reply.message <> None ->
+          Error "only notify may carry message"
+      | Notify_answer -> (
+          match (reply.message, reply.procedure, reply.reason) with
+          | Some message, None, None
+            when String.trim message <> ""
+                 && String.length message <= 1024
+                 && (not (String.contains message '\n'))
+                 && not (String.contains message '\r') ->
+              Ok Run.{ answer = Notify message; expect; usage = None }
+          | _ ->
+              Error
+                "notify requires one nonempty line (max 1024 bytes), without procedure \
+                 or reason")
       | Continue_answer -> (
           match (reply.procedure, reply.reason, reply.actions) with
           | None, None, actions

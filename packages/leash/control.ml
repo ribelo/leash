@@ -196,9 +196,6 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
               in
               let outcome =
                 try
-                  let* () =
-                    if args.P.tab = None then Tabs.close_after_resume tabs tab else Ok ()
-                  in
                   Tabs.run ?learning ~planner_actions ~on_page ~on_step ~on_planner_step
                     ~meter ?levels ~model ?decide ?text_helper ?installed tabs ~tab args
                 with exn ->
@@ -206,7 +203,11 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
                   raise exn
               in
               match outcome with
-              | Ok result when P.Run_status.to_string result.P.status = "handoff" ->
+              | Ok result
+                when List.mem
+                       (P.Run_status.to_string result.P.status)
+                       [ "handoff"; "handoff-expired" ]
+                     || result.detail <> None ->
                   outcome
               | _ when args.P.tab <> None -> outcome
               | _ -> (
@@ -266,7 +267,7 @@ let cdp_budget = Ox.Duration.seconds 35
    and the focus command (hand-rg9h), plus the reply's own egress. *)
 let handoff_margin = Ox.Duration.seconds 20
 
-let budget (request : (P.request, string) result) =
+let budget ?(handoff_timeout_s = 300) (request : (P.request, string) result) =
   let seconds n = Ox.Duration.seconds n in
   match request with
   | Error _ -> Some (seconds 1)
@@ -279,13 +280,18 @@ let budget (request : (P.request, string) result) =
            (min Reading.max_wait_ms (max 1 (Option.value ~default:30_000 args.timeout_ms))
            + 1000))
   | Ok { command = P.Handoff args; _ } ->
-      Some (Ox.Duration.add (Tabs.handoff_timeout args.timeout_s) handoff_margin)
+      Some
+        (Ox.Duration.add
+           (Tabs.handoff_timeout ~default:handoff_timeout_s args.timeout_s)
+           handoff_margin)
   | Ok { command = P.Drive args; _ } ->
       (* run-vspj run-obtt: a run's budget is its deadline plus the margin its last steps
          need — the procedure's own bounded expectation wait (at most 30 s), a planner
          turn's correction call (at most 30 s, L32) and the reply — so the listener never
          cancels a run at the instant it is due to answer. *)
-      Some (seconds (max 1 (Option.value ~default:900 args.deadline_s) + 75))
+      Some
+        (seconds
+           (max 1 (Option.value ~default:900 args.deadline_s) + handoff_timeout_s + 75))
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _ | P.Playbook_test _; _ } ->
       (* A script may await a fetch; the CDP call's own deadline is 30 s. *)
       Some (seconds 35)
@@ -390,7 +396,8 @@ let create ?learning ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?m
     Ox_ipc.Listener.run ~caps:deps.caps ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock
       ~path ~policy ~decode
       ~encode:(fun reply -> Yojson.Safe.to_string (P.encode_reply reply))
-      ~budget ~on_budget_exceeded:budget_exceeded ~handler
+      ~budget:(budget ~handoff_timeout_s:(Tabs.handoff_timeout_s deps.tabs))
+      ~on_budget_exceeded:budget_exceeded ~handler
       ~on_peer_error:(on_peer_error deps.logger) ()
   with
   | Ok () -> Ok { path }

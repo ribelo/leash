@@ -244,6 +244,10 @@ type t = {
   await_load : unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   await_handoff : Ox.Duration.t -> unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   desktop : Desktop.t;
+  notify : string -> (unit, string) result;
+  handoff_timeout_s : int;
+  challenge_attempt : bool;
+  challenge_turns : int;
   logger : Ox_observability.Logger.t;
   download_dir : string option;
   downloads_by_guid : (string, string) Hashtbl.t;
@@ -1034,9 +1038,11 @@ let close t handle =
    when it names none (or names something a clock cannot use). [Control.budget] asks this
    same question, so the handler's budget and the request's own deadline cannot drift
    apart. *)
-let handoff_timeout = function
+let handoff_timeout_s t = t.handoff_timeout_s
+
+let handoff_timeout ?(default = 300) = function
   | Some seconds when seconds > 0 -> Ox.Duration.seconds seconds
-  | Some _ | None -> Ox.Duration.minutes 15
+  | Some _ | None -> Ox.Duration.seconds default
 
 (* hand-len8 hand-nisr: the transition itself, for a caller that already holds the tab's
    lock — which the run does for its whole duration (run-d82w) — and for the command
@@ -1193,7 +1199,9 @@ let handoff t ~reason ~timeout_s handle =
   let remaining () =
     let spent = Ox.Duration.ms (int_of_float ((now t -. started) *. 1000.)) in
     Ox.Duration.max Ox.Duration.zero
-      (Ox.Duration.subtract (handoff_timeout timeout_s) spent)
+      (Ox.Duration.subtract
+         (handoff_timeout ~default:t.handoff_timeout_s timeout_s)
+         spent)
   in
   Fun.protect ~finally:release (fun () ->
       Eio.Switch.run (fun human ->
@@ -2470,8 +2478,15 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                     | Error why -> Error (error "internal" why));
                 hand_off =
                   (fun ~reason ->
-                    let* entry, _ = begin_handoff_locked t ~reason tab in
-                    Ok (info_of t entry));
+                    (* notif-oslv: resume must acquire the lock while the run waits. *)
+                    Eio.Mutex.unlock tab.lock;
+                    Fun.protect
+                      ~finally:(fun () ->
+                        Eio.Cancel.protect (fun () -> Eio.Mutex.lock tab.lock))
+                      (fun () ->
+                        let* _ = handoff t ~reason ~timeout_s:None handle in
+                        let* tab = locate t ~access:Act handle in
+                        Ok (info t tab)));
                 (* extr-8o1h extr-k40c: the only script text that reaches the page in a run
                    is a loaded playbook's, through {!Reading.script}. A script that threw,
                    broke its shape or was too large is the procedure's failure; a browser
@@ -2532,9 +2547,14 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                   ~some:(fun learning -> Learning.drafts learning)
                   learning
               in
+              let challenge (_observation : Run.observation) =
+                Reading.challenge_signal tab.reading
+              in
               let execute on_record =
                 Run.loop ~handler ~on_book ~on_record ~drafts ~planner_action
-                  ~on_planner_step ~planner_actions
+                  ~on_planner_step ~planner_actions ~notify:t.notify ~challenge
+                  ~challenge_attempt:t.challenge_attempt
+                  ~challenge_turns:t.challenge_turns
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)
                   ~page_kinds:kinds ~installed:books run_args
@@ -2896,8 +2916,9 @@ let inspect t json =
                   List.iter (fun resolve -> Eio.Promise.resolve resolve ()) pending))))
   | _ -> ()
 
-let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Ox.Duration.minutes 30)
-    (deps : 'clock deps) =
+let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
+    ?(handoff_timeout_s = 300) ?(challenge_attempt = true) ?(challenge_turns = 2)
+    ?(idle = Ox.Duration.minutes 30) (deps : 'clock deps) =
   (* ^nactor-8z1n: the registry's bookkeeping is one actor's state, folded by [fold], for
      as long as the switch lives. A handler that raises fails the switch. *)
   let ledger =
@@ -2928,6 +2949,10 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(idle = Ox.Duration.minutes 30)
               Eio.Promise.await promise;
               Ok ()));
       desktop = deps.desktop;
+      notify;
+      handoff_timeout_s;
+      challenge_attempt;
+      challenge_turns;
       logger = deps.logger;
       download_dir;
       downloads_by_guid = Hashtbl.create 32;

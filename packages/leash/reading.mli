@@ -2,6 +2,11 @@ type t
 (** Browser-specific reading and diagnostics. One state value per tab, never shared across
     tabs. *)
 
+val challenge_signal : t -> string option
+(** notif-tdtz: normalized challenge origin in the current document, independent of
+    debug-ring clearing. Reset by main-frame navigation, not arbitrary DOM mutation;
+    debug-only clearance is conservative until a new document is observed. *)
+
 type page_state = { loader : string; guard : (string * int) option }
 (** The two facts a snapshot's currency rests on (hard-sckn): the main frame's loader id,
     and the mutation guard's epoch and count — [None] when the document carries no guard,

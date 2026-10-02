@@ -955,11 +955,12 @@ let endings () =
       ()
   in
   let ended = ran (run ~installed:[ site_a ] handoff (args ())) in
-  check_status "fly-2akp BLOCKED continues through operator" "done" ended;
+  check_status "notif-m37y BLOCKED goes to planner handoff" "handoff" ended;
   Alcotest.(check int)
-    "fly-2akp BLOCKED never invokes planner" 0
+    "notif-m37y BLOCKED invokes planner once" 1
     (List.length handoff.plan_requests);
-  Alcotest.(check (list string)) "no unsolicited handoff" [] handoff.handoffs
+  Alcotest.(check (list string))
+    "notif-m37y planner handoff" [ "the captcha needs you" ] handoff.handoffs
 
 (* run-vj48 run-7blx: the six judgments of the loop go through one handler token — one
    handler, one place where a model or a level is swapped — and the run performs all six. *)
@@ -1112,13 +1113,19 @@ let fallback_mission_stops () =
   List.iter
     (fun (operator_status, expected) ->
       let h =
-        harness ~drives:[ drive ~status:operator_status ~reason:"operator stopped" () ] ()
+        harness
+          ~drives:[ drive ~status:operator_status ~reason:"operator stopped" () ]
+          ~plans:[ R.{ answer = Fail "operator stopped"; expect = []; usage = None } ]
+          ()
       in
       let result = ran (run h (args ~expect:[ "the page contains ready" ] ())) in
       check_status "non-DONE stop preserved" expected result;
       Alcotest.(check int) "no DONE verification" 0 (List.length h.verification_checks);
       Alcotest.(check string)
-        "operator stop reason" "operator stopped"
+        "operator stop reason"
+        (if operator_status = "blocked" then
+           "operator stopped; the planner answered fail: operator stopped"
+         else "operator stopped")
         (Option.value ~default:"" result.P.reason))
     [
       ("blocked", "blocked");

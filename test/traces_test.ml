@@ -27,6 +27,7 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time 
     P.drive_trace =
   P.Trace.
     {
+      unattended = [];
       version = 1;
       time = T.timestamp time;
       site;
@@ -419,6 +420,63 @@ let planner_steps () =
   Alcotest.(check int)
     "durable wire retains planner steps" 3 (List.length roundtrip.steps)
 
+let unattended_capture () =
+  let notify =
+    `Assoc
+      [
+        ("kind", `String "notify");
+        ("message", `String "Order 123 placed");
+        ("elapsed_ms", `Int 4);
+        ("outcome", `String "failed");
+        ("error", `String "exited 1");
+      ]
+  in
+  let challenge =
+    `Assoc
+      [
+        ("kind", `String "challenge");
+        ("origin", `String "https://example.com");
+        ("attempt", `Bool true);
+        ("turns", `Int 2);
+        ("outcome", `String "expired");
+      ]
+  in
+  let polluted =
+    match challenge with
+    | `Assoc fields -> `Assoc (("cookies", `String "SECRET") :: fields)
+    | _ -> assert false
+  in
+  let error =
+    P.make_error
+      ~detail:
+        (`Assoc
+           [
+             ( "unattended",
+               `List
+                 [
+                   notify;
+                   polluted;
+                   `Assoc [ ("kind", `String "unknown"); ("raw", `String "SECRET") ];
+                 ] );
+           ])
+      (ok (P.Error_code.of_string "invalid-request"))
+      ~message:"blocked"
+  in
+  let saved = T.finish (T.capture ~mission:"unattended" ~now:0.) ~now:1. (Error error) in
+  bool "notif-udh3 audit kinds survive safe projection"
+    (saved.unattended = [ notify; challenge ]);
+  temp (fun root ->
+      let path = ok (T.write (T.create ~caps ~root ()) saved) in
+      bool "notif-udh3 audit survives durable store"
+        ((ok (T.read ~caps path)).unattended = saved.unattended));
+  let legacy =
+    match P.yojson_of_drive_trace saved with
+    | `Assoc fields -> `Assoc (List.remove_assoc "unattended" fields)
+    | _ -> assert false
+  in
+  bool "notif-udh3 old trace default is empty"
+    ((ok (P.drive_trace_of_yojson legacy)).unattended = [])
+
 let () =
   Alcotest.run "L51 traces"
     [
@@ -434,5 +492,6 @@ let () =
             ("trace-iqqz kind-s1k2 inferred header canonicalization", inferred_capture);
             ("trace-zbb9 trace-uovo acknowledged target", scripted_steps);
             ("map-3qag mixed planner trace and partial failure", planner_steps);
+            ("notif-udh3 safe durable unattended audit and old codecs", unattended_capture);
           ] );
     ]
