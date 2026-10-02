@@ -1,0 +1,61 @@
+{
+  "command": [
+    "status"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.0024251029990409734,
+  "reply": {
+    "key_present": true,
+    "commit": "91228d4632e753fb02d3b04515cabf49d386bea3",
+    "skill": {
+      "state": "missing",
+      "version": "0.0.0",
+      "commit": "91228d4632e753fb02d3b04515cabf49d386bea3",
+      "installs": [
+        {
+          "path": "/home/ribelo/.claude/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.codex/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.agents/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        }
+      ]
+    },
+    "generation": 1,
+    "tabs": {
+      "open": 3,
+      "cap": 8
+    },
+    "chrome": "running",
+    "uptime_s": 28.549542903900146,
+    "models": {
+      "configured": true,
+      "jev_model": "typesafe/jev-1.13-20260917",
+      "text_model": "inception/mercury-2.5",
+      "systemone_endpoint": "https://openrouter.ai/api/v1/systemone",
+      "chat_base_url": "https://openrouter.ai/api/v1"
+    },
+    "version": "0.0.0",
+    "pid": 1437780,
+    "headed": false,
+    "learning": {
+      "mode": "auto",
+      "pending": 0,
+      "drafts": 0,
+      "sites": []
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

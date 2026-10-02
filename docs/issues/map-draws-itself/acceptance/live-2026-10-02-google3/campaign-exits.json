@@ -1,0 +1,10 @@
+[
+  {
+    "site": "maps",
+    "exit_code": 1
+  },
+  {
+    "site": "flights",
+    "exit_code": 1
+  }
+]

@@ -1,0 +1,313 @@
+{
+  "git_head": "91228d4632e753fb02d3b04515cabf49d386bea3",
+  "binary_sha256": "8821a2624bba017c3af2fe25ec706de829b0c252714516fa6571e5c7ce60eee6",
+  "passed": false,
+  "seeded_playbooks": 0,
+  "campaign_attempts_per_site": 1,
+  "retries": 0,
+  "learning_wait_bound_s": 900,
+  "mission_deadline_s": 420,
+  "retained_screenshots": 6,
+  "sites": {
+    "maps": {
+      "passed": false,
+      "first_failed_gate": 2,
+      "missions_recorded": 2,
+      "missions_skipped": [
+        3,
+        4
+      ],
+      "failures": [
+        "After two independently successful missions: no actual generated draft in private proposed store",
+        "Draft lacks provenance of two successful traces",
+        "Generated draft is not classified repeatable with replay gate"
+      ],
+      "elapsed_s": 28.617411613464355,
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true
+      },
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "harness_goal_verified": true,
+          "independent_goal_verified": true,
+          "independent_review": "Screenshot shows Eiffel Tower and Av. Gustave Eiffel, 75007 Paris, France.",
+          "screenshot": "maps/mission-1/after/page.png",
+          "visible_page": "maps/mission-1/after/visible-page.json",
+          "browser_calls": 11,
+          "browser_run_cost_usd": 0.00133586,
+          "learning_calls": 0,
+          "learning_cost_usd": 0,
+          "total_calls": 11,
+          "total_cost_usd": 0.00133586,
+          "fully_reported": true,
+          "new_learning_account": false,
+          "learning_pending_finished": true,
+          "learning_wait_seconds": 0.002777636000246275,
+          "learning_poll_count": 1,
+          "max_observed_pending": 0,
+          "learning_pending_at_finish": 0,
+          "procedures": []
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "harness_goal_verified": true,
+          "independent_goal_verified": true,
+          "independent_review": "Screenshot shows Eiffel Tower and Av. Gustave Eiffel, 75007 Paris, France.",
+          "screenshot": "maps/mission-2/after/page.png",
+          "visible_page": "maps/mission-2/after/visible-page.json",
+          "browser_calls": 7,
+          "browser_run_cost_usd": 0.00113628,
+          "learning_calls": 0,
+          "learning_cost_usd": 0,
+          "total_calls": 7,
+          "total_cost_usd": 0.00113628,
+          "fully_reported": true,
+          "new_learning_account": false,
+          "learning_pending_finished": true,
+          "learning_wait_seconds": 0.0027961010000581155,
+          "learning_poll_count": 1,
+          "max_observed_pending": 0,
+          "learning_pending_at_finish": 0,
+          "procedures": []
+        }
+      ],
+      "costs": {
+        "browser_calls": 18,
+        "browser_cost_usd": 0.00247214,
+        "learning_calls": 0,
+        "learning_cost_usd": 0,
+        "total_calls": 18,
+        "total_cost_usd": 0.00247214
+      }
+    },
+    "flights": {
+      "passed": false,
+      "first_failed_gate": 4,
+      "missions_recorded": 4,
+      "missions_skipped": [],
+      "failures": [
+        "Mission 4: independently observed page did not satisfy unchanged mission"
+      ],
+      "elapsed_s": 193.72575116157532,
+      "cleanup": {
+        "service_exit": 0,
+        "profile_processes_after_service": [],
+        "loopback_server_closed": true
+      },
+      "missions": [
+        {
+          "number": 1,
+          "status": "done",
+          "harness_goal_verified": true,
+          "independent_goal_verified": true,
+          "independent_review": "Screenshot shows Explore destinations geography, destination cards and PLN flight prices.",
+          "screenshot": "flights/mission-1/after/page.png",
+          "visible_page": "flights/mission-1/after/visible-page.json",
+          "browser_calls": 7,
+          "browser_run_cost_usd": 0.001173438,
+          "learning_calls": 0,
+          "learning_cost_usd": 0,
+          "total_calls": 7,
+          "total_cost_usd": 0.001173438,
+          "fully_reported": true,
+          "new_learning_account": false,
+          "learning_pending_finished": true,
+          "learning_wait_seconds": 0.0033437670008424902,
+          "learning_poll_count": 1,
+          "max_observed_pending": 0,
+          "learning_pending_at_finish": 0,
+          "procedures": []
+        },
+        {
+          "number": 2,
+          "status": "done",
+          "harness_goal_verified": true,
+          "independent_goal_verified": true,
+          "independent_review": "Screenshot shows Explore destinations geography, destination cards and PLN flight prices.",
+          "screenshot": "flights/mission-2/after/page.png",
+          "visible_page": "flights/mission-2/after/visible-page.json",
+          "browser_calls": 7,
+          "browser_run_cost_usd": 0.001561434,
+          "learning_calls": 1,
+          "learning_cost_usd": 0.005736175,
+          "total_calls": 8,
+          "total_cost_usd": 0.007297609,
+          "fully_reported": true,
+          "new_learning_account": true,
+          "learning_pending_finished": true,
+          "learning_wait_seconds": 90.06797546100097,
+          "learning_poll_count": 19,
+          "max_observed_pending": 1,
+          "learning_pending_at_finish": 0,
+          "procedures": []
+        },
+        {
+          "number": 3,
+          "status": "done",
+          "harness_goal_verified": true,
+          "independent_goal_verified": true,
+          "independent_review": "Screenshot shows Explore destinations geography, destination cards and PLN flight prices.",
+          "screenshot": "flights/mission-3/after/page.png",
+          "visible_page": "flights/mission-3/after/visible-page.json",
+          "browser_calls": 4,
+          "browser_run_cost_usd": 0.000256242,
+          "learning_calls": 0,
+          "learning_cost_usd": 0,
+          "total_calls": 4,
+          "total_cost_usd": 0.000256242,
+          "fully_reported": true,
+          "new_learning_account": false,
+          "learning_pending_finished": true,
+          "learning_wait_seconds": 0.0032744259988248814,
+          "learning_poll_count": 1,
+          "max_observed_pending": 0,
+          "learning_pending_at_finish": 0,
+          "procedures": [
+            {
+              "slug": "draft:explore-destinations",
+              "chosen_key": "draft:explore-destinations",
+              "outcome": "verified",
+              "expectations": [
+                {
+                  "sentence": "the page is travel-slug",
+                  "checker": "page_kind",
+                  "passed": true,
+                  "score": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 4,
+          "status": "done",
+          "harness_goal_verified": false,
+          "independent_goal_verified": null,
+          "independent_review": "Earlier DOM says Loading results and contains no destination prices; subsequent screenshot shows destination cards, map markers and PLN prices, but gray/unloaded basemap tiles. Not a clean complete-goal pass at drive completion.",
+          "screenshot": "flights/mission-4/after/page.png",
+          "visible_page": "flights/mission-4/after/visible-page.json",
+          "browser_calls": 4,
+          "browser_run_cost_usd": 0.000255738,
+          "learning_calls": 2,
+          "learning_cost_usd": 0.003503975,
+          "total_calls": 6,
+          "total_cost_usd": 0.003759713,
+          "fully_reported": true,
+          "new_learning_account": true,
+          "learning_pending_finished": true,
+          "learning_wait_seconds": 50.03755168600037,
+          "learning_poll_count": 11,
+          "max_observed_pending": 1,
+          "learning_pending_at_finish": 0,
+          "procedures": [
+            {
+              "slug": "explore-destinations",
+              "chosen_key": "explore-destinations",
+              "outcome": "verified",
+              "expectations": [
+                {
+                  "sentence": "the page is travel-slug",
+                  "checker": "page_kind",
+                  "passed": true,
+                  "score": null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "costs": {
+        "browser_calls": 22,
+        "browser_cost_usd": 0.003246852,
+        "learning_calls": 3,
+        "learning_cost_usd": 0.00924015,
+        "total_calls": 25,
+        "total_cost_usd": 0.012487002
+      }
+    }
+  },
+  "costs": {
+    "browser_calls": 40,
+    "browser_cost_usd": 0.005718992,
+    "learning_calls": 3,
+    "learning_cost_usd": 0.00924015,
+    "total_calls": 43,
+    "total_cost_usd": 0.014959142,
+    "fully_reported": true,
+    "unreported_calls": 0,
+    "calls_by_kind": {
+      "text_helper": 2,
+      "operator": 32,
+      "learning": 3,
+      "playbook": 2,
+      "procedure": 4
+    }
+  },
+  "models": {
+    "jev": "typesafe/jev-1.13-20260917",
+    "helper": "inception/mercury-2.5",
+    "planner_and_learning": "openai/gpt-6-luna",
+    "reasoning_effort": "max",
+    "provider": "OpenRouter"
+  },
+  "diagnosis": {
+    "maps": {
+      "raw_paths": [
+        [
+          "m",
+          "maps",
+          "place-<slug>"
+        ],
+        [
+          "maps",
+          "search-<slug>",
+          "place-<slug>"
+        ]
+      ],
+      "matching_paths": [
+        [
+          "maps",
+          "place-slug"
+        ],
+        [
+          "maps",
+          "search-slug",
+          "place-slug"
+        ]
+      ],
+      "foreign_consent_already_excluded": true,
+      "exact_path_cohort_insufficient": true,
+      "compile_attempted": false
+    },
+    "flights": {
+      "original_draft_and_installed_slug": "explore-destinations",
+      "original_provenance_path": [
+        "travel-slug"
+      ],
+      "third_and_fourth_trace_path": [
+        "flights",
+        "travel-slug"
+      ],
+      "fourth_new_draft_from_traces": [
+        3,
+        4
+      ],
+      "fourth_new_draft_learning_calls": 2,
+      "fourth_new_draft_learning_cost_usd": 0.003503975,
+      "verified_expectation": "the page is travel-slug",
+      "fourth_early_dom_goal_false": true,
+      "fourth_subsequent_screenshot_prices_visible": true,
+      "fourth_subsequent_screenshot_basemap_tiles_gray": true,
+      "fourth_browser_cost_cheaper_than_both_baselines": true,
+      "fourth_inclusive_cost_cheaper_than_both_baselines": false,
+      "fourth_inclusive_calls_lower_than_both_baselines": true,
+      "harness_fourth_comparator_reached": false
+    },
+    "accounting": "Browser drive reply and durable trace are run-only. Add only a newly written LAST-work account after pending=0; retained account on install-only mission 3 is not rebilled. All observed costs are fully reported."
+  }
+}

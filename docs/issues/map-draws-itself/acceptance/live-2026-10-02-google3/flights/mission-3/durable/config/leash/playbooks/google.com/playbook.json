@@ -1,0 +1,54 @@
+{
+  "site": "google.com",
+  "entry": "https://consent.google.com/m?continue=https://www.google.com/travel/flights?hl%3Den&gl=PL&m=0&pc=flt&cm=2&hl=en&src=1",
+  "description": "Learned google.com",
+  "pages": [
+    {
+      "name": "m",
+      "description": "Inferred m",
+      "url_pattern": "https://consent.google.com/m",
+      "repeatable": true
+    },
+    {
+      "name": "travel-slug",
+      "description": "Inferred travel-<slug>",
+      "url_pattern": "https://www.google.com/travel/*",
+      "repeatable": true
+    }
+  ],
+  "procedures": [
+    {
+      "provenance": {
+        "traces": [
+          "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-02T19:32:23.014480Z-done.json",
+          "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-02T19:32:12.979140Z-done.json"
+        ],
+        "model": "openai/gpt-6-luna",
+        "time": "2026-10-02T19:33:53.156121Z",
+        "tries": 0,
+        "path": [
+          "travel-slug"
+        ],
+        "repeatable": true,
+        "reason": "no irreversible submission in the observed path",
+        "gate": "replay",
+        "repair": false,
+        "model_calls": 1,
+        "model_cost": 0.005736175
+      },
+      "slug": "explore-destinations",
+      "description": "Open Google Flights' Explore destinations page.",
+      "steps": [
+        {
+          "goal": "Click the button named Explore destinations",
+          "until": [
+            "the page is travel-slug"
+          ]
+        }
+      ],
+      "expect": [
+        "the page is travel-slug"
+      ]
+    }
+  ]
+}

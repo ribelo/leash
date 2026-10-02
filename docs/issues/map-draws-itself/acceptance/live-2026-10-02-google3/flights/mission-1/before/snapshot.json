@@ -1,0 +1,73 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "250"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.027470753999295994,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://consent.google.com/m?continue=https://www.google.com/travel/flights?hl%3Den&gl=PL&m=0&pc=flt&cm=2&hl=en&src=1",
+    "title": "Before you continue",
+    "page_kind": {
+      "name": "m",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "button",
+        "name": "Language: English",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 3,
+        "role": "heading",
+        "name": "Before you continue to Google"
+      },
+      {
+        "index": 4,
+        "role": "paragraph",
+        "name": "We use  and data, including IP addresses, to"
+      },
+      {
+        "index": 5,
+        "role": "link",
+        "name": "cookies (Opens in a new tab)"
+      },
+      {
+        "index": 6,
+        "role": "paragraph",
+        "name": "If you choose to “Accept all,” we will also use cookies and data, including IP addresses, to"
+      },
+      {
+        "index": 7,
+        "role": "paragraph",
+        "name": "If you choose to “Reject all,” we will not use cookies or IP addresses for these additional purposes."
+      },
+      {
+        "index": 8,
+        "role": "paragraph",
+        "name": "Non-personalized content is influenced by things like the content you’re currently viewing, activity in your active Search session, and your location. Non-personalized ads are influenced by the content you’re currently viewing and your general location. Personalized content and ads can also include more relevant results, recommendations, and tailored ads based on past activity from this browser, like previous Google searches. We also use cookies and data to tailor the experience to be age-appropriate, if relevant."
+      }
+    ],
+    "total": 8,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

@@ -1,0 +1,1125 @@
+{
+  "command": [
+    "drive",
+    "On Google Flights, open Explore and stop when the Explore destinations map and destination flight prices are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "420",
+    "--max-steps",
+    "50",
+    "--max-procedures",
+    "15",
+    "--out",
+    "<PRIVATE_ROOT>/output-2.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 7.129600934000337,
+  "reply": {
+    "unattended": [],
+    "playbook_choices": [
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      }
+    ],
+    "status": "done",
+    "site": null,
+    "procedures": [],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "operator": 7
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.001561434,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 7,
+    "model_cost": 0.001561434,
+    "operator_steps": [
+      {
+        "non_repeatable": false,
+        "n": 1,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 21,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.99,
+            "WAIT": 0.0,
+            "BLOCKED": 0.0,
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.0,
+            "SCROLL_DOWN": 0.01
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.15,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.85,
+            "23": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Explore destinations"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 2596
+      },
+      {
+        "non_repeatable": false,
+        "n": 2,
+        "snapshot": "[redacted capability]",
+        "operation": "done",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.01,
+            "BLOCKED": 0.01,
+            "TYPE_TEXT": 0.0,
+            "WAIT": 0.01,
+            "DONE": 0.97
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+          "title": "Wrocław to anywhere | Explore"
+        },
+        "elapsed_ms": 6747
+      }
+    ],
+    "operator_state": {
+      "status": "done",
+      "reason": null,
+      "error": null,
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+          "title": "Wrocław to anywhere | Explore",
+          "page_kind": {
+            "name": "explore",
+            "source": "inferred"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "button",
+              "name": "Main menu",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 2,
+              "role": "link",
+              "name": "Google"
+            },
+            {
+              "index": 3,
+              "role": "button",
+              "name": "Skip to main content"
+            },
+            {
+              "index": 4,
+              "role": "button",
+              "name": "Accessibility feedback"
+            },
+            {
+              "index": 5,
+              "role": "link",
+              "name": "Explore"
+            },
+            {
+              "index": 6,
+              "role": "link",
+              "name": "Flights"
+            },
+            {
+              "index": 7,
+              "role": "link",
+              "name": "Hotels"
+            },
+            {
+              "index": 8,
+              "role": "link",
+              "name": "Vacation rentals"
+            },
+            {
+              "index": 9,
+              "role": "button",
+              "name": "Change appearance",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 10,
+              "role": "button",
+              "name": "Google apps",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 11,
+              "role": "link",
+              "name": "Sign in"
+            },
+            {
+              "index": 12,
+              "role": "combobox",
+              "name": "Change ticket type. Round trip",
+              "value": "Round trip",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 13,
+              "role": "button",
+              "name": "1 passenger"
+            },
+            {
+              "index": 14,
+              "role": "combobox",
+              "name": "Change seating class. Economy",
+              "value": "Economy",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 15,
+              "role": "combobox",
+              "name": "Where from?",
+              "value": "Wrocław",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 16,
+              "role": "combobox",
+              "name": "Where to?",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 17,
+              "role": "button",
+              "name": "1-week trip in the next 6 months"
+            },
+            {
+              "index": 18,
+              "role": "button",
+              "name": "All filters (1)"
+            },
+            {
+              "index": 19,
+              "role": "button",
+              "name": "Flights only, Travel mode, Selected"
+            },
+            {
+              "index": 20,
+              "role": "button",
+              "name": "Clear Travel mode"
+            },
+            {
+              "index": 21,
+              "role": "button",
+              "name": "Stops, Not selected"
+            },
+            {
+              "index": 22,
+              "role": "button",
+              "name": "Price, Not selected"
+            },
+            {
+              "index": 23,
+              "role": "button",
+              "name": "Airlines, Not selected"
+            },
+            {
+              "index": 24,
+              "role": "button",
+              "name": "Duration, Not selected"
+            },
+            {
+              "index": 25,
+              "role": "button",
+              "name": "Bags, Not selected"
+            },
+            {
+              "index": 26,
+              "role": "button",
+              "name": "About these results"
+            },
+            {
+              "index": 27,
+              "role": "button",
+              "name": "Paris Nov 15 – 23 Ryanair Nonstop · 2 hr 5 min 184 Polish zlotys"
+            },
+            {
+              "index": 28,
+              "role": "button",
+              "name": "Paris Nov 15 – 23 Ryanair Nonstop · 2 hr 5 min 184 Polish zlotys"
+            },
+            {
+              "index": 29,
+              "role": "heading",
+              "name": "Paris"
+            },
+            {
+              "index": 30,
+              "role": "button",
+              "name": "London Oct 22 – 31 Ryanair Nonstop · 2 hr 20 min 130 Polish zlotys"
+            },
+            {
+              "index": 31,
+              "role": "button",
+              "name": "London Oct 22 – 31 Ryanair Nonstop · 2 hr 20 min 130 Polish zlotys"
+            },
+            {
+              "index": 32,
+              "role": "heading",
+              "name": "London"
+            },
+            {
+              "index": 33,
+              "role": "button",
+              "name": "Rome Nov 1 – 8 Ryanair Nonstop · 2 hr 230 Polish zlotys"
+            },
+            {
+              "index": 34,
+              "role": "button",
+              "name": "Rome Nov 1 – 8 Ryanair Nonstop · 2 hr 230 Polish zlotys"
+            },
+            {
+              "index": 35,
+              "role": "heading",
+              "name": "Rome"
+            },
+            {
+              "index": 36,
+              "role": "button",
+              "name": "Barcelona Jan 4 – 11, 2027 Wizz Air Nonstop · 2 hr 45 min 368 Polish zlotys"
+            },
+            {
+              "index": 37,
+              "role": "button",
+              "name": "Barcelona Jan 4 – 11, 2027 Wizz Air Nonstop · 2 hr 45 min 368 Polish zlotys"
+            },
+            {
+              "index": 38,
+              "role": "heading",
+              "name": "Barcelona"
+            },
+            {
+              "index": 39,
+              "role": "button",
+              "name": "​English (United States)"
+            },
+            {
+              "index": 40,
+              "role": "button",
+              "name": "PLN"
+            },
+            {
+              "index": 41,
+              "role": "button",
+              "name": "Paris 184 Polish zlotys"
+            },
+            {
+              "index": 42,
+              "role": "button",
+              "name": "Rome 230 Polish zlotys"
+            },
+            {
+              "index": 43,
+              "role": "button",
+              "name": "Barcelona 368 Polish zlotys"
+            },
+            {
+              "index": 44,
+              "role": "button",
+              "name": "Lisbon 352 Polish zlotys"
+            },
+            {
+              "index": 45,
+              "role": "button",
+              "name": "Athens 337 Polish zlotys"
+            },
+            {
+              "index": 46,
+              "role": "button",
+              "name": "Vienna 702 Polish zlotys"
+            },
+            {
+              "index": 47,
+              "role": "button",
+              "name": "Dublin 270 Polish zlotys"
+            },
+            {
+              "index": 48,
+              "role": "button",
+              "name": "Hamburg 706 Polish zlotys"
+            },
+            {
+              "index": 49,
+              "role": "button",
+              "name": "Warsaw 349 Polish zlotys"
+            },
+            {
+              "index": 50,
+              "role": "button",
+              "name": "Chișinău 138 Polish zlotys"
+            },
+            {
+              "index": 51,
+              "role": "button",
+              "name": "Map camera controls",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 52,
+              "role": "button",
+              "name": "Zoom in"
+            },
+            {
+              "index": 53,
+              "role": "button",
+              "name": "Zoom out"
+            },
+            {
+              "index": 54,
+              "role": "button",
+              "name": "Keyboard shortcuts"
+            },
+            {
+              "index": 55,
+              "role": "link",
+              "name": "Terms (opens in new tab)"
+            },
+            {
+              "index": 56,
+              "role": "button",
+              "name": "View smaller map"
+            }
+          ],
+          "total": 56,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+        "title": "Wrocław to anywhere | Explore",
+        "page_kind": "travel-<slug>",
+        "page_kind_source": "inferred",
+        "text": "Skip to main content\nAccessibility feedback\nExplore\nFlights\nHotels\nVacation rentals\nSign in\n1\n1-week trip in the next 6 months\nAll filters (1)\nFlights only\nStops\nPrice\nAirlines\nDuration\nBags\nAbout these results\nParis\nNov 15 – 23\nNonstop\n2 hr 5 min\nPLN 184\nLondon\nOct 22 – 31\nNonstop\n2 hr 20 min\nPLN 130\nRome\nNov 1 – 8\nNonstop\n2 hr\nPLN 230\nBarcelona\nEnglish (United States)\nParis\nPLN 184\nLondon\nRome\nPLN 230\nBarcelona\nPLN 368\nVenice\nLisbon\nPLN 352\nFlorence\nMadrid\nAthens\nPLN 337\nIstanbul\nVienna\nPLN 702\nSantorini\nDublin\nPLN 270\nMilan\nDubrovnik\nMunich\nPorto\nSeville\nManchester\nBordeaux\nNice\nHamburg\nPLN 706\nFrankfurt am Main\nWarsaw\nPLN 349\nLyon\nPalermo\nAntalya\nBilbao\nBucharest\nPalma\nCork\nSofia\nCagliari\nBrașov\nA Coruña\nVarna\nChișinău\nPLN 138\nMinsk\nKayseri\nKeyboard shortcuts\nMap data ©2026 Google, INEGI\nTerms",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [
+          "nested-scroll-container"
+        ],
+        "can_scroll_down": false,
+        "can_scroll_up": false,
+        "coverage": "viewport",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": false,
+          "can_scroll_down": false,
+          "coverage": "viewport",
+          "unsupported_states": [
+            "nested-scroll-container"
+          ]
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 21,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.99,
+                "WAIT": 0.0,
+                "BLOCKED": 0.0,
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.0,
+                "SCROLL_DOWN": 0.01
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.15,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.85,
+                "23": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Explore destinations"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 2596
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 14,
+          "settle_ms": 751
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "executed",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 21,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.99,
+              "WAIT": 0.0,
+              "BLOCKED": 0.0,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.0,
+              "SCROLL_DOWN": 0.01
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.15,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.85,
+              "23": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0
+            }
+          },
+          "confidence": 0.98,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4414,
+            "output_tokens": 336,
+            "cost": 0.000185388,
+            "retries": 0
+          },
+          "elapsed_ms": 1527
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 2,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.92,
+              "BLOCKED": 0.02,
+              "DONE": 0.01,
+              "WAIT": 0.05
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.98,
+              "6": 0.02,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0
+            }
+          },
+          "confidence": 0.89,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2253,
+            "output_tokens": 141,
+            "cost": 9.4626e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 357
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 3,
+          "snapshot": "[redacted capability]",
+          "operation": "wait",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.02,
+              "DONE": 0.15,
+              "CLICK": 0.2,
+              "WAIT": 0.39,
+              "BLOCKED": 0.24
+            },
+            "target": {}
+          },
+          "confidence": 0.24,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4576,
+            "output_tokens": 335,
+            "cost": 0.000192192,
+            "retries": 0
+          },
+          "elapsed_ms": 444
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 4,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.0,
+              "CLICK": 0.09,
+              "BLOCKED": 0.1,
+              "DONE": 0.76,
+              "WAIT": 0.05
+            },
+            "target": {}
+          },
+          "confidence": 0.69,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5885,
+            "output_tokens": 407,
+            "cost": 0.00024717,
+            "retries": 0
+          },
+          "elapsed_ms": 565
+        },
+        {
+          "outcome": "stale terminal; re-decide",
+          "n": 5,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.09,
+              "WAIT": 0.02,
+              "BLOCKED": 0.05,
+              "DONE": 0.84,
+              "TYPE_TEXT": 0.0
+            },
+            "target": {}
+          },
+          "confidence": 0.79,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6010,
+            "output_tokens": 415,
+            "cost": 0.00025242,
+            "retries": 0
+          },
+          "elapsed_ms": 576
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 6,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.02,
+              "CLICK": 0.02,
+              "BLOCKED": 0.02,
+              "TYPE_TEXT": 0.0,
+              "DONE": 0.94
+            },
+            "target": {}
+          },
+          "confidence": 0.93,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6481,
+            "output_tokens": 454,
+            "cost": 0.000272202,
+            "retries": 0
+          },
+          "elapsed_ms": 340
+        },
+        {
+          "outcome": "terminal",
+          "n": 7,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.01,
+              "BLOCKED": 0.01,
+              "TYPE_TEXT": 0.0,
+              "WAIT": 0.01,
+              "DONE": 0.97
+            },
+            "target": {}
+          },
+          "confidence": 0.97,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 7558,
+            "output_tokens": 527,
+            "cost": 0.000317436,
+            "retries": 0
+          },
+          "elapsed_ms": 361
+        }
+      ],
+      "text_calls": [],
+      "metrics": {
+        "actions": 1,
+        "predictions": 7,
+        "text_calls": 0,
+        "observation_calls": 8,
+        "observation_retries": 3,
+        "stale_decisions": 5,
+        "bootstrap_ms": 0,
+        "observation_ms": 2382,
+        "prediction_ms": 4170,
+        "text_helper_ms": 0,
+        "input_ms": 14,
+        "settle_ms": 751,
+        "elapsed_ms": 6747
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+      "title": "Wrocław to anywhere | Explore",
+      "page_kind": {
+        "name": "explore",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "button",
+          "name": "Main menu",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Google"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Skip to main content"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "Accessibility feedback"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Explore"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Flights"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "Hotels"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Vacation rentals"
+        },
+        {
+          "index": 9,
+          "role": "button",
+          "name": "Change appearance",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 10,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 12,
+          "role": "combobox",
+          "name": "Change ticket type. Round trip",
+          "value": "Round trip",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 13,
+          "role": "button",
+          "name": "1 passenger"
+        },
+        {
+          "index": 14,
+          "role": "combobox",
+          "name": "Change seating class. Economy",
+          "value": "Economy",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 15,
+          "role": "combobox",
+          "name": "Where from?",
+          "value": "Wrocław",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 16,
+          "role": "combobox",
+          "name": "Where to?",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 17,
+          "role": "button",
+          "name": "1-week trip in the next 6 months"
+        },
+        {
+          "index": 18,
+          "role": "button",
+          "name": "All filters (1)"
+        },
+        {
+          "index": 19,
+          "role": "button",
+          "name": "Flights only, Travel mode, Selected"
+        },
+        {
+          "index": 20,
+          "role": "button",
+          "name": "Clear Travel mode"
+        },
+        {
+          "index": 21,
+          "role": "button",
+          "name": "Stops, Not selected"
+        },
+        {
+          "index": 22,
+          "role": "button",
+          "name": "Price, Not selected"
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Airlines, Not selected"
+        },
+        {
+          "index": 24,
+          "role": "button",
+          "name": "Duration, Not selected"
+        },
+        {
+          "index": 25,
+          "role": "button",
+          "name": "Bags, Not selected"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "About these results"
+        },
+        {
+          "index": 27,
+          "role": "button",
+          "name": "Paris Nov 15 – 23 Ryanair Nonstop · 2 hr 5 min 184 Polish zlotys"
+        },
+        {
+          "index": 28,
+          "role": "button",
+          "name": "Paris Nov 15 – 23 Ryanair Nonstop · 2 hr 5 min 184 Polish zlotys"
+        },
+        {
+          "index": 29,
+          "role": "heading",
+          "name": "Paris"
+        },
+        {
+          "index": 30,
+          "role": "button",
+          "name": "London Oct 22 – 31 Ryanair Nonstop · 2 hr 20 min 130 Polish zlotys"
+        },
+        {
+          "index": 31,
+          "role": "button",
+          "name": "London Oct 22 – 31 Ryanair Nonstop · 2 hr 20 min 130 Polish zlotys"
+        },
+        {
+          "index": 32,
+          "role": "heading",
+          "name": "London"
+        },
+        {
+          "index": 33,
+          "role": "button",
+          "name": "Rome Nov 1 – 8 Ryanair Nonstop · 2 hr 230 Polish zlotys"
+        },
+        {
+          "index": 34,
+          "role": "button",
+          "name": "Rome Nov 1 – 8 Ryanair Nonstop · 2 hr 230 Polish zlotys"
+        },
+        {
+          "index": 35,
+          "role": "heading",
+          "name": "Rome"
+        },
+        {
+          "index": 36,
+          "role": "button",
+          "name": "Barcelona Jan 4 – 11, 2027 Wizz Air Nonstop · 2 hr 45 min 368 Polish zlotys"
+        },
+        {
+          "index": 37,
+          "role": "button",
+          "name": "Barcelona Jan 4 – 11, 2027 Wizz Air Nonstop · 2 hr 45 min 368 Polish zlotys"
+        },
+        {
+          "index": 38,
+          "role": "heading",
+          "name": "Barcelona"
+        },
+        {
+          "index": 39,
+          "role": "button",
+          "name": "​English (United States)"
+        },
+        {
+          "index": 40,
+          "role": "button",
+          "name": "PLN"
+        },
+        {
+          "index": 41,
+          "role": "button",
+          "name": "Paris 184 Polish zlotys"
+        },
+        {
+          "index": 42,
+          "role": "button",
+          "name": "Rome 230 Polish zlotys"
+        },
+        {
+          "index": 43,
+          "role": "button",
+          "name": "Barcelona 368 Polish zlotys"
+        },
+        {
+          "index": 44,
+          "role": "button",
+          "name": "Lisbon 352 Polish zlotys"
+        },
+        {
+          "index": 45,
+          "role": "button",
+          "name": "Athens 337 Polish zlotys"
+        },
+        {
+          "index": 46,
+          "role": "button",
+          "name": "Vienna 702 Polish zlotys"
+        },
+        {
+          "index": 47,
+          "role": "button",
+          "name": "Dublin 270 Polish zlotys"
+        },
+        {
+          "index": 48,
+          "role": "button",
+          "name": "Hamburg 706 Polish zlotys"
+        },
+        {
+          "index": 49,
+          "role": "button",
+          "name": "Warsaw 349 Polish zlotys"
+        },
+        {
+          "index": 50,
+          "role": "button",
+          "name": "Chișinău 138 Polish zlotys"
+        },
+        {
+          "index": 51,
+          "role": "button",
+          "name": "Map camera controls",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 52,
+          "role": "button",
+          "name": "Zoom in"
+        },
+        {
+          "index": 53,
+          "role": "button",
+          "name": "Zoom out"
+        },
+        {
+          "index": 54,
+          "role": "button",
+          "name": "Keyboard shortcuts"
+        },
+        {
+          "index": 55,
+          "role": "link",
+          "name": "Terms (opens in new tab)"
+        },
+        {
+          "index": 56,
+          "role": "button",
+          "name": "View smaller map"
+        }
+      ],
+      "total": 56,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-02T19:32:23.014480Z-done.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}

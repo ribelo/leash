@@ -1,0 +1,61 @@
+{
+  "site": "google.com",
+  "entry": "https://consent.google.com/m?continue=https://www.google.com/travel/flights?hl%3Den&gl=PL&m=0&pc=flt&cm=2&hl=en&src=1",
+  "description": "Learned google.com",
+  "pages": [
+    {
+      "name": "m",
+      "description": "Inferred m",
+      "url_pattern": "https://consent.google.com/m",
+      "repeatable": true
+    },
+    {
+      "name": "travel-slug",
+      "description": "Inferred travel-<slug>",
+      "url_pattern": "https://www.google.com/travel/*",
+      "repeatable": true
+    },
+    {
+      "name": "flights",
+      "description": "Inferred flights",
+      "url_pattern": "https://www.google.com/travel/flights",
+      "repeatable": true
+    }
+  ],
+  "procedures": [
+    {
+      "provenance": {
+        "traces": [
+          "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-02T19:34:11.649369Z-done.json",
+          "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-02T19:34:01.876903Z-done.json"
+        ],
+        "model": "openai/gpt-6-luna",
+        "time": "2026-10-02T19:35:06.304841Z",
+        "tries": 0,
+        "path": [
+          "flights",
+          "travel-slug"
+        ],
+        "repeatable": true,
+        "reason": "no irreversible submission in the observed path",
+        "gate": "replay",
+        "repair": false,
+        "model_calls": 2,
+        "model_cost": 0.003503975
+      },
+      "slug": "explore-destinations",
+      "description": "Open Google Flights' Explore destinations page.",
+      "steps": [
+        {
+          "goal": "Click the button named Explore destinations",
+          "until": [
+            "the page is travel-slug"
+          ]
+        }
+      ],
+      "expect": [
+        "the page is travel-slug"
+      ]
+    }
+  ]
+}

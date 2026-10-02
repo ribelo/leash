@@ -1,0 +1,13 @@
+{
+  "command": [
+    "close",
+    "[redacted]"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.002273623000291991,
+  "reply": {
+    "closed": true
+  },
+  "stdout": null,
+  "stderr": ""
+}

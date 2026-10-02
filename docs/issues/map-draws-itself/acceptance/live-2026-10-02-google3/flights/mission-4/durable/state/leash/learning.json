@@ -1,0 +1,9 @@
+{
+  "account:google.com": {
+    "model_calls": 2,
+    "model_cost": 0.003503975
+  },
+  "compile:google.com": "2026-10-02T19:35:06.304655Z",
+  "repair-fail:google.com:explore-destinations": 0,
+  "fail:google.com:explore-destinations": 0
+}

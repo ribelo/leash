@@ -1,0 +1,589 @@
+{
+  "command": [
+    "drive",
+    "On Google Flights, open Explore and stop when the Explore destinations map and destination flight prices are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "420",
+    "--max-steps",
+    "50",
+    "--max-procedures",
+    "15",
+    "--out",
+    "<PRIVATE_ROOT>/output-4.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 3.0353459930011013,
+  "reply": {
+    "unattended": [],
+    "playbook_choices": [
+      {
+        "source": "jev",
+        "key": "book:<PRIVATE_ROOT>/config/leash/playbooks/google.com/playbook.json",
+        "probabilities": {
+          "book:<PRIVATE_ROOT>/config/leash/playbooks/google.com/playbook.json": 0.51,
+          "none": 0.49
+        },
+        "confidence": 0.03,
+        "usage": {
+          "input_tokens": 637,
+          "output_tokens": 84,
+          "cost": 2.6754e-05
+        },
+        "note": null
+      }
+    ],
+    "status": "done",
+    "site": "google.com",
+    "procedures": [
+      {
+        "slug": "explore-destinations",
+        "site": "google.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "explore-destinations",
+          "probabilities": {
+            "NONE": 0.02,
+            "DONE": 0.0,
+            "explore-destinations": 0.98
+          },
+          "confidence": 0.97,
+          "usage": {
+            "input_tokens": 577,
+            "output_tokens": 49,
+            "cost": 2.4234e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Click the button named Explore destinations",
+            "status": "done",
+            "steps": [
+              {
+                "non_repeatable": false,
+                "n": 1,
+                "snapshot": "[redacted capability]",
+                "operation": "click",
+                "index": 21,
+                "probabilities": {
+                  "op": {
+                    "WAIT": 0.0,
+                    "TYPE_TEXT": 0.0,
+                    "CLICK": 1.0,
+                    "SCROLL_DOWN": 0.0,
+                    "DONE": 0.0,
+                    "BLOCKED": 0.0
+                  },
+                  "target": {
+                    "1": 0.0,
+                    "2": 0.0,
+                    "3": 0.0,
+                    "4": 0.0,
+                    "5": 0.0,
+                    "6": 0.0,
+                    "7": 0.0,
+                    "8": 0.0,
+                    "9": 0.0,
+                    "10": 0.0,
+                    "11": 0.0,
+                    "13": 0.0,
+                    "14": 0.0,
+                    "15": 0.0,
+                    "16": 0.0,
+                    "18": 0.0,
+                    "19": 0.0,
+                    "20": 0.0,
+                    "21": 1.0,
+                    "23": 0.0,
+                    "26": 0.0,
+                    "27": 0.0,
+                    "28": 0.0,
+                    "29": 0.0,
+                    "30": 0.0
+                  }
+                },
+                "target": {
+                  "role": "button",
+                  "label": "Explore destinations"
+                },
+                "after": {
+                  "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+                  "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+                },
+                "elapsed_ms": 1194
+              }
+            ],
+            "reason": "the step's until checks hold"
+          }
+        ],
+        "scripts": [],
+        "expectations": [
+          {
+            "sentence": "the page is travel-slug",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 1282
+      }
+    ],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "operator": 1,
+        "playbook": 1,
+        "procedure": 2
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.000255738,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 4,
+    "model_cost": 0.000255738,
+    "operator_steps": [],
+    "operator_state": {
+      "status": "done",
+      "reason": "the step's until checks hold",
+      "error": null,
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+          "page_kind": {
+            "name": "travel-slug",
+            "source": "declared"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "button",
+              "name": "Main menu",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 2,
+              "role": "link",
+              "name": "Google"
+            },
+            {
+              "index": 3,
+              "role": "button",
+              "name": "Skip to main content"
+            },
+            {
+              "index": 4,
+              "role": "button",
+              "name": "Accessibility feedback"
+            },
+            {
+              "index": 5,
+              "role": "link",
+              "name": "Explore"
+            },
+            {
+              "index": 6,
+              "role": "link",
+              "name": "Flights"
+            },
+            {
+              "index": 7,
+              "role": "link",
+              "name": "Hotels"
+            },
+            {
+              "index": 8,
+              "role": "link",
+              "name": "Vacation rentals"
+            },
+            {
+              "index": 9,
+              "role": "button",
+              "name": "Change appearance",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 10,
+              "role": "button",
+              "name": "Google apps",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 11,
+              "role": "link",
+              "name": "Sign in"
+            }
+          ],
+          "total": 11,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+        "page_kind": "travel-slug",
+        "page_kind_source": "declared",
+        "text": "Skip to main content\nAccessibility feedback\nExplore\nFlights\nHotels\nVacation rentals\nSign in",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [],
+        "can_scroll_down": false,
+        "can_scroll_up": false,
+        "coverage": "viewport",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": false,
+          "can_scroll_down": false,
+          "coverage": "viewport",
+          "unsupported_states": []
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 21,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.0,
+                "TYPE_TEXT": 0.0,
+                "CLICK": 1.0,
+                "SCROLL_DOWN": 0.0,
+                "DONE": 0.0,
+                "BLOCKED": 0.0
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 1.0,
+                "23": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Explore destinations"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 1194
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 15,
+          "settle_ms": 651
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "executed",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 21,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.0,
+              "TYPE_TEXT": 0.0,
+              "CLICK": 1.0,
+              "SCROLL_DOWN": 0.0,
+              "DONE": 0.0,
+              "BLOCKED": 0.0
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 1.0,
+              "23": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0
+            }
+          },
+          "confidence": 1.0,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4212,
+            "output_tokens": 336,
+            "cost": 0.000176904,
+            "retries": 0
+          },
+          "elapsed_ms": 329
+        }
+      ],
+      "text_calls": [],
+      "metrics": {
+        "actions": 1,
+        "predictions": 1,
+        "text_calls": 0,
+        "observation_calls": 2,
+        "observation_retries": 0,
+        "stale_decisions": 0,
+        "bootstrap_ms": 0,
+        "observation_ms": 843,
+        "prediction_ms": 329,
+        "text_helper_ms": 0,
+        "input_ms": 15,
+        "settle_ms": 651,
+        "elapsed_ms": 1194
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+      "title": "Wrocław to anywhere | Explore",
+      "page_kind": {
+        "name": "travel-slug",
+        "source": "declared"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "button",
+          "name": "Main menu",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Google"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Skip to main content"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "Accessibility feedback"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Explore"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Flights"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "Hotels"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Vacation rentals"
+        },
+        {
+          "index": 9,
+          "role": "button",
+          "name": "Change appearance",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 10,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 12,
+          "role": "combobox",
+          "name": "Change ticket type. Round trip",
+          "value": "Round trip",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 13,
+          "role": "button",
+          "name": "1 passenger"
+        },
+        {
+          "index": 14,
+          "role": "combobox",
+          "name": "Change seating class. Economy",
+          "value": "Economy",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 15,
+          "role": "combobox",
+          "name": "Where from?",
+          "value": "Wrocław",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 16,
+          "role": "combobox",
+          "name": "Where to?",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 17,
+          "role": "button",
+          "name": "1-week trip in the next 6 months"
+        },
+        {
+          "index": 18,
+          "role": "button",
+          "name": "All filters (1)"
+        },
+        {
+          "index": 19,
+          "role": "button",
+          "name": "Flights only, Travel mode, Selected"
+        },
+        {
+          "index": 20,
+          "role": "button",
+          "name": "Clear Travel mode"
+        },
+        {
+          "index": 21,
+          "role": "button",
+          "name": "Stops, Not selected"
+        },
+        {
+          "index": 22,
+          "role": "button",
+          "name": "Price, Not selected"
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Airlines, Not selected"
+        },
+        {
+          "index": 24,
+          "role": "button",
+          "name": "Duration, Not selected"
+        },
+        {
+          "index": 25,
+          "role": "button",
+          "name": "Bags, Not selected"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "​English (United States)"
+        },
+        {
+          "index": 27,
+          "role": "button",
+          "name": "PLN"
+        },
+        {
+          "index": 28,
+          "role": "button",
+          "name": "View smaller map"
+        }
+      ],
+      "total": 28,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-02T19:34:11.649369Z-done.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}

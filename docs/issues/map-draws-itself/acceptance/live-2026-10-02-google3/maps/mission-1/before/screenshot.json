@@ -1,0 +1,15 @@
+{
+  "command": [
+    "shot",
+    "[redacted]",
+    "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-02-google3/maps/mission-1/before/page.png"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.0658368980002706,
+  "reply": {
+    "path": "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-02-google3/maps/mission-1/before/page.png",
+    "bytes": 87803
+  },
+  "stdout": null,
+  "stderr": ""
+}

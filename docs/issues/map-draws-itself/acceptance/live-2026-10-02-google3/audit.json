@@ -1,0 +1,95 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "site": "maps",
+      "mission": 1,
+      "browser_trace_reconciled": true,
+      "async_last_work_reconciled": true,
+      "pending_finished": true
+    },
+    {
+      "site": "maps",
+      "mission": 2,
+      "browser_trace_reconciled": true,
+      "async_last_work_reconciled": true,
+      "pending_finished": true
+    },
+    {
+      "site": "flights",
+      "mission": 1,
+      "browser_trace_reconciled": true,
+      "async_last_work_reconciled": true,
+      "pending_finished": true
+    },
+    {
+      "site": "flights",
+      "mission": 2,
+      "browser_trace_reconciled": true,
+      "async_last_work_reconciled": true,
+      "pending_finished": true
+    },
+    {
+      "site": "flights",
+      "mission": 3,
+      "browser_trace_reconciled": true,
+      "async_last_work_reconciled": true,
+      "pending_finished": true
+    },
+    {
+      "site": "flights",
+      "mission": 4,
+      "browser_trace_reconciled": true,
+      "async_last_work_reconciled": true,
+      "pending_finished": true
+    }
+  ],
+  "browser_calls": 40,
+  "learning_calls": 3,
+  "total_calls": 43,
+  "browser_cost_usd": 0.005718992,
+  "learning_cost_usd": 0.00924015,
+  "inclusive_cost_usd": 0.014959142,
+  "markdown_links_validated": 28,
+  "goal_screenshots_retained": 6,
+  "no_owned_processes": true,
+  "no_private_campaign_temp_roots": true,
+  "product_worktree_unchanged": true,
+  "prior_evidence_preserved": true,
+  "frozen_binary_and_harness_hashes_verified": true,
+  "replay_install_and_new_path_draft_verified": true,
+  "artifact_sha256": {
+    "README.md": "3a6be0c199f8ca374d3f53fcfc5e0762bf52938e444e7c02f794f37780414335",
+    "maps/README.md": "f9de071c496f6c9a79680aed42e3e0f85db13c5f065ddf335d652761c39e0416",
+    "flights/README.md": "ac0f4f563d3540924e36bbfdf0757d923ad94232c0b456eeace0b1af8af3a4af",
+    "summary.json": "469df34c80d351930ea7c47d382c5d80b33b6688de2543b26e0db3f7c5009c08",
+    "provenance.json": "221db4928b0a2e559b1300f87f7d9335aab7b7382231c8eb03a4caa18c0e1caf",
+    "harness.py": "0c3c28f903b9efc9d4cb2b80538863ff099be57363b1f989373edca64aff74f1",
+    "harness-test.py": "02ef7a91def7e76087763225d5e33599b2a900197fb7f8c9df49b874bde17635",
+    "audit-evidence.py": "fd3b023a34c692f833bf81d20385cd26beb1bab4e8d6cd408ce773eb58a694b2",
+    "maps/cost-curve.json": "6f35a4330a5c9ab169b35641ffb20af3c80e55211b3ce2b6fb7f35a1467a0516",
+    "maps/result.json": "d89c484e2be54f9fbbdb8588848af9378f8c6271523023f3ecd3a505850ef0de",
+    "flights/cost-curve.json": "53c7bc0d335ee0be99808438acb714c1db202a9d014189541ddfab20d02b3009",
+    "flights/result.json": "38d7b6bad1971d58efd77b2d420fb263521c9f5044aa179bca0bb330e5c5ada0"
+  },
+  "goal_screenshot_sha256": {
+    "flights/mission-1/after/page.png": "e78c4d14064da7ca7b87b975d8afc0c02db0dcd2ab49f76587aa9e9e668145bb",
+    "flights/mission-2/after/page.png": "0d581fc28c149a9af5615a597e83c336190a6c51b7b948b04035914c7c93a307",
+    "flights/mission-3/after/page.png": "36636c04f0e835fda1084a8b9102013f094e7eef2f18410ca59c2b5dfec2ca2a",
+    "flights/mission-4/after/page.png": "1a902b5814013780091584a737a2d4a8b6f7b16c225ea497cddf68e287053349",
+    "maps/mission-1/after/page.png": "5d8eab79258911b4f469e3d6c5d460822973acfee07fd77c24e8087c4d97ec8f",
+    "maps/mission-2/after/page.png": "e8a1014169fb4f968558fda2a66468add60a307f48dcb9efa31c42e640138d77"
+  },
+  "leaks": {
+    "capability_tokens": 0,
+    "concrete_private_roots": 0,
+    "key_prefixes": 0,
+    "real_chrome_paths": 0,
+    "exact_api_key_occurrences": 0,
+    "unredacted_capability_fields": 0
+  },
+  "files_scanned": 162,
+  "json_files_validated": 131,
+  "jsonl_files_validated": 8,
+  "jsonl_rows_validated": 6
+}

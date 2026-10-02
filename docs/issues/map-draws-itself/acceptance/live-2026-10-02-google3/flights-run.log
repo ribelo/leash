@@ -1,0 +1,5 @@
+flights mission 1: exit=0 status=done goal=True model_calls=7 cost=0.001173438 proposals=0 installed=[]
+flights mission 2: exit=0 status=done goal=True model_calls=8 cost=0.007297609 proposals=0 installed=[]
+flights mission 3: exit=0 status=done goal=True model_calls=4 cost=0.000256242 proposals=0 installed=[]
+flights mission 4: exit=0 status=done goal=False model_calls=6 cost=0.003759713 proposals=0 installed=[]
+{"gate": "flights", "passed": false, "missions_recorded": 4, "failures": ["Mission 4: independently observed page did not satisfy unchanged mission"]}

@@ -1,0 +1,9 @@
+{
+  "git_head": "23b54a122216da54cd4170b85d469864b9d91bfc",
+  "binary_sha256": "4d52204dece79529828de89c3e6a8a8d0b24063ecf2e50bccf176c797015b1c0",
+  "build_exit": 0,
+  "missions_started": 0,
+  "reason": "Pending status was not exposed; parent authorized discarding unused first build and fresh replacement at 91228d4",
+  "discarded_build_dir": "_build_l53_google3",
+  "replacement_build_dir": "_build_l53_google3b"
+}

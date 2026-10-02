@@ -1,0 +1,18 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,50000)}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.02455519100112724,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/travel/flights?hl=en",
+      "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+      "text": "Skip to main content\nAccessibility feedback\nExplore\nFlights\nHotels\nVacation rentals\nChange appearance\nSign in\nFlights\nRound trip\n1\nEconomy\nWrocław\nExplore\nFlexible? Discover the best flight deals with AI\nDescribe your ideal trip, and let Google Flights find the best deals for you\nExplore deals with AI\nFind and book cheap flights worldwide and track prices\nFind cheap flights from Poland to anywhere\nWrocław\nWarsaw\nKraków\nGdańsk\nWrocław\nLondon\nOct 22 — Oct 31\nNonstop\nfrom PLN 130\nWrocław\nParis\nNov 15 — Nov 23\nNonstop\nfrom PLN 184\nWrocław\nMilan\nOct 29 — Nov 6\nNonstop\nfrom PLN 217\nExplore destinations\nUseful tools to help you find the best airline tickets\nFind the cheapest days to fly\nThe Date grid and Price graph make it easy to find the best flight deals\nKnow when to book with price insights\nPrice history and trend data show you the best time to book your airline ticket to get the cheapest price for your flight\nTrack flight prices for a trip\nNot ready to book yet? Observe price changes for a route or flight and get notified when prices drop.\nExplore the best flight deals with AI\nDescribe your ideal trip and let Google Flights find you the best deals\nInsightful tools help you choose your trip dates\nIf your travel plans are flexible, use the form above to start searching for a specific trip. Then, play around with the Date grid and Price graph options on the Search page to find the cheapest days to fly and book your tickets.\nPopular flight destinations from Poland\nLondon\nMilan\nParis\nTokyo\nOslo\nBarcelona\nFrankfurt am Main\nCopenhagen\nRome\nMunich\nFrequently asked questions\nWhat are some good flight destinations from Poland?\nHow can I find last-minute flight deals?\nHow can I find cheap flights for a weekend getaway?\nHow can I find flight deals if my travel plans are flexible?\nHow can I find cheap flights to anywhere?\nHow can I get flight alerts for my trip?\nSearch more flights\nFind cheap flights on popular routes\nFlights from cities in Poland\nInternational flights from Poland\nFlights from Warsaw\nFlights from Kraków\nFlights from Gdańsk\nFlights from Wrocław\nFlights from Poznań\nFlights from Rzeszów\nLanguage​English (United States)\nLocation​Poland\nCurrencyPLN\n\nCurrent language and currency options applied: English (United States) - Poland - PLN\n\nDisplayed currencies may differ from the currencies used to purchase flights. Learn more\n\nPrices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.\n\nAbout\nPrivacy\nTerms\nJoin user studies\nReport Illegal Content\nFeedback\nHelp Center and Consumer Information\nInternational sites\nExplore flights"
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

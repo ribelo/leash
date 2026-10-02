@@ -1,0 +1,14 @@
+{
+  "gate": "flights",
+  "passed": false,
+  "missions_recorded": 4,
+  "failures": [
+    "Mission 4: independently observed page did not satisfy unchanged mission"
+  ],
+  "elapsed_s": 193.72575116157532,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}
