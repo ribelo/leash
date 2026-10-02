@@ -1,0 +1,20 @@
+{
+  "git_head": "9a3b553ec284568fc142e6d66f74d03077ac7813",
+  "clean_before_build": true,
+  "source_provenance": "clean commit; no tarball",
+  "build_command": "timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l53_google2 bash -c 'ulimit -v 16777216; exec dune build @install'",
+  "build_dir_fresh": true,
+  "build_exit": 0,
+  "binary": "_build_l53_google2/default/packages/leash/bin/main.exe",
+  "binary_sha256": "7b53eff0e82e75f9052c57b3f519b49fd3ad214cdcc24b98083807177f811f05",
+  "binary_bytes": 16060808,
+  "harness_sha256": {
+    "scripts/live-acceptance-l53": "68552c9c5c0fab7684f7a41ccbd0d449605d4e49b3eacc5032a13fd7b3325869",
+    "scripts/live-acceptance-l53.py": "d6448497f88ebaf3197353b8bd316756c7c6c4e6cfbd5b5db37b9bd19b5de713",
+    "scripts/live-acceptance-l53-test.py": "0d7911b3f6db089c11633aa4ce51062afecb7a8602feaf17af8a2d7eca3fbd82"
+  },
+  "offline_harness_tests": {
+    "passed": 10,
+    "failed": 0
+  }
+}

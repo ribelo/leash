@@ -1,0 +1,15 @@
+{
+  "gate": "flights",
+  "passed": false,
+  "missions_recorded": 1,
+  "failures": [
+    "Mission 1: drive not done (exit 0, status blocked, reason the operator repeated three non-WAIT actions without changing the page)",
+    "Mission 1: independently observed page did not satisfy unchanged mission"
+  ],
+  "elapsed_s": 14.606024503707886,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

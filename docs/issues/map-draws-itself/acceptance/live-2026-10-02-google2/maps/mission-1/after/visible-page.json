@@ -1,0 +1,18 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,50000)}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.016807351999887032,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "Eiffel Tower - Google Maps",
+      "text": "\n\n\nRestaurants\n\nHotels\n\nThings to do\n\nTransit\n\nParking\n\nPharmacies\n\nATMs\n\n\n\nSaved\n\nRecents\nEiffel Tower\n\nGet app\n\nSee photos\nEiffel Tower\nTour Eiffel\n4.7\n\nHistorical landmark·\nOverview\nAbout\n\nDirections\n\nSave\n\nNearby\n\nSend to phone\n\nShare\nGustave Eiffel's iconic, wrought-iron 1889 tower, with steps and elevators to observation decks.\n\n \n\nAv. Gustave Eiffel, 75007 Paris, France\n\nLocated in: Champ de Mars\n\nOpen · Closes 12 am\n\n\ntoureiffel.paris\n\n\n\nV75V+8Q Paris, France\n\n\n \n\nSuggest an edit\n \nAdd missing information\n\n\nAdd a photo\n \nDirectory\nSearch for places\nFood & Drink\n5\nShopping\n1\nOther\n4\nMadame Brasserie\n4.1(6,499)\nFrench restaurant\nOpen · Closes 11 pm\nJules Verne\n4.4(3,686) · $$$$\nFrench haute cuisine restaurant\nOpen · Closes 8:45 pm\nGustave Eiffel's office\n4.5(1,322)\nTourist attraction\nOpen · Closes 10:30 pm\nBar à Champagne\n4.3(449)\nBar\nOpen · Closes 10 pm\n \nView all\n \n \n\nWrite a review\n \nAbout this data\n\nYou're seeing a limited view of Google Maps. See more\n\nSign in\n\n\n\n Layers\nMap data ©2026 GooglePolandTermsPrivacySend Product Feedback\n\t50 m "
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

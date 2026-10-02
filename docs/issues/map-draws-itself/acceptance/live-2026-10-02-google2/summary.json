@@ -1,0 +1,170 @@
+{
+  "git_head": "9a3b553ec284568fc142e6d66f74d03077ac7813",
+  "binary_sha256": "7b53eff0e82e75f9052c57b3f519b49fd3ad214cdcc24b98083807177f811f05",
+  "passed": false,
+  "rules": {
+    "learning": "auto",
+    "successes": 2,
+    "seeded_playbooks": false,
+    "mission_text_changed": false,
+    "campaign_retries": 0,
+    "stop_each_site_at_first_failure": true,
+    "isolated_headless_chrome": true,
+    "service_or_real_config_changed_by_worker": false,
+    "product_edits_or_commits_by_worker": false
+  },
+  "maps": {
+    "passed": false,
+    "harness_exit": 1,
+    "missions_recorded": 2,
+    "missions_skipped": [
+      3,
+      4
+    ],
+    "first_failed_gate": "draft compilation after second independently successful mission",
+    "missions": [
+      {
+        "number": 1,
+        "status": "done",
+        "goal_verified_independently": true,
+        "visible_goal": "Eiffel Tower; Av. Gustave Eiffel, 75007 Paris, France",
+        "model_calls": 14,
+        "model_cost_usd": 0.001722856,
+        "learning_calls": 0,
+        "learning_cost_usd": 0,
+        "screenshot": "maps/mission-1/after/page.png"
+      },
+      {
+        "number": 2,
+        "status": "done",
+        "goal_verified_independently": true,
+        "visible_goal": "Eiffel Tower; Av. Gustave Eiffel, 75007 Paris, France",
+        "model_calls": 7,
+        "model_cost_usd": 0.003329233,
+        "learning_calls": 1,
+        "learning_cost_usd": 0.002263925,
+        "screenshot": "maps/mission-2/after/page.png"
+      }
+    ],
+    "diagnosis": {
+      "matching_path_both_traces": [
+        "maps",
+        "search-slug",
+        "place-slug"
+      ],
+      "path_gate_reached_compiler": true,
+      "compile_attempts": 1,
+      "planner_response": {
+        "finish_reason": "length",
+        "content_kind": "null-or-missing",
+        "max_output_tokens": 4096,
+        "prompt_tokens": 1728,
+        "completion_tokens": 4096,
+        "total_tokens": 5824,
+        "reasoning_tokens": 4096,
+        "cost_usd": 0.002263925
+      },
+      "compile_dropped": true,
+      "drafts": 0,
+      "installed": 0,
+      "trace_compiled_flags": [
+        false,
+        false
+      ],
+      "evidence": [
+        "maps/service.redacted.jsonl",
+        "maps/checkpoint-2/state/leash/learning.json",
+        "maps/checkpoint-2/status.json"
+      ]
+    },
+    "total_model_calls": 21,
+    "total_model_cost_usd": 0.005052089,
+    "learning_calls": 1,
+    "learning_cost_usd": 0.002263925
+  },
+  "flights": {
+    "passed": false,
+    "harness_exit": 1,
+    "missions_recorded": 1,
+    "missions_skipped": [
+      2,
+      3,
+      4
+    ],
+    "first_failed_gate": "first live mission",
+    "missions": [
+      {
+        "number": 1,
+        "status": "blocked",
+        "cli_exit": 0,
+        "goal_verified_independently": false,
+        "model_calls": 5,
+        "model_cost_usd": 0.000728028,
+        "learning_calls": 0,
+        "learning_cost_usd": 0,
+        "screenshot": "flights/mission-1/after/page.png"
+      }
+    ],
+    "diagnosis": {
+      "reason": "the operator repeated three non-WAIT actions without changing the page",
+      "steps": [
+        3,
+        4,
+        5
+      ],
+      "operation": "click",
+      "row": 21,
+      "target": {
+        "role": "button",
+        "label": "Explore destinations"
+      },
+      "recorded_outcome": "executed",
+      "page_changed": [
+        false,
+        false,
+        false
+      ],
+      "final_url": "https://www.google.com/travel/flights?hl=en",
+      "final_page": "Flights landing/search page; no visible Explore map",
+      "covered_click_error_recurred": false,
+      "covered_click_observer_fired": false,
+      "mechanism": "Not established: saved evidence lacks dispatch coordinates/quads and atomic hit-test results for these executed clicks; no new browser action or mission retry authorized.",
+      "evidence": [
+        "flights/mission-1/drive.json",
+        "flights/mission-1/after/snapshot.json",
+        "flights/mission-1/after/visible-page.json"
+      ]
+    },
+    "total_model_calls": 5,
+    "total_model_cost_usd": 0.000728028,
+    "learning_calls": 0,
+    "learning_cost_usd": 0
+  },
+  "costs": {
+    "model_calls": 26,
+    "calls_by_kind": {
+      "operator": 21,
+      "text_helper": 4,
+      "learning": 1
+    },
+    "total_model_cost_usd": 0.005780117,
+    "learning_calls": 1,
+    "learning_cost_usd": 0.002263925,
+    "total_cost_fully_reported": true,
+    "cost_unreported": 0
+  },
+  "cleanup": {
+    "maps": {
+      "service_exit": 0,
+      "profile_processes_after_service": [],
+      "loopback_server_closed": true
+    },
+    "flights": {
+      "service_exit": 0,
+      "profile_processes_after_service": [],
+      "loopback_server_closed": true
+    }
+  },
+  "retained_screenshots": 3,
+  "provenance_note": "Clean HEAD at build; frozen binary and unchanged harness hashes rechecked after runs. Parent-owned source edits appeared during reporting, after both campaigns finished; preserved untouched."
+}

@@ -1,0 +1,5 @@
+{
+  "url": "https://www.google.com/maps?hl=en",
+  "mission": "Search Google Maps for Eiffel Tower in Paris and open its place information. Stop when the place name Eiffel Tower and its Paris address are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+  "unchanged_across_four_missions": true
+}

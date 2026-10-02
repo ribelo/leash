@@ -1,0 +1,10 @@
+{
+  "gate": "maps",
+  "start_unix": 1790962485.2860024,
+  "binary_sha256": "7b53eff0e82e75f9052c57b3f519b49fd3ad214cdcc24b98083807177f811f05",
+  "seeded_playbooks": 0,
+  "private_xdg": true,
+  "headless": true,
+  "model_key_source": "secret-env ai --",
+  "git_head": "9a3b553ec284568fc142e6d66f74d03077ac7813"
+}
