@@ -1605,14 +1605,34 @@ let passes checker (snapshot : observation) =
         snapshot.rows
   | Judgment _ -> assert false
 
+(* map-bjon: an authored procedure waits 5 s. A learned one waits 15 s unless the
+   draft named its own bound, because a page-kind match can land while the result
+   is still loading. *)
+let default_expect_timeout_s = 5
+let learned_expect_timeout_s = 15
+
+let expect_timeout (proc : procedure) =
+  match proc.expect_timeout_s with
+  | Some seconds -> seconds
+  | None ->
+      if proc.provenance = None then default_expect_timeout_s
+      else learned_expect_timeout_s
+
+let with_learned_timeout (proc : procedure) =
+  match proc.expect_timeout_s with
+  | Some _ -> proc
+  | None -> { proc with expect_timeout_s = Some learned_expect_timeout_s }
+
 (* run-l06s run-vbys: the bounded wait, keeping what each expectation came to, so the run's
    trace can say which checker decided it and — for a judgment — the score it carried. The
    result is the last observation's verdicts: the one that passed everything, or the one
-   the deadline found. No sleeping after the deadline; each observation is fresh. *)
+   the deadline found. No sleeping after the deadline; each observation is fresh.
+   map-bjon: a judgment is not final until the deadline. A pass scored against a page
+   that moved during the score — a loading frame — is not accepted while time remains. *)
 let await_results ~now ~sleep ~observe ~score ?(threshold = 0.8) ?(timeout_s = 5) checks =
   let deadline = now () +. float_of_int timeout_s in
-  let evaluate () =
-    let snapshot = observe () in
+  let has_judgment = List.exists (function _, Judgment _ -> true | _ -> false) checks in
+  let evaluate snapshot =
     List.map
       (fun (sentence, checker) ->
         match checker with
@@ -1634,8 +1654,16 @@ let await_results ~now ~sleep ~observe ~score ?(threshold = 0.8) ?(timeout_s = 5
       checks
   in
   let rec loop () =
-    let results = evaluate () in
-    if List.for_all (fun (result : checked) -> result.passed) results then results
+    let snapshot = observe () in
+    let results = evaluate snapshot in
+    let passed = List.for_all (fun (result : checked) -> result.passed) results in
+    if passed && has_judgment && now () < deadline then
+      let fresh = observe () in
+      if fresh.text <> snapshot.text then (
+        sleep (min 0.1 (deadline -. now ()));
+        loop ())
+      else results
+    else if passed then results
     else if now () >= deadline then results
     else (
       sleep (min 0.1 (deadline -. now ()));

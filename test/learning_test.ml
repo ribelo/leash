@@ -163,7 +163,7 @@ let procedure ?(slug = "inspect") ?(goal = "Click the button named View") ?(args
       slug;
       description = "inspect catalog";
       steps = [ Goal { goal; hint = None; until = Some until } ];
-      expect = [ "the page is catalog" ];
+      expect = [ "the page is catalog"; "catalog entries are shown" ];
       args = Some args;
       provenance = None;
       expect_timeout_s = None;
@@ -1010,7 +1010,7 @@ let inferred_navigation_patterns () =
                    (procedure ~goal:"Click the link named Mystery"
                       ~until:[ "the page is books-slug" ] ())
                    with
-                   B.expect = [ "the page is books-slug" ];
+                   B.expect = [ "the page is books-slug"; "book prices are shown" ];
                  }))
           ()
       in
@@ -1394,7 +1394,9 @@ let google_paths () =
           ~planner:(fun _ ->
             incr calls;
             let proc = procedure ~until:[ "the page is maps" ] () in
-            Ok (answer { proc with B.expect = [ "the page is maps" ] }))
+            Ok
+              (answer
+                 { proc with B.expect = [ "the page is maps"; "the place is shown" ] }))
           ()
       in
       let store = store root in
@@ -1410,6 +1412,82 @@ let google_paths () =
            (maps_trace ~kinds:[ "maps"; "place-<slug>"; "search-<slug>" ] 8.)
            (result ()));
       Alcotest.(check int) "map-cnee a reordered path does not compile with them" 1 !calls)
+
+let contains needle haystack =
+  let n = String.length needle in
+  let rec loop i =
+    i + n <= String.length haystack && (String.sub haystack i n = needle || loop (i + 1))
+  in
+  n = 0 || loop 0
+
+(* map-bjon: Flights verified on "the page is travel-slug" while the page still
+   said Loading results. The compiler must be shown the mission and the final
+   title, and must reject an expect list that only checks the page kind. *)
+let result_expectation () =
+  temp (fun root ->
+      let calls = ref 0 in
+      let first = ref None in
+      let retry_reason = ref "" in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:(configure C.Learning_mode.Draft)
+          ~planner:(fun request ->
+            incr calls;
+            if !calls = 1 then (
+              first := Some request;
+              Ok (answer { (procedure ()) with B.expect = [ "the page is catalog" ] }))
+            else (
+              (retry_reason :=
+                 match Yojson.Safe.Util.member "validation_errors" request with
+                 | `String reason -> reason
+                 | _ -> "");
+              Ok (answer (procedure ()))))
+          ()
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      let _ = after learning store (trace 2.) (result ()) in
+      Alcotest.(check int) "map-bjon page-kind-only expect is retried once" 2 !calls;
+      bool "map-bjon retry names the mission result"
+        (contains "mission result" !retry_reason
+        && contains "destination prices are shown" !retry_reason);
+      let request = Option.get !first in
+      Alcotest.(check string)
+        "map-bjon compiler prompt" "map-3"
+        (match Yojson.Safe.Util.member "prompt_version" request with
+        | `String version -> version
+        | _ -> "");
+      let trace_json =
+        match Yojson.Safe.Util.member "traces" request with
+        | `List (head :: _) -> head
+        | _ -> Alcotest.fail "map-bjon compiler request has no traces"
+      in
+      let fields = match trace_json with `Assoc fields -> fields | _ -> [] in
+      Alcotest.(check string)
+        "map-bjon mission reaches the compiler" "inspect catalog"
+        (match List.assoc_opt "mission" fields with
+        | Some (`String mission) -> mission
+        | _ -> "");
+      Alcotest.(check string)
+        "map-bjon final title reaches the compiler" "Catalog"
+        (match List.assoc_opt "final_title" fields with
+        | Some (`String title) -> title
+        | _ -> "");
+      bool "map-bjon traces still carry no page body"
+        ((not (List.mem_assoc "page_text" fields)) && not (List.mem_assoc "text" fields));
+      let proposed =
+        ok
+          (B.of_json
+             ~file:(List.hd (proposal_files ()))
+             (Yojson.Safe.from_file (List.hd (proposal_files ()))))
+      in
+      let proc = List.hd proposed.playbook.procedures in
+      Alcotest.(check (option int))
+        "map-bjon learned wait is 15 s" (Some 15) proc.expect_timeout_s;
+      bool "map-bjon expect keeps the page kind and adds a result check"
+        (List.mem "the page is catalog" proc.expect
+        && List.exists (( <> ) "the page is catalog") proc.expect);
+      ignore root)
 
 let () =
   Eio_main.run (fun _ ->
@@ -1435,6 +1513,7 @@ let () =
                     ("map-cnee covered by verified use", covered_by_use);
                     ("draft compile", draft_compile);
                     ("validation retry", validation);
+                    ("map-bjon result expectation", result_expectation);
                     ("parameterization", parameters);
                     ("replay", replay);
                     ("try budget", tries);

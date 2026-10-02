@@ -351,6 +351,15 @@ type checked = {
 }
 (** run-xqh8: one expectation's verdict, which is what a run's trace records. *)
 
+val expect_timeout : procedure -> int
+(** Seconds a procedure's expectations may wait. The procedure's [expect_timeout_s] when
+    set; otherwise 15 for a learned procedure (one with provenance) and 5 for an authored
+    one. map-bjon. *)
+
+val with_learned_timeout : procedure -> procedure
+(** A compiled procedure waits 15 s for its result check when the draft omitted
+    [expect_timeout_s]. An explicit value is kept. *)
+
 val await_results :
   now:(unit -> float) ->
   sleep:(float -> unit) ->
@@ -361,7 +370,9 @@ val await_results :
   (string * checker) list ->
   checked list
 (** run-l06s run-vbys: {!await} with the verdicts kept. The result is the last
-    observation's: the one that passed everything, or the one the deadline found. *)
+    observation's: the one that passed everything, or the one the deadline found. A failed
+    judgment is not final before that deadline. A pass scored while the page text is still
+    changing is not accepted while time remains (map-bjon). *)
 
 val await :
   now:(unit -> float) ->

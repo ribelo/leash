@@ -2366,6 +2366,9 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
              wait would otherwise ask it every 100 ms — so the answer is memoized on the
              sentence and the text it was asked over. *)
           let verify ~pages ~checks ~timeout_s =
+            (* map-bjon: one judgment must not consume expect_timeout_s. Leave time
+               to observe the page again after a loading frame. *)
+            let expect_deadline = now t +. float_of_int timeout_s in
             let failure = ref None in
             let memo = Hashtbl.create 4 in
             let last = ref None in
@@ -2410,8 +2413,19 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                           ]
                     | None -> `Null
                   in
+                  (* Leave time for another observation while the expect window is
+                     open. Never skip the score: a run clock that has already
+                     moved still has to judge the page (extr-5x9e). *)
+                  let expect_left = expect_deadline -. now t in
+                  let deadline =
+                    if expect_left > 1. then
+                      Ox.Duration.min (remaining ())
+                        (Ox.Duration.ms
+                           (max 1 (int_of_float (min 8. (expect_left -. 0.25) *. 1000.))))
+                    else remaining ()
+                  in
                   let value =
-                    match levels.Run.score ~deadline:(remaining ()) ~sentence ~state with
+                    match levels.Run.score ~deadline ~sentence ~state with
                     | Ok value -> value
                     | Error error ->
                         if !failure = None then failure := Some error;

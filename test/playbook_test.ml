@@ -1014,6 +1014,108 @@ let goal_until () =
             (holds ~start_url:"https://books.example/1" ~url:"https://books.example/2"
                { observation with kind = None }))
 
+let page text =
+  B.{ kind = Some "travel-slug"; text; dialog = false; rows = []; downloads = [] }
+
+(* map-bjon: a judgment that passes on a loading frame is not the verdict if the
+   page moves before the deadline, and a failing judgment is not final early. *)
+let judgment_loading () =
+  let elapsed = ref 0. in
+  let phase = ref `loading in
+  let scores = ref [] in
+  let results =
+    B.await_results
+      ~now:(fun () -> !elapsed)
+      ~sleep:(fun seconds -> elapsed := !elapsed +. seconds)
+      ~observe:(fun () ->
+        page (if !phase = `loading then "Loading results" else "Paris PLN 184"))
+      ~score:(fun _ obs ->
+        scores := obs.text :: !scores;
+        phase := `ready;
+        if obs.text = "Loading results" then 0.95 else 0.91)
+      ~timeout_s:5
+      [
+        ("the page is travel-slug", B.Page_kind "travel-slug");
+        ("destination prices are shown", B.Judgment "destination prices are shown");
+      ]
+  in
+  Alcotest.(check bool)
+    "map-bjon loaded page passes" true
+    (List.for_all (fun (result : B.checked) -> result.passed) results);
+  Alcotest.(check bool)
+    "map-bjon judgment was scored on the loaded page" true
+    (List.mem "Paris PLN 184" !scores);
+  Alcotest.(check string)
+    "map-bjon a loading-frame score is not enough" "Loading results"
+    (List.hd (List.rev !scores));
+  let elapsed = ref 0. in
+  let calls = ref 0 in
+  let failed =
+    B.await_results
+      ~now:(fun () -> !elapsed)
+      ~sleep:(fun seconds -> elapsed := !elapsed +. seconds)
+      ~observe:(fun () ->
+        incr calls;
+        page "Loading results")
+      ~score:(fun _ _ -> 0.1)
+      ~timeout_s:1
+      [ ("destination prices are shown", B.Judgment "destination prices are shown") ]
+  in
+  Alcotest.(check bool)
+    "map-bjon loading judgment does not pass" false
+    (List.for_all (fun (result : B.checked) -> result.passed) failed);
+  Alcotest.(check bool)
+    "map-bjon failure waits out the timeout" true
+    (!calls > 1 && !elapsed <= 1. && !elapsed > 0.5)
+
+let learned_timeout () =
+  let learned =
+    B.
+      {
+        traces = [];
+        model = "test";
+        time = "t";
+        tries = 0;
+        last_failure = None;
+        path = [];
+        repeatable = true;
+        reason = "test";
+        gate = "replay";
+        repair = false;
+        model_calls = 0;
+        model_cost = None;
+      }
+  in
+  let proc timeout provenance =
+    B.
+      {
+        slug = "explore";
+        description = "explore";
+        provenance;
+        args = None;
+        steps =
+          [ Goal { goal = "Click the button named Explore"; hint = None; until = None } ];
+        expect = [ "destination prices are shown" ];
+        expect_timeout_s = timeout;
+        max_steps = None;
+        repeat = None;
+        deadline_s = None;
+      }
+  in
+  Alcotest.(check int) "map-bjon authored default" 5 (B.expect_timeout (proc None None));
+  Alcotest.(check int)
+    "map-bjon learned default" 15
+    (B.expect_timeout (proc None (Some learned)));
+  Alcotest.(check int)
+    "map-bjon explicit timeout" 8
+    (B.expect_timeout (proc (Some 8) (Some learned)));
+  Alcotest.(check (option int))
+    "map-bjon compiler fills 15" (Some 15)
+    (B.with_learned_timeout (proc None None)).expect_timeout_s;
+  Alcotest.(check (option int))
+    "map-bjon compiler keeps an explicit timeout" (Some 8)
+    (B.with_learned_timeout (proc (Some 8) None)).expect_timeout_s
+
 let () =
   Alcotest.run "playbooks"
     [
@@ -1023,6 +1125,8 @@ let () =
           Alcotest.test_case "run-r1e9 run-tny5 grammar" `Quick grammar;
           Alcotest.test_case "run-xqh8 consent cleared" `Quick consent_cleared;
           Alcotest.test_case "run-l06s wait" `Quick await;
+          Alcotest.test_case "map-bjon judgment waits out loading" `Quick judgment_loading;
+          Alcotest.test_case "map-bjon learned expect timeout" `Quick learned_timeout;
           Alcotest.test_case "run-k8bx retry once" `Quick retry;
           Alcotest.test_case "run-seqo examples" `Quick examples;
           Alcotest.test_case "run-xqh8 offscreen offer" `Quick offscreen_offer;

@@ -453,6 +453,9 @@ let trace_input trace =
   in
   `Assoc
     [
+      ("mission", `String trace.mission);
+      ( "final_title",
+        match trace.final with Some page -> `String page.title | None -> `Null );
       ("path", `List (List.map (fun s -> `String s) (matching_path trace)));
       ( "steps",
         `List
@@ -590,12 +593,32 @@ let validate_generalization book traces (proc : B.procedure) =
             else None)
           (steps trace)
   in
-  if
-    List.for_all
-      (function Some kind -> List.mem ("the page is " ^ kind) untils | None -> false)
-      navigations
-  then Ok ()
-  else Error "every navigation needs an explicit the page is <kind> until expectation"
+  let* () =
+    if
+      List.for_all
+        (function Some kind -> List.mem ("the page is " ^ kind) untils | None -> false)
+        navigations
+    then Ok ()
+    else Error "every navigation needs an explicit the page is <kind> until expectation"
+  in
+  (* map-bjon: a page-kind check can pass while the page still says it is loading.
+     The mission result needs its own expectation. *)
+  let page_kind_sentence sentence =
+    match B.resolve book.B.pages sentence with
+    | Ok (B.Page_kind _ | B.Not_page_kind _) -> true
+    | _ -> false
+  in
+  if List.exists (fun sentence -> not (page_kind_sentence sentence)) proc.expect then
+    Ok ()
+  else
+    Error
+      "final expectations must check the mission result, not only the page kind: keep \
+       the page-kind checks and add a result check. Use \"the page shows <stable text>\" \
+       only when that exact text is body text on every trace's final page. When no \
+       stable text is known, write a judgment sentence in the mission's words, for \
+       example \"destination prices are shown\" when the mission asked to see \
+       destination prices (not \"the page shows destination prices\", which is a literal \
+       text check)"
 
 let snapshot_agrees (book : B.t) (snapshot : P.snapshot) (proc : B.procedure) =
   let goals = List.filter_map (function B.Goal g -> Some g | _ -> None) proc.steps in
@@ -828,7 +851,7 @@ let compile ?prior ?revision t ~meter ~files ~traces ~existing ~repair ~snapshot
             model_cost = priced meter;
           }
       in
-      let proc = { proc with B.provenance = Some provenance } in
+      let proc = B.with_learned_timeout { proc with B.provenance = Some provenance } in
       let book = { seed with B.procedures = [ proc ] } in
       match persist ?revision t book proc with
       | Error why ->

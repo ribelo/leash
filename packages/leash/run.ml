@@ -314,6 +314,9 @@ type state = {
   checks : (string * Playbook.checker) list;
       (** The last verified procedure's expectations, which the DONE guard re-verifies when
           the mission carries none of its own (run-4j1v). *)
+  expect_timeout_s : int;
+      (** map-bjon: seconds that re-verification of [checks] may wait. The last
+          procedure's {!Playbook.expect_timeout}; 5 until a procedure has been verified. *)
   mission_expect : string list;
       (** run-2tt3: the mission's expectations as the planner attached them on its first
           turn, before they are resolved. A caller's own [expect] list wins over these. *)
@@ -492,6 +495,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
       visited = [];
       book = None;
       checks = [];
+      expect_timeout_s = 5;
       mission_expect = [];
       mission_checks = [];
       verified_pages = [];
@@ -1474,7 +1478,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                           ~outcome:"skipped" ~attempts:n ~elapsed ~reason:(Some reason)))
               | None -> (
                   let checks = resolved_checks book proc values in
-                  let timeout_s = Option.value ~default:5 proc.Playbook.expect_timeout_s in
+                  let timeout_s = Playbook.expect_timeout proc in
                   match verify t ~pages:book.Playbook.playbook.pages ~checks ~timeout_s with
                   | Error error -> Error (with_trace st error)
                   | Ok (results, observation) when observation.dialog <> None ->
@@ -1489,7 +1493,9 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                       if passed then
                         (* run-4j1v: the verified procedure's expectations are what the
                            DONE guard re-verifies when the mission carries none. *)
-                        let st = { st with checks } in
+                        let st =
+                          { st with checks; expect_timeout_s = Playbook.expect_timeout proc }
+                        in
                         (match propose_verified st with
                         | Error error -> Error error
                         | Ok st ->
@@ -1596,7 +1602,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                   Ok (Finish (finish st (status "blocked") ~reason ()))
               | Ok (Steps_done (st, drives, _)) ->
                   let checks = resolved_checks book next values in
-                  let timeout_s = Option.value ~default:5 next.Playbook.expect_timeout_s in
+                  let timeout_s = Playbook.expect_timeout next in
                   match verify t ~pages:book.Playbook.playbook.pages ~checks ~timeout_s with
                   | Error error -> Error (with_trace st error)
                   | Ok (results, observation) ->
@@ -1608,7 +1614,14 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                           ~reason:(Some "end of pagination: next expectations failed") in
                         Ok (Continue { st with complete = true; collection_pending = false })
                       else
-                        let st = { st with checks; pages = st.pages + 1 } in
+                        let st =
+                          {
+                            st with
+                            checks;
+                            expect_timeout_s = Playbook.expect_timeout next;
+                            pages = st.pages + 1;
+                          }
+                        in
                         let st = record st ~book ~proc:next ~planned:false
                           ~choice:(repeat_choice next.slug) ~drives ~expectations:results
                           ~outcome:"verified" ~attempts:1 ~elapsed:0 ~reason:None in
@@ -1654,7 +1667,8 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
     let pages =
       match st.book with Some book -> book.Playbook.playbook.pages | None -> []
     in
-    match verify t ~pages ~checks ~timeout_s:5 with
+    let timeout_s = if mission then 5 else st.expect_timeout_s in
+    match verify t ~pages ~checks ~timeout_s with
     | Error error -> Error (with_trace st error)
     | Ok (results, observation) when observation.dialog <> None ->
         let st = { st with observation } in
