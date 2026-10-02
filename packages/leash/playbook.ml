@@ -1079,7 +1079,7 @@ let load ~caps dir =
     else Error (file ^ ": No such file or directory")
   else
     let extra =
-      Sys.readdir dir |> Array.to_list
+      Cap_sys.readdir ~caps dir |> Array.to_list
       |> List.filter (fun name ->
           (not (String.starts_with ~prefix:"." name))
           && String.ends_with ~suffix:".json" name
@@ -1262,11 +1262,70 @@ let non_repeatable_context text =
       "deletion";
     ]
 
+(* map-yzqp: the table has no form ancestry. Only an explicitly named search
+   target gives enough scope to exclude other controls; generic OK/Continue,
+   missing targets and free page warnings retain the conservative full context. *)
+let action_risk_context ~(snapshot : Protocol.snapshot) ~text ~index =
+  let target =
+    Option.bind index (fun index ->
+        List.find_opt (fun (row : Protocol.row) -> row.index = index) snapshot.rows)
+  in
+  let text =
+    match target with
+    | Some target
+      when (not snapshot.truncated) && snapshot.offset = 0
+           && snapshot.total = List.length snapshot.rows
+           && snapshot.dialog = None
+           && List.mem target.role [ "button"; "combobox"; "searchbox"; "textbox" ]
+           &&
+           let name = String.lowercase_ascii (String.trim target.name) in
+           name = "search" || String.starts_with ~prefix:"search " name ->
+        let ambient =
+          List.filter_map
+            (fun (row : Protocol.row) ->
+              if
+                row.index <> target.index
+                && List.mem row.role
+                     [
+                       "button"; "link"; "menuitem"; "tab"; "checkbox"; "radio"; "switch";
+                     ]
+              then Some (String.trim row.name)
+              else None)
+            snapshot.rows
+        in
+        (* Each unrelated row can account for one label occurrence, not every
+           identical warning in the body. Duplicate row names are ambiguous. *)
+        let ambient =
+          List.filter
+            (fun name -> List.length (List.filter (( = ) name) ambient) = 1)
+            ambient
+        in
+        let rec scoped labels = function
+          | [] -> []
+          | line :: rest ->
+              let name = String.trim line in
+              if List.mem name labels then scoped (List.filter (( <> ) name) labels) rest
+              else line :: scoped labels rest
+        in
+        scoped ambient (String.split_on_char '\n' text) |> String.concat "\n"
+    | _ -> text
+  in
+  String.concat " "
+    [
+      snapshot.url;
+      snapshot.title;
+      Option.fold ~none:""
+        ~some:(fun (kind : Protocol.page_kind_label) -> kind.name)
+        snapshot.page_kind;
+      Option.fold ~none:"" ~some:(fun (row : Protocol.row) -> row.name) target;
+      text;
+    ]
+
 let non_repeatable_action ~context operation =
   non_repeatable_context context
   && List.mem
        (String.lowercase_ascii operation)
-       [ "submit"; "press"; "click"; "upload"; "select"; "type_text" ]
+       [ "submit"; "press"; "click"; "upload"; "select"; "type_text"; "fill" ]
 
 let procedure_repeatable (book : t) ~context (proc : procedure) =
   (* Authored pins are authoritative even when the procedure has no provenance,

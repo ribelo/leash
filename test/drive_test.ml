@@ -911,6 +911,61 @@ let bounded_pre_action_risk () =
     "map-yzqp durable step never includes raw page body" false
     (contains (Yojson.Safe.to_string (P.yojson_of_drive_result result)) "PRIVATE-BODY")
 
+(* map-yzqp map-ngyr: risk belongs to the chosen action, not unrelated controls. *)
+let scoped_action_risk () =
+  let check_case ?(title = "Google Maps") ?(url = "https://www.google.com/maps")
+      ?(kind = None) ?(target = "Search") ?(role = "button") ?(index = Some 1)
+      ?(operation = "click") ?(truncated = false) ~body ~ambient expected =
+    let selected = { (row 1 target) with P.role } in
+    let other = { (row 2 ambient) with P.role = "button" } in
+    let page = observation ~rows:[ selected; other ] title in
+    let page =
+      {
+        page with
+        D.text = body;
+        snapshot = { page.snapshot with P.url; page_kind = kind; truncated };
+      }
+    in
+    let calls = ref 0 in
+    let result =
+      fly_run
+        ~observe:(fun () -> Ok page)
+        ~decide:(fun _ ->
+          incr calls;
+          Ok (if !calls = 1 then decision ?index operation else decision "done"))
+        ~text_value:(fun _ -> Ok (Some "Eiffel Tower"))
+        ~act:(fun _ _ ~text:_ -> Ok (performed ()))
+        ()
+    in
+    Alcotest.(check bool)
+      ("map-yzqp " ^ target ^ " / " ^ body)
+      expected (List.hd result.steps).P.non_repeatable
+  in
+  check_case ~body:"Search\nSend Product Feedback" ~ambient:"Send Product Feedback" false;
+  check_case ~target:"Search Google Maps" ~role:"combobox" ~operation:"type_text"
+    ~body:"Send to phone\nSearch Google Maps" ~ambient:"Send to phone" false;
+  check_case ~truncated:true ~body:"Search\nSend Product Feedback"
+    ~ambient:"Send Product Feedback" true;
+  check_case ~body:"Search\nDelete account permanently"
+    ~ambient:"Delete account permanently" false;
+  check_case ~body:"Delete account permanently\nSearch\nDelete account permanently"
+    ~ambient:"Delete account permanently" true;
+  check_case ~target:"Send to phone" ~body:"Send to phone" ~ambient:"Search" true;
+  check_case ~target:"OK" ~body:"Delete this account permanently?\nOK" ~ambient:"Cancel"
+    true;
+  check_case ~target:"Continue" ~body:"Payment details\nContinue" ~ambient:"Cancel" true;
+  check_case ~target:"Submit" ~body:"Post this message\nSubmit" ~ambient:"Cancel" true;
+  check_case ~title:"Checkout payment" ~body:"Search\nSend Product Feedback"
+    ~ambient:"Send Product Feedback" true;
+  check_case
+    ~kind:(Some P.{ name = "deletion"; source = Inferred })
+    ~body:"Search" ~ambient:"Cancel" true;
+  check_case ~body:"Search\nThis action will delete your account" ~ambient:"Cancel" true;
+  check_case ~index:None ~body:"Send Product Feedback" ~ambient:"Send Product Feedback"
+    true;
+  check_case ~target:"Search" ~body:"Send Product Feedback and delete account"
+    ~ambient:"Send Product Feedback" true
+
 let () =
   Alcotest.run "drive"
     [
@@ -918,6 +973,7 @@ let () =
         List.map
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
+            ("map-yzqp action scoped search safety", scoped_action_risk);
             ("map-yzqp bounded pre-action safety evidence", bounded_pre_action_risk);
             ("fly-hc3l fly-fl7u fly-vzzw budgets", fly_budgets);
             ("fly-vnf1 bounded BLOCKED frontier rescue", fly_blocked_frontier);

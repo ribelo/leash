@@ -190,7 +190,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     let text = redact_password page choice.J.index text in
     let recorded = P.{
         non_repeatable = Playbook.non_repeatable_action
-          ~context:(page.snapshot.url ^ " " ^ page.snapshot.title ^ " " ^ page.text)
+          ~context:(Playbook.action_risk_context ~snapshot:page.snapshot ~text:page.text ~index:choice.J.index)
           (P.Operation.to_string choice.J.operation);
         n = List.length steps + 1; snapshot = page.snapshot.snapshot;
         operation = choice.J.operation; index = choice.index;

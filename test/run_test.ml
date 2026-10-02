@@ -2200,6 +2200,29 @@ let planner_continue () =
     in
     (result, h, !called, !captured)
   in
+  List.iter
+    (fun (label, role, body, command, expected) ->
+      let risk_rows = [ row 1 role label; row 2 "button" "Send Product Feedback" ] in
+      let risk_page =
+        {
+          observed with
+          R.text = body;
+          snapshot = { observed.snapshot with P.rows = risk_rows };
+        }
+      in
+      let _, _, _, captured =
+        execute ~max_steps:1 ~observations:[ risk_page ] [ command ]
+      in
+      Alcotest.(check bool)
+        ("map-yzqp planner scoped risk " ^ label ^ body)
+        expected (List.hd captured).P.non_repeatable)
+    [
+      ("Search", "button", "Search\nSend Product Feedback", P.Click page, false);
+      ("Search", "textbox", "Search\nSend Product Feedback", List.hd actions, false);
+      ("OK", "button", "Delete account permanently?\nOK", P.Click page, true);
+      ("Continue", "button", "Payment details\nContinue", P.Click page, true);
+      ("Message", "textbox", "Post a message", List.hd actions, true);
+    ];
   let result, h, called, captured = execute actions in
   let result = ran result in
   check_status "map-7xrq returns to JEV and completes" "done" result;

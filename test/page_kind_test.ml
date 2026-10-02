@@ -265,6 +265,51 @@ let sibling_patterns () =
     "kind-dnye later sibling reuses merge" 1
     (List.length (K.draft_pages kinds))
 
+(* map-ngyr map-cnee: observation timing cannot rename the same Maps route. *)
+let maps_routes () =
+  let base = "https://www.google.com/maps" in
+  let place = base ^ "/place/Eiffel+Tower/@48.858,2.294,17z/data=!3m1" in
+  let search = base ^ "/search/Eiffel+Tower/@48.858,2.294,17z" in
+  List.iter
+    (fun routes ->
+      let kinds = K.session () in
+      List.iter (fun url -> ignore (K.observe kinds ~url ~title:"Google Maps")) routes;
+      let get url = K.observe kinds ~url ~title:"Google Maps" in
+      check_string "map-ngyr base keeps semantic name" "maps" (get base).name;
+      check_string "map-ngyr coordinates do not add a kind" "maps"
+        (get (base ^ "/@51.167,16.583,14z")).name;
+      check_string "map-ngyr place survives search sibling" "place-<slug>"
+        (get place).name;
+      check_string "map-ngyr search is not place" "search-<slug>" (get search).name;
+      let declared =
+        List.map
+          (fun (p : K.draft_page) ->
+            Leash.Playbook.
+              {
+                name = p.name;
+                description = "inferred";
+                url_pattern = Some p.url_pattern;
+                text_marker = None;
+                repeatable = true;
+              })
+          (K.draft_pages kinds)
+      in
+      List.iter
+        (fun (url, name) ->
+          Alcotest.(check (option string))
+            "map-ngyr promoted vocabulary preserves route distinctions" (Some name)
+            (Leash.Playbook.page_kind declared ~url ~text:""))
+        [ (base, "maps"); (place, "place-slug"); (search, "search-slug") ];
+      let consent = get "https://consent.google.com/m?continue=maps" in
+      check_string "map-cnee consent remains a distinct path step" "m" consent.name;
+      Alcotest.(check int)
+        "map-ngyr annotations share one draft kind" 4
+        (List.length (K.draft_pages kinds)))
+    [
+      [ base; base ^ "/@51.167,16.583,14z"; place; search ];
+      [ base ^ "/@51.167,16.583,14z"; base; search; place ];
+    ]
+
 let executable_patterns () =
   List.iter
     (fun url ->
@@ -374,7 +419,7 @@ let origin_ports () =
   ignore (K.observe kinds ~url:"http://localhost:36090/tag/humor" ~title:"");
   Alcotest.(check (list string))
     "kind-dnye different ports are distinct origins"
-    [ "http://localhost:36089/tag/*"; "http://localhost:36090/tag/humor" ]
+    [ "http://localhost:36090/tag/humor"; "http://localhost:36089/tag/*" ]
     (List.map (fun (p : K.draft_page) -> p.url_pattern) (K.draft_pages kinds))
 
 let () =
@@ -389,6 +434,7 @@ let () =
           Alcotest.test_case "kind-a7uy non-web pages" `Quick non_web_pages;
           Alcotest.test_case "kind-dnye kind-s1k2 observed sibling table" `Quick
             sibling_patterns;
+          Alcotest.test_case "map-ngyr stable Maps routes" `Quick maps_routes;
           Alcotest.test_case "kind-jdcs twenty real pairs" `Quick table;
           Alcotest.test_case "kind-dnye kind-s1k2 kind-4qke session" `Quick session;
         ] );

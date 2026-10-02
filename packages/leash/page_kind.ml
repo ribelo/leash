@@ -358,6 +358,11 @@ let covers pattern value =
 
 (* kind-dnye kind-jdcs: observed sibling slugs, not a vocabulary of route names.
    A static prefix is required: unrelated root routes remain separate kinds. *)
+let without_annotation pattern =
+  if String.ends_with ~suffix:"*" pattern then
+    String.sub pattern 0 (String.length pattern - 1)
+  else pattern
+
 let merge_pattern previous current =
   match (parse_url previous, parse_url current) with
   | Some (scheme, _, authority, path), Some (other_scheme, _, other_authority, other_path)
@@ -369,7 +374,10 @@ let merge_pattern previous current =
         | x :: xs, y :: ys
           when (not difference) && prefix <> []
                && (not (String.contains x '<' || String.contains y '<'))
-               && List.for_all (fun s -> not (String.contains s '<')) prefix ->
+               && List.for_all (fun s -> not (String.contains s '<')) prefix
+               (* map-ngyr: a route before a dynamic argument is not a sibling
+                  value (search/<slug> and place/<slug> are distinct routes). *)
+               && match xs with s :: _ -> not (String.contains s '<') | [] -> true ->
             let _, ext = split_ext x and _, other_ext = split_ext y in
             if ext = other_ext then merge (("<slug>" ^ ext) :: prefix) true xs ys
             else None
@@ -387,7 +395,13 @@ let observe t ~url ~title =
     let canonical =
       match Hashtbl.find_opt t.aliases inferred.url_pattern with
       | Some pattern -> Some pattern
-      | None -> List.find_opt (fun pattern -> covers pattern inferred.url_pattern) t.order
+      | None ->
+          List.find_opt
+            (fun pattern ->
+              covers pattern inferred.url_pattern
+              || String.ends_with ~suffix:"*" pattern
+                 && without_annotation pattern = inferred.url_pattern)
+            t.order
     in
     match canonical with
     | Some url_pattern ->
@@ -399,28 +413,35 @@ let observe t ~url ~title =
             (fun previous ->
               Option.map
                 (fun merged -> (previous, merged))
-                (merge_pattern previous inferred.url_pattern))
+                (if without_annotation previous = without_annotation inferred.url_pattern
+                 then Some (without_annotation previous ^ "*")
+                 else merge_pattern previous inferred.url_pattern))
             (List.rev t.order)
         with
         | Some (previous, url_pattern) ->
-            let name =
-              match parse_url url_pattern with
-              | None -> inferred.name
-              | Some (_, _, _, path) ->
-                  let rec prefix = function
-                    | [] -> []
-                    | piece :: rest ->
-                        piece
-                        ::
-                        (if String.starts_with ~prefix:"<slug>" piece then []
-                         else prefix rest)
-                  in
-                  let _, tokens, _ =
-                    shape_of ("/" ^ String.concat "/" (prefix (segments path)))
-                  in
-                  name_of tokens
+            let annotation_only =
+              without_annotation previous = without_annotation url_pattern
             in
-            let name = assign t name in
+            let name =
+              if annotation_only then Hashtbl.find t.by_pattern previous
+              else
+                match parse_url url_pattern with
+                | None -> inferred.name
+                | Some (_, _, _, path) ->
+                    let rec prefix = function
+                      | [] -> []
+                      | piece :: rest ->
+                          piece
+                          ::
+                          (if String.starts_with ~prefix:"<slug>" piece then []
+                           else prefix rest)
+                    in
+                    let _, tokens, _ =
+                      shape_of ("/" ^ String.concat "/" (prefix (segments path)))
+                    in
+                    name_of tokens
+            in
+            let name = if annotation_only then name else assign t name in
             let aliases =
               Hashtbl.fold
                 (fun alias canonical acc ->
@@ -479,6 +500,14 @@ let inferred_pages t =
       { name = Hashtbl.find t.by_pattern url_pattern; url_pattern })
 
 let draft_pages t =
+  let specificity (page : draft_page) =
+    if String.contains page.url_pattern '*' then
+      String.split_on_char '*' page.url_pattern |> String.concat "" |> String.length
+    else max_int
+  in
   inferred_pages t
   |> List.map (fun (page : draft_page) ->
       { name = playbook_name page.name; url_pattern = playbook_pattern page.url_pattern })
+  (* map-ngyr: generated broad annotation patterns must not shadow their more
+     specific routes when the draft becomes a first-match declared vocabulary. *)
+  |> List.stable_sort (fun a b -> Int.compare (specificity b) (specificity a))

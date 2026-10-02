@@ -171,6 +171,11 @@ val page_kind : page list -> url:string -> text:string -> string option
 val procedure_of_yojson : Yojson.Safe.t -> (procedure, string) result
 val yojson_of_procedure : procedure -> Yojson.Safe.t
 val non_repeatable_context : string -> bool
+
+val action_risk_context :
+  snapshot:Protocol.snapshot -> text:string -> index:int option -> string
+(** map-yzqp: target-scoped evidence; ambiguous actions retain all page warnings. *)
+
 val non_repeatable_action : context:string -> string -> bool
 val procedure_repeatable : t -> context:string -> procedure -> bool
 

@@ -6,7 +6,7 @@
 # (share/ox_caps beside the findlib package), over
 # packages/. Runtime dangerous calls go through Ox_caps with the capability in
 # their signatures; the entry exit is allowed by the rules. The sole build-only
-# generator exception is explained below.
+# generator exceptions are explained below.
 set -euo pipefail
 cd "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 
@@ -23,4 +23,6 @@ fi
 # gen_skill_data is a Dune generator, not a Door program. It runs before the
 # application exists, cannot receive Ox_app.Env.caps, and only reads the source
 # skill tree and emits OCaml to stdout; it is not linked into the CLI.
-exec bash "$gate" --allow packages/leash/bin/gen_skill_data.ml "$@" packages
+# gen_error_topic is also build-only: it emits the pure protocol error table
+# for generated documentation, without runtime service access.
+exec bash "$gate" --allow packages/leash/bin/gen_skill_data.ml --allow packages/leash/bin/gen_error_topic.ml "$@" packages

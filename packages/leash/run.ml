@@ -919,8 +919,15 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                               | Ok (result : P.action_result) -> P.{url = result.url; title = result.title}
                               | Error _ -> P.{url = st.observation.url; title = st.observation.title} in
                             let text = match action with P.Fill a -> Some a.text | _ -> None in
+                            let index = match action with
+                              | P.Click a -> Some a.index
+                              | P.Fill a -> Some a.index
+                              | P.Press a -> a.index
+                              | _ -> None in
+                            let snapshot = {st.observation.snapshot with
+                              P.url = st.observation.url; title = st.observation.title} in
                             let step = P.{non_repeatable = Playbook.non_repeatable_action
-                              ~context:(st.observation.url ^ " " ^ st.observation.title ^ " " ^ st.observation.text)
+                              ~context:(Playbook.action_risk_context ~snapshot ~text:st.observation.text ~index)
                               (P.command_name action);
                               n = List.fold_left (fun n (p : P.planner_turn) -> n + List.length p.steps) 1 st.plans;
                               command = P.command_name action; target; text; after;
