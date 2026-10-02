@@ -556,9 +556,9 @@ let fills () =
       let body = Yojson.Safe.from_string request.Chat.body in
       Alcotest.(check string)
         "drive-ls3c the pinned text model" text_model (text "model" body);
-      Alcotest.(check int)
-        "drive-ls3c the token cap" 1024
-        (match field "max_tokens" body with Some (`Int n) -> n | _ -> 0);
+      Alcotest.(check bool)
+        "no output token budget (operator 2026-10-02)" true
+        (field "max_tokens" body = None);
       Alcotest.(check string)
         "drive-ls3c json_object is required" "json_object"
         (text "type" (get "response_format" body));

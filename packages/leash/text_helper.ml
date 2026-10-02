@@ -147,8 +147,8 @@ let ask client ~now ~model ~logger ~on_usage ?(deadline = default_deadline) json
   in
   Model_usage.start "text_helper";
   match
-    Ox_ai_chat.complete client ~deadline ~model ~messages ~max_tokens:1024
-      ~json_object:true ~reasoning:`Disabled ()
+    Ox_ai_chat.complete client ~deadline ~model ~messages ~json_object:true
+      ~reasoning:`Disabled ()
   with
   | Error error -> Error (Model_error.of_eta error)
   | Ok first -> (
@@ -191,8 +191,7 @@ let ask client ~now ~model ~logger ~on_usage ?(deadline = default_deadline) json
             match
               Ox_ai_chat.complete client
                 ~deadline:(Ox.Duration.min correction_deadline default_deadline)
-                ~model ~messages:retry ~max_tokens:1024 ~json_object:true
-                ~reasoning:`Disabled ()
+                ~model ~messages:retry ~json_object:true ~reasoning:`Disabled ()
             with
             | Error error -> Error (Model_error.of_eta error)
             | Ok second ->
