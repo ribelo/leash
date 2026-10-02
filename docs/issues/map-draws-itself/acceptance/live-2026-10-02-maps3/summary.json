@@ -1,0 +1,142 @@
+{
+  "site": "maps",
+  "passed": false,
+  "git_head": "f983c07964557bf09a211a5834dace240b4e05b1",
+  "binary_sha256": "14e87b671d4db7f04711e81f4699ba06735e3f6138d594669caf1b060b1b9c4f",
+  "requested_ancestor": "279bbf3",
+  "missions": [
+    {
+      "number": 1,
+      "mission": "Search Google Maps for Eiffel Tower in Paris and open its place information. Stop when the place name Eiffel Tower and its Paris address are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+      "cli_exit": 0,
+      "status": "done",
+      "goal_verified_independently": true,
+      "verification": "Personally reviewed retained final screenshot: Eiffel Tower, Av. Gustave Eiffel, 75007 Paris, France and Champ de Mars visible. Saved final snapshot/visible DOM corroborate.",
+      "screenshot": "maps/mission-1/after/page.png",
+      "model_calls": 13,
+      "calls_by_kind": {
+        "text_helper": 2,
+        "operator": 11
+      },
+      "browser_run_calls": 13,
+      "browser_run_cost_usd": 0.001693742,
+      "learning_calls": 0,
+      "learning_cost_usd": 0,
+      "model_cost_usd": 0.001693742,
+      "total_cost_fully_reported": true,
+      "durable_trace_model_calls": 13,
+      "durable_trace_cost_usd": 0.001693742,
+      "elapsed_s": 20.49986913599969
+    },
+    {
+      "number": 2,
+      "mission": "Search Google Maps for Eiffel Tower in Paris and open its place information. Stop when the place name Eiffel Tower and its Paris address are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+      "cli_exit": 0,
+      "status": "done",
+      "goal_verified_independently": true,
+      "verification": "Personally reviewed retained final screenshot: Eiffel Tower, Av. Gustave Eiffel, 75007 Paris, France and Champ de Mars visible. Saved final snapshot/visible DOM corroborate.",
+      "screenshot": "maps/mission-2/after/page.png",
+      "model_calls": 11,
+      "calls_by_kind": {
+        "text_helper": 1,
+        "operator": 9,
+        "learning": 1
+      },
+      "browser_run_calls": 10,
+      "browser_run_cost_usd": 0.001690678,
+      "learning_calls": 1,
+      "learning_cost_usd": null,
+      "model_cost_usd": null,
+      "total_cost_fully_reported": false,
+      "durable_trace_model_calls": 11,
+      "durable_trace_cost_usd": null,
+      "elapsed_s": 67.33719193899924
+    }
+  ],
+  "missions_skipped": [
+    3,
+    4
+  ],
+  "failures": [
+    "Mission 2: total run-plus-learning provider cost is incomplete",
+    "After two independently successful missions: no actual generated draft in private proposed store",
+    "Draft lacks provenance of two successful traces",
+    "Generated draft is not classified repeatable with replay gate"
+  ],
+  "costs": {
+    "model_calls": 24,
+    "browser_run_calls": 23,
+    "calls_by_kind": {
+      "text_helper": 3,
+      "operator": 20,
+      "learning": 1
+    },
+    "learning_calls": 1,
+    "unreported_learning_calls": 1,
+    "known_browser_run_cost_usd": 0.00338442,
+    "learning_cost_usd": null,
+    "total_model_cost_usd": null,
+    "fully_reported": false,
+    "note": "The known browser-run component is not the learning-inclusive total. One timed-out learning call has unknown provider cost."
+  },
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  },
+  "retained_screenshots": 2,
+  "redundant_before_screenshots_removed": 2,
+  "rules": {
+    "builds": 1,
+    "fresh_build_dir": "_build_l53_maps3",
+    "build_timeout_seconds": 900,
+    "build_memory_kib": 16777216,
+    "harness_unchanged": true,
+    "mission_wording_unchanged": true,
+    "learning_mode": "auto",
+    "successes": 2,
+    "seeded_playbooks": 0,
+    "campaign_attempts": 1,
+    "campaign_retries": 0,
+    "extra_browser_investigation_after_closure": false,
+    "flights_campaign_started": false,
+    "private_xdg_profile_socket": true,
+    "real_profile_or_service_changes": false,
+    "product_edits": false,
+    "commits": false
+  },
+  "first_failed_gate": "Mission2 total run-plus-learning provider cost completeness; generated-draft/provenance/repeatability also fail at the same checkpoint",
+  "diagnosis": {
+    "learning_attempts": 1,
+    "planner_timeout_seconds": 60,
+    "output_token_cap_set_by_leash": false,
+    "planner_model": "openai/gpt-6-luna",
+    "planner_reasoning": "max",
+    "service_warning": "learning: learning compile dropped: timed out",
+    "mission2_success_trace_timestamp": "2026-10-02T18:00:39.625411Z",
+    "warning_timestamp": "2026-10-02T18:01:39.627Z",
+    "elapsed_between_trace_and_warning_seconds": 60.001589,
+    "deadline_source": "Models.learning passes config.planner_timeout to Planner.learning; Config.default_planner_timeout=60; unchanged harness does not override it.",
+    "bounded_claim": "The learning request did not complete within its local 60-second deadline. Provider internal work, eventual response and charged cost are not established. No output-length metadata was returned.",
+    "drafts": 0,
+    "installed_by_replay": 0,
+    "installed_by_agreement": 0,
+    "traces_compiled": false,
+    "raw_trace_paths": [
+      [
+        "m",
+        "maps",
+        "search-<slug>",
+        "place-<slug>"
+      ],
+      [
+        "maps",
+        "search-<slug>",
+        "place-<slug>"
+      ]
+    ],
+    "compiler_eligibility_reached": true,
+    "l55_observed_behavior": "Mission2 reply and durable trace include 11 calls (10 browser-run plus 1 learning) and retain null total cost. The timed-out call is not represented as free."
+  },
+  "checkout_note": "Build clean at recorded HEAD; parent changes after campaigns are preserved. Audit records current checkout independently from the frozen tested binary."
+}

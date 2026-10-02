@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "scope": "all retained bytes including PNG and final audit",
+  "exact_key_scan_authorized_key_present": true,
+  "leaks": {
+    "capability_tokens": 0,
+    "concrete_private_runtime_paths": 0,
+    "api_key_prefixes": 0,
+    "real_chrome_profile_paths": 0,
+    "exact_api_key_occurrences": 0,
+    "unredacted_capability_fields": 0
+  },
+  "validation": {
+    "json_files": 44,
+    "jsonl_files": 3,
+    "jsonl_rows": 3,
+    "markdown_links": 12,
+    "broken_links": 0,
+    "costs_and_durable_traces_reconciled": true,
+    "fully_reported_costs": false,
+    "unreported_learning_calls": 1,
+    "unknown_total_cost_preserved": true,
+    "summary_matches_gate_results": true,
+    "screenshots_retained": 2,
+    "binary_and_harness_hashes_match": true,
+    "build_exit": 0,
+    "offline_harness_tests_passed": 10
+  },
+  "cleanup": {
+    "owned_processes": 0,
+    "random_runtime_roots": 0,
+    "preexisting_archives_preserved": [
+      "leash-l53-incidental-20261002",
+      "leash-l53-build-provenance"
+    ],
+    "service_exit": 0,
+    "loopback_server_closed": true
+  },
+  "checkout": {
+    "head_at_build": "f983c07964557bf09a211a5834dace240b4e05b1",
+    "head_at_audit": "f983c07964557bf09a211a5834dace240b4e05b1",
+    "tracked_changes_since_build_preserved": [],
+    "product_edits_by_worker": false,
+    "commits_by_worker": false
+  },
+  "files": 56,
+  "bytes": 1591783
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "pid": 611941,
+    "headless": true,
+    "pipe": true,
+    "browser_main": true,
+    "argv": [
+      "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true --simulate-outdated-no-au=Tue, 31 Dec 2099 23:59:59 GMT --ozone-platform=wayland --enable-features=AllowLegacyMV2Extensions --disable-features=ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled,ExtensionsManifestV3Only,WebRtcAllowInputVolumeAdjustment --user-data-dir=<PRIVATE_ROOT>/profile --no-first-run --no-default-browser-check --hide-crash-restore-bubble --remote-debugging-pipe --disable-blink-features=AutomationControlled --test-type --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --class=leash --headless=new --window-size=1366,900 --noerrdialogs --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl"
+    ]
+  }
+]

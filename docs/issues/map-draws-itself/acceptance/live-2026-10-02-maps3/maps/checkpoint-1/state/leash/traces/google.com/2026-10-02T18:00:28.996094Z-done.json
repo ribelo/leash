@@ -1,0 +1,366 @@
+{
+  "unattended": [],
+  "version": 1,
+  "time": "2026-10-02T18:00:28.996094Z",
+  "site": "google.com",
+  "mission": "Search Google Maps for Eiffel Tower in Paris and open its place information. Stop when the place name Eiffel Tower and its Paris address are visible. Do not buy, book, send, upload personal data, log in, or bypass challenges. If cookie consent appears, choose Reject all only. Stop if login or a challenge is needed.",
+  "outcome": "done",
+  "cost": 0.001693742,
+  "duration_ms": 20479,
+  "model_calls": 13,
+  "start_url": "https://consent.google.com/m?continue=https://www.google.com/maps?hl%3Den&gl=PL&m=0&pc=m&uxe=eomtm&cm=2&hl=en&src=1",
+  "page_kind_path": [
+    "m",
+    "maps",
+    "search-<slug>",
+    "place-<slug>"
+  ],
+  "inferred_pages": [
+    {
+      "name": "m",
+      "url_pattern": "https://consent.google.com/m"
+    },
+    {
+      "name": "maps",
+      "url_pattern": "https://www.google.com/maps*"
+    },
+    {
+      "name": "search-<slug>",
+      "url_pattern": "https://www.google.com/maps/search/<slug>*"
+    },
+    {
+      "name": "place-<slug>",
+      "url_pattern": "https://www.google.com/maps/place/<slug>*"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.64
+        },
+        {
+          "key": "click",
+          "probability": 0.1
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.24
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://consent.google.com/m?continue=https://www.google.com/maps?hl%3Den&gl=PL&m=0&pc=m&uxe=eomtm&cm=2&hl=en&src=1",
+        "title": "Before you continue to Google Maps"
+      },
+      "elapsed_ms": 925
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Reject all"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 1.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "5",
+          "probability": 1.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps?hl=en",
+        "title": "Google Maps"
+      },
+      "elapsed_ms": 1911
+    },
+    {
+      "non_repeatable": false,
+      "n": 3,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search Google Maps"
+      },
+      "text": "Eiffel Tower in Paris",
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.02
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.98
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/@51.1701458,16.5748849,14z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Google Maps"
+      },
+      "elapsed_ms": 17048
+    },
+    {
+      "non_repeatable": false,
+      "n": 4,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.99
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.14
+        },
+        {
+          "key": "2",
+          "probability": 0.86
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/@51.1701458,16.5748849,14z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Eiffel Tower in Paris - Google Maps"
+      },
+      "elapsed_ms": 17482
+    },
+    {
+      "non_repeatable": false,
+      "n": 5,
+      "operation": "done",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.95
+        },
+        {
+          "key": "click",
+          "probability": 0.04
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Eiffel Tower - Google Maps"
+      },
+      "elapsed_ms": 20310
+    }
+  ],
+  "final": {
+    "url": "https://www.google.com/maps/place/Eiffel+Tower/@48.8583736,2.2919064,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!8m2!3d48.8583701!4d2.2944813!16zL20vMDJqODE?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "Eiffel Tower - Google Maps"
+  }
+}

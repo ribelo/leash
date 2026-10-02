@@ -1,0 +1,56 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "250"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.051399304999904416,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/maps?hl=en",
+    "title": "Google Maps",
+    "page_kind": {
+      "name": "maps",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "button",
+        "name": "Menu",
+        "state": [
+          "disabled"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "combobox",
+        "name": "",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Search"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Directions"
+      }
+    ],
+    "total": 4,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

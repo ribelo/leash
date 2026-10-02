@@ -1,0 +1,2658 @@
+{
+  "provenance": {
+    "sha256": "14e87b671d4db7f04711e81f4699ba06735e3f6138d594669caf1b060b1b9c4f",
+    "browser": {
+      "value": {
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+        "webdriver": false,
+        "viewport": [
+          1366,
+          813
+        ]
+      }
+    },
+    "processes": [
+      {
+        "pid": 618422,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": true,
+        "pipe": true,
+        "main": true
+      },
+      {
+        "pid": 618438,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": true,
+        "pipe": false,
+        "main": false
+      },
+      {
+        "pid": 618439,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": true,
+        "pipe": false,
+        "main": false
+      },
+      {
+        "pid": 618441,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": true,
+        "pipe": false,
+        "main": false
+      },
+      {
+        "pid": 618464,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": true,
+        "pipe": false,
+        "main": false
+      },
+      {
+        "pid": 618466,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": false,
+        "main": false
+      },
+      {
+        "pid": 618472,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": false,
+        "main": false
+      },
+      {
+        "pid": 618502,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": true,
+        "main": false
+      },
+      {
+        "pid": 618513,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": true,
+        "main": false
+      },
+      {
+        "pid": 618535,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": true,
+        "main": false
+      },
+      {
+        "pid": 618980,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": true,
+        "main": false
+      },
+      {
+        "pid": 619183,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": true,
+        "main": false
+      },
+      {
+        "pid": 619300,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": true,
+        "main": false
+      },
+      {
+        "pid": 620044,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": false,
+        "main": false
+      },
+      {
+        "pid": 653606,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": true,
+        "main": false
+      },
+      {
+        "pid": 660505,
+        "exe": "/nix/store/hlzchn03l9yfa9xpfv2hykw9r1hj1zd1-google-chrome-152.0.7977.64/share/google/chrome/chrome",
+        "headless": false,
+        "pipe": true,
+        "main": false
+      }
+    ],
+    "head": "f983c07964557bf09a211a5834dace240b4e05b1",
+    "build_exit": 0,
+    "service_exit": 0,
+    "owned_process_survivors": [],
+    "model_calls": 0,
+    "initial_tracked_diff": "clean",
+    "preserved_untracked": "live-2026-10-02-maps3/"
+  },
+  "baseline_before": {
+    "value": {
+      "url": "https://www.google.com/travel/flights?hl=en",
+      "ready": "complete",
+      "time": 48925.5,
+      "visibility": "visible",
+      "focus": true,
+      "rect": {
+        "x": 620.34375,
+        "y": 526,
+        "width": 110.3125,
+        "height": 40,
+        "top": 526,
+        "right": 730.65625,
+        "bottom": 566,
+        "left": 620.34375
+      },
+      "point": {
+        "x": 675.5,
+        "y": 546
+      },
+      "hit": "<span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span>",
+      "target": "<button class=\"VfPpkd-LgbsSe VfPpkd-LgbsSe-OWXEXe-k8QpJ VfPpkd-LgbsSe-OWXEXe-Bz112c-M1Soyc nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jscontroller=\"soHxf\" jsaction=\"click:cOuCgd; mousedown:UX7yZ; mouseup:lbsD7e; mouseenter:tfO1Yc; mouseleave:JywGue; touchstart:p6p2H; touchmove:FwuNnf; touchend:yfqBxc; touchcancel:JMtRjd; focus:AHmuwe; blur:O22p3e; contextmenu:mg9Pef;mlnRJb:fLiPzd;\" data-idom-class=\"nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jsname=\"vLv7Lb\" aria-label=\"Explore destinations\" jslog=\"37596;ved:2ahUKEwiAyf6o9ZuXAxU3GjoCHbKTCX8Q3KUCegQIAxAZ;track:click\"><div class=\"VfPpkd-Jh9lGc\"></div><div class=\"VfPpkd-J1Ukfc-LhBDec\"></div><span class=\"notranslate VfPpkd-kBDsod E6fbI\" aria-hidden=\"true\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" focusable=\"false\" class=\" NMm5M\"><path d=\"M20.49 19l-5.73-5.73C15.53 12.2 16 10.91 16 9.5A6.5 6.5 0 1 0 9.5 16c1.41 0 2.7-.47 3.77-1.24L19 20.49 20.49 19zM5 9.5C5 7.01 7.01 5 9.5 5S14 7.01 14 9.5 11.99 14 9.5 14 5 11.99 5 9.5z\"></path></svg></span><span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span></button>",
+      "ancestors": [
+        "<div class=\"xFFcie\" jsaction=\"JIbuQc:wXjZtc\"><button class=\"VfPpkd-LgbsSe VfPpkd-LgbsSe-OWXEXe-k8QpJ VfPpkd-LgbsSe-OWXEXe-Bz112c-M1Soyc nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jscontroller=\"soHxf\" jsaction=\"click:cOuCgd; mousedown:UX7yZ; mouseup:lbsD7e; mouseenter:tfO1Yc; mouseleave:JywGue; touchstart:p6p2H; touchmove:FwuNnf; touchend:yfqBxc; touchcancel:JMtRjd; focus:AHmuwe; blur:O22p3e; contextmenu:mg9Pef;mlnRJb:fLiPzd;\" data-idom-class=\"nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jsname=\"vLv7Lb\" aria-label=\"Explore destinations\" jslog=\"37596;ved:2ahUKEwiAyf6o9ZuXAxU3GjoCHbKTCX8Q3KUCegQIAxAZ;track:click\"><div class=\"VfPpkd-Jh9lGc\"></div><div class=\"VfPpkd-J1Ukfc-LhBDec\"></div><span class=\"notranslate VfPpkd-kBDsod E6fbI\" aria-hidden=\"true\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" focusable=\"false\" class=\" NMm5M\"><path d=\"M20.49 19l-5.73-5.73C15.53 12.2 16 10.91 16 9.5A6.5 6.5 0 1 0 9.5 16c1.41 0 2.7-.47 3.77-1.24L19 20.49 20.49 19zM5 9.5C5 7.01 7.01 5 9.5 5S14 7.01 14 9.5 11.99 14 9.5 14 5 11.99 5 9.5z\"></path></svg></span><span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span></button></div>",
+        "<div class=\"MXvFbd\"><div class=\"xFFcie\" jsaction=\"JIbuQc:wXjZtc\"><button class=\"VfPpkd-LgbsSe VfPpkd-LgbsSe-OWXEXe-k8QpJ VfPpkd-LgbsSe-OWXEXe-Bz112c-M1Soyc nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jscontroller=\"soHxf\" jsaction=\"click:cOuCgd; mousedown:UX7yZ; mouseup:lbsD7e; mouseenter:tfO1Yc; mouseleave:JywGue; touchstart:p6p2H; touchmove:FwuNnf; touchend:yfqBxc; touchcancel:JMtRjd; focus:AHmuwe; blur:O22p3e; contextmenu:mg9Pef;mlnRJb:fLiPzd;\" data-idom-class=\"nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jsname=\"vLv7Lb\" aria-label=\"Explore destinations\" jslog=\"37596;ved:2ahUKEwiAyf6o9ZuXAxU3GjoCHbKTCX8Q3KUCegQIAxAZ;track:click\"><div class=\"VfPpkd-Jh9lGc\"></div><div class=\"VfPpkd-J1Ukfc-LhBDec\"></div><span class=\"notranslate VfPpkd-kBDsod E6fbI\" aria-hidden=\"true\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" focusable=\"false\" class=\" NMm5M\"><path d=\"M20.49 19l-5.73-5.73C15.53 12.2 16 10.91 16 9.5A6.5 6.5 0 1 0 9.5 16c1.41 0 2.7-.47 3.77-1.24L19 20.49 20.49 19zM5 9.5C5 7.01 7.01 5 9.5 5S14 7.01 14 9.5 11.99 14 9.5 14 5 11.99 5 9.5z\"></path></svg></span><span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span></button></div></div>"
+      ],
+      "scripts": 31,
+      "listenerAPI": "undefined",
+      "keys": [
+        "__jsaction"
+      ],
+      "viewport": {
+        "width": 1366,
+        "height": 813,
+        "scrollX": 0,
+        "scrollY": 0
+      }
+    }
+  },
+  "trials": [
+    {
+      "label": "cold-click",
+      "delay_s": 0,
+      "hover": false,
+      "before": {
+        "value": {
+          "url": "https://www.google.com/travel/flights?hl=en",
+          "ready": "complete",
+          "time": 793.6999999992549,
+          "visibility": "visible",
+          "focus": true,
+          "rect": {
+            "x": 620.34375,
+            "y": 526,
+            "width": 110.3125,
+            "height": 40,
+            "top": 526,
+            "right": 730.65625,
+            "bottom": 566,
+            "left": 620.34375
+          },
+          "point": {
+            "x": 675.5,
+            "y": 546
+          },
+          "hit": "<span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span>",
+          "target": "<button class=\"VfPpkd-LgbsSe VfPpkd-LgbsSe-OWXEXe-k8QpJ VfPpkd-LgbsSe-OWXEXe-Bz112c-M1Soyc nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jscontroller=\"soHxf\" jsaction=\"click:cOuCgd; mousedown:UX7yZ; mouseup:lbsD7e; mouseenter:tfO1Yc; mouseleave:JywGue; touchstart:p6p2H; touchmove:FwuNnf; touchend:yfqBxc; touchcancel:JMtRjd; focus:AHmuwe; blur:O22p3e; contextmenu:mg9Pef;mlnRJb:fLiPzd;\" data-idom-class=\"nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jsname=\"vLv7Lb\" aria-label=\"Explore destinations\" jslog=\"37596;ved:2ahUKEwiU2M3j9ZuXAxUvKEMDHWJXKM8Q3KUCegQIAxAZ;track:click\"><div class=\"VfPpkd-Jh9lGc\"></div><div class=\"VfPpkd-J1Ukfc-LhBDec\"></div><span class=\"notranslate VfPpkd-kBDsod E6fbI\" aria-hidden=\"true\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" focusable=\"false\" class=\" NMm5M\"><path d=\"M20.49 19l-5.73-5.73C15.53 12.2 16 10.91 16 9.5A6.5 6.5 0 1 0 9.5 16c1.41 0 2.7-.47 3.77-1.24L19 20.49 20.49 19zM5 9.5C5 7.01 7.01 5 9.5 5S14 7.01 14 9.5 11.99 14 9.5 14 5 11.99 5 9.5z\"></path></svg></span><span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span></button>",
+          "scripts": 32,
+          "listenerAPI": "undefined",
+          "keys": [
+            "__jsaction"
+          ],
+          "viewport": {
+            "width": 1366,
+            "height": 813,
+            "scrollX": 0,
+            "scrollY": 0
+          }
+        }
+      },
+      "click": {
+        "tab": "[redacted capability]",
+        "url": "https://www.google.com/travel/flights?hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+        "snapshot": null,
+        "dialog": null,
+        "popups": []
+      },
+      "after": {
+        "value": [
+          {
+            "time": 871.6999999992549,
+            "url": "https://www.google.com/travel/flights?hl=en",
+            "ready": "complete",
+            "events": [
+              {
+                "type": "pointerdown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 806.6999999992549
+              },
+              {
+                "type": "pointerdown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 806.6999999992549
+              },
+              {
+                "type": "mousedown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 806.6999999992549
+              },
+              {
+                "type": "mousedown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 807.0999999996275
+              },
+              {
+                "type": "pointerup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 808.2999999998137
+              },
+              {
+                "type": "pointerup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 808.2999999998137
+              },
+              {
+                "type": "mouseup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 808.5
+              },
+              {
+                "type": "mouseup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 808.5999999996275
+              },
+              {
+                "type": "click",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 808.5999999996275
+              },
+              {
+                "type": "click",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 813.6999999992549
+              }
+            ]
+          },
+          {
+            "time": 1090.7999999998137,
+            "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+            "ready": "complete",
+            "events": [
+              {
+                "type": "pointerdown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 806.6999999992549
+              },
+              {
+                "type": "pointerdown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 806.6999999992549
+              },
+              {
+                "type": "mousedown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 806.6999999992549
+              },
+              {
+                "type": "mousedown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 807.0999999996275
+              },
+              {
+                "type": "pointerup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 808.2999999998137
+              },
+              {
+                "type": "pointerup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 808.2999999998137
+              },
+              {
+                "type": "mouseup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 808.5
+              },
+              {
+                "type": "mouseup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 808.5999999996275
+              },
+              {
+                "type": "click",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 808.5999999996275
+              },
+              {
+                "type": "click",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 813.6999999992549
+              }
+            ]
+          }
+        ]
+      },
+      "net_delta": [
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=wLR2Tc",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 2,
+          "from_cache": true
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=YeOTje",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 1,
+          "from_cache": true
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/log",
+          "status": 200,
+          "type": "fetch",
+          "duration_ms": 41,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=U0ZjKc,YFsb7d",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 1,
+          "from_cache": true
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=bZS0Jb,qR2Ti,RlXEKc,nQxlC",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 2,
+          "from_cache": true
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=roywif",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 1,
+          "from_cache": true
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=hrxZBe,EC5Fy,vUcUQd,fLWofd,JU2L5e,AZgf7c,xpn8pb,tnrgQ,lnVDmd",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 2,
+          "from_cache": true
+        },
+        {
+          "method": "GET",
+          "url": "data://image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' xml:space='preserve' preserveAspectRatio='xMinYMin slice' viewBox='0 0 5 2'%3E%3Ccircle cx='1' cy='1' r='1'/%3",
+          "status": 200,
+          "type": "image",
+          "duration_ms": 0,
+          "from_cache": true
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/log",
+          "status": null,
+          "type": "fetch",
+          "duration_ms": null,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=BOuIpd,UMu52b,DFTXbf,mn1JOe,CJKfQc,Ln9KZ,LpvVK,OW4oef,DAizJd,CRffVe,U0Nqfd,yAkMp",
+          "status": null,
+          "type": "script",
+          "duration_ms": null,
+          "from_cache": false
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/gen_204",
+          "status": null,
+          "type": "ping",
+          "duration_ms": null,
+          "from_cache": false
+        }
+      ],
+      "debug": {
+        "entries": [
+          {
+            "at": "2026-10-02T18:04:18Z",
+            "kind": "console",
+            "level": "log",
+            "text": "%c%s font-size: 18px; Using this console may allow attackers to impersonate you and steal your information using an attack called Self-XSS.\nDo not enter or paste code that you do not understand."
+          },
+          {
+            "at": "2026-10-02T18:04:18Z",
+            "kind": "console",
+            "level": "log",
+            "text": "%c%s color: red; background: yellow; font-size: 24px; WARNING!"
+          }
+        ]
+      }
+    },
+    {
+      "label": "wait3-click",
+      "delay_s": 3,
+      "hover": false,
+      "before": {
+        "value": {
+          "url": "https://www.google.com/travel/flights?hl=en",
+          "ready": "complete",
+          "time": 3539.2999999998137,
+          "visibility": "visible",
+          "focus": true,
+          "rect": {
+            "x": 620.34375,
+            "y": 526,
+            "width": 110.3125,
+            "height": 40,
+            "top": 526,
+            "right": 730.65625,
+            "bottom": 566,
+            "left": 620.34375
+          },
+          "point": {
+            "x": 675.5,
+            "y": 546
+          },
+          "hit": "<span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span>",
+          "target": "<button class=\"VfPpkd-LgbsSe VfPpkd-LgbsSe-OWXEXe-k8QpJ VfPpkd-LgbsSe-OWXEXe-Bz112c-M1Soyc nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jscontroller=\"soHxf\" jsaction=\"click:cOuCgd; mousedown:UX7yZ; mouseup:lbsD7e; mouseenter:tfO1Yc; mouseleave:JywGue; touchstart:p6p2H; touchmove:FwuNnf; touchend:yfqBxc; touchcancel:JMtRjd; focus:AHmuwe; blur:O22p3e; contextmenu:mg9Pef;mlnRJb:fLiPzd;\" data-idom-class=\"nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jsname=\"vLv7Lb\" aria-label=\"Explore destinations\" jslog=\"37596;ved:2ahUKEwiriuHl9ZuXAxUvKEMDHWJXKM8Q3KUCegQIAxAZ;track:click\"><div class=\"VfPpkd-Jh9lGc\"></div><div class=\"VfPpkd-J1Ukfc-LhBDec\"></div><span class=\"notranslate VfPpkd-kBDsod E6fbI\" aria-hidden=\"true\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" focusable=\"false\" class=\" NMm5M\"><path d=\"M20.49 19l-5.73-5.73C15.53 12.2 16 10.91 16 9.5A6.5 6.5 0 1 0 9.5 16c1.41 0 2.7-.47 3.77-1.24L19 20.49 20.49 19zM5 9.5C5 7.01 7.01 5 9.5 5S14 7.01 14 9.5 11.99 14 9.5 14 5 11.99 5 9.5z\"></path></svg></span><span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span></button>",
+          "scripts": 31,
+          "listenerAPI": "undefined",
+          "keys": [
+            "__jsaction"
+          ],
+          "viewport": {
+            "width": 1366,
+            "height": 813,
+            "scrollX": 0,
+            "scrollY": 0
+          }
+        }
+      },
+      "click": {
+        "tab": "[redacted capability]",
+        "url": "https://www.google.com/travel/flights?hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+        "snapshot": null,
+        "dialog": null,
+        "popups": []
+      },
+      "after": {
+        "value": [
+          {
+            "time": 3635.199999999255,
+            "url": "https://www.google.com/travel/flights?hl=en",
+            "ready": "complete",
+            "events": [
+              {
+                "type": "pointerdown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3560.699999999255
+              },
+              {
+                "type": "pointerdown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3560.699999999255
+              },
+              {
+                "type": "mousedown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3560.7999999998137
+              },
+              {
+                "type": "mousedown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3561.7999999998137
+              },
+              {
+                "type": "pointerup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3566.699999999255
+              },
+              {
+                "type": "pointerup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3566.699999999255
+              },
+              {
+                "type": "mouseup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567
+              },
+              {
+                "type": "mouseup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567.2999999998137
+              },
+              {
+                "type": "click",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567.2999999998137
+              },
+              {
+                "type": "click",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3573.899999999441
+              }
+            ]
+          },
+          {
+            "time": 3835.5999999996275,
+            "url": "https://www.google.com/travel/flights?hl=en",
+            "ready": "complete",
+            "events": [
+              {
+                "type": "pointerdown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3560.699999999255
+              },
+              {
+                "type": "pointerdown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3560.699999999255
+              },
+              {
+                "type": "mousedown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3560.7999999998137
+              },
+              {
+                "type": "mousedown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3561.7999999998137
+              },
+              {
+                "type": "pointerup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3566.699999999255
+              },
+              {
+                "type": "pointerup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3566.699999999255
+              },
+              {
+                "type": "mouseup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567
+              },
+              {
+                "type": "mouseup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567.2999999998137
+              },
+              {
+                "type": "click",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567.2999999998137
+              },
+              {
+                "type": "click",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3573.899999999441
+              }
+            ]
+          },
+          {
+            "time": 4035.899999999441,
+            "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+            "ready": "complete",
+            "events": [
+              {
+                "type": "pointerdown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3560.699999999255
+              },
+              {
+                "type": "pointerdown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3560.699999999255
+              },
+              {
+                "type": "mousedown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3560.7999999998137
+              },
+              {
+                "type": "mousedown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3561.7999999998137
+              },
+              {
+                "type": "pointerup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3566.699999999255
+              },
+              {
+                "type": "pointerup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 3566.699999999255
+              },
+              {
+                "type": "mouseup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567
+              },
+              {
+                "type": "mouseup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567.2999999998137
+              },
+              {
+                "type": "click",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3567.2999999998137
+              },
+              {
+                "type": "click",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 3573.899999999441
+              }
+            ]
+          }
+        ]
+      },
+      "net_delta": [
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=wLR2Tc",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 43,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=YeOTje",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 43,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=U0ZjKc,YFsb7d",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 291,
+          "from_cache": false
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/log",
+          "status": 200,
+          "type": "fetch",
+          "duration_ms": 42,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=bZS0Jb,qR2Ti,RlXEKc,nQxlC",
+          "status": null,
+          "type": "script",
+          "duration_ms": null,
+          "from_cache": false
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/log",
+          "status": null,
+          "type": "fetch",
+          "duration_ms": null,
+          "from_cache": false
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/gen_204",
+          "status": null,
+          "type": "ping",
+          "duration_ms": null,
+          "from_cache": false
+        }
+      ],
+      "debug": {
+        "entries": [
+          {
+            "at": "2026-10-02T18:04:23Z",
+            "kind": "console",
+            "level": "log",
+            "text": "%c%s font-size: 18px; Using this console may allow attackers to impersonate you and steal your information using an attack called Self-XSS.\nDo not enter or paste code that you do not understand."
+          },
+          {
+            "at": "2026-10-02T18:04:23Z",
+            "kind": "console",
+            "level": "log",
+            "text": "%c%s color: red; background: yellow; font-size: 24px; WARNING!"
+          }
+        ]
+      }
+    },
+    {
+      "label": "wait3-hover-click",
+      "delay_s": 3,
+      "hover": true,
+      "before": {
+        "value": {
+          "url": "https://www.google.com/travel/flights?hl=en",
+          "ready": "complete",
+          "time": 3386.4000000003725,
+          "visibility": "visible",
+          "focus": true,
+          "rect": {
+            "x": 620.34375,
+            "y": 526,
+            "width": 110.3125,
+            "height": 40,
+            "top": 526,
+            "right": 730.65625,
+            "bottom": 566,
+            "left": 620.34375
+          },
+          "point": {
+            "x": 675.5,
+            "y": 546
+          },
+          "hit": "<span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span>",
+          "target": "<button class=\"VfPpkd-LgbsSe VfPpkd-LgbsSe-OWXEXe-k8QpJ VfPpkd-LgbsSe-OWXEXe-Bz112c-M1Soyc nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jscontroller=\"soHxf\" jsaction=\"click:cOuCgd; mousedown:UX7yZ; mouseup:lbsD7e; mouseenter:tfO1Yc; mouseleave:JywGue; touchstart:p6p2H; touchmove:FwuNnf; touchend:yfqBxc; touchcancel:JMtRjd; focus:AHmuwe; blur:O22p3e; contextmenu:mg9Pef;mlnRJb:fLiPzd;\" data-idom-class=\"nCP5yc AjY5Oe LQeN7 TUT4y zlyfOd\" jsname=\"vLv7Lb\" aria-label=\"Explore destinations\" jslog=\"37596;ved:2ahUKEwiAvczp9ZuXAxU8FkMDHcqaGH0Q3KUCegQIAxAZ;track:click\"><div class=\"VfPpkd-Jh9lGc\"></div><div class=\"VfPpkd-J1Ukfc-LhBDec\"></div><span class=\"notranslate VfPpkd-kBDsod E6fbI\" aria-hidden=\"true\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" focusable=\"false\" class=\" NMm5M\"><path d=\"M20.49 19l-5.73-5.73C15.53 12.2 16 10.91 16 9.5A6.5 6.5 0 1 0 9.5 16c1.41 0 2.7-.47 3.77-1.24L19 20.49 20.49 19zM5 9.5C5 7.01 7.01 5 9.5 5S14 7.01 14 9.5 11.99 14 9.5 14 5 11.99 5 9.5z\"></path></svg></span><span jsname=\"V67aGc\" class=\"VfPpkd-vQzf8d\">Explore</span></button>",
+          "scripts": 31,
+          "listenerAPI": "undefined",
+          "keys": [
+            "__jsaction"
+          ],
+          "viewport": {
+            "width": 1366,
+            "height": 813,
+            "scrollX": 0,
+            "scrollY": 0
+          }
+        }
+      },
+      "click": {
+        "tab": "[redacted capability]",
+        "url": "https://www.google.com/travel/flights?hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+        "snapshot": null,
+        "dialog": null,
+        "popups": []
+      },
+      "after": {
+        "value": [
+          {
+            "time": 4220,
+            "url": "https://www.google.com/travel/flights?hl=en",
+            "ready": "complete",
+            "events": [
+              {
+                "type": "pointermove",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": -1,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4012.100000000559
+              },
+              {
+                "type": "pointermove",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": -1,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4012.100000000559
+              },
+              {
+                "type": "pointerdown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4149.5
+              },
+              {
+                "type": "pointerdown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4149.5
+              },
+              {
+                "type": "mousedown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4149.5
+              },
+              {
+                "type": "mousedown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4150.600000000559
+              },
+              {
+                "type": "pointerup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4151.9000000003725
+              },
+              {
+                "type": "pointerup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4152
+              },
+              {
+                "type": "mouseup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4152.200000000186
+              },
+              {
+                "type": "mouseup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4152.299999999814
+              },
+              {
+                "type": "click",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4152.5
+              },
+              {
+                "type": "click",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4157.600000000559
+              }
+            ]
+          },
+          {
+            "time": 4420.100000000559,
+            "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+            "ready": "complete",
+            "events": [
+              {
+                "type": "pointermove",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": -1,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4012.100000000559
+              },
+              {
+                "type": "pointermove",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": -1,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4012.100000000559
+              },
+              {
+                "type": "pointerdown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4149.5
+              },
+              {
+                "type": "pointerdown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4149.5
+              },
+              {
+                "type": "mousedown",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4149.5
+              },
+              {
+                "type": "mousedown",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 1,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4150.600000000559
+              },
+              {
+                "type": "pointerup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4151.9000000003725
+              },
+              {
+                "type": "pointerup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675.5,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 0,
+                "defaultPrevented": false,
+                "time": 4152
+              },
+              {
+                "type": "mouseup",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4152.200000000186
+              },
+              {
+                "type": "mouseup",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4152.299999999814
+              },
+              {
+                "type": "click",
+                "capture": true,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4152.5
+              },
+              {
+                "type": "click",
+                "capture": false,
+                "tag": "SPAN",
+                "trusted": true,
+                "x": 675,
+                "y": 546,
+                "buttons": 0,
+                "button": 0,
+                "detail": 1,
+                "defaultPrevented": false,
+                "time": 4157.600000000559
+              }
+            ]
+          }
+        ]
+      },
+      "net_delta": [
+        {
+          "method": "POST",
+          "url": "https://www.google.com/log",
+          "status": 200,
+          "type": "fetch",
+          "duration_ms": 40,
+          "from_cache": false
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/gen_204",
+          "status": 204,
+          "type": "ping",
+          "duration_ms": 316,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=wLR2Tc",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 107,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=YeOTje",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 84,
+          "from_cache": false
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/log",
+          "status": 200,
+          "type": "fetch",
+          "duration_ms": 44,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=U0ZjKc,YFsb7d",
+          "status": 200,
+          "type": "script",
+          "duration_ms": 79,
+          "from_cache": false
+        },
+        {
+          "method": "GET",
+          "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=bZS0Jb,qR2Ti,RlXEKc,nQxlC",
+          "status": null,
+          "type": "script",
+          "duration_ms": null,
+          "from_cache": false
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/log",
+          "status": null,
+          "type": "fetch",
+          "duration_ms": null,
+          "from_cache": false
+        },
+        {
+          "method": "POST",
+          "url": "https://www.google.com/gen_204",
+          "status": null,
+          "type": "ping",
+          "duration_ms": null,
+          "from_cache": false
+        }
+      ],
+      "debug": {
+        "entries": [
+          {
+            "at": "2026-10-02T18:04:31Z",
+            "kind": "console",
+            "level": "log",
+            "text": "%c%s font-size: 18px; Using this console may allow attackers to impersonate you and steal your information using an attack called Self-XSS.\nDo not enter or paste code that you do not understand."
+          },
+          {
+            "at": "2026-10-02T18:04:31Z",
+            "kind": "console",
+            "level": "log",
+            "text": "%c%s color: red; background: yellow; font-size: 24px; WARNING!"
+          }
+        ]
+      }
+    }
+  ],
+  "no_eval_control": {
+    "before": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/travel/flights?hl=en",
+      "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+      "page_kind": {
+        "name": "flights",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "button",
+          "name": "Main menu",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Google"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Skip to main content"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "Accessibility feedback"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Explore"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Flights"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "Hotels"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Vacation rentals"
+        },
+        {
+          "index": 9,
+          "role": "button",
+          "name": "Change appearance",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 10,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 12,
+          "role": "heading",
+          "name": "Flights"
+        },
+        {
+          "index": 13,
+          "role": "combobox",
+          "name": "Change ticket type. Round trip",
+          "value": "Round trip",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 14,
+          "role": "button",
+          "name": "1 passenger, change number of passengers."
+        },
+        {
+          "index": 15,
+          "role": "combobox",
+          "name": "Change seating class. Economy",
+          "value": "Economy",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 16,
+          "role": "combobox",
+          "name": "Where from?",
+          "value": "Wroc\u0142aw",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 17,
+          "role": "button",
+          "name": "Swap origin and destination.",
+          "state": [
+            "disabled"
+          ]
+        },
+        {
+          "index": 18,
+          "role": "combobox",
+          "name": "Where to? ",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 19,
+          "role": "textbox",
+          "name": "Departure"
+        },
+        {
+          "index": 20,
+          "role": "textbox",
+          "name": "Return"
+        },
+        {
+          "index": 21,
+          "role": "button",
+          "name": "Explore destinations"
+        },
+        {
+          "index": 22,
+          "role": "heading",
+          "name": "Flexible? Discover the best flight deals with AI"
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Explore deals with AI"
+        },
+        {
+          "index": 24,
+          "role": "heading",
+          "name": "Find and book cheap flights worldwide and track prices"
+        },
+        {
+          "index": 25,
+          "role": "heading",
+          "name": "Find cheap flights to anywhere"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "Explore more destinations"
+        }
+      ],
+      "total": 26,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "click": {
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/travel/flights?hl=en",
+      "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+      "snapshot": null,
+      "dialog": null,
+      "popups": []
+    },
+    "immediate_snap": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+      "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+      "page_kind": {
+        "name": "explore",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "button",
+          "name": "Main menu",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Google"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Skip to main content"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "Accessibility feedback"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Explore"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Flights"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "Hotels"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Vacation rentals"
+        },
+        {
+          "index": 9,
+          "role": "button",
+          "name": "Change appearance",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 10,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 12,
+          "role": "heading",
+          "name": "Flights"
+        },
+        {
+          "index": 13,
+          "role": "combobox",
+          "name": "Change ticket type. Round trip",
+          "value": "Round trip",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 14,
+          "role": "button",
+          "name": "1 passenger, change number of passengers."
+        },
+        {
+          "index": 15,
+          "role": "combobox",
+          "name": "Change seating class. Economy",
+          "value": "Economy",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 16,
+          "role": "combobox",
+          "name": "Where from?",
+          "value": "Wroc\u0142aw",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 17,
+          "role": "button",
+          "name": "Swap origin and destination.",
+          "state": [
+            "disabled"
+          ]
+        },
+        {
+          "index": 18,
+          "role": "combobox",
+          "name": "Where to? ",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 19,
+          "role": "textbox",
+          "name": "Departure"
+        },
+        {
+          "index": 20,
+          "role": "textbox",
+          "name": "Return"
+        },
+        {
+          "index": 21,
+          "role": "button",
+          "name": "Explore destinations"
+        },
+        {
+          "index": 22,
+          "role": "heading",
+          "name": "Flexible? Discover the best flight deals with AI"
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Explore deals with AI"
+        },
+        {
+          "index": 24,
+          "role": "heading",
+          "name": "Find and book cheap flights worldwide and track prices"
+        },
+        {
+          "index": 25,
+          "role": "heading",
+          "name": "Find cheap flights to anywhere"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "Explore more destinations"
+        }
+      ],
+      "total": 26,
+      "offset": 0,
+      "truncated": false,
+      "settled": false,
+      "source": "ax",
+      "reason": "document-changing",
+      "dialog": null
+    },
+    "after5_snap": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+      "title": "Wroc\u0142aw to anywhere | Explore",
+      "page_kind": {
+        "name": "explore",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "button",
+          "name": "Main menu",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Google"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Skip to main content"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "Accessibility feedback"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Explore"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Flights"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "Hotels"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Vacation rentals"
+        },
+        {
+          "index": 9,
+          "role": "button",
+          "name": "Change appearance",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 10,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 12,
+          "role": "combobox",
+          "name": "Change ticket type. Round trip",
+          "value": "Round trip",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 13,
+          "role": "button",
+          "name": "1 passenger"
+        },
+        {
+          "index": 14,
+          "role": "combobox",
+          "name": "Change seating class. Economy",
+          "value": "Economy",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 15,
+          "role": "combobox",
+          "name": "Where from?",
+          "value": "Wroc\u0142aw",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 16,
+          "role": "combobox",
+          "name": "Where to?",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 17,
+          "role": "button",
+          "name": "1-week trip in the next 6 months"
+        },
+        {
+          "index": 18,
+          "role": "button",
+          "name": "All filters (1)"
+        },
+        {
+          "index": 19,
+          "role": "button",
+          "name": "Flights only, Travel mode, Selected"
+        },
+        {
+          "index": 20,
+          "role": "button",
+          "name": "Clear Travel mode"
+        },
+        {
+          "index": 21,
+          "role": "button",
+          "name": "Stops, Not selected"
+        },
+        {
+          "index": 22,
+          "role": "button",
+          "name": "Price, Not selected"
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Airlines, Not selected"
+        },
+        {
+          "index": 24,
+          "role": "button",
+          "name": "Duration, Not selected"
+        },
+        {
+          "index": 25,
+          "role": "button",
+          "name": "Bags, Not selected"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "\u200bEnglish (United States)"
+        },
+        {
+          "index": 27,
+          "role": "button",
+          "name": "PLN"
+        },
+        {
+          "index": 28,
+          "role": "button",
+          "name": "View smaller map"
+        }
+      ],
+      "total": 28,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "debug": {
+      "entries": [
+        {
+          "at": "2026-10-02T18:06:41Z",
+          "kind": "console",
+          "level": "warning",
+          "text": "Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading"
+        },
+        {
+          "at": "2026-10-02T18:06:37Z",
+          "kind": "console",
+          "level": "log",
+          "text": "%c%s font-size: 18px; Using this console may allow attackers to impersonate you and steal your information using an attack called Self-XSS.\nDo not enter or paste code that you do not understand."
+        },
+        {
+          "at": "2026-10-02T18:06:37Z",
+          "kind": "console",
+          "level": "log",
+          "text": "%c%s color: red; background: yellow; font-size: 24px; WARNING!"
+        }
+      ]
+    },
+    "net_delta": [
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=wLR2Tc",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 41,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=YeOTje",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 43,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=U0ZjKc,YFsb7d",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 48,
+        "from_cache": false
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/log",
+        "status": 200,
+        "type": "fetch",
+        "duration_ms": 45,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=FXBp4c,XTf4dd",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 64,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=KgZinc",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 118,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=bZS0Jb,qR2Ti,RlXEKc,nQxlC",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 98,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=roywif",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 83,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "data://image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' xml:space='preserve' preserveAspectRatio='xMinYMin slice' viewBox='0 0 5 2'%3E%3Ccircle cx='1' cy='1' r='1'/%3",
+        "status": 200,
+        "type": "image",
+        "duration_ms": 0,
+        "from_cache": true
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=hrxZBe,EC5Fy,vUcUQd,fLWofd,JU2L5e,AZgf7c,xpn8pb,tnrgQ,lnVDmd",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 114,
+        "from_cache": false
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/log",
+        "status": 200,
+        "type": "fetch",
+        "duration_ms": 56,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=BOuIpd,UMu52b,DFTXbf,mn1JOe,CJKfQc,Ln9KZ,LpvVK,OW4oef,DAizJd,CRffVe,U0Nqfd,yAkMp",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 108,
+        "from_cache": false
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/gen_204",
+        "status": 204,
+        "type": "ping",
+        "duration_ms": 315,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=FEsyge",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 84,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=KZo3W",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 48,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=yb08jf,infPT,fbFUZ",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 103,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://maps.googleapis.com/maps/api/js",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 50,
+        "from_cache": true
+      },
+      {
+        "method": "GET",
+        "url": "https://maps.googleapis.com/maps/api/mapsjs/gen_204",
+        "status": 200,
+        "type": "xhr",
+        "duration_ms": 78,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://maps.googleapis.com/maps-api-v3/api/js/66/7/map.js",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 1,
+        "from_cache": true
+      },
+      {
+        "method": "GET",
+        "url": "https://maps.googleapis.com/maps-api-v3/api/js/66/7/layers.js",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 4,
+        "from_cache": true
+      },
+      {
+        "method": "GET",
+        "url": "https://maps.googleapis.com/maps-api-v3/api/js/66/7/overlay.js",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 5,
+        "from_cache": true
+      },
+      {
+        "method": "GET",
+        "url": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendUi_desktop_ms.Z2vlgwTQ1kE.L.B1.O/am=AAAAAAIAAAAAAAAAAAAAAEAAAAAA \u2026 /m=G2KPSe,Ufresf,cn5Pl,dQS5He,pD5lsd,GLmAR,mRYHCd,UISile",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 92,
+        "from_cache": false
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/gen_204",
+        "status": 204,
+        "type": "ping",
+        "duration_ms": 317,
+        "from_cache": false
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/log",
+        "status": 200,
+        "type": "fetch",
+        "duration_ms": 47,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.google.com/_/FlightsFrontendUi/bscframe",
+        "status": 200,
+        "type": "document",
+        "duration_ms": 2,
+        "from_cache": true
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/log",
+        "status": 200,
+        "type": "fetch",
+        "duration_ms": 45,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://www.google.com/generate_204",
+        "status": 204,
+        "type": "image",
+        "duration_ms": 18,
+        "from_cache": false
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/_/FlightsFrontendUi/data/travel.frontend.flights.FlightsFrontendService/GetExploreDestinations",
+        "status": 200,
+        "type": "xhr",
+        "duration_ms": 610,
+        "from_cache": false
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/log",
+        "status": 200,
+        "type": "fetch",
+        "duration_ms": 44,
+        "from_cache": false
+      },
+      {
+        "method": "POST",
+        "url": "https://www.google.com/log",
+        "status": 200,
+        "type": "fetch",
+        "duration_ms": 54,
+        "from_cache": false
+      },
+      {
+        "method": "GET",
+        "url": "https://maps.gstatic.com/mapfiles/openhand_8_8.cur",
+        "status": 200,
+        "type": "image",
+        "duration_ms": 1,
+        "from_cache": true
+      },
+      {
+        "method": "GET",
+        "url": "https://maps.googleapis.com/maps-api-v3/api/js/66/7/log.js",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 1,
+        "from_cache": true
+      },
+      {
+        "method": "GET",
+        "url": "https://maps.googleapis.com/maps-api-v3/api/js/66/7/onion.js",
+        "status": 200,
+        "type": "script",
+        "duration_ms": 1,
+        "from_cache": true
+      },
+      {
+        "method": "POST",
+        "url": "https://maps.googleapis.com/$rpc/google.internal.maps.mapsjs.v1.MapsJsInternalService/GetViewportInfo",
+        "status": 200,
+        "type": "xhr",
+        "duration_ms": 49,
+        "from_cache": false
+      }
+    ]
+  },
+  "timing_probe_recovered": {
+    "value": {
+      "url": "https://www.google.com/travel/explore?tfs=CBwQAxoOagwIAhIIL20vMDg0NWIaDnIMCAISCC9tLzA4NDViQAFIAXACggELCP___________wGYAQGyAQQYASAB&tfu=GgA&hl=en",
+      "ready": "complete",
+      "history": [],
+      "connected": true,
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      },
+      "hit": "<div class=\"gb_Td gb_Wd gb_Ud\"><div class=\"gb_2d gb_Ad gb_Bd\"><div class=\"gb_ad\" aria-expanded=\"false\" aria-label=\"Main menu\" role=\"button\" tabindex=\"",
+      "events": [
+        {
+          "type": "pointerdown",
+          "capture": true,
+          "trusted": true,
+          "time": 3461.399999999441,
+          "tag": "SPAN"
+        },
+        {
+          "type": "pointerdown",
+          "capture": false,
+          "trusted": true,
+          "time": 3461.399999999441,
+          "tag": "SPAN"
+        },
+        {
+          "type": "mousedown",
+          "capture": true,
+          "trusted": true,
+          "time": 3461.399999999441,
+          "tag": "SPAN"
+        },
+        {
+          "type": "mousedown",
+          "capture": false,
+          "trusted": true,
+          "time": 3462,
+          "tag": "SPAN"
+        },
+        {
+          "type": "pointerup",
+          "capture": true,
+          "trusted": true,
+          "time": 3463,
+          "tag": "SPAN"
+        },
+        {
+          "type": "pointerup",
+          "capture": false,
+          "trusted": true,
+          "time": 3463,
+          "tag": "SPAN"
+        },
+        {
+          "type": "mouseup",
+          "capture": true,
+          "trusted": true,
+          "time": 3463.2000000001863,
+          "tag": "SPAN"
+        },
+        {
+          "type": "mouseup",
+          "capture": false,
+          "trusted": true,
+          "time": 3463.2999999998137,
+          "tag": "SPAN"
+        },
+        {
+          "type": "click",
+          "capture": true,
+          "trusted": true,
+          "time": 3463.399999999441,
+          "tag": "SPAN"
+        },
+        {
+          "type": "click",
+          "capture": false,
+          "trusted": true,
+          "time": 3468.399999999441,
+          "tag": "SPAN"
+        }
+      ],
+      "resources": [
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3465.2000000001863,
+          "end": 3560.899999999441,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3466.5,
+          "end": 3518.2000000001863,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.google.com/log",
+          "start": 3519.7999999998137,
+          "end": 3576.399999999441,
+          "initiator": "fetch"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3633.7000000001863,
+          "end": 3678.5,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3716.399999999441,
+          "end": 3817.0999999996275,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3834.2999999998137,
+          "end": 3892.0999999996275,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3837.5,
+          "end": 3892,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.google.com/log",
+          "start": 3848.2000000001863,
+          "end": 3891.399999999441,
+          "initiator": "fetch"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3849.0999999996275,
+          "end": 3898.899999999441,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3902.399999999441,
+          "end": 3995.399999999441,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3903,
+          "end": 3987.0999999996275,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 3903.7999999998137,
+          "end": 3968.5,
+          "initiator": "script"
+        },
+        {
+          "name": "https://maps.googleapis.com/maps/api/js",
+          "start": 3905.0999999996275,
+          "end": 3908,
+          "initiator": "script"
+        },
+        {
+          "name": "https://maps.googleapis.com/maps/api/mapsjs/gen_204",
+          "start": 3913.899999999441,
+          "end": 3976.5999999996275,
+          "initiator": "xmlhttprequest"
+        },
+        {
+          "name": "https://maps.googleapis.com/maps-api-v3/api/js/66/7/map.js",
+          "start": 3932.399999999441,
+          "end": 3937.399999999441,
+          "initiator": "script"
+        },
+        {
+          "name": "https://maps.googleapis.com/maps-api-v3/api/js/66/7/layers.js",
+          "start": 3933.5999999996275,
+          "end": 3939.399999999441,
+          "initiator": "script"
+        },
+        {
+          "name": "https://maps.googleapis.com/maps-api-v3/api/js/66/7/overlay.js",
+          "start": 3937.5999999996275,
+          "end": 3940.5,
+          "initiator": "script"
+        },
+        {
+          "name": "https://www.gstatic.com/_/mss/boq-travel/_/js/k=boq-travel.FlightsFrontendUi_desktop_ms.en._yit022xvt8.2021.O/ck=boq-travel.FlightsFrontendU",
+          "start": 4001.5999999996275,
+          "end": 4068.7999999998137,
+          "initiator": "script"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,3 @@
+maps mission 1: exit=0 status=done goal=True model_calls=13 cost=0.001693742 proposals=0 installed=[]
+maps mission 2: exit=0 status=done goal=True model_calls=11 cost=None proposals=0 installed=[]
+{"gate": "maps", "passed": false, "missions_recorded": 2, "failures": ["Mission 2: total run-plus-learning provider cost is incomplete", "After two independently successful missions: no actual generated draft in private proposed store", "Draft lacks provenance of two successful traces", "Generated draft is not classified repeatable with replay gate"]}
