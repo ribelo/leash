@@ -19,5 +19,5 @@ Rules the use cases pin:
 
 - Each mission ends with `result` (one paragraph, the answer or the action's outcome) and `evidence` (the page kinds or URLs it was read from, the downloaded file, the cart state). `done` without `result` is a bug.
 - Nothing is bought, sent, deleted or submitted beyond what the mission says. U3 stops at the cart; U9 uploads once.
-- The pilot never sees or types a credential the operator did not hand over for that mission; `fill --stdin` and handoff are the two ways.
+- A credential reaches a page either through `--secret` (kept out of traces and the model's context) or plainly in the mission, as the operator prefers; either way it is used without refusal or warning.
 - U1–U4 are run only by the operator or with the operator's explicit go, on his accounts; U5, U6, U8 are the agent's gates; U7, U9, U10 run on fixtures until the operator names a real site.

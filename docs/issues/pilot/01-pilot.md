@@ -67,4 +67,4 @@ CAPTCHA solving beyond L55; running U1–U4 by anyone but the operator; cross-si
 
 ## Further Notes
 
-Credentials the operator pasted into the design conversation on 2026-10-03 must be rotated before U1/U2 run; the agent never receives them. `docs/use-cases.md` is the acceptance list and is edited only by the operator or the coordinator.
+Credentials are the operator's business. `--secret` exists so a value can be kept out of the trace and out of the model's context when the operator wants that; a credential written plainly into a mission is also accepted and used, with no refusal and no warning — Leash does not police what the operator chooses to share. `docs/use-cases.md` is the acceptance list and is edited only by the operator or the coordinator.
