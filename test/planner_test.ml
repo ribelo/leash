@@ -80,8 +80,9 @@ let refuses () =
    2026-10-04: "missing field v" before the first turn). *)
 let act_without_version () =
   match
-    M.decode_pilot request
-      {|{"answer":"act","action":{"cmd":"press","args":{"tab":"t_test","snapshot":"s_test","key":"Enter"}}}|}
+    P.planner_action_of_yojson
+      (Yojson.Safe.from_string
+         {|{"cmd":"press","args":{"tab":"t_test","snapshot":"s_test","key":"Enter"}}|})
   with
   | Ok _ -> ()
   | Error why -> Alcotest.fail why
