@@ -26,6 +26,30 @@ type context = {
   recent : J.recent_action list;
 }
 
+(* pilot-02ij: field values and recent fills are page reflections too. *)
+let redact secrets (context : context) =
+  let clean = Protocol.redact_string secrets in
+  {
+    goal = clean context.goal;
+    field =
+      {
+        label = clean context.field.label;
+        role = context.field.role;
+        value = clean context.field.value;
+      };
+    page_title = clean context.page_title;
+    page_text = clean context.page_text;
+    recent =
+      List.map
+        (fun (action : Jev_request.recent_action) ->
+          {
+            action with
+            action = clean action.action;
+            text = Option.map clean action.text;
+          })
+        context.recent;
+  }
+
 type t = {
   complete : ?deadline:Ox.Duration.t -> context -> (string option, P.error) result;
 }

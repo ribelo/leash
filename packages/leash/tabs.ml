@@ -1119,9 +1119,15 @@ let step_deadline = Ox.Duration.seconds 5
      stopped the moment the handoff ends by any path — resume, deadline, disconnect, or
      the tab going away. Its Done action is the human's [resume] (hand-0sja); one that
      arrives after the handoff already ended is logged, not retried. *)
-let announce t ~sw ~tab ~reason ~warn =
+let announce t ~sw ~tab ~reason ~warn ~clean =
   let context =
-    Desktop.{ tab = credential tab; reason; url = tab.url; title = tab.title }
+    Desktop.
+      {
+        tab = credential tab;
+        reason = clean reason;
+        url = clean tab.url;
+        title = clean tab.title;
+      }
   in
   let guarded step f =
     match
@@ -1157,25 +1163,26 @@ let announce t ~sw ~tab ~reason ~warn =
               | Ok _ -> ()
               | Error error ->
                   Ox_observability.Logger.info t.logger
-                    ~fields:[ ("url", Ox_observability.Logger.String tab.url) ]
+                    ~fields:[ ("url", Ox_observability.Logger.String (clean tab.url)) ]
                     ("the notification answered a handoff that had already ended: "
-                   ^ error.P.message)));
+                   ^ clean error.P.message)));
       `Stop_daemon)
 
-let handoff t ~reason ~timeout_s handle =
+let handoff ?(secrets = []) t ~reason ~timeout_s handle =
+  let clean text = P.redact_string secrets text in
   (* hand-lmd5: the deadline counts from the request, not from the moment the ledger's
      answer reaches this fiber. *)
   let started = now t in
   let* { tab; _ }, waiting = begin_handoff t ~reason handle in
   let warnings = ref [] in
   let warn step message =
-    let warning = step ^ ": " ^ message in
+    let warning = clean (step ^ ": " ^ message) in
     warnings := warning :: !warnings;
     Ox_observability.Logger.warn t.logger
       ~fields:
         [
-          ("url", Ox_observability.Logger.String tab.url);
-          ("reason", Ox_observability.Logger.String reason);
+          ("url", Ox_observability.Logger.String (clean tab.url));
+          ("reason", Ox_observability.Logger.String (clean reason));
         ]
       ("handoff warning: " ^ warning)
   in
@@ -1224,7 +1231,7 @@ let handoff t ~reason ~timeout_s handle =
       Eio.Switch.run (fun human ->
           (* hand-04rb hand-phof: the human-facing steps, on this handoff's own switch, so
              the notifier is stopped when the request ends however it ends. *)
-          announce t ~sw:human ~tab ~reason ~warn;
+          announce t ~sw:human ~tab ~reason ~warn ~clean;
           let left = remaining () in
           if not (Ox.Duration.is_zero left) then
             ignore (t.await_handoff left waiting.promise);
@@ -1647,40 +1654,6 @@ let read_text t (args : P.text_args) =
   with_reading t ~access:Act args.tab (fun _ browser -> Reading.text browser args)
 
 (* map-op09: capture only structure, on the exact final page, before trace persistence. *)
-let structural_outline t ~tab ~url =
-  with_reading t ~access:Act tab (fun _ browser ->
-      let current, _ = browser.Reading.current () in
-      if current <> url then
-        Error (error "stale-snapshot" "structural outline: final page URL changed")
-      else
-        let* response =
-          browser.call "Runtime.evaluate"
-            (`Assoc
-               [
-                 ("expression", `String Structural_outline.expression);
-                 ("returnByValue", `Bool true);
-                 (* Trusted, read-only service code: V8 side-effect checking rejects
-                    DOM traversal and local collection mutations. *)
-                 ("timeout", `Int 1000);
-               ])
-        in
-        match member "exceptionDetails" response with
-        | Some details ->
-            let why =
-              Option.bind (member "exception" details) (text "description")
-              |> Option.value
-                   ~default:
-                     (Option.value ~default:"evaluation failed" (text "text" details))
-            in
-            Error (error "internal" ("structural outline: " ^ why))
-        | None -> (
-            let value = Option.bind (member "result" response) (member "value") in
-            match Option.bind value Structural_outline.decode with
-            | Some outline -> Ok (Some outline)
-            | None ->
-                Error
-                  (error "internal"
-                     "structural outline: missing, invalid or empty skeleton")))
 
 let eval t (args : P.eval_args) =
   with_reading t ~access:Act args.tab (fun _ browser -> Reading.eval browser args)
@@ -1974,8 +1947,8 @@ let observation_of (snapshot : P.snapshot) (read : Snapshot_source.operator_read
 (* drive-8n2z drive-tfqh fly-iodm fly-crcc: keep the lock across observe/decide/act.
    Never call a public Tabs action here: each would reacquire this very same mutex.
    An invalid operator payload is an observation error, never a weaker legacy read. *)
-let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ())
-    ?(meter = meter ())
+let drive_locked ?mission ?(secrets = fun () -> []) ?recent ?on_step
+    ?(observed = fun (_ : Drive.observation) -> ()) ?(meter = meter ())
     ?(decide =
       fun ~deadline:_ _ ->
         Error
@@ -1995,7 +1968,7 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
   in
   let decide request =
     clear_usage meter "operator";
-    decide ~deadline:(remaining ()) request
+    decide ~deadline:(remaining ()) (Jev_request.redact (secrets ()) request)
   in
   (* drive-ls3c: one helper per drive. It carries the one-entry memo that reuses an
          answer for an unchanged context — what a stale-row retry is — so it is taken
@@ -2003,7 +1976,8 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
   let helper = text_helper () in
   let text_value context =
     clear_usage meter "text_helper";
-    helper.Text_helper.complete ~deadline:(remaining ()) context
+    helper.Text_helper.complete ~deadline:(remaining ())
+      (Text_helper.redact (secrets ()) context)
   in
   let* cdp = ready t in
   let* session = page_session t cdp tab in
@@ -2143,6 +2117,22 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
     let index = Option.value ~default:0 choice.index in
     let op = P.Operation.to_string choice.operation in
     let* () =
+      let intent =
+        if List.mem op [ "click"; "select"; "type_text" ] then
+          Option.bind
+            (List.find_opt (fun (row : P.row) -> row.index = index) page.snapshot.rows)
+            (fun row -> Run.unsafe_action row.name)
+        else None
+      in
+      match intent with
+      | Some intent
+        when not (Run.authorises (Option.value ~default:args.goal mission) intent) ->
+          Error
+            (error "row-not-actionable"
+               ("refused " ^ intent ^ ": mission does not name that action"))
+      | _ -> Ok ()
+    in
+    let* () =
       if op <> "click" then Ok ()
       else
         Result.map_error (error "row-not-actionable")
@@ -2182,6 +2172,9 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
       | "type_text" -> (
           match text with
           | Some value ->
+              let value =
+                Option.value ~default:value (List.assoc_opt value (secrets ()))
+              in
               Actions.fill ~settle_after:false ~check_hit:true ~blur_after:false ~cdp view
                 P.
                   {
@@ -2255,7 +2248,7 @@ let no_levels : Run.levels =
 
 let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
     ?(on_planner_step = fun _ -> ()) ?(on_arguments = fun _ -> ()) ?(planner_actions = 5)
-    ?(levels = no_levels) ?(model = "unconfigured")
+    ?pilot ?(levels = no_levels) ?(model = "unconfigured")
     ?(decide =
       fun ~deadline:_ _ ->
         Error
@@ -2280,7 +2273,28 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
           let* session = page_session t cdp tab in
           let browser = reading_browser t ~session tab cdp in
           let started = now t in
+          let secret_values = ref args.P.secrets in
+          let clean text = P.redact_string !secret_values text in
+          let clean_json value = P.redact_json !secret_values value in
+          let on_step =
+            Option.map
+              (fun callback step ->
+                match P.step_of_yojson (clean_json (P.yojson_of_step step)) with
+                | Ok step -> callback step
+                | Error _ -> ())
+              on_step
+          in
           let run_args = Run.of_args args in
+          let run_args =
+            match pilot with
+            | None -> run_args
+            | Some (pilot : Config.pilot) ->
+                {
+                  run_args with
+                  max_plans = pilot.turns;
+                  deadline_s = Option.value ~default:pilot.deadline_s args.deadline_s;
+                }
+          in
           let budget = float_of_int run_args.Run.deadline_s in
           let remaining () =
             Ox.Duration.ms
@@ -2311,10 +2325,13 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
               | Page_kind.Inferred -> Some inferred.url_pattern
               | Page_kind.Declared -> None
             in
-            on_page ~url:snapshot.url
+            on_page ~url:(clean snapshot.url)
               ~kind:
-                (if Page_kind.is_page ~url:snapshot.url then Some inferred.name else None)
-              ~pattern:(if Page_kind.is_page ~url:snapshot.url then pattern else None)
+                (if Page_kind.is_page ~url:snapshot.url then Some (clean inferred.name)
+                 else None)
+              ~pattern:
+                (if Page_kind.is_page ~url:snapshot.url then Option.map clean pattern
+                 else None)
           in
           let label ~url ~title ~text =
             let inferred, source =
@@ -2359,7 +2376,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                 Reading.text browser
                   P.{ tab = handle; index = None; max_chars = Some 12_000 }
             in
-            traced snapshot rendered.P.text;
+            traced snapshot (clean rendered.P.text);
             Ok
               Run.
                 {
@@ -2387,6 +2404,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
             | P.Click args -> Actions.click ~cdp view args
             | P.Fill args -> Actions.fill ~check_hit:true ~cdp view args
             | P.Press args -> Actions.press ~cdp view args
+            | P.Select args -> Actions.select ~cdp view args
             | P.Scroll args -> Actions.scroll ~cdp view args
             | P.Nav args ->
                 let* _ = navigate_locked t ~tab args.url in
@@ -2467,7 +2485,10 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                     else remaining ()
                   in
                   let value =
-                    match levels.Run.score ~deadline ~sentence ~state with
+                    match
+                      levels.Run.score ~deadline ~sentence:(clean sentence)
+                        ~state:(clean_json state)
+                    with
                     | Ok value -> value
                     | Error error ->
                         if !failure = None then failure := Some error;
@@ -2525,10 +2546,13 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                     (match meter with
                     | Some meter -> clear_usage meter "text_helper"
                     | None -> ());
-                    (text_helper ()).Text_helper.complete ~deadline:(remaining ()) context);
+                    (text_helper ()).Text_helper.complete ~deadline:(remaining ())
+                      (Text_helper.redact !secret_values context));
                 step =
                   (fun request ->
-                    drive_locked ~recent:request.Run.recent ?meter ?on_step
+                    drive_locked ~mission:args.mission
+                      ~secrets:(fun () -> !secret_values)
+                      ~recent:request.Run.recent ?meter ?on_step
                       ~observed:(fun page -> traced page.Drive.snapshot page.text)
                       ~decide ~text_helper ~label
                       ~scripts:(fun page ->
@@ -2562,7 +2586,9 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                       ~finally:(fun () ->
                         Eio.Cancel.protect (fun () -> Eio.Mutex.lock tab.lock))
                       (fun () ->
-                        let* _ = handoff t ~reason ~timeout_s:None handle in
+                        let* _ =
+                          handoff ~secrets:!secret_values t ~reason ~timeout_s:None handle
+                        in
                         let* tab = locate t ~access:Act handle in
                         Ok (info t tab)));
                 (* extr-8o1h extr-k40c: the only script text that reaches the page in a run
@@ -2629,9 +2655,11 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                 Reading.challenge_signal tab.reading
               in
               let execute on_record =
-                Run.loop ~handler ~on_book ~on_record ~drafts ~planner_action
-                  ~on_planner_step ~on_arguments ~planner_actions ~notify:t.notify
-                  ~challenge ~challenge_attempt:t.challenge_attempt
+                Run.loop ~handler ~on_book ~on_record ~drafts ?learning
+                  ~secrets:args.secrets
+                  ~on_secrets:(fun values -> secret_values := values)
+                  ~planner_action ~on_planner_step ~on_arguments ~planner_actions
+                  ~notify:t.notify ~challenge ~challenge_attempt:t.challenge_attempt
                   ~challenge_turns:t.challenge_turns
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)

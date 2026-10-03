@@ -4,6 +4,7 @@
 module P = Leash.Protocol
 module Fake = Leash_test_support.Fake_browser
 module Chrome = Leash.Chrome
+module Run = Leash.Run
 
 let obj xs = `Assoc xs
 let str s = `String s
@@ -39,6 +40,67 @@ let contains text sub =
     && (String.sub text i (String.length sub) = sub || search (i + 1))
   in
   search 0
+
+(* pilot-ukoh pilot-x1f3: mission ownership never invokes the legacy JEV chooser. *)
+let levels_with ?plan answers _questions =
+  let first = ref true in
+  let goals =
+    ref
+      (List.filter
+         (fun answer ->
+           (not (String.contains answer '.')) && answer <> "DONE" && answer <> "BLOCKED")
+         answers)
+  in
+  let reply answer =
+    Run.
+      {
+        answer;
+        expect = [];
+        reasoning_summary = None;
+        secrets_for_operator = [];
+        usage = None;
+      }
+  in
+  Run.
+    {
+      choose =
+        (fun ~deadline:_ _ -> Alcotest.fail "mission invoked the withdrawn JEV selector");
+      score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
+      plan =
+        (fun ~deadline:_ request ->
+          if !first then (
+            first := false;
+            let goal =
+              match !goals with
+              | [] -> request.mission
+              | goal :: rest ->
+                  goals := rest;
+                  goal
+            in
+            Ok (reply (Leg goal)))
+          else
+            match plan with
+            | Some plan -> Ok plan
+            | None -> (
+                match !goals with
+                | goal :: rest ->
+                    goals := rest;
+                    Ok (reply (Leg goal))
+                | [] ->
+                    Ok
+                      (reply
+                         (if
+                            List.for_all
+                              (fun (leg : Run.leg) -> leg.outcome = "done")
+                              request.legs
+                          then
+                            Done
+                              {
+                                result = "Navigation completed";
+                                evidence = [ "Navigator reported DONE" ];
+                              }
+                          else Fail "navigation did not complete"))));
+    }
 
 let rig ?reporter ?download_dir ?handoff_timeout_s f =
   Ox_test.run (fun env sw ->
@@ -205,6 +267,7 @@ let lifecycle () =
                 max_procedures = None;
                 expect = None;
                 out = None;
+                secrets = [];
                 deadline_s = None;
                 dry_run = Some true;
               }));
@@ -442,7 +505,8 @@ let budget () =
   (* L32 run-obtt: the margin covers the last expectation wait and a planner turn's
      correction call, so a run that stops at the planner still answers. *)
   Alcotest.(check int)
-    "notif-oslv handler includes planner and configured human wait" 1_275_000
+    "pilot-x1f3 explicit deadline overrides pilot default and includes human wait"
+    1_275_000
     (ms
        (P.Drive
           {
@@ -455,6 +519,7 @@ let budget () =
             dry_run = None;
             expect = None;
             out = None;
+            secrets = [];
           }));
   Alcotest.(check int) "other commands keep one second" 1_000 (ms P.Status)
 
@@ -1280,6 +1345,7 @@ let drive_dry_run () =
                   max_procedures = Some 3;
                   expect = None;
                   out = None;
+                  secrets = [];
                   deadline_s = Some 30;
                   dry_run = Some true;
                 };
@@ -1287,18 +1353,34 @@ let drive_dry_run () =
         |> Yojson.Safe.to_string
       in
       let reply =
-        Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide tabs wire
+        Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide
+          ~levels:
+            {
+              (levels_with [] (ref [])) with
+              plan =
+                (fun ~deadline:_ request ->
+                  Ok
+                    Run.
+                      {
+                        answer = Leg request.mission;
+                        expect = [];
+                        reasoning_summary = Some "Would open the result";
+                        secrets_for_operator = [];
+                        usage = None;
+                      });
+            }
+          tabs wire
         |> Yojson.Safe.from_string |> P.decode_reply
       in
       let reply =
         match reply with Ok reply -> result reply | Error why -> Alcotest.fail why
       in
       Alcotest.(check string)
-        "drive-l7yk one-step dry-run" "blocked"
+        "pilot-r94o dry-run is planned" "planned"
         (match get "status" reply with `String s -> s | _ -> "");
-      Alcotest.(check int) "drive-l7yk decision once" 1 !decisions;
+      Alcotest.(check int) "pilot-r94o navigator never runs" 0 !decisions;
       Alcotest.(check int)
-        "drive-l7yk step once" 1
+        "pilot-r94o no executed steps" 0
         (match get "operator_steps" reply with `List xs -> List.length xs | _ -> 0);
       Alcotest.(check bool)
         "drive-l7yk no mutating browser operation" false
@@ -1450,6 +1532,7 @@ let refused_click_redecides ?(operation_name = "click") () =
                   max_procedures = None;
                   expect = None;
                   out = None;
+                  secrets = [];
                   deadline_s = Some 30;
                   dry_run = None;
                 };
@@ -1458,6 +1541,7 @@ let refused_click_redecides ?(operation_name = "click") () =
       in
       let reply =
         Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide
+          ~levels:(levels_with [] (ref []))
           ~text_helper:(fun () ->
             Leash.Text_helper.{ complete = (fun ?deadline:_ _ -> Ok (Some "2026-11-01")) })
           tabs wire
@@ -1876,6 +1960,7 @@ let journal_redaction () =
                 dry_run = Some true;
                 expect = None;
                 out = None;
+                secrets = [];
               };
           ]
       in
@@ -2041,7 +2126,6 @@ let optional_otlp () =
    modal on the offer URL, whose playbook kind is [post-add] because its text marker takes
    priority over the offer URL matcher. *)
 
-module Run = Leash.Run
 module Jev = Leash__Jev_request
 
 let modal_text = "Added! Your product has been added to cart. View Cart"
@@ -2067,52 +2151,6 @@ let decide_done ~deadline:_ (_ : Jev.request) =
         targets = [];
       }
 
-(* L32 run-w7ke: the planner answer a test scripts; production's Luna is exercised in
-   test/planner_test.ml, and the run's own wiring for a proposal here. *)
-let levels_with
-    ?(plan = Run.{ answer = Fail "nothing left to plan"; expect = []; usage = None })
-    answers questions =
-  let remaining = ref answers in
-  Run.
-    {
-      choose =
-        (fun ~deadline:_ (question : Run.question) ->
-          questions := question :: !questions;
-          match !remaining with
-          | [] -> Alcotest.fail "the run asked for more answers than the test scripted"
-          | key :: rest ->
-              remaining := rest;
-              (* fly-mepw: a scripted site name is the offered book identity, not the
-                 site string. Procedure slugs, DONE and BLOCKED are already criteria. *)
-              let key =
-                if
-                  question.name <> "select_playbook"
-                  || List.exists (fun (offered, _) -> offered = key) question.criteria
-                then key
-                else
-                  match
-                    List.find_opt
-                      (fun (offered, description) ->
-                        String.starts_with ~prefix:"book:" offered
-                        && contains description ("site " ^ key ^ " |"))
-                      question.criteria
-                  with
-                  | Some (offered, _) -> offered
-                  | None -> key
-              in
-              Ok
-                Run.
-                  {
-                    key;
-                    probabilities = `Assoc [ (key, `Float 1.) ];
-                    confidence = 1.;
-                    usage = None;
-                    judgments = [];
-                  });
-      score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
-      plan = (fun ~deadline:_ _ -> Ok plan);
-    }
-
 let run_wire ?(who = "alice") ?expect ?tab ?max_steps ?deadline_s mission =
   P.encode_request
     {
@@ -2128,6 +2166,7 @@ let run_wire ?(who = "alice") ?expect ?tab ?max_steps ?deadline_s mission =
             dry_run = None;
             expect;
             out = None;
+            secrets = [];
           };
     }
   |> Yojson.Safe.to_string
@@ -2223,6 +2262,7 @@ let run_mission () =
       let answers = [ "automationexercise.com"; "add-to-cart"; "DONE" ] in
       let base = levels_with answers questions in
       let scored = ref 0 in
+      let pilot_requests = ref [] in
       let levels =
         Run.
           {
@@ -2236,11 +2276,22 @@ let run_mission () =
                 result);
             plan =
               (fun ~deadline request ->
+                pilot_requests := request :: !pilot_requests;
                 Leash__Model_usage.start "planner";
                 Leash__Model_usage.report "planner" (Some 0.3);
                 Leash__Model_usage.start "planner";
                 Leash__Model_usage.report "planner" (Some 0.07);
-                base.plan ~deadline request);
+                if List.length !pilot_requests > 2 then
+                  Ok
+                    Run.
+                      {
+                        answer = Fail "mission expectations did not pass";
+                        expect = [];
+                        reasoning_summary = None;
+                        secrets_for_operator = [];
+                        usage = None;
+                      }
+                else base.plan ~deadline request);
           }
       in
       let decide ~deadline request =
@@ -2269,7 +2320,7 @@ let run_mission () =
         | _ -> false);
       Alcotest.(check bool)
         "extr-5x9e each retry counted separately" true
-        (get "planner" by_kind = `Int 2);
+        (get "planner" by_kind = `Int 6);
       Alcotest.(check bool)
         ("extr-5x9e verifier calls counted " ^ string_of_int !scored)
         true
@@ -2282,7 +2333,7 @@ let run_mission () =
         | `Float n ->
             Float.abs
               (n
-              -. (0.37
+              -. (1.11
                  +. (float_of_int !scored *. 0.05)
                  +. 0.4
                     *.
@@ -2292,15 +2343,15 @@ let run_mission () =
             < 0.00001
         | _ -> false);
       Alcotest.(check string)
-        "run-4j1v the Added! modal is not DONE" "blocked"
+        "run-4j1v the Added! modal is not DONE" "failed"
         (match get "status" body with `String s -> s | _ -> "");
       (match get "procedures" body with
       | `List (entry :: _) ->
           Alcotest.(check string)
-            "run-9ypy the procedure the level chose" "add-to-cart"
+            "pilot-eu1c the selected candidate leg is visible" "add-to-cart"
             (match get "slug" entry with `String s -> s | _ -> "");
           Alcotest.(check string)
-            "run-9ypy the procedure verified" "verified"
+            "pilot-eu1c leg DONE returns to pilot" "done"
             (match get "outcome" entry with `String s -> s | _ -> "")
       | _ -> Alcotest.fail "run-9ypy the trace has no procedure");
       (match get "mission_expectations" body with
@@ -2313,34 +2364,22 @@ let run_mission () =
             (match get "sentence" expectation with `String s -> s | _ -> "")
       | _ -> Alcotest.fail "run-4j1v the mission expectations are missing");
       (match get "planner_turns" body with
-      | `List [ turn ] ->
-          Alcotest.(check string)
-            "run-w7ke the planner was asked at the refusal" "blocked"
-            (match get "trigger" turn with `String s -> s | _ -> "")
-      | _ -> Alcotest.fail "run-w7ke no planner turn");
-      (* run-qq3o run-pvmc: the state the procedure level was asked over. Its page kind is
-         the modal's, not the offer URL's, and no page text is in it. *)
-      let procedure_question =
-        match
-          List.find_opt
-            (fun (question : Run.question) -> question.Run.name = "select_procedure")
-            !questions
-        with
-        | Some question -> question
-        | None -> Alcotest.fail "run-qq3o the procedure level was never asked"
-      in
-      let state = procedure_question.Run.state in
-      Alcotest.(check string)
-        "run-snk4 the modal is the post-add kind, not the offer URL" "post-add"
-        (match
-           List.assoc_opt "page_kind"
-             (match state with `Assoc fields -> fields | _ -> [])
-         with
-        | Some (`String kind) -> kind
-        | _ -> "");
+      | `List [ first; attempt; last ] ->
+          Alcotest.(check bool)
+            "pilot decides again after completion guard refuses" true
+            (get "answer" first = str "leg"
+            && get "answer" attempt = str "done"
+            && get "answer" last = str "fail")
+      | _ -> Alcotest.fail "pilot decisions missing");
+      let initial = List.hd (List.rev !pilot_requests) in
       Alcotest.(check bool)
-        "run-pvmc no page text reaches the upper level" false
-        (List.mem_assoc "text" (match state with `Assoc fields -> fields | _ -> []));
+        "pilot gets current kind" true
+        (initial.Run.page_kind = Some "post-add");
+      Alcotest.(check bool)
+        "pilot receives page evidence from turn one" true
+        (String.length initial.text > 0);
+      Alcotest.(check int)
+        "mission never invokes legacy selector" 0 (List.length !questions);
       (* run-shgh: the step went through the same service path [drive] uses, and nothing
          acted on the page: the decision was [done]. *)
       let methods =
@@ -2379,7 +2418,15 @@ let drive_temporary_cleanup () =
             Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide
               ~levels:
                 (levels_with
-                   ~plan:Run.{ answer = Fail "scripted stop"; expect = []; usage = None }
+                   ~plan:
+                     Run.
+                       {
+                         answer = Fail "scripted stop";
+                         expect = [];
+                         reasoning_summary = None;
+                         secrets_for_operator = [];
+                         usage = None;
+                       }
                    [] (ref []))
               tabs
               (run_wire "Open https://example.com and inspect the page")
@@ -2388,7 +2435,7 @@ let drive_temporary_cleanup () =
           (match (outcome, reply) with
           | "model-error", P.Success body ->
               Alcotest.(check string)
-                "fly-8fgl provider failure is terminal evidence" "error"
+                "pilot-rdjv provider failure returns before pilot fail" "failed"
                 (match get "status" body with `String s -> s | _ -> "");
               let error =
                 match P.error_of_yojson (get "error" (get "operator_state" body)) with
@@ -2400,7 +2447,7 @@ let drive_temporary_cleanup () =
                 (P.Error_code.to_string error.P.code)
           | _, P.Success body ->
               Alcotest.(check string)
-                "daily-9ggi original outcome retained" outcome
+                "pilot-rdjv explicit pilot failure closes the mission" "failed"
                 (match get "status" body with `String s -> s | _ -> "")
           | _ -> Alcotest.fail "daily-9ggi unexpected drive reply");
           let listed = result (request tabs "alice" P.List_tabs) |> get "tabs" in
@@ -2415,6 +2462,7 @@ let drive_temporary_cleanup () =
       (match
          Leash.Control.handle ~model:"fixture-model" ~installed:[]
            ~decide:(fun ~deadline:_ _ -> raise Exit)
+           ~levels:(levels_with [] (ref []))
            tabs
            (run_wire "Open https://example.com")
        with
@@ -2441,6 +2489,8 @@ let drive_temporary_cleanup () =
           {
             answer = Handoff "Please sign in with your credentials";
             expect = [];
+            reasoning_summary = None;
+            secrets_for_operator = [];
             usage = None;
           }
       in
@@ -2507,9 +2557,13 @@ let drive_tab_lifecycle () =
                 Run.
                   {
                     answer =
-                      (if outcome = "blocked" then Fail "scripted stop"
-                       else Handoff "Please inspect this");
+                      (if outcome = "handoff" then Handoff "Please inspect this"
+                       else if outcome = "done" then
+                         Done { result = "Complete"; evidence = [] }
+                       else Fail "scripted stop");
                     expect = [];
+                    reasoning_summary = None;
+                    secrets_for_operator = [];
                     usage = None;
                   }
               in
@@ -2550,7 +2604,10 @@ let drive_tab_lifecycle () =
               in
               Alcotest.(check string)
                 ("map-puhi ending " ^ outcome)
-                (if outcome = "handoff" then "handoff-expired" else outcome)
+                (if outcome = "handoff" then "handoff-expired"
+                 else if outcome = "deadline" then "deadline"
+                 else if outcome = "done" then "done"
+                 else "failed")
                 (match get "status" body with `String name -> name | _ -> "");
               let listing () =
                 match get "tabs" (result (request tabs "alice" P.List_tabs)) with
@@ -2639,14 +2696,29 @@ let run_refusals () =
         reply_of
           (P.decode_reply
              (Yojson.Safe.from_string
-                (Leash.Control.handle ~model:"fixture-model" ~levels ~installed:[]
-                   ~decide:decide_done tabs (run_wire "learn the thing"))))
+                (Leash.Control.handle ~model:"fixture-model"
+                   ~levels:
+                     {
+                       levels with
+                       plan =
+                         (fun ~deadline:_ _ ->
+                           Ok
+                             Run.
+                               {
+                                 answer = Fail "mission needs a URL";
+                                 expect = [];
+                                 reasoning_summary = None;
+                                 secrets_for_operator = [];
+                                 usage = None;
+                               });
+                     }
+                   ~installed:[] ~decide:decide_done tabs (run_wire "learn the thing"))))
       in
       (match opened with
       | P.Failure error -> Alcotest.fail error.P.message
       | P.Success body ->
           Alcotest.(check string)
-            "daily-9ggi blank mission without URL is explained" "blocked"
+            "pilot-s954 pilot explains missing URL" "failed"
             (match get "status" body with `String s -> s | _ -> ""));
       let tabs_now = result (request tabs "alice" P.List_tabs) |> get "tabs" in
       Alcotest.(check int)
@@ -2703,22 +2775,28 @@ let run_proposal () =
           (* fly-yolk: procedure BLOCKED enters the operator. A DONE nothing can verify
              still asks the planner once; run-rq6i: it answers with a procedure, which the
              loop runs and verifies, and the next DONE accepts that verification. *)
-          let answers = [ "automationexercise.com"; "DONE"; "DONE" ] in
-          let planned : Run.plan_answer =
-            Run.Procedure
-              Leash.Playbook.
-                {
-                  slug = "check-modal";
-                  description = "Check the added-to-cart modal.";
-                  args = None;
-                  steps =
-                    [ Goal Leash.Playbook.{ goal = "Look at the page."; hint = None } ];
-                  expect = [ "the page is post-add" ];
-                  repeat = None;
-                }
+          let candidate : Leash.Playbook.procedure =
+            Leash.Playbook.
+              {
+                slug = "check-modal";
+                description = "Check the added-to-cart modal.";
+                args = None;
+                steps = [ Goal { goal = "Look at the page."; hint = None } ];
+                expect = [ "the page is post-add" ];
+                repeat = None;
+              }
           in
-          let plan = Run.{ answer = planned; expect = []; usage = None } in
-          let levels = levels_with ~plan answers questions in
+          let playbook =
+            {
+              playbook with
+              Leash.Playbook.playbook =
+                {
+                  playbook.playbook with
+                  procedures = candidate :: playbook.playbook.procedures;
+                };
+            }
+          in
+          let levels = levels_with [ "check-modal"; "DONE" ] questions in
           let reply =
             with_ticking_clock env sw (fun () ->
                 Leash.Control.handle ~model:"fixture-model" ~levels
@@ -2733,32 +2811,23 @@ let run_proposal () =
           (match get "procedures" body with
           | `List [ entry ] ->
               Alcotest.(check string)
-                "run-rq6i the trace names it" "check-modal"
+                "pilot-x1f3 the trace names the selected candidate" "check-modal"
                 (match get "slug" entry with `String s -> s | _ -> "");
               Alcotest.(check bool)
                 "run-m0r8 it is marked planned" true
                 (match get "planned" entry with `Bool b -> b | _ -> false)
           | _ -> Alcotest.fail "run-rq6i the trace is not the one planned procedure");
-          let expected =
-            Filename.concat
-              (Filename.concat (Filename.concat state "leash") "proposed")
-              "automationexercise.com-check-modal.json"
-          in
-          (match get "proposals" body with
-          | `List [ `String path ] ->
-              Alcotest.(check string)
-                "run-m0r8 the proposal is where the state directory says" expected path;
-              Alcotest.(check bool)
-                "run-m0r8 the proposal file exists" true (Sys.file_exists path)
-          | _ -> Alcotest.fail "run-m0r8 the run reported no proposal");
+          Alcotest.(check bool)
+            "pilot does not author raw proposals" true
+            (get "proposals" body = `List []);
           Alcotest.(check string)
             "run-m0r8 the installed playbook is untouched" before
             (read playbook.Leash.Playbook.file);
           match get "planner_turns" body with
-          | `List [ turn ] ->
-              Alcotest.(check string)
-                "run-w7ke the trigger" "blocked"
-                (match get "trigger" turn with `String s -> s | _ -> "")
+          | `List [ first; last ] ->
+              Alcotest.(check bool)
+                "pilot owns first and last turns" true
+                (get "answer" first = str "leg" && get "answer" last = str "done")
           | _ -> Alcotest.fail "run-w7ke no planner turn"))
 
 (* L33 run-3vat run-xda7: command enters production Tabs.run through Control,
@@ -2978,7 +3047,7 @@ let list_js =
 
 let books_json =
   {|{
- "site":"books.example","entry":"https://books.example/","description":"Books to collect",
+ "site":"automationexercise.com","entry":"https://automationexercise.com/","description":"Books to collect",
  "pages":[{"name":"page","url_pattern":"https://automationexercise.com/*"}],
  "shapes":{"row":[{"title":"string","price":"number"}],"title":[{"title":"string"}]},
  "scripts":{
@@ -3009,6 +3078,7 @@ let with_books f =
       | Error why -> Alcotest.fail why)
 
 let handle_with ?levels ?text_helper ?(decide = decide_done) ~installed tabs who command =
+  let levels = Some (Option.value levels ~default:(levels_with [] (ref []))) in
   let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   match
     P.decode_reply
@@ -3267,21 +3337,17 @@ let run_scripts ?out hostile =
             |> tab
           in
           let questions = ref [] in
-          let base = levels_with [ "books.example"; "collect"; "DONE" ] questions in
+          let base = levels_with [ "collect"; "DONE" ] (ref []) in
           let levels =
             Run.
               {
                 base with
-                choose =
-                  (fun ~deadline question ->
-                    let kind =
-                      if question.Run.name = "select_playbook" then "playbook"
-                      else "procedure"
-                    in
-                    Leash__Model_usage.start kind;
-                    let answer = base.choose ~deadline question in
-                    Leash__Model_usage.report kind
-                      (Some (if kind = "playbook" then 0.1 else 0.2));
+                plan =
+                  (fun ~deadline request ->
+                    questions := request :: !questions;
+                    Leash__Model_usage.start "planner";
+                    let answer = base.plan ~deadline request in
+                    Leash__Model_usage.report "planner" (Some 0.2);
                     answer);
               }
           in
@@ -3314,6 +3380,7 @@ let run_scripts ?out hostile =
                        dry_run = None;
                        expect = None;
                        out;
+                       secrets = [];
                      }))
           in
           (result reply, payloads f, script_calls f, !questions)))
@@ -3323,7 +3390,7 @@ let run_script_step () =
   let body, payloads_seen, calls, model_requests = run_scripts hostile in
   let billed = get "model_calls_by_kind" (get "data" body) in
   Alcotest.(check int)
-    "extr-5x9e every actual model request" 4
+    "pilot-ukoh counts pilot and argument helper requests" 3
     (match get "model_calls" body with `Int n -> n | _ -> -1);
   List.iter
     (fun (kind, expected) ->
@@ -3331,14 +3398,14 @@ let run_script_step () =
         ("extr-5x9e " ^ kind ^ " call count")
         true
         (get kind billed = `Int expected))
-    [ ("playbook", 1); ("procedure", 2); ("text_helper", 1) ];
+    [ ("planner", 2); ("text_helper", 1) ];
   Alcotest.(check bool)
     "fly-gn5z an unpriced helper makes model_cost unknown" true
     (get "model_cost" body = `Null);
   Alcotest.(check bool)
     "fly-gn5z reported_cost is the known subtotal" true
     (match get "reported_cost" (get "data" body) with
-    | `Float cost -> Float.abs (cost -. 0.5) < 0.00001
+    | `Float cost -> Float.abs (cost -. 0.4) < 0.00001
     | _ -> false);
   Alcotest.(check bool)
     "extr-5x9e missing helper cost shown" true
@@ -3349,8 +3416,8 @@ let run_script_step () =
     | `List kinds -> List.mem (str "script-record") kinds
     | _ -> false);
   List.iter
-    (fun (question : Run.question) ->
-      let text = Yojson.Safe.to_string question.state in
+    (fun (question : Run.plan_request) ->
+      let text = Yojson.Safe.to_string (Leash.Planner.pilot_request_json question) in
       Alcotest.(check bool)
         "extr-b3u0 records never enter recorded model payloads" false
         (contains text "A Light in the Attic" || contains text "Tipping the Velvet"))
@@ -3408,10 +3475,12 @@ let run_script_step () =
         "extr-b3u0 bounded reply count" true
         (get "count" (get "data" streamed) = `Int 2);
       List.iter
-        (fun (q : Run.question) ->
+        (fun (q : Run.plan_request) ->
           Alcotest.(check bool)
             "extr-b3u0 JSONL records absent from every model request" false
-            (contains (Yojson.Safe.to_string q.state) "A Light in the Attic"))
+            (contains
+               (Yojson.Safe.to_string (Leash.Planner.pilot_request_json q))
+               "A Light in the Attic"))
         requests);
   Alcotest.(check bool) "extr-8o1h the run is done" true (get "status" body = str "done");
   Alcotest.(check bool)
@@ -3630,6 +3699,7 @@ let durable_drive_traces () =
               ()
           in
           let invoke ?traces ?levels ?(installed = []) ?(decide = decide_done) wire =
+            let levels = Some (Option.value levels ~default:(levels_with [] (ref []))) in
             with_ticking_clock env sw (fun () ->
                 Leash.Control.handle ?traces ~logger ~model:"fixture-model" ?levels
                   ~installed ~decide tabs wire)
@@ -3652,73 +3722,9 @@ let durable_drive_traces () =
             | Ok trace -> trace
             | Error why -> Alcotest.fail why
           in
-          let outline_calls = ref 0 and outline_failure = ref false in
           (* trace-qe8c: Chrome's pushed tab-strip title is not its document title. *)
           Fake.on_method f "Runtime.evaluate" (fun request ->
               match get "expression" (get "params" request) with
-              | `String expression when expression = Leash__Structural_outline.expression
-                ->
-                  incr outline_calls;
-                  Alcotest.(check bool)
-                    "map-op09 returns value within bounded evaluation" true
-                    (get "returnByValue" (get "params" request) = `Bool true
-                    && get "timeout" (get "params" request) = `Int 1000);
-                  if
-                    !outline_failure
-                    || field "throwOnSideEffect" (get "params" request)
-                       = Some (`Bool true)
-                  then
-                    obj
-                      [
-                        ( "exceptionDetails",
-                          obj
-                            [
-                              ("text", str "Uncaught");
-                              ( "exception",
-                                obj
-                                  [
-                                    ( "description",
-                                      str
-                                        "EvalError: Possible side-effect in \
-                                         debug-evaluate" );
-                                  ] );
-                            ] );
-                      ]
-                  else
-                    let value =
-                      `List
-                        [
-                          obj
-                            [
-                              ("tag", str "article");
-                              ("classes", `List [ str "product_pod" ]);
-                              ( "children",
-                                `List
-                                  [
-                                    obj
-                                      [
-                                        ("tag", str "h3");
-                                        ("classes", `List []);
-                                        ( "children",
-                                          `List
-                                            [
-                                              obj
-                                                [
-                                                  ("tag", str "a");
-                                                  ("classes", `List []);
-                                                  ("children", `List []);
-                                                  ("text", str "PRIVATE PAGE BODY");
-                                                  ("value", str "s3cret-password");
-                                                  ("email", str "alice@example.com");
-                                                  ("card", str "4111 1111 1111 1111");
-                                                ];
-                                            ] );
-                                      ];
-                                  ] );
-                            ];
-                        ]
-                    in
-                    obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]
               | `String expression when contains expression "leash-operator-read" ->
                   let value =
                     match operator_observation ~text:modal_text with
@@ -3773,61 +3779,6 @@ let durable_drive_traces () =
             "trace-qe8c first navigable site" "automationexercise.com" trace.site;
           Alcotest.(check bool)
             "trace-zbb9 public acknowledged steps" true (trace.steps <> []);
-          Alcotest.(check bool)
-            "map-op09 ordinary mission skips outline" true
-            (trace.structural_outline = None && !outline_calls = 0);
-          let collection =
-            invoke ~traces:store (run_wire ("Collect every title from " ^ product_url))
-            |> decoded |> saved
-          in
-          Alcotest.(check (option string))
-            "map-op09 capture survives created-tab cleanup"
-            (Some "article.product_pod\n  h3\n    a\n") collection.structural_outline;
-          Alcotest.(check int) "map-op09 one final structural read" 1 !outline_calls;
-          let wire = P.yojson_of_drive_trace collection |> Yojson.Safe.to_string in
-          List.iter
-            (fun secret ->
-              Alcotest.(check bool)
-                "map-op09 saved compiler evidence excludes body and secrets" false
-                (contains wire secret))
-            [
-              "PRIVATE PAGE BODY";
-              "s3cret-password";
-              "alice@example.com";
-              "4111 1111 1111 1111";
-            ];
-          let collected = Fake.received f in
-          let rec sequence n = function
-            | [] -> []
-            | x :: xs -> (n, x) :: sequence (n + 1) xs
-          in
-          let numbered = sequence 0 collected in
-          let captured_at =
-            List.find
-              (fun (_, j) ->
-                get "method" j = str "Runtime.evaluate"
-                && get "expression" (get "params" j)
-                   = str Leash__Structural_outline.expression)
-              numbered
-            |> fst
-          in
-          let closed_at =
-            List.find (fun (_, j) -> get "method" j = str "Target.closeTarget") numbered
-            |> fst
-          in
-          Alcotest.(check bool)
-            "map-op09 structural read precedes close" true (captured_at < closed_at);
-          outline_failure := true;
-          let failed_outline =
-            invoke ~traces:store (run_wire ~tab:h "Collect every title")
-            |> decoded |> saved
-          in
-          Alcotest.(check bool)
-            "map-op09 evaluation exception is warned with reason" true
-            (failed_outline.structural_outline = None
-            && contains (Buffer.contents logs) "structural outline capture failed"
-            && contains (Buffer.contents logs) "Possible side-effect");
-          outline_failure := false;
           let before = count () in
           let disabled = invoke (run_wire ~tab:h "disabled trace capture") |> decoded in
           Alcotest.(check bool)

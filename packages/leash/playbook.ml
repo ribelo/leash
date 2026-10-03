@@ -1018,10 +1018,10 @@ let resolve_scripts ~file ~dir (book : t) =
   in
   go [] [] decls
 
-(* map-op08: compiled scripts have a narrower contract than authored scripts.
+(* map-op08: proposed scripts have a narrower contract than authored scripts.
    Scan source conservatively, including comments and quoted property names; reject
    escaped identifiers rather than accepting spelling tricks around the denylist. *)
-let check_compiled_script code =
+let check_proposed_script code =
   let lower = String.lowercase_ascii code in
   let forbidden =
     [
@@ -1883,7 +1883,7 @@ let learned_install ~caps ~from_dir ~to_dir ~file (book : t) (proc : procedure) 
   match prov with
   | None -> Ok ()
   | Some prov ->
-      let* () = check_goal_count ~minimum:2 ~file book proc in
+      let* () = check_goal_count ~minimum:1 ~file book proc in
       let* () =
         if
           List.exists (function Script _ -> true | _ -> false) proc.steps
@@ -1891,7 +1891,7 @@ let learned_install ~caps ~from_dir ~to_dir ~file (book : t) (proc : procedure) 
         then
           Error
             (file ^ ": procedure " ^ proc.slug
-           ^ ": compiled scripts require a repeatable replay-gate procedure")
+           ^ ": proposed scripts require a repeatable replay-gate procedure")
         else Ok ()
       in
       let* () =
@@ -1907,7 +1907,7 @@ let learned_install ~caps ~from_dir ~to_dir ~file (book : t) (proc : procedure) 
                 | Some decl -> (
                     match decl.source with
                     | None -> Ok ()
-                    | Some source -> check_compiled_script source))
+                    | Some source -> check_proposed_script source))
             | _ -> Ok ())
           (Ok ()) proc.steps
       in
@@ -1936,7 +1936,7 @@ let accept_unlocked ?revision ?(replayed_scripts = []) ~caps path =
       else
         Error
           (path
-         ^ ": compiled scripts must run successfully through the replay gate before \
+         ^ ": proposed scripts must run successfully through the replay gate before \
             installation")
     in
     let* existing =
@@ -2080,7 +2080,7 @@ let accept ?revision ?(consume = false) ?(replayed_scripts = []) ~caps path =
           | Some _ when replayed_scripts <> [] -> Ok ()
           | Some _ ->
               Error
-                "compiled scripts must run successfully through the replay gate before \
+                "proposed scripts must run successfully through the replay gate before \
                  installation")
       | _ -> Ok ()
     with

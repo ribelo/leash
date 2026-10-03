@@ -26,6 +26,8 @@ type context = {
 (** What one [type_text] decision is asked from, in the drive's own order: [recent] is the
     drive's history, oldest first. *)
 
+val redact : (string * string) list -> context -> context
+
 type t = {
   complete : ?deadline:Ox.Duration.t -> context -> (string option, Protocol.error) result;
 }

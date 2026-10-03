@@ -34,8 +34,8 @@ and exit 65. No service, browser, or model is needed.
 
 The version-1 derived Protocol.drive_trace projection contains time, site, mission,
 outcome, cost (number or null), duration_ms, model_calls, page_kind_path,
-inferred_pages, arguments, compiled, procedures, steps, unattended, final (URL/title or null), and optional
-error_code and `structural_outline` (default `null`). For done collection missions the final page contributes a tag/class skeleton of repeated containers, bounded to 4096 bytes, at most 256 elements and depth five. It contains no text nodes, attributes, field values or URLs; failed capture leaves null and logs a warning with the reason (including CDP evaluation exceptions, an empty skeleton or a changed final URL). The trusted service-owned DOM walk runs without V8 side-effect checking; this does not relax compiled-script validation. Legacy files decode with null. The compiler receives this skeleton as selector evidence (map-op09). inferred_pages is the session mapping: each `{name, url_pattern}` is a
+inferred_pages, arguments, procedures, steps, unattended, final (URL/title or null), and optional
+error_code. inferred_pages is the session mapping: each `{name, url_pattern}` is a
 generalized URL and the name it was given, first-seen. A missing inferred_pages on an
 older file decodes as empty. Procedures
 have n, procedure, outcome, planned, and safe steps. `arguments` is a list of `[name, value]` pairs (default `[]`): only bindings whose values occur in retained, non-redacted typed steps are saved; unused and password-marker bindings are discarded. Steps have n, operation, source (`operator` or `planner`, default `operator`), non_repeatable (default false), optional error code,
@@ -51,8 +51,7 @@ A selected playbook's declared kind wins over an inferred one and is not added t
 inferred_pages. Where no declared kind matches, the inferred name enters
 page_kind_path and the generalized pattern enters inferred_pages. An installed book
 that was not selected does not supply declared kinds. Unchanged observations do not
-add duplicates. Inferred kinds are not written into a playbook; the compiler proposes
-pages from inferred_pages.
+add duplicates. Inferred kinds remain trace evidence; they are not compiled into a playbook.
 Persistence completes before reply encoding, so trace_path names an existing
 file. Errors expose error.detail.trace_path. Write/prune failures are logged and
 never change the drive outcome; a failed write omits the path.
@@ -85,7 +84,4 @@ toward the newest-first rank. Automatic pruning follows a successful write;
 prune applies the same rule offline. Cutoffs use UTC; the exact age boundary is
 kept.
 
-Every done trace with compiled = false is exempt from both limits. Missing
-compiled decodes as false for older files. A future compiler may set compiled =
-true only after the resulting procedure is durably accepted; normal retention
-then applies. L51 neither compiles traces nor sets the marker.
+Done traces obey the same retention limits as every other outcome. Traces are evidence, not input to a procedure compiler; there is no compiled marker or structural outline. Successful pilot legs are remembered separately as draft procedures.

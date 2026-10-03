@@ -70,10 +70,10 @@ Books [service events](<books/service-events.jsonl>) retain structural-outline w
 
 | Story | Live evidence | Verdict |
 |---|---|---|
-| map-fmt01 | Books draft uses goal/args/expect with no removed fields; no old-file rejection or installation tested. | Partial draft evidence; end-to-end unproven |
-| map-fmt02 | No inline draft provenance; full metadata is a separate sidecar. | Separation observed; installed behavior unexercised |
-| map-fmt03 | Compiler drops and final replay-gated draft retained; no successful installation correction. | End-to-end unproven |
-| map-fmt04 | Collection/out intent existed; outline/script validation failed; final Books draft has no script; Flights scripts rejected. | Script-first collection not achieved |
+| map-fm01 | Books draft uses goal/args/expect with no removed fields; no old-file rejection or installation tested. | Partial draft evidence; end-to-end unproven |
+| map-fm02 | No inline draft provenance; full metadata is a separate sidecar. | Separation observed; installed behavior unexercised |
+| map-fm03 | Compiler drops and final replay-gated draft retained; no successful installation correction. | End-to-end unproven |
+| map-fm04 | Collection/out intent existed; outline/script validation failed; final Books draft has no script; Flights scripts rejected. | Script-first collection not achieved |
 
 Complete final proposal and sidecar follow. [Audit](<audit.json>) preserves exact text, unique draft versions, installed-file maps, and repair/retirement lists. All installed/script maps and repair lists are empty.
 

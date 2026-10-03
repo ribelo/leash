@@ -324,9 +324,39 @@ let scripted ~model ?reply_model steps =
 (* ---------- The control seam ---------- *)
 
 let raw ?models ?decide ?model tabs command =
+  let planned = ref false in
+  let levels =
+    Leash.Run.
+      {
+        choose = (fun ~deadline:_ _ -> Alcotest.fail "unexpected JEV choice");
+        score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
+        plan =
+          (fun ~deadline:_ request ->
+            let answer =
+              if not !planned then (
+                planned := true;
+                Leash.Run.Leg request.mission)
+              else if
+                List.for_all
+                  (fun (leg : Leash.Run.leg) -> leg.outcome = "done")
+                  request.legs
+              then Leash.Run.Done { result = "Navigation completed"; evidence = [] }
+              else Leash.Run.Fail "Navigation leg failed"
+            in
+            Ok
+              Leash.Run.
+                {
+                  answer;
+                  expect = [];
+                  reasoning_summary = None;
+                  secrets_for_operator = [];
+                  usage = None;
+                });
+      }
+  in
   let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   let answer =
-    Leash.Control.handle ?model ?decide
+    Leash.Control.handle ~levels ?model ?decide
       ?models_status:(Option.map (fun models () -> Models.status models) models)
       tabs wire
   in
@@ -354,6 +384,7 @@ let drive models tabs handle goal =
          dry_run = None;
          expect = None;
          out = None;
+         secrets = [];
        })
 
 (* ---------- drive-y7v8 drive-xjh6 drive-4zlp drive-y37b drive-zml5 ---------- *)
@@ -563,7 +594,8 @@ let model_error () =
       let json, error, steps =
         evidence (drive models tabs handle "Open the Wikipedia article")
       in
-      Alcotest.(check string) "fly-8fgl terminal status" "error" (text "status" json);
+      Alcotest.(check string)
+        "pilot fails after operator error" "failed" (text "status" json);
       check_code "drive-kh2u model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-kh2u the provider's kind" "unavailable" (detail_code error);
@@ -591,7 +623,8 @@ let model_mismatch () =
       let json, error, steps =
         evidence (drive models tabs handle "Open the Wikipedia article")
       in
-      Alcotest.(check string) "fly-8fgl terminal status" "error" (text "status" json);
+      Alcotest.(check string)
+        "pilot fails after operator error" "failed" (text "status" json);
       check_code "drive-e7oi model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-e7oi the substituted model" "model-mismatch" (detail_code error);
@@ -630,7 +663,8 @@ let missing_key () =
       let json, error, steps =
         evidence (drive models tabs handle "Open the Wikipedia article")
       in
-      Alcotest.(check string) "fly-8fgl terminal status" "error" (text "status" json);
+      Alcotest.(check string)
+        "pilot fails after operator error" "failed" (text "status" json);
       check_code "drive-kh2u model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-kh2u the reason is the missing key" "missing-key" (detail_code error);
@@ -773,12 +807,14 @@ let provider_timeout ~attempt ~deadline ~succeeds () =
                dry_run = None;
                expect = None;
                out = None;
+               secrets = [];
              })
       in
       if succeeds then ignore (result reply)
       else begin
         let json, error, _steps = evidence reply in
-        Alcotest.(check string) "fly-8fgl terminal status" "error" (text "status" json);
+        Alcotest.(check string)
+          "pilot fails after operator error" "failed" (text "status" json);
         check_code "daily-6pde retryable provider timeout" "model-timeout" error;
         Alcotest.(check string) "daily-9ggi timeout kind" "timeout" (detail_code error);
         Alcotest.(check string)
@@ -833,6 +869,9 @@ let chat_timeout ~kind ~attempt ~expected () =
             ((Models.levels models).plan ~deadline
                {
                  Leash.Run.trigger = Blocked;
+                 legs = [];
+                 candidates = [];
+                 secret_names = [];
                  reason = "blocked";
                  mission = "collect";
                  site = None;

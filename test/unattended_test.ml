@@ -217,6 +217,7 @@ let args ?tab () =
       dry_run = Some false;
       expect = None;
       out = None;
+      secrets = [];
     }
 
 let run_reply ?tab ?(planner_actions = 2) tabs ~plan ~decide =
@@ -256,7 +257,16 @@ let run ?tab ?(planner_actions = 2) tabs ~plan ~decide =
             P.make_error (ok (P.Error_code.of_string "internal")) ~message))
   | P.Failure e -> Alcotest.fail e.message
 
-let reply answer = Ok R.{ answer; expect = []; usage = None }
+let reply answer =
+  Ok
+    R.
+      {
+        answer;
+        expect = [];
+        reasoning_summary = None;
+        secrets_for_operator = [];
+        usage = None;
+      }
 
 let status expected result =
   eq "run ending" expected (P.Run_status.to_string result.P.status)
@@ -284,16 +294,17 @@ let notify_then_done ?(signal = "blocked") () =
         run tabs
           ~plan:(fun request ->
             incr plans;
-            eq "JEV interruption reaches planner" signal
-              (R.trigger_name request.R.trigger);
-            reply (R.Notify "Order 12345 placed"))
+            ignore (signal, request);
+            reply
+              (if !plans = 1 then R.Notify "Order 12345 placed"
+               else R.Done { result = "Notified"; evidence = [] }))
           ~decide:(fun _ ->
             incr jev;
             Ok (decision (if !jev = 1 then signal else "done")))
       in
       status "done" result;
-      Alcotest.(check int) "one planner owns interruption" 1 !plans;
-      Alcotest.(check int) "JEV resumes after notify" 2 !jev;
+      Alcotest.(check int) "notify returns to pilot" 2 !plans;
+      Alcotest.(check int) "notify does not invoke JEV" 0 !jev;
       Alcotest.(check (list string))
         "one nonblocking message" [ "Order 12345 placed" ] !messages;
       let event = List.hd (events result "notify") in
@@ -391,19 +402,17 @@ let set_ax fake label =
   Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> ax label)
 
 let click request =
-  R.Continue_actions
-    [
-      P.Click
-        P.
-          {
-            tab = request.R.snapshot.tab;
-            snapshot = request.R.snapshot.snapshot;
-            index = 1;
-            snap = None;
-            match_ = None;
-            limit = None;
-          };
-    ]
+  R.Act
+    (P.Click
+       P.
+         {
+           tab = request.R.snapshot.tab;
+           snapshot = request.R.snapshot.snapshot;
+           index = 1;
+           snap = None;
+           match_ = None;
+           limit = None;
+         })
 
 let challenge_case ?(broken = false) ~attempt ~clears ~actions () =
   let plans = ref [] and clicked = ref 0 and jev = ref 0 in
@@ -420,27 +429,30 @@ let challenge_case ?(broken = false) ~attempt ~clears ~actions () =
         run tabs
           ~plan:(fun request ->
             plans := request :: !plans;
-            eq "challenge planner trigger" "challenge" (R.trigger_name request.R.trigger);
-            if actions then reply (click request) else reply (R.Continue_actions []))
+            if clears && List.length !plans > 1 then
+              reply (R.Done { result = "Challenge cleared"; evidence = [] })
+            else if attempt && actions && List.length !plans <= 2 then
+              reply (click request)
+            else reply (R.Handoff "captcha"))
           ~decide:(fun _ ->
             incr jev;
             Ok (decision "done"))
       in
-      status (if clears then "done" else "blocked") result;
+      status (if clears then "done" else "handoff-expired") result;
       Alcotest.(check int)
         "bounded attempts"
-        (if attempt then if clears then 1 else 2 else 0)
+        (if clears then 2 else if attempt && actions then 3 else 1)
         (List.length !plans);
       if actions then
         boolean "ordinary mouse action executed"
           (if broken then !clicked = 0 else !clicked > 0);
       if not clears then begin
-        eq "challenge origin detail" "https://example.com"
-          (Yojson.Safe.Util.to_string (member "challenge" (Option.get result.P.detail)));
+        eq "pilot selected captcha handoff" "captcha"
+          (Option.value ~default:"" result.reason);
         boolean "captcha handoff only after bound" (events result "handoff" <> []);
         tab_open tabs result
       end;
-      boolean "challenge audit recorded" (events result "challenge" <> []);
+      boolean "pilot decisions recorded" (result.pilot_turns > 0);
       if not attempt then Alcotest.(check int) "disabled never reaches JEV" 0 !jev)
 
 let forbidden_challenge_actions () =
@@ -453,47 +465,56 @@ let forbidden_challenge_actions () =
             run_reply tabs
               ~plan:(fun request ->
                 incr planned;
-                let page = request.R.snapshot in
-                let ordinary =
-                  P.Click
-                    P.
-                      {
-                        tab = page.tab;
-                        snapshot = page.snapshot;
-                        index = (if case = "invented-row" then 999 else 1);
-                        snap = None;
-                        match_ = None;
-                        limit = None;
-                      }
-                in
-                let actions =
-                  match case with
-                  | "javascript" ->
-                      [
-                        P.Eval
-                          P.
-                            {
-                              tab = page.tab;
-                              expression = "globalThis.__l55Forbidden = true";
-                              argument = None;
-                              index = None;
-                              snapshot = None;
-                            };
-                      ]
-                  | "navigation" ->
-                      [ P.Nav P.{ tab = page.tab; url = "https://example.com/guessed" } ]
-                  | "too-many" -> [ ordinary; ordinary; ordinary ]
-                  | _ -> [ ordinary ]
-                in
-                reply (R.Continue_actions actions))
+                if !planned > 1 then reply (R.Fail "unsafe action refused")
+                else
+                  let page = request.R.snapshot in
+                  let ordinary =
+                    P.Click
+                      P.
+                        {
+                          tab = page.tab;
+                          snapshot = page.snapshot;
+                          index = (if case = "invented-row" then 999 else 1);
+                          snap = None;
+                          match_ = None;
+                          limit = None;
+                        }
+                  in
+                  let actions =
+                    match case with
+                    | "javascript" ->
+                        [
+                          P.Eval
+                            P.
+                              {
+                                tab = page.tab;
+                                expression = "globalThis.__l55Forbidden = true";
+                                argument = None;
+                                index = None;
+                                snapshot = None;
+                              };
+                        ]
+                    | "navigation" ->
+                        [
+                          P.Nav P.{ tab = page.tab; url = "https://example.com/guessed" };
+                        ]
+                    | _ -> [ ordinary ]
+                  in
+                  reply (R.Act (List.hd actions)))
               ~decide:(fun _ -> Alcotest.fail "challenge reached JEV before validation")
           in
           (match wire with
           | P.Failure error ->
               eq "unsafe challenge answer refused" "invalid-request"
                 (P.Error_code.to_string error.code)
-          | P.Success _ -> Alcotest.fail "unsafe challenge answer executed");
-          Alcotest.(check int) "one bounded planner answer" 1 !planned;
+          | P.Success json ->
+              let result = ok (P.run_result_of_yojson json) in
+              status "failed" result;
+              boolean "refusal is recorded"
+                (match result.planner_turns with
+                | turn :: _ -> Option.is_some turn.reason
+                | _ -> false));
+          Alcotest.(check int) "refusal returns to pilot" 2 !planned;
           boolean "no mouse or keyboard actions"
             (not
                (List.exists
@@ -503,7 +524,7 @@ let forbidden_challenge_actions () =
                     || meth = str "Input.insertText"
                     || contains (Yojson.Safe.to_string request) "__l55Forbidden")
                   (Fake.received fake)))))
-    [ "javascript"; "navigation"; "invented-row"; "too-many" ]
+    [ "javascript"; "navigation"; "invented-row" ]
 
 let disabled () = challenge_case ~attempt:false ~clears:false ~actions:false ()
 let bounded () = challenge_case ~attempt:true ~clears:false ~actions:false ()
@@ -565,10 +586,16 @@ let resumed () =
           wait ());
       let result =
         run ~tab:owned.tab tabs
-          ~plan:(fun _ -> reply (R.Handoff "Login"))
+          ~plan:
+            (let n = ref 0 in
+             fun _ ->
+               incr n;
+               reply
+                 (if !n = 1 then R.Handoff "Login"
+                  else R.Done { result = "Resumed"; evidence = [] }))
           ~decide:(fun _ -> Ok (decision "blocked"))
       in
-      status "handoff" result;
+      status "done" result;
       eq "resume audited" "resumed"
         (Yojson.Safe.Util.to_string
            (member "outcome" (List.hd (events result "handoff"))));
@@ -597,14 +624,11 @@ let debug_challenge () =
       done;
       let result =
         run ~tab:tab.tab tabs
-          ~plan:(fun _ -> Alcotest.fail "disabled debug signal called planner")
+          ~plan:(fun _ -> reply (R.Handoff "captcha"))
           ~decide:(fun _ -> Alcotest.fail "debug challenge reached JEV")
       in
-      status "blocked" result;
-      eq "debug origin normalized" "https://www.google.com"
-        (Yojson.Safe.Util.to_string (member "challenge" (Option.get result.P.detail)));
-      boolean "debug evidence persisted across unchanged observation"
-        (events result "challenge" <> []);
+      status "handoff-expired" result;
+      boolean "pilot handoff recorded" (events result "handoff" <> []);
       tab_open tabs result)
 
 let debug_signal_lifecycle () =
@@ -654,32 +678,31 @@ let debug_signal_lifecycle () =
             run ~tab:tab.tab tabs
               ~plan:(fun request ->
                 incr plans;
-                if !plans = 1 then reply (click request)
-                else reply (R.Continue_actions []))
+                if navigates then
+                  reply (R.Done { result = "New document"; evidence = [] })
+                else if !plans = 1 then reply (click request)
+                else reply (R.Handoff "captcha"))
               ~decide:(fun _ ->
                 incr jev;
                 Ok (decision "done"))
           in
-          status (if navigates then "done" else "blocked") result;
+          status (if navigates then "done" else "handoff-expired") result;
           Alcotest.(check int)
             "current document only, mutations cannot prove clearance"
-            (if navigates then 0 else 2)
+            (if navigates then 1 else 2)
             !plans;
-          Alcotest.(check int)
-            "unresolved challenge never reaches JEV"
-            (if navigates then 1 else 0)
-            !jev))
+          Alcotest.(check int) "unresolved challenge never reaches JEV" 0 !jev))
     [ false; true ]
 
 let semantic_challenge () =
   rig ~attempt:false ~text:"Verify you are human" (fun _ _ tabs _ ->
       let result =
         run tabs
-          ~plan:(fun _ -> Alcotest.fail "disabled semantic challenge called planner")
+          ~plan:(fun _ -> reply (R.Handoff "captcha"))
           ~decide:(fun _ -> Alcotest.fail "semantic challenge reached JEV")
       in
-      status "blocked" result;
-      boolean "inferred page challenge audited" (events result "challenge" <> []))
+      status "handoff-expired" result;
+      boolean "pilot sees semantic page and hands off" (events result "handoff" <> []))
 
 let notifier_bound () =
   Ox_test.run (fun env sw ->
@@ -767,8 +790,7 @@ let () =
           Alcotest.test_case "notif-7pha argv and five-second timeout" `Quick
             notifier_bound;
           Alcotest.test_case "notif-udh3 invalid unattended bounds" `Quick config_invalid;
-          Alcotest.test_case
-            "notif-himb notif-p4yk no JS, guessed rows, navigation or over-limit actions"
+          Alcotest.test_case "notif-himb notif-p4yk no JS, guessed rows or navigation"
             `Quick forbidden_challenge_actions;
         ] );
     ]

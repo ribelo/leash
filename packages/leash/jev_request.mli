@@ -86,6 +86,8 @@ val elements : Protocol.snapshot -> element list
 
 type request
 
+val redact : (string * string) list -> request -> request
+
 type offered_script = { name : string; description : string }
 (** pbk-rai1: one script the operator question may offer. The criterion key is
     {!run_script_prefix} plus [name]; the criterion text is [description]. *)

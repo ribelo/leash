@@ -34,7 +34,7 @@ decodes to the defaults it documents.
 | `handoff.timeout_s` | `300` | Positive human-wait deadline in seconds; expiry keeps the tab open and clears `with_human` (notif-oslv). |
 | `notify.command` | `["notify-send", "--urgency=normal", "Leash", "{message}"]` | Non-blocking planner notification argv; empty disables it. Failure is traced, not a mission failure (notif-7o8j, notif-7pha). |
 | `challenges.attempt` | `true` | Try detected CAPTCHA/bot challenges through ordinary visible snapshot rows before human handoff (notif-himb, notif-udh3). |
-| `challenges.turns` | `2` | Planner challenge-turn bound, 1–10; each continue also obeys `learning.planner_actions`. Exhaustion hands off as `captcha` (notif-p4yk, notif-tdtz). |
+| `challenges.turns` | `2` | Planner challenge-turn bound, 1–10; each action also obeys the pilot mission deadline. Exhaustion hands off as `captcha` (notif-p4yk, notif-tdtz). |
 | `handoff.focus_command` | empty | The argv template a handoff runs to raise the window; off by default because a handoff must not take focus (daily-n7on, operator 2026-10-01). For niri: `["niri", "msg", "action", "focus-window", "--id", "{window_id}"]` (hand-phof). |
 | `handoff.notify_command` | `notify-send --urgency=critical --app-name=Leash --action done=Done "Leash needs you" {reason}` | The argv template for the notification whose Done action resumes; critical so the daemon keeps it until answered; empty turns it off (hand-phof). |
 
@@ -44,3 +44,18 @@ Environment:
 - `XDG_DATA_HOME` and `XDG_RUNTIME_DIR` expand the two XDG paths above. A variable that is
   unset leaves its placeholder in place, and validation refuses that field by pointer — the
   service never writes to a path named `$XDG_RUNTIME_DIR`.
+
+## Pilot and memory (L56)
+
+```toml
+[pilot]
+turns = 12       # 1..100
+deadline_s = 600 # 30..3600
+
+[learning]
+mode = "auto"   # off | auto; default auto
+max_tries = 3
+retire_after = 5
+```
+
+The pilot uses `models.planner_reasoning = "max"` by default. Learning records successful pilot legs and installs drafts after verified replay; it does not compile traces. `draft` mode and the old learning keys `successes`, `planner_model`, `planner_reasoning`, `planner_actions`, and `timeout_s` are refused, not migrated.

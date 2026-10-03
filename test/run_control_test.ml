@@ -20,8 +20,9 @@ let book =
  {"slug":"next-page","description":"Next","steps":[{"goal":"Open the next page."},{"script":"list"}],"expect":["no dialog is open"]},
  {"slug":"open","description":"Open the catalogue.","steps":[{"goal":"Open the catalogue."},{"use":"collect"}],"expect":["no dialog is open"]}]}|}))
 
-let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2")
-    ?(malformed_done = false) ?(rejected = false) () =
+let run ?(duplicate = false) ?(book = book) ?(empty = false)
+    ?(next_url = "https://example.com/page-2") ?(malformed_done = false)
+    ?(rejected = false) () =
   (* fly-xger: a blank tab with no URL is missing-start, not a playbook question.
      These controls start on an open page so the playbook switch is what navigates. *)
   let url = ref "https://start.example/" and page = ref 0 and asked = ref 0 in
@@ -66,30 +67,7 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
             url := target;
             incr page;
             Ok ());
-        choose =
-          (fun q ->
-            questions := q :: !questions;
-            let key =
-              if q.name = "select_playbook" then
-                match
-                  List.find_opt
-                    (fun (key, _) -> String.starts_with ~prefix:"book:" key)
-                    q.criteria
-                with
-                | Some (key, _) -> key
-                | None -> "example.com"
-              else (
-                incr asked;
-                if !asked = 1 then "collect" else "DONE")
-            in
-            Ok
-              {
-                key;
-                confidence = 1.;
-                probabilities = `Assoc [ (key, `Float 1.) ];
-                usage = None;
-                judgments = [];
-              });
+        choose = (fun _ -> Alcotest.fail "pilot must not choose playbooks through JEV");
         text_value = (fun _ -> assert false);
         step =
           (fun _ ->
@@ -113,7 +91,20 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
                   checks,
                 observe () ));
         plan =
-          (fun _ -> Ok { answer = Fail "collection failed"; expect = []; usage = None });
+          (fun request ->
+            questions := request :: !questions;
+            incr asked;
+            Ok
+              {
+                answer =
+                  (if !asked = 1 then Leg "collect"
+                   else if malformed_done || rejected then Fail "collection failed"
+                   else Done { result = "Collected catalogue"; evidence = [] });
+                expect = [];
+                usage = None;
+                reasoning_summary = None;
+                secrets_for_operator = [];
+              });
         propose = (fun ~site:_ _ -> assert false);
         hand_off = (fun ~reason:_ -> assert false);
         script =
@@ -125,7 +116,18 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
                 match script.B.name with
                 | "list" ->
                     if empty then (`List [], 0)
-                    else (`List [ `Assoc [ ("id", `String (string_of_int !page)) ] ], 1)
+                    else
+                      ( `List
+                          [
+                            `Assoc
+                              [
+                                ( "id",
+                                  `String
+                                    (if duplicate then "same-id" else string_of_int !page)
+                                );
+                              ];
+                          ],
+                        1 )
                 | "next" -> (`Assoc [ ("url", `String next_url) ], 1)
                 | "last" ->
                     ( `Assoc
@@ -152,11 +154,11 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
           {
             mission = "collect every book";
             max_steps = 60;
-            start_url = None;
+            start_url = Some book.playbook.entry;
             max_procedures = 10;
             deadline_s = 60;
             dry_run = false;
-            max_plans = 1;
+            max_plans = 2;
             expect = [];
           }
     with
@@ -177,14 +179,26 @@ let native_repeat () =
   Alcotest.(check int) "only list records streamed" 2 (List.length streamed);
   Alcotest.(check int) "only list records counted" 2 result.collected;
   Alcotest.(check int)
-    "playbook decision recorded" 1
-    (List.length result.playbook_choices);
+    "candidate expectations are audited" 2
+    (List.length (List.hd result.procedures).expectations);
+  Alcotest.(check int) "no JEV playbook decision" 0 (List.length result.playbook_choices);
   let first = List.hd questions in
   Alcotest.(check bool)
-    "an open tab is not reported as a blank start" false
-    (match first.state with
-    | `Assoc fields -> List.mem_assoc "current_page" fields
-    | _ -> true)
+    "an open tab is not reported as a blank start" false (first.legs <> [])
+
+let duplicate_records () =
+  let result, _, streamed, _ = run ~duplicate:true () in
+  Alcotest.(check int) "repeat key deduplicates records" 1 result.collected;
+  Alcotest.(check int) "repeat key deduplicates streamed JSONL" 1 (List.length streamed)
+
+let rejected_trace () =
+  let result, _, _, _ = run ~rejected:true () in
+  Alcotest.(check bool)
+    "control rejection is audited" true
+    (List.exists
+       (fun (script : P.run_script) ->
+         script.script = "last" && script.error = Some "$.done: expected boolean")
+       (List.hd result.procedures).scripts)
 
 let refuses_control () =
   List.iter
@@ -220,13 +234,13 @@ let one_shot () =
       Alcotest.(check string)
         "one-shot finishes" "done"
         (P.Run_status.to_string result.status);
-      Alcotest.(check int) "collector runs once" 1 (List.length result.procedures);
+      Alcotest.(check int)
+        "one candidate leg" 1
+        (List.length (List.hd (List.rev questions)).legs);
       let last = List.hd (List.rev questions) in
       Alcotest.(check bool)
         "completion visible even for zero records" true
-        (match last.state with
-        | `Assoc fields -> List.assoc_opt "collection_complete" fields = Some (`Bool true)
-        | _ -> false))
+        (match last.legs with [ leg ] -> leg.outcome = "done" | _ -> false))
     [ false; true ]
 
 let () =
@@ -235,6 +249,8 @@ let () =
       ( "extr-uhnc",
         [
           Alcotest.test_case "native repeat and terminal cap" `Quick native_repeat;
+          Alcotest.test_case "keyed repeat deduplication" `Quick duplicate_records;
+          Alcotest.test_case "rejected control audit" `Quick rejected_trace;
           Alcotest.test_case "one-shot and empty completion" `Quick one_shot;
           Alcotest.test_case "fail closed controls" `Quick refuses_control;
         ] );

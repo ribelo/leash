@@ -349,8 +349,8 @@ let url_usage =
    Travel and return the visible titles and prices' --url https://books.toscrape.com/"
 
 let max_steps_usage =
-  "--max-steps must be a positive integer (default 60). Example: leash drive 'Complete \
-   this page search and open the matching result' --tab TAB --max-steps 60"
+  "--max-steps must be a positive integer (default 15). Example: leash drive 'Complete \
+   this page search and open the matching result' --tab TAB --max-steps 15"
 
 let drive_request_options options =
   let options =
@@ -418,6 +418,62 @@ let rec perform ~caps ~send ~base command fields positionals options =
         [ "tab"; "snapshot"; "index" ]
         [ tab; snapshot; index ]
         (Some ("paths", `List (List.map str paths)) :: options)
+  | "drive", _
+    when List.exists (function Some ("secret", _) -> true | _ -> false) options -> (
+      let specs =
+        List.find_map
+          (function Some ("secret", `List specs) -> Some specs | _ -> None)
+          options
+        |> Option.value ~default:[]
+      in
+      let rec resolve acc = function
+        | [] -> Ok (List.rev acc)
+        | `String spec :: rest -> (
+            match String.index_opt spec '=' with
+            | None -> Error "--secret requires NAME=@file or NAME=-"
+            | Some split -> (
+                let name = String.sub spec 0 split in
+                let source =
+                  String.sub spec (split + 1) (String.length spec - split - 1)
+                in
+                if name = "" || List.exists (fun (key, _) -> key = name) acc then
+                  Error "secret names must be nonempty and unique"
+                else
+                  let input =
+                    if source = "-" then read_bounded (Cap_stdlib.stdin ~caps)
+                    else if String.starts_with ~prefix:"@" source then
+                      read_fill_file ~caps
+                        (String.sub source 1 (String.length source - 1))
+                    else Error (`Missing "secret source")
+                  in
+                  match input with
+                  | Error _ ->
+                      Error
+                        "cannot read secret source (expected NAME=@file or NAME=-, at \
+                         most 64 KiB)"
+                  | Ok value ->
+                      let value =
+                        if String.ends_with ~suffix:"\n" value then
+                          String.sub value 0 (String.length value - 1)
+                        else value
+                      in
+                      resolve ((name, value) :: acc) rest))
+        | _ -> Error "invalid secret option"
+      in
+      match resolve [] specs with
+      | Error why -> usage ~caps why
+      | Ok pairs ->
+          let options =
+            List.filter (function Some ("secret", _) -> false | _ -> true) options
+          in
+          perform ~base ~caps ~send "drive" fields positionals
+            (Some
+               ( "secrets",
+                 `List
+                   (List.map
+                      (fun (key, value) -> `List [ `String key; `String value ])
+                      pairs) )
+            :: options))
   | "fill", _ -> (
       let present key =
         List.find_map
@@ -898,8 +954,8 @@ let playbook_command ~caps ~send ~base ~run_owned =
            `Pre
              "A playbook is a directory that describes one site: pages, procedures, and \
               scripts.\n\
-              The operator writes it. A model never does. JEV follows it when a mission \
-              fits.\n\
+              The operator writes it. A model never does. The pilot can select it when a \
+              mission fits.\n\
               Format, example, and every loader refusal: leash help playbooks";
          ]
        ~examples:[ "leash playbook list"; "leash playbook check ./my-playbook" ])
@@ -1016,9 +1072,7 @@ let traces_command ~caps ~run_owned =
   let prune =
     Cmd.v
       (Cli_help.local_info ~docs:"TRACES" "prune"
-         ~doc:
-           "Apply local retention and print deleted paths; uncompiled done traces are \
-            preserved."
+         ~doc:"Apply local retention and print deleted paths."
          ~examples:
            [ "leash traces prune --dry-run"; "leash traces prune --site toscrape.com" ])
       Term.(
@@ -1298,14 +1352,11 @@ let commands ~caps ~send ~base ~run_owned =
                asserts the goal.\n\
                Lanes, options, and how to read a trace: leash help drive";
             `S "ROUTING";
-            `P "max-steps default 60.";
+            `P "The pilot owns the mission. Each navigation leg has at most 15 steps.";
             `P
-              "Playbooks are optional. no-playbooks: no playbook question and no \
-               planner; the operator runs the whole mission. one-book: that book is \
-               offered with NONE and is never forced. many-books: JEV chooses one book \
-               identity or NONE; books are not merged. none-matching: NONE enters the \
-               operator on the current page. NONE is not BLOCKED and is not a planner \
-               review. A procedure NONE or BLOCKED also falls through to the operator.";
+              "The pilot receives the mission, bounded page text and rows, prior legs, \
+               and learning candidates. A leg is one navigation goal in JEV's language. \
+               Leg DONE/BLOCKED returns to the pilot; only pilot done completes.";
             `P
               "--out JSONL is tagged. script-record, source playbook, is a validated \
                script record. operator-state, source operator, is one terminal bounded \
@@ -1315,24 +1366,28 @@ let commands ~caps ~send ~base ~run_owned =
                call is unpriced; data.reported_cost is the known subtotal.";
           ]
         "drive"
-        "Drive MISSION on the fly, or through a fitting playbook when JEV chooses one."
+        "Drive MISSION with the pilot, using short navigation legs and direct row \
+         actions."
         [ pos "mission" "MISSION" ]
         ([
+           opt_list "secret" Strings "NAME=@FILE|NAME=-"
+             "Read a secret from a file or stdin. Only its name reaches the pilot.";
            opt "tab" Str "TAB"
              "Reuse TAB instead of opening one. Does not replace a populated page.";
            opt "url" Str "URL"
              "Explicit http(s) start (start_url). Not a model navigation target.";
            opt "max_steps" Int "N"
-             "On-the-fly executed-action cap (default 60). Must be positive. Prediction \
-              cap is twice N.";
+             "Navigation-leg cap (default and maximum 15). Must be positive.";
            opt "max_procedures" Int "N"
-             "Playbook-lane procedure cap (default 40), not the operator action cap.";
+             "Compatibility option; mission decisions use pilot.max_turns.";
            opt "out" Str "FILE"
              "Append tagged JSONL: script-record from a playbook, operator-state from \
               the operator.";
-           opt "deadline_s" Int "S" "Seconds for the whole mission (default 900).";
+           opt "deadline_s" Int "S"
+             "Seconds for the whole mission (default pilot.deadline_s = 600).";
            opt "dry_run" Bool ""
-             "Observe and decide once; never navigate, act, type, or write --out.";
+             "Return the first pilot decision and reasoning summary without executing \
+              actions.";
            opt_list "expect" Strings "SENTENCE"
              "Mission expectation the DONE guard verifies (repeatable).";
          ]
@@ -1341,15 +1396,15 @@ let commands ~caps ~send ~base ~run_owned =
           "leash drive 'Open Travel and return the visible titles and prices' --url \
            https://books.toscrape.com/ --out travel-state.jsonl";
           "leash drive 'Complete this page search and open the matching result' --tab \
-           TAB --max-steps 60 --deadline-s 300";
+           TAB --max-steps 15 --deadline-s 300";
           "no-playbooks: leash drive 'Open Travel and return the visible titles and \
-           prices' --url https://books.toscrape.com/ --max-steps 60";
+           prices' --url https://books.toscrape.com/ --max-steps 15";
           "one-book: leash drive 'Collect the supported category' --url \
            https://books.toscrape.com/ --out books.jsonl";
           "many-books: leash drive 'Collect the supported category' --tab TAB \
-           --max-steps 60";
+           --max-steps 15";
           "none-matching: leash drive 'Search one-way and stop at the visible options' \
-           --url https://www.google.com/travel/flights --max-steps 60 --deadline-s 300";
+           --url https://www.google.com/travel/flights --max-steps 15 --deadline-s 300";
         ];
       playbook_command ~caps ~send ~base ~run_owned;
       traces_command ~caps ~run_owned;
@@ -1453,7 +1508,6 @@ let program env (config : Leash.Config.t) sw =
   in
   let learning =
     Leash.Learning.create ~sw ~caps:env.caps ~config:config.learning
-      ~planner:(Leash.Models.learning models config.learning)
       ~warn:(fun why -> Ox_observability.Logger.warn env.logger ("learning: " ^ why))
       ()
   in
@@ -1463,7 +1517,7 @@ let program env (config : Leash.Config.t) sw =
      that is not a real absolute path, so the variable is resolved by now. *)
   let socket = Leash.Config.Text.to_string config.control.socket in
   let* _control =
-    Leash.Control.create ~learning ~planner_actions:config.learning.planner_actions
+    Leash.Control.create ~learning ~pilot:config.pilot
       ~chrome_pid:(fun () -> (Leash.Chrome.status chrome).pid)
       ~models
       ~model:(Leash.Config.Text.to_string config.models.jev_model)

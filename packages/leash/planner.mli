@@ -1,31 +1,10 @@
-(** The planner turn — Luna by default (L32, milestone 7; run-w7ke run-rq6i run-2tt3
-    run-obtt run-d99l).
-
-    The planner is the level above JEV, and only that: the run asks it where JEV stopped —
-    a BLOCKED answer, a procedure that failed its expectations twice, an argument the text
-    helper could not fill (run-w7ke) — and never for the work itself. One turn is one
-    {!Ox_ai_chat.complete} call with [json_object] on and reasoning at the configured
-    effort: the system message is {!Questions.planner}, the user message is the
-    {!Run.plan_request} as JSON — the mission, the playbook in its own schema, the trace,
-    the arguments known and the observed page with its text bounded — and the reply must
-    decode into a supported answer: [procedure] (a new procedure in the playbook's schema,
-    to run now), [handoff] (a reason for the human), [fail] (a reason for the operator),
-    or [continue] (an optional bounded list of ordinary actions targeting the supplied
-    snapshot before returning to JEV). A reply that does not decode, or that names a
-    procedure this playbook cannot run, is shown back with its refusal and asked once
-    more; a second refusal ends the turn as [model-unavailable] with
-    [detail.code = "invalid-response"]. A turn's first reply may also attach the mission's
-    expectations (run-2tt3), each of which must resolve against the playbook's own page
-    kinds.
-
-    The chat client is the models service's — one transport for every model, as with
-    {!Text_helper} — and this module owns the prompt, the fail-closed decode and the
-    accounting. The caller supplies its clock as a thunk to bound correction calls. *)
+(** Versioned mission-pilot turns (pilot-ukoh pilot-gt2h pilot-r94o). The pilot is called
+    from the first mission turn, using bounded page evidence, prior navigation legs and
+    candidate procedures. It owns done/fail, not JEV. Strict JSON decoding permits one of
+    seven answer shapes. A correction call shares the original deadline and never echoes a
+    raw rejected reply. *)
 
 type t = {
-  choose : deadline:Ox.Duration.t -> Run.question -> Protocol.playbook_choice;
-      (** One bounded choice-only call. Invalid answers are recorded with no key; the
-          caller retains JEV's argmax. No correction call or procedure generation. *)
   plan :
     ?deadline:Ox.Duration.t -> Run.plan_request -> (Run.plan_reply, Protocol.error) result;
 }
@@ -39,20 +18,8 @@ type t = {
     The cost of a turn rides on the reply (run-obtt): the tokens and provider-reported
     cost summed over the calls the turn took; absent cost contributes zero. *)
 
-val learning_response_metadata : Yojson.Safe.t -> Yojson.Safe.t
-(** map-ptnk: allowlisted finish reason, content shape, output budget, tokens and cost; no
-    message content, reasoning text, request body or arbitrary provider fields. *)
-
-val learning_prompt_version : string
-
-val learning :
-  client:Ox_ai_chat.t ->
-  model:string ->
-  reasoning:string ->
-  logger:Ox_observability.Logger.t ->
-  deadline:Ox.Duration.t ->
-  Yojson.Safe.t ->
-  (Yojson.Safe.t, string) result
+val pilot_request_json : Run.plan_request -> Yojson.Safe.t
+val decode_pilot : Run.plan_request -> string -> (Run.plan_reply, string) result
 
 val create :
   now:(unit -> float) ->

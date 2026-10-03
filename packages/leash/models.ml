@@ -12,7 +12,6 @@ module J = Jev_request
 
 type t = {
   now : unit -> float;
-  learning_client : int -> Ox_ai_chat.t option;
   config : Config.models;
   logger : Ox_observability.Logger.t;
   http : Ox_http.Client.t;
@@ -72,15 +71,6 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
   in
   {
     now = (fun () -> Eio.Time.now clock);
-    learning_client =
-      (fun timeout_s ->
-        Option.map
-          (fun api_key ->
-            Ox_ai_chat.create ~http ~clock ~logger ~endpoint:(planner_endpoint config)
-              ~api_key
-              ~timeout:(Ox.Duration.seconds timeout_s)
-              ())
-          config.api_key);
     config;
     logger;
     http;
@@ -351,21 +341,6 @@ let score ?(deadline = default_deadline) t ~sentence ~state =
    L32's Luna over the second chat client (run-d99l), with the configured model and
    reasoning; without a key there is no client and the turn refuses before anything is
    sent, as the two choice levels do. *)
-(* Compile, confirmation and repair are one planner call at reasoning max. That call
-   has its own deadline: the shared planner client is capped at [planner_timeout], which
-   is too tight, and the attempt timeout is the minimum of the client timeout and the
-   call deadline. A learning client is built for this call so neither cap is the drive
-   planner's. *)
-let learning t (config : Config.learning) request =
-  match t.learning_client config.timeout_s with
-  | None -> Error "learning planner: no API key configured"
-  | Some client ->
-      Planner.learning ~client ~logger:t.logger
-        ~model:(Config.Text.to_string config.planner_model)
-        ~reasoning:(Config.Text.to_string config.planner_reasoning)
-        ~deadline:(Ox.Duration.seconds config.timeout_s)
-        request
-
 let levels (t : t) : Run.levels =
   Run.
     {

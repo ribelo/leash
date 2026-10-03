@@ -50,9 +50,9 @@ let report ?learning ?models_status ?chrome_pid tabs =
     key_present = (match models with Some models -> models.configured | None -> false);
   }
 
-let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfigured")
-    ?models ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs
-    (request : P.request) =
+let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
+    ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
+    ?models_status ?chrome_pid tabs (request : P.request) =
   let meter = Tabs.meter () in
   let decide, text_helper =
     match models with
@@ -120,7 +120,10 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
          errors during tab acquisition. No trace I/O is performed without a store. *)
       let capture =
         Option.map
-          (fun store -> Traces.capture ~mission:args.P.mission ~now:(Traces.now store))
+          (fun store ->
+            Traces.capture
+              ~mission:(P.redact_string args.secrets args.P.mission)
+              ~now:(Traces.now store))
           traces
       in
       let on_page ~url ~kind ~pattern =
@@ -133,27 +136,6 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
       let on_planner_step step =
         Option.iter (fun c -> Traces.planner_step c step) capture
       in
-      (* map-op09: capture before ordinary endings close a newly created tab. *)
-      let final_outline = ref None in
-      let capture_outline outcome =
-        match (capture, outcome) with
-        | Some _, Ok result
-          when P.Run_status.to_string result.P.status = "done"
-               && (Structural_outline.collection args.mission || args.out <> None) -> (
-            match
-              Tabs.structural_outline tabs ~tab:result.final.tab ~url:result.final.url
-            with
-            | Ok outline -> final_outline := outline
-            | Error error ->
-                Option.iter
-                  (fun logger ->
-                    Ox_observability.Logger.warn logger
-                      ~fields:
-                        [ ("error", Ox_observability.Logger.String error.P.message) ]
-                      "structural outline capture failed")
-                  logger)
-        | _ -> ()
-      in
       let keep outcome =
         match (traces, capture) with
         | Some store, Some capture ->
@@ -161,15 +143,6 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
                 let now = Traces.now store in
                 let trace = Traces.finish capture ~now outcome in
                 let trace = { trace with out_requested = args.out <> None } in
-                let trace =
-                  match outcome with
-                  | Ok _
-                    when trace.outcome = "done"
-                         && (Structural_outline.collection args.mission
-                            || args.out <> None) ->
-                      { trace with structural_outline = !final_outline }
-                  | _ -> trace
-                in
                 let warn what why =
                   Option.iter
                     (fun logger ->
@@ -189,14 +162,7 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
                     | Ok _ -> ()
                     | Error why -> warn "drive trace retention failed" why);
                     match outcome with
-                    | Ok result ->
-                        let result =
-                          Option.fold ~none:result
-                            ~some:(fun learning ->
-                              Learning.after_trace learning ~store ~file:path trace result)
-                            learning
-                        in
-                        Ok { result with P.trace_path = Some path }
+                    | Ok result -> Ok { result with P.trace_path = Some path }
                     | Error error ->
                         let fields =
                           match error.P.detail with
@@ -230,14 +196,13 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
               in
               let outcome =
                 try
-                  Tabs.run ?learning ~planner_actions ~on_page ~on_step ~on_planner_step
-                    ~on_arguments ~meter ?levels ~model ?decide ?text_helper ?installed
-                    tabs ~tab args
+                  Tabs.run ?learning ?pilot ~planner_actions ~on_page ~on_step
+                    ~on_planner_step ~on_arguments ~meter ?levels ~model ?decide
+                    ?text_helper ?installed tabs ~tab args
                 with exn ->
                   cleanup ();
                   raise exn
               in
-              capture_outline outcome;
               match outcome with
               | Ok result
                 when List.mem
@@ -268,15 +233,17 @@ let with_command ?logger (request : P.request) f =
         logger;
       f ())
 
-let handle ?learning ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?models
-    ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid ?logger tabs line =
+let handle ?learning ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured")
+    ?models ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid ?logger
+    tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
-            dispatch ?learning ~planner_actions ?traces ?logger ~model ?models ?levels
-              ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs request)
+            dispatch ?learning ?pilot ~planner_actions ?traces ?logger ~model ?models
+              ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs
+              request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -303,7 +270,8 @@ let cdp_budget = Ox.Duration.seconds 35
    and the focus command (hand-rg9h), plus the reply's own egress. *)
 let handoff_margin = Ox.Duration.seconds 20
 
-let budget ?(handoff_timeout_s = 300) (request : (P.request, string) result) =
+let budget ?(pilot = Config.default.pilot) ?(handoff_timeout_s = 300)
+    (request : (P.request, string) result) =
   let seconds n = Ox.Duration.seconds n in
   match request with
   | Error _ -> Some (seconds 1)
@@ -327,7 +295,8 @@ let budget ?(handoff_timeout_s = 300) (request : (P.request, string) result) =
          cancels a run at the instant it is due to answer. *)
       Some
         (seconds
-           (max 1 (Option.value ~default:900 args.deadline_s) + handoff_timeout_s + 75))
+           (max 1 (Option.value ~default:pilot.deadline_s args.deadline_s)
+           + handoff_timeout_s + 75))
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _ | P.Playbook_test _; _ } ->
       (* A script may await a fetch; the CDP call's own deadline is 30 s. *)
       Some (seconds 35)
@@ -411,8 +380,8 @@ let on_peer_error logger error =
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
-let create ?learning ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?models
-    ?levels ?decide ?text_helper ?installed ?chrome_pid ~sw ~path deps =
+let create ?learning ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured")
+    ?models ?levels ?decide ?text_helper ?installed ?chrome_pid ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -421,8 +390,8 @@ let create ?learning ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?m
       match request with
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
-              dispatch ?learning ~planner_actions ?traces ~logger:deps.logger ~model
-                ?models ?levels ?decide ?text_helper ?installed
+              dispatch ?learning ?pilot ~planner_actions ?traces ~logger:deps.logger
+                ~model ?models ?levels ?decide ?text_helper ?installed
                 ~models_status:deps.models_status ?chrome_pid deps.tabs request)
       | Error why -> invalid why
     in
@@ -432,7 +401,7 @@ let create ?learning ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?m
     Ox_ipc.Listener.run ~caps:deps.caps ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock
       ~path ~policy ~decode
       ~encode:(fun reply -> Yojson.Safe.to_string (P.encode_reply reply))
-      ~budget:(budget ~handoff_timeout_s:(Tabs.handoff_timeout_s deps.tabs))
+      ~budget:(budget ?pilot ~handoff_timeout_s:(Tabs.handoff_timeout_s deps.tabs))
       ~on_budget_exceeded:budget_exceeded ~handler
       ~on_peer_error:(on_peer_error deps.logger) ()
   with

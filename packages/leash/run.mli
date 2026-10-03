@@ -1,33 +1,15 @@
-(** The run loop: one mission over the installed playbooks (L31;
-    docs/issues/run/01-run.md, milestone 7).
-
-    A mission is one sentence of human language. A playbook is a site's file of named
-    procedures written in human language. The loop asks three levels of judgment through
-    JEV with an authoritative NONE candidate (L45 fly-ab3f): which playbook serves the
-    current part of the mission (asked at the start and when the site changes, run-kli0),
-    which procedure comes next (asked every turn over the small observed state, run-qq3o
-    run-pvmc), and the operator level that drives each step (run-d82w — exactly the tested
-    {!Drive} loop, one call per playbook step). Expectations are verified by code where a
-    checker applies and by a JEV score where only judgment can (run-tny5 run-vbys); DONE
-    is accepted only against a fresh verification of the mission's own expectations or,
-    when the mission carries none, of the last verified procedure's (run-4j1v, the guard
-    L30's measurement demanded). No books, NONE, or a BLOCKED procedure choice continues
-    the full original mission on the current page through {!Drive}, preserving prior
-    actions and the remaining mission budget, without a planner (L45 fly-fu94 fly-prli).
-    Legacy authored-procedure failure recovery remains bounded; a verified recovery
-    proposal is reported, never merged into a book. Operator results are bounded page
-    evidence, not normalized script records.
-
-    Everything is a handler: production ({!Tabs.run}), a scripted test and a dry run are
-    this same computation with different handlers, and the run itself touches no browser,
-    model, clock or file. *)
+(** Mission pilot (pilot-ukoh pilot-eu1c pilot-rdjv). The pilot receives bounded page
+    evidence and candidate procedures each turn. It may run one navigation leg, read, act
+    on one snapshot row, notify, hand off, done or fail. A leg has at most 15 operator
+    steps; DONE/BLOCKED returns to the pilot. Only pilot done completes the mission. All
+    effects use handlers, so tests and dry-run need no browser or model service. *)
 
 type observation = {
   url : string;
   title : string;
   text : string;
       (** The page's visible text. Checkers and the text helper read it; the upper levels
-          never do (run-pvmc). *)
+          receive a bounded projection (pilot-ukoh). *)
   dialog : Protocol.dialog option;
   rows : (string * string) list;
       (** Role and accessible name of each row, for the [<role> named <text>] checker. *)
@@ -84,31 +66,33 @@ type script_outcome =
       (** extr-8o1h: what a script step came to. [Collected] is a result that fit its
           [returns] shape and its size bound; [Rejected] is a script that threw, whose
           result did not fit its shape or was too large. A rejection fails the procedure's
-          attempt with its reason in the trace (the whole procedure is replayed once, like
-          a failed expectation); a protocol error is a browser failure and ends the run.
-      *)
+          leg with its reason in the trace; the pilot receives the failure and chooses the
+          next mission step. *)
 
 type plan_trigger =
   | Blocked
   | Failed
   | Arguments
   | Challenge
-      (** The three points JEV stopped and a planner turn is asked: the procedure level
-          answered BLOCKED, a procedure failed its expectations twice, or a required
-          argument could not be filled (run-w7ke). *)
+      (** Legacy context labels retained for scripted callers. Mission pilot requests do
+          not wait for a JEV trigger. *)
+
+type leg = { goal : string; outcome : string; steps : Protocol.step list }
+type candidate = Playbook.procedure * [ `Installed | `Draft of string ]
 
 type plan_answer =
-  | Procedure of Playbook.procedure
-  | Continue_actions of Protocol.planner_action list
+  | Leg of string
+  | Read of { quote : string; note : string }
+  | Act of Protocol.planner_action
   | Notify of string
   | Done of { result : string; evidence : string list }
       (** map-op10: one-line result, verified against live-page expectations. *)
   | Handoff of string
-  | Fail of string
-      (** What a planner turn may answer (run-rq6i, L32): a procedure to run now, a
-          handoff with the reason the human is shown, or a failure with its reason. *)
+  | Fail of string  (** Exactly one of the seven pilot decisions (pilot-gt2h). *)
 
 type plan_reply = {
+  reasoning_summary : string option;
+  secrets_for_operator : (string * string) list;
   answer : plan_answer;
   expect : string list;
   usage : Protocol.run_usage option;
@@ -119,6 +103,9 @@ type plan_reply = {
     is what the turn cost, carried into the run's trace. *)
 
 type plan_request = {
+  legs : leg list;
+  candidates : candidate list;
+  secret_names : string list;
   trigger : plan_trigger;
   reason : string;
   mission : string;
@@ -217,8 +204,12 @@ type args = {
 }
 
 val of_args : Protocol.run_args -> args
-(** The wire arguments with their defaults: 40 procedures, 900 seconds, no dry run, three
-    planner turns, no mission expectations. *)
+(** The wire arguments with their defaults: 15 navigator steps, 12 pilot turns, 600
+    seconds, no dry run and no mission expectations. *)
+
+val authorises : string -> string -> bool
+(** Whether the mission explicitly names the protected action category without a refusal.
+*)
 
 val unsafe_action : string -> string option
 (** The protected action class (payment, deletion, messaging) in a goal or row label. *)
@@ -229,6 +220,9 @@ val loop :
   installed:Playbook.loaded list ->
   ?page_kinds:Page_kind.session ->
   ?drafts:(site:string -> kind:string option -> Playbook.draft list) ->
+  ?learning:Learning.t ->
+  ?secrets:(string * string) list ->
+  ?on_secrets:((string * string) list -> unit) ->
   ?on_book:(Playbook.loaded option -> unit) ->
   ?on_record:(Yojson.Safe.t -> (unit, Protocol.error) result) ->
   ?notify:(string -> (unit, string) result) ->

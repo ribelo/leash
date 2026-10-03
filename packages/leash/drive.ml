@@ -138,7 +138,8 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
      pager of books.toscrape.com's Default category before seeing it. *)
   (* map-op08 map-bjon: a first viewport is not a complete collection. *)
   let exhaustive =
-    Structural_outline.collection args.goal
+    (let words = String.lowercase_ascii args.goal in
+     List.exists (fun word -> try ignore (Str.search_forward (Str.regexp_string word) words 0); true with Not_found -> false) ["collect"; "extract"; "list"; "gather"])
     && (try ignore (Str.search_forward (Str.regexp "\\b\\(every\\|all\\)\\b")
          (String.lowercase_ascii args.goal) 0); true with Not_found -> false) in
   let done_refusals = ref 0 in

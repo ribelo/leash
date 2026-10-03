@@ -256,6 +256,48 @@ type request = {
   shown_url : string option;
 }
 
+(* pilot-02ij: model requests cannot carry secret values reflected by a page. *)
+let redact secrets request =
+  let text = P.redact_string secrets in
+  let snapshot =
+    match
+      P.snapshot_of_yojson (P.redact_json secrets (P.yojson_of_snapshot request.snapshot))
+    with
+    | Ok snapshot -> snapshot
+    | Error _ -> request.snapshot
+  in
+  {
+    request with
+    goal = text request.goal;
+    text = text request.text;
+    snapshot;
+    recent =
+      List.map
+        (fun action ->
+          { action with action = text action.action; text = Option.map text action.text })
+        request.recent;
+    elements =
+      List.map
+        (fun element ->
+          {
+            element with
+            label = text element.label;
+            value = text element.value;
+            options =
+              List.map
+                (fun (option : select_target) ->
+                  { option with label = text option.label; value = text option.value })
+                element.options;
+          })
+        request.elements;
+    scripts =
+      List.map
+        (fun script -> { name = text script.name; description = text script.description })
+        request.scripts;
+    shown_url = Option.map text request.shown_url;
+    coverage = P.redact_json secrets request.coverage;
+  }
+
 (* fly-iodm, fly-crcc: enforce the Unicode viewport bound at the request boundary. *)
 let bounded_text text =
   let at = ref 0 and count = ref 0 in

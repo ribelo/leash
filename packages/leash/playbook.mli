@@ -222,7 +222,7 @@ val load : caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) resul
     file, and a directory that holds only a [playbook.yaml], are refused with a message
     that says what a playbook is. *)
 
-val check_compiled_script : string -> (unit, string) result
+val check_proposed_script : string -> (unit, string) result
 (** map-op08: conservative source-reference refusal for compiled read-only scripts. *)
 
 val script_named : loaded -> string -> script option

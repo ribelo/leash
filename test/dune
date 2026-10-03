@@ -18,16 +18,7 @@
 (test
  (name learning_test)
  (modules learning_test)
- (deps
-  (glob_files fixtures/learning-operations/*.json))
  (libraries leash ox_test eio_main yojson alcotest))
-
-(test
- (name learning_operation_test)
- (modules learning_operation_test)
- (deps
-  (glob_files fixtures/learning-operations/*.json))
- (libraries leash yojson alcotest))
 
 ; Eio_main picks io_uring on Linux; each ring pins locked memory against
 ; RLIMIT_MEMLOCK, and dune runs suites in parallel, so they fail with ENOMEM in
@@ -72,30 +63,6 @@
  (deps
   (source_tree ../examples/playbooks))
  (libraries leash ox_caps ox_test yojson alcotest str))
-
-(test
- (name choice_review_test)
- (modules choice_review_test)
- (libraries
-  leash
-  leash_test_support
-  ox_observability
-  eio
-  eio_main
-  yojson
-  alcotest))
-
-(test
- (name playbook_choice_test)
- (modules playbook_choice_test)
- (libraries
-  leash
-  leash_test_support
-  ox_observability
-  eio
-  eio_main
-  yojson
-  alcotest))
 
 (test
  (name playbook_test)
@@ -437,11 +404,6 @@
  (name daily_skill_install_test)
  (modules daily_skill_install_test)
  (libraries leash_cli_support ox_test alcotest unix yojson))
-
-(test
- (name structural_outline_test)
- (modules structural_outline_test)
- (libraries leash yojson str alcotest))
 
 (test
  (name traces_test)

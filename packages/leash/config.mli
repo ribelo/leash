@@ -96,8 +96,8 @@ type models = {
 
     L32 run-d99l: [planner_model] is the fallback planner's own model, default
     [openai/gpt-6-luna] through the same OpenRouter chat route; [planner_reasoning] is the
-    effort that route is asked with — ["high"] by default, and ["none"] turns reasoning
-    off — and [planner_endpoint], absent by default, replaces the
+    effort that route is asked with — ["max"] by default, and ["none"] turns reasoning off
+    — and [planner_endpoint], absent by default, replaces the
     [chat_base_url + "/chat/completions"] route the planner would otherwise share with the
     text helper. All three are [models] keys, flat beside the model ids they tune. *)
 
@@ -130,23 +130,13 @@ type otlp = { endpoint : Text.t option; headers : otlp_header list }
     [[otlp.headers]] entries with [name] and [value]. *)
 
 module Learning_mode : sig
-  type t = Off | Draft | Auto
+  type t = Off | Auto
 
   val to_string : t -> string
 end
 
-type learning = {
-  mode : Learning_mode.t;
-  successes : int;
-  planner_model : Text.t;
-  planner_reasoning : Text.t;
-  max_tries : int;
-  retire_after : int;
-  planner_actions : int;
-  timeout_s : int;
-      (** Deadline for one compile, confirmation or repair call. Independent of
-          [models.planner_timeout]. 60..3600, default 900. *)
-}
+type learning = { mode : Learning_mode.t; max_tries : int; retire_after : int }
+type pilot = { turns : int; deadline_s : int }
 
 val default_learning : learning
 
@@ -171,6 +161,7 @@ type t = {
   skill : skill;
   traces : traces;
   learning : learning;
+  pilot : pilot;
 }
 (** svc-x8rp: every section and every field has a default, so a file that names one
     setting — or a file that is only comments — decodes: it is a configuration in which

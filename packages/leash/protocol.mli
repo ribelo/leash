@@ -534,6 +534,7 @@ type drive_args = {
     [None], and [decode_request] refuses a key its record does not name. *)
 
 type run_args = {
+  secrets : (string * string) list; [@json.default []]
   tab : Handle.t option;
   mission : string;
   max_steps : int option;
@@ -891,6 +892,12 @@ val planner_turn_of_yojson : Yojson.Safe.t -> (planner_turn, string) result
 val yojson_of_planner_turn : planner_turn -> Yojson.Safe.t
 
 type run_result = {
+  result : string option;
+  evidence : string list;
+  pilot_turns : int;
+  navigator_steps : int;
+  reasoning_summary : string option;
+  secrets_for_operator : (string * string) list;
   unattended : Yojson.Safe.t list;
   detail : Yojson.Safe.t option;
   playbook_choices : playbook_choice list;
@@ -1038,3 +1045,5 @@ val check_consent_click : snapshot -> index:int -> (unit, string) result
 (** map-op11: refuse all-consent buttons when a decline alternative is offered. *)
 
 val check_planner_action : snapshot -> planner_action -> (unit, string) result
+val redact_string : (string * string) list -> string -> string
+val redact_json : (string * string) list -> Yojson.Safe.t -> Yojson.Safe.t

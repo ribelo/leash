@@ -45,11 +45,8 @@ type t = {
   start_url : string option; [@json.default None]
   page_kind_path : string list;
   inferred_pages : inferred_page list; [@json.default []]
-  compiled : bool; [@json.default false]
   procedures : trace_procedure list;
   steps : trace_step list;
-  structural_outline : string option; [@json.default None]
-      (** map-op09: at most 4096 bytes of tag/class skeleton, never page text. *)
   out_requested : bool; [@json.default false]
   final : trace_page option; [@json.null]
   error_code : string option;

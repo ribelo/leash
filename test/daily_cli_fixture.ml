@@ -415,17 +415,16 @@ let drive_help path =
     [
       "--url";
       "--max-steps";
-      "default 60";
+      "default and maximum 15";
       "operator-state";
       "script-record";
       "https://books.toscrape.com/";
-      "--max-steps 60";
+      "--max-steps 15";
       "--deadline-s 300";
       "no-playbooks";
       "one-book";
       "many-books";
       "none-matching";
-      "NONE";
       "EXAMPLES";
     ];
   print_endline "drive help: both routes, four playbook cases, operator-state example"

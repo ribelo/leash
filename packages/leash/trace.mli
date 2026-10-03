@@ -46,11 +46,8 @@ type t = {
   inferred_pages : inferred_page list;
       (** kind-dnye: generalized pattern to name, first-seen. Empty when every kind was
           declared. Missing on an older file decodes as [[]]. *)
-  compiled : bool; [@json.default false]
   procedures : trace_procedure list;
   steps : trace_step list;
-  structural_outline : string option; [@json.default None]
-      (** map-op09: at most 4096 bytes of tag/class skeleton, never page text. *)
   out_requested : bool; [@json.default false]
       (** map-fmt04: the mission asked for [--out]. Absent JSON is false. *)
   final : trace_page option; [@json.null]

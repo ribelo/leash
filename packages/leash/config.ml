@@ -127,12 +127,11 @@ let default_chat_base_url = "https://openrouter.ai/api/v1"
 let default_jev_model = "typesafe/jev-1.13-20260917"
 let default_text_model = "inception/mercury-2.5"
 
-(* L32 run-d99l: the planner is a fallback, not the driver, so its own model is configured
-   on its own: Luna through the same OpenRouter chat route the text helper uses, reasoning
-   at "high" as the L32 decisions record, and the route [planner_endpoint] overrides when
-   an operator points the planner at another OpenAI-compatible endpoint. *)
+(* pilot-ffqa: the pilot model remains independent of the labeler and systemone
+   predictor. Reasoning defaults to "max"; planner_endpoint still permits an
+   operator-selected OpenAI-compatible endpoint. *)
 let default_planner_model = "openai/gpt-6-luna"
-let default_planner_reasoning = "high"
+let default_planner_reasoning = "max"
 
 (* daily-9ggi: per-attempt provider budgets, independent of the mission deadline. *)
 let default_jev_timeout = 10
@@ -336,106 +335,72 @@ type traces = {
 
 let default_traces = { enabled = true; retention = Traces.Retention.default }
 
-(* map-0by0 map-igfx map-h5ym map-3qag: learning has independent budgets. *)
+(* pilot-c77y: memory is written by the pilot and installed by replay. *)
 module Learning_mode = struct
-  type t = Off | Draft | Auto
+  type t = Off | Auto
 
-  let to_string = function Off -> "off" | Draft -> "draft" | Auto -> "auto"
+  let to_string = function Off -> "off" | Auto -> "auto"
 
   let t_of_yojson = function
     | `String "off" -> Ok Off
-    | `String "draft" -> Ok Draft
     | `String "auto" -> Ok Auto
-    | _ -> Error "expected off, draft, or auto"
+    | _ ->
+        Error "expected off or auto; compile-from-traces modes were removed by pilot-c77y"
 
   let yojson_of_t t = `String (to_string t)
 end
 
-type learning = {
-  mode : Learning_mode.t;
-  successes : int;
-  planner_model : Text.t;
-  planner_reasoning : Text.t;
-  max_tries : int;
-  retire_after : int;
-  planner_actions : int;
-  timeout_s : int;
-}
+type learning = { mode : Learning_mode.t; max_tries : int; retire_after : int }
 
-let default_learning_timeout_s = 900
-
-let learning_timeout_s_of_yojson = function
-  | `Int n when n >= 60 && n <= 3600 -> Ok n
-  | _ -> Error "expected an integer between 60 and 3600"
-
-let default_learning =
-  {
-    mode = Learning_mode.Draft;
-    successes = 2;
-    planner_model = "openai/gpt-6-luna";
-    planner_reasoning = "max";
-    max_tries = 3;
-    retire_after = 5;
-    planner_actions = 5;
-    timeout_s = default_learning_timeout_s;
-  }
+let default_learning = { mode = Learning_mode.Auto; max_tries = 3; retire_after = 5 }
 
 let learning_of_yojson = function
   | `Assoc fields ->
       let ( let* ) = Result.bind in
+      let* () =
+        match
+          List.find_opt
+            (fun (name, _) -> not (List.mem name [ "mode"; "max_tries"; "retire_after" ]))
+            fields
+        with
+        | None -> Ok ()
+        | Some (name, _) ->
+            Error ("learning." ^ name ^ ": removed compile-from-traces key (pilot-c77y)")
+      in
       let field name decode default =
         match List.assoc_opt name fields with
         | None -> Ok default
-        | Some json ->
-            Result.map_error (fun why -> "learning." ^ name ^ ": " ^ why) (decode json)
+        | Some json -> decode json
       in
-      let bounded maximum = function
-        | `Int n when n >= 1 && n <= maximum -> Ok n
-        | _ -> Error (Printf.sprintf "expected an integer between 1 and %d" maximum)
+      let bounded = function
+        | `Int n when n >= 1 && n <= 100 -> Ok n
+        | _ -> Error "expected an integer between 1 and 100"
       in
       let* mode = field "mode" Learning_mode.t_of_yojson default_learning.mode in
-      let* successes = field "successes" (bounded 100) default_learning.successes in
-      let* planner_model =
-        field "planner_model" Text.t_of_yojson default_learning.planner_model
-      in
-      let* planner_reasoning =
-        field "planner_reasoning" Text.t_of_yojson default_learning.planner_reasoning
-      in
-      let* max_tries = field "max_tries" (bounded 100) default_learning.max_tries in
-      let* retire_after =
-        field "retire_after" (bounded 100) default_learning.retire_after
-      in
-      let* planner_actions =
-        field "planner_actions" (bounded 20) default_learning.planner_actions
-      in
-      let* timeout_s =
-        field "timeout_s" learning_timeout_s_of_yojson default_learning.timeout_s
-      in
-      Ok
-        {
-          mode;
-          successes;
-          planner_model;
-          planner_reasoning;
-          max_tries;
-          retire_after;
-          planner_actions;
-          timeout_s;
-        }
+      let* max_tries = field "max_tries" bounded default_learning.max_tries in
+      let* retire_after = field "retire_after" bounded default_learning.retire_after in
+      Ok { mode; max_tries; retire_after }
   | _ -> Error "learning: expected an object"
 
 let yojson_of_learning (v : learning) =
   `Assoc
     [
       ("mode", Learning_mode.yojson_of_t v.mode);
-      ("successes", `Int v.successes);
-      ("planner_model", Text.yojson_of_t v.planner_model);
-      ("planner_reasoning", Text.yojson_of_t v.planner_reasoning);
       ("max_tries", `Int v.max_tries);
       ("retire_after", `Int v.retire_after);
-      ("planner_actions", `Int v.planner_actions);
-      ("timeout_s", `Int v.timeout_s);
     ]
+
+type pilot = { turns : int; [@json.default 12] deadline_s : int [@json.default 600] }
+[@@deriving yojson]
+
+let default_pilot = { turns = 12; deadline_s = 600 }
+
+let pilot_of_yojson json =
+  Result.bind (pilot_of_yojson json) (fun pilot ->
+      if pilot.turns < 1 || pilot.turns > 100 then Error "pilot.turns: expected 1..100"
+      else if pilot.deadline_s < 30 || pilot.deadline_s > 3600 then
+        Error "pilot.deadline_s: expected 30..3600"
+      else Ok pilot)
 
 type skill = { roots : Text.t list [@json.default []] } [@@deriving yojson]
 
@@ -463,6 +428,7 @@ type t = {
   skill : skill; [@json.default default_skill]
   traces : traces; [@json.default default_traces]
   learning : learning; [@json.default default_learning]
+  pilot : pilot; [@json.default default_pilot]
 }
 [@@deriving yojson]
 
@@ -480,6 +446,7 @@ let default : t =
     skill = default_skill;
     traces = default_traces;
     learning = default_learning;
+    pilot = default_pilot;
   }
 
 let toml_array values =
@@ -539,17 +506,16 @@ let default_toml =
 # enabled = true              # save every drive; false disables capture and writes
 # [traces.retention]
 # count = 20                  # per site, 1..10000
-# days = 30                   # 1..3650; uncompiled done traces are never pruned
+# days = 30                   # 1..3650; all traces obey retention
 #
 # [learning]
-# mode = "draft"             # off: no learning; draft: proposals; auto: gated install
-# successes = 2              # done traces with matching page-kind paths
-# planner_model = "openai/gpt-6-luna"
-# planner_reasoning = "max"
-# max_tries = 3              # failed draft trials before dropping
-# retire_after = 5           # consecutive failed missions without successful repair
-# planner_actions = 5        # maximum actions in a planner continue turn
-# timeout_s = 900             # compile/confirm/repair deadline, 60..3600; not planner_timeout
+# mode = "auto"              # off: no memory writes; auto: pilot drafts, replay install
+# max_tries = 3
+# retire_after = 5
+#
+# [pilot]
+# turns = 12                 # 1..100
+# deadline_s = 600           # 30..3600
 #
 # [handoff]
 # timeout_s = 300            # bounded human wait in seconds
@@ -1008,6 +974,7 @@ let collect json =
               "skill";
               "traces";
               "learning";
+              "pilot";
             ]
           fields
       in
@@ -1159,6 +1126,26 @@ let collect json =
                         in
                         if errors = [] then Ok Traces.Retention.default else Error errors))
       in
+      let pilot_errors =
+        let pointer = child "" "pilot" in
+        match List.assoc_opt "pilot" fields with
+        | None -> []
+        | Some json ->
+            collect_object pointer json ~known:[ "turns"; "deadline_s" ] (fun section ->
+                List.concat_map
+                  (fun (key, minimum, maximum) ->
+                    field_errors pointer key section (fun p j ->
+                        match j with
+                        | `Int n when n >= minimum && n <= maximum -> Ok ()
+                        | _ ->
+                            Error
+                              [
+                                issue p
+                                  (Printf.sprintf "expected an integer between %d and %d"
+                                     minimum maximum);
+                              ]))
+                  [ ("turns", 1, 100); ("deadline_s", 30, 3600) ])
+      in
       let learning_errors =
         let pointer = child "" "learning" in
         match List.assoc_opt "learning" fields with
@@ -1168,15 +1155,29 @@ let collect json =
               ~known:
                 [
                   "mode";
+                  "max_tries";
+                  "retire_after";
                   "successes";
                   "planner_model";
                   "planner_reasoning";
-                  "max_tries";
-                  "retire_after";
                   "planner_actions";
                   "timeout_s";
                 ] (fun section ->
-                field_errors pointer "mode" section (fun p j ->
+                List.filter_map
+                  (fun key ->
+                    if List.mem_assoc key section then
+                      Some
+                        (issue (child pointer key)
+                           "removed compile-from-traces key (pilot-c77y)")
+                    else None)
+                  [
+                    "successes";
+                    "planner_model";
+                    "planner_reasoning";
+                    "planner_actions";
+                    "timeout_s";
+                  ]
+                @ field_errors pointer "mode" section (fun p j ->
                     decode_with p Learning_mode.t_of_yojson j)
                 @ List.concat_map
                     (fun (key, maximum) ->
@@ -1190,21 +1191,7 @@ let collect json =
                                     (Printf.sprintf "expected an integer between 1 and %d"
                                        maximum);
                                 ]))
-                    [
-                      ("successes", 100);
-                      ("max_tries", 100);
-                      ("retire_after", 100);
-                      ("planner_actions", 20);
-                    ]
-                @ field_errors pointer "timeout_s" section (fun p j ->
-                    match j with
-                    | `Int n when n >= 60 && n <= 3600 -> Ok ()
-                    | _ -> Error [ issue p "expected an integer between 60 and 3600" ])
-                @ List.concat_map
-                    (fun key ->
-                      field_errors pointer key section (fun p j ->
-                          decode_with p Text.t_of_yojson j))
-                    [ "planner_model"; "planner_reasoning" ])
+                    [ ("max_tries", 100); ("retire_after", 100) ])
       in
       let notify_errors =
         match List.assoc_opt "notify" fields with
@@ -1241,7 +1228,7 @@ let collect json =
         errors =
           unknown @ chrome_errors @ tabs_errors @ expiry_errors @ control_errors
           @ otlp_errors @ models_errors @ handoff_errors @ skill_errors @ traces_errors
-          @ learning_errors @ notify_errors @ challenges_errors;
+          @ learning_errors @ pilot_errors @ notify_errors @ challenges_errors;
         binary;
         profile_dir;
         socket;

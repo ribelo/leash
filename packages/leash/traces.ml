@@ -247,11 +247,7 @@ let prune t ?site ~dry_run ~now () =
           1 + Option.value ~default:0 (Hashtbl.find_opt counts trace.P.Trace.site)
         in
         Hashtbl.replace counts trace.site count;
-        let uncompiled = trace.outcome = "done" && not trace.compiled in
-        if
-          uncompiled
-          || (count <= t.retention.count && String.compare trace.time cutoff >= 0)
-        then None
+        if count <= t.retention.count && String.compare trace.time cutoff >= 0 then None
         else Some path)
       entries
   in
@@ -560,10 +556,8 @@ let finish t ~now outcome =
           (fun (page : Page_kind.draft_page) ->
             P.Trace.{ name = page.name; url_pattern = page.url_pattern })
           (Page_kind.inferred_pages t.page_kinds);
-      compiled = false;
       procedures;
       steps;
-      structural_outline = None;
       out_requested = false;
       final;
       error_code;

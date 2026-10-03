@@ -476,7 +476,52 @@ let new_tab tabs =
   tab (result (raw tabs (P.New { url = Some "https://example.com/"; label = None })))
 
 let drive ?levels models tabs handle goal =
-  raw ?levels ~models
+  let supplied = Option.value ~default:(Models.levels models) levels in
+  let plans = ref 0 in
+  let levels =
+    {
+      supplied with
+      Leash.Run.plan =
+        (fun ~deadline request ->
+          incr plans;
+          if !plans = 1 then
+            Ok
+              Leash.Run.
+                {
+                  answer = Leg goal;
+                  expect = [];
+                  reasoning_summary = None;
+                  secrets_for_operator = [];
+                  usage = None;
+                }
+          else
+            match List.rev request.legs with
+            | leg :: _ when leg.outcome <> "done" -> (
+                match levels with
+                | Some _ -> supplied.plan ~deadline request
+                | None ->
+                    Ok
+                      Leash.Run.
+                        {
+                          answer = Fail "Navigation leg failed";
+                          expect = [];
+                          reasoning_summary = None;
+                          secrets_for_operator = [];
+                          usage = None;
+                        })
+            | _ ->
+                Ok
+                  Leash.Run.
+                    {
+                      answer = Done { result = "Navigation leg completed"; evidence = [] };
+                      expect = [];
+                      reasoning_summary = None;
+                      secrets_for_operator = [];
+                      usage = None;
+                    });
+    }
+  in
+  raw ~levels ~models
     ~decide:(fun ~deadline request -> Models.decide ~deadline models request)
     ~text_helper:(fun () -> Models.text_helper models)
     tabs
@@ -489,6 +534,7 @@ let drive ?levels models tabs handle goal =
          dry_run = None;
          expect = None;
          out = None;
+         secrets = [];
          max_steps = None;
          start_url = None;
        })
@@ -631,19 +677,17 @@ let null_is_blocked () =
                   {
                     answer = Fail "required field value is missing";
                     expect = [];
+                    reasoning_summary = None;
+                    secrets_for_operator = [];
                     usage = None;
                   });
         }
       in
       let reply = result (drive ~levels models tabs handle goal) in
-      Alcotest.(check string) "drive-ls3c blocked" "blocked" (text "status" reply);
+      Alcotest.(check string)
+        "pilot fails after blocked leg" "failed" (text "status" reply);
       Alcotest.(check (option string))
-        "drive-ls3c the field is named"
-        (Some
-           (Printf.sprintf
-              "no value for field %S; the planner answered fail: required field value is \
-               missing"
-              "Search terms"))
+        "drive-ls3c the field is named" (Some "required field value is missing")
         (match field "reason" reply with
         | Some (`String reason) -> Some reason
         | _ -> None);
@@ -697,7 +741,7 @@ let bound () =
       (* the same drive, one byte over *)
       let reply = result (drive models tabs handle goal) in
       Alcotest.(check string)
-        "fly-8fgl overlong helper is terminal" "error" (text "status" reply);
+        "pilot fails after overlong helper" "failed" (text "status" reply);
       let operator = get "operator_state" reply in
       let error =
         match P.error_of_yojson (get "error" operator) with
@@ -776,7 +820,7 @@ let chat_failure () =
       let handle = new_tab tabs in
       let reply = result (drive models tabs handle goal) in
       Alcotest.(check string)
-        "fly-8fgl chat failure retains terminal evidence" "error" (text "status" reply);
+        "pilot failure retains operator error evidence" "failed" (text "status" reply);
       let operator = get "operator_state" reply in
       let error =
         match P.error_of_yojson (get "error" operator) with

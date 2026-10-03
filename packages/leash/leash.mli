@@ -16,6 +16,7 @@ module Traces : module type of Traces
 module Page_kind : module type of Page_kind
 module Playbook : module type of Playbook
 module Run : module type of Run
+module Planner : module type of Planner
 module Tabs : module type of Tabs
 module Expiry : module type of Expiry
 module Control : module type of Control

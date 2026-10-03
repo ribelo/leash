@@ -235,6 +235,7 @@ end
     would collide with the drive's. *)
 type run_status =
   | Run_done [@json.name "done"]
+  | Run_planned [@json.name "planned"]
   | Run_blocked [@json.name "blocked"]
   | Run_failed [@json.name "failed"]
   | Run_handoff [@json.name "handoff"]
@@ -882,6 +883,7 @@ type drive_args = {
    procedure (run-4j1v, the L30 guard). A [key?] list: omitted when the mission carries
    none. *)
 type run_args = {
+  secrets : (string * string) list; [@json.default []]
   tab : Handle.t option;
   mission : string;
   max_steps : int option;
@@ -1166,6 +1168,12 @@ type planner_turn = {
    the run never merges one; [final] is the last snapshot the run observed, whose [dialog]
    is what ended an [error]; [reason] names why the run stopped. *)
 type run_result = {
+  result : string option;
+  evidence : string list;
+  pilot_turns : int;
+  navigator_steps : int;
+  reasoning_summary : string option;
+  secrets_for_operator : (string * string) list;
   unattended : Yojson.Safe.t list; [@json.default []]
   detail : Yojson.Safe.t option; [@json.default None]
   playbook_choices : playbook_choice list;
@@ -1491,8 +1499,6 @@ let planner_action_of_yojson json =
 
 let yojson_of_planner_action command = encode_request { command }
 
-(* map-op11: the default is always decline, even if a mission asks to accept.
-   Only snapshot button labels count; page text and prior pages are not authority. *)
 let check_consent_click (page : snapshot) ~index =
   let label name =
     String.lowercase_ascii (String.trim name)
@@ -1558,47 +1564,49 @@ let check_planner_action (page : snapshot) action =
   let same_tab tab check =
     if tab <> page.tab then Error "continue action names a different tab" else check ()
   in
-  let host url =
-    match String.index_opt url ':' with
-    | Some i when i + 3 <= String.length url && String.sub url i 3 = "://" ->
-        let scheme = String.lowercase_ascii (String.sub url 0 i) in
-        let rest = String.sub url (i + 3) (String.length url - i - 3) in
-        let stop =
-          List.fold_left
-            (fun stop c ->
-              match String.index_opt rest c with Some i -> min stop i | None -> stop)
-            (String.length rest) [ '/'; '?'; '#' ]
-        in
-        let authority = String.sub rest 0 stop in
-        if
-          (scheme = "http" || scheme = "https")
-          && authority <> ""
-          && not (String.contains authority '@')
-        then Some (String.lowercase_ascii authority)
-        else None
-    | _ -> None
-  in
   match action with
   | Click args ->
       same_tab args.tab (fun () ->
           Result.bind (row args.snapshot args.index) (fun () ->
               check_consent_click page ~index:args.index))
   | Fill args -> same_tab args.tab (fun () -> row args.snapshot args.index)
+  | Select args -> same_tab args.tab (fun () -> row args.snapshot args.index)
   | Press args ->
       same_tab args.tab (fun () ->
           match args.index with
           | Some index -> row args.snapshot index
           | None -> Error "continue press must name an offered row")
-  | Scroll args ->
-      same_tab args.tab (fun () ->
-          match args.index with
-          | Some index when not (named index) ->
-              Error "continue scroll names no offered row"
-          | _ -> Ok ())
-  | Nav args ->
-      same_tab args.tab (fun () ->
-          match (host page.url, host args.url) with
-          | Some before, Some after when before = after -> Ok ()
-          | _ ->
-              Error "continue nav must stay on the current HTTP(S) site without userinfo")
-  | _ -> Error "continue accepts only click, fill, press, scroll and nav"
+  | _ -> Error "pilot act accepts only click, select, fill and press on offered rows"
+
+(* pilot-02ij: redact values before any model, trace or diagnostic boundary. *)
+let redact_string secrets text =
+  List.fold_left
+    (fun text (_, value) ->
+      if value = "" then text
+      else
+        let n = String.length value in
+        let out = Buffer.create (String.length text) in
+        let rec go i =
+          if i >= String.length text then Buffer.contents out
+          else if i + n <= String.length text && String.sub text i n = value then (
+            Buffer.add_string out "<redacted>";
+            go (i + n))
+          else (
+            Buffer.add_char out text.[i];
+            go (i + 1))
+        in
+        go 0)
+    text
+    (List.sort
+       (fun (_, a) (_, b) -> Int.compare (String.length b) (String.length a))
+       secrets)
+
+let rec redact_json secrets = function
+  | `String value -> `String (redact_string secrets value)
+  | `Assoc fields ->
+      `Assoc
+        (List.map
+           (fun (key, value) -> (redact_string secrets key, redact_json secrets value))
+           fields)
+  | `List values -> `List (List.map (redact_json secrets) values)
+  | json -> json

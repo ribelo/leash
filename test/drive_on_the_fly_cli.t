@@ -21,7 +21,7 @@ A non-integer is still a parse failure. The message names a correct example.
 
   $ check usage leash drive 'Open the page' --max-steps 0 --socket "$tmp/missing.sock"
   usage: exit 64, JSON-only stderr, hint, empty stdout
-  $ grep -q -- '--max-steps 60' err && printf 'max-steps usage names an example\n'
+  $ grep -q -- '--max-steps 15' err && printf 'max-steps usage names an example\n'
   max-steps usage names an example
   $ check usage leash drive 'Open the page' --max-steps=-1 --socket "$tmp/missing.sock"
   usage: exit 64, JSON-only stderr, hint, empty stdout

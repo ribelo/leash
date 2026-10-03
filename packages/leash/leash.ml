@@ -18,6 +18,7 @@ module Traces = Traces
 module Page_kind = Page_kind
 module Playbook = Playbook
 module Run = Run
+module Planner = Planner
 module Tabs = Tabs
 module Expiry = Expiry
 module Control = Control

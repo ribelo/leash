@@ -23,8 +23,7 @@ let temp f =
   Unix.mkdir path 0o700;
   Fun.protect ~finally:(fun () -> remove path) (fun () -> f path)
 
-let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time :
-    P.drive_trace =
+let trace ?(site = "toscrape.com") ?(outcome = "done") time : P.drive_trace =
   P.Trace.
     {
       unattended = [];
@@ -40,8 +39,6 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time 
       page_kind_path = [ "catalog" ];
       start_url = None;
       inferred_pages = [];
-      compiled;
-      structural_outline = None;
       out_requested = false;
       procedures = [];
       steps = [];
@@ -50,41 +47,6 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time 
     }
 
 (* map-op09: optional safe skeleton survives durable roundtrip; legacy traces work. *)
-let structural_outline () =
-  temp (fun root ->
-      let store = T.create ~caps ~root () in
-      let saved =
-        {
-          (trace 1000.) with
-          out_requested = false;
-          structural_outline = Some "article.product_pod\n  h3\n    a\n  p.price_color\n";
-        }
-      in
-      let path = ok (T.write store saved) in
-      bool "map-op09 outline persists in trace" (ok (T.read ~caps path) = saved);
-      let json = P.yojson_of_drive_trace saved in
-      let legacy =
-        match json with
-        | `Assoc fields -> `Assoc (List.remove_assoc "structural_outline" fields)
-        | _ -> assert false
-      in
-      bool "map-op09 legacy trace has no outline"
-        ((ok (P.drive_trace_of_yojson legacy)).structural_outline = None);
-      let data = Yojson.Safe.to_string json in
-      List.iter
-        (fun secret ->
-          bool "map-op09 outline serialization has no text/password/card/email"
-            (try
-               ignore (Str.search_forward (Str.regexp_string secret) data 0);
-               false
-             with Not_found -> true))
-        [
-          "PRIVATE PAGE BODY";
-          "s3cret-password";
-          "alice@example.com";
-          "4111 1111 1111 1111";
-        ])
-
 let filesystem () =
   temp (fun root ->
       let store = T.create ~caps ~root () in
@@ -142,12 +104,10 @@ let retention () =
   temp (fun root ->
       let retention = ok (T.Retention.of_values ~count:2 ~days:1) in
       let store = T.create ~caps ~root ~retention () in
-      let write ?site ?outcome ?compiled time =
-        ok (T.write store (trace ?site ?outcome ?compiled time))
-      in
+      let write ?site ?outcome time = ok (T.write store (trace ?site ?outcome time)) in
       let protected = write 1. in
       let old = write ~outcome:"error" 2. in
-      let compiled = write ~compiled:true 3. in
+      let old_success = write 3. in
       let boundary = write ~outcome:"blocked" (100000. -. 86400.) in
       let recent = write ~outcome:"error" 99999. in
       let other = write ~site:"other.example" ~outcome:"error" 1. in
@@ -156,22 +116,14 @@ let retention () =
       in
       bool "trace-dqr2 dry-run protected"
         (Sys.file_exists protected && Sys.file_exists old);
-      bool "trace-dqr2 age and compiled marker"
-        (List.mem old doomed && List.mem compiled doomed);
+      bool "trace-dqr2 age and old_success marker"
+        (List.mem old doomed && List.mem old_success doomed);
       bool "trace-dqr2 newest count and inclusive boundary"
         ((not (List.mem boundary doomed)) && not (List.mem recent doomed));
-      bool "trace-dqr2 uncompiled success forever" (not (List.mem protected doomed));
+      bool "pilot-c77y successes obey retention" (List.mem protected doomed);
       ignore (ok (T.prune store ~site:"toscrape.com" ~dry_run:false ~now:100000. ()));
       bool "trace-dqr2 prunes only selected site"
-        (Sys.file_exists other && not (Sys.file_exists old));
-      let json = P.yojson_of_drive_trace (trace 1.) in
-      let legacy =
-        match json with
-        | `Assoc fields -> `Assoc (List.remove_assoc "compiled" fields)
-        | _ -> assert false
-      in
-      bool "trace-dqr2 legacy defaults uncompiled"
-        (not (ok (P.drive_trace_of_yojson legacy)).compiled))
+        (Sys.file_exists other && not (Sys.file_exists old)))
 
 let config () =
   let defaults = ok (Leash.Config.t_of_yojson (`Assoc [])) in
@@ -533,7 +485,6 @@ let () =
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
             ("trace-qe8c trace-lg58 private store", filesystem);
-            ("map-op09 durable outline and legacy codec", structural_outline);
             ("trace-qe8c public suffix", domains);
             ("trace-dqr2 retention", retention);
             ("trace-szpg config", config);
