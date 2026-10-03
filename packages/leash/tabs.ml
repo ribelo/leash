@@ -1650,7 +1650,8 @@ let read_text t (args : P.text_args) =
 let structural_outline t ~tab ~url =
   with_reading t ~access:Act tab (fun _ browser ->
       let current, _ = browser.Reading.current () in
-      if current <> url then Ok None
+      if current <> url then
+        Error (error "stale-snapshot" "structural outline: final page URL changed")
       else
         let* response =
           browser.call "Runtime.evaluate"
@@ -1658,12 +1659,28 @@ let structural_outline t ~tab ~url =
                [
                  ("expression", `String Structural_outline.expression);
                  ("returnByValue", `Bool true);
-                 ("throwOnSideEffect", `Bool true);
+                 (* Trusted, read-only service code: V8 side-effect checking rejects
+                    DOM traversal and local collection mutations. *)
                  ("timeout", `Int 1000);
                ])
         in
-        let value = Option.bind (member "result" response) (member "value") in
-        Ok (Option.bind value Structural_outline.decode))
+        match member "exceptionDetails" response with
+        | Some details ->
+            let why =
+              Option.bind (member "exception" details) (text "description")
+              |> Option.value
+                   ~default:
+                     (Option.value ~default:"evaluation failed" (text "text" details))
+            in
+            Error (error "internal" ("structural outline: " ^ why))
+        | None -> (
+            let value = Option.bind (member "result" response) (member "value") in
+            match Option.bind value Structural_outline.decode with
+            | Some outline -> Ok (Some outline)
+            | None ->
+                Error
+                  (error "internal"
+                     "structural outline: missing, invalid or empty skeleton")))
 
 let eval t (args : P.eval_args) =
   with_reading t ~access:Act args.tab (fun _ browser -> Reading.eval browser args)

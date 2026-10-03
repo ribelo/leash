@@ -227,6 +227,8 @@ let declared name pattern =
       repeatable = true;
     }
 
+(* map-op04 op07b: compiler replies were not retained. These faithful fixtures
+   reconstruct the recorded flights-without-mapping and page-<id> cases. *)
 let naming () =
   let seed = book [ declared "travel-<slug>" "https://example.com/travel/*" ] [] in
   let response name = `Assoc [ ("kinds", `Assoc [ ("travel-<slug>", `String name) ]) ] in
@@ -236,7 +238,15 @@ let naming () =
     (fun name ->
       check "map-op04 URL/placeholder names rejected"
         (Result.is_error (N.name ~known:[] seed (response name))))
-    [ "m"; "unknown"; "travel-slug" ];
+    [ "m"; "x"; "page-<id>"; "travel-<slug>"; "Flights"; "-flights"; "flights--search" ];
+  let placeholder = book [ declared "page-<id>" "https://example.com/page-*" ] [] in
+  check "map-op04 raw page placeholder still requires a meaningful name"
+    (Result.is_error (N.name ~known:[] placeholder (`Assoc [])));
+  let flights = book [ declared "flights" "https://example.com/flights" ] [] in
+  check "map-op04 plain URL-shape word is a valid page name"
+    (Result.is_ok (N.name ~known:[] flights (`Assoc [])));
+  check "map-op04 lowercase words and hyphens are sufficient"
+    (Result.is_ok (N.name ~known:[] seed (response "travel-slug")));
   let named, mapping = ok (N.name ~known:[] seed (response "flights-explore")) in
   check "map-op04 pattern is service-owned"
     ((List.hd named.pages).url_pattern = (List.hd seed.pages).url_pattern);

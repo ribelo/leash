@@ -1198,6 +1198,125 @@ let unchanged_action_mask () =
   Alcotest.(check bool)
     "map-op12 masked loop completes within cap" true (Result.is_ok result)
 
+let oscillating_action_mask ?(meaningful_change = false) () =
+  let fixture =
+    try Yojson.Safe.from_file "fixtures/op07b-regressions.json"
+    with Sys_error _ -> Yojson.Safe.from_file "test/fixtures/op07b-regressions.json"
+  in
+  let open Yojson.Safe.Util in
+  let actions = fixture |> member "maps" |> member "actions" |> to_list in
+  let frequency a =
+    List.length (List.filter (fun b -> member "url" a = member "url" b) actions)
+  in
+  let sample =
+    List.hd (List.sort (fun a b -> compare (frequency b) (frequency a)) actions)
+  in
+  let url = sample |> member "url" |> to_string in
+  Alcotest.(check bool)
+    "map-op12 real M1 has repeated Rating actions" true
+    (List.length (List.filter (fun a -> a |> member "url" |> to_string = url) actions)
+    >= 3);
+  let label = sample |> member "target" |> member "label" |> to_string in
+  let input = ref 0 and calls = ref 0 in
+  let button index name =
+    P.{ index; name; role = "button"; value = None; state = None; options = None }
+  in
+  let observe () =
+    let rating = button (!input + 1) label in
+    let rating =
+      if meaningful_change then { rating with value = Some (string_of_int !input) }
+      else rating
+    in
+    let page =
+      observation
+        ~rows:
+          ([ rating; button (!input + 2) "Open place" ]
+          @ if !input mod 2 = 0 then [] else [ button 90 "Done" ])
+        ("menu state " ^ string_of_int !input)
+    in
+    Ok
+      {
+        page with
+        snapshot =
+          { page.snapshot with url = (if !input >= 4 then url ^ "&changed=1" else url) };
+      }
+  in
+  let decide request =
+    let n = !calls in
+    incr calls;
+    let elements = J.body request |> member "state" |> member "elements" |> to_list in
+    let rating = List.find (fun e -> e |> member "label" |> to_string = label) elements in
+    let offered =
+      rating |> member "operations" |> to_list |> List.mem (`String "CLICK")
+    in
+    Alcotest.(check bool)
+      "map-op12 toggles do not reset mask; URL does"
+      (meaningful_change || n <> 3)
+      offered;
+    Ok
+      (if n >= 5 then decision "done"
+       else decision ~index:(!input + if n = 3 then 2 else 1) "click")
+  in
+  let act _ _ ~text:_ =
+    incr input;
+    Ok
+      P.
+        {
+          tab = handle;
+          url;
+          title = "menu";
+          snapshot = None;
+          dialog = None;
+          popups = [];
+          via = None;
+        }
+  in
+  match
+    D.run
+      ~handler:D.{ observe; decide; text_value = (fun _ -> Ok None); act }
+      ~now:(fun () -> 0.)
+      ~model:"test" ~args:(args ~max_steps:6 ()) ~dry_run:false ()
+  with
+  | Ok result -> check "map-op12 oscillation recovery" "done" (status result)
+  | Error e -> Alcotest.fail e.message
+
+let collection_next_guard () =
+  let next =
+    P.
+      {
+        index = 1;
+        role = "link";
+        name = "next";
+        value = None;
+        state = None;
+        options = None;
+      }
+  in
+  let page = observation ~rows:[ next ] "category bottom" in
+  let calls = ref 0 in
+  let decide request =
+    incr calls;
+    if !calls > 1 then
+      Alcotest.(check bool)
+        "map-op08 next row reason reaches JEV" true
+        (contains (Yojson.Safe.to_string (J.body request)) "next-page row");
+    Ok (decision "done")
+  in
+  let act _ _ ~text:_ = Alcotest.fail "map-op08 DONE guard dispatches no action" in
+  match
+    D.run
+      ~handler:
+        D.{ observe = (fun () -> Ok page); decide; text_value = (fun _ -> Ok None); act }
+      ~now:(fun () -> 0.)
+      ~model:"test"
+      ~args:{ (args ()) with goal = "Collect all items" }
+      ~dry_run:false ()
+  with
+  | Ok result ->
+      check "map-op08 next row prevents done baseline" "blocked" (status result);
+      Alcotest.(check int) "map-op08 bounded next refusals" 4 !calls
+  | Error e -> Alcotest.fail e.message
+
 let () =
   Alcotest.run "drive"
     [
@@ -1221,6 +1340,11 @@ let () =
             ("map-op11 consent default decline", consent_guard);
             ("map-op11 consent refusal context", consent_dispatch);
             ("map-op12 unchanged action request masks", unchanged_action_mask);
+            ( "map-op12 live M1 menu oscillation",
+              oscillating_action_mask ~meaningful_change:false );
+            ( "map-op12 meaningful target change resets count",
+              oscillating_action_mask ~meaningful_change:true );
+            ("map-op08 next row DONE guard", collection_next_guard);
             ("stall", stall);
             ("cap", cap);
             ("deadline", deadline);

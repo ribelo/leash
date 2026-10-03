@@ -381,7 +381,7 @@ validation gate, whether this is a repair, and the planner calls and reported co
 the compile or repair that wrote it. `model_calls` defaults to 0 when absent.
 `model_cost` is null when unknown. Older provenance defaults `entry_kind` and `exit_kind` to `""`, and `signature` and `kind_mapping` to `[]`. Traces keep their raw kind keys; meaningful names and generalized patterns belong to the proposed book.
 
-Compilation requires `successes` independent stored successful traces agreeing per operation (map-op03). Repeatable operations require the same entry and exit kinds and compatible distinct (operation, role) sets: order and duplicates do not matter, optional click/scroll/wait extras are allowed, but all type_text/select role pairs must remain present. Labels normalize supplied/typed values and date/number/currency fragments as compiler evidence, not equality identity. Non-repeatable agreement remains strict ordered action/role/exact-label matching with only typed text differing. Repeated matching operations within one trace count once; the compiled marker does not exclude evidence. The transition action belongs to the departing operation, and DONE is an observation rather than an action. Consent and off-final-host entries are excluded; the first remaining observed URL becomes a new site's entry. The compiler receives feeding argument names and observation-based naming evidence, and must return an exit-kind check and meaningful result expectations. Learned top-level procedures require at least two goal steps, except directly `use:`-referenced children; the full-book loader enforces this too. Invalid compiler output receives one validation retry. For done collection missions, the trace adds nullable `structural_outline`: a final-page tag/class skeleton of repeated containers, bounded to 4096 bytes and containing no text nodes, attributes, field values or URLs; legacy traces default to null (map-op09). The compiler may declare inline scripts with `returns` and Script steps only for repeatable collection operations with an observed outline. The loader conservatively refuses navigation, submission, input/event, network, storage and dynamic-code references; it is not a JavaScript sandbox. Installation needs JEV choosing that exact draft revision, every declared script successfully executing, and non-empty passing expectations. Manual acceptance cannot bypass this replay gate (map-op08).
+Compilation requires `successes` independent stored successful traces agreeing per operation (map-op03). Repeatable operations require the same entry and exit kinds and compatible distinct (operation, role) sets: order and duplicates do not matter, optional click/scroll/wait extras are allowed, but all type_text/select role pairs must remain present. Labels normalize supplied/typed values and date/number/currency fragments as compiler evidence, not equality identity. Non-repeatable agreement remains strict ordered action/role/exact-label matching with only typed text differing. Repeated matching operations within one trace count once; the compiled marker does not exclude evidence. The transition action belongs to the departing operation, and DONE is an observation rather than an action. Consent and off-final-host entries are excluded; the first remaining observed URL becomes a new site's entry. The compiler receives feeding argument names and observation-based naming evidence, and must return an exit-kind check and meaningful result expectations. Learned top-level procedures require at least two goal steps, except directly `use:`-referenced children; the full-book loader enforces this too. Compiled page names are lowercase words separated by hyphens, without placeholder markers or single-letter names; plain `flights` is valid even if it equals the URL-shape key. Invalid compiler output receives one validation retry. For done collection missions, the trace adds nullable `structural_outline`: a final-page tag/class skeleton of repeated containers, bounded to 4096 bytes and containing no text nodes, attributes, field values or URLs; legacy traces default to null (map-op09). Capture runs the trusted service-owned DOM walk without V8 side-effect checking; evaluation exceptions, empty/invalid results and final-URL changes log a warning with the reason instead of disappearing silently. The compiler may declare inline scripts with `returns` and Script steps only for repeatable collection operations with an observed outline. The loader conservatively refuses navigation, submission, input/event, network, storage and dynamic-code references; it is not a JavaScript sandbox. Installation needs JEV choosing that exact draft revision, every declared script successfully executing, and non-empty passing expectations. Manual acceptance cannot bypass this replay gate (map-op08).
 
 Current gate values are `replay`,
 `agreement` and `agreement-repair`; the codec's field is a string.
@@ -416,6 +416,25 @@ An action that leaves the page fingerprint unchanged has its exact operation and
 target masked from JEV's next request until the page changes. Other targets and
 operations remain offered across row reindexing. WAIT is not masked; the existing
 stall and prediction caps still apply.
+
+Three executions of the same operation and target on one URL, without a change
+to that target's role/name row set, values or options, also mask it until the URL
+changes. Menu expansion and unrelated DOM changes do not reset this oscillation
+mask. (map-op12)
+
+For collection goals asking for every/all items, operator DONE is refused while
+the page can scroll down or offers an enabled next-page link/button. JEV receives
+the reason and can continue; after three refusals another incomplete DONE ends
+blocked, never as a successful learning baseline. This frontier guard does not
+prove that records were accumulated. (map-op08, map-bjon)
+
+A row-not-actionable refusal before input dispatch makes the operator re-observe
+and re-decide for click, type_text, select and press. A planner continuation stops
+its remaining actions and returns to JEV. Dispatched input is never replayed.
+
+Invalid or empty JEV/text-helper provider responses are retried once within the
+original deadline. A valid helper `{"text":null}` still means a missing value;
+null provider message content is an invalid response. No token caps are added.
 
 ### Planner Continue (L53)
 

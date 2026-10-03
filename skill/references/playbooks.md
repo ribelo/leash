@@ -135,6 +135,10 @@ Here is a complete `playbook.json` for the bookshop catalogue. Save it in your o
 
 The directory also holds `scripts/list-page.js` and `scripts/last-page.js`. Those files are not inside the JSON. `list-page.js` starts with `/** returns: "book" */` and returns one record per card. `last-page.js` returns `{done: true}` when the listing has no next link.
 
+Compiled page names use lowercase words separated by hyphens, with no placeholder
+markers (`<id>`, `<slug>`) or single-letter names. A plain word such as `flights`
+remains valid even when it equals the inferred URL-shape key. (map-op04)
+
 ### A sentence for each field
 
 - `site` is `books.toscrape.com`, the catalogue this book knows.

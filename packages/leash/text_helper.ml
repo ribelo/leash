@@ -145,60 +145,46 @@ let ask client ~now ~model ~logger ~on_usage ?(deadline = default_deadline) json
   let messages =
     [ { role = System; content = Questions.text_value }; { role = User; content = json } ]
   in
-  Model_usage.start "text_helper";
-  match
-    Ox_ai_chat.complete client ~deadline ~model ~messages ~json_object:true
-      ~reasoning:`Disabled ()
-  with
-  | Error error -> Error (Model_error.of_eta error)
-  | Ok first -> (
-      log_usage logger first;
-      report_usage on_usage first;
-      Model_usage.report "text_helper" first.Ox_ai_chat.Codecs.usage.cost;
-      let content = first.Ox_ai_chat.Codecs.content in
-      match value content with
-      | Ok answer -> Ok answer
-      | Error error -> (
-          (* drive-ls3c, L34: malformed model formatting gets one bounded correction,
-             never a permissive extraction. Overlong typed values are terminal. *)
-          let overlong =
-            match Yojson.Safe.from_string content with
-            | `Assoc [ ("text", `String text) ] -> not (valid_text text)
-            | _ -> false
-            | exception Yojson.Json_error _ -> false
+  let rec attempt retry messages deadline =
+    Model_usage.start "text_helper";
+    let answer, content =
+      match
+        Ox_ai_chat.complete client ~deadline ~model ~messages ~json_object:true
+          ~reasoning:`Disabled ()
+      with
+      | Error error -> (Error (Model_error.of_eta error), None)
+      | Ok response ->
+          log_usage logger response;
+          report_usage on_usage response;
+          Model_usage.report "text_helper" response.Ox_ai_chat.Codecs.usage.cost;
+          (value response.content, Some response.content)
+    in
+    match answer with
+    | Error ({ P.detail = Some (`Assoc fields); _ } as error)
+      when retry && List.assoc_opt "code" fields = Some (`String "invalid-response") ->
+        let remaining = Ox.Duration.to_seconds_float deadline -. (now () -. started) in
+        if remaining <= 0. then Error error
+        else
+          let messages =
+            match content with
+            | None -> messages
+            | Some content ->
+                messages
+                @ [
+                    { role = Assistant; content };
+                    {
+                      role = User;
+                      content =
+                        "Reply with exactly {\"text\": string|null}, without Markdown \
+                         fences, extra members or prose.";
+                    };
+                  ]
           in
-          let remaining = Ox.Duration.to_seconds_float deadline -. (now () -. started) in
-          if overlong then Error error
-          else if remaining <= 0. then Error (Model_error.of_eta `Timeout)
-          else
-            let correction_deadline =
-              Ox.Duration.ms (max 1 (int_of_float (remaining *. 1000.)))
-            in
-            let retry =
-              messages
-              @ [
-                  { role = Assistant; content };
-                  {
-                    role = User;
-                    content =
-                      "Your previous answer was not exactly one JSON object with only a \
-                       text member. Reply with only {\"text\": string|null}; do not add \
-                       Markdown fences, other members, or prose.";
-                  };
-                ]
-            in
-            Model_usage.start "text_helper";
-            match
-              Ox_ai_chat.complete client
-                ~deadline:(Ox.Duration.min correction_deadline default_deadline)
-                ~model ~messages:retry ~json_object:true ~reasoning:`Disabled ()
-            with
-            | Error error -> Error (Model_error.of_eta error)
-            | Ok second ->
-                log_usage logger second;
-                report_usage on_usage second;
-                Model_usage.report "text_helper" second.Ox_ai_chat.Codecs.usage.cost;
-                value second.Ox_ai_chat.Codecs.content))
+          attempt false messages
+            (Ox.Duration.ms (max 1 (int_of_float (remaining *. 1000.))))
+    | _ -> answer
+  in
+  attempt true messages deadline
 
 let create ?(on_usage = fun _ -> ()) ~client ~now ~model ~logger () =
   (* The one-entry memo of agent.py:110-114, keyed by what the reference compares: the

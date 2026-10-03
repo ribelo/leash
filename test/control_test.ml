@@ -1315,7 +1315,8 @@ let drive_dry_run () =
 
 (* tab-bw4j drive-y7v8: a click refused before any input is not an uncertain
    outcome. JEV is shown the page again and may choose a different action. *)
-let refused_click_redecides () =
+let refused_click_redecides ?(operation_name = "click") () =
+  let role = if operation_name = "type_text" then "textbox" else "button" in
   rig (fun _ _ _ tabs fake ->
       let fake = fake () in
       let fixture = fixture "unlabelled-controls-chrome.json" in
@@ -1343,7 +1344,7 @@ let refused_click_redecides () =
                   [
                     obj
                       [
-                        ("role", obj [ ("value", str "button") ]);
+                        ("role", obj [ ("value", str role) ]);
                         ("name", obj [ ("value", str "") ]);
                       ];
                   ] );
@@ -1406,7 +1407,7 @@ let refused_click_redecides () =
       let index =
         match
           List.find_opt
-            (fun row -> get "role" row = str "button" && get "name" row = str "")
+            (fun row -> get "role" row = str role && get "name" row = str "")
             rows
         with
         | Some row -> ( match get "index" row with `Int i -> i | _ -> assert false)
@@ -1416,7 +1417,9 @@ let refused_click_redecides () =
       let decide ~deadline:_ (_ : Leash__Jev_request.request) =
         incr decisions;
         let operation =
-          match P.Operation.of_string (if !decisions = 1 then "click" else "done") with
+          match
+            P.Operation.of_string (if !decisions = 1 then operation_name else "done")
+          with
           | Ok operation -> operation
           | Error _ -> assert false
         in
@@ -1454,7 +1457,10 @@ let refused_click_redecides () =
         |> Yojson.Safe.to_string
       in
       let reply =
-        Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide tabs wire
+        Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide
+          ~text_helper:(fun () ->
+            Leash.Text_helper.{ complete = (fun ?deadline:_ _ -> Ok (Some "2026-11-01")) })
+          tabs wire
         |> Yojson.Safe.from_string |> P.decode_reply
       in
       let reply =
@@ -1468,7 +1474,9 @@ let refused_click_redecides () =
       Alcotest.(check bool)
         "tab-bw4j the refusal dispatched no mouse input" false
         (List.exists
-           (fun json -> field "method" json = Some (str "Input.dispatchMouseEvent"))
+           (fun json ->
+             List.mem (field "method" json)
+               [ Some (str "Input.dispatchMouseEvent"); Some (str "Input.insertText") ])
            (Fake.received fake));
       Alcotest.(check bool)
         "tab-bw4j the refusal is not outcome uncertain" false
@@ -3555,6 +3563,42 @@ let shared_handle_over_socket () =
 
 (* trace-qe8c trace-iqqz trace-zbb9 trace-uovo: public control persists every
    drive outcome before replying, without a browser/service/provider. *)
+let collection_done_guard () =
+  rig (fun env sw _ tabs fake ->
+      let f = fake () in
+      page_script f (fixture "unlabelled-controls-chrome.json") "Category";
+      document_at ~title:"Category" ~url:product_url f;
+      let evidence = get "books" (fixture "op07b-regressions.json") in
+      Alcotest.(check bool)
+        "map-op08 live books DONE left scroll frontier" true
+        (get "can_scroll_down" evidence = `Bool true);
+      let h =
+        result (request tabs "alice" (P.New { url = Some product_url; label = None }))
+        |> tab
+      in
+      let calls = ref 0 in
+      let decide ~deadline request =
+        incr calls;
+        if !calls > 1 then
+          Alcotest.(check bool)
+            "map-bjon refusal reason reaches next JEV decision" true
+            (contains (Yojson.Safe.to_string (Jev.body request)) "can still scroll down");
+        decide_done ~deadline request
+      in
+      let reply =
+        with_ticking_clock env sw (fun () ->
+            Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide
+              ~levels:(levels_with [] (ref []))
+              tabs
+              (run_wire ~tab:h
+                 (match get "mission" evidence with `String s -> s | _ -> assert false)))
+        |> Yojson.Safe.from_string |> P.decode_reply |> decoded
+      in
+      Alcotest.(check int) "map-op08 exactly three refusals then blocked" 4 !calls;
+      Alcotest.(check bool)
+        "map-op08 incomplete collection never supplies done baseline" true
+        (get "status" reply <> str "done"))
+
 let durable_drive_traces () =
   let caps = Ox_test.powerbox () in
   let root = Filename.temp_file "leash-l51-control-" "" in
@@ -3611,47 +3655,73 @@ let durable_drive_traces () =
             | Ok trace -> trace
             | Error why -> Alcotest.fail why
           in
-          let outline_calls = ref 0 in
+          let outline_calls = ref 0 and outline_failure = ref false in
           (* trace-qe8c: Chrome's pushed tab-strip title is not its document title. *)
           Fake.on_method f "Runtime.evaluate" (fun request ->
               match get "expression" (get "params" request) with
               | `String expression when expression = Leash__Structural_outline.expression
                 ->
                   incr outline_calls;
-                  let value =
-                    `List
+                  Alcotest.(check bool)
+                    "map-op09 returns value within bounded evaluation" true
+                    (get "returnByValue" (get "params" request) = `Bool true
+                    && get "timeout" (get "params" request) = `Int 1000);
+                  if
+                    !outline_failure
+                    || field "throwOnSideEffect" (get "params" request)
+                       = Some (`Bool true)
+                  then
+                    obj
                       [
-                        obj
-                          [
-                            ("tag", str "article");
-                            ("classes", `List [ str "product_pod" ]);
-                            ( "children",
-                              `List
-                                [
-                                  obj
-                                    [
-                                      ("tag", str "h3");
-                                      ("classes", `List []);
-                                      ( "children",
-                                        `List
-                                          [
-                                            obj
-                                              [
-                                                ("tag", str "a");
-                                                ("classes", `List []);
-                                                ("children", `List []);
-                                                ("text", str "PRIVATE PAGE BODY");
-                                                ("value", str "s3cret-password");
-                                                ("email", str "alice@example.com");
-                                                ("card", str "4111 1111 1111 1111");
-                                              ];
-                                          ] );
-                                    ];
-                                ] );
-                          ];
+                        ( "exceptionDetails",
+                          obj
+                            [
+                              ("text", str "Uncaught");
+                              ( "exception",
+                                obj
+                                  [
+                                    ( "description",
+                                      str
+                                        "EvalError: Possible side-effect in \
+                                         debug-evaluate" );
+                                  ] );
+                            ] );
                       ]
-                  in
-                  obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]
+                  else
+                    let value =
+                      `List
+                        [
+                          obj
+                            [
+                              ("tag", str "article");
+                              ("classes", `List [ str "product_pod" ]);
+                              ( "children",
+                                `List
+                                  [
+                                    obj
+                                      [
+                                        ("tag", str "h3");
+                                        ("classes", `List []);
+                                        ( "children",
+                                          `List
+                                            [
+                                              obj
+                                                [
+                                                  ("tag", str "a");
+                                                  ("classes", `List []);
+                                                  ("children", `List []);
+                                                  ("text", str "PRIVATE PAGE BODY");
+                                                  ("value", str "s3cret-password");
+                                                  ("email", str "alice@example.com");
+                                                  ("card", str "4111 1111 1111 1111");
+                                                ];
+                                            ] );
+                                      ];
+                                  ] );
+                            ];
+                        ]
+                    in
+                    obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]
               | `String expression when contains expression "leash-operator-read" ->
                   let value =
                     match operator_observation ~text:modal_text with
@@ -3659,7 +3729,18 @@ let durable_drive_traces () =
                         `Assoc
                           (("title", str "Blue Top")
                           :: ("url", str product_url)
-                          :: List.remove_assoc "title" (List.remove_assoc "url" fields))
+                          :: ( "scroll",
+                               obj
+                                 [
+                                   ("x", `Int 0);
+                                   ("y", `Int 400);
+                                   ("height", `Int 1000);
+                                   ("viewport", `Int 600);
+                                   ("width", `Int 800);
+                                 ] )
+                          :: List.remove_assoc "scroll"
+                               (List.remove_assoc "title"
+                                  (List.remove_assoc "url" fields)))
                     | value -> value
                   in
                   obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]
@@ -3739,6 +3820,17 @@ let durable_drive_traces () =
           in
           Alcotest.(check bool)
             "map-op09 structural read precedes close" true (captured_at < closed_at);
+          outline_failure := true;
+          let failed_outline =
+            invoke ~traces:store (run_wire ~tab:h "Collect every title")
+            |> decoded |> saved
+          in
+          Alcotest.(check bool)
+            "map-op09 evaluation exception is warned with reason" true
+            (failed_outline.structural_outline = None
+            && contains (Buffer.contents logs) "structural outline capture failed"
+            && contains (Buffer.contents logs) "Possible side-effect");
+          outline_failure := false;
           let before = count () in
           let disabled = invoke (run_wire ~tab:h "disabled trace capture") |> decoded in
           Alcotest.(check bool)
@@ -3872,11 +3964,27 @@ let () =
           Alcotest.test_case "human-origin shutdown" `Quick human;
           Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
           Alcotest.test_case "tab-bw4j pseudo-icon click safety" `Quick pseudo_icon_hit;
+          Alcotest.test_case "map-op08 map-bjon live collection DONE guard" `Quick
+            collection_done_guard;
           Alcotest.test_case "trace-qe8c trace-iqqz public durable drives" `Quick
             durable_drive_traces;
           Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;
           Alcotest.test_case "tab-bw4j refused click is decided again" `Quick
-            refused_click_redecides;
+            (refused_click_redecides ~operation_name:"click");
+          Alcotest.test_case "map-op07 covered type_text re-decides without input" `Quick
+            (fun () ->
+              let action =
+                match get "action" (get "flights" (fixture "op07b-regressions.json")) with
+                | `List [ action ] -> action
+                | _ -> Alcotest.fail "map-op07 missing live Flights action"
+              in
+              Alcotest.(check bool)
+                "map-op07 real covered Departure field" true
+                (get "label" (get "target" action) = str "Departure");
+              refused_click_redecides
+                ~operation_name:
+                  (match get "operation" action with `String s -> s | _ -> assert false)
+                ());
           Alcotest.test_case "run-9ypy run-4j1v run-snk4 run-shgh run-7blx" `Quick
             run_mission;
           Alcotest.test_case "daily-9ggi temporary drive tabs" `Quick

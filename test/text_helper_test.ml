@@ -674,7 +674,11 @@ let bound () =
       let at_bound = String.make 2000 'x' and over = String.make 2001 'x' in
       let chat =
         chat_server ~sw ~net:env#net
-          [ chat_reply (`String at_bound); chat_reply (`String over) ]
+          [
+            chat_reply (`String at_bound);
+            chat_reply (`String over);
+            chat_reply (`String over);
+          ]
       in
       let models =
         Models.create ~sw ~net:env#net ~clock:env#clock ~logger
@@ -702,7 +706,8 @@ let bound () =
       in
       check_code "fly-qr70 over 2000 characters is refused" "model-unavailable" error;
       Alcotest.(check string)
-        "fly-qr70 invalid text is not corrected" "invalid-response" (detail_code error);
+        "map-op07 repeated invalid text remains refused" "invalid-response"
+        (detail_code error);
       Alcotest.(check int)
         "drive-ls3c the over-long text is not typed" 1
         (List.length (calls fake "Input.insertText")))
@@ -893,6 +898,25 @@ let field_context () =
 
 (* drive-ls3c, L34: a real provider added a bare Markdown fence after valid
    JSON. A bounded correction asks again; the malformed first answer is never typed. *)
+let empty_response_retry () =
+  let null_content =
+    Chat.ok
+      ("{\"id\":\"gen-null\",\"model\":\"" ^ text_model
+     ^ "\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":null},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":0,\"total_tokens\":10}}"
+      )
+  in
+  List.iter
+    (fun first ->
+      helper_rig
+        ~replies:[ first; chat_reply (`String "Blue Top") ]
+        (fun _ _ helper server _ ->
+          let answer = helper.Leash.Text_helper.complete context in
+          Alcotest.(check (option string))
+            "map-op07 invalid/empty helper reply recovers" (Some "Blue Top")
+            (match answer with Ok x -> x | Error e -> Alcotest.fail e.message);
+          Alcotest.(check int) "map-op07 one helper retry" 2 (Chat.connections server)))
+    [ null_content; chat_content ""; chat_reply (`String "") ]
+
 let corrective_retry () =
   helper_rig
     ~replies:
@@ -1017,6 +1041,8 @@ let unicode_and_usage () =
       [
         chat_reply (`String (repeat 2000));
         chat_reply (`String (repeat 2001));
+        chat_reply (`String (repeat 2001));
+        chat_reply (`String "");
         chat_reply (`String "");
       ]
     (fun _ _ helper server _ ->
@@ -1042,9 +1068,9 @@ let unicode_and_usage () =
           | Ok _ -> Alcotest.fail "fly-qr70 unsafe helper value")
         [ "over"; "empty" ];
       Alcotest.(check int)
-        "fly-qr70 invalid text is not corrected" 3 (Chat.connections server);
+        "map-op07 invalid text retried once" 5 (Chat.connections server);
       Alcotest.(check int)
-        "fly-9e0f callback records answered calls, not memo" 3 (List.length !reported);
+        "fly-9e0f callback records answered calls, not memo" 5 (List.length !reported);
       let usage = List.hd !reported in
       Alcotest.(check int)
         "fly-9e0f token count" 10
@@ -1067,6 +1093,8 @@ let () =
           Alcotest.test_case "drive-ls3c reuse on unchanged input" `Quick reuse;
           Alcotest.test_case "drive-kh2u chat failure with steps" `Quick chat_failure;
           Alcotest.test_case "drive-ls3c jev's field_context" `Quick field_context;
+          Alcotest.test_case "map-op07 null content and empty response retry" `Quick
+            empty_response_retry;
           Alcotest.test_case "drive-ls3c Markdown corrective retry" `Quick
             corrective_retry;
           Alcotest.test_case "drive-ls3c the answer shape" `Quick answer_shape;

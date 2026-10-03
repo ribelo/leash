@@ -1027,6 +1027,14 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                                 (match observe t () with
                                 | Ok observation -> single_goal {st with observation}
                                 | Error _ -> await_human st "captcha")
+                            | Error error when P.Error_code.to_string error.P.code = "row-not-actionable" ->
+                                (* map-op07: refusal sent no input; abandon the stale plan. *)
+                                (match observe t () with
+                                | Error error -> Error (with_trace st error)
+                                | Ok observation -> single_goal {st with observation;
+                                    operator_history = st.operator_history @ [Jev_request.{
+                                      action = "refused; no input: " ^ error.message; kind = Some "guard";
+                                      text = None; page_changed = None }]})
                             | Error error -> Error (with_trace st error)
                             | Ok _ -> (match observe t () with
                                 | Error error -> Error (with_trace st error)

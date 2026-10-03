@@ -493,6 +493,23 @@ let drive_to_done () =
 
 (* One answered decision writes one info line with the model, the token counts and the
    cost the provider reported — the operator's view of what the drive cost. *)
+let invalid_response_retry () =
+  rig (fun env sw tabs fake logger _ ->
+      script_page fake;
+      let calls = ref 0 in
+      let valid = scripted ~model:jev_model [ Answer "DONE" ] in
+      let server =
+        Server.serve ~net:env#net ~sw (fun request ->
+            incr calls;
+            if !calls = 1 then Server.ok "{}" else valid request)
+      in
+      let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
+      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let reply = result (drive models tabs (new_tab tabs) "Inspect this page") in
+      Alcotest.(check string)
+        "map-op07 invalid JEV reply recovers" "done" (text "status" reply);
+      Alcotest.(check int) "map-op07 exactly one JEV retry" 2 !calls)
+
 let usage_is_logged () =
   rig (fun env sw tabs fake logger memory ->
       script_page fake;
@@ -987,6 +1004,8 @@ let () =
             (provider_timeout ~attempt:3 ~deadline:(Ox.Duration.seconds 5) ~succeeds:true);
           Alcotest.test_case "daily-9ggi caller budget bounds retries" `Quick
             (provider_timeout ~attempt:3 ~deadline:(Ox.Duration.ms 100) ~succeeds:false);
+          Alcotest.test_case "map-op07 malformed JEV then valid" `Quick
+            invalid_response_retry;
           Alcotest.test_case "daily-9ggi model timeout config" `Quick timeout_config;
           Alcotest.test_case "daily-9ggi text correction shares deadline" `Quick
             (text_correction_budget ~deadline:(Ox.Duration.ms 400) ~succeeds:false);

@@ -499,11 +499,13 @@ let covered_edit () =
       let text_helper () =
         Leash__Text_helper.{ complete = (fun ?deadline:_ _ -> Ok (Some "query")) }
       in
-      match drive ~text_helper tabs [ decision ~index:(Some 1) "type_text" ] with
+      match
+        drive ~text_helper tabs [ decision ~index:(Some 1) "type_text"; decision "done" ]
+      with
       | Error error -> Alcotest.fail error.message
       | Ok result ->
           Alcotest.(check string)
-            "fly-4lmg covered field refused" "error"
+            "map-op07 covered field refusal re-decides" "done"
             (P.Drive_status.to_string result.status);
           Alcotest.(check bool)
             "fly-iodm current value retained" true

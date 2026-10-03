@@ -1,0 +1,69 @@
+{
+  "source": "docs/issues/map-draws-itself/acceptance/live-2026-10-03-op07b/",
+  "books": {
+    "source": "books/mission-3/drive.json",
+    "mission": "collect every book title and price in the Poetry category",
+    "status": "done",
+    "can_scroll_down": true,
+    "steps": [
+      {
+        "operation": "click",
+        "target": {
+          "role": "link",
+          "label": "Poetry"
+        }
+      },
+      {
+        "operation": "scroll_down"
+      },
+      {
+        "operation": "scroll_down"
+      },
+      {
+        "operation": "done"
+      }
+    ]
+  },
+  "maps": {
+    "source": "maps/mission-1/trace.json",
+    "unchanged_url_repetitions": 12,
+    "actions": [
+      {
+        "operation": "click",
+        "target": {
+          "role": "button",
+          "label": "Rating"
+        },
+        "url": "https://www.google.com/maps/search/cafe+near+Eiffel+Tower/@48.8588646,2.2960262,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D"
+      },
+      {
+        "operation": "click",
+        "target": {
+          "role": "button",
+          "label": "Rating"
+        },
+        "url": "https://www.google.com/maps/search/cafe+near+Eiffel+Tower/@48.8588646,2.2960262,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D"
+      },
+      {
+        "operation": "click",
+        "target": {
+          "role": "button",
+          "label": "Rating"
+        },
+        "url": "https://www.google.com/maps/search/cafe+near+Eiffel+Tower/@48.8588646,2.2960262,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D"
+      }
+    ]
+  },
+  "flights": {
+    "reason": "the type_text action (outcome uncertain; not replayed) failed (row-not-actionable): the row is covered at its click point",
+    "action": [
+      {
+        "operation": "type_text",
+        "target": {
+          "role": "textbox",
+          "label": "Departure"
+        }
+      }
+    ]
+  }
+}

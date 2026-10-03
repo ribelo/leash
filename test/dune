@@ -153,6 +153,7 @@
  (name control_test)
  (modules control_test)
  (deps
+  fixtures/op07b-regressions.json
   fixtures/snapshot-chrome.json
   fixtures/daily-snapshot-chrome.json
   fixtures/unlabelled-controls-chrome.json
@@ -352,7 +353,7 @@
 (test
  (name drive_test)
  (modules drive_test)
- (deps fixtures/map-run-actions.json)
+ (deps fixtures/map-run-actions.json fixtures/op07b-regressions.json)
  (libraries leash yojson alcotest))
 
 (test

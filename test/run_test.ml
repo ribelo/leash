@@ -2175,7 +2175,7 @@ let planner_continue () =
   in
   let execute ?(cap = 2) ?(max_steps = 60) ?(observations = [ observed ])
       ?(dry_run = false) ?(deadline_s = 900) ?(advance_clock = 0.) ?after_first ?fail_at
-      actions =
+      ?(failure_code = "stale-snapshot") actions =
     let h = make observations actions and called = ref [] and captured = ref [] in
     let planner_action command =
       called := !called @ [ command ];
@@ -2183,8 +2183,7 @@ let planner_continue () =
       if List.length !called = 1 then
         Option.iter (fun fresh -> h.observations <- [ fresh ]) after_first;
       if fail_at = Some (List.length !called) then
-        Error
-          (P.make_error (ok (P.Error_code.of_string "stale-snapshot")) ~message:"changed")
+        Error (P.make_error (ok (P.Error_code.of_string failure_code)) ~message:"changed")
       else
         Ok
           P.
@@ -2249,6 +2248,16 @@ let planner_continue () =
   let result, h, _, _ = execute [] in
   check_status "optional empty detour resumes JEV" "done" (ran result);
   Alcotest.(check int) "empty actions resume operator" 1 (List.length h.steps);
+  let refused, resumed, calls, captured =
+    execute ~fail_at:1 ~failure_code:"row-not-actionable" actions
+  in
+  check_status "map-op07 planner fill refusal resumes JEV" "done" (ran refused);
+  Alcotest.(check int) "map-op07 stale planner batch is abandoned" 1 (List.length calls);
+  Alcotest.(check int)
+    "map-op07 operator re-decides after refusal" 1 (List.length resumed.steps);
+  Alcotest.(check (option string))
+    "map-3qag refused planner input remains evidence" (Some "row-not-actionable")
+    (List.hd captured).P.error;
   let result, h, called, captured = execute ~fail_at:2 actions in
   Alcotest.(check bool) "action failure preserved" true (Result.is_error result);
   Alcotest.(check int) "no operator after failed action" 0 (List.length h.steps);

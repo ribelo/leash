@@ -147,7 +147,7 @@ let log_usage logger (response : Ox_ai_systemone.Codecs.response) =
 
 let default_deadline = Ox.Duration.seconds 30
 
-let decide ?(deadline = default_deadline) ?(on_usage = fun _ -> ()) (t : t)
+let decide_once ?(deadline = default_deadline) ?(on_usage = fun _ -> ()) (t : t)
     (request : J.request) =
   match t.systemone with
   | None ->
@@ -190,6 +190,21 @@ let decide ?(deadline = default_deadline) ?(on_usage = fun _ -> ()) (t : t)
               | Ok decision -> Ok decision
               | Error why -> Error (Model_error.unavailable ~code:"invalid-response" why))
           ))
+
+(* map-op07: retry malformed replies once within the original deadline.
+   This repeats only a model request, never browser input. *)
+let retry_invalid t ~deadline call =
+  let started = t.now () in
+  match call deadline with
+  | Error ({ P.detail = Some (`Assoc fields); _ } as error)
+    when List.assoc_opt "code" fields = Some (`String "invalid-response") ->
+      let remaining = Ox.Duration.to_seconds_float deadline -. (t.now () -. started) in
+      if remaining <= 0. then Error error
+      else call (Ox.Duration.ms (max 1 (int_of_float (remaining *. 1000.))))
+  | answer -> answer
+
+let decide ?(deadline = default_deadline) ?on_usage t request =
+  retry_invalid t ~deadline (fun deadline -> decide_once ~deadline ?on_usage t request)
 
 (* drive-ls3c: a fresh helper per call. The helper carries the one-entry memo the
    stale-page reuse rule needs, so it must not outlive the drive it serves; without a key
@@ -296,12 +311,12 @@ let choose_jev ~deadline (t : t) (question : Run.question) =
    instruction. Threshold the top probability, never JEV's margin-like confidence. *)
 (* fly-2akp: the original JEV choice is authoritative, including NONE. *)
 let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
-  choose_jev ~deadline t question
+  retry_invalid t ~deadline (fun deadline -> choose_jev ~deadline t question)
 
 (* run-vbys: the score question a judgment expectation asks, over the page summary the
    registry builds. Its two levels make the answer's position the [0, 1] score the wait's
    threshold compares. *)
-let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
+let score_once ?(deadline = default_deadline) (t : t) ~sentence ~state =
   match t.systemone with
   | None -> Error missing_key
   | Some client -> (
@@ -328,6 +343,9 @@ let score ?(deadline = default_deadline) (t : t) ~sentence ~state =
                   (invalid_response
                      (Printf.sprintf "the score %g is not inside 0..1" value))
           | _ -> Error (invalid_response "the reply carries no score answer")))
+
+let score ?(deadline = default_deadline) t ~sentence ~state =
+  retry_invalid t ~deadline (fun deadline -> score_once ~deadline t ~sentence ~state)
 
 (* run-7blx run-w7ke run-d99l: the one seam a run's upper levels use. The planner turn is
    L32's Luna over the second chat client (run-d99l), with the configured model and

@@ -95,16 +95,21 @@ let name ~known (seed : B.t) json =
         let key = p.name and name = named p.name in
         let inferred = not (List.mem_assoc key known) in
         inferred
-        && ((not (List.mem_assoc key declared))
-           || name = "m" || name = "unknown"
-           || (String.contains key '<' && name = Page_kind.playbook_name key)))
+        && (String.length name < 2
+           || not
+                (List.for_all
+                   (fun word ->
+                     word <> ""
+                     && String.for_all (function 'a' .. 'z' -> true | _ -> false) word)
+                   (String.split_on_char '-' name))))
       seed.pages
   in
   match invalid with
   | Some p ->
       Error
         ("name page kind " ^ p.name
-       ^ " from its observed title and labels in kinds, not its URL shape")
+       ^ " with lowercase words separated by hyphens, without placeholders or single \
+          letters")
   | None ->
       let pages =
         List.map (fun (p : B.page) -> { p with name = named p.name }) seed.pages

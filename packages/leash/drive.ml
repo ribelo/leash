@@ -101,17 +101,57 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
       mask_page := Some page.fingerprint;
       let key = (choice.operation, target) in
       if not (List.mem key !masked) then masked := key :: !masked) in
+  (* map-op12: menu toggles change the DOM fingerprint, not the target row set.
+     Once masked, an oscillating action stays masked for this URL. *)
+  let oscillation_url = ref None and oscillating = ref [] in
+  let executions = Hashtbl.create 16 in
+  let reset_oscillation (page : observation) =
+    if !oscillation_url <> Some page.snapshot.url then (
+      oscillation_url := Some page.snapshot.url;
+      oscillating := []; Hashtbl.clear executions) in
+  let row_set (page : observation) (role, name, _) =
+    page.snapshot.rows |> List.filter_map (fun (row : P.row) ->
+      if row.role = role && row.name = name then Some (row.value, row.options) else None)
+    |> List.sort compare in
+  let track_execution page next (choice : J.decision) =
+    reset_oscillation page;
+    match Option.bind choice.index (fun index -> List.assoc_opt index (targets page)) with
+    | Some target when page.snapshot.url = next.snapshot.url ->
+        let key = choice.operation, Some target in
+        let rows = row_set next target in
+        let previous, count = Option.value ~default:(rows, 0) (Hashtbl.find_opt executions key) in
+        let count = if previous = rows && row_set page target = rows then count + 1 else 0 in
+        Hashtbl.replace executions key (rows, count);
+        if count >= 3 && not (List.mem key !oscillating) then oscillating := key :: !oscillating
+    | _ -> () in
   let masks (page : observation) =
+    reset_oscillation page;
     if !mask_page <> Some page.fingerprint then (mask_page := None; masked := []);
     List.concat_map (fun (op, target) -> match target with
       | None -> [op, None]
       | Some target -> List.filter_map (fun (index, identity) ->
           if identity = target then Some (op, Some index) else None)
-          (targets page)) !masked in
+          (targets page)) (!masked @ !oscillating) in
   (* fly-vnf1: BLOCKED cannot certify an unseen scroll frontier. This deliberate
      deviation from jev-ultrafast is bounded per URL. pbk-eyya raised the bound from three
      to eight: a 20-card listing is taller than three viewports, and JEV gave up on the
      pager of books.toscrape.com's Default category before seeing it. *)
+  (* map-op08 map-bjon: a first viewport is not a complete collection. *)
+  let exhaustive =
+    Structural_outline.collection args.goal
+    && (try ignore (Str.search_forward (Str.regexp "\\b\\(every\\|all\\)\\b")
+         (String.lowercase_ascii args.goal) 0); true with Not_found -> false) in
+  let done_refusals = ref 0 in
+  let collection_frontier (page : observation) =
+    if page.can_scroll_down then Some "the page can still scroll down"
+    else if List.exists (fun (row : P.row) ->
+      List.mem row.role ["link"; "button"]
+      && not (List.exists (fun state -> P.Row_state.to_string state = "disabled")
+                (Option.value ~default:[] row.state))
+      && List.mem (String.lowercase_ascii (String.trim row.name))
+           ["next"; "next page"; "next ›"; "next »"; "›"; "»"])
+      page.snapshot.rows then Some "a next-page row is still available"
+    else None in
   let rescue_cap = 8 in
   let frontiers = Hashtbl.create 8 in
   let integer n = `Int n and string s = `String s in
@@ -344,6 +384,16 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                      | Error error -> finish ~error ~reason:(failed "fresh terminal observation" error) "error" steps page
                      | Ok next when page.fingerprint <> next.fingerprint ->
                          incr stale; update_prediction "stale terminal; re-decide"; go next steps recent
+                     | Ok next when op = operation "done" && exhaustive
+                                    && Option.is_some (collection_frontier next) ->
+                         let reason = "collection DONE refused: " ^ Option.get (collection_frontier next) in
+                         update_prediction reason;
+                         if !done_refusals >= 3 then
+                           finish ~reason:(reason ^ "; three refusals exhausted") "blocked" steps next
+                         else (
+                           incr done_refusals;
+                           go next steps (J.{ action = reason; kind = Some "guard";
+                             text = None; page_changed = None } :: recent))
                      | Ok next ->
                          update_prediction "terminal";
                          let step = record_step page next choice None steps in
@@ -398,11 +448,10 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                           let answer = measured input_ms (fun () -> act t page choice text) in
                           match answer with
                           | Error error when stale_error error -> refresh "stale; no input"
-                          (* A click refused before dispatch sent no input. Re-observe
+                          (* map-op07: an action refused before dispatch sent no input. Re-observe
                              and let JEV decide again; do not end as outcome uncertain. *)
                           | Error error
-                            when op = operation "click"
-                                 && P.Error_code.to_string error.P.code = "row-not-actionable" ->
+                            when P.Error_code.to_string error.P.code = "row-not-actionable" ->
                               mask_choice page choice;
                               let recent = J.{ action = error.message; kind = Some "guard";
                                 text = None; page_changed = None } :: recent in
@@ -437,6 +486,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                                     finish ~error ~reason:(failed "observe after executed action; not replayed" error) "error" (step :: steps) page
                                | Ok next ->
                                    let step = record_step page next choice text steps in
+                                   track_execution page next choice;
                                    if page.fingerprint = next.fingerprint then mask_choice page choice;
                                    let changed = page.fingerprint <> next.fingerprint in
                                    action_log := `Assoc (("step", P.yojson_of_step step) :: ("page_changed", `Bool changed) :: action_fields ()) :: List.tl !action_log;

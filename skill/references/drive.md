@@ -41,6 +41,25 @@ If an action leaves the page unchanged, that exact operation and target are mask
 from JEV until the page changes. Other choices remain available, and row
 reindexing does not reset the mask. WAIT is exempt; caps still apply. (map-op12)
 
+Three executions of the same operation and target on one URL, without a change
+to that target's role/name row set, values or options, also mask it until the URL
+changes. Menu expansion and unrelated DOM changes do not reset this oscillation
+mask. (map-op12)
+
+For collection goals asking for every/all items, operator DONE is refused while
+the page can scroll down or offers an enabled next-page link/button. JEV receives
+the reason and can continue; after three refusals another incomplete DONE ends
+blocked, never as a successful learning baseline. This frontier guard does not
+prove that records were accumulated. (map-op08, map-bjon)
+
+A row-not-actionable refusal before input dispatch makes the operator re-observe
+and re-decide for click, type_text, select and press. A planner continuation stops
+its remaining actions and returns to JEV. Dispatched input is never replayed.
+
+Invalid or empty JEV/text-helper provider responses are retried once within the
+original deadline. A valid helper `{"text":null}` still means a missing value;
+null provider message content is an invalid response. No token caps are added.
+
 ## Options
 
 | Option | Meaning |

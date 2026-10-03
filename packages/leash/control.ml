@@ -144,7 +144,14 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
               Tabs.structural_outline tabs ~tab:result.final.tab ~url:result.final.url
             with
             | Ok outline -> final_outline := outline
-            | Error _ -> ())
+            | Error error ->
+                Option.iter
+                  (fun logger ->
+                    Ox_observability.Logger.warn logger
+                      ~fields:
+                        [ ("error", Ox_observability.Logger.String error.P.message) ]
+                      "structural outline capture failed")
+                  logger)
         | _ -> ()
       in
       let keep outcome =
