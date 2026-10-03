@@ -340,7 +340,12 @@ type script = {
   args : arg_decl list;
 }
 
-type draft = { procedure : procedure; pages : page list; revision : string }
+type draft = {
+  procedure : procedure;
+  pages : page list;
+  scripts : script list;
+  revision : string;
+}
 
 type loaded = {
   file : string;
@@ -939,6 +944,66 @@ let resolve_scripts ~file ~dir (book : t) =
   in
   go [] [] decls
 
+(* map-op08: compiled scripts have a narrower contract than authored scripts.
+   Scan source conservatively, including comments and quoted property names; reject
+   escaped identifiers rather than accepting spelling tricks around the denylist. *)
+let check_compiled_script code =
+  let lower = String.lowercase_ascii code in
+  let forbidden =
+    [
+      "location";
+      "history";
+      "submit";
+      "requestsubmit";
+      "click";
+      "dispatchevent";
+      "focus";
+      "fetch";
+      "xmlhttprequest";
+      "websocket";
+      "sendbeacon";
+      "navigator";
+      "localstorage";
+      "sessionstorage";
+      "cookie";
+      "indexeddb";
+      "eval";
+      "constructor";
+    ]
+  in
+  let token name = Str.regexp ("\\b" ^ name ^ "\\b") in
+  let references re =
+    try
+      ignore (Str.search_forward re lower 0);
+      true
+    with Not_found -> false
+  in
+  let compact = Str.global_replace (Str.regexp "[ \t\r\n]+") "" lower in
+  let unsafe =
+    List.exists (fun name -> references (token name)) forbidden
+    || (try
+          ignore (Str.search_forward (token "Function") code 0);
+          true
+        with Not_found -> false)
+    || references (Str.regexp "\\bimport[ \t\r\n]*(")
+    || references (Str.regexp "\\bwindow[ \t\r\n]*\\.[ \t\r\n]*open\\b")
+    || String.contains code '\\'
+    || (try
+          ignore (Str.search_forward (Str.regexp "\\bvalue['\"]?\\]?[=+*/-]") compact 0);
+          true
+        with Not_found -> false)
+    ||
+      try
+        ignore (Str.search_forward (Str.regexp "window\\[['\"]open['\"]\\]") compact 0);
+        true
+      with Not_found -> false
+  in
+  if unsafe then
+    Error
+      "compiled script must be read-only: forbidden navigation, input, network, storage \
+       or dynamic code reference"
+  else Ok ()
+
 let validate ~file ~dir (book : t) =
   let ( let* ) = Result.bind in
   let refuse ?(procedure = "<playbook>") reason =
@@ -1066,6 +1131,32 @@ let validate ~file ~dir (book : t) =
     else Error (file ^ ": " ^ script_only_message)
   in
   let* scripts = resolve_scripts ~file ~dir book in
+  let* () =
+    List.fold_left
+      (fun result (proc : procedure) ->
+        let* () = result in
+        match proc.provenance with
+        | None -> Ok ()
+        | Some provenance ->
+            let names =
+              List.filter_map
+                (function Script step -> Some step.script | _ -> None)
+                proc.steps
+            in
+            if names <> [] && ((not provenance.repeatable) || provenance.gate <> "replay")
+            then
+              refuse ~procedure:proc.slug
+                "compiled scripts require a repeatable replay-gate procedure"
+            else
+              List.fold_left
+                (fun result name ->
+                  let* () = result in
+                  match List.find_opt (fun (s : script) -> s.name = name) scripts with
+                  | None -> refuse ~procedure:proc.slug ("unknown compiled script " ^ name)
+                  | Some script -> check_compiled_script script.code)
+                (Ok ()) names)
+      (Ok ()) book.procedures
+  in
   let* () =
     require (List.length scripts <= 246) "more than 246 scripts (255-option JEV ceiling)"
   in
@@ -1718,7 +1809,7 @@ let await ~now ~sleep ~observe ~score ?threshold ?timeout_s checks =
     (await_results ~now ~sleep ~observe ~score ?threshold ?timeout_s
        (List.map (fun checker -> ("", checker)) checks))
 
-let accept_unlocked ?revision ~caps path =
+let accept_unlocked ?revision ?(replayed_scripts = []) ~caps path =
   let ( let* ) = Result.bind in
   let* json =
     try Ok (Cap_stdlib.In_channel.with_open_bin ~caps path Yojson.Safe.from_channel) with
@@ -1734,12 +1825,15 @@ let accept_unlocked ?revision ~caps path =
           Error "stale draft revision; nothing was installed"
       | _ -> Ok ()
     in
-    (* extr-k40c: a discovered playbook was written by a model, and a script is never
-       model output: a proposal carries none, whatever it declares. *)
+    (* map-op08: manual acceptance cannot bypass successful script replay. *)
     let* () =
-      match draft.scripts with
-      | None | Some [] -> Ok ()
-      | Some _ -> Error (path ^ ": a proposed playbook cannot carry scripts")
+      let required = List.map (fun (s : script) -> s.name) discovered.scripts in
+      if List.for_all (fun name -> List.mem name replayed_scripts) required then Ok ()
+      else
+        Error
+          (path
+         ^ ": compiled scripts must run successfully through the replay gate before \
+            installation")
     in
     let* existing =
       match installed_for_site ~caps draft.site with
@@ -1774,7 +1868,22 @@ let accept_unlocked ?revision ~caps path =
                 else current @ [ proc ])
               book.playbook.procedures draft.procedures
           in
-          ({ book.playbook with pages; procedures }, book.file, book.dir, true)
+          let existing_scripts = Option.value ~default:[] book.playbook.scripts in
+          let scripts =
+            existing_scripts
+            @ List.filter
+                (fun (name, _) -> not (List.mem_assoc name existing_scripts))
+                (Option.value ~default:[] draft.scripts)
+          in
+          ( {
+              book.playbook with
+              pages;
+              procedures;
+              scripts = (if scripts = [] then None else Some scripts);
+            },
+            book.file,
+            book.dir,
+            true )
     in
     let* _ =
       validate ~file:destination
@@ -1842,7 +1951,7 @@ let accept_unlocked ?revision ~caps path =
         replaced;
       }
 
-let accept ?revision ?(consume = false) ~caps path =
+let accept ?revision ?(consume = false) ?(replayed_scripts = []) ~caps path =
   (* Reject model-authored scripts before creating any installed-map state. Read
      again under the lock so a replacement cannot evade the validated merge. *)
   let* () =
@@ -1851,7 +1960,11 @@ let accept ?revision ?(consume = false) ~caps path =
       | `Assoc fields when List.mem_assoc "procedures" fields -> (
           match List.assoc_opt "scripts" fields with
           | None | Some `Null -> Ok ()
-          | Some _ -> Error "draft playbooks cannot carry scripts")
+          | Some _ when replayed_scripts <> [] -> Ok ()
+          | Some _ ->
+              Error
+                "compiled scripts must run successfully through the replay gate before \
+                 installation")
       | _ -> Ok ()
     with
     | Sys_error why -> Error (path ^ ": " ^ why)
@@ -1861,7 +1974,7 @@ let accept ?revision ?(consume = false) ~caps path =
     if consume || Option.is_some revision then Some (Filename.dirname path) else None
   in
   with_installation_lock ?proposal ~caps (fun () ->
-      let* accepted = accept_unlocked ?revision ~caps path in
+      let* accepted = accept_unlocked ?revision ~replayed_scripts ~caps path in
       (if consume && path <> accepted.playbook then
          try Cap_sys.remove ~caps path with Sys_error _ -> ());
       Ok accepted)

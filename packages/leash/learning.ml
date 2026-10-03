@@ -329,6 +329,7 @@ let drafts t ~site ~kind =
                 {
                   procedure = d.proc;
                   pages = d.book.playbook.pages;
+                  scripts = d.book.scripts;
                   revision = B.draft_revision d.book.playbook;
                 }
         | _ -> None)
@@ -462,6 +463,10 @@ let trace_input trace =
   `Assoc
     [
       ("mission", `String trace.mission);
+      ( "structural_outline",
+        Option.fold ~none:`Null
+          ~some:(fun outline -> `String outline)
+          trace.structural_outline );
       ( "final_title",
         match trace.final with Some page -> `String page.title | None -> `Null );
       ("path", `List (List.map (fun s -> `String s) (matching_path trace)));
@@ -531,8 +536,10 @@ let validate_generalization book traces (proc : B.procedure) =
     List.filter_map (function B.Goal goal -> Some goal | _ -> None) proc.steps
   in
   let* () =
-    if List.length goals = List.length proc.steps then Ok ()
-    else Error "compiled steps must be human-language goal steps"
+    if List.for_all (function B.Goal _ | B.Script _ -> true | _ -> false) proc.steps
+    then Ok ()
+    else
+      Error "compiled steps must be human-language goals or read-only collection scripts"
   in
   let texts trace =
     List.filter_map (fun (s : Trace.trace_step) -> s.text) (steps trace)
@@ -712,17 +719,23 @@ let snapshot_agrees (book : B.t) (snapshot : P.snapshot) (proc : B.procedure) =
               kind))
     goals
 
-let persist ?revision t book proc =
-  B.propose ?revision ~caps:t.caps ~book:{ book with scripts = None } ~site:book.B.site
-    proc
+let persist ?revision t (book : B.t) (proc : B.procedure) =
+  let names =
+    List.filter_map (function B.Script s -> Some s.script | _ -> None) proc.steps
+  in
+  let scripts =
+    Option.map (List.filter (fun (name, _) -> List.mem name names)) book.B.scripts
+  in
+  let scripts = match scripts with Some [] -> None | other -> other in
+  B.propose ?revision ~caps:t.caps ~book:{ book with scripts } ~site:book.B.site proc
 
 let archive t draft =
   B.archive_proposal
     ~revision:(B.draft_revision draft.book.playbook)
     ~caps:t.caps draft.file
 
-let install ?revision t file slug (result : P.run_result) =
-  match B.accept ?revision ~consume:true ~caps:t.caps file with
+let install ?revision ?(replayed_scripts = []) t file slug (result : P.run_result) =
+  match B.accept ?revision ~consume:true ~replayed_scripts ~caps:t.caps file with
   | Error why ->
       t.warn why;
       result
@@ -845,7 +858,8 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
           (fun (trace : Trace.t) ->
             trace.outcome = "done" && trace.error_code = None
             && List.for_all (fun (s : Trace.trace_step) -> s.error = None) (steps trace)
-            && signature trace = O.signature operation
+            && (if repeatable then O.compatible (signature trace) (O.signature operation)
+                else signature trace = O.signature operation)
             &&
             match trace.page_kind_path with
             | entry :: _ -> entry = operation.entry_kind
@@ -895,6 +909,58 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
       match repair with Some old -> { proc with B.slug = old.slug } | None -> proc
     in
     let* book, mapping = Learning_pages.name ~known seed json in
+    let* book =
+      match get "scripts" json with
+      | `Null -> Ok book
+      | scripts ->
+          let fields =
+            match B.yojson_of_t book with `Assoc fields -> fields | _ -> assert false
+          in
+          let* declared =
+            B.t_of_yojson
+              (`Assoc (("scripts", scripts) :: List.remove_assoc "scripts" fields))
+          in
+          let names =
+            List.filter_map
+              (function B.Script s -> Some s.script | _ -> None)
+              proc.steps
+          in
+          if
+            (not repeatable)
+            || not
+                 (List.for_all
+                    (fun (trace : Trace.t) -> Structural_outline.collection trace.mission)
+                    traces)
+          then Error "compiled scripts require a repeatable collection procedure"
+          else if
+            not
+              (List.exists
+                 (fun (trace : Trace.t) -> trace.structural_outline <> None)
+                 traces)
+          then Error "compiled collection scripts require observed structural_outline"
+          else if
+            not
+              (List.for_all
+                 (fun (name, _) -> List.mem name names)
+                 (Option.value ~default:[] declared.scripts))
+          then
+            Error "every compiled script must be a procedure step and run through replay"
+          else if
+            List.exists
+              (fun (name, _) ->
+                List.mem_assoc name (Option.value ~default:[] book.scripts))
+              (Option.value ~default:[] declared.scripts)
+          then Error "compiled scripts must not replace existing script names"
+          else
+            Ok
+              {
+                declared with
+                scripts =
+                  Some
+                    (Option.value ~default:[] book.scripts
+                    @ Option.value ~default:[] declared.scripts);
+              }
+    in
     let* () =
       match operation with
       | Some op when name_kind mapping op.entry_kind = "consent" ->
@@ -920,7 +986,7 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
           then Ok ()
           else Error ("operation expect must check exit kind " ^ expected_kind)
     in
-    let* _ =
+    let* loaded =
       B.of_json ~file:"<learning>"
         (B.yojson_of_t
            {
@@ -931,6 +997,35 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
                     (fun (old : B.procedure) -> old.slug <> proc.slug)
                     book.procedures;
            })
+    in
+    let names =
+      List.filter_map (function B.Script s -> Some s.script | _ -> None) proc.steps
+    in
+    let scripts =
+      List.filter (fun (s : B.script) -> List.mem s.name names) loaded.scripts
+    in
+    let* () =
+      List.fold_left
+        (fun result (script : B.script) ->
+          let* () = result in
+          B.check_compiled_script script.code)
+        (Ok ()) scripts
+    in
+    let* () =
+      if
+        scripts = []
+        || repeatable
+           && List.for_all
+                (fun (trace : Trace.t) -> Structural_outline.collection trace.mission)
+                traces
+           && List.exists
+                (fun (trace : Trace.t) -> trace.structural_outline <> None)
+                traces
+      then Ok ()
+      else
+        Error
+          "compiled scripts require repeatable collection operations and observed \
+           structural_outline"
     in
     if
       (not repeatable) && repair = None
@@ -1084,10 +1179,21 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
                   done_
                   && attempted.outcome = "verified"
                   && List.for_all
+                       (fun (script : B.script) ->
+                         List.exists
+                           (fun (ran : P.run_script) ->
+                             ran.script = script.name && ran.error = None)
+                           attempted.scripts)
+                       draft.book.scripts
+                  && attempted.expectations <> []
+                  && List.for_all
                        (fun (e : P.run_expectation) -> e.passed)
                        attempted.expectations
                 then
-                  install ?revision:attempted.revision t draft.file draft.proc.slug result
+                  install ?revision:attempted.revision
+                    ~replayed_scripts:
+                      (List.map (fun (s : P.run_script) -> s.script) attempted.scripts)
+                    t draft.file draft.proc.slug result
                 else if attempted.outcome = "failed" then (
                   let tries = provenance.tries + 1 in
                   if provenance.repair then (
@@ -1130,7 +1236,7 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
                         let updated =
                           {
                             draft.book.playbook with
-                            B.scripts = None;
+                            B.scripts = draft.book.playbook.scripts;
                             procedures = [ proc ];
                           }
                         in
@@ -1254,7 +1360,11 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
               Option.fold ~none:false
                 ~some:(fun (p : B.provenance) ->
                   p.entry_kind = operation.entry_kind
-                  && p.signature = O.signature operation)
+                  &&
+                  if p.repeatable && operation.repeatable then
+                    p.exit_kind = operation.exit_kind
+                    && O.compatible p.signature (O.signature operation)
+                  else p.signature = O.signature operation)
                 proc.provenance
             in
             let covered =

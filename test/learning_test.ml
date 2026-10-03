@@ -70,6 +70,7 @@ let result ?(status = "done") ?(procedures = []) () =
       installed = [];
       collected = 0;
       data = `Null;
+      answer = None;
       model_calls = 0;
       model_cost = Some 0.;
       operator_steps = [];
@@ -141,6 +142,7 @@ let trace ?(kinds = [ "catalog" ]) ?(steps = [ step () ]) ?(outcome = "done") ti
       inferred_pages =
         [ { name = "catalog"; url_pattern = "https://example.com/catalog" } ];
       compiled = false;
+      structural_outline = None;
       procedures = [];
       steps;
       final = Some { url = "https://example.com/catalog"; title = "Catalog" };
@@ -246,6 +248,288 @@ let drafts learning = L.drafts learning ~site:"example.com" ~kind:(Some "catalog
 
 let trial learning ?attempts ?outcome slug =
   entry ~revision:(List.hd (drafts learning)).revision ?attempts ?outcome slug
+
+(* map-op08/map-op09: compiler source is observed, resolved and replay-gated. *)
+let collection_compile_replay () =
+  temp (fun root ->
+      let calls = ref 0 in
+      let proc =
+        {
+          (procedure ()) with
+          steps = (procedure ()).steps @ [ B.Script { script = "collect"; args = None } ];
+        }
+      in
+      let source =
+        "/** returns: [{\"title\":\"string\",\"price\":\"string\"}] */\n\
+         return Array.from(document.querySelectorAll('article.product_pod')).map(e => \
+         ({title: e.querySelector('h3 a').textContent, price: \
+         e.querySelector('.price_color').textContent}));"
+      in
+      let reply =
+        match answer proc with
+        | `Assoc fields ->
+            `Assoc
+              (( "scripts",
+                 `Assoc
+                   [
+                     ( "collect",
+                       `Assoc
+                         [
+                           ("source", `String source);
+                           ( "description",
+                             `String "Collect every title and price on the catalog page."
+                           );
+                           ("pages", `List [ `String "catalog" ]);
+                         ] );
+                   ] )
+              :: fields)
+        | _ -> assert false
+      in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun input ->
+            incr calls;
+            let evidence = Yojson.Safe.Util.(input |> member "traces" |> to_list) in
+            bool "map-op09 compiler receives final-page skeleton"
+              (List.for_all
+                 (fun t ->
+                   Yojson.Safe.Util.(t |> member "structural_outline")
+                   = `String "article.product_pod\n  h3\n    a\n  p.price_color\n")
+                 evidence);
+            Ok reply)
+          ()
+      in
+      let store = store root in
+      let trace n =
+        {
+          (trace n) with
+          mission = "Collect every book title and price";
+          structural_outline = Some "article.product_pod\n  h3\n    a\n  p.price_color\n";
+        }
+      in
+      ignore (after learning store (trace 1.) (result ()));
+      ignore (after learning store (trace 2.) (result ()));
+      Alcotest.(check int) "map-op08 one compilation" 1 !calls;
+      let draft = List.hd (drafts learning) in
+      Alcotest.(check int)
+        "map-op08 compiled script survives draft decoding" 1 (List.length draft.scripts);
+      let file = List.hd (proposal_files ()) in
+      bool "map-op08 manual acceptance cannot bypass script replay"
+        (Result.is_error (B.accept ~caps file));
+      ignore
+        (after learning store (trace 3.)
+           (result ~procedures:[ trial learning "draft:inspect" ] ()));
+      bool "map-op08 unexecuted script blocks automatic installation"
+        (installed_slugs () = []);
+      let ran =
+        P.
+          {
+            script = "collect";
+            url = (snap ()).url;
+            records = 1;
+            bytes = 30;
+            elapsed_ms = 1;
+            error = None;
+          }
+      in
+      let failed = { ran with error = Some "script-failed" } in
+      let attempted = { (trial learning "draft:inspect") with scripts = [ failed ] } in
+      ignore (after learning store (trace 4.) (result ~procedures:[ attempted ] ()));
+      bool "map-op08 failed script blocks automatic installation" (installed_slugs () = []);
+      let attempted =
+        { (trial learning "draft:inspect") with scripts = [ ran ]; expectations = [] }
+      in
+      ignore (after learning store (trace 5.) (result ~procedures:[ attempted ] ()));
+      bool "map-op08 empty expectation proof cannot install" (installed_slugs () = []);
+      let attempted =
+        {
+          (trial learning "draft:inspect") with
+          scripts = [ ran ];
+          expectations = [ { (List.hd (entry "x").expectations) with passed = false } ];
+        }
+      in
+      ignore (after learning store (trace 6.) (result ~procedures:[ attempted ] ()));
+      bool "map-op08 failed check cannot install" (installed_slugs () = []);
+      let attempted =
+        {
+          (trial learning "draft:inspect") with
+          scripts = [ ran ];
+          revision = Some "stale";
+        }
+      in
+      ignore (after learning store (trace 7.) (result ~procedures:[ attempted ] ()));
+      bool "map-op08 stale draft revision cannot install" (installed_slugs () = []);
+      let attempted = { (trial learning "draft:other") with scripts = [ ran ] } in
+      ignore (after learning store (trace 8.) (result ~procedures:[ attempted ] ()));
+      bool "map-op08 another selected draft cannot install" (installed_slugs () = []);
+      ignore (after learning store (trace 9.) (result ()));
+      bool "map-op08 JEV declining the draft cannot install" (installed_slugs () = []);
+      let attempted = { (trial learning "draft:inspect") with scripts = [ ran ] } in
+      let installed =
+        after learning store (trace 10.) (result ~procedures:[ attempted ] ())
+      in
+      bool "map-op08 selected draft, script and checks install"
+        (installed_slugs () = [ "inspect" ]);
+      let book = List.hd (ok (B.list ~caps ())) in
+      bool "map-op08 installed script resolves and retains returns"
+        (B.script_named book "collect" <> None))
+
+let collection_compiler_refusals () =
+  let valid = "/** returns: [{\"title\":\"string\"}] */ return [];" in
+  List.iter
+    (fun (name, source, collection, outline, non_repeatable, referenced) ->
+      temp (fun root ->
+          let proc =
+            {
+              (procedure ()) with
+              steps =
+                ((procedure ()).steps
+                @
+                if referenced then [ B.Script { script = "collect"; args = None } ]
+                else []);
+            }
+          in
+          let reply =
+            match answer proc with
+            | `Assoc fields ->
+                `Assoc
+                  (( "scripts",
+                     `Assoc
+                       [
+                         ( "collect",
+                           `Assoc
+                             [
+                               ("source", `String source);
+                               ("description", `String "Collect catalog records.");
+                             ] );
+                       ] )
+                  :: fields)
+            | _ -> assert false
+          in
+          let learning =
+            L.create ~sw:(learning_sw ()) ~caps
+              ~config:{ (configure C.Learning_mode.Draft) with successes = 1 }
+              ~planner:(fun _ -> Ok reply)
+              ()
+          in
+          let trace =
+            {
+              (trace 1.) with
+              mission = (if collection then "Collect every title" else "Open the catalog");
+              structural_outline =
+                (if outline then Some "article.product_pod\n" else None);
+              steps = [ { (step ()) with non_repeatable } ];
+            }
+          in
+          ignore (after learning (store root) trace (result ()));
+          bool ("map-op08 rejects " ^ name) (drafts learning = [])))
+    [
+      ("missing returns", "return [];", true, true, false, true);
+      ("network source", valid ^ " fetch('/api');", true, true, false, true);
+      ("non-repeatable script", valid, true, true, true, true);
+      ("unobserved outline", valid, true, false, false, true);
+      ("non-collection script", valid, false, true, false, true);
+      ("unexecuted declaration", valid, true, true, false, false);
+    ]
+
+let collection_keeps_authored_scripts () =
+  temp (fun root ->
+      let existing_source =
+        "/** returns: [{\"title\":\"string\"}] */ return await fetch('/author-api');"
+      in
+      let authored =
+        B.t_of_yojson
+          (match B.yojson_of_t (book (procedure ~slug:"keep" ())) with
+          | `Assoc fields ->
+              `Assoc
+                (( "scripts",
+                   `Assoc
+                     [
+                       ( "authored",
+                         `Assoc
+                           [
+                             ("source", `String existing_source);
+                             ("description", `String "Authored endpoint reader.");
+                           ] );
+                     ] )
+                :: List.remove_assoc "scripts" fields)
+          | _ -> assert false)
+        |> ok
+      in
+      let dir = Filename.concat (B.directory ~caps ()) "example.com" in
+      ok (Leash.Config.ensure_dir ~caps dir);
+      let out = open_out (Filename.concat dir "playbook.json") in
+      Fun.protect
+        ~finally:(fun () -> close_out out)
+        (fun () -> Yojson.Safe.to_channel out (B.yojson_of_t authored));
+      let proc =
+        {
+          (procedure ()) with
+          steps = (procedure ()).steps @ [ B.Script { script = "collect"; args = None } ];
+        }
+      in
+      let reply =
+        match answer proc with
+        | `Assoc fields ->
+            `Assoc
+              (( "scripts",
+                 `Assoc
+                   [
+                     ( "collect",
+                       `Assoc
+                         [
+                           ( "source",
+                             `String "/** returns: [{\"title\":\"string\"}] */ return [];"
+                           );
+                           ("description", `String "Collect catalog records.");
+                         ] );
+                   ] )
+              :: fields)
+        | _ -> assert false
+      in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:{ (configure C.Learning_mode.Auto) with successes = 1 }
+          ~planner:(fun _ -> Ok reply)
+          ()
+      in
+      let trace n =
+        {
+          (trace n) with
+          mission = "Collect every title";
+          structural_outline = Some "article.product_pod\n";
+        }
+      in
+      let store = store root in
+      ignore (after learning store (trace 1.) (result ()));
+      let draft = List.hd (drafts learning) in
+      bool "map-op08 unrelated authored source does not block collection compile"
+        (List.map (fun (s : B.script) -> s.name) draft.scripts = [ "collect" ]);
+      let attempted =
+        {
+          (trial learning "draft:inspect") with
+          scripts =
+            [
+              P.
+                {
+                  script = "collect";
+                  url = (snap ()).url;
+                  records = 0;
+                  bytes = 2;
+                  elapsed_ms = 1;
+                  error = None;
+                };
+            ];
+        }
+      in
+      ignore (after learning store (trace 2.) (result ~procedures:[ attempted ] ()));
+      let installed = List.hd (ok (B.list ~caps ())) in
+      bool "map-op08 authored declaration retained on merge"
+        (Option.map (fun (s : B.script) -> s.code) (B.script_named installed "authored")
+        = Some existing_source);
+      bool "map-op08 new script installs beside authored one"
+        (B.script_named installed "collect" <> None))
 
 let defaults () =
   Alcotest.(check int) "map-w62c successes" 2 C.default.learning.successes;
@@ -1473,7 +1757,7 @@ let result_expectation () =
         && contains "destination prices are shown" !retry_reason);
       let request = Option.get !first in
       Alcotest.(check string)
-        "map-bjon compiler prompt" "map-4"
+        "map-bjon compiler prompt" "map-5"
         (match Yojson.Safe.Util.member "prompt_version" request with
         | `String version -> version
         | _ -> "");
@@ -1566,7 +1850,7 @@ let google_operation_protocol () =
       in
       let store = store root in
       let trace n =
-        let trace = google_fixture ("google2-maps-" ^ n) in
+        let trace = google_fixture ("google3-maps-" ^ n) in
         let text =
           List.find_map (fun (step : Trace.trace_step) -> step.text) trace.steps
           |> Option.get
@@ -1879,6 +2163,11 @@ let () =
                     ("map-op06 real Explore one-goal rejection", flights_one_goal_protocol);
                     ("map-cnee covered by verified use", covered_by_use);
                     ("draft compile", draft_compile);
+                    ( "map-op08 map-op09 collection compile replay",
+                      collection_compile_replay );
+                    ("map-op08 compiler refusal cases", collection_compiler_refusals);
+                    ( "map-op08 preserve authored scripts",
+                      collection_keeps_authored_scripts );
                     ("validation retry", validation);
                     ("map-bjon result expectation", result_expectation);
                     ("parameterization", parameters);

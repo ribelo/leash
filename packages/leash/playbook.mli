@@ -143,7 +143,12 @@ type script = private {
     function that hands script text to the browser, takes one. Model output can therefore
     never become a script. *)
 
-type draft = { procedure : procedure; pages : page list; revision : string }
+type draft = {
+  procedure : procedure;
+  pages : page list;
+  scripts : script list;
+  revision : string;
+}
 (** L53 map-b3kk: procedure and executable page vocabulary from the same immutable
     full-book revision, captured together before the selection question. *)
 
@@ -224,6 +229,9 @@ val load : caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) resul
     file, and a directory that holds only a [playbook.yaml], are refused with a message
     that says what a playbook is. *)
 
+val check_compiled_script : string -> (unit, string) result
+(** map-op08: conservative source-reference refusal for compiled read-only scripts. *)
+
 val script_named : loaded -> string -> script option
 
 val offered_scripts : loaded -> url:string -> text:string -> script list
@@ -302,6 +310,7 @@ val archive_proposal :
 val accept :
   ?revision:string ->
   ?consume:bool ->
+  ?replayed_scripts:string list ->
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
   string ->
   (accepted, string) result

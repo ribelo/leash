@@ -2545,7 +2545,9 @@ let immutable_draft_selection () =
   in
   List.iter
     (fun dry_run ->
-      let current = ref B.{ procedure = original; pages; revision = "old-revision" } in
+      let current =
+        ref B.{ procedure = original; pages; scripts = []; revision = "old-revision" }
+      in
       let h =
         harness ~procs:[ "draft:step"; "DONE" ]
           ~drives:[ drive ~url:destination () ]
@@ -2570,6 +2572,7 @@ let immutable_draft_selection () =
                            page ~url_pattern:"https://site-a.example/other-books/*"
                              "books-slug";
                          ];
+                       scripts = [];
                        revision = "new-revision";
                      });
               base.choose q);
@@ -2618,11 +2621,182 @@ let immutable_draft_selection () =
              ~text:"")))
     [ true; false ]
 
+(* map-op10: done is terminal only after live expectations; notify is not. *)
+let planner_done () =
+  let evidence = "the page shows Tower of London Cafe" in
+  let answer = "Tower of London Cafe — 1 Tower Hill, London" in
+  List.iter
+    (fun passed ->
+      let h =
+        harness ~procs:[ "DONE" ]
+          ~plans:
+            [
+              R.
+                {
+                  answer = Done { result = answer; evidence = [ evidence ] };
+                  expect = [];
+                  usage = None;
+                };
+              R.{ answer = Fail "evidence did not hold"; expect = []; usage = None };
+            ]
+          ~verifies:[ [ expectation ~passed evidence "text" ] ]
+          ()
+      in
+      let result = ran (run ~installed:[ site_a ] h (args ~mission:"name a cafe" ())) in
+      check_status "map-op10 verified result only"
+        (if passed then "done" else "blocked")
+        result;
+      Alcotest.(check (option string))
+        "map-op10 answer only when verified"
+        (if passed then Some answer else None)
+        result.answer;
+      Alcotest.(check int)
+        "map-op10 refusal consumes a turn"
+        (if passed then 1 else 2)
+        (List.length result.planner_turns);
+      Alcotest.(check int)
+        "map-op10 live verification used" 1
+        (List.length h.verification_checks);
+      Alcotest.(check bool)
+        "map-op10 uses expectation resolver" true
+        (List.mem
+           (evidence, B.Text "tower of london cafe")
+           (List.hd h.verification_checks)))
+    [ true; false ];
+  let h =
+    harness ~procs:[ "DONE" ]
+      ~plans:
+        [
+          R.{ answer = Notify "Still checking"; expect = []; usage = None };
+          R.
+            {
+              answer = Done { result = answer; evidence = [ evidence ] };
+              expect = [];
+              usage = None;
+            };
+        ]
+      ~verifies:[ [ expectation evidence "text" ] ]
+      ~drives:[ drive ~status:"blocked" () ]
+      ()
+  in
+  let sent = ref [] in
+  let result =
+    ran
+      (R.loop ~handler:(handler h)
+         ~now:(fun () -> h.clock)
+         ~installed:[ site_a ]
+         ~notify:(fun message ->
+           sent := message :: !sent;
+           Ok ())
+         (args ~mission:"name a cafe" ()))
+  in
+  check_status "map-op10 notify continues" "done" result;
+  Alcotest.(check int)
+    "map-op10 notify needs another planner turn" 2
+    (List.length result.planner_turns);
+  Alcotest.(check (list string)) "map-op10 notification sent" [ "Still checking" ] !sent;
+  let caller = "the page shows caller requirement" in
+  let h =
+    harness ~procs:[ "DONE" ]
+      ~plans:
+        [
+          R.
+            {
+              answer = Done { result = answer; evidence = [ evidence ] };
+              expect = [];
+              usage = None;
+            };
+          R.{ answer = Fail "caller check failed"; expect = []; usage = None };
+        ]
+      ~verifies:
+        [
+          [ expectation ~passed:false caller "text" ];
+          [ expectation evidence "text"; expectation ~passed:false caller "text" ];
+        ]
+      ()
+  in
+  let result = ran (run ~installed:[ site_a ] h (args ~expect:[ caller ] ())) in
+  check_status "map-op10 caller expectation still gates answer" "blocked" result;
+  Alcotest.(check (option string))
+    "map-op10 caller failure withholds answer" None result.answer;
+  Alcotest.(check bool)
+    "map-op10 done verifies evidence and caller requirement" true
+    (List.mem (caller, B.Text "caller requirement") (List.nth h.verification_checks 1))
+
+(* map-op08: a selected draft owns its executable scripts in both trial lanes. *)
+let draft_script_execution () =
+  List.iter
+    (fun installed_script ->
+      List.iter
+        (fun dry_run ->
+          let original = script_book () in
+          let declarations =
+            List.map
+              (fun (name, (decl : B.script_decl)) ->
+                (name, { decl with source = Some "return [{title: 'draft'}]" }))
+              (Option.get original.playbook.scripts)
+          in
+          let revised = { original.playbook with scripts = Some declarations } in
+          let validated = ok (B.of_json ~file:"draft.json" (B.yojson_of_t revised)) in
+          let script = List.hd validated.B.scripts in
+          let installed =
+            if installed_script then original else { original with B.scripts = [] }
+          in
+          let proc = List.hd original.playbook.procedures in
+          let draft =
+            B.
+              {
+                procedure = proc;
+                pages = original.playbook.pages;
+                scripts = [ script ];
+                revision = "script-draft";
+              }
+          in
+          let h = harness ~procs:[ "draft:collect"; "DONE" ] () in
+          h.scripts <-
+            [
+              Ok
+                (R.Collected
+                   {
+                     value = `List [ `Assoc [ ("title", `String "draft") ] ];
+                     records = 1;
+                     bytes = 20;
+                     elapsed_ms = 1;
+                   });
+            ];
+          let result =
+            ran
+              (R.loop ~handler:(handler h)
+                 ~now:(fun () -> h.clock)
+                 ~installed:[ installed ]
+                 ~drafts:(fun ~site:_ ~kind:_ -> [ draft ])
+                 (args ~mission:"collect titles" ~dry_run ()))
+          in
+          if dry_run then
+            Alcotest.(check string)
+              "map-op08 draft script trial planned" "planned"
+              (List.hd result.procedures).outcome
+          else check_status "map-op08 draft script trial" "done" result;
+          Alcotest.(check int)
+            "map-op08 script only executes in normal lane"
+            (if dry_run then 0 else 1)
+            (List.length h.script_calls);
+          if not dry_run then
+            let _, code, _ = List.hd h.script_calls in
+            Alcotest.(check string)
+              "map-op08 draft script wins same name" script.code code)
+        [ true; false ])
+    [ true; false ]
+
 let () =
   Alcotest.run "L31 run"
     [
       ( "L53",
         [
+          Alcotest.test_case "map-op10 verified planner done and notify" `Quick
+            planner_done;
+          Alcotest.test_case "map-op08 draft scripts normal and dry-run" `Quick
+            draft_script_execution;
           Alcotest.test_case "map-yzqp map-itbt unsafe composition" `Quick
             nonrepeatable_composition;
           Alcotest.test_case "map-yzqp map-itbt nonrepeatable cannot recover" `Quick

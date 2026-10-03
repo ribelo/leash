@@ -966,6 +966,238 @@ let scoped_action_risk () =
   check_case ~target:"Search" ~body:"Send Product Feedback and delete account"
     ~ambient:"Send Product Feedback" true
 
+(* map-op11: exact real consent labels from Maps/Flights evidence; mission
+   wording cannot opt into acceptance. Planner and operator share this predicate. *)
+let real_run_actions () = Yojson.Safe.from_file "fixtures/map-run-actions.json"
+
+let consent_guard () =
+  let real_accept =
+    real_run_actions ()
+    |> Yojson.Safe.Util.member "consent_label"
+    |> Yojson.Safe.Util.to_string
+  in
+  let button index name =
+    P.{ index; role = "button"; name; value = None; state = None; options = None }
+  in
+  List.iter
+    (fun (accept, reject) ->
+      let page = { (snapshot ()) with P.rows = [ button 1 accept; button 2 reject ] } in
+      Alcotest.(check bool)
+        "map-op11 accept-all refused" true
+        (Result.is_error (P.check_consent_click page ~index:1));
+      Alcotest.(check bool)
+        "map-op11 reject-all allowed" true
+        (Result.is_ok (P.check_consent_click page ~index:2));
+      let click =
+        P.Click
+          P.
+            {
+              tab = handle;
+              snapshot = id;
+              index = 1;
+              snap = None;
+              match_ = None;
+              limit = None;
+            }
+      in
+      Alcotest.(check bool)
+        "map-op11 planner cannot bypass" true
+        (Result.is_error (P.check_planner_action page click));
+      Alcotest.(check bool)
+        "map-op11 page without alternative unaffected" true
+        (Result.is_ok
+           (P.check_consent_click { page with rows = [ button 1 accept ] } ~index:1)))
+    [
+      (real_accept, "Reject all");
+      ("Zaakceptuj wszystko", "Odrzuć wszystko");
+      ("Agree to all", "Necessary only");
+      ("Allow all", "Decline all");
+    ]
+
+(* map-op11: a dispatch refusal survives refresh as JEV context, with decline
+   still offered and acceptance masked. This is the guard/drive seam. *)
+let consent_dispatch () =
+  let button index name =
+    P.{ index; role = "button"; name; value = None; state = None; options = None }
+  in
+  let page =
+    observation ~rows:[ button 1 "Accept all"; button 2 "Reject all" ] "consent"
+  in
+  let calls = ref 0 in
+  let decide request =
+    incr calls;
+    if !calls = 2 then (
+      let encoded = Yojson.Safe.to_string (J.body request) in
+      Alcotest.(check bool)
+        "map-op11 guard reason returned to JEV" true
+        (contains encoded "consent guard");
+      Alcotest.(check bool)
+        "map-op11 default decline explanation returned" true
+        (contains encoded "always decline"));
+    Ok
+      (if !calls = 1 then decision ~index:1 "click"
+       else if !calls = 2 then decision ~index:2 "click"
+       else decision "done")
+  in
+  let clicked = ref [] in
+  let act page choice ~text:_ =
+    let index = Option.get choice.J.index in
+    match P.check_consent_click page.D.snapshot ~index with
+    | Error message ->
+        Error
+          (P.make_error
+             (Result.get_ok (P.Error_code.of_string "row-not-actionable"))
+             ~message)
+    | Ok () ->
+        clicked := index :: !clicked;
+        Ok
+          P.
+            {
+              tab = handle;
+              url = "https://example.org";
+              title = "declined";
+              snapshot = None;
+              dialog = None;
+              popups = [];
+              via = None;
+            }
+  in
+  let result =
+    D.run
+      ~handler:
+        D.{ observe = (fun () -> Ok page); decide; text_value = (fun _ -> Ok None); act }
+      ~now:(fun () -> 0.)
+      ~model:"test" ~args:(args ~max_steps:3 ()) ~dry_run:false ()
+  in
+  Alcotest.(check bool)
+    "map-op11 rejection keeps mission running" true (Result.is_ok result);
+  Alcotest.(check (list int)) "map-op11 only rejection dispatched" [ 2 ] !clicked
+
+(* map-op12: predictions are the real protocol request, not a mock counter.
+   The Maps trace repeats Rating with an unchanged URL; only that click is masked.
+   Row ids change during refresh; a new page re-enables the action. *)
+let unchanged_action_mask () =
+  let fixture = real_run_actions () |> Yojson.Safe.Util.member "repeated_action" in
+  let rating_label =
+    fixture
+    |> Yojson.Safe.Util.member "target"
+    |> Yojson.Safe.Util.member "label"
+    |> Yojson.Safe.Util.to_string
+  in
+  Alcotest.(check bool)
+    "map-op12 fixture captures repeated unchanged action" true
+    (fixture
+    |> Yojson.Safe.Util.member "unchanged_url_repetitions"
+    |> Yojson.Safe.Util.to_int > 2);
+  let button index name =
+    P.{ index; role = "button"; name; value = None; state = None; options = None }
+  in
+  let page version =
+    observation
+      ~rows:
+        [
+          button (version + 1) rating_label;
+          button (version + 2) "Open place";
+          button (version + 3) rating_label;
+        ]
+      (if version = 3 then "place changed" else "same results")
+  in
+  let observed = ref 0 and called = ref 0 and input = ref 0 in
+  let observe () =
+    let n = min !observed 3 in
+    incr observed;
+    Ok (page n)
+  in
+  let decide request =
+    let n = !called in
+    incr called;
+    let open Yojson.Safe.Util in
+    let body_json = J.body request in
+    let elements = body_json |> member "state" |> member "elements" |> to_list in
+    let rating =
+      List.find (fun e -> e |> member "label" |> to_string = "Rating") elements
+    in
+    let open_place =
+      List.find (fun e -> e |> member "label" |> to_string = "Open place") elements
+    in
+    let offered e = e |> member "operations" |> to_list |> List.mem (`String "CLICK") in
+    let expected = n = 0 || n = 3 in
+    Alcotest.(check bool) "map-op12 exact Rating click offer" expected (offered rating);
+    Alcotest.(check bool)
+      "map-op12 other target remains offered" true (offered open_place);
+    let duplicate_rating =
+      List.find
+        (fun e ->
+          e |> member "label" |> to_string = "Rating"
+          && e |> member "index" |> to_string <> (rating |> member "index" |> to_string))
+        elements
+    in
+    Alcotest.(check bool)
+      "map-op12 duplicate label is a different target" true (offered duplicate_rating);
+    let questions = body_json |> member "questions" in
+    let operation_keys =
+      questions |> member "operation" |> member "criteria" |> to_assoc |> List.map fst
+    in
+    let click_keys =
+      questions |> member "click_target" |> member "criteria" |> to_assoc |> List.map fst
+    in
+    let head choice keys =
+      `Assoc
+        [
+          ("choice", `String choice);
+          ("confidence", `Float 1.);
+          ( "probabilities",
+            `Assoc
+              (List.map (fun key -> (key, `Float (if key = choice then 1. else 0.))) keys)
+          );
+        ]
+    in
+    let rating_key = rating |> member "index" |> to_string in
+    let refused =
+      J.decide request
+        ~answers:
+          (`Assoc
+             [
+               ("operation", head "CLICK" operation_keys);
+               ("click_target", head rating_key click_keys);
+             ])
+    in
+    Alcotest.(check bool)
+      "map-op12 real decoder refuses masked prediction" (not expected)
+      (Result.is_error refused);
+    let body = Yojson.Safe.to_string (J.body request) in
+    Alcotest.(check bool)
+      "map-op12 encoded request keeps alternative" true (contains body "Open place");
+    let row = min (!observed - 1) 3 + 1 in
+    Ok
+      (if n = 0 || n = 3 then decision ~index:row "click"
+       else if n = 2 then decision ~index:(row + 1) "click"
+       else if n >= 4 then decision "done"
+       else decision "wait")
+  in
+  let act _ _ ~text:_ =
+    incr input;
+    Ok
+      P.
+        {
+          tab = handle;
+          url = "https://example.org";
+          title = "same";
+          snapshot = None;
+          dialog = None;
+          popups = [];
+          via = None;
+        }
+  in
+  let result =
+    D.run
+      ~handler:D.{ observe; decide; text_value = (fun _ -> Ok None); act }
+      ~now:(fun () -> 0.)
+      ~model:"test" ~args:(args ~max_steps:4 ()) ~dry_run:false ()
+  in
+  Alcotest.(check bool)
+    "map-op12 masked loop completes within cap" true (Result.is_ok result)
+
 let () =
   Alcotest.run "drive"
     [
@@ -986,6 +1218,9 @@ let () =
             ("done", done_path);
             ("pbk-eyya goal until", until_reached);
             ("daily-9ggi blocked reasons", blocked_reasons);
+            ("map-op11 consent default decline", consent_guard);
+            ("map-op11 consent refusal context", consent_dispatch);
+            ("map-op12 unchanged action request masks", unchanged_action_mask);
             ("stall", stall);
             ("cap", cap);
             ("deadline", deadline);

@@ -615,7 +615,7 @@ let layout () =
             (contains "playbooks are directories" why))
 
 let proposals_carry_no_scripts () =
-  (* extr-k40c: a proposal is written by a model; it can never bring a script in. *)
+  (* map-op08 amends extr-k40c: compiler scripts cannot bypass successful replay. *)
   let root = temp_dir () in
   Fun.protect
     ~finally:(fun () -> rm_rf root)
@@ -630,8 +630,7 @@ let proposals_carry_no_scripts () =
       | Ok _ -> Alcotest.fail "extr-k40c a proposal with scripts was merged"
       | Error why ->
           Alcotest.(check bool)
-            ("extr-k40c refused: " ^ why) true
-            (contains "cannot carry scripts" why))
+            ("extr-k40c refused: " ^ why) true (contains "replay gate" why))
 
 (* extr-zdst extr-8o1h: the shape language and its validation, as a table. *)
 let shape_of text =

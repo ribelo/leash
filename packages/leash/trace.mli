@@ -49,6 +49,8 @@ type t = {
   compiled : bool; [@json.default false]
   procedures : trace_procedure list;
   steps : trace_step list;
+  structural_outline : string option; [@json.default None]
+      (** map-op09: at most 4096 bytes of tag/class skeleton, never page text. *)
   final : trace_page option; [@json.null]
   error_code : string option;
 }

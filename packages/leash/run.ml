@@ -81,7 +81,7 @@ type plan_trigger = Blocked | Failed | Arguments | Challenge
     stopped — the procedure level answered BLOCKED, a procedure failed its expectations
     twice, or an argument the mission does not supply could not be filled. *)
 
-type plan_answer = Procedure of Playbook.procedure | Continue_actions of P.planner_action list | Notify of string | Handoff of string | Fail of string
+type plan_answer = Procedure of Playbook.procedure | Continue_actions of P.planner_action list | Notify of string | Done of { result : string; evidence : string list } | Handoff of string | Fail of string
 
 type plan_reply = {
   answer : plan_answer;
@@ -285,6 +285,7 @@ let answer_name = function
   | Procedure _ -> "procedure"
   | Continue_actions _ -> "continue"
   | Notify _ -> "notify"
+  | Done _ -> "done"
   | Handoff _ -> "handoff"
   | Fail _ -> "fail"
 
@@ -349,7 +350,7 @@ type state = {
   observation : observation;
 }
 
-let finish (st : state) status ?reason () =
+let finish (st : state) status ?answer ?reason () =
   let scripts =
     List.concat_map (fun (entry : P.run_procedure) -> entry.P.scripts) st.trace
     |> List.fold_left (fun acc (entry : P.run_script) ->
@@ -364,6 +365,7 @@ let finish (st : state) status ?reason () =
       unattended = List.rev st.unattended;
       detail = None;
       status;
+      answer;
       site = Option.map (fun (book : Playbook.loaded) -> book.Playbook.playbook.Playbook.site) st.book;
       procedures = List.rev st.trace;
       mission_expectations = st.mission_checks;
@@ -690,7 +692,12 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
           (fun (page : Playbook.page) -> not (List.exists
             (fun (old : Playbook.page) -> old.name = page.name) book.playbook.pages))
           draft.pages in
-        { book with playbook = { book.playbook with pages } }
+        (* map-op08: execute scripts from the exact trial revision, including
+           dry runs. Draft names shadow installed scripts for this trial only. *)
+        let scripts = draft.scripts @ List.filter (fun (script : Playbook.script) ->
+          not (List.exists (fun (new_script : Playbook.script) ->
+            new_script.name = script.name) draft.scripts)) book.scripts in
+        { book with playbook = { book.playbook with pages }; scripts }
   in
 
   (* run-qq3o: every turn, selectable procedures plus DONE and BLOCKED. *)
@@ -884,6 +891,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                   (match reply.answer with
                   | Procedure _ | Continue_actions _ -> None
                   | Notify message -> Some message
+                   | Done { result; _ } -> Some result
                   | Handoff why -> Some why
                   | Fail why -> Some why);
                 usage = reply.usage;
@@ -901,6 +909,46 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
           in
           (match reply.answer with
           | Notify message -> single_goal (send st message)
+           | Done { result; evidence } -> (
+               (* map-op10: a conclusion needs live evidence; refusal consumes a turn. *)
+               let refuse st why =
+                 let plans = match st.plans with
+                   | turn :: rest -> { turn with P.reason = Some why } :: rest
+                   | [] -> [] in
+                 let st = { st with plans } in
+                 if trigger = Challenge then
+                   challenge_route st (Option.value ~default:st.observation.url !active_challenge)
+                 else planner st ~trigger:Blocked ~reason:why in
+               let pages = match st.book with
+                 | Some book -> book.Playbook.playbook.pages | None -> [] in
+               let sentences = List.sort_uniq String.compare (evidence @ st.mission_expect @ args.expect) in
+               let checks = List.fold_left (fun acc sentence ->
+                 Result.bind acc (fun acc ->
+                   let sentence = Playbook.substitute st.known sentence in
+                   Result.map (fun checker -> (sentence, checker) :: acc)
+                     (Playbook.resolve pages sentence))) (Ok []) sentences in
+               if trigger = Challenge then
+                 refuse st "planner done refused: challenge requires human resolution"
+               else if String.trim result = "" || String.length result > 1024
+                 || String.contains result '\n' || String.contains result '\r'
+                 || List.exists (fun s -> String.trim s = "") evidence then
+                 refuse st "planner done refused: malformed result or evidence"
+               else if st.collection_pending then
+                 refuse st "planner done refused: collection is incomplete"
+               else if evidence = [] then
+                 refuse st "planner done refused: evidence is empty"
+               else match checks with
+               | Error why -> refuse st ("planner done refused: " ^ why)
+               | Ok checks -> (match verify t ~pages ~checks:(List.rev checks) ~timeout_s:5 with
+                   | Error error -> Error (with_trace st error)
+                   | Ok (results, observation) ->
+                       let st = { st with observation; mission_checks = results; mission_expect = sentences } in
+                       if observation.dialog <> None then
+                         Ok (Finish (finish st (status "error")
+                           ~reason:(dialog_reason (Option.get observation.dialog)) ()))
+                       else if List.for_all (fun (r : P.run_expectation) -> r.passed) results then
+                         Ok (Finish (finish st (status "done") ~answer:result ()))
+                       else refuse st ("planner done refused: " ^ failures results)))
           | Continue_actions actions ->
               let original = request.snapshot in
               let checked = if List.length actions > planner_actions then
@@ -951,7 +999,9 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                             let started = now () in
                             let outcome = match protected with
                               | Some kind -> Error (invalid ("continue stopped before " ^ kind ^ " action"))
-                              | None -> planner_action action in
+                              | None -> (match P.check_planner_action st.observation.snapshot action with
+                                   | Error why -> Error (invalid why)
+                                   | Ok () -> planner_action action) in
                             let after = match outcome with
                               | Ok (result : P.action_result) -> P.{url = result.url; title = result.title}
                               | Error _ -> P.{url = st.observation.url; title = st.observation.title} in

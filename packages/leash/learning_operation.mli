@@ -5,6 +5,8 @@ type t = {
   exit : Trace.trace_page;
   steps : Trace.trace_step list;
   arguments : (int * string list) list;
+  values : string list;
+  repeatable : bool;
 }
 (** map-op01 map-op03: a maximal run of actions on one entry page kind. The transition
     action belongs to the departing kind; DONE is result evidence. No page text, browser,
@@ -25,7 +27,16 @@ val first_entry :
 val signature : t -> (string * Trace.trace_target option) list
 
 val agrees : t -> t -> bool
-(** Entry kind and every operation/role/label, never typed values or whole paths. *)
+(** map-op03: repeatable operations share entry/exit kinds and compatible distinct
+    operation/role sets (one may contain the other). Non-repeatable agreement keeps exact
+    ordered operations, roles and labels. *)
+
+val normalize_label : string list -> string -> string
+
+val compatible :
+  (string * Trace.trace_target option) list ->
+  (string * Trace.trace_target option) list ->
+  bool
 
 val project : Trace.t -> t -> Trace.t
 (** Restrict existing repeatability/validation gates to this operation's evidence. *)

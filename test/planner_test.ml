@@ -1423,11 +1423,60 @@ let notify_codec () =
       [ ("message", str "hi"); ("procedure", procedure_json ()) ];
     ]
 
+let done_codec () =
+  let call fields check =
+    let content = Yojson.Safe.to_string (obj (("answer", str "done") :: fields)) in
+    rig ~contents:[ content; content ] (fun _ _ models _ _ ->
+        check
+          ((Models.levels models).R.plan ~deadline:(Ox.Duration.seconds 30)
+             (plan_request ())))
+  in
+  let fields =
+    [
+      ("result", str "ama Café, Berlin");
+      ("evidence", `List [ str "the page shows ama Café" ]);
+    ]
+  in
+  call fields (function
+    | Ok { R.answer = Done { result; evidence }; _ } ->
+        Alcotest.(check string) "map-op10 one-line answer" "ama Café, Berlin" result;
+        Alcotest.(check (list string))
+          "map-op10 expectation evidence"
+          [ "the page shows ama Café" ]
+          evidence
+    | _ -> Alcotest.fail "map-op10 valid done refused");
+  List.iter
+    (fun fields ->
+      call fields (fun result ->
+          Alcotest.(check bool)
+            "map-op10 malformed done fails closed" true (Result.is_error result)))
+    [
+      [];
+      [ ("result", str "yes"); ("evidence", `List []) ];
+      [ ("result", str "yes"); ("evidence", `List [ str " " ]) ];
+      [ ("result", str "two\nlines"); ("evidence", `List [ str "the page shows cafe" ]) ];
+      ("message", str "mixed") :: fields;
+      ("actions", `List []) :: fields;
+      ("reason", str "mixed") :: fields;
+      ("expect", `List [ str "the page is home" ]) :: fields;
+    ];
+  call
+    [
+      ("result", str "the cafe qualifies");
+      ("evidence", `List [ str "the cafe rating exceeds four" ]);
+    ]
+    (fun result ->
+      Alcotest.(check bool)
+        "map-op10 judgment evidence uses existing vocabulary" true (Result.is_ok result))
+
 let () =
   Alcotest.run "L32 planner"
     [
       ( "L55",
-        [ Alcotest.test_case "notif-7o8j notif-tdtz notify codec" `Quick notify_codec ] );
+        [
+          Alcotest.test_case "notif-7o8j notif-tdtz notify codec" `Quick notify_codec;
+          Alcotest.test_case "map-op10 done decoder" `Quick done_codec;
+        ] );
       ( "L53",
         [ Alcotest.test_case "map-7xrq continue protocol codec" `Quick continue_codec ] );
       ( "L32",

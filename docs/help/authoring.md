@@ -1,6 +1,6 @@
 # Authoring a playbook
 
-Write one when a site will be driven again, or when a mission needs validated records rather than the operator's bounded page state. Prefer `leash drive` for goals: successful traces can produce learning drafts. This topic covers explicit manual authoring, not the learning path.
+Write one when a site will be driven again, or when a mission needs validated records rather than the operator's bounded page state. Prefer `leash drive` for goals: successful traces can produce learning drafts. The learning compiler may generate read-only collection scripts from observed final-page tag/class structure for repeatable drafts; declared returns and successful replay are required. This topic covers explicit manual authoring, not that learning path.
 
 The format, the worked example, and every loader refusal are in `leash help playbooks`. Checker sentences are in `leash help expectations`. Scripts are in `leash help scripts`.
 

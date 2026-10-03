@@ -1,0 +1,1622 @@
+{
+  "unattended": [],
+  "version": 1,
+  "time": "2026-10-02T22:02:59.994767Z",
+  "site": "google.com",
+  "mission": "find the cheapest flight from Kraków to Barcelona next month and tell me its price and dates",
+  "arguments": [],
+  "outcome": "done",
+  "cost": 0.0033153,
+  "duration_ms": 14548,
+  "model_calls": 14,
+  "start_url": "https://www.google.com/travel/flights",
+  "page_kind_path": [
+    "flights",
+    "search"
+  ],
+  "inferred_pages": [
+    {
+      "name": "flights",
+      "url_pattern": "https://www.google.com/travel/flights"
+    },
+    {
+      "name": "search",
+      "url_pattern": "https://www.google.com/travel/flights/search"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Where from?"
+      },
+      "text": "Kraków",
+      "operations": [
+        {
+          "key": "scroll_down",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.42
+        },
+        {
+          "key": "blocked",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.56
+        },
+        {
+          "key": "wait",
+          "probability": 0
+        }
+      ],
+      "targets": [
+        {
+          "key": "13",
+          "probability": 0
+        },
+        {
+          "key": "15",
+          "probability": 0
+        },
+        {
+          "key": "16",
+          "probability": 0.58
+        },
+        {
+          "key": "18",
+          "probability": 0.42
+        },
+        {
+          "key": "19",
+          "probability": 0
+        },
+        {
+          "key": "20",
+          "probability": 0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 2176
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "option",
+        "label": "John Paul II Kraków Balice International Airport (KRK)"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.86
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.1
+        },
+        {
+          "key": "done",
+          "probability": 0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.23
+        },
+        {
+          "key": "2",
+          "probability": 0.06
+        },
+        {
+          "key": "3",
+          "probability": 0
+        },
+        {
+          "key": "4",
+          "probability": 0
+        },
+        {
+          "key": "5",
+          "probability": 0.34
+        },
+        {
+          "key": "6",
+          "probability": 0
+        },
+        {
+          "key": "7",
+          "probability": 0.37
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 3060
+    },
+    {
+      "non_repeatable": false,
+      "n": 3,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Where to? "
+      },
+      "text": "Barcelona",
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.98
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0
+        },
+        {
+          "key": "click",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0
+        },
+        {
+          "key": "blocked",
+          "probability": 0
+        },
+        {
+          "key": "wait",
+          "probability": 0
+        }
+      ],
+      "targets": [
+        {
+          "key": "13",
+          "probability": 0
+        },
+        {
+          "key": "15",
+          "probability": 0
+        },
+        {
+          "key": "16",
+          "probability": 0
+        },
+        {
+          "key": "18",
+          "probability": 1
+        },
+        {
+          "key": "19",
+          "probability": 0
+        },
+        {
+          "key": "20",
+          "probability": 0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 6096
+    },
+    {
+      "non_repeatable": false,
+      "n": 4,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "option",
+        "label": "Barcelona, Spain"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0
+        },
+        {
+          "key": "click",
+          "probability": 0.95
+        },
+        {
+          "key": "blocked",
+          "probability": 0.01
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.03
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.01
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0
+        },
+        {
+          "key": "4",
+          "probability": 0
+        },
+        {
+          "key": "5",
+          "probability": 0.7
+        },
+        {
+          "key": "6",
+          "probability": 0
+        },
+        {
+          "key": "7",
+          "probability": 0.27
+        },
+        {
+          "key": "8",
+          "probability": 0
+        },
+        {
+          "key": "9",
+          "probability": 0.01
+        },
+        {
+          "key": "10",
+          "probability": 0
+        },
+        {
+          "key": "11",
+          "probability": 0
+        },
+        {
+          "key": "12",
+          "probability": 0
+        },
+        {
+          "key": "13",
+          "probability": 0
+        },
+        {
+          "key": "14",
+          "probability": 0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 7136
+    },
+    {
+      "non_repeatable": false,
+      "n": 5,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "textbox",
+        "label": "Departure"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.29
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.03
+        },
+        {
+          "key": "click",
+          "probability": 0.67
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0
+        },
+        {
+          "key": "2",
+          "probability": 0
+        },
+        {
+          "key": "3",
+          "probability": 0
+        },
+        {
+          "key": "4",
+          "probability": 0
+        },
+        {
+          "key": "5",
+          "probability": 0
+        },
+        {
+          "key": "6",
+          "probability": 0
+        },
+        {
+          "key": "7",
+          "probability": 0
+        },
+        {
+          "key": "8",
+          "probability": 0
+        },
+        {
+          "key": "9",
+          "probability": 0
+        },
+        {
+          "key": "10",
+          "probability": 0
+        },
+        {
+          "key": "11",
+          "probability": 0
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0
+        },
+        {
+          "key": "15",
+          "probability": 0
+        },
+        {
+          "key": "16",
+          "probability": 0
+        },
+        {
+          "key": "17",
+          "probability": 0
+        },
+        {
+          "key": "18",
+          "probability": 0
+        },
+        {
+          "key": "19",
+          "probability": 0.89
+        },
+        {
+          "key": "20",
+          "probability": 0
+        },
+        {
+          "key": "21",
+          "probability": 0.08
+        },
+        {
+          "key": "23",
+          "probability": 0
+        },
+        {
+          "key": "26",
+          "probability": 0
+        },
+        {
+          "key": "27",
+          "probability": 0
+        },
+        {
+          "key": "28",
+          "probability": 0
+        },
+        {
+          "key": "29",
+          "probability": 0.02
+        },
+        {
+          "key": "30",
+          "probability": 0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 7984
+    },
+    {
+      "non_repeatable": false,
+      "n": 6,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Tuesday, November 24, 2026 , 218 Polish zlotys, Cheapest price"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.07
+        },
+        {
+          "key": "click",
+          "probability": 0.68
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.01
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.18
+        },
+        {
+          "key": "blocked",
+          "probability": 0.05
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.060000000000000005
+        },
+        {
+          "key": "2",
+          "probability": 0.09
+        },
+        {
+          "key": "3",
+          "probability": 0.04
+        },
+        {
+          "key": "4",
+          "probability": 0.01
+        },
+        {
+          "key": "5",
+          "probability": 0.01
+        },
+        {
+          "key": "7",
+          "probability": 0.03
+        },
+        {
+          "key": "8",
+          "probability": 0
+        },
+        {
+          "key": "9",
+          "probability": 0
+        },
+        {
+          "key": "10",
+          "probability": 0
+        },
+        {
+          "key": "11",
+          "probability": 0
+        },
+        {
+          "key": "12",
+          "probability": 0
+        },
+        {
+          "key": "13",
+          "probability": 0
+        },
+        {
+          "key": "14",
+          "probability": 0
+        },
+        {
+          "key": "15",
+          "probability": 0
+        },
+        {
+          "key": "16",
+          "probability": 0
+        },
+        {
+          "key": "17",
+          "probability": 0
+        },
+        {
+          "key": "18",
+          "probability": 0
+        },
+        {
+          "key": "19",
+          "probability": 0
+        },
+        {
+          "key": "20",
+          "probability": 0
+        },
+        {
+          "key": "21",
+          "probability": 0
+        },
+        {
+          "key": "22",
+          "probability": 0
+        },
+        {
+          "key": "23",
+          "probability": 0
+        },
+        {
+          "key": "24",
+          "probability": 0
+        },
+        {
+          "key": "25",
+          "probability": 0
+        },
+        {
+          "key": "26",
+          "probability": 0
+        },
+        {
+          "key": "27",
+          "probability": 0
+        },
+        {
+          "key": "28",
+          "probability": 0
+        },
+        {
+          "key": "29",
+          "probability": 0
+        },
+        {
+          "key": "30",
+          "probability": 0
+        },
+        {
+          "key": "31",
+          "probability": 0
+        },
+        {
+          "key": "32",
+          "probability": 0
+        },
+        {
+          "key": "33",
+          "probability": 0
+        },
+        {
+          "key": "34",
+          "probability": 0
+        },
+        {
+          "key": "35",
+          "probability": 0.01
+        },
+        {
+          "key": "36",
+          "probability": 0.01
+        },
+        {
+          "key": "37",
+          "probability": 0
+        },
+        {
+          "key": "38",
+          "probability": 0.03
+        },
+        {
+          "key": "39",
+          "probability": 0
+        },
+        {
+          "key": "40",
+          "probability": 0
+        },
+        {
+          "key": "41",
+          "probability": 0
+        },
+        {
+          "key": "42",
+          "probability": 0
+        },
+        {
+          "key": "43",
+          "probability": 0
+        },
+        {
+          "key": "44",
+          "probability": 0
+        },
+        {
+          "key": "45",
+          "probability": 0
+        },
+        {
+          "key": "46",
+          "probability": 0
+        },
+        {
+          "key": "47",
+          "probability": 0
+        },
+        {
+          "key": "48",
+          "probability": 0
+        },
+        {
+          "key": "49",
+          "probability": 0
+        },
+        {
+          "key": "50",
+          "probability": 0
+        },
+        {
+          "key": "51",
+          "probability": 0
+        },
+        {
+          "key": "52",
+          "probability": 0
+        },
+        {
+          "key": "53",
+          "probability": 0
+        },
+        {
+          "key": "54",
+          "probability": 0
+        },
+        {
+          "key": "55",
+          "probability": 0
+        },
+        {
+          "key": "56",
+          "probability": 0
+        },
+        {
+          "key": "57",
+          "probability": 0
+        },
+        {
+          "key": "58",
+          "probability": 0
+        },
+        {
+          "key": "59",
+          "probability": 0.39
+        },
+        {
+          "key": "60",
+          "probability": 0
+        },
+        {
+          "key": "61",
+          "probability": 0
+        },
+        {
+          "key": "62",
+          "probability": 0
+        },
+        {
+          "key": "63",
+          "probability": 0
+        },
+        {
+          "key": "64",
+          "probability": 0
+        },
+        {
+          "key": "65",
+          "probability": 0
+        },
+        {
+          "key": "66",
+          "probability": 0
+        },
+        {
+          "key": "67",
+          "probability": 0
+        },
+        {
+          "key": "68",
+          "probability": 0
+        },
+        {
+          "key": "69",
+          "probability": 0
+        },
+        {
+          "key": "70",
+          "probability": 0
+        },
+        {
+          "key": "71",
+          "probability": 0
+        },
+        {
+          "key": "72",
+          "probability": 0
+        },
+        {
+          "key": "73",
+          "probability": 0
+        },
+        {
+          "key": "74",
+          "probability": 0
+        },
+        {
+          "key": "75",
+          "probability": 0
+        },
+        {
+          "key": "76",
+          "probability": 0
+        },
+        {
+          "key": "77",
+          "probability": 0
+        },
+        {
+          "key": "78",
+          "probability": 0
+        },
+        {
+          "key": "79",
+          "probability": 0
+        },
+        {
+          "key": "80",
+          "probability": 0
+        },
+        {
+          "key": "81",
+          "probability": 0
+        },
+        {
+          "key": "82",
+          "probability": 0
+        },
+        {
+          "key": "83",
+          "probability": 0
+        },
+        {
+          "key": "84",
+          "probability": 0
+        },
+        {
+          "key": "85",
+          "probability": 0.04
+        },
+        {
+          "key": "86",
+          "probability": 0.27
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 9833
+    },
+    {
+      "non_repeatable": false,
+      "n": 7,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Wednesday, November 25, 2026 , 268 Polish zlotys, Cheapest price"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.03
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0
+        },
+        {
+          "key": "click",
+          "probability": 0.86
+        },
+        {
+          "key": "done",
+          "probability": 0.09
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "wait",
+          "probability": 0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.03
+        },
+        {
+          "key": "2",
+          "probability": 0.02
+        },
+        {
+          "key": "3",
+          "probability": 0.02
+        },
+        {
+          "key": "4",
+          "probability": 0.01
+        },
+        {
+          "key": "5",
+          "probability": 0.15000000000000002
+        },
+        {
+          "key": "6",
+          "probability": 0.01
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.36
+        },
+        {
+          "key": "9",
+          "probability": 0
+        },
+        {
+          "key": "10",
+          "probability": 0
+        },
+        {
+          "key": "11",
+          "probability": 0
+        },
+        {
+          "key": "12",
+          "probability": 0.05
+        },
+        {
+          "key": "13",
+          "probability": 0
+        },
+        {
+          "key": "14",
+          "probability": 0
+        },
+        {
+          "key": "15",
+          "probability": 0
+        },
+        {
+          "key": "16",
+          "probability": 0
+        },
+        {
+          "key": "17",
+          "probability": 0
+        },
+        {
+          "key": "18",
+          "probability": 0
+        },
+        {
+          "key": "19",
+          "probability": 0
+        },
+        {
+          "key": "20",
+          "probability": 0
+        },
+        {
+          "key": "21",
+          "probability": 0
+        },
+        {
+          "key": "22",
+          "probability": 0
+        },
+        {
+          "key": "23",
+          "probability": 0
+        },
+        {
+          "key": "24",
+          "probability": 0
+        },
+        {
+          "key": "25",
+          "probability": 0
+        },
+        {
+          "key": "26",
+          "probability": 0
+        },
+        {
+          "key": "27",
+          "probability": 0
+        },
+        {
+          "key": "28",
+          "probability": 0
+        },
+        {
+          "key": "29",
+          "probability": 0
+        },
+        {
+          "key": "30",
+          "probability": 0
+        },
+        {
+          "key": "31",
+          "probability": 0
+        },
+        {
+          "key": "32",
+          "probability": 0
+        },
+        {
+          "key": "33",
+          "probability": 0
+        },
+        {
+          "key": "34",
+          "probability": 0.34
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 11140
+    },
+    {
+      "non_repeatable": false,
+      "n": 8,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Done. Search for round trip flights, departing on November 24, 2026 and returning on November 25, 2026"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.07
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.87
+        },
+        {
+          "key": "blocked",
+          "probability": 0.03
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.08
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0
+        },
+        {
+          "key": "4",
+          "probability": 0
+        },
+        {
+          "key": "5",
+          "probability": 0.02
+        },
+        {
+          "key": "6",
+          "probability": 0.02
+        },
+        {
+          "key": "7",
+          "probability": 0
+        },
+        {
+          "key": "8",
+          "probability": 0
+        },
+        {
+          "key": "9",
+          "probability": 0
+        },
+        {
+          "key": "10",
+          "probability": 0
+        },
+        {
+          "key": "11",
+          "probability": 0
+        },
+        {
+          "key": "12",
+          "probability": 0
+        },
+        {
+          "key": "13",
+          "probability": 0
+        },
+        {
+          "key": "14",
+          "probability": 0
+        },
+        {
+          "key": "15",
+          "probability": 0
+        },
+        {
+          "key": "16",
+          "probability": 0
+        },
+        {
+          "key": "17",
+          "probability": 0
+        },
+        {
+          "key": "18",
+          "probability": 0
+        },
+        {
+          "key": "19",
+          "probability": 0
+        },
+        {
+          "key": "20",
+          "probability": 0
+        },
+        {
+          "key": "21",
+          "probability": 0
+        },
+        {
+          "key": "22",
+          "probability": 0
+        },
+        {
+          "key": "23",
+          "probability": 0
+        },
+        {
+          "key": "24",
+          "probability": 0
+        },
+        {
+          "key": "25",
+          "probability": 0
+        },
+        {
+          "key": "26",
+          "probability": 0
+        },
+        {
+          "key": "27",
+          "probability": 0
+        },
+        {
+          "key": "28",
+          "probability": 0
+        },
+        {
+          "key": "29",
+          "probability": 0
+        },
+        {
+          "key": "30",
+          "probability": 0
+        },
+        {
+          "key": "31",
+          "probability": 0
+        },
+        {
+          "key": "32",
+          "probability": 0
+        },
+        {
+          "key": "33",
+          "probability": 0
+        },
+        {
+          "key": "34",
+          "probability": 0
+        },
+        {
+          "key": "35",
+          "probability": 0
+        },
+        {
+          "key": "36",
+          "probability": 0
+        },
+        {
+          "key": "37",
+          "probability": 0
+        },
+        {
+          "key": "38",
+          "probability": 0
+        },
+        {
+          "key": "39",
+          "probability": 0
+        },
+        {
+          "key": "40",
+          "probability": 0
+        },
+        {
+          "key": "41",
+          "probability": 0
+        },
+        {
+          "key": "42",
+          "probability": 0
+        },
+        {
+          "key": "43",
+          "probability": 0
+        },
+        {
+          "key": "44",
+          "probability": 0
+        },
+        {
+          "key": "45",
+          "probability": 0
+        },
+        {
+          "key": "46",
+          "probability": 0
+        },
+        {
+          "key": "47",
+          "probability": 0
+        },
+        {
+          "key": "48",
+          "probability": 0
+        },
+        {
+          "key": "49",
+          "probability": 0
+        },
+        {
+          "key": "50",
+          "probability": 0
+        },
+        {
+          "key": "51",
+          "probability": 0
+        },
+        {
+          "key": "52",
+          "probability": 0
+        },
+        {
+          "key": "53",
+          "probability": 0
+        },
+        {
+          "key": "54",
+          "probability": 0
+        },
+        {
+          "key": "55",
+          "probability": 0
+        },
+        {
+          "key": "56",
+          "probability": 0
+        },
+        {
+          "key": "57",
+          "probability": 0
+        },
+        {
+          "key": "58",
+          "probability": 0
+        },
+        {
+          "key": "59",
+          "probability": 0.03
+        },
+        {
+          "key": "60",
+          "probability": 0.05
+        },
+        {
+          "key": "61",
+          "probability": 0
+        },
+        {
+          "key": "62",
+          "probability": 0
+        },
+        {
+          "key": "63",
+          "probability": 0
+        },
+        {
+          "key": "64",
+          "probability": 0
+        },
+        {
+          "key": "65",
+          "probability": 0
+        },
+        {
+          "key": "66",
+          "probability": 0
+        },
+        {
+          "key": "67",
+          "probability": 0
+        },
+        {
+          "key": "68",
+          "probability": 0
+        },
+        {
+          "key": "69",
+          "probability": 0
+        },
+        {
+          "key": "70",
+          "probability": 0
+        },
+        {
+          "key": "71",
+          "probability": 0
+        },
+        {
+          "key": "72",
+          "probability": 0
+        },
+        {
+          "key": "73",
+          "probability": 0
+        },
+        {
+          "key": "74",
+          "probability": 0
+        },
+        {
+          "key": "75",
+          "probability": 0
+        },
+        {
+          "key": "76",
+          "probability": 0
+        },
+        {
+          "key": "77",
+          "probability": 0
+        },
+        {
+          "key": "78",
+          "probability": 0
+        },
+        {
+          "key": "79",
+          "probability": 0
+        },
+        {
+          "key": "80",
+          "probability": 0
+        },
+        {
+          "key": "81",
+          "probability": 0
+        },
+        {
+          "key": "82",
+          "probability": 0
+        },
+        {
+          "key": "83",
+          "probability": 0
+        },
+        {
+          "key": "84",
+          "probability": 0
+        },
+        {
+          "key": "85",
+          "probability": 0.02
+        },
+        {
+          "key": "86",
+          "probability": 0.76
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 12082
+    },
+    {
+      "non_repeatable": false,
+      "n": 9,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.05
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        },
+        {
+          "key": "click",
+          "probability": 0.83
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0
+        },
+        {
+          "key": "done",
+          "probability": 0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.1
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0
+        },
+        {
+          "key": "2",
+          "probability": 0
+        },
+        {
+          "key": "3",
+          "probability": 0
+        },
+        {
+          "key": "4",
+          "probability": 0
+        },
+        {
+          "key": "5",
+          "probability": 0
+        },
+        {
+          "key": "6",
+          "probability": 0
+        },
+        {
+          "key": "7",
+          "probability": 0
+        },
+        {
+          "key": "8",
+          "probability": 0
+        },
+        {
+          "key": "9",
+          "probability": 0
+        },
+        {
+          "key": "10",
+          "probability": 0
+        },
+        {
+          "key": "11",
+          "probability": 0
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0
+        },
+        {
+          "key": "15",
+          "probability": 0
+        },
+        {
+          "key": "16",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0
+        },
+        {
+          "key": "18",
+          "probability": 0
+        },
+        {
+          "key": "19",
+          "probability": 0.37
+        },
+        {
+          "key": "20",
+          "probability": 0.03
+        },
+        {
+          "key": "21",
+          "probability": 0.56
+        },
+        {
+          "key": "23",
+          "probability": 0
+        },
+        {
+          "key": "26",
+          "probability": 0
+        },
+        {
+          "key": "27",
+          "probability": 0
+        },
+        {
+          "key": "28",
+          "probability": 0
+        },
+        {
+          "key": "29",
+          "probability": 0.02
+        },
+        {
+          "key": "30",
+          "probability": 0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights/search",
+        "title": "Kraków to Barcelona | Google Flights"
+      },
+      "elapsed_ms": 13462
+    },
+    {
+      "non_repeatable": false,
+      "n": 10,
+      "operation": "done",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.62
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.02
+        },
+        {
+          "key": "blocked",
+          "probability": 0.05
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.29
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://www.google.com/travel/flights/search",
+        "title": "Kraków to Barcelona | Google Flights"
+      },
+      "elapsed_ms": 14187
+    }
+  ],
+  "final": {
+    "url": "https://www.google.com/travel/flights/search",
+    "title": "Kraków to Barcelona | Google Flights"
+  }
+}

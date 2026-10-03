@@ -1646,6 +1646,25 @@ let with_reading t ~access handle f =
 let read_text t (args : P.text_args) =
   with_reading t ~access:Act args.tab (fun _ browser -> Reading.text browser args)
 
+(* map-op09: capture only structure, on the exact final page, before trace persistence. *)
+let structural_outline t ~tab ~url =
+  with_reading t ~access:Act tab (fun _ browser ->
+      let current, _ = browser.Reading.current () in
+      if current <> url then Ok None
+      else
+        let* response =
+          browser.call "Runtime.evaluate"
+            (`Assoc
+               [
+                 ("expression", `String Structural_outline.expression);
+                 ("returnByValue", `Bool true);
+                 ("throwOnSideEffect", `Bool true);
+                 ("timeout", `Int 1000);
+               ])
+        in
+        let value = Option.bind (member "result" response) (member "value") in
+        Ok (Option.bind value Structural_outline.decode))
+
 let eval t (args : P.eval_args) =
   with_reading t ~access:Act args.tab (fun _ browser -> Reading.eval browser args)
 
@@ -2106,6 +2125,12 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
     let snapshot = page.snapshot.snapshot in
     let index = Option.value ~default:0 choice.index in
     let op = P.Operation.to_string choice.operation in
+    let* () =
+      if op <> "click" then Ok ()
+      else
+        Result.map_error (error "row-not-actionable")
+          (P.check_consent_click page.snapshot ~index)
+    in
     let started_act = now t in
     let outcome =
       match op with

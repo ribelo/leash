@@ -84,6 +84,30 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
   let observation_ms = ref 0 and prediction_ms = ref 0 and helper_ms = ref 0 and input_ms = ref 0 in
   let prediction_log = ref [] and text_log = ref [] and action_log = ref [] in
   let pending_text = ref None in
+  (* map-op12: target identity survives snapshot refresh/reindexing, but never a
+     page change. A no-op masks only its operation, not every action on that row. *)
+  let mask_page = ref None and masked = ref [] in
+  let targets (page : observation) =
+    let rec identities seen = function
+      | [] -> []
+      | (row : P.row) :: rest ->
+          let label = row.role, row.name in
+          let rank = List.length (List.filter ((=) label) seen) in
+          (row.index, (row.role, row.name, rank)) :: identities (label :: seen) rest in
+    identities [] page.snapshot.rows in
+  let mask_choice (page : observation) (choice : J.decision) =
+    if not (List.mem (op_name choice.operation) ["wait"; "done"; "blocked"]) then (
+      let target = Option.bind choice.index (fun index -> List.assoc_opt index (targets page)) in
+      mask_page := Some page.fingerprint;
+      let key = (choice.operation, target) in
+      if not (List.mem key !masked) then masked := key :: !masked) in
+  let masks (page : observation) =
+    if !mask_page <> Some page.fingerprint then (mask_page := None; masked := []);
+    List.concat_map (fun (op, target) -> match target with
+      | None -> [op, None]
+      | Some target -> List.filter_map (fun (index, identity) ->
+          if identity = target then Some (op, Some index) else None)
+          (targets page)) !masked in
   (* fly-vnf1: BLOCKED cannot certify an unseen scroll frontier. This deliberate
      deviation from jev-ultrafast is bounded per URL. pbk-eyya raised the bound from three
      to eight: a 20-card listing is taller than three viewports, and JEV gave up on the
@@ -219,6 +243,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
         else
           let request = J.make ~model ~goal:args.goal ~snapshot:page.snapshot ~text:page.text
             ~recent:(List.rev recent) ~can_scroll_down:page.can_scroll_down ~can_scroll_up:page.can_scroll_up
+            |> fun request -> J.without_actions request (masks page)
             |> fun request -> J.with_scripts request (scripts page)
             |> fun request -> J.with_coverage request (coverage page)
             |> fun request ->
@@ -266,7 +291,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
               let op = choice.J.operation in
               let terminal =
                 choice.J.script = None && (op = operation "done" || op = operation "blocked") in
-              let refresh why =
+              let refresh ?(recent = recent) why =
                 incr stale;
                 update_prediction why;
                 match observe_page () with
@@ -378,7 +403,10 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                           | Error error
                             when op = operation "click"
                                  && P.Error_code.to_string error.P.code = "row-not-actionable" ->
-                              refresh "refused; no input"
+                              mask_choice page choice;
+                              let recent = J.{ action = error.message; kind = Some "guard";
+                                text = None; page_changed = None } :: recent in
+                              refresh ~recent ("refused; no input: " ^ error.message)
                           | Error error ->
                               update_prediction "input outcome uncertain; not replayed";
                               let step = record_step page page choice text steps in
@@ -409,6 +437,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                                     finish ~error ~reason:(failed "observe after executed action; not replayed" error) "error" (step :: steps) page
                                | Ok next ->
                                    let step = record_step page next choice text steps in
+                                   if page.fingerprint = next.fingerprint then mask_choice page choice;
                                    let changed = page.fingerprint <> next.fingerprint in
                                    action_log := `Assoc (("step", P.yojson_of_step step) :: ("page_changed", `Bool changed) :: action_fields ()) :: List.tl !action_log;
                                    let steps = step :: steps in

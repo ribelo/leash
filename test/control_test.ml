@@ -3611,9 +3611,47 @@ let durable_drive_traces () =
             | Ok trace -> trace
             | Error why -> Alcotest.fail why
           in
+          let outline_calls = ref 0 in
           (* trace-qe8c: Chrome's pushed tab-strip title is not its document title. *)
           Fake.on_method f "Runtime.evaluate" (fun request ->
               match get "expression" (get "params" request) with
+              | `String expression when expression = Leash__Structural_outline.expression
+                ->
+                  incr outline_calls;
+                  let value =
+                    `List
+                      [
+                        obj
+                          [
+                            ("tag", str "article");
+                            ("classes", `List [ str "product_pod" ]);
+                            ( "children",
+                              `List
+                                [
+                                  obj
+                                    [
+                                      ("tag", str "h3");
+                                      ("classes", `List []);
+                                      ( "children",
+                                        `List
+                                          [
+                                            obj
+                                              [
+                                                ("tag", str "a");
+                                                ("classes", `List []);
+                                                ("children", `List []);
+                                                ("text", str "PRIVATE PAGE BODY");
+                                                ("value", str "s3cret-password");
+                                                ("email", str "alice@example.com");
+                                                ("card", str "4111 1111 1111 1111");
+                                              ];
+                                          ] );
+                                    ];
+                                ] );
+                          ];
+                      ]
+                  in
+                  obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]
               | `String expression when contains expression "leash-operator-read" ->
                   let value =
                     match operator_observation ~text:modal_text with
@@ -3657,6 +3695,50 @@ let durable_drive_traces () =
             "trace-qe8c first navigable site" "automationexercise.com" trace.site;
           Alcotest.(check bool)
             "trace-zbb9 public acknowledged steps" true (trace.steps <> []);
+          Alcotest.(check bool)
+            "map-op09 ordinary mission skips outline" true
+            (trace.structural_outline = None && !outline_calls = 0);
+          let collection =
+            invoke ~traces:store (run_wire ("Collect every title from " ^ product_url))
+            |> decoded |> saved
+          in
+          Alcotest.(check (option string))
+            "map-op09 capture survives created-tab cleanup"
+            (Some "article.product_pod\n  h3\n    a\n") collection.structural_outline;
+          Alcotest.(check int) "map-op09 one final structural read" 1 !outline_calls;
+          let wire = P.yojson_of_drive_trace collection |> Yojson.Safe.to_string in
+          List.iter
+            (fun secret ->
+              Alcotest.(check bool)
+                "map-op09 saved compiler evidence excludes body and secrets" false
+                (contains wire secret))
+            [
+              "PRIVATE PAGE BODY";
+              "s3cret-password";
+              "alice@example.com";
+              "4111 1111 1111 1111";
+            ];
+          let collected = Fake.received f in
+          let rec sequence n = function
+            | [] -> []
+            | x :: xs -> (n, x) :: sequence (n + 1) xs
+          in
+          let numbered = sequence 0 collected in
+          let captured_at =
+            List.find
+              (fun (_, j) ->
+                get "method" j = str "Runtime.evaluate"
+                && get "expression" (get "params" j)
+                   = str Leash__Structural_outline.expression)
+              numbered
+            |> fst
+          in
+          let closed_at =
+            List.find (fun (_, j) -> get "method" j = str "Target.closeTarget") numbered
+            |> fst
+          in
+          Alcotest.(check bool)
+            "map-op09 structural read precedes close" true (captured_at < closed_at);
           let before = count () in
           let disabled = invoke (run_wire ~tab:h "disabled trace capture") |> decoded in
           Alcotest.(check bool)

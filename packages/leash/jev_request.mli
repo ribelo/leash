@@ -126,6 +126,9 @@ val with_shown_url : request -> string -> request
 (** kind-ir9l: the playbook-less lane shows the inferred kind in the page URL slot. The
     snapshot itself is unchanged. *)
 
+val without_actions : request -> (Protocol.Operation.t * int option) list -> request
+(** map-op12: mask exact operation/target pairs for an unchanged page. *)
+
 val with_scripts : request -> offered_script list -> request
 (** pbk-rai1: the scripts offered on this observation. *)
 

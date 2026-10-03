@@ -133,12 +133,34 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
       let on_planner_step step =
         Option.iter (fun c -> Traces.planner_step c step) capture
       in
+      (* map-op09: capture before ordinary endings close a newly created tab. *)
+      let final_outline = ref None in
+      let capture_outline outcome =
+        match (capture, outcome) with
+        | Some _, Ok result
+          when P.Run_status.to_string result.P.status = "done"
+               && Structural_outline.collection args.mission -> (
+            match
+              Tabs.structural_outline tabs ~tab:result.final.tab ~url:result.final.url
+            with
+            | Ok outline -> final_outline := outline
+            | Error _ -> ())
+        | _ -> ()
+      in
       let keep outcome =
         match (traces, capture) with
         | Some store, Some capture ->
             Eio.Cancel.protect (fun () ->
                 let now = Traces.now store in
                 let trace = Traces.finish capture ~now outcome in
+                let trace =
+                  match outcome with
+                  | Ok _
+                    when trace.outcome = "done"
+                         && Structural_outline.collection args.mission ->
+                      { trace with structural_outline = !final_outline }
+                  | _ -> trace
+                in
                 let warn what why =
                   Option.iter
                     (fun logger ->
@@ -206,6 +228,7 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
                   cleanup ();
                   raise exn
               in
+              capture_outline outcome;
               match outcome with
               | Ok result
                 when List.mem

@@ -1170,6 +1170,7 @@ type run_result = {
   detail : Yojson.Safe.t option; [@json.default None]
   playbook_choices : playbook_choice list;
   status : Run_status.t;
+  answer : string option; [@json.default None]
   site : string option; [@json.null]
   procedures : run_procedure list;
   mission_expectations : run_expectation list;
@@ -1490,6 +1491,63 @@ let planner_action_of_yojson json =
 
 let yojson_of_planner_action command = encode_request { command }
 
+(* map-op11: the default is always decline, even if a mission asks to accept.
+   Only snapshot button labels count; page text and prior pages are not authority. *)
+let check_consent_click (page : snapshot) ~index =
+  let label name =
+    String.lowercase_ascii (String.trim name)
+    |> String.map (function '-' | '_' -> ' ' | c -> c)
+    |> String.split_on_char ' '
+    |> List.filter (( <> ) "")
+    |> String.concat " "
+  in
+  let accepts =
+    [
+      "accept all";
+      "accept all cookies";
+      "agree to all";
+      "agree to all cookies";
+      "allow all";
+      "allow all cookies";
+      "zaakceptuj wszystko";
+    ]
+  in
+  let rejects =
+    [
+      "reject all";
+      "decline all";
+      "reject";
+      "decline";
+      "necessary only";
+      "only necessary";
+      "necessary cookies only";
+      "only necessary cookies";
+      "essential only";
+      "only essential";
+      "use necessary cookies only";
+      "continue without accepting";
+      "odrzuć wszystko";
+      "tylko niezbędne";
+    ]
+  in
+  let button (row : row) = row.role = "button" in
+  match List.find_opt (fun (row : row) -> row.index = index) page.rows with
+  | Some target when button target && List.mem (label target.name) accepts -> (
+      match
+        List.find_opt
+          (fun (row : row) ->
+            List.mem row.role [ "button"; "link" ]
+            && List.mem (label row.name) rejects
+            && not (List.mem Disabled (Option.value ~default:[] row.state)))
+          page.rows
+      with
+      | Some alternative ->
+          Error
+            (Printf.sprintf "consent guard: refuse %S; choose %S instead (always decline)"
+               target.name alternative.name)
+      | None -> Ok ())
+  | _ -> Ok ()
+
 let check_planner_action (page : snapshot) action =
   let named index = List.exists (fun (row : row) -> row.index = index) page.rows in
   let row snapshot index =
@@ -1521,7 +1579,10 @@ let check_planner_action (page : snapshot) action =
     | _ -> None
   in
   match action with
-  | Click args -> same_tab args.tab (fun () -> row args.snapshot args.index)
+  | Click args ->
+      same_tab args.tab (fun () ->
+          Result.bind (row args.snapshot args.index) (fun () ->
+              check_consent_click page ~index:args.index))
   | Fill args -> same_tab args.tab (fun () -> row args.snapshot args.index)
   | Press args ->
       same_tab args.tab (fun () ->

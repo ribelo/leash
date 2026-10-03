@@ -24,7 +24,10 @@ let google_maps () =
       check "map-op01 consent is not an operation"
         (x.entry_kind = "maps" && List.length x.steps = 2);
       check "map-op03 different paths and typed values agree"
-        (a.page_kind_path <> b.page_kind_path && O.agrees x y);
+        (a.page_kind_path <> b.page_kind_path
+        && O.agrees x y = (x.exit_kind = y.exit_kind));
+      check "map-op03 non-repeatable typed-only agreement unchanged"
+        (O.agrees { x with repeatable = false } { y with repeatable = false });
       check "map-op01 delayed DONE observation is the result"
         (x.exit = Option.get a.final
         && (y.exit = Option.get b.final || y.exit_kind = "search-<slug>"));
@@ -105,7 +108,11 @@ let boundaries () =
           a.steps;
     }
   in
-  check "map-op03 exit and typed values are not agreement identity" (O.agrees a changed);
+  check "map-op03 repeatable exit is agreement identity" (not (O.agrees a changed));
+  check "map-op03 typed values do not affect identity"
+    (O.agrees a { changed with exit_kind = a.exit_kind });
+  check "map-op03 non-repeatable strict agreement remains unchanged"
+    (O.agrees { a with repeatable = false } { changed with repeatable = false });
   let changed =
     {
       a with
@@ -137,6 +144,45 @@ let boundaries () =
     }
   in
   check "map-op01 legacy procedure steps still segment" (O.segment legacy = ops)
+
+let real_structural_agreement () =
+  let flights =
+    List.map (fun n -> one (fixture ("op07-flights-" ^ string_of_int n))) [ 2; 3; 4 ]
+  in
+  List.iter
+    (fun a ->
+      List.iter
+        (fun b -> check "map-op03 real Flights agree structurally" (O.agrees a b))
+        flights)
+    flights;
+  let books n = O.segment (fixture ("op07-books-" ^ string_of_int n)) in
+  List.iter2
+    (fun a b -> check "map-op03 real Books category and scroll agree" (O.agrees a b))
+    (books 1) (books 3);
+  let a = List.hd flights in
+  let clicks =
+    {
+      a with
+      steps = List.filter (fun (s : Trace.trace_step) -> s.operation = "click") a.steps;
+    }
+  in
+  check "map-op03 click-only is not a type-and-click form" (not (O.agrees a clicks));
+  let changed =
+    {
+      a with
+      steps =
+        List.map (fun (s : Trace.trace_step) -> { s with operation = "upload" }) a.steps;
+    }
+  in
+  check "map-op03 different operation does not agree" (not (O.agrees a changed));
+  let strict = { a with repeatable = false } in
+  check "map-op03 non-repeatable labels/order remain exact"
+    (not (O.agrees strict { strict with steps = List.rev strict.steps }));
+  Alcotest.(check string)
+    "map-op03 values/dates/currency are generalized evidence"
+    "{value} {date}, {date} {number}, {number}, {number} {currency}"
+    (O.normalize_label [ "Barcelona" ]
+       "Barcelona Monday, November 16, 2026, 184 Polish zlotys")
 
 let interstitials () =
   let trace = synthetic () in
@@ -278,6 +324,7 @@ let () =
           [
             ("real Google Maps", google_maps);
             ("operation boundaries", boundaries);
+            ("map-op03 real structural agreement", real_structural_agreement);
             ("interstitials", interstitials);
             ("observed kind names", naming);
             ("goal minimum and Explore", goals);

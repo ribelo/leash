@@ -168,6 +168,11 @@ val run :
     [detail.procedures]. *)
 
 val text : t -> Protocol.text_args -> (Protocol.text_result, Protocol.error) result
+
+val structural_outline :
+  t -> tab:Protocol.Handle.t -> url:string -> (string option, Protocol.error) result
+(** map-op09: final-page tag/class skeleton, never text or values. *)
+
 val eval : t -> Protocol.eval_args -> (Protocol.eval_result, Protocol.error) result
 val shot : t -> Protocol.shot_args -> (Protocol.shot_result, Protocol.error) result
 val debug : t -> Protocol.debug_args -> (Protocol.debug_result, Protocol.error) result

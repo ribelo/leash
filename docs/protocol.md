@@ -13,7 +13,7 @@ the drive outcome. `Protocol.drive_trace` is the version-1 derived safe durable
 projection, not the live result type, to exclude handles, page text, records, and
 raw state. It records headers, the page-kind path (declared kinds win; otherwise
 inferred), `inferred_pages` (`{name, url_pattern}`[], default empty), procedures,
-steps, URL/title, `arguments` (`[name, value][]`, default `[]`), unattended events (default `[]`), and a `compiled` marker (default false). Only argument values feeding retained non-redacted typed steps are persisted. Operator and planner
+steps, URL/title, `arguments` (`[name, value][]`, default `[]`), unattended events (default `[]`), a `compiled` marker (default false), and nullable `structural_outline` (default null; bounded final tag/class structure for done collection missions). Only argument values feeding retained non-redacted typed steps are persisted. Operator and planner
 steps share one chronological sequence, renumbered from 1; a failed planner
 action is retained with its error code, including on a partial-failure trace.
 The safe step shape is:
@@ -381,10 +381,41 @@ validation gate, whether this is a repair, and the planner calls and reported co
 the compile or repair that wrote it. `model_calls` defaults to 0 when absent.
 `model_cost` is null when unknown. Older provenance defaults `entry_kind` and `exit_kind` to `""`, and `signature` and `kind_mapping` to `[]`. Traces keep their raw kind keys; meaningful names and generalized patterns belong to the proposed book.
 
-Compilation requires `successes` independent stored successful traces with a matching entry kind and ordered action/role/label signature. Repeated matching operations within one trace count once; the compiled marker does not exclude evidence. Typed values and exit paths may differ. The transition action belongs to the departing operation, and DONE is an observation rather than an action. Consent and off-final-host entries are excluded; the first remaining observed URL becomes a new site's entry. The compiler receives feeding argument names and observation-based naming evidence, and must return an exit-kind check and meaningful result expectations. Learned top-level procedures require at least two goal steps, except directly `use:`-referenced children; the full-book loader enforces this too. Invalid compiler output receives one validation retry.
+Compilation requires `successes` independent stored successful traces agreeing per operation (map-op03). Repeatable operations require the same entry and exit kinds and compatible distinct (operation, role) sets: order and duplicates do not matter, optional click/scroll/wait extras are allowed, but all type_text/select role pairs must remain present. Labels normalize supplied/typed values and date/number/currency fragments as compiler evidence, not equality identity. Non-repeatable agreement remains strict ordered action/role/exact-label matching with only typed text differing. Repeated matching operations within one trace count once; the compiled marker does not exclude evidence. The transition action belongs to the departing operation, and DONE is an observation rather than an action. Consent and off-final-host entries are excluded; the first remaining observed URL becomes a new site's entry. The compiler receives feeding argument names and observation-based naming evidence, and must return an exit-kind check and meaningful result expectations. Learned top-level procedures require at least two goal steps, except directly `use:`-referenced children; the full-book loader enforces this too. Invalid compiler output receives one validation retry. For done collection missions, the trace adds nullable `structural_outline`: a final-page tag/class skeleton of repeated containers, bounded to 4096 bytes and containing no text nodes, attributes, field values or URLs; legacy traces default to null (map-op09). The compiler may declare inline scripts with `returns` and Script steps only for repeatable collection operations with an observed outline. The loader conservatively refuses navigation, submission, input/event, network, storage and dynamic-code references; it is not a JavaScript sandbox. Installation needs JEV choosing that exact draft revision, every declared script successfully executing, and non-empty passing expectations. Manual acceptance cannot bypass this replay gate (map-op08).
 
 Current gate values are `replay`,
 `agreement` and `agreement-repair`; the codec's field is a string.
+
+### Planner Done (map-op10)
+
+The planner may answer:
+
+```json
+{"answer":"done","result":"ama Café, Berlin","evidence":["the page shows ama Café"]}
+```
+
+`result` is a nonempty single line of at most 1024 bytes; `evidence` is a nonempty
+list of sentences in the existing expectation vocabulary. No actions, message,
+procedure, reason or expect may be mixed into done. The runner resolves and
+verifies those checks, together with the mission expectations, against the live
+page before returning `status: "done"` and the optional `answer` result. Failed
+evidence records a refusal and consumes a bounded planner turn before continuing.
+An active challenge or incomplete collection cannot finish this way. Notify still
+sends a message and continues: it is not a completion answer.
+
+### Default-decline consent and unchanged actions (map-op11, map-op12)
+
+Planner and operator accept-all, agree-to-all and allow-all consent clicks are
+refused when the same snapshot offers reject, decline or necessary-only. Reject
+remains clickable; the refusal reason goes to JEV's recent-actions context.
+Mission wording never overrides this always-decline default; explicit acceptance
+missions are out of scope. English Accept all / Reject all and Polish
+Zaakceptuj wszystko / Odrzuć wszystko are recognized.
+
+An action that leaves the page fingerprint unchanged has its exact operation and
+target masked from JEV's next request until the page changes. Other targets and
+operations remain offered across row reindexing. WAIT is not masked; the existing
+stall and prediction caps still apply.
 
 ### Planner Continue (L53)
 

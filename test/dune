@@ -352,6 +352,7 @@
 (test
  (name drive_test)
  (modules drive_test)
+ (deps fixtures/map-run-actions.json)
  (libraries leash yojson alcotest))
 
 (test
@@ -435,6 +436,11 @@
  (name daily_skill_install_test)
  (modules daily_skill_install_test)
  (libraries leash_cli_support ox_test alcotest unix yojson))
+
+(test
+ (name structural_outline_test)
+ (modules structural_outline_test)
+ (libraries leash yojson str alcotest))
 
 (test
  (name traces_test)

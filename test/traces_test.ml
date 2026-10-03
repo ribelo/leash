@@ -41,11 +41,47 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time 
       start_url = None;
       inferred_pages = [];
       compiled;
+      structural_outline = None;
       procedures = [];
       steps = [];
       final = Some { url = "https://books.toscrape.com/"; title = "Catalog" };
       error_code = None;
     }
+
+(* map-op09: optional safe skeleton survives durable roundtrip; legacy traces work. *)
+let structural_outline () =
+  temp (fun root ->
+      let store = T.create ~caps ~root () in
+      let saved =
+        {
+          (trace 1000.) with
+          structural_outline = Some "article.product_pod\n  h3\n    a\n  p.price_color\n";
+        }
+      in
+      let path = ok (T.write store saved) in
+      bool "map-op09 outline persists in trace" (ok (T.read ~caps path) = saved);
+      let json = P.yojson_of_drive_trace saved in
+      let legacy =
+        match json with
+        | `Assoc fields -> `Assoc (List.remove_assoc "structural_outline" fields)
+        | _ -> assert false
+      in
+      bool "map-op09 legacy trace has no outline"
+        ((ok (P.drive_trace_of_yojson legacy)).structural_outline = None);
+      let data = Yojson.Safe.to_string json in
+      List.iter
+        (fun secret ->
+          bool "map-op09 outline serialization has no text/password/card/email"
+            (try
+               ignore (Str.search_forward (Str.regexp_string secret) data 0);
+               false
+             with Not_found -> true))
+        [
+          "PRIVATE PAGE BODY";
+          "s3cret-password";
+          "alice@example.com";
+          "4111 1111 1111 1111";
+        ])
 
 let filesystem () =
   temp (fun root ->
@@ -495,6 +531,7 @@ let () =
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
             ("trace-qe8c trace-lg58 private store", filesystem);
+            ("map-op09 durable outline and legacy codec", structural_outline);
             ("trace-qe8c public suffix", domains);
             ("trace-dqr2 retention", retention);
             ("trace-szpg config", config);

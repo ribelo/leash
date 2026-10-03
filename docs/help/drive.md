@@ -11,7 +11,7 @@ password text is `[password]`. Inspect offline with `leash traces list`,
 (20 newest traces per site, 30 days; uncompiled done traces survive both).
 A storage failure is logged without changing the drive outcome.
 
-`leash drive MISSION` is the one mission command. It runs on one tab toward one goal until `done`, `blocked`, a cap, a deadline, or an error, and returns the trace and a final snapshot. Leash never asserts that the goal is achieved. There is no `run` command, and the call is not `drive TAB GOAL`. Include the concrete result and any needed values in the mission. Do not delegate a broader action than the user authorized.
+`leash drive MISSION` is the one mission command. It runs on one tab toward one goal until `done`, `blocked`, a cap, a deadline, or an error, and returns the trace and a final snapshot. A planner `answer` is returned only after live evidence checks; a bare operator `done` is not itself proof that the goal is achieved. There is no `run` command, and the call is not `drive TAB GOAL`. Include the concrete result and any needed values in the mission. Do not delegate a broader action than the user authorized.
 
 ```sh
 leash drive 'Open Travel and return the visible titles and prices' --url https://books.toscrape.com/ --out /tmp/travel-state.jsonl
@@ -21,6 +21,25 @@ leash drive 'Complete this page search and open the matching result' --tab TAB -
 The connection stays open until the mission returns. A long mission can run in the background while you work on other tabs. Do not start another action or read on that tab while it is working.
 
 Models are OpenRouter. The service needs `OPENROUTER_API_KEY` in its own environment, or `models.api_key` in the configuration. The key is the operator's. Setting a variable in the client shell does not update an already running service. A missing key or a provider failure is `model-unavailable`; read `detail.code` and the partial trace before any retry.
+
+## Verified planner results and safeguards
+
+The planner may return done with a one-line result and nonempty expectation
+sentences as evidence. Leash verifies those sentences and the mission expectations
+on the live page before returning `status: "done"` and `answer`. Failed evidence
+consumes a planner turn and continues; notify remains non-terminal. Evidence may
+use exact text or the existing live-page judgment checker. A challenge or an
+incomplete collection cannot be dismissed with done. (map-op10)
+
+Consent always defaults to decline. Operator and planner accept-all, agree-to-all
+and allow-all clicks are refused when the same snapshot offers reject, decline
+or necessary-only. Reject stays clickable, including English and Polish labels;
+asking to accept in the mission does not bypass the guard. JEV receives the reason.
+(map-op11)
+
+If an action leaves the page unchanged, that exact operation and target are masked
+from JEV until the page changes. Other choices remain available, and row
+reindexing does not reset the mask. WAIT is exempt; caps still apply. (map-op12)
 
 ## Options
 
@@ -35,7 +54,7 @@ Models are OpenRouter. The service needs `OPENROUTER_API_KEY` in its own environ
 | `--out FILE` | Append tagged JSONL. Use a deliberate writable path, not an existing valuable file. |
 | `--dry-run` | Observe and decide once. No navigation, input, text helper, or `--out` write. Still makes billable model calls and may allocate a blank tab. |
 
-Always pass `--expect` with a concrete sentence the result must satisfy. Without one, `done` is only JEV's opinion. Code-checked sentences are in `leash help expectations`. The operator never types a password: fill that row yourself (`snap` marks it `password`) with `leash fill`, then drive the rest.
+Always pass `--expect` with a concrete sentence the result must satisfy. Without one, a bare operator `done` is only JEV's opinion; a planner `answer` still needs its own verified evidence. Code-checked sentences are in `leash help expectations`. The operator never types a password: fill that row yourself (`snap` marks it `password`) with `leash fill`, then drive the rest.
 
 A drive reply is large. Write it to a file and read the fields below. Do not paste the whole reply into the chat.
 

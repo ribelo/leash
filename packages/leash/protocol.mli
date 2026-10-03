@@ -895,6 +895,7 @@ type run_result = {
   detail : Yojson.Safe.t option;
   playbook_choices : playbook_choice list;
   status : Run_status.t;
+  answer : string option; [@json.default None]
   site : string option; [@json.null]
   procedures : run_procedure list;
   mission_expectations : run_expectation list;
@@ -1032,4 +1033,8 @@ type planner_action = command
 
 val planner_action_of_yojson : Yojson.Safe.t -> (planner_action, string) result
 val yojson_of_planner_action : planner_action -> Yojson.Safe.t
+
+val check_consent_click : snapshot -> index:int -> (unit, string) result
+(** map-op11: refuse all-consent buttons when a decline alternative is offered. *)
+
 val check_planner_action : snapshot -> planner_action -> (unit, string) result

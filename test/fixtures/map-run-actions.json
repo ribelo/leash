@@ -1,0 +1,19 @@
+{
+  "sources": [
+    "maps/mission-1/trace.json",
+    "flights/mission-1/trace.json",
+    "maps/mission-3/trace.json",
+    "books/mission-1/trace.json"
+  ],
+  "consent_label": "Accept all",
+  "repeated_action": {
+    "operation": "click",
+    "target": {
+      "role": "button",
+      "label": "Rating"
+    },
+    "unchanged_url_repetitions": 11
+  },
+  "cafe_label": "ama Café",
+  "collection_mission": "collect every book title and price in the Travel category"
+}

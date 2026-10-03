@@ -35,7 +35,7 @@ and exit 65. No service, browser, or model is needed.
 The version-1 derived Protocol.drive_trace projection contains time, site, mission,
 outcome, cost (number or null), duration_ms, model_calls, page_kind_path,
 inferred_pages, arguments, compiled, procedures, steps, unattended, final (URL/title or null), and optional
-error_code. inferred_pages is the session mapping: each `{name, url_pattern}` is a
+error_code and `structural_outline` (default `null`). For done collection missions the final page contributes a tag/class skeleton of repeated containers, bounded to 4096 bytes, at most 256 elements and depth five. It contains no text nodes, attributes, field values or URLs; failed capture leaves null. Legacy files decode with null. The compiler receives this skeleton as selector evidence (map-op09). inferred_pages is the session mapping: each `{name, url_pattern}` is a
 generalized URL and the name it was given, first-seen. A missing inferred_pages on an
 older file decodes as empty. Procedures
 have n, procedure, outcome, planned, and safe steps. `arguments` is a list of `[name, value]` pairs (default `[]`): only bindings whose values occur in retained, non-redacted typed steps are saved; unused and password-marker bindings are discarded. Steps have n, operation, source (`operator` or `planner`, default `operator`), non_repeatable (default false), optional error code,

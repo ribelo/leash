@@ -287,6 +287,28 @@ let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
     shown_url = None;
   }
 
+(* map-op12: remove only exact operation/row pairs. Other operations on that
+   row remain available; targetless scrolls are page controls. *)
+let without_actions request masked =
+  let blocked op index = List.mem (op, index) masked in
+  let elements =
+    List.map
+      (fun (element : element) ->
+        {
+          element with
+          operations =
+            List.filter (fun op -> not (blocked op (Some element.row))) element.operations;
+        })
+      request.elements
+  in
+  {
+    request with
+    elements;
+    can_scroll_down =
+      request.can_scroll_down && not (blocked (operation "scroll_down") None);
+    can_scroll_up = request.can_scroll_up && not (blocked (operation "scroll_up") None);
+  }
+
 let with_scripts request scripts = { request with scripts }
 let with_shown_url request url = { request with shown_url = Some url }
 

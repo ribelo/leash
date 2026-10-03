@@ -563,6 +563,7 @@ let finish t ~now outcome =
       compiled = false;
       procedures;
       steps;
+      structural_outline = None;
       final;
       error_code;
     }

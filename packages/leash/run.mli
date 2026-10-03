@@ -102,6 +102,8 @@ type plan_answer =
   | Procedure of Playbook.procedure
   | Continue_actions of Protocol.planner_action list
   | Notify of string
+  | Done of { result : string; evidence : string list }
+      (** map-op10: one-line result, verified against live-page expectations. *)
   | Handoff of string
   | Fail of string
       (** What a planner turn may answer (run-rq6i, L32): a procedure to run now, a
