@@ -1,0 +1,28 @@
+{
+  "command": [
+    "new",
+    "https://www.google.com/travel/flights?hl=en"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.36090150800009724,
+  "reply": {
+    "tab": "[redacted capability]",
+    "label": null,
+    "url": "https://www.google.com/travel/flights?hl=en",
+    "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+    "page_kind": {
+      "name": "flights",
+      "source": "inferred"
+    },
+    "origin": "agent",
+    "age_s": 0,
+    "idle_s": 0,
+    "closes_in_s": 3600,
+    "with_human": false,
+    "generation": 1,
+    "dialog": null,
+    "loaded": true
+  },
+  "stdout": null,
+  "stderr": ""
+}

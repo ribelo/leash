@@ -1,0 +1,13 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 69,
+  "elapsed_s": 0.02333623899903614,
+  "reply": null,
+  "stdout": "",
+  "stderr": "Failed to connect to user scope bus via local transport: No such file or directory\n{\"code\":\"service-unreachable\",\"message\":\"cannot reach the Leash service at <PRIVATE_ROOT>/runtime/leash/control.sock\",\"hint\":\"`systemctl --user start leash`, or pass --socket\",\"detail\":{\"socket\":\"<PRIVATE_ROOT>/runtime/leash/control.sock\"}}\n"
+}

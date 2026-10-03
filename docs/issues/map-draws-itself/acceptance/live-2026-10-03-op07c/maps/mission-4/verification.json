@@ -1,0 +1,14 @@
+{
+  "verified": false,
+  "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+  "cafe_name": "",
+  "visible_ratings": [],
+  "address": null,
+  "distance_m": null,
+  "cafe_category_visible": false,
+  "requested_landmark_in_drive_navigation_evidence": false,
+  "answer_name_and_address_supported": false,
+  "answer": "",
+  "results_heading_ignored": true,
+  "needs_manual_review": true
+}

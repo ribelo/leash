@@ -1,0 +1,27 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.007420269999784068,
+  "reply": {
+    "value": {
+      "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+      "title": "Horror | Books to Scrape - Sandbox",
+      "text": "Books to Scrape We love being scraped!\nHome  Books Horror\nBooks\nTravel\nMystery\nHistorical Fiction\nSequential Art\nClassics\nPhilosophy\nRomance\nWomens Fiction\nFiction\nChildrens\nReligion\nNonfiction\nMusic\nDefault\nScience Fiction\nSports and Games\nAdd a comment\nFantasy\nNew Adult\nYoung Adult\nScience\nPoetry\nParanormal\nArt\nPsychology\nAutobiography\nParenting\nAdult Fiction\nHumor\nHorror\nHistory\nFood and Drink\nChristian Fiction\nBusiness\nBiography\nThriller\nContemporary\nSpirituality\nAcademic\nSelf Help\nHistorical\nChristian\nSuspense\nShort Stories\nNovels\nHealth\nPolitics\nCultural\nErotica\nCrime\nHorror\n17 results.\nWarning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.\n\n    \n\nSecurity\n\n£39.25\n\n In stock\n\nAdd to basket\n\n    \n\nFollow You Home\n\n£21.36\n\n In stock\n\nAdd to basket\n\n    \n\nThe Loney\n\n£23.40\n\n In stock\n\nAdd to basket\n\n    \n\nPet Sematary\n\n£10.56\n\n In stock\n\nAdd to basket\n\n    \n\nDoctor Sleep (The Shining ...\n\n£40.12\n\n In stock\n\nAdd to basket\n\n    \n\nPsycho: Sanitarium (Psycho #1.5)\n\n£36.97\n\n In stock\n\nAdd to basket\n\n    \n\nCan You Keep a ...\n\n£48.64\n\n In stock\n\nAdd to basket\n\n    \n\nRed Dragon (Hannibal Lecter ...\n\n£23.37\n\n In stock\n\nAdd to basket\n\n    \n\nDracula the Un-Dead\n\n£35.63\n\n In stock\n\nAdd to basket\n\n    \n\nNight Shift (Night Shift ...\n\n£12.75\n\n In stock\n\nAdd to basket\n\n    \n\nNeedful Things\n\n£47.51\n\n In stock\n\nAdd to basket\n\n    \n\nMisery\n\n£34.79\n\n In stock\n\nAdd to basket\n\n    \n\nIt\n\n£25.01\n\n In stock\n\nAdd to basket\n\n    \n\n'Salem's Lot\n\n£49.56\n\n In stock\n\nAdd to basket\n\n    \n\nThe Stand\n\n£57.86\n\n In stock\n\nAdd to basket\n\n    \n\nThe Girl with All ...\n\n£49.47\n\n In stock\n\nAdd to basket\n\n    \n\nHouse of Leaves\n\n£54.89\n\n In stock\n\nAdd to basket",
+      "headings": [
+        "Horror"
+      ],
+      "labels": [],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T14:02:16.711Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

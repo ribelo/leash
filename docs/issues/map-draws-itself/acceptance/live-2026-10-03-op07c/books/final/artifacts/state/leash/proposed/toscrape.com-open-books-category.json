@@ -1,0 +1,29 @@
+{
+  "site": "toscrape.com",
+  "entry": "https://books.toscrape.com/",
+  "description": "Learned toscrape.com",
+  "pages": [
+    {
+      "name": "books-category",
+      "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html"
+    },
+    { "name": "home", "url_pattern": "https://books.toscrape.com/" }
+  ],
+  "procedures": [
+    {
+      "slug": "open-books-category",
+      "description": "Open the requested books category and collect every book title and price.",
+      "args": { "category": { "from": "mission" } },
+      "steps": [
+        { "goal": "Click the link named {category}" },
+        {
+          "goal": "Collect every book title and price in the {category} category"
+        }
+      ],
+      "expect": [
+        "the page is books-category",
+        "every book title and price in the requested category is collected"
+      ]
+    }
+  ]
+}

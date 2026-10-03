@@ -1,0 +1,11 @@
+{
+  "op07c_binary_processes": 0,
+  "private_chrome_profile_processes": 0,
+  "private_runtime_paths_in_process_arguments": 0,
+  "real_service": {
+    "ActiveState": "active",
+    "SubState": "running",
+    "MainPID": "3662"
+  },
+  "real_service_main_pid_unchanged": true
+}

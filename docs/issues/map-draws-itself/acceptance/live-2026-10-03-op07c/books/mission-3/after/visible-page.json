@@ -1,0 +1,27 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.007224986999062821,
+  "reply": {
+    "value": {
+      "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+      "title": "Poetry | Books to Scrape - Sandbox",
+      "text": "Books to Scrape We love being scraped!\nHome  Books Poetry\nBooks\nTravel\nMystery\nHistorical Fiction\nSequential Art\nClassics\nPhilosophy\nRomance\nWomens Fiction\nFiction\nChildrens\nReligion\nNonfiction\nMusic\nDefault\nScience Fiction\nSports and Games\nAdd a comment\nFantasy\nNew Adult\nYoung Adult\nScience\nPoetry\nParanormal\nArt\nPsychology\nAutobiography\nParenting\nAdult Fiction\nHumor\nHorror\nHistory\nFood and Drink\nChristian Fiction\nBusiness\nBiography\nThriller\nContemporary\nSpirituality\nAcademic\nSelf Help\nHistorical\nChristian\nSuspense\nShort Stories\nNovels\nHealth\nPolitics\nCultural\nErotica\nCrime\nPoetry\n19 results.\nWarning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.\n\n    \n\nA Light in the ...\n\n£51.77\n\n In stock\n\nAdd to basket\n\n    \n\nThe Black Maria\n\n£52.15\n\n In stock\n\nAdd to basket\n\n    \n\nShakespeare's Sonnets\n\n£20.66\n\n In stock\n\nAdd to basket\n\n    \n\nOlio\n\n£23.88\n\n In stock\n\nAdd to basket\n\n    \n\nYou can't bury them ...\n\n£33.63\n\n In stock\n\nAdd to basket\n\n    \n\nSlow States of Collapse: ...\n\n£57.31\n\n In stock\n\nAdd to basket\n\n    \n\nUntitled Collection: Sabbath Poems ...\n\n£14.27\n\n In stock\n\nAdd to basket\n\n    \n\nPoems That Make Grown ...\n\n£14.19\n\n In stock\n\nAdd to basket\n\n    \n\nNight Sky with Exit ...\n\n£41.05\n\n In stock\n\nAdd to basket\n\n    \n\nsalt.\n\n£46.78\n\n In stock\n\nAdd to basket\n\n    \n\nQuarter Life Poetry: Poems ...\n\n£50.89\n\n In stock\n\nAdd to basket\n\n    \n\nOut of Print: City ...\n\n£53.64\n\n In stock\n\nAdd to basket\n\n    \n\nLes Fleurs du Mal\n\n£29.04\n\n In stock\n\nAdd to basket\n\n    \n\nHowl and Other Poems\n\n£40.45\n\n In stock\n\nAdd to basket\n\n    \n\nLeave This Song Behind: ...\n\n£51.17\n\n In stock\n\nAdd to basket\n\n    \n\nThe Collected Poems of ...\n\n£15.42\n\n In stock\n\nAdd to basket\n\n    \n\nThe Crossover\n\n£38.77\n\n In stock\n\nAdd to basket\n\n    \n\nBooked\n\n£17.49\n\n In stock\n\nAdd to basket\n\n    \n\nTwenty Love Poems and ...\n\n£30.95\n\n In stock\n\nAdd to basket",
+      "headings": [
+        "Poetry"
+      ],
+      "labels": [],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T13:56:31.392Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

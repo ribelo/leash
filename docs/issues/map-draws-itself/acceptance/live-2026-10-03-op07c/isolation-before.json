@@ -1,0 +1,21 @@
+{
+  "processes": [
+    {
+      "pid": 3662,
+      "name": "leash",
+      "start_ticks": "10749"
+    }
+  ],
+  "real_config_file_mtimes_ns": {
+    "config.toml": 1000000000,
+    "playbooks/.install.lock": 1790890472880388549,
+    "playbooks/books.toscrape.com/playbook.json": 1790805316646140104,
+    "playbooks/automationexercise.com/playbook.json": 1790871945906633263,
+    "playbooks/automationexercise.com/scripts/cart-url.js": 1790871945906624797,
+    "playbooks/automationexercise.com/scripts/read-cart.js": 1790871945906591954,
+    "playbooks/automationexercise.com/scripts/product-url.js": 1790871945906617634,
+    "playbooks/automationexercise.com/scripts/search-url.js": 1790871945906609458,
+    "playbooks/books.toscrape.com/scripts/list-page.js": 1790805316646116519,
+    "playbooks/books.toscrape.com/scripts/last-page.js": 1790805316646131778
+  }
+}

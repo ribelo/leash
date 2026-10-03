@@ -1,0 +1,12 @@
+{
+  "binary_sha256": "10afe16378511bcb42e92402b8a54dde7bac7aaf98c109a63b13f8f7989366b0",
+  "git_head": "1690f49",
+  "rebuild": false,
+  "fallback_harness": "/home/ribelo/projects/ribelo/leash-op07-evidence-wip/harness.py",
+  "preserved_runs": [
+    "books-killed",
+    "flights-killed"
+  ],
+  "maps_5_diagnosis": "SIGTERM infrastructure kill, not harness bug; no rerun",
+  "real_service_main_pid_before": 3662
+}

@@ -1,0 +1,3815 @@
+{
+  "command": [
+    "drive",
+    "find the cheapest flight from Warsaw to Lisbon next month and tell me its price and dates",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "900",
+    "--max-steps",
+    "60",
+    "--max-procedures",
+    "20",
+    "--out",
+    "<PRIVATE_ROOT>/output-1.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 17.36480909400052,
+  "reply": {
+    "unattended": [],
+    "playbook_choices": [
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      }
+    ],
+    "status": "done",
+    "site": null,
+    "procedures": [],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "text_helper": 2,
+        "operator": 18
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.005410836000000001,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 20,
+    "model_cost": 0.005410836000000001,
+    "operator_steps": [
+      {
+        "non_repeatable": false,
+        "n": 1,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "CLICK": 0.11,
+            "BLOCKED": 0.62,
+            "SCROLL_DOWN": 0.26,
+            "WAIT": 0.01
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://consent.google.com/m?continue=https://www.google.com/travel/flights?hl%3Den&gl=PL&m=0&pc=flt&cm=2&hl=en&src=1",
+          "title": "Before you continue"
+        },
+        "elapsed_ms": 584
+      },
+      {
+        "non_repeatable": false,
+        "n": 2,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 5,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.25,
+            "CLICK": 0.6900000000000001,
+            "DONE": 0.0,
+            "WAIT": 0.0,
+            "SCROLL_UP": 0.06
+          },
+          "target": {
+            "5": 0.53,
+            "6": 0.47,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Reject all"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 2015
+      },
+      {
+        "non_repeatable": false,
+        "n": 3,
+        "snapshot": "[redacted capability]",
+        "operation": "type_text",
+        "index": 16,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.49,
+            "BLOCKED": 0.01,
+            "WAIT": 0.0,
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.49,
+            "SCROLL_DOWN": 0.01
+          },
+          "target": {
+            "13": 0.0,
+            "15": 0.0,
+            "16": 0.55,
+            "18": 0.45,
+            "19": 0.0,
+            "20": 0.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": "Where from?"
+        },
+        "text": "Warsaw",
+        "after": {
+          "url": "https://www.google.com/travel/flights?hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 3822
+      },
+      {
+        "non_repeatable": false,
+        "n": 4,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 6,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.04,
+            "WAIT": 0.01,
+            "TYPE_TEXT": 0.11,
+            "DONE": 0.0,
+            "SCROLL_DOWN": 0.02,
+            "CLICK": 0.82
+          },
+          "target": {
+            "1": 0.16,
+            "2": 0.01,
+            "3": 0.0,
+            "4": 0.32,
+            "5": 0.0,
+            "6": 0.5,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.01,
+            "11": 0.0
+          }
+        },
+        "target": {
+          "role": "option",
+          "label": "Warsaw Chopin Airport (WAW)"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoJagcIARIDV0FXGglyBwgBEgNXQVdAAUgBcAGCAQsI____________AZgBAQ&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 4985
+      },
+      {
+        "non_repeatable": false,
+        "n": 5,
+        "snapshot": "[redacted capability]",
+        "operation": "type_text",
+        "index": 18,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "WAIT": 0.0,
+            "BLOCKED": 0.01,
+            "CLICK": 0.01,
+            "SCROLL_DOWN": 0.01,
+            "TYPE_TEXT": 0.97
+          },
+          "target": {
+            "13": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "18": 1.0,
+            "19": 0.0,
+            "20": 0.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": "Where to? "
+        },
+        "text": "Lisbon",
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoJagcIARIDV0FXGglyBwgBEgNXQVdAAUgBcAGCAQsI____________AZgBAQ&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 6778
+      },
+      {
+        "non_repeatable": false,
+        "n": 6,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 4,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.94,
+            "BLOCKED": 0.02,
+            "WAIT": 0.01,
+            "SCROLL_DOWN": 0.02,
+            "TYPE_TEXT": 0.01,
+            "DONE": 0.0
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.85,
+            "5": 0.0,
+            "6": 0.15000000000000002,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0
+          }
+        },
+        "target": {
+          "role": "option",
+          "label": "Lisbon, Portugal"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 7577
+      },
+      {
+        "non_repeatable": false,
+        "n": 7,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 19,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.64,
+            "WAIT": 0.01,
+            "TYPE_TEXT": 0.31,
+            "DONE": 0.0,
+            "SCROLL_DOWN": 0.0,
+            "BLOCKED": 0.04
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "13": 0.01,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.01,
+            "17": 0.0,
+            "18": 0.01,
+            "19": 0.82,
+            "20": 0.0,
+            "21": 0.11,
+            "23": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.04,
+            "29": 0.0,
+            "30": 0.0
+          }
+        },
+        "target": {
+          "role": "textbox",
+          "label": "Departure"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 8175
+      },
+      {
+        "non_repeatable": false,
+        "n": 8,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 85,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.67,
+            "SCROLL_DOWN": 0.01,
+            "BLOCKED": 0.06,
+            "DONE": 0.13,
+            "TYPE_TEXT": 0.11,
+            "WAIT": 0.02
+          },
+          "target": {
+            "1": 0.060000000000000005,
+            "2": 0.14,
+            "3": 0.04,
+            "4": 0.04,
+            "5": 0.01,
+            "7": 0.04,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.02,
+            "25": 0.01,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.01,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.01,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "40": 0.01,
+            "41": 0.01,
+            "42": 0.0,
+            "43": 0.0,
+            "44": 0.0,
+            "45": 0.0,
+            "46": 0.0,
+            "47": 0.01,
+            "48": 0.0,
+            "49": 0.0,
+            "50": 0.0,
+            "51": 0.0,
+            "52": 0.0,
+            "53": 0.0,
+            "54": 0.0,
+            "55": 0.0,
+            "56": 0.0,
+            "57": 0.0,
+            "58": 0.0,
+            "59": 0.27,
+            "60": 0.0,
+            "61": 0.02,
+            "62": 0.0,
+            "63": 0.0,
+            "64": 0.0,
+            "65": 0.0,
+            "66": 0.0,
+            "67": 0.0,
+            "68": 0.0,
+            "69": 0.0,
+            "70": 0.0,
+            "71": 0.0,
+            "72": 0.0,
+            "73": 0.0,
+            "74": 0.0,
+            "75": 0.0,
+            "76": 0.0,
+            "77": 0.0,
+            "78": 0.0,
+            "79": 0.0,
+            "80": 0.0,
+            "81": 0.0,
+            "82": 0.0,
+            "83": 0.0,
+            "84": 0.0,
+            "85": 0.29000000000000004
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Done. "
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 9898
+      },
+      {
+        "non_repeatable": false,
+        "n": 9,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 19,
+        "probabilities": {
+          "op": {
+            "SCROLL_DOWN": 0.0,
+            "WAIT": 0.02,
+            "CLICK": 0.58,
+            "BLOCKED": 0.05,
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.35
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.85,
+            "20": 0.0,
+            "21": 0.12,
+            "23": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.03,
+            "29": 0.0,
+            "30": 0.0
+          }
+        },
+        "target": {
+          "role": "textbox",
+          "label": "Departure"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 11196
+      },
+      {
+        "non_repeatable": false,
+        "n": 10,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 59,
+        "probabilities": {
+          "op": {
+            "TYPE_TEXT": 0.11,
+            "DONE": 0.18,
+            "CLICK": 0.61,
+            "BLOCKED": 0.07,
+            "SCROLL_DOWN": 0.01,
+            "WAIT": 0.02
+          },
+          "target": {
+            "1": 0.060000000000000005,
+            "2": 0.13,
+            "3": 0.02,
+            "4": 0.04,
+            "5": 0.01,
+            "7": 0.04,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.01,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.02,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.01,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "40": 0.01,
+            "41": 0.01,
+            "42": 0.0,
+            "43": 0.0,
+            "44": 0.0,
+            "45": 0.0,
+            "46": 0.0,
+            "47": 0.03,
+            "48": 0.0,
+            "49": 0.0,
+            "50": 0.0,
+            "51": 0.0,
+            "52": 0.0,
+            "53": 0.0,
+            "54": 0.0,
+            "55": 0.0,
+            "56": 0.0,
+            "57": 0.0,
+            "58": 0.0,
+            "59": 0.29000000000000004,
+            "60": 0.0,
+            "61": 0.03,
+            "62": 0.0,
+            "63": 0.0,
+            "64": 0.0,
+            "65": 0.0,
+            "66": 0.0,
+            "67": 0.0,
+            "68": 0.0,
+            "69": 0.0,
+            "70": 0.0,
+            "71": 0.0,
+            "72": 0.0,
+            "73": 0.0,
+            "74": 0.0,
+            "75": 0.0,
+            "76": 0.0,
+            "77": 0.0,
+            "78": 0.0,
+            "79": 0.0,
+            "80": 0.0,
+            "81": 0.0,
+            "82": 0.0,
+            "83": 0.0,
+            "84": 0.0,
+            "85": 0.04,
+            "86": 0.24000000000000002
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Tuesday, November 24, 2026 , 588 Polish zlotys, Cheapest price"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 13495
+      },
+      {
+        "non_repeatable": false,
+        "n": 11,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 9,
+        "probabilities": {
+          "op": {
+            "DONE": 0.11,
+            "BLOCKED": 0.03,
+            "TYPE_TEXT": 0.02,
+            "SCROLL_DOWN": 0.0,
+            "WAIT": 0.01,
+            "CLICK": 0.83
+          },
+          "target": {
+            "1": 0.03,
+            "2": 0.02,
+            "3": 0.02,
+            "4": 0.01,
+            "5": 0.09,
+            "6": 0.01,
+            "7": 0.01,
+            "8": 0.0,
+            "9": 0.43,
+            "10": 0.0,
+            "11": 0.01,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.01,
+            "34": 0.36
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Thursday, November 26, 2026 , 638 Polish zlotys, Cheapest price"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 14297
+      },
+      {
+        "non_repeatable": false,
+        "n": 12,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 86,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.9,
+            "SCROLL_DOWN": 0.0,
+            "BLOCKED": 0.02,
+            "WAIT": 0.01,
+            "DONE": 0.06,
+            "TYPE_TEXT": 0.01
+          },
+          "target": {
+            "1": 0.12,
+            "2": 0.02,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "40": 0.0,
+            "41": 0.0,
+            "42": 0.0,
+            "43": 0.0,
+            "44": 0.0,
+            "45": 0.0,
+            "46": 0.0,
+            "47": 0.0,
+            "48": 0.0,
+            "49": 0.0,
+            "50": 0.0,
+            "51": 0.0,
+            "52": 0.0,
+            "53": 0.0,
+            "54": 0.0,
+            "55": 0.0,
+            "56": 0.0,
+            "57": 0.0,
+            "58": 0.0,
+            "59": 0.03,
+            "60": 0.0,
+            "61": 0.03,
+            "62": 0.0,
+            "63": 0.0,
+            "64": 0.0,
+            "65": 0.0,
+            "66": 0.0,
+            "67": 0.0,
+            "68": 0.0,
+            "69": 0.0,
+            "70": 0.0,
+            "71": 0.0,
+            "72": 0.0,
+            "73": 0.0,
+            "74": 0.0,
+            "75": 0.0,
+            "76": 0.0,
+            "77": 0.0,
+            "78": 0.0,
+            "79": 0.0,
+            "80": 0.0,
+            "81": 0.0,
+            "82": 0.0,
+            "83": 0.0,
+            "84": 0.0,
+            "85": 0.02,
+            "86": 0.77
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Done. Search for round trip flights, departing on November 24, 2026 and returning on November 26, 2026"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+          "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+        },
+        "elapsed_ms": 14988
+      },
+      {
+        "non_repeatable": false,
+        "n": 13,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 21,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.12,
+            "CLICK": 0.8,
+            "BLOCKED": 0.05,
+            "WAIT": 0.02,
+            "SCROLL_DOWN": 0.01
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "13": 0.02,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.37,
+            "20": 0.03,
+            "21": 0.55,
+            "23": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.03,
+            "29": 0.0,
+            "30": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhojEgoyMDI2LTExLTI0agcIARIDV0FXcgwIAxIIL20vMDRsbGIaIxIKMjAyNi0xMS0yNmoMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&hl=en",
+          "title": "Warsaw to Lisbon | Google Flights"
+        },
+        "elapsed_ms": 16606
+      },
+      {
+        "non_repeatable": false,
+        "n": 14,
+        "snapshot": "[redacted capability]",
+        "operation": "done",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "SCROLL_DOWN": 0.02,
+            "WAIT": 0.0,
+            "DONE": 0.69,
+            "TYPE_TEXT": 0.0,
+            "BLOCKED": 0.02,
+            "CLICK": 0.27
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhojEgoyMDI2LTExLTI0agcIARIDV0FXcgwIAxIIL20vMDRsbGIaIxIKMjAyNi0xMS0yNmoMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&hl=en",
+          "title": "Warsaw to Lisbon | Google Flights"
+        },
+        "elapsed_ms": 17298
+      }
+    ],
+    "operator_state": {
+      "status": "done",
+      "reason": null,
+      "error": null,
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhojEgoyMDI2LTExLTI0agcIARIDV0FXcgwIAxIIL20vMDRsbGIaIxIKMjAyNi0xMS0yNmoMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&hl=en",
+          "title": "Warsaw to Lisbon | Google Flights",
+          "page_kind": {
+            "name": "search",
+            "source": "inferred"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "button",
+              "name": "Main menu",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 2,
+              "role": "link",
+              "name": "Google"
+            },
+            {
+              "index": 3,
+              "role": "button",
+              "name": "Skip to main content"
+            },
+            {
+              "index": 4,
+              "role": "button",
+              "name": "Accessibility feedback"
+            },
+            {
+              "index": 5,
+              "role": "link",
+              "name": "Explore"
+            },
+            {
+              "index": 6,
+              "role": "link",
+              "name": "Flights"
+            },
+            {
+              "index": 7,
+              "role": "link",
+              "name": "Hotels"
+            },
+            {
+              "index": 8,
+              "role": "link",
+              "name": "Vacation rentals"
+            },
+            {
+              "index": 9,
+              "role": "button",
+              "name": "Change appearance",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 10,
+              "role": "button",
+              "name": "Google apps",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 11,
+              "role": "link",
+              "name": "Sign in"
+            },
+            {
+              "index": 12,
+              "role": "heading",
+              "name": "Flight search"
+            },
+            {
+              "index": 13,
+              "role": "combobox",
+              "name": "Change ticket type. Round trip",
+              "value": "Round trip",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 14,
+              "role": "button",
+              "name": "1 passenger, change number of passengers."
+            },
+            {
+              "index": 15,
+              "role": "combobox",
+              "name": "Change seating class. Economy",
+              "value": "Economy",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 16,
+              "role": "combobox",
+              "name": "Where from? Warsaw WAW",
+              "value": "Warsaw",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 17,
+              "role": "button",
+              "name": "Swap origin and destination."
+            },
+            {
+              "index": 18,
+              "role": "combobox",
+              "name": "Where to?",
+              "value": "Lisbon",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 19,
+              "role": "textbox",
+              "name": "Departure",
+              "value": "Tue, Nov 24"
+            },
+            {
+              "index": 20,
+              "role": "textbox",
+              "name": "Return",
+              "value": "Thu, Nov 26"
+            },
+            {
+              "index": 21,
+              "role": "heading",
+              "name": "Filters"
+            },
+            {
+              "index": 22,
+              "role": "button",
+              "name": "All filters"
+            },
+            {
+              "index": 23,
+              "role": "button",
+              "name": "Stops, Not selected"
+            },
+            {
+              "index": 24,
+              "role": "button",
+              "name": "Airlines, Not selected"
+            },
+            {
+              "index": 25,
+              "role": "button",
+              "name": "Bags, Not selected"
+            },
+            {
+              "index": 26,
+              "role": "button",
+              "name": "Price, Not selected"
+            },
+            {
+              "index": 27,
+              "role": "button",
+              "name": "Times, Not selected"
+            },
+            {
+              "index": 28,
+              "role": "button",
+              "name": "Emissions, Not selected"
+            },
+            {
+              "index": 29,
+              "role": "button",
+              "name": "Connecting airports, Not selected"
+            },
+            {
+              "index": 30,
+              "role": "button",
+              "name": "Duration, Not selected"
+            },
+            {
+              "index": 31,
+              "role": "heading",
+              "name": "Search results"
+            },
+            {
+              "index": 32,
+              "role": "tab",
+              "name": "Best Learn more about ranking",
+              "state": [
+                "selected"
+              ]
+            },
+            {
+              "index": 33,
+              "role": "button",
+              "name": "Learn more about ranking"
+            },
+            {
+              "index": 34,
+              "role": "tab",
+              "name": "Cheapest from 638 Polish zlotys Learn more about ranking"
+            },
+            {
+              "index": 35,
+              "role": "button",
+              "name": "Learn more about ranking"
+            },
+            {
+              "index": 36,
+              "role": "heading",
+              "name": "Top departing flights"
+            },
+            {
+              "index": 37,
+              "role": "button",
+              "name": "Learn more about ranking"
+            },
+            {
+              "index": 38,
+              "role": "button",
+              "name": "bag fees"
+            },
+            {
+              "index": 39,
+              "role": "button",
+              "name": "Passenger assistance"
+            },
+            {
+              "index": 40,
+              "role": "button",
+              "name": "Sorted by top flights, Change sort order."
+            },
+            {
+              "index": 41,
+              "role": "link",
+              "name": "From 638 Polish zlotys round trip total.This price does not include overhead bin access. Nonstop flight with Wizz Air. Leaves Warsaw Chopin Airport at 1:25 PM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 4:50 PM on Tuesday, November 24. Total duration 4 hr 25 min. Select flight"
+            },
+            {
+              "index": 42,
+              "role": "button",
+              "name": "Carbon emissions estimate: 172 kilograms. -33% emissions. Learn more about this emissions estimate"
+            },
+            {
+              "index": 43,
+              "role": "button",
+              "name": "This price for this flight doesn't include overhead bin access. If you need a carry-on bag, use the Bags filter to update prices."
+            },
+            {
+              "index": 44,
+              "role": "button",
+              "name": "Avoids as much CO2e as 5174 trees absorb in a day. Learn more about this calculation."
+            },
+            {
+              "index": 45,
+              "role": "button",
+              "name": "Flight details. Leaves Warsaw Chopin Airport at 1:25 PM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 4:50 PM on Tuesday, November 24.",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 46,
+              "role": "link",
+              "name": "From 876 Polish zlotys round trip total. 1 stop flight with SWISS. Operated by Helvetic. Leaves Warsaw Chopin Airport at 9:50 AM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 2:35 PM on Tuesday, November 24. Total duration 5 hr 45 min. Layover (1 of 1) is a 40 min layover at Zurich Airport in Zürich. Select flight"
+            },
+            {
+              "index": 47,
+              "role": "button",
+              "name": "Carbon emissions estimate: 311 kilograms. +21% emissions. Learn more about this emissions estimate"
+            },
+            {
+              "index": 48,
+              "role": "button",
+              "name": "Flight details. Leaves Warsaw Chopin Airport at 9:50 AM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 2:35 PM on Tuesday, November 24.",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 49,
+              "role": "link",
+              "name": "From 982 Polish zlotys round trip total. 1 stop flight with Lufthansa. Leaves Warsaw Chopin Airport at 6:30 AM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 11:30 AM on Tuesday, November 24. Total duration 6 hr. Layover (1 of 1) is a 1 hr layover at Frankfurt Airport in Frankfurt am Main. Select flight"
+            },
+            {
+              "index": 50,
+              "role": "button",
+              "name": "Carbon emissions estimate: 238 kilograms. -7% emissions. Learn more about this emissions estimate"
+            },
+            {
+              "index": 51,
+              "role": "button",
+              "name": "Flight details. Leaves Warsaw Chopin Airport at 6:30 AM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 11:30 AM on Tuesday, November 24.",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 52,
+              "role": "heading",
+              "name": "Price insights"
+            },
+            {
+              "index": 53,
+              "role": "heading",
+              "name": "Prices are currently low — PLN 115 cheaper than usual for your search"
+            },
+            {
+              "index": 54,
+              "role": "button",
+              "name": "View price history",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 55,
+              "role": "heading",
+              "name": "Track prices"
+            },
+            {
+              "index": 56,
+              "role": "button",
+              "name": "Learn more about tracked prices"
+            },
+            {
+              "index": 57,
+              "role": "link",
+              "name": "Learn more about tracked prices"
+            },
+            {
+              "index": 58,
+              "role": "switch",
+              "name": "Track prices from Warsaw to Lisbon departing 2026-11-24 and returning 2026-11-26",
+              "state": [
+                "unchecked"
+              ]
+            },
+            {
+              "index": 59,
+              "role": "switch",
+              "name": "Track prices from Warsaw to Lisbon - Any dates",
+              "state": [
+                "unchecked"
+              ]
+            },
+            {
+              "index": 60,
+              "role": "button",
+              "name": "Date grid"
+            },
+            {
+              "index": 61,
+              "role": "button",
+              "name": "Price graph"
+            }
+          ],
+          "total": 61,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhojEgoyMDI2LTExLTI0agcIARIDV0FXcgwIAxIIL20vMDRsbGIaIxIKMjAyNi0xMS0yNmoMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&hl=en",
+        "title": "Warsaw to Lisbon | Google Flights",
+        "page_kind": "search",
+        "page_kind_source": "inferred",
+        "text": "Skip to main content\nAccessibility feedback\nExplore\nFlights\nHotels\nVacation rentals\nSign in\nFlight search\n1\nFilters\nAll filters\nStops\nAirlines\nBags\nPrice\nTimes\nEmissions\nConnecting airports\nDuration\nSearch results\n9 results returned.\nBest\nCheapest\nfrom\nPLN 638\nTop departing flights\nRanked based on price and convenience\nPrices include required taxes + fees for 1 adult.\nOptional charges and\nbag fees\nmay apply.\nPassenger assistance\ninfo.\nSorted by top flights\n1:25 PM\n–\n4:50 PM\nWizz Air\n4 hr 25 min\nNonstop\nPLN 638\nround trip\nAvoids\nas much CO2e as\n5,174\ntrees absorb in a day\n9:50 AM\n–\n2:35 PM\nSWISS\nOperated by Helvetic\n5 hr 45 min\n1 stop\n40 min\nZRH\nPLN 876\nround trip\n6:30 AM\n–\n11:30 AM\nLufthansa\n6 hr\n1 stop\n1 hr\nFRA\nPLN 982\nround trip\nPrice insights\nPrices are currently\nlow\n—\nPLN 115\ncheaper than usual for your search\nTrack prices\nTrack prices from Warsaw to Lisbon departing 2026-11-24 and returning 2026-11-26\nTrack prices from Warsaw to Lisbon - Any dates\nDate grid\nPrice graph",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [],
+        "can_scroll_down": true,
+        "can_scroll_up": false,
+        "coverage": "viewport+below",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": false,
+          "can_scroll_down": true,
+          "coverage": "viewport+below",
+          "unsupported_states": []
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "CLICK": 0.11,
+                "BLOCKED": 0.62,
+                "SCROLL_DOWN": 0.26,
+                "WAIT": 0.01
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://consent.google.com/m?continue=https://www.google.com/travel/flights?hl%3Den&gl=PL&m=0&pc=flt&cm=2&hl=en&src=1",
+              "title": "Before you continue"
+            },
+            "elapsed_ms": 584
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "blocked",
+          "rescue": true,
+          "input_ms": 124,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 2,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.25,
+                "CLICK": 0.6900000000000001,
+                "DONE": 0.0,
+                "WAIT": 0.0,
+                "SCROLL_UP": 0.06
+              },
+              "target": {
+                "5": 0.53,
+                "6": 0.47,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Reject all"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 2015
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 7,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 3,
+            "snapshot": "[redacted capability]",
+            "operation": "type_text",
+            "index": 16,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.49,
+                "BLOCKED": 0.01,
+                "WAIT": 0.0,
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.49,
+                "SCROLL_DOWN": 0.01
+              },
+              "target": {
+                "13": 0.0,
+                "15": 0.0,
+                "16": 0.55,
+                "18": 0.45,
+                "19": 0.0,
+                "20": 0.0
+              }
+            },
+            "target": {
+              "role": "combobox",
+              "label": "Where from?"
+            },
+            "text": "Warsaw",
+            "after": {
+              "url": "https://www.google.com/travel/flights?hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 3822
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "type_text",
+          "rescue": false,
+          "input_ms": 5,
+          "settle_ms": 400
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 4,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 6,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.04,
+                "WAIT": 0.01,
+                "TYPE_TEXT": 0.11,
+                "DONE": 0.0,
+                "SCROLL_DOWN": 0.02,
+                "CLICK": 0.82
+              },
+              "target": {
+                "1": 0.16,
+                "2": 0.01,
+                "3": 0.0,
+                "4": 0.32,
+                "5": 0.0,
+                "6": 0.5,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.01,
+                "11": 0.0
+              }
+            },
+            "target": {
+              "role": "option",
+              "label": "Warsaw Chopin Airport (WAW)"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoJagcIARIDV0FXGglyBwgBEgNXQVdAAUgBcAGCAQsI____________AZgBAQ&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 4985
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 12,
+          "settle_ms": 551
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 5,
+            "snapshot": "[redacted capability]",
+            "operation": "type_text",
+            "index": 18,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "WAIT": 0.0,
+                "BLOCKED": 0.01,
+                "CLICK": 0.01,
+                "SCROLL_DOWN": 0.01,
+                "TYPE_TEXT": 0.97
+              },
+              "target": {
+                "13": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "18": 1.0,
+                "19": 0.0,
+                "20": 0.0
+              }
+            },
+            "target": {
+              "role": "combobox",
+              "label": "Where to? "
+            },
+            "text": "Lisbon",
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoJagcIARIDV0FXGglyBwgBEgNXQVdAAUgBcAGCAQsI____________AZgBAQ&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 6778
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "type_text",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 250
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 6,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 4,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.94,
+                "BLOCKED": 0.02,
+                "WAIT": 0.01,
+                "SCROLL_DOWN": 0.02,
+                "TYPE_TEXT": 0.01,
+                "DONE": 0.0
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.85,
+                "5": 0.0,
+                "6": 0.15000000000000002,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0
+              }
+            },
+            "target": {
+              "role": "option",
+              "label": "Lisbon, Portugal"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 7577
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 9,
+          "settle_ms": 250
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 7,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 19,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.64,
+                "WAIT": 0.01,
+                "TYPE_TEXT": 0.31,
+                "DONE": 0.0,
+                "SCROLL_DOWN": 0.0,
+                "BLOCKED": 0.04
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "13": 0.01,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.01,
+                "17": 0.0,
+                "18": 0.01,
+                "19": 0.82,
+                "20": 0.0,
+                "21": 0.11,
+                "23": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.04,
+                "29": 0.0,
+                "30": 0.0
+              }
+            },
+            "target": {
+              "role": "textbox",
+              "label": "Departure"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 8175
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 29,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 8,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 85,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.67,
+                "SCROLL_DOWN": 0.01,
+                "BLOCKED": 0.06,
+                "DONE": 0.13,
+                "TYPE_TEXT": 0.11,
+                "WAIT": 0.02
+              },
+              "target": {
+                "1": 0.060000000000000005,
+                "2": 0.14,
+                "3": 0.04,
+                "4": 0.04,
+                "5": 0.01,
+                "7": 0.04,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.02,
+                "25": 0.01,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.01,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.01,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.01,
+                "41": 0.01,
+                "42": 0.0,
+                "43": 0.0,
+                "44": 0.0,
+                "45": 0.0,
+                "46": 0.0,
+                "47": 0.01,
+                "48": 0.0,
+                "49": 0.0,
+                "50": 0.0,
+                "51": 0.0,
+                "52": 0.0,
+                "53": 0.0,
+                "54": 0.0,
+                "55": 0.0,
+                "56": 0.0,
+                "57": 0.0,
+                "58": 0.0,
+                "59": 0.27,
+                "60": 0.0,
+                "61": 0.02,
+                "62": 0.0,
+                "63": 0.0,
+                "64": 0.0,
+                "65": 0.0,
+                "66": 0.0,
+                "67": 0.0,
+                "68": 0.0,
+                "69": 0.0,
+                "70": 0.0,
+                "71": 0.0,
+                "72": 0.0,
+                "73": 0.0,
+                "74": 0.0,
+                "75": 0.0,
+                "76": 0.0,
+                "77": 0.0,
+                "78": 0.0,
+                "79": 0.0,
+                "80": 0.0,
+                "81": 0.0,
+                "82": 0.0,
+                "83": 0.0,
+                "84": 0.0,
+                "85": 0.29000000000000004
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Done. "
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 9898
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 9,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 9,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 19,
+            "probabilities": {
+              "op": {
+                "SCROLL_DOWN": 0.0,
+                "WAIT": 0.02,
+                "CLICK": 0.58,
+                "BLOCKED": 0.05,
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.35
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.85,
+                "20": 0.0,
+                "21": 0.12,
+                "23": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.03,
+                "29": 0.0,
+                "30": 0.0
+              }
+            },
+            "target": {
+              "role": "textbox",
+              "label": "Departure"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 11196
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 20,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 10,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 59,
+            "probabilities": {
+              "op": {
+                "TYPE_TEXT": 0.11,
+                "DONE": 0.18,
+                "CLICK": 0.61,
+                "BLOCKED": 0.07,
+                "SCROLL_DOWN": 0.01,
+                "WAIT": 0.02
+              },
+              "target": {
+                "1": 0.060000000000000005,
+                "2": 0.13,
+                "3": 0.02,
+                "4": 0.04,
+                "5": 0.01,
+                "7": 0.04,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.01,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.02,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.01,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.01,
+                "41": 0.01,
+                "42": 0.0,
+                "43": 0.0,
+                "44": 0.0,
+                "45": 0.0,
+                "46": 0.0,
+                "47": 0.03,
+                "48": 0.0,
+                "49": 0.0,
+                "50": 0.0,
+                "51": 0.0,
+                "52": 0.0,
+                "53": 0.0,
+                "54": 0.0,
+                "55": 0.0,
+                "56": 0.0,
+                "57": 0.0,
+                "58": 0.0,
+                "59": 0.29000000000000004,
+                "60": 0.0,
+                "61": 0.03,
+                "62": 0.0,
+                "63": 0.0,
+                "64": 0.0,
+                "65": 0.0,
+                "66": 0.0,
+                "67": 0.0,
+                "68": 0.0,
+                "69": 0.0,
+                "70": 0.0,
+                "71": 0.0,
+                "72": 0.0,
+                "73": 0.0,
+                "74": 0.0,
+                "75": 0.0,
+                "76": 0.0,
+                "77": 0.0,
+                "78": 0.0,
+                "79": 0.0,
+                "80": 0.0,
+                "81": 0.0,
+                "82": 0.0,
+                "83": 0.0,
+                "84": 0.0,
+                "85": 0.04,
+                "86": 0.24000000000000002
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Tuesday, November 24, 2026 , 588 Polish zlotys, Cheapest price"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 13495
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 37,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 11,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 9,
+            "probabilities": {
+              "op": {
+                "DONE": 0.11,
+                "BLOCKED": 0.03,
+                "TYPE_TEXT": 0.02,
+                "SCROLL_DOWN": 0.0,
+                "WAIT": 0.01,
+                "CLICK": 0.83
+              },
+              "target": {
+                "1": 0.03,
+                "2": 0.02,
+                "3": 0.02,
+                "4": 0.01,
+                "5": 0.09,
+                "6": 0.01,
+                "7": 0.01,
+                "8": 0.0,
+                "9": 0.43,
+                "10": 0.0,
+                "11": 0.01,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.01,
+                "34": 0.36
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Thursday, November 26, 2026 , 638 Polish zlotys, Cheapest price"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 14297
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 21,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 12,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 86,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.9,
+                "SCROLL_DOWN": 0.0,
+                "BLOCKED": 0.02,
+                "WAIT": 0.01,
+                "DONE": 0.06,
+                "TYPE_TEXT": 0.01
+              },
+              "target": {
+                "1": 0.12,
+                "2": 0.02,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.0,
+                "41": 0.0,
+                "42": 0.0,
+                "43": 0.0,
+                "44": 0.0,
+                "45": 0.0,
+                "46": 0.0,
+                "47": 0.0,
+                "48": 0.0,
+                "49": 0.0,
+                "50": 0.0,
+                "51": 0.0,
+                "52": 0.0,
+                "53": 0.0,
+                "54": 0.0,
+                "55": 0.0,
+                "56": 0.0,
+                "57": 0.0,
+                "58": 0.0,
+                "59": 0.03,
+                "60": 0.0,
+                "61": 0.03,
+                "62": 0.0,
+                "63": 0.0,
+                "64": 0.0,
+                "65": 0.0,
+                "66": 0.0,
+                "67": 0.0,
+                "68": 0.0,
+                "69": 0.0,
+                "70": 0.0,
+                "71": 0.0,
+                "72": 0.0,
+                "73": 0.0,
+                "74": 0.0,
+                "75": 0.0,
+                "76": 0.0,
+                "77": 0.0,
+                "78": 0.0,
+                "79": 0.0,
+                "80": 0.0,
+                "81": 0.0,
+                "82": 0.0,
+                "83": 0.0,
+                "84": 0.0,
+                "85": 0.02,
+                "86": 0.77
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Done. Search for round trip flights, departing on November 24, 2026 and returning on November 26, 2026"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights?tfs=CBwQARoXagcIARIDV0FXcgwIAxIIL20vMDRsbGIaF2oMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&tfu=KgIIAw&hl=en",
+              "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+            },
+            "elapsed_ms": 14988
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 6,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 13,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 21,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.12,
+                "CLICK": 0.8,
+                "BLOCKED": 0.05,
+                "WAIT": 0.02,
+                "SCROLL_DOWN": 0.01
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "13": 0.02,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.37,
+                "20": 0.03,
+                "21": 0.55,
+                "23": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.03,
+                "29": 0.0,
+                "30": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhojEgoyMDI2LTExLTI0agcIARIDV0FXcgwIAxIIL20vMDRsbGIaIxIKMjAyNi0xMS0yNmoMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&hl=en",
+              "title": "Warsaw to Lisbon | Google Flights"
+            },
+            "elapsed_ms": 16606
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 11,
+          "settle_ms": 601
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "executed",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "CLICK": 0.11,
+              "BLOCKED": 0.62,
+              "SCROLL_DOWN": 0.26,
+              "WAIT": 0.01
+            },
+            "target": {}
+          },
+          "confidence": 0.53,
+          "rescued_operation": "scroll_down",
+          "usage": {
+            "input_tokens": 1637,
+            "output_tokens": 94,
+            "cost": 6.8754e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 358
+        },
+        {
+          "outcome": "executed",
+          "n": 2,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.25,
+              "CLICK": 0.6900000000000001,
+              "DONE": 0.0,
+              "WAIT": 0.0,
+              "SCROLL_UP": 0.06
+            },
+            "target": {
+              "5": 0.53,
+              "6": 0.47,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0
+            }
+          },
+          "confidence": 0.6,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 1810,
+            "output_tokens": 106,
+            "cost": 7.602e-05,
+            "retries": 0
+          },
+          "elapsed_ms": 319
+        },
+        {
+          "outcome": "executed",
+          "n": 3,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 16,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.49,
+              "BLOCKED": 0.01,
+              "WAIT": 0.0,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.49,
+              "SCROLL_DOWN": 0.01
+            },
+            "target": {
+              "13": 0.0,
+              "15": 0.0,
+              "16": 0.55,
+              "18": 0.45,
+              "19": 0.0,
+              "20": 0.0
+            }
+          },
+          "confidence": 0.4,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4308,
+            "output_tokens": 337,
+            "cost": 0.000180936,
+            "retries": 0
+          },
+          "elapsed_ms": 354
+        },
+        {
+          "outcome": "executed",
+          "n": 4,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 6,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.04,
+              "WAIT": 0.01,
+              "TYPE_TEXT": 0.11,
+              "DONE": 0.0,
+              "SCROLL_DOWN": 0.02,
+              "CLICK": 0.82
+            },
+            "target": {
+              "1": 0.16,
+              "2": 0.01,
+              "3": 0.0,
+              "4": 0.32,
+              "5": 0.0,
+              "6": 0.5,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.01,
+              "11": 0.0
+            }
+          },
+          "confidence": 0.79,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2767,
+            "output_tokens": 181,
+            "cost": 0.000116214,
+            "retries": 0
+          },
+          "elapsed_ms": 488
+        },
+        {
+          "outcome": "executed",
+          "n": 5,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 18,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "WAIT": 0.0,
+              "BLOCKED": 0.01,
+              "CLICK": 0.01,
+              "SCROLL_DOWN": 0.01,
+              "TYPE_TEXT": 0.97
+            },
+            "target": {
+              "13": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "18": 1.0,
+              "19": 0.0,
+              "20": 0.0
+            }
+          },
+          "confidence": 0.97,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4365,
+            "output_tokens": 337,
+            "cost": 0.00018333,
+            "retries": 0
+          },
+          "elapsed_ms": 388
+        },
+        {
+          "outcome": "executed",
+          "n": 6,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 4,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.94,
+              "BLOCKED": 0.02,
+              "WAIT": 0.01,
+              "SCROLL_DOWN": 0.02,
+              "TYPE_TEXT": 0.01,
+              "DONE": 0.0
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.85,
+              "5": 0.0,
+              "6": 0.15000000000000002,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0
+            }
+          },
+          "confidence": 0.93,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3197,
+            "output_tokens": 205,
+            "cost": 0.000134274,
+            "retries": 0
+          },
+          "elapsed_ms": 428
+        },
+        {
+          "outcome": "executed",
+          "n": 7,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 19,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.64,
+              "WAIT": 0.01,
+              "TYPE_TEXT": 0.31,
+              "DONE": 0.0,
+              "SCROLL_DOWN": 0.0,
+              "BLOCKED": 0.04
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "13": 0.01,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.01,
+              "17": 0.0,
+              "18": 0.01,
+              "19": 0.82,
+              "20": 0.0,
+              "21": 0.11,
+              "23": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.04,
+              "29": 0.0,
+              "30": 0.0
+            }
+          },
+          "confidence": 0.55,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4523,
+            "output_tokens": 344,
+            "cost": 0.000189966,
+            "retries": 0
+          },
+          "elapsed_ms": 338
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 8,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 85,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.05,
+              "SCROLL_DOWN": 0.08,
+              "WAIT": 0.04,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.07,
+              "CLICK": 0.76
+            },
+            "target": {
+              "1": 0.05,
+              "2": 0.09,
+              "3": 0.09999999999999999,
+              "4": 0.02,
+              "5": 0.03,
+              "7": 0.25,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.01,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.09999999999999999,
+              "37": 0.02,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.02,
+              "41": 0.02,
+              "42": 0.0,
+              "43": 0.02,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "54": 0.0,
+              "55": 0.0,
+              "56": 0.0,
+              "57": 0.0,
+              "58": 0.0,
+              "59": 0.0,
+              "60": 0.0,
+              "61": 0.0,
+              "62": 0.0,
+              "63": 0.0,
+              "64": 0.0,
+              "65": 0.0,
+              "66": 0.0,
+              "67": 0.0,
+              "68": 0.0,
+              "69": 0.0,
+              "70": 0.0,
+              "71": 0.0,
+              "72": 0.0,
+              "73": 0.0,
+              "74": 0.0,
+              "75": 0.0,
+              "76": 0.0,
+              "77": 0.0,
+              "78": 0.0,
+              "79": 0.0,
+              "80": 0.0,
+              "81": 0.0,
+              "82": 0.0,
+              "83": 0.0,
+              "84": 0.0,
+              "85": 0.27
+            }
+          },
+          "confidence": 0.71,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 10887,
+            "output_tokens": 794,
+            "cost": 0.000457254,
+            "retries": 0
+          },
+          "elapsed_ms": 561
+        },
+        {
+          "outcome": "executed",
+          "n": 9,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 85,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.67,
+              "SCROLL_DOWN": 0.01,
+              "BLOCKED": 0.06,
+              "DONE": 0.13,
+              "TYPE_TEXT": 0.11,
+              "WAIT": 0.02
+            },
+            "target": {
+              "1": 0.060000000000000005,
+              "2": 0.14,
+              "3": 0.04,
+              "4": 0.04,
+              "5": 0.01,
+              "7": 0.04,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.02,
+              "25": 0.01,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.01,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.01,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.01,
+              "41": 0.01,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.01,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "54": 0.0,
+              "55": 0.0,
+              "56": 0.0,
+              "57": 0.0,
+              "58": 0.0,
+              "59": 0.27,
+              "60": 0.0,
+              "61": 0.02,
+              "62": 0.0,
+              "63": 0.0,
+              "64": 0.0,
+              "65": 0.0,
+              "66": 0.0,
+              "67": 0.0,
+              "68": 0.0,
+              "69": 0.0,
+              "70": 0.0,
+              "71": 0.0,
+              "72": 0.0,
+              "73": 0.0,
+              "74": 0.0,
+              "75": 0.0,
+              "76": 0.0,
+              "77": 0.0,
+              "78": 0.0,
+              "79": 0.0,
+              "80": 0.0,
+              "81": 0.0,
+              "82": 0.0,
+              "83": 0.0,
+              "84": 0.0,
+              "85": 0.29000000000000004
+            }
+          },
+          "confidence": 0.61,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 12305,
+            "output_tokens": 794,
+            "cost": 0.00051681,
+            "retries": 0
+          },
+          "elapsed_ms": 508
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 10,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 59,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.09,
+              "BLOCKED": 0.09,
+              "DONE": 0.14,
+              "SCROLL_DOWN": 0.02,
+              "WAIT": 0.02,
+              "CLICK": 0.64
+            },
+            "target": {
+              "1": 0.05,
+              "2": 0.15000000000000002,
+              "3": 0.04,
+              "4": 0.060000000000000005,
+              "5": 0.04,
+              "7": 0.05,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.01,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.01,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.01,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.02,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "54": 0.0,
+              "55": 0.0,
+              "56": 0.0,
+              "57": 0.0,
+              "58": 0.0,
+              "59": 0.51,
+              "60": 0.0,
+              "61": 0.04,
+              "62": 0.0,
+              "63": 0.0,
+              "64": 0.0,
+              "65": 0.0,
+              "66": 0.0,
+              "67": 0.0,
+              "68": 0.0,
+              "69": 0.0,
+              "70": 0.0,
+              "71": 0.0,
+              "72": 0.0,
+              "73": 0.0,
+              "74": 0.0,
+              "75": 0.0,
+              "76": 0.0,
+              "77": 0.0,
+              "78": 0.0,
+              "79": 0.0,
+              "80": 0.0,
+              "81": 0.0,
+              "82": 0.0,
+              "83": 0.0,
+              "84": 0.0
+            }
+          },
+          "confidence": 0.57,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 12292,
+            "output_tokens": 786,
+            "cost": 0.000516264,
+            "retries": 0
+          },
+          "elapsed_ms": 409
+        },
+        {
+          "outcome": "executed",
+          "n": 11,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 19,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.0,
+              "WAIT": 0.02,
+              "CLICK": 0.58,
+              "BLOCKED": 0.05,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.35
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.85,
+              "20": 0.0,
+              "21": 0.12,
+              "23": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.03,
+              "29": 0.0,
+              "30": 0.0
+            }
+          },
+          "confidence": 0.5,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4585,
+            "output_tokens": 344,
+            "cost": 0.00019257,
+            "retries": 0
+          },
+          "elapsed_ms": 329
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 12,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 86,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.08,
+              "CLICK": 0.73,
+              "DONE": 0.01,
+              "SCROLL_DOWN": 0.09,
+              "WAIT": 0.03,
+              "TYPE_TEXT": 0.06
+            },
+            "target": {
+              "1": 0.060000000000000005,
+              "2": 0.09999999999999999,
+              "3": 0.03,
+              "4": 0.01,
+              "5": 0.02,
+              "7": 0.25,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.01,
+              "26": 0.01,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.11,
+              "37": 0.01,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.01,
+              "41": 0.02,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "54": 0.0,
+              "55": 0.0,
+              "56": 0.0,
+              "57": 0.0,
+              "58": 0.0,
+              "59": 0.0,
+              "60": 0.0,
+              "61": 0.0,
+              "62": 0.0,
+              "63": 0.0,
+              "64": 0.0,
+              "65": 0.0,
+              "66": 0.0,
+              "67": 0.02,
+              "68": 0.0,
+              "69": 0.0,
+              "70": 0.0,
+              "71": 0.0,
+              "72": 0.0,
+              "73": 0.0,
+              "74": 0.0,
+              "75": 0.0,
+              "76": 0.0,
+              "77": 0.0,
+              "78": 0.0,
+              "79": 0.0,
+              "80": 0.0,
+              "81": 0.0,
+              "82": 0.0,
+              "83": 0.0,
+              "84": 0.0,
+              "85": 0.060000000000000005,
+              "86": 0.27
+            }
+          },
+          "confidence": 0.69,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 11032,
+            "output_tokens": 802,
+            "cost": 0.000463344,
+            "retries": 0
+          },
+          "elapsed_ms": 394
+        },
+        {
+          "outcome": "executed",
+          "n": 13,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 59,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.11,
+              "DONE": 0.18,
+              "CLICK": 0.61,
+              "BLOCKED": 0.07,
+              "SCROLL_DOWN": 0.01,
+              "WAIT": 0.02
+            },
+            "target": {
+              "1": 0.060000000000000005,
+              "2": 0.13,
+              "3": 0.02,
+              "4": 0.04,
+              "5": 0.01,
+              "7": 0.04,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.01,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.02,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.01,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.01,
+              "41": 0.01,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.03,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "54": 0.0,
+              "55": 0.0,
+              "56": 0.0,
+              "57": 0.0,
+              "58": 0.0,
+              "59": 0.29000000000000004,
+              "60": 0.0,
+              "61": 0.03,
+              "62": 0.0,
+              "63": 0.0,
+              "64": 0.0,
+              "65": 0.0,
+              "66": 0.0,
+              "67": 0.0,
+              "68": 0.0,
+              "69": 0.0,
+              "70": 0.0,
+              "71": 0.0,
+              "72": 0.0,
+              "73": 0.0,
+              "74": 0.0,
+              "75": 0.0,
+              "76": 0.0,
+              "77": 0.0,
+              "78": 0.0,
+              "79": 0.0,
+              "80": 0.0,
+              "81": 0.0,
+              "82": 0.0,
+              "83": 0.0,
+              "84": 0.0,
+              "85": 0.04,
+              "86": 0.24000000000000002
+            }
+          },
+          "confidence": 0.52,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 12450,
+            "output_tokens": 802,
+            "cost": 0.0005229,
+            "retries": 0
+          },
+          "elapsed_ms": 488
+        },
+        {
+          "outcome": "executed",
+          "n": 14,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 9,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.11,
+              "BLOCKED": 0.03,
+              "TYPE_TEXT": 0.02,
+              "SCROLL_DOWN": 0.0,
+              "WAIT": 0.01,
+              "CLICK": 0.83
+            },
+            "target": {
+              "1": 0.03,
+              "2": 0.02,
+              "3": 0.02,
+              "4": 0.01,
+              "5": 0.09,
+              "6": 0.01,
+              "7": 0.01,
+              "8": 0.0,
+              "9": 0.43,
+              "10": 0.0,
+              "11": 0.01,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.01,
+              "34": 0.36
+            }
+          },
+          "confidence": 0.8,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5815,
+            "output_tokens": 393,
+            "cost": 0.00024423,
+            "retries": 0
+          },
+          "elapsed_ms": 339
+        },
+        {
+          "outcome": "executed",
+          "n": 15,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 86,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.9,
+              "SCROLL_DOWN": 0.0,
+              "BLOCKED": 0.02,
+              "WAIT": 0.01,
+              "DONE": 0.06,
+              "TYPE_TEXT": 0.01
+            },
+            "target": {
+              "1": 0.12,
+              "2": 0.02,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "54": 0.0,
+              "55": 0.0,
+              "56": 0.0,
+              "57": 0.0,
+              "58": 0.0,
+              "59": 0.03,
+              "60": 0.0,
+              "61": 0.03,
+              "62": 0.0,
+              "63": 0.0,
+              "64": 0.0,
+              "65": 0.0,
+              "66": 0.0,
+              "67": 0.0,
+              "68": 0.0,
+              "69": 0.0,
+              "70": 0.0,
+              "71": 0.0,
+              "72": 0.0,
+              "73": 0.0,
+              "74": 0.0,
+              "75": 0.0,
+              "76": 0.0,
+              "77": 0.0,
+              "78": 0.0,
+              "79": 0.0,
+              "80": 0.0,
+              "81": 0.0,
+              "82": 0.0,
+              "83": 0.0,
+              "84": 0.0,
+              "85": 0.02,
+              "86": 0.77
+            }
+          },
+          "confidence": 0.89,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 11257,
+            "output_tokens": 810,
+            "cost": 0.000472794,
+            "retries": 0
+          },
+          "elapsed_ms": 436
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 16,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 61,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.01,
+              "BLOCKED": 0.04,
+              "CLICK": 0.85,
+              "TYPE_TEXT": 0.0,
+              "WAIT": 0.01,
+              "DONE": 0.09
+            },
+            "target": {
+              "1": 0.09999999999999999,
+              "2": 0.03,
+              "3": 0.0,
+              "4": 0.02,
+              "5": 0.02,
+              "6": 0.03,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.01,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.03,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "54": 0.0,
+              "55": 0.0,
+              "56": 0.0,
+              "57": 0.0,
+              "58": 0.0,
+              "59": 0.08,
+              "60": 0.0,
+              "61": 0.33,
+              "62": 0.0,
+              "63": 0.0,
+              "64": 0.0,
+              "65": 0.0,
+              "66": 0.0,
+              "67": 0.0,
+              "68": 0.0,
+              "69": 0.0,
+              "70": 0.0,
+              "71": 0.0,
+              "72": 0.0,
+              "73": 0.0,
+              "74": 0.0,
+              "75": 0.0,
+              "76": 0.0,
+              "77": 0.0,
+              "78": 0.0,
+              "79": 0.0,
+              "80": 0.01,
+              "81": 0.01,
+              "82": 0.01,
+              "83": 0.01,
+              "84": 0.01,
+              "85": 0.3
+            }
+          },
+          "confidence": 0.82,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 11183,
+            "output_tokens": 802,
+            "cost": 0.000469686,
+            "retries": 0
+          },
+          "elapsed_ms": 372
+        },
+        {
+          "outcome": "executed",
+          "n": 17,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 21,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.12,
+              "CLICK": 0.8,
+              "BLOCKED": 0.05,
+              "WAIT": 0.02,
+              "SCROLL_DOWN": 0.01
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "13": 0.02,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.37,
+              "20": 0.03,
+              "21": 0.55,
+              "23": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.03,
+              "29": 0.0,
+              "30": 0.0
+            }
+          },
+          "confidence": 0.76,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4682,
+            "output_tokens": 344,
+            "cost": 0.000196644,
+            "retries": 0
+          },
+          "elapsed_ms": 334
+        },
+        {
+          "outcome": "terminal",
+          "n": 18,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.02,
+              "WAIT": 0.0,
+              "DONE": 0.69,
+              "TYPE_TEXT": 0.0,
+              "BLOCKED": 0.02,
+              "CLICK": 0.27
+            },
+            "target": {}
+          },
+          "confidence": 0.62,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 8618,
+            "output_tokens": 568,
+            "cost": 0.000361956,
+            "retries": 0
+          },
+          "elapsed_ms": 380
+        }
+      ],
+      "text_calls": [
+        {
+          "field": "Where from?",
+          "value": "Warsaw",
+          "outcome": "value",
+          "usage": {
+            "input_tokens": 285,
+            "output_tokens": 75,
+            "cost": 2.265e-05,
+            "retries": null
+          },
+          "elapsed_ms": 952
+        },
+        {
+          "field": "Where to? ",
+          "value": "Lisbon",
+          "outcome": "value",
+          "usage": {
+            "input_tokens": 291,
+            "output_tokens": 84,
+            "cost": 2.424e-05,
+            "retries": null
+          },
+          "elapsed_ms": 1030
+        }
+      ],
+      "metrics": {
+        "actions": 13,
+        "predictions": 18,
+        "text_calls": 2,
+        "observation_calls": 19,
+        "observation_retries": 12,
+        "stale_decisions": 4,
+        "bootstrap_ms": 0,
+        "observation_ms": 7589,
+        "prediction_ms": 7223,
+        "text_helper_ms": 1982,
+        "input_ms": 293,
+        "settle_ms": 2452,
+        "elapsed_ms": 17298
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhojEgoyMDI2LTExLTI0agcIARIDV0FXcgwIAxIIL20vMDRsbGIaIxIKMjAyNi0xMS0yNmoMCAMSCC9tLzA0bGxicgcIARIDV0FXQAFIAXABggELCP___________wGYAQE&hl=en",
+      "title": "Warsaw to Lisbon | Google Flights",
+      "page_kind": {
+        "name": "search",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "button",
+          "name": "Main menu",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Google"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Skip to main content"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "Accessibility feedback"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Explore"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Flights"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "Hotels"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Vacation rentals"
+        },
+        {
+          "index": 9,
+          "role": "button",
+          "name": "Change appearance",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 10,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 12,
+          "role": "heading",
+          "name": "Flight search"
+        },
+        {
+          "index": 13,
+          "role": "combobox",
+          "name": "Change ticket type. Round trip",
+          "value": "Round trip",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 14,
+          "role": "button",
+          "name": "1 passenger, change number of passengers."
+        },
+        {
+          "index": 15,
+          "role": "combobox",
+          "name": "Change seating class. Economy",
+          "value": "Economy",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 16,
+          "role": "combobox",
+          "name": "Where from? Warsaw WAW",
+          "value": "Warsaw",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 17,
+          "role": "button",
+          "name": "Swap origin and destination."
+        },
+        {
+          "index": 18,
+          "role": "combobox",
+          "name": "Where to?",
+          "value": "Lisbon",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 19,
+          "role": "textbox",
+          "name": "Departure",
+          "value": "Tue, Nov 24"
+        },
+        {
+          "index": 20,
+          "role": "textbox",
+          "name": "Return",
+          "value": "Thu, Nov 26"
+        },
+        {
+          "index": 21,
+          "role": "heading",
+          "name": "Filters"
+        },
+        {
+          "index": 22,
+          "role": "button",
+          "name": "All filters"
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Stops, Not selected"
+        },
+        {
+          "index": 24,
+          "role": "button",
+          "name": "Airlines, Not selected"
+        },
+        {
+          "index": 25,
+          "role": "button",
+          "name": "Bags, Not selected"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "Price, Not selected"
+        },
+        {
+          "index": 27,
+          "role": "button",
+          "name": "Times, Not selected"
+        },
+        {
+          "index": 28,
+          "role": "button",
+          "name": "Emissions, Not selected"
+        },
+        {
+          "index": 29,
+          "role": "button",
+          "name": "Connecting airports, Not selected"
+        },
+        {
+          "index": 30,
+          "role": "button",
+          "name": "Duration, Not selected"
+        },
+        {
+          "index": 31,
+          "role": "heading",
+          "name": "Search results"
+        },
+        {
+          "index": 32,
+          "role": "tab",
+          "name": "Best Learn more about ranking",
+          "state": [
+            "selected"
+          ]
+        },
+        {
+          "index": 33,
+          "role": "button",
+          "name": "Learn more about ranking"
+        },
+        {
+          "index": 34,
+          "role": "tab",
+          "name": "Cheapest from 638 Polish zlotys Learn more about ranking"
+        },
+        {
+          "index": 35,
+          "role": "button",
+          "name": "Learn more about ranking"
+        },
+        {
+          "index": 36,
+          "role": "heading",
+          "name": "Top departing flights"
+        },
+        {
+          "index": 37,
+          "role": "button",
+          "name": "Learn more about ranking"
+        },
+        {
+          "index": 38,
+          "role": "button",
+          "name": "bag fees"
+        },
+        {
+          "index": 39,
+          "role": "button",
+          "name": "Passenger assistance"
+        },
+        {
+          "index": 40,
+          "role": "button",
+          "name": "Sorted by top flights, Change sort order."
+        },
+        {
+          "index": 41,
+          "role": "link",
+          "name": "From 638 Polish zlotys round trip total.This price does not include overhead bin access. Nonstop flight with Wizz Air. Leaves Warsaw Chopin Airport at 1:25 PM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 4:50 PM on Tuesday, November 24. Total duration 4 hr 25 min. Select flight"
+        },
+        {
+          "index": 42,
+          "role": "button",
+          "name": "Carbon emissions estimate: 172 kilograms. -33% emissions. Learn more about this emissions estimate"
+        },
+        {
+          "index": 43,
+          "role": "button",
+          "name": "This price for this flight doesn't include overhead bin access. If you need a carry-on bag, use the Bags filter to update prices."
+        },
+        {
+          "index": 44,
+          "role": "button",
+          "name": "Avoids as much CO2e as 5174 trees absorb in a day. Learn more about this calculation."
+        },
+        {
+          "index": 45,
+          "role": "button",
+          "name": "Flight details. Leaves Warsaw Chopin Airport at 1:25 PM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 4:50 PM on Tuesday, November 24.",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 46,
+          "role": "link",
+          "name": "From 876 Polish zlotys round trip total. 1 stop flight with SWISS. Operated by Helvetic. Leaves Warsaw Chopin Airport at 9:50 AM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 2:35 PM on Tuesday, November 24. Total duration 5 hr 45 min. Layover (1 of 1) is a 40 min layover at Zurich Airport in Zürich. Select flight"
+        },
+        {
+          "index": 47,
+          "role": "button",
+          "name": "Carbon emissions estimate: 311 kilograms. +21% emissions. Learn more about this emissions estimate"
+        },
+        {
+          "index": 48,
+          "role": "button",
+          "name": "Flight details. Leaves Warsaw Chopin Airport at 9:50 AM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 2:35 PM on Tuesday, November 24.",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 49,
+          "role": "link",
+          "name": "From 982 Polish zlotys round trip total. 1 stop flight with Lufthansa. Leaves Warsaw Chopin Airport at 6:30 AM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 11:30 AM on Tuesday, November 24. Total duration 6 hr. Layover (1 of 1) is a 1 hr layover at Frankfurt Airport in Frankfurt am Main. Select flight"
+        },
+        {
+          "index": 50,
+          "role": "button",
+          "name": "Carbon emissions estimate: 238 kilograms. -7% emissions. Learn more about this emissions estimate"
+        },
+        {
+          "index": 51,
+          "role": "button",
+          "name": "Flight details. Leaves Warsaw Chopin Airport at 6:30 AM on Tuesday, November 24 and arrives at Humberto Delgado Airport at 11:30 AM on Tuesday, November 24.",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 52,
+          "role": "heading",
+          "name": "Price insights"
+        },
+        {
+          "index": 53,
+          "role": "heading",
+          "name": "Prices are currently low — PLN 115 cheaper than usual for your search"
+        },
+        {
+          "index": 54,
+          "role": "button",
+          "name": "View price history",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 55,
+          "role": "heading",
+          "name": "Track prices"
+        },
+        {
+          "index": 56,
+          "role": "button",
+          "name": "Learn more about tracked prices"
+        },
+        {
+          "index": 57,
+          "role": "link",
+          "name": "Learn more about tracked prices"
+        },
+        {
+          "index": 58,
+          "role": "switch",
+          "name": "Track prices from Warsaw to Lisbon departing 2026-11-24 and returning 2026-11-26",
+          "state": [
+            "unchecked"
+          ]
+        },
+        {
+          "index": 59,
+          "role": "switch",
+          "name": "Track prices from Warsaw to Lisbon - Any dates",
+          "state": [
+            "unchecked"
+          ]
+        },
+        {
+          "index": 60,
+          "role": "button",
+          "name": "Date grid"
+        },
+        {
+          "index": 61,
+          "role": "button",
+          "name": "Price graph"
+        }
+      ],
+      "total": 61,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-03T13:46:33.067348Z-done.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}

@@ -1,0 +1,285 @@
+{
+  "verified": false,
+  "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+  "site": {
+    "category": "Mystery",
+    "total_reported": 32,
+    "records": [
+      {
+        "title": "Sharp Objects",
+        "price": "£47.82"
+      },
+      {
+        "title": "In a Dark, Dark Wood",
+        "price": "£19.63"
+      },
+      {
+        "title": "The Past Never Ends",
+        "price": "£56.50"
+      },
+      {
+        "title": "A Murder in Time",
+        "price": "£16.64"
+      },
+      {
+        "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+        "price": "£44.10"
+      },
+      {
+        "title": "The Last Mile (Amos Decker #2)",
+        "price": "£54.21"
+      },
+      {
+        "title": "That Darkness (Gardiner and Renner #1)",
+        "price": "£13.92"
+      },
+      {
+        "title": "Tastes Like Fear (DI Marnie Rome #3)",
+        "price": "£10.69"
+      },
+      {
+        "title": "A Time of Torment (Charlie Parker #14)",
+        "price": "£48.35"
+      },
+      {
+        "title": "A Study in Scarlet (Sherlock Holmes #1)",
+        "price": "£16.73"
+      },
+      {
+        "title": "Poisonous (Max Revere Novels #3)",
+        "price": "£26.80"
+      },
+      {
+        "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+        "price": "£54.36"
+      },
+      {
+        "title": "Most Wanted",
+        "price": "£35.28"
+      },
+      {
+        "title": "Hide Away (Eve Duncan #20)",
+        "price": "£11.84"
+      },
+      {
+        "title": "Boar Island (Anna Pigeon #19)",
+        "price": "£59.48"
+      },
+      {
+        "title": "The Widow",
+        "price": "£27.26"
+      },
+      {
+        "title": "Playing with Fire",
+        "price": "£13.71"
+      },
+      {
+        "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+        "price": "£25.37"
+      },
+      {
+        "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+        "price": "£52.30"
+      },
+      {
+        "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+        "price": "£20.89"
+      },
+      {
+        "title": "The Mysterious Affair at Styles (Hercule Poirot #1)",
+        "price": "£24.80"
+      },
+      {
+        "title": "In the Woods (Dublin Murder Squad #1)",
+        "price": "£38.38"
+      },
+      {
+        "title": "The Silkworm (Cormoran Strike #2)",
+        "price": "£23.05"
+      },
+      {
+        "title": "The Exiled",
+        "price": "£43.45"
+      },
+      {
+        "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+        "price": "£19.21"
+      },
+      {
+        "title": "Extreme Prey (Lucas Davenport #26)",
+        "price": "£25.40"
+      },
+      {
+        "title": "Career of Evil (Cormoran Strike #3)",
+        "price": "£24.72"
+      },
+      {
+        "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+        "price": "£57.70"
+      },
+      {
+        "title": "The Girl You Lost",
+        "price": "£12.29"
+      },
+      {
+        "title": "The Girl In The Ice (DCI Erika Foster #1)",
+        "price": "£15.85"
+      },
+      {
+        "title": "Blood Defense (Samantha Brinkman #1)",
+        "price": "£20.30"
+      },
+      {
+        "title": "1st to Die (Women's Murder Club #1)",
+        "price": "£53.98"
+      }
+    ],
+    "pages": [
+      {
+        "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+        "status": 200,
+        "count": 20,
+        "heading": "Mystery"
+      },
+      {
+        "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
+        "status": 200,
+        "count": 12,
+        "heading": "Mystery"
+      }
+    ],
+    "counts_match": true,
+    "next_page_unvisited": false
+  },
+  "answer_record_matches": 0,
+  "missing_records": [
+    {
+      "title": "Sharp Objects",
+      "price": "£47.82"
+    },
+    {
+      "title": "In a Dark, Dark Wood",
+      "price": "£19.63"
+    },
+    {
+      "title": "The Past Never Ends",
+      "price": "£56.50"
+    },
+    {
+      "title": "A Murder in Time",
+      "price": "£16.64"
+    },
+    {
+      "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+      "price": "£44.10"
+    },
+    {
+      "title": "The Last Mile (Amos Decker #2)",
+      "price": "£54.21"
+    },
+    {
+      "title": "That Darkness (Gardiner and Renner #1)",
+      "price": "£13.92"
+    },
+    {
+      "title": "Tastes Like Fear (DI Marnie Rome #3)",
+      "price": "£10.69"
+    },
+    {
+      "title": "A Time of Torment (Charlie Parker #14)",
+      "price": "£48.35"
+    },
+    {
+      "title": "A Study in Scarlet (Sherlock Holmes #1)",
+      "price": "£16.73"
+    },
+    {
+      "title": "Poisonous (Max Revere Novels #3)",
+      "price": "£26.80"
+    },
+    {
+      "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+      "price": "£54.36"
+    },
+    {
+      "title": "Most Wanted",
+      "price": "£35.28"
+    },
+    {
+      "title": "Hide Away (Eve Duncan #20)",
+      "price": "£11.84"
+    },
+    {
+      "title": "Boar Island (Anna Pigeon #19)",
+      "price": "£59.48"
+    },
+    {
+      "title": "The Widow",
+      "price": "£27.26"
+    },
+    {
+      "title": "Playing with Fire",
+      "price": "£13.71"
+    },
+    {
+      "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+      "price": "£25.37"
+    },
+    {
+      "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+      "price": "£52.30"
+    },
+    {
+      "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+      "price": "£20.89"
+    },
+    {
+      "title": "The Mysterious Affair at Styles (Hercule Poirot #1)",
+      "price": "£24.80"
+    },
+    {
+      "title": "In the Woods (Dublin Murder Squad #1)",
+      "price": "£38.38"
+    },
+    {
+      "title": "The Silkworm (Cormoran Strike #2)",
+      "price": "£23.05"
+    },
+    {
+      "title": "The Exiled",
+      "price": "£43.45"
+    },
+    {
+      "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+      "price": "£19.21"
+    },
+    {
+      "title": "Extreme Prey (Lucas Davenport #26)",
+      "price": "£25.40"
+    },
+    {
+      "title": "Career of Evil (Cormoran Strike #3)",
+      "price": "£24.72"
+    },
+    {
+      "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+      "price": "£57.70"
+    },
+    {
+      "title": "The Girl You Lost",
+      "price": "£12.29"
+    },
+    {
+      "title": "The Girl In The Ice (DCI Erika Foster #1)",
+      "price": "£15.85"
+    },
+    {
+      "title": "Blood Defense (Samantha Brinkman #1)",
+      "price": "£20.30"
+    },
+    {
+      "title": "1st to Die (Women's Murder Club #1)",
+      "price": "£53.98"
+    }
+  ]
+}

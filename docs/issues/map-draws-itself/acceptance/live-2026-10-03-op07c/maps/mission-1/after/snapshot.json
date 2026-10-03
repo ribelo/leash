@@ -1,0 +1,313 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.0457225419995666,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/maps/place/Sunflower+Caf%C3%A9/@48.8541807,2.2940586,17z/data=!4m6!3m5!1s0x47e6701ee2cad7fb:0x416aa141baa67851!8m2!3d48.8541772!4d2.2966335!16s%2Fg%2F1thq94wt?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "Sunflower Café - Google Maps",
+    "page_kind": {
+      "name": "place-<slug>",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "combobox",
+        "name": "",
+        "value": "Sunflower Café",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "button",
+        "name": "Search"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Close"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Nearby restaurants"
+      },
+      {
+        "index": 5,
+        "role": "button",
+        "name": "Hotels"
+      },
+      {
+        "index": 6,
+        "role": "button",
+        "name": "Things to do"
+      },
+      {
+        "index": 7,
+        "role": "button",
+        "name": "Bars"
+      },
+      {
+        "index": 8,
+        "role": "button",
+        "name": "Coffee"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Takeout"
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Groceries"
+      },
+      {
+        "index": 11,
+        "role": "button",
+        "name": "Next page"
+      },
+      {
+        "index": 12,
+        "role": "button",
+        "name": "Menu"
+      },
+      {
+        "index": 13,
+        "role": "button",
+        "name": "Saved"
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "Recents"
+      },
+      {
+        "index": 15,
+        "role": "button",
+        "name": "2 places Paris"
+      },
+      {
+        "index": 16,
+        "role": "button",
+        "name": "Get app"
+      },
+      {
+        "index": 17,
+        "role": "button",
+        "name": "Photo of Sunflower Café"
+      },
+      {
+        "index": 18,
+        "role": "button",
+        "name": "See photos"
+      },
+      {
+        "index": 19,
+        "role": "heading",
+        "name": "Sunflower Café"
+      },
+      {
+        "index": 20,
+        "role": "button",
+        "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+      },
+      {
+        "index": 21,
+        "role": "button",
+        "name": "Cafe"
+      },
+      {
+        "index": 22,
+        "role": "tab",
+        "name": "Overview of Sunflower Café",
+        "state": [
+          "selected"
+        ]
+      },
+      {
+        "index": 23,
+        "role": "tab",
+        "name": "About Sunflower Café"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "Directions"
+      },
+      {
+        "index": 25,
+        "role": "button",
+        "name": "Save"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "Nearby"
+      },
+      {
+        "index": 27,
+        "role": "button",
+        "name": "Send to phone"
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Share"
+      },
+      {
+        "index": 29,
+        "role": "button",
+        "name": "Laid-back hangout dishing up bowls, salads & sandwiches with health-conscious ingredients."
+      },
+      {
+        "index": 30,
+        "role": "button",
+        "name": "Address: 41 Av. de Suffren, 75007 Paris, France "
+      },
+      {
+        "index": 31,
+        "role": "button",
+        "name": "Copy address"
+      },
+      {
+        "index": 32,
+        "role": "button",
+        "name": "Open · Closes 10 pm · See more hours"
+      },
+      {
+        "index": 33,
+        "role": "paragraph",
+        "name": "See more hours"
+      },
+      {
+        "index": 34,
+        "role": "button",
+        "name": "Phone: +33 1 42 73 68 84 "
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Copy phone number"
+      },
+      {
+        "index": 36,
+        "role": "link",
+        "name": "Call phone number"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Plus code: V73W+MM Paris, France"
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "Copy plus code"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Learn more about plus codes"
+      },
+      {
+        "index": 40,
+        "role": "button",
+        "name": "Suggest an edit"
+      },
+      {
+        "index": 41,
+        "role": "button",
+        "name": "Collapse side panel"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 43,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 44,
+        "role": "button",
+        "name": "Show Your Location"
+      },
+      {
+        "index": 45,
+        "role": "button",
+        "name": "Zoom in"
+      },
+      {
+        "index": 46,
+        "role": "button",
+        "name": "Zoom out"
+      },
+      {
+        "index": 47,
+        "role": "button",
+        "name": "Browse Street View images"
+      },
+      {
+        "index": 48,
+        "role": "button",
+        "name": "Street View"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Layers",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 50,
+        "role": "button",
+        "name": "Poland"
+      },
+      {
+        "index": 51,
+        "role": "button",
+        "name": "Terms"
+      },
+      {
+        "index": 52,
+        "role": "button",
+        "name": "Privacy"
+      },
+      {
+        "index": 53,
+        "role": "button",
+        "name": "Send Product Feedback"
+      },
+      {
+        "index": 54,
+        "role": "button",
+        "name": "50 m"
+      }
+    ],
+    "total": 54,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

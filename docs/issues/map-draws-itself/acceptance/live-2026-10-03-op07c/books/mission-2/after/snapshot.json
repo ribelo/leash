@@ -1,0 +1,330 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.027455217999886372,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
+    "title": "Mystery | Books to Scrape - Sandbox",
+    "page_kind": {
+      "name": "page-<id>",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "link",
+        "name": "Books to Scrape"
+      },
+      {
+        "index": 2,
+        "role": "link",
+        "name": "Home"
+      },
+      {
+        "index": 3,
+        "role": "link",
+        "name": "Books"
+      },
+      {
+        "index": 4,
+        "role": "link",
+        "name": "Books"
+      },
+      {
+        "index": 5,
+        "role": "link",
+        "name": "Travel"
+      },
+      {
+        "index": 6,
+        "role": "link",
+        "name": "Mystery"
+      },
+      {
+        "index": 7,
+        "role": "link",
+        "name": "Historical Fiction"
+      },
+      {
+        "index": 8,
+        "role": "link",
+        "name": "Sequential Art"
+      },
+      {
+        "index": 9,
+        "role": "link",
+        "name": "Classics"
+      },
+      {
+        "index": 10,
+        "role": "link",
+        "name": "Philosophy"
+      },
+      {
+        "index": 11,
+        "role": "link",
+        "name": "Romance"
+      },
+      {
+        "index": 12,
+        "role": "link",
+        "name": "Womens Fiction"
+      },
+      {
+        "index": 13,
+        "role": "link",
+        "name": "Fiction"
+      },
+      {
+        "index": 14,
+        "role": "link",
+        "name": "Childrens"
+      },
+      {
+        "index": 15,
+        "role": "link",
+        "name": "Religion"
+      },
+      {
+        "index": 16,
+        "role": "link",
+        "name": "Nonfiction"
+      },
+      {
+        "index": 17,
+        "role": "link",
+        "name": "Music"
+      },
+      {
+        "index": 18,
+        "role": "link",
+        "name": "Default"
+      },
+      {
+        "index": 19,
+        "role": "link",
+        "name": "Science Fiction"
+      },
+      {
+        "index": 20,
+        "role": "link",
+        "name": "Sports and Games"
+      },
+      {
+        "index": 21,
+        "role": "link",
+        "name": "Add a comment"
+      },
+      {
+        "index": 22,
+        "role": "link",
+        "name": "Fantasy"
+      },
+      {
+        "index": 23,
+        "role": "link",
+        "name": "New Adult"
+      },
+      {
+        "index": 24,
+        "role": "link",
+        "name": "Young Adult"
+      },
+      {
+        "index": 25,
+        "role": "link",
+        "name": "Science"
+      },
+      {
+        "index": 26,
+        "role": "link",
+        "name": "Poetry"
+      },
+      {
+        "index": 27,
+        "role": "link",
+        "name": "Paranormal"
+      },
+      {
+        "index": 28,
+        "role": "link",
+        "name": "Art"
+      },
+      {
+        "index": 29,
+        "role": "link",
+        "name": "Psychology"
+      },
+      {
+        "index": 30,
+        "role": "link",
+        "name": "Autobiography"
+      },
+      {
+        "index": 31,
+        "role": "link",
+        "name": "Parenting"
+      },
+      {
+        "index": 32,
+        "role": "heading",
+        "name": "Mystery"
+      },
+      {
+        "index": 33,
+        "role": "link",
+        "name": "The Mysterious Affair at Styles (Hercule Poirot #1)"
+      },
+      {
+        "index": 34,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 35,
+        "role": "heading",
+        "name": "The Mysterious Affair at ..."
+      },
+      {
+        "index": 36,
+        "role": "link",
+        "name": "The Mysterious Affair at ..."
+      },
+      {
+        "index": 37,
+        "role": "paragraph",
+        "name": "£24.80"
+      },
+      {
+        "index": 38,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 40,
+        "role": "link",
+        "name": "In the Woods (Dublin Murder Squad #1)"
+      },
+      {
+        "index": 41,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 42,
+        "role": "heading",
+        "name": "In the Woods (Dublin ..."
+      },
+      {
+        "index": 43,
+        "role": "link",
+        "name": "In the Woods (Dublin ..."
+      },
+      {
+        "index": 44,
+        "role": "paragraph",
+        "name": "£38.38"
+      },
+      {
+        "index": 45,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 46,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 47,
+        "role": "link",
+        "name": "The Silkworm (Cormoran Strike #2)"
+      },
+      {
+        "index": 48,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 49,
+        "role": "heading",
+        "name": "The Silkworm (Cormoran Strike ..."
+      },
+      {
+        "index": 50,
+        "role": "link",
+        "name": "The Silkworm (Cormoran Strike ..."
+      },
+      {
+        "index": 51,
+        "role": "paragraph",
+        "name": "£23.05"
+      },
+      {
+        "index": 52,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 53,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 54,
+        "role": "link",
+        "name": "The Exiled"
+      },
+      {
+        "index": 55,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 56,
+        "role": "heading",
+        "name": "The Exiled"
+      },
+      {
+        "index": 57,
+        "role": "link",
+        "name": "The Exiled"
+      },
+      {
+        "index": 58,
+        "role": "paragraph",
+        "name": "£43.45"
+      },
+      {
+        "index": 59,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 60,
+        "role": "button",
+        "name": "Add to basket"
+      }
+    ],
+    "total": 60,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

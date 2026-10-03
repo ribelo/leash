@@ -1,0 +1,3492 @@
+{
+  "story": "map-op07",
+  "campaign": "op07c",
+  "baseline_head": "1690f49",
+  "binary_sha256": "10afe16378511bcb42e92402b8a54dde7bac7aaf98c109a63b13f8f7989366b0",
+  "rebuild": false,
+  "product_edits": false,
+  "commit": false,
+  "sites": {
+    "books": {
+      "criterion_pass": false,
+      "criterion": {
+        "installed_playbook_present": false,
+        "fresh_service_and_profile": true,
+        "fifth_goal_independently_verified": false,
+        "lower_inclusive_cost_than_mission_1": false,
+        "acceptance_learning_off": true,
+        "acceptance_no_learning_calls": true
+      },
+      "missions": [
+        {
+          "number": 1,
+          "arguments": "Travel",
+          "mission": "collect every book title and price in the Travel category",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 3.9013996019984916,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent category HTML through private Leash; compare returned answer/validated collection and output only (diagnostic DOM excluded)",
+            "expected_records": 11,
+            "delivered_count": 0,
+            "matched_records": 0,
+            "missing_records": [
+              {
+                "title": "It's Only the Himalayas",
+                "price": "£45.17"
+              },
+              {
+                "title": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond",
+                "price": "£49.43"
+              },
+              {
+                "title": "See America: A Celebration of Our National Parks & Treasured Sites",
+                "price": "£48.87"
+              },
+              {
+                "title": "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel",
+                "price": "£36.94"
+              },
+              {
+                "title": "Under the Tuscan Sun",
+                "price": "£37.33"
+              },
+              {
+                "title": "A Summer In Europe",
+                "price": "£44.34"
+              },
+              {
+                "title": "The Great Railway Bazaar",
+                "price": "£30.54"
+              },
+              {
+                "title": "A Year in Provence (Provence #1)",
+                "price": "£56.88"
+              },
+              {
+                "title": "The Road to Little Dribbling: Adventures of an American in Britain (Notes From a Small Island #2)",
+                "price": "£23.21"
+              },
+              {
+                "title": "Neither Here nor There: Travels in Europe",
+                "price": "£38.95"
+              },
+              {
+                "title": "1,000 Places to See Before You Die",
+                "price": "£26.08"
+              }
+            ],
+            "reference": {
+              "category": "Travel",
+              "total_reported": 11,
+              "records": [
+                {
+                  "title": "It's Only the Himalayas",
+                  "price": "£45.17"
+                },
+                {
+                  "title": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond",
+                  "price": "£49.43"
+                },
+                {
+                  "title": "See America: A Celebration of Our National Parks & Treasured Sites",
+                  "price": "£48.87"
+                },
+                {
+                  "title": "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel",
+                  "price": "£36.94"
+                },
+                {
+                  "title": "Under the Tuscan Sun",
+                  "price": "£37.33"
+                },
+                {
+                  "title": "A Summer In Europe",
+                  "price": "£44.34"
+                },
+                {
+                  "title": "The Great Railway Bazaar",
+                  "price": "£30.54"
+                },
+                {
+                  "title": "A Year in Provence (Provence #1)",
+                  "price": "£56.88"
+                },
+                {
+                  "title": "The Road to Little Dribbling: Adventures of an American in Britain (Notes From a Small Island #2)",
+                  "price": "£23.21"
+                },
+                {
+                  "title": "Neither Here nor There: Travels in Europe",
+                  "price": "£38.95"
+                },
+                {
+                  "title": "1,000 Places to See Before You Die",
+                  "price": "£26.08"
+                }
+              ],
+              "pages": [
+                {
+                  "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+                  "status": 200,
+                  "count": 11,
+                  "heading": "Travel"
+                }
+              ],
+              "counts_match": true,
+              "next_page_unvisited": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+              "site": {
+                "category": "Travel",
+                "total_reported": 11,
+                "records": [
+                  {
+                    "title": "It's Only the Himalayas",
+                    "price": "£45.17"
+                  },
+                  {
+                    "title": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond",
+                    "price": "£49.43"
+                  },
+                  {
+                    "title": "See America: A Celebration of Our National Parks & Treasured Sites",
+                    "price": "£48.87"
+                  },
+                  {
+                    "title": "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel",
+                    "price": "£36.94"
+                  },
+                  {
+                    "title": "Under the Tuscan Sun",
+                    "price": "£37.33"
+                  },
+                  {
+                    "title": "A Summer In Europe",
+                    "price": "£44.34"
+                  },
+                  {
+                    "title": "The Great Railway Bazaar",
+                    "price": "£30.54"
+                  },
+                  {
+                    "title": "A Year in Provence (Provence #1)",
+                    "price": "£56.88"
+                  },
+                  {
+                    "title": "The Road to Little Dribbling: Adventures of an American in Britain (Notes From a Small Island #2)",
+                    "price": "£23.21"
+                  },
+                  {
+                    "title": "Neither Here nor There: Travels in Europe",
+                    "price": "£38.95"
+                  },
+                  {
+                    "title": "1,000 Places to See Before You Die",
+                    "price": "£26.08"
+                  }
+                ],
+                "pages": [
+                  {
+                    "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+                    "status": 200,
+                    "count": 11,
+                    "heading": "Travel"
+                  }
+                ],
+                "counts_match": true,
+                "next_page_unvisited": false
+              },
+              "answer_record_matches": 7,
+              "missing_records": [
+                {
+                  "title": "It's Only the Himalayas",
+                  "price": "£45.17"
+                },
+                {
+                  "title": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond",
+                  "price": "£49.43"
+                },
+                {
+                  "title": "See America: A Celebration of Our National Parks & Treasured Sites",
+                  "price": "£48.87"
+                },
+                {
+                  "title": "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel",
+                  "price": "£36.94"
+                }
+              ]
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 4,
+            "browser_cost_usd": 0.000937188,
+            "browser_reported_cost_usd": 0.000937188,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "operator": 4
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 4,
+            "inclusive_cost_usd": 0.000937188,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "operator": 4
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.000937188,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 2,
+          "arguments": "Mystery",
+          "mission": "collect every book title and price in the Mystery category",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "limit",
+          "answer": null,
+          "exit_code": 0,
+          "reason": "action budget exhausted (60 executed actions)",
+          "elapsed_s": 57.94878194199919,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent category HTML through private Leash; compare returned answer/validated collection and output only (diagnostic DOM excluded)",
+            "expected_records": 32,
+            "delivered_count": 0,
+            "matched_records": 0,
+            "missing_records": [
+              {
+                "title": "Sharp Objects",
+                "price": "£47.82"
+              },
+              {
+                "title": "In a Dark, Dark Wood",
+                "price": "£19.63"
+              },
+              {
+                "title": "The Past Never Ends",
+                "price": "£56.50"
+              },
+              {
+                "title": "A Murder in Time",
+                "price": "£16.64"
+              },
+              {
+                "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+                "price": "£44.10"
+              },
+              {
+                "title": "The Last Mile (Amos Decker #2)",
+                "price": "£54.21"
+              },
+              {
+                "title": "That Darkness (Gardiner and Renner #1)",
+                "price": "£13.92"
+              },
+              {
+                "title": "Tastes Like Fear (DI Marnie Rome #3)",
+                "price": "£10.69"
+              },
+              {
+                "title": "A Time of Torment (Charlie Parker #14)",
+                "price": "£48.35"
+              },
+              {
+                "title": "A Study in Scarlet (Sherlock Holmes #1)",
+                "price": "£16.73"
+              },
+              {
+                "title": "Poisonous (Max Revere Novels #3)",
+                "price": "£26.80"
+              },
+              {
+                "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+                "price": "£54.36"
+              },
+              {
+                "title": "Most Wanted",
+                "price": "£35.28"
+              },
+              {
+                "title": "Hide Away (Eve Duncan #20)",
+                "price": "£11.84"
+              },
+              {
+                "title": "Boar Island (Anna Pigeon #19)",
+                "price": "£59.48"
+              },
+              {
+                "title": "The Widow",
+                "price": "£27.26"
+              },
+              {
+                "title": "Playing with Fire",
+                "price": "£13.71"
+              },
+              {
+                "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+                "price": "£25.37"
+              },
+              {
+                "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+                "price": "£52.30"
+              },
+              {
+                "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+                "price": "£20.89"
+              },
+              {
+                "title": "The Mysterious Affair at Styles (Hercule Poirot #1)",
+                "price": "£24.80"
+              },
+              {
+                "title": "In the Woods (Dublin Murder Squad #1)",
+                "price": "£38.38"
+              },
+              {
+                "title": "The Silkworm (Cormoran Strike #2)",
+                "price": "£23.05"
+              },
+              {
+                "title": "The Exiled",
+                "price": "£43.45"
+              },
+              {
+                "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+                "price": "£19.21"
+              },
+              {
+                "title": "Extreme Prey (Lucas Davenport #26)",
+                "price": "£25.40"
+              },
+              {
+                "title": "Career of Evil (Cormoran Strike #3)",
+                "price": "£24.72"
+              },
+              {
+                "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+                "price": "£57.70"
+              },
+              {
+                "title": "The Girl You Lost",
+                "price": "£12.29"
+              },
+              {
+                "title": "The Girl In The Ice (DCI Erika Foster #1)",
+                "price": "£15.85"
+              },
+              {
+                "title": "Blood Defense (Samantha Brinkman #1)",
+                "price": "£20.30"
+              },
+              {
+                "title": "1st to Die (Women's Murder Club #1)",
+                "price": "£53.98"
+              }
+            ],
+            "reference": {
+              "category": "Mystery",
+              "total_reported": 32,
+              "records": [
+                {
+                  "title": "Sharp Objects",
+                  "price": "£47.82"
+                },
+                {
+                  "title": "In a Dark, Dark Wood",
+                  "price": "£19.63"
+                },
+                {
+                  "title": "The Past Never Ends",
+                  "price": "£56.50"
+                },
+                {
+                  "title": "A Murder in Time",
+                  "price": "£16.64"
+                },
+                {
+                  "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+                  "price": "£44.10"
+                },
+                {
+                  "title": "The Last Mile (Amos Decker #2)",
+                  "price": "£54.21"
+                },
+                {
+                  "title": "That Darkness (Gardiner and Renner #1)",
+                  "price": "£13.92"
+                },
+                {
+                  "title": "Tastes Like Fear (DI Marnie Rome #3)",
+                  "price": "£10.69"
+                },
+                {
+                  "title": "A Time of Torment (Charlie Parker #14)",
+                  "price": "£48.35"
+                },
+                {
+                  "title": "A Study in Scarlet (Sherlock Holmes #1)",
+                  "price": "£16.73"
+                },
+                {
+                  "title": "Poisonous (Max Revere Novels #3)",
+                  "price": "£26.80"
+                },
+                {
+                  "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+                  "price": "£54.36"
+                },
+                {
+                  "title": "Most Wanted",
+                  "price": "£35.28"
+                },
+                {
+                  "title": "Hide Away (Eve Duncan #20)",
+                  "price": "£11.84"
+                },
+                {
+                  "title": "Boar Island (Anna Pigeon #19)",
+                  "price": "£59.48"
+                },
+                {
+                  "title": "The Widow",
+                  "price": "£27.26"
+                },
+                {
+                  "title": "Playing with Fire",
+                  "price": "£13.71"
+                },
+                {
+                  "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+                  "price": "£25.37"
+                },
+                {
+                  "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+                  "price": "£52.30"
+                },
+                {
+                  "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+                  "price": "£20.89"
+                },
+                {
+                  "title": "The Mysterious Affair at Styles (Hercule Poirot #1)",
+                  "price": "£24.80"
+                },
+                {
+                  "title": "In the Woods (Dublin Murder Squad #1)",
+                  "price": "£38.38"
+                },
+                {
+                  "title": "The Silkworm (Cormoran Strike #2)",
+                  "price": "£23.05"
+                },
+                {
+                  "title": "The Exiled",
+                  "price": "£43.45"
+                },
+                {
+                  "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+                  "price": "£19.21"
+                },
+                {
+                  "title": "Extreme Prey (Lucas Davenport #26)",
+                  "price": "£25.40"
+                },
+                {
+                  "title": "Career of Evil (Cormoran Strike #3)",
+                  "price": "£24.72"
+                },
+                {
+                  "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+                  "price": "£57.70"
+                },
+                {
+                  "title": "The Girl You Lost",
+                  "price": "£12.29"
+                },
+                {
+                  "title": "The Girl In The Ice (DCI Erika Foster #1)",
+                  "price": "£15.85"
+                },
+                {
+                  "title": "Blood Defense (Samantha Brinkman #1)",
+                  "price": "£20.30"
+                },
+                {
+                  "title": "1st to Die (Women's Murder Club #1)",
+                  "price": "£53.98"
+                }
+              ],
+              "pages": [
+                {
+                  "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+                  "status": 200,
+                  "count": 20,
+                  "heading": "Mystery"
+                },
+                {
+                  "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
+                  "status": 200,
+                  "count": 12,
+                  "heading": "Mystery"
+                }
+              ],
+              "counts_match": true,
+              "next_page_unvisited": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+              "site": {
+                "category": "Mystery",
+                "total_reported": 32,
+                "records": [
+                  {
+                    "title": "Sharp Objects",
+                    "price": "£47.82"
+                  },
+                  {
+                    "title": "In a Dark, Dark Wood",
+                    "price": "£19.63"
+                  },
+                  {
+                    "title": "The Past Never Ends",
+                    "price": "£56.50"
+                  },
+                  {
+                    "title": "A Murder in Time",
+                    "price": "£16.64"
+                  },
+                  {
+                    "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+                    "price": "£44.10"
+                  },
+                  {
+                    "title": "The Last Mile (Amos Decker #2)",
+                    "price": "£54.21"
+                  },
+                  {
+                    "title": "That Darkness (Gardiner and Renner #1)",
+                    "price": "£13.92"
+                  },
+                  {
+                    "title": "Tastes Like Fear (DI Marnie Rome #3)",
+                    "price": "£10.69"
+                  },
+                  {
+                    "title": "A Time of Torment (Charlie Parker #14)",
+                    "price": "£48.35"
+                  },
+                  {
+                    "title": "A Study in Scarlet (Sherlock Holmes #1)",
+                    "price": "£16.73"
+                  },
+                  {
+                    "title": "Poisonous (Max Revere Novels #3)",
+                    "price": "£26.80"
+                  },
+                  {
+                    "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+                    "price": "£54.36"
+                  },
+                  {
+                    "title": "Most Wanted",
+                    "price": "£35.28"
+                  },
+                  {
+                    "title": "Hide Away (Eve Duncan #20)",
+                    "price": "£11.84"
+                  },
+                  {
+                    "title": "Boar Island (Anna Pigeon #19)",
+                    "price": "£59.48"
+                  },
+                  {
+                    "title": "The Widow",
+                    "price": "£27.26"
+                  },
+                  {
+                    "title": "Playing with Fire",
+                    "price": "£13.71"
+                  },
+                  {
+                    "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+                    "price": "£25.37"
+                  },
+                  {
+                    "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+                    "price": "£52.30"
+                  },
+                  {
+                    "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+                    "price": "£20.89"
+                  },
+                  {
+                    "title": "The Mysterious Affair at Styles (Hercule Poirot #1)",
+                    "price": "£24.80"
+                  },
+                  {
+                    "title": "In the Woods (Dublin Murder Squad #1)",
+                    "price": "£38.38"
+                  },
+                  {
+                    "title": "The Silkworm (Cormoran Strike #2)",
+                    "price": "£23.05"
+                  },
+                  {
+                    "title": "The Exiled",
+                    "price": "£43.45"
+                  },
+                  {
+                    "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+                    "price": "£19.21"
+                  },
+                  {
+                    "title": "Extreme Prey (Lucas Davenport #26)",
+                    "price": "£25.40"
+                  },
+                  {
+                    "title": "Career of Evil (Cormoran Strike #3)",
+                    "price": "£24.72"
+                  },
+                  {
+                    "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+                    "price": "£57.70"
+                  },
+                  {
+                    "title": "The Girl You Lost",
+                    "price": "£12.29"
+                  },
+                  {
+                    "title": "The Girl In The Ice (DCI Erika Foster #1)",
+                    "price": "£15.85"
+                  },
+                  {
+                    "title": "Blood Defense (Samantha Brinkman #1)",
+                    "price": "£20.30"
+                  },
+                  {
+                    "title": "1st to Die (Women's Murder Club #1)",
+                    "price": "£53.98"
+                  }
+                ],
+                "pages": [
+                  {
+                    "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+                    "status": 200,
+                    "count": 20,
+                    "heading": "Mystery"
+                  },
+                  {
+                    "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
+                    "status": 200,
+                    "count": 12,
+                    "heading": "Mystery"
+                  }
+                ],
+                "counts_match": true,
+                "next_page_unvisited": false
+              },
+              "answer_record_matches": 4,
+              "missing_records": [
+                {
+                  "title": "Sharp Objects",
+                  "price": "£47.82"
+                },
+                {
+                  "title": "In a Dark, Dark Wood",
+                  "price": "£19.63"
+                },
+                {
+                  "title": "The Past Never Ends",
+                  "price": "£56.50"
+                },
+                {
+                  "title": "A Murder in Time",
+                  "price": "£16.64"
+                },
+                {
+                  "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+                  "price": "£44.10"
+                },
+                {
+                  "title": "The Last Mile (Amos Decker #2)",
+                  "price": "£54.21"
+                },
+                {
+                  "title": "That Darkness (Gardiner and Renner #1)",
+                  "price": "£13.92"
+                },
+                {
+                  "title": "Tastes Like Fear (DI Marnie Rome #3)",
+                  "price": "£10.69"
+                },
+                {
+                  "title": "A Time of Torment (Charlie Parker #14)",
+                  "price": "£48.35"
+                },
+                {
+                  "title": "A Study in Scarlet (Sherlock Holmes #1)",
+                  "price": "£16.73"
+                },
+                {
+                  "title": "Poisonous (Max Revere Novels #3)",
+                  "price": "£26.80"
+                },
+                {
+                  "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+                  "price": "£54.36"
+                },
+                {
+                  "title": "Most Wanted",
+                  "price": "£35.28"
+                },
+                {
+                  "title": "Hide Away (Eve Duncan #20)",
+                  "price": "£11.84"
+                },
+                {
+                  "title": "Boar Island (Anna Pigeon #19)",
+                  "price": "£59.48"
+                },
+                {
+                  "title": "The Widow",
+                  "price": "£27.26"
+                },
+                {
+                  "title": "Playing with Fire",
+                  "price": "£13.71"
+                },
+                {
+                  "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+                  "price": "£25.37"
+                },
+                {
+                  "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+                  "price": "£52.30"
+                },
+                {
+                  "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+                  "price": "£20.89"
+                },
+                {
+                  "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+                  "price": "£19.21"
+                },
+                {
+                  "title": "Extreme Prey (Lucas Davenport #26)",
+                  "price": "£25.40"
+                },
+                {
+                  "title": "Career of Evil (Cormoran Strike #3)",
+                  "price": "£24.72"
+                },
+                {
+                  "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+                  "price": "£57.70"
+                },
+                {
+                  "title": "The Girl You Lost",
+                  "price": "£12.29"
+                },
+                {
+                  "title": "The Girl In The Ice (DCI Erika Foster #1)",
+                  "price": "£15.85"
+                },
+                {
+                  "title": "Blood Defense (Samantha Brinkman #1)",
+                  "price": "£20.30"
+                },
+                {
+                  "title": "1st to Die (Women's Murder Club #1)",
+                  "price": "£53.98"
+                }
+              ]
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 62,
+            "browser_cost_usd": 0.014604618000000008,
+            "browser_reported_cost_usd": 0.014604618000000008,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "operator": 62
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 62,
+            "inclusive_cost_usd": 0.014604618000000008,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "operator": 62
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.014604618000000008,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 3,
+          "arguments": "Poetry",
+          "mission": "collect every book title and price in the Poetry category",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 5.5984775710003305,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent category HTML through private Leash; compare returned answer/validated collection and output only (diagnostic DOM excluded)",
+            "expected_records": 19,
+            "delivered_count": 0,
+            "matched_records": 0,
+            "missing_records": [
+              {
+                "title": "A Light in the Attic",
+                "price": "£51.77"
+              },
+              {
+                "title": "The Black Maria",
+                "price": "£52.15"
+              },
+              {
+                "title": "Shakespeare's Sonnets",
+                "price": "£20.66"
+              },
+              {
+                "title": "Olio",
+                "price": "£23.88"
+              },
+              {
+                "title": "You can't bury them all: Poems",
+                "price": "£33.63"
+              },
+              {
+                "title": "Slow States of Collapse: Poems",
+                "price": "£57.31"
+              },
+              {
+                "title": "Untitled Collection: Sabbath Poems 2014",
+                "price": "£14.27"
+              },
+              {
+                "title": "Poems That Make Grown Women Cry",
+                "price": "£14.19"
+              },
+              {
+                "title": "Night Sky with Exit Wounds",
+                "price": "£41.05"
+              },
+              {
+                "title": "salt.",
+                "price": "£46.78"
+              },
+              {
+                "title": "Quarter Life Poetry: Poems for the Young, Broke and Hangry",
+                "price": "£50.89"
+              },
+              {
+                "title": "Out of Print: City Lights Spotlight No. 14",
+                "price": "£53.64"
+              },
+              {
+                "title": "Les Fleurs du Mal",
+                "price": "£29.04"
+              },
+              {
+                "title": "Howl and Other Poems",
+                "price": "£40.45"
+              },
+              {
+                "title": "Leave This Song Behind: Teen Poetry at Its Best",
+                "price": "£51.17"
+              },
+              {
+                "title": "The Collected Poems of W.B. Yeats (The Collected Works of W.B. Yeats #1)",
+                "price": "£15.42"
+              },
+              {
+                "title": "The Crossover",
+                "price": "£38.77"
+              },
+              {
+                "title": "Booked",
+                "price": "£17.49"
+              },
+              {
+                "title": "Twenty Love Poems and a Song of Despair",
+                "price": "£30.95"
+              }
+            ],
+            "reference": {
+              "category": "Poetry",
+              "total_reported": 19,
+              "records": [
+                {
+                  "title": "A Light in the Attic",
+                  "price": "£51.77"
+                },
+                {
+                  "title": "The Black Maria",
+                  "price": "£52.15"
+                },
+                {
+                  "title": "Shakespeare's Sonnets",
+                  "price": "£20.66"
+                },
+                {
+                  "title": "Olio",
+                  "price": "£23.88"
+                },
+                {
+                  "title": "You can't bury them all: Poems",
+                  "price": "£33.63"
+                },
+                {
+                  "title": "Slow States of Collapse: Poems",
+                  "price": "£57.31"
+                },
+                {
+                  "title": "Untitled Collection: Sabbath Poems 2014",
+                  "price": "£14.27"
+                },
+                {
+                  "title": "Poems That Make Grown Women Cry",
+                  "price": "£14.19"
+                },
+                {
+                  "title": "Night Sky with Exit Wounds",
+                  "price": "£41.05"
+                },
+                {
+                  "title": "salt.",
+                  "price": "£46.78"
+                },
+                {
+                  "title": "Quarter Life Poetry: Poems for the Young, Broke and Hangry",
+                  "price": "£50.89"
+                },
+                {
+                  "title": "Out of Print: City Lights Spotlight No. 14",
+                  "price": "£53.64"
+                },
+                {
+                  "title": "Les Fleurs du Mal",
+                  "price": "£29.04"
+                },
+                {
+                  "title": "Howl and Other Poems",
+                  "price": "£40.45"
+                },
+                {
+                  "title": "Leave This Song Behind: Teen Poetry at Its Best",
+                  "price": "£51.17"
+                },
+                {
+                  "title": "The Collected Poems of W.B. Yeats (The Collected Works of W.B. Yeats #1)",
+                  "price": "£15.42"
+                },
+                {
+                  "title": "The Crossover",
+                  "price": "£38.77"
+                },
+                {
+                  "title": "Booked",
+                  "price": "£17.49"
+                },
+                {
+                  "title": "Twenty Love Poems and a Song of Despair",
+                  "price": "£30.95"
+                }
+              ],
+              "pages": [
+                {
+                  "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+                  "status": 200,
+                  "count": 19,
+                  "heading": "Poetry"
+                }
+              ],
+              "counts_match": true,
+              "next_page_unvisited": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+              "site": {
+                "category": "Poetry",
+                "total_reported": 19,
+                "records": [
+                  {
+                    "title": "A Light in the Attic",
+                    "price": "£51.77"
+                  },
+                  {
+                    "title": "The Black Maria",
+                    "price": "£52.15"
+                  },
+                  {
+                    "title": "Shakespeare's Sonnets",
+                    "price": "£20.66"
+                  },
+                  {
+                    "title": "Olio",
+                    "price": "£23.88"
+                  },
+                  {
+                    "title": "You can't bury them all: Poems",
+                    "price": "£33.63"
+                  },
+                  {
+                    "title": "Slow States of Collapse: Poems",
+                    "price": "£57.31"
+                  },
+                  {
+                    "title": "Untitled Collection: Sabbath Poems 2014",
+                    "price": "£14.27"
+                  },
+                  {
+                    "title": "Poems That Make Grown Women Cry",
+                    "price": "£14.19"
+                  },
+                  {
+                    "title": "Night Sky with Exit Wounds",
+                    "price": "£41.05"
+                  },
+                  {
+                    "title": "salt.",
+                    "price": "£46.78"
+                  },
+                  {
+                    "title": "Quarter Life Poetry: Poems for the Young, Broke and Hangry",
+                    "price": "£50.89"
+                  },
+                  {
+                    "title": "Out of Print: City Lights Spotlight No. 14",
+                    "price": "£53.64"
+                  },
+                  {
+                    "title": "Les Fleurs du Mal",
+                    "price": "£29.04"
+                  },
+                  {
+                    "title": "Howl and Other Poems",
+                    "price": "£40.45"
+                  },
+                  {
+                    "title": "Leave This Song Behind: Teen Poetry at Its Best",
+                    "price": "£51.17"
+                  },
+                  {
+                    "title": "The Collected Poems of W.B. Yeats (The Collected Works of W.B. Yeats #1)",
+                    "price": "£15.42"
+                  },
+                  {
+                    "title": "The Crossover",
+                    "price": "£38.77"
+                  },
+                  {
+                    "title": "Booked",
+                    "price": "£17.49"
+                  },
+                  {
+                    "title": "Twenty Love Poems and a Song of Despair",
+                    "price": "£30.95"
+                  }
+                ],
+                "pages": [
+                  {
+                    "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+                    "status": 200,
+                    "count": 19,
+                    "heading": "Poetry"
+                  }
+                ],
+                "counts_match": true,
+                "next_page_unvisited": false
+              },
+              "answer_record_matches": 7,
+              "missing_records": [
+                {
+                  "title": "A Light in the Attic",
+                  "price": "£51.77"
+                },
+                {
+                  "title": "The Black Maria",
+                  "price": "£52.15"
+                },
+                {
+                  "title": "Shakespeare's Sonnets",
+                  "price": "£20.66"
+                },
+                {
+                  "title": "Olio",
+                  "price": "£23.88"
+                },
+                {
+                  "title": "You can't bury them all: Poems",
+                  "price": "£33.63"
+                },
+                {
+                  "title": "Slow States of Collapse: Poems",
+                  "price": "£57.31"
+                },
+                {
+                  "title": "Untitled Collection: Sabbath Poems 2014",
+                  "price": "£14.27"
+                },
+                {
+                  "title": "Poems That Make Grown Women Cry",
+                  "price": "£14.19"
+                },
+                {
+                  "title": "Night Sky with Exit Wounds",
+                  "price": "£41.05"
+                },
+                {
+                  "title": "salt.",
+                  "price": "£46.78"
+                },
+                {
+                  "title": "Quarter Life Poetry: Poems for the Young, Broke and Hangry",
+                  "price": "£50.89"
+                },
+                {
+                  "title": "Out of Print: City Lights Spotlight No. 14",
+                  "price": "£53.64"
+                }
+              ]
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 7,
+            "browser_cost_usd": 0.0013589519999999999,
+            "browser_reported_cost_usd": 0.0013589519999999999,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "operator": 7
+            },
+            "learning_calls": 4,
+            "learning_cost_usd": 0.0306789,
+            "inclusive_calls": 11,
+            "inclusive_cost_usd": 0.032037852,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": true,
+            "learning_account": {
+              "model_calls": 4,
+              "model_cost": 0.0306789
+            },
+            "status_site": {
+              "site": "toscrape.com",
+              "last_compile": "2026-10-03T13:56:29.665137Z",
+              "installed_by_replay": 0,
+              "installed_by_agreement": 0,
+              "learning_calls": 4,
+              "learning_cost": 0.0306789
+            }
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "operator": 7
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.0013589519999999999,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 4,
+          "arguments": "Historical Fiction",
+          "mission": "collect every book title and price in the Historical Fiction category",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 11.938049170999875,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent category HTML through private Leash; compare returned answer/validated collection and output only (diagnostic DOM excluded)",
+            "expected_records": 26,
+            "delivered_count": 0,
+            "matched_records": 0,
+            "missing_records": [
+              {
+                "title": "Tipping the Velvet",
+                "price": "£53.74"
+              },
+              {
+                "title": "Forever and Forever: The Courtship of Henry Longfellow and Fanny Appleton",
+                "price": "£29.69"
+              },
+              {
+                "title": "A Flight of Arrows (The Pathfinders #2)",
+                "price": "£55.53"
+              },
+              {
+                "title": "The House by the Lake",
+                "price": "£36.95"
+              },
+              {
+                "title": "Mrs. Houdini",
+                "price": "£30.25"
+              },
+              {
+                "title": "The Marriage of Opposites",
+                "price": "£28.08"
+              },
+              {
+                "title": "Glory over Everything: Beyond The Kitchen House",
+                "price": "£45.84"
+              },
+              {
+                "title": "Love, Lies and Spies",
+                "price": "£20.55"
+              },
+              {
+                "title": "A Paris Apartment",
+                "price": "£39.01"
+              },
+              {
+                "title": "Lilac Girls",
+                "price": "£17.28"
+              },
+              {
+                "title": "The Constant Princess (The Tudor Court #1)",
+                "price": "£16.62"
+              },
+              {
+                "title": "The Invention of Wings",
+                "price": "£37.34"
+              },
+              {
+                "title": "World Without End (The Pillars of the Earth #2)",
+                "price": "£32.97"
+              },
+              {
+                "title": "The Passion of Dolssa",
+                "price": "£28.32"
+              },
+              {
+                "title": "Girl With a Pearl Earring",
+                "price": "£26.77"
+              },
+              {
+                "title": "Voyager (Outlander #3)",
+                "price": "£21.07"
+              },
+              {
+                "title": "The Red Tent",
+                "price": "£35.66"
+              },
+              {
+                "title": "The Last Painting of Sara de Vos",
+                "price": "£55.55"
+              },
+              {
+                "title": "The Guernsey Literary and Potato Peel Pie Society",
+                "price": "£49.53"
+              },
+              {
+                "title": "Girl in the Blue Coat",
+                "price": "£46.83"
+              },
+              {
+                "title": "Between Shades of Gray",
+                "price": "£20.79"
+              },
+              {
+                "title": "While You Were Mine",
+                "price": "£41.32"
+              },
+              {
+                "title": "The Secret Healer",
+                "price": "£34.56"
+              },
+              {
+                "title": "Starlark",
+                "price": "£25.83"
+              },
+              {
+                "title": "Lost Among the Living",
+                "price": "£27.70"
+              },
+              {
+                "title": "A Spy's Devotion (The Regency Spies of London #1)",
+                "price": "£16.97"
+              }
+            ],
+            "reference": {
+              "category": "Historical Fiction",
+              "total_reported": 26,
+              "records": [
+                {
+                  "title": "Tipping the Velvet",
+                  "price": "£53.74"
+                },
+                {
+                  "title": "Forever and Forever: The Courtship of Henry Longfellow and Fanny Appleton",
+                  "price": "£29.69"
+                },
+                {
+                  "title": "A Flight of Arrows (The Pathfinders #2)",
+                  "price": "£55.53"
+                },
+                {
+                  "title": "The House by the Lake",
+                  "price": "£36.95"
+                },
+                {
+                  "title": "Mrs. Houdini",
+                  "price": "£30.25"
+                },
+                {
+                  "title": "The Marriage of Opposites",
+                  "price": "£28.08"
+                },
+                {
+                  "title": "Glory over Everything: Beyond The Kitchen House",
+                  "price": "£45.84"
+                },
+                {
+                  "title": "Love, Lies and Spies",
+                  "price": "£20.55"
+                },
+                {
+                  "title": "A Paris Apartment",
+                  "price": "£39.01"
+                },
+                {
+                  "title": "Lilac Girls",
+                  "price": "£17.28"
+                },
+                {
+                  "title": "The Constant Princess (The Tudor Court #1)",
+                  "price": "£16.62"
+                },
+                {
+                  "title": "The Invention of Wings",
+                  "price": "£37.34"
+                },
+                {
+                  "title": "World Without End (The Pillars of the Earth #2)",
+                  "price": "£32.97"
+                },
+                {
+                  "title": "The Passion of Dolssa",
+                  "price": "£28.32"
+                },
+                {
+                  "title": "Girl With a Pearl Earring",
+                  "price": "£26.77"
+                },
+                {
+                  "title": "Voyager (Outlander #3)",
+                  "price": "£21.07"
+                },
+                {
+                  "title": "The Red Tent",
+                  "price": "£35.66"
+                },
+                {
+                  "title": "The Last Painting of Sara de Vos",
+                  "price": "£55.55"
+                },
+                {
+                  "title": "The Guernsey Literary and Potato Peel Pie Society",
+                  "price": "£49.53"
+                },
+                {
+                  "title": "Girl in the Blue Coat",
+                  "price": "£46.83"
+                },
+                {
+                  "title": "Between Shades of Gray",
+                  "price": "£20.79"
+                },
+                {
+                  "title": "While You Were Mine",
+                  "price": "£41.32"
+                },
+                {
+                  "title": "The Secret Healer",
+                  "price": "£34.56"
+                },
+                {
+                  "title": "Starlark",
+                  "price": "£25.83"
+                },
+                {
+                  "title": "Lost Among the Living",
+                  "price": "£27.70"
+                },
+                {
+                  "title": "A Spy's Devotion (The Regency Spies of London #1)",
+                  "price": "£16.97"
+                }
+              ],
+              "pages": [
+                {
+                  "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+                  "status": 200,
+                  "count": 20,
+                  "heading": "Historical Fiction"
+                },
+                {
+                  "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+                  "status": 200,
+                  "count": 6,
+                  "heading": "Historical Fiction"
+                }
+              ],
+              "counts_match": true,
+              "next_page_unvisited": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+              "site": {
+                "category": "Historical Fiction",
+                "total_reported": 26,
+                "records": [
+                  {
+                    "title": "Tipping the Velvet",
+                    "price": "£53.74"
+                  },
+                  {
+                    "title": "Forever and Forever: The Courtship of Henry Longfellow and Fanny Appleton",
+                    "price": "£29.69"
+                  },
+                  {
+                    "title": "A Flight of Arrows (The Pathfinders #2)",
+                    "price": "£55.53"
+                  },
+                  {
+                    "title": "The House by the Lake",
+                    "price": "£36.95"
+                  },
+                  {
+                    "title": "Mrs. Houdini",
+                    "price": "£30.25"
+                  },
+                  {
+                    "title": "The Marriage of Opposites",
+                    "price": "£28.08"
+                  },
+                  {
+                    "title": "Glory over Everything: Beyond The Kitchen House",
+                    "price": "£45.84"
+                  },
+                  {
+                    "title": "Love, Lies and Spies",
+                    "price": "£20.55"
+                  },
+                  {
+                    "title": "A Paris Apartment",
+                    "price": "£39.01"
+                  },
+                  {
+                    "title": "Lilac Girls",
+                    "price": "£17.28"
+                  },
+                  {
+                    "title": "The Constant Princess (The Tudor Court #1)",
+                    "price": "£16.62"
+                  },
+                  {
+                    "title": "The Invention of Wings",
+                    "price": "£37.34"
+                  },
+                  {
+                    "title": "World Without End (The Pillars of the Earth #2)",
+                    "price": "£32.97"
+                  },
+                  {
+                    "title": "The Passion of Dolssa",
+                    "price": "£28.32"
+                  },
+                  {
+                    "title": "Girl With a Pearl Earring",
+                    "price": "£26.77"
+                  },
+                  {
+                    "title": "Voyager (Outlander #3)",
+                    "price": "£21.07"
+                  },
+                  {
+                    "title": "The Red Tent",
+                    "price": "£35.66"
+                  },
+                  {
+                    "title": "The Last Painting of Sara de Vos",
+                    "price": "£55.55"
+                  },
+                  {
+                    "title": "The Guernsey Literary and Potato Peel Pie Society",
+                    "price": "£49.53"
+                  },
+                  {
+                    "title": "Girl in the Blue Coat",
+                    "price": "£46.83"
+                  },
+                  {
+                    "title": "Between Shades of Gray",
+                    "price": "£20.79"
+                  },
+                  {
+                    "title": "While You Were Mine",
+                    "price": "£41.32"
+                  },
+                  {
+                    "title": "The Secret Healer",
+                    "price": "£34.56"
+                  },
+                  {
+                    "title": "Starlark",
+                    "price": "£25.83"
+                  },
+                  {
+                    "title": "Lost Among the Living",
+                    "price": "£27.70"
+                  },
+                  {
+                    "title": "A Spy's Devotion (The Regency Spies of London #1)",
+                    "price": "£16.97"
+                  }
+                ],
+                "pages": [
+                  {
+                    "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+                    "status": 200,
+                    "count": 20,
+                    "heading": "Historical Fiction"
+                  },
+                  {
+                    "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+                    "status": 200,
+                    "count": 6,
+                    "heading": "Historical Fiction"
+                  }
+                ],
+                "counts_match": true,
+                "next_page_unvisited": false
+              },
+              "answer_record_matches": 6,
+              "missing_records": [
+                {
+                  "title": "Tipping the Velvet",
+                  "price": "£53.74"
+                },
+                {
+                  "title": "Forever and Forever: The Courtship of Henry Longfellow and Fanny Appleton",
+                  "price": "£29.69"
+                },
+                {
+                  "title": "A Flight of Arrows (The Pathfinders #2)",
+                  "price": "£55.53"
+                },
+                {
+                  "title": "The House by the Lake",
+                  "price": "£36.95"
+                },
+                {
+                  "title": "Mrs. Houdini",
+                  "price": "£30.25"
+                },
+                {
+                  "title": "The Marriage of Opposites",
+                  "price": "£28.08"
+                },
+                {
+                  "title": "Glory over Everything: Beyond The Kitchen House",
+                  "price": "£45.84"
+                },
+                {
+                  "title": "Love, Lies and Spies",
+                  "price": "£20.55"
+                },
+                {
+                  "title": "A Paris Apartment",
+                  "price": "£39.01"
+                },
+                {
+                  "title": "Lilac Girls",
+                  "price": "£17.28"
+                },
+                {
+                  "title": "The Constant Princess (The Tudor Court #1)",
+                  "price": "£16.62"
+                },
+                {
+                  "title": "The Invention of Wings",
+                  "price": "£37.34"
+                },
+                {
+                  "title": "World Without End (The Pillars of the Earth #2)",
+                  "price": "£32.97"
+                },
+                {
+                  "title": "The Passion of Dolssa",
+                  "price": "£28.32"
+                },
+                {
+                  "title": "Girl With a Pearl Earring",
+                  "price": "£26.77"
+                },
+                {
+                  "title": "Voyager (Outlander #3)",
+                  "price": "£21.07"
+                },
+                {
+                  "title": "The Red Tent",
+                  "price": "£35.66"
+                },
+                {
+                  "title": "The Last Painting of Sara de Vos",
+                  "price": "£55.55"
+                },
+                {
+                  "title": "The Guernsey Literary and Potato Peel Pie Society",
+                  "price": "£49.53"
+                },
+                {
+                  "title": "Girl in the Blue Coat",
+                  "price": "£46.83"
+                }
+              ]
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 13,
+            "browser_cost_usd": 0.00292173,
+            "browser_reported_cost_usd": 0.00292173,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "operator": 13
+            },
+            "learning_calls": 2,
+            "learning_cost_usd": 0.013367475,
+            "inclusive_calls": 15,
+            "inclusive_cost_usd": 0.016289205,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": true,
+            "learning_account": {
+              "model_calls": 2,
+              "model_cost": 0.013367475
+            },
+            "status_site": {
+              "site": "toscrape.com",
+              "last_compile": "2026-10-03T14:01:17.860326Z",
+              "installed_by_replay": 0,
+              "installed_by_agreement": 0,
+              "learning_calls": 2,
+              "learning_cost": 0.013367475
+            }
+          },
+          "procedures": [],
+          "compiled_after": [
+            {
+              "site": "toscrape.com",
+              "entry": "https://books.toscrape.com/",
+              "description": "Learned toscrape.com",
+              "pages": [
+                {
+                  "name": "books-category",
+                  "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html"
+                },
+                {
+                  "name": "home",
+                  "url_pattern": "https://books.toscrape.com/"
+                }
+              ],
+              "procedures": [
+                {
+                  "slug": "open-books-category",
+                  "description": "Open the requested books category and collect every book title and price.",
+                  "args": {
+                    "category": {
+                      "from": "mission"
+                    }
+                  },
+                  "steps": [
+                    {
+                      "goal": "Click the link named {category}"
+                    },
+                    {
+                      "goal": "Collect every book title and price in the {category} category"
+                    }
+                  ],
+                  "expect": [
+                    "the page is books-category",
+                    "every book title and price in the requested category is collected"
+                  ]
+                }
+              ]
+            }
+          ],
+          "installed_after": [],
+          "provenance_sidecars_after": [
+            {
+              "path": "state/leash/proposed/open-books-category.provenance.json",
+              "json": {
+                "traces": [
+                  "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T13:46:15.658484Z-done.json",
+                  "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T13:47:20.896986Z-done.json"
+                ],
+                "model": "openai/gpt-6-luna",
+                "time": "2026-10-03T14:01:17.860524Z",
+                "tries": 0,
+                "path": [
+                  "home",
+                  "books-category"
+                ],
+                "entry_kind": "home",
+                "exit_kind": "books-<slug>",
+                "signature": [
+                  [
+                    "click",
+                    {
+                      "role": "link",
+                      "label": "travel"
+                    }
+                  ]
+                ],
+                "kind_mapping": [
+                  [
+                    "books-<slug>",
+                    "books-category"
+                  ]
+                ],
+                "repeatable": true,
+                "reason": "no irreversible submission in the observed path",
+                "gate": "replay",
+                "repair": false,
+                "model_calls": 2,
+                "model_cost": 0.013367475
+              }
+            }
+          ],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "operator": 13
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.00292173,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 5,
+          "arguments": "Horror",
+          "mission": "collect every book title and price in the Horror category",
+          "fresh_agent": true,
+          "learning_mode": "off",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 27.159956456000145,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent category HTML through private Leash; compare returned answer/validated collection and output only (diagnostic DOM excluded)",
+            "expected_records": 17,
+            "delivered_count": 0,
+            "matched_records": 0,
+            "missing_records": [
+              {
+                "title": "Security",
+                "price": "£39.25"
+              },
+              {
+                "title": "Follow You Home",
+                "price": "£21.36"
+              },
+              {
+                "title": "The Loney",
+                "price": "£23.40"
+              },
+              {
+                "title": "Pet Sematary",
+                "price": "£10.56"
+              },
+              {
+                "title": "Doctor Sleep (The Shining #2)",
+                "price": "£40.12"
+              },
+              {
+                "title": "Psycho: Sanitarium (Psycho #1.5)",
+                "price": "£36.97"
+              },
+              {
+                "title": "Can You Keep a Secret? (Fear Street Relaunch #4)",
+                "price": "£48.64"
+              },
+              {
+                "title": "Red Dragon (Hannibal Lecter #1)",
+                "price": "£23.37"
+              },
+              {
+                "title": "Dracula the Un-Dead",
+                "price": "£35.63"
+              },
+              {
+                "title": "Night Shift (Night Shift #1-20)",
+                "price": "£12.75"
+              },
+              {
+                "title": "Needful Things",
+                "price": "£47.51"
+              },
+              {
+                "title": "Misery",
+                "price": "£34.79"
+              },
+              {
+                "title": "It",
+                "price": "£25.01"
+              },
+              {
+                "title": "'Salem's Lot",
+                "price": "£49.56"
+              },
+              {
+                "title": "The Stand",
+                "price": "£57.86"
+              },
+              {
+                "title": "The Girl with All the Gifts",
+                "price": "£49.47"
+              },
+              {
+                "title": "House of Leaves",
+                "price": "£54.89"
+              }
+            ],
+            "reference": {
+              "category": "Horror",
+              "total_reported": 17,
+              "records": [
+                {
+                  "title": "Security",
+                  "price": "£39.25"
+                },
+                {
+                  "title": "Follow You Home",
+                  "price": "£21.36"
+                },
+                {
+                  "title": "The Loney",
+                  "price": "£23.40"
+                },
+                {
+                  "title": "Pet Sematary",
+                  "price": "£10.56"
+                },
+                {
+                  "title": "Doctor Sleep (The Shining #2)",
+                  "price": "£40.12"
+                },
+                {
+                  "title": "Psycho: Sanitarium (Psycho #1.5)",
+                  "price": "£36.97"
+                },
+                {
+                  "title": "Can You Keep a Secret? (Fear Street Relaunch #4)",
+                  "price": "£48.64"
+                },
+                {
+                  "title": "Red Dragon (Hannibal Lecter #1)",
+                  "price": "£23.37"
+                },
+                {
+                  "title": "Dracula the Un-Dead",
+                  "price": "£35.63"
+                },
+                {
+                  "title": "Night Shift (Night Shift #1-20)",
+                  "price": "£12.75"
+                },
+                {
+                  "title": "Needful Things",
+                  "price": "£47.51"
+                },
+                {
+                  "title": "Misery",
+                  "price": "£34.79"
+                },
+                {
+                  "title": "It",
+                  "price": "£25.01"
+                },
+                {
+                  "title": "'Salem's Lot",
+                  "price": "£49.56"
+                },
+                {
+                  "title": "The Stand",
+                  "price": "£57.86"
+                },
+                {
+                  "title": "The Girl with All the Gifts",
+                  "price": "£49.47"
+                },
+                {
+                  "title": "House of Leaves",
+                  "price": "£54.89"
+                }
+              ],
+              "pages": [
+                {
+                  "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+                  "status": 200,
+                  "count": 17,
+                  "heading": "Horror"
+                }
+              ],
+              "counts_match": true,
+              "next_page_unvisited": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+              "site": {
+                "category": "Horror",
+                "total_reported": 17,
+                "records": [
+                  {
+                    "title": "Security",
+                    "price": "£39.25"
+                  },
+                  {
+                    "title": "Follow You Home",
+                    "price": "£21.36"
+                  },
+                  {
+                    "title": "The Loney",
+                    "price": "£23.40"
+                  },
+                  {
+                    "title": "Pet Sematary",
+                    "price": "£10.56"
+                  },
+                  {
+                    "title": "Doctor Sleep (The Shining #2)",
+                    "price": "£40.12"
+                  },
+                  {
+                    "title": "Psycho: Sanitarium (Psycho #1.5)",
+                    "price": "£36.97"
+                  },
+                  {
+                    "title": "Can You Keep a Secret? (Fear Street Relaunch #4)",
+                    "price": "£48.64"
+                  },
+                  {
+                    "title": "Red Dragon (Hannibal Lecter #1)",
+                    "price": "£23.37"
+                  },
+                  {
+                    "title": "Dracula the Un-Dead",
+                    "price": "£35.63"
+                  },
+                  {
+                    "title": "Night Shift (Night Shift #1-20)",
+                    "price": "£12.75"
+                  },
+                  {
+                    "title": "Needful Things",
+                    "price": "£47.51"
+                  },
+                  {
+                    "title": "Misery",
+                    "price": "£34.79"
+                  },
+                  {
+                    "title": "It",
+                    "price": "£25.01"
+                  },
+                  {
+                    "title": "'Salem's Lot",
+                    "price": "£49.56"
+                  },
+                  {
+                    "title": "The Stand",
+                    "price": "£57.86"
+                  },
+                  {
+                    "title": "The Girl with All the Gifts",
+                    "price": "£49.47"
+                  },
+                  {
+                    "title": "House of Leaves",
+                    "price": "£54.89"
+                  }
+                ],
+                "pages": [
+                  {
+                    "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+                    "status": 200,
+                    "count": 17,
+                    "heading": "Horror"
+                  }
+                ],
+                "counts_match": true,
+                "next_page_unvisited": false
+              },
+              "answer_record_matches": 5,
+              "missing_records": [
+                {
+                  "title": "Security",
+                  "price": "£39.25"
+                },
+                {
+                  "title": "Follow You Home",
+                  "price": "£21.36"
+                },
+                {
+                  "title": "The Loney",
+                  "price": "£23.40"
+                },
+                {
+                  "title": "Pet Sematary",
+                  "price": "£10.56"
+                },
+                {
+                  "title": "Doctor Sleep (The Shining #2)",
+                  "price": "£40.12"
+                },
+                {
+                  "title": "Psycho: Sanitarium (Psycho #1.5)",
+                  "price": "£36.97"
+                },
+                {
+                  "title": "Can You Keep a Secret? (Fear Street Relaunch #4)",
+                  "price": "£48.64"
+                },
+                {
+                  "title": "Red Dragon (Hannibal Lecter #1)",
+                  "price": "£23.37"
+                },
+                {
+                  "title": "Dracula the Un-Dead",
+                  "price": "£35.63"
+                },
+                {
+                  "title": "Night Shift (Night Shift #1-20)",
+                  "price": "£12.75"
+                },
+                {
+                  "title": "Needful Things",
+                  "price": "£47.51"
+                },
+                {
+                  "title": "Misery",
+                  "price": "£34.79"
+                }
+              ]
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 12,
+            "browser_cost_usd": 0.00283745,
+            "browser_reported_cost_usd": 0.00283745,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "operator": 10,
+              "planner": 2
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 12,
+            "inclusive_cost_usd": 0.00283745,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "operator": 10,
+                "planner": 2
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.00283745,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        }
+      ],
+      "installed_playbooks_full": {},
+      "installed_snapshot": [],
+      "compiled_drafts": [
+        {
+          "first_observed": "books/mission-4",
+          "path": "state/leash/proposed/toscrape.com-open-books-category.json",
+          "json": {
+            "site": "toscrape.com",
+            "entry": "https://books.toscrape.com/",
+            "description": "Learned toscrape.com",
+            "pages": [
+              {
+                "name": "books-category",
+                "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html"
+              },
+              {
+                "name": "home",
+                "url_pattern": "https://books.toscrape.com/"
+              }
+            ],
+            "procedures": [
+              {
+                "slug": "open-books-category",
+                "description": "Open the requested books category and collect every book title and price.",
+                "args": {
+                  "category": {
+                    "from": "mission"
+                  }
+                },
+                "steps": [
+                  {
+                    "goal": "Click the link named {category}"
+                  },
+                  {
+                    "goal": "Collect every book title and price in the {category} category"
+                  }
+                ],
+                "expect": [
+                  "the page is books-category",
+                  "every book title and price in the requested category is collected"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "repairs": [],
+      "cleanup": {
+        "training": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        },
+        "fresh": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        }
+      }
+    },
+    "flights": {
+      "criterion_pass": false,
+      "criterion": {
+        "installed_playbook_present": false,
+        "fresh_service_and_profile": true,
+        "fifth_goal_independently_verified": false,
+        "lower_inclusive_cost_than_mission_1": false,
+        "acceptance_learning_off": true,
+        "acceptance_no_learning_calls": true
+      },
+      "missions": [
+        {
+          "number": 1,
+          "arguments": [
+            "Warsaw",
+            "Lisbon"
+          ],
+          "mission": "find the cheapest flight from Warsaw to Lisbon next month and tell me its price and dates",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 17.36480909400052,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent manual review of retained terminal answer and live DOM evidence",
+            "manual_review": {
+              "verified": false,
+              "judged": true,
+              "method": "Review of terminal answer/script records and retained independent post-drive verification; operator-state diagnostics excluded from delivered results.",
+              "finding": "No terminal answer or script-record collection was delivered. Selected-date fares in the diagnostic page do not prove the cheapest flight across November 2026.",
+              "page_state_only": true,
+              "month_wide_minimum_proven": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent post-drive visible DOM; reviewer must corroborate route, November dates, real fare amount and cheapest-month evidence (currency selector alone never counts)",
+              "requested_route": [
+                "Warsaw",
+                "Lisbon"
+              ],
+              "next_month": "November 2026",
+              "visible_price_amounts": [
+                "PLN 638",
+                "PLN 638",
+                "PLN 876",
+                "PLN 982",
+                "PLN 115 ",
+                "PLN 897",
+                "PLN 897",
+                "PLN 931",
+                "PLN 1,238",
+                "PLN 1,273",
+                "PLN 1,396",
+                "PLN 638"
+              ],
+              "visible_date_or_cheapest_lines": [
+                "Cheapest",
+                "Track prices from Warsaw to Lisbon departing 2026-11-24 and returning 2026-11-26",
+                "Nov 24 – 26",
+                "Prices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.",
+                "Departure",
+                "Departure",
+                "Tuesday, November 24, 2026, departure date.",
+                "Thursday, November 26, 2026, return date.",
+                "Departure time: 1:25 PM.",
+                "Departure time: 1:25 PM.",
+                "Departure time: 1:25 PM.",
+                "Departure time: 9:50 AM.",
+                "Departure time: 9:50 AM.",
+                "Departure time: 9:50 AM.",
+                "Departure time: 6:30 AM.",
+                "Departure time: 6:30 AM.",
+                "Departure time: 6:30 AM.",
+                "Track prices from Warsaw to Lisbon departing 2026-11-24 and returning 2026-11-26",
+                "Departure time: 6:05 AM.",
+                "Departure time: 6:05 AM.",
+                "Departure time: 6:05 AM.",
+                "Departure time: 5:10 PM.",
+                "Departure time: 5:10 PM.",
+                "Departure time: 5:10 PM.",
+                "Departure time: 2:40 PM.",
+                "Departure time: 2:40 PM.",
+                "Departure time: 2:40 PM.",
+                "Departure time: 5:25 PM.",
+                "Departure time: 5:25 PM.",
+                "Departure time: 5:25 PM.",
+                "Departure time: 7:30 AM.",
+                "Departure time: 7:30 AM.",
+                "Departure time: 7:30 AM.",
+                "Departure time: 10:10 AM.",
+                "Departure time: 10:10 AM.",
+                "Departure time: 10:10 AM.",
+                "Departure time: 1:25 PM.",
+                "Departure time: 1:25 PM.",
+                "Departure time: 1:25 PM.",
+                "Departure time: 9:50 AM.",
+                "Departure time: 9:50 AM.",
+                "Departure time: 9:50 AM.",
+                "Departure time: 6:30 AM.",
+                "Departure time: 6:30 AM.",
+                "Departure time: 6:30 AM.",
+                "Departure time: 6:05 AM.",
+                "Departure time: 6:05 AM.",
+                "Departure time: 6:05 AM.",
+                "Departure time: 5:10 PM.",
+                "Departure time: 5:10 PM.",
+                "Departure time: 5:10 PM.",
+                "Departure time: 2:40 PM.",
+                "Departure time: 2:40 PM.",
+                "Departure time: 2:40 PM.",
+                "Departure time: 5:25 PM.",
+                "Departure time: 5:25 PM.",
+                "Departure time: 5:25 PM.",
+                "Departure time: 7:30 AM.",
+                "Departure time: 7:30 AM.",
+                "Departure time: 7:30 AM.",
+                "Departure time: 10:10 AM.",
+                "Departure time: 10:10 AM.",
+                "Departure time: 10:10 AM."
+              ],
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 20,
+            "browser_cost_usd": 0.005410836000000001,
+            "browser_reported_cost_usd": 0.005410836000000001,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "text_helper": 2,
+              "operator": 18
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 20,
+            "inclusive_cost_usd": 0.005410836000000001,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 2,
+                "operator": 18
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.005410836000000001,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 2,
+          "arguments": [
+            "Kraków",
+            "Barcelona"
+          ],
+          "mission": "find the cheapest flight from Kraków to Barcelona next month and tell me its price and dates",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 13.143130239001039,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent manual review of retained terminal answer and live DOM evidence",
+            "manual_review": {
+              "verified": false,
+              "judged": true,
+              "method": "Review of terminal answer/script records and retained independent post-drive verification; operator-state diagnostics excluded from delivered results.",
+              "finding": "No terminal answer or script-record collection was delivered. Selected-date fares in the diagnostic page do not prove the cheapest flight across November 2026.",
+              "page_state_only": true,
+              "month_wide_minimum_proven": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent post-drive visible DOM; reviewer must corroborate route, November dates, real fare amount and cheapest-month evidence (currency selector alone never counts)",
+              "requested_route": [
+                "Kraków",
+                "Barcelona"
+              ],
+              "next_month": "November 2026",
+              "visible_price_amounts": [
+                "PLN 1,038",
+                "PLN 538",
+                "PLN 1,038",
+                "PLN 1,247",
+                "PLN 1,376",
+                "PLN 1,038 "
+              ],
+              "visible_date_or_cheapest_lines": [
+                "Cheapest",
+                "The cheapest time to book is usually earlier, about 1–4 months before takeoff",
+                "Prices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.",
+                "Departure",
+                "Departure",
+                "Saturday, October 3, 2026, departure date.",
+                "Thursday, October 22, 2026, return date.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 7:10 PM.",
+                "Departure time: 7:10 PM.",
+                "Departure time: 7:10 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 4:45 PM.",
+                "Departure time: 7:10 PM.",
+                "Departure time: 7:10 PM.",
+                "Departure time: 7:10 PM."
+              ],
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 16,
+            "browser_cost_usd": 0.0044472819999999995,
+            "browser_reported_cost_usd": 0.0044472819999999995,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "text_helper": 2,
+              "operator": 14
+            },
+            "learning_calls": 2,
+            "learning_cost_usd": 0.032179575,
+            "inclusive_calls": 18,
+            "inclusive_cost_usd": 0.036626857,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": true,
+            "learning_account": {
+              "model_calls": 2,
+              "model_cost": 0.032179575
+            },
+            "status_site": {
+              "site": "google.com",
+              "last_compile": "2026-10-03T13:55:25.739542Z",
+              "installed_by_replay": 0,
+              "installed_by_agreement": 0,
+              "learning_calls": 2,
+              "learning_cost": 0.032179575
+            }
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 2,
+                "operator": 14
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.0044472819999999995,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 3,
+          "arguments": [
+            "Gdańsk",
+            "Rome"
+          ],
+          "mission": "find the cheapest flight from Gdańsk to Rome next month and tell me its price and dates",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 32.977171996000834,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent manual review of retained terminal answer and live DOM evidence",
+            "manual_review": {
+              "verified": false,
+              "judged": true,
+              "method": "Review of terminal answer/script records and retained independent post-drive verification; operator-state diagnostics excluded from delivered results.",
+              "finding": "No terminal answer or script-record collection was delivered. Selected-date fares in the diagnostic page do not prove the cheapest flight across November 2026.",
+              "page_state_only": true,
+              "month_wide_minimum_proven": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent post-drive visible DOM; reviewer must corroborate route, November dates, real fare amount and cheapest-month evidence (currency selector alone never counts)",
+              "requested_route": [
+                "Gdańsk",
+                "Rome"
+              ],
+              "next_month": "November 2026",
+              "visible_price_amounts": [
+                "PLN 284",
+                "PLN 284",
+                "PLN 801",
+                "PLN 879",
+                "PLN 230 ",
+                "PLN 1,005",
+                "PLN 1,150",
+                "PLN 1,185",
+                "PLN 1,189",
+                "PLN 1,268",
+                "PLN 1,323"
+              ],
+              "visible_date_or_cheapest_lines": [
+                "Cheapest",
+                "Track prices from Gdańsk to Rome departing 2026-11-25 and returning 2026-11-30",
+                "Nov 25 – 30",
+                "Prices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.",
+                "The cheapest price shown is 284 Polish zlotys on Wed, Nov 25.",
+                "Departure",
+                "Departure",
+                "Wednesday, November 25, 2026, departure date.",
+                "Monday, November 30, 2026, return date.",
+                "Departure time: 6:55 PM.",
+                "Departure time: 6:55 PM.",
+                "Departure time: 6:55 PM.",
+                "Departure time: 11:55 AM.",
+                "Departure time: 11:55 AM.",
+                "Departure time: 11:55 AM.",
+                "Departure time: 2:20 PM.",
+                "Departure time: 2:20 PM.",
+                "Departure time: 2:20 PM.",
+                "Track prices from Gdańsk to Rome departing 2026-11-25 and returning 2026-11-30",
+                "Departure time: 2:25 PM.",
+                "Departure time: 2:25 PM.",
+                "Departure time: 2:25 PM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:15 PM.",
+                "Departure time: 6:15 PM.",
+                "Departure time: 6:15 PM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:45 AM.",
+                "Departure time: 6:45 AM.",
+                "Departure time: 6:45 AM.",
+                "Departure time: 6:55 PM.",
+                "Departure time: 6:55 PM.",
+                "Departure time: 6:55 PM.",
+                "Departure time: 11:55 AM.",
+                "Departure time: 11:55 AM.",
+                "Departure time: 11:55 AM.",
+                "Departure time: 2:20 PM.",
+                "Departure time: 2:20 PM.",
+                "Departure time: 2:20 PM.",
+                "Departure time: 2:25 PM.",
+                "Departure time: 2:25 PM.",
+                "Departure time: 2:25 PM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:15 PM.",
+                "Departure time: 6:15 PM.",
+                "Departure time: 6:15 PM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:10 AM.",
+                "Departure time: 6:45 AM.",
+                "Departure time: 6:45 AM.",
+                "Departure time: 6:45 AM."
+              ],
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 45,
+            "browser_cost_usd": 0.0153666,
+            "browser_reported_cost_usd": 0.0153666,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "text_helper": 2,
+              "operator": 43
+            },
+            "learning_calls": 2,
+            "learning_cost_usd": 0.03392017,
+            "inclusive_calls": 47,
+            "inclusive_cost_usd": 0.04928677,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": true,
+            "learning_account": {
+              "model_calls": 2,
+              "model_cost": 0.03392017
+            },
+            "status_site": {
+              "site": "google.com",
+              "last_compile": "2026-10-03T14:05:51.063668Z",
+              "installed_by_replay": 0,
+              "installed_by_agreement": 0,
+              "learning_calls": 2,
+              "learning_cost": 0.03392017
+            }
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 2,
+                "operator": 43
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.0153666,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 4,
+          "arguments": [
+            "Wrocław",
+            "Paris"
+          ],
+          "mission": "find the cheapest flight from Wrocław to Paris next month and tell me its price and dates",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 39.11864433399933,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent manual review of retained terminal answer and live DOM evidence",
+            "manual_review": {
+              "verified": false,
+              "judged": true,
+              "method": "Review of terminal answer/script records and retained independent post-drive verification; operator-state diagnostics excluded from delivered results.",
+              "finding": "No terminal answer or script-record collection was delivered. Selected-date fares in the diagnostic page do not prove the cheapest flight across November 2026.",
+              "page_state_only": true,
+              "month_wide_minimum_proven": false
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent post-drive visible DOM; reviewer must corroborate route, November dates, real fare amount and cheapest-month evidence (currency selector alone never counts)",
+              "requested_route": [
+                "Wrocław",
+                "Paris"
+              ],
+              "next_month": "November 2026",
+              "visible_price_amounts": [
+                "PLN 179",
+                "PLN 179",
+                "PLN 779",
+                "PLN 620 ",
+                "PLN 779",
+                "PLN 896",
+                "PLN 896",
+                "PLN 938",
+                "PLN 952",
+                "PLN 1,007",
+                "PLN 1,073",
+                "PLN 1,579",
+                "PLN 179"
+              ],
+              "visible_date_or_cheapest_lines": [
+                "Cheapest",
+                "Track prices from Wrocław to Paris departing 2026-11-16 and returning 2026-11-23",
+                "Nov 16 – 23",
+                "Prices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.",
+                "Departure",
+                "Departure",
+                "Monday, November 16, 2026, departure date.",
+                "Monday, November 23, 2026, return date.",
+                "Departure time: 8:00 AM.",
+                "Departure time: 8:00 AM.",
+                "Departure time: 8:00 AM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Track prices from Wrocław to Paris departing 2026-11-16 and returning 2026-11-23",
+                "Departure time: 9:30 PM.",
+                "Departure time: 9:30 PM.",
+                "Departure time: 9:30 PM.",
+                "Departure time: 12:20 PM.",
+                "Departure time: 12:20 PM.",
+                "Departure time: 12:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 1:10 PM.",
+                "Departure time: 1:10 PM.",
+                "Departure time: 1:10 PM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 1:45 PM.",
+                "Departure time: 1:45 PM.",
+                "Departure time: 1:45 PM.",
+                "Departure time: 8:00 AM.",
+                "Departure time: 8:00 AM.",
+                "Departure time: 8:00 AM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 9:30 PM.",
+                "Departure time: 9:30 PM.",
+                "Departure time: 9:30 PM.",
+                "Departure time: 12:20 PM.",
+                "Departure time: 12:20 PM.",
+                "Departure time: 12:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 1:10 PM.",
+                "Departure time: 1:10 PM.",
+                "Departure time: 1:10 PM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 5:30 AM.",
+                "Departure time: 1:45 PM.",
+                "Departure time: 1:45 PM.",
+                "Departure time: 1:45 PM."
+              ],
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 30,
+            "browser_cost_usd": 0.009802438000000002,
+            "browser_reported_cost_usd": 0.009802438000000002,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "text_helper": 4,
+              "operator": 26
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 30,
+            "inclusive_cost_usd": 0.009802438000000002,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {
+              "site": "google.com",
+              "last_compile": "2026-10-03T14:05:51.063668Z",
+              "installed_by_replay": 0,
+              "installed_by_agreement": 0,
+              "learning_calls": 2,
+              "learning_cost": 0.03392017
+            }
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 4,
+                "operator": 26
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.009802438000000002,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 5,
+          "arguments": [
+            "Poznań",
+            "Amsterdam"
+          ],
+          "mission": "find the cheapest flight from Poznań to Amsterdam next month and tell me its price and dates",
+          "fresh_agent": true,
+          "learning_mode": "off",
+          "status": "done",
+          "answer": null,
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 37.58138618499834,
+          "independent_verification": {
+            "verified": false,
+            "method": "independent manual review of retained terminal answer and live DOM evidence",
+            "manual_review": {
+              "verified": false,
+              "judged": true,
+              "method": "Review of terminal answer/script records and retained independent post-drive verification; operator-state diagnostics excluded from delivered results.",
+              "finding": "No terminal answer or script-record collection was delivered. Selected-date fares in the diagnostic page do not prove the cheapest flight across November 2026.",
+              "page_state_only": true,
+              "month_wide_minimum_proven": false,
+              "observed_route": "Poznań to Amsterdam",
+              "observed_departure": "2026-11-01",
+              "observed_return": "2026-11-04",
+              "observed_selected_date_cheapest_price": "PLN 751",
+              "screenshot_reviewed": true
+            },
+            "raw_verifier": {
+              "verified": false,
+              "method": "independent post-drive visible DOM; reviewer must corroborate route, November dates, real fare amount and cheapest-month evidence (currency selector alone never counts)",
+              "requested_route": [
+                "Poznań",
+                "Amsterdam"
+              ],
+              "next_month": "November 2026",
+              "visible_price_amounts": [
+                "PLN 751",
+                "PLN 874",
+                "PLN 874",
+                "PLN 912",
+                "PLN 751",
+                "PLN 1,012",
+                "PLN 1,012",
+                "PLN 1,664",
+                "PLN 2,208"
+              ],
+              "visible_date_or_cheapest_lines": [
+                "Cheapest",
+                "Prices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.",
+                "The cheapest price shown is 751 Polish zlotys on Sun, Nov 1.",
+                "Departure",
+                "Departure",
+                "Sunday, November 1, 2026, departure date.",
+                "Wednesday, November 4, 2026, return date.",
+                "Departure time: 2:10 PM.",
+                "Departure time: 2:10 PM.",
+                "Departure time: 2:10 PM.",
+                "Departure time: 6:00 PM.",
+                "Departure time: 6:00 PM.",
+                "Departure time: 6:00 PM.",
+                "Departure time: 6:15 AM.",
+                "Departure time: 6:15 AM.",
+                "Departure time: 6:15 AM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 3:05 PM.",
+                "Departure time: 3:05 PM.",
+                "Departure time: 3:05 PM.",
+                "Departure time: 6:00 AM.",
+                "Departure time: 6:00 AM.",
+                "Departure time: 6:00 AM.",
+                "Departure time: 2:10 PM.",
+                "Departure time: 2:10 PM.",
+                "Departure time: 2:10 PM.",
+                "Departure time: 6:00 PM.",
+                "Departure time: 6:00 PM.",
+                "Departure time: 6:00 PM.",
+                "Departure time: 6:15 AM.",
+                "Departure time: 6:15 AM.",
+                "Departure time: 6:15 AM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 2:50 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 6:20 PM.",
+                "Departure time: 3:05 PM.",
+                "Departure time: 3:05 PM.",
+                "Departure time: 3:05 PM.",
+                "Departure time: 6:00 AM.",
+                "Departure time: 6:00 AM.",
+                "Departure time: 6:00 AM."
+              ],
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 42,
+            "browser_cost_usd": 0.013961107999999998,
+            "browser_reported_cost_usd": 0.013961107999999998,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "text_helper": 2,
+              "operator": 40
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 42,
+            "inclusive_cost_usd": 0.013961107999999998,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 2,
+                "operator": 40
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.013961107999999998,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        }
+      ],
+      "installed_playbooks_full": {},
+      "installed_snapshot": [],
+      "compiled_drafts": [],
+      "repairs": [],
+      "cleanup": {
+        "training": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        },
+        "fresh": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        }
+      }
+    },
+    "maps": {
+      "criterion_pass": false,
+      "criterion": {
+        "installed_playbook_present": false,
+        "fresh_service_and_profile": true,
+        "fifth_goal_independently_verified": false,
+        "lower_inclusive_cost_than_mission_1": false,
+        "acceptance_learning_off": true,
+        "acceptance_no_learning_calls": null
+      },
+      "missions": [
+        {
+          "number": 1,
+          "arguments": "Eiffel Tower",
+          "mission": "find the Eiffel Tower, then find a cafe near it with a rating over 4 and give me its name and address",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "limit",
+          "answer": null,
+          "exit_code": 0,
+          "reason": "action budget exhausted (60 executed actions)",
+          "elapsed_s": 109.30433037200055,
+          "independent_verification": {
+            "verified": false,
+            "judged": true,
+            "raw_verifier": {
+              "verified": false,
+              "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+              "cafe_name": "Sunflower Café",
+              "visible_ratings": [
+                4.7
+              ],
+              "address": "Address: 41 Av. de Suffren, 75007 Paris, France ",
+              "distance_m": 492.1197162030311,
+              "cafe_category_visible": true,
+              "requested_landmark_in_drive_navigation_evidence": false,
+              "answer_name_and_address_supported": false,
+              "answer": "",
+              "results_heading_ignored": true,
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 116,
+            "browser_cost_usd": null,
+            "browser_reported_cost_usd": 0.023903548000000007,
+            "browser_unpriced_calls": 1,
+            "browser_calls_by_kind": {
+              "text_helper": 22,
+              "operator": 94
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 116,
+            "inclusive_cost_usd": null,
+            "fully_reported": false,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 22,
+                "operator": 94
+              },
+              "cost_unreported": 1,
+              "reported_cost": 0.023903548000000007,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 2,
+          "arguments": "Colosseum",
+          "mission": "find the Colosseum, then find a cafe near it with a rating over 4 and give me its name and address",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "done",
+          "answer": "Caffè Antica Roma — Via Marco Aurelio, 28",
+          "exit_code": 0,
+          "reason": null,
+          "elapsed_s": 25.758744164000746,
+          "independent_verification": {
+            "verified": false,
+            "judged": true,
+            "raw_verifier": {
+              "verified": false,
+              "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+              "cafe_name": "",
+              "visible_ratings": [
+                2.0,
+                2.5,
+                3.0,
+                3.5,
+                4.0,
+                4.5,
+                4.7,
+                3.7,
+                4.7,
+                4.8,
+                4.8,
+                4.8
+              ],
+              "address": null,
+              "distance_m": null,
+              "cafe_category_visible": false,
+              "requested_landmark_in_drive_navigation_evidence": false,
+              "answer_name_and_address_supported": false,
+              "answer": "Caffè Antica Roma — Via Marco Aurelio, 28",
+              "results_heading_ignored": true,
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 21,
+            "browser_cost_usd": 0.0044451970000000006,
+            "browser_reported_cost_usd": 0.0044451970000000006,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "text_helper": 3,
+              "operator": 15,
+              "planner": 1,
+              "verifier": 2
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 21,
+            "inclusive_cost_usd": 0.0044451970000000006,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": "Caffè Antica Roma — Via Marco Aurelio, 28",
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 3,
+                "operator": 15,
+                "planner": 1,
+                "verifier": 2
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.0044451970000000006,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 3,
+          "arguments": "Brandenburg Gate",
+          "mission": "find the Brandenburg Gate, then find a cafe near it with a rating over 4 and give me its name and address",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "limit",
+          "answer": null,
+          "exit_code": 0,
+          "reason": "action budget exhausted (57 executed actions)",
+          "elapsed_s": 109.07190289000027,
+          "independent_verification": {
+            "verified": false,
+            "judged": true,
+            "raw_verifier": {
+              "verified": false,
+              "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+              "cafe_name": "",
+              "visible_ratings": [],
+              "address": null,
+              "distance_m": null,
+              "cafe_category_visible": false,
+              "requested_landmark_in_drive_navigation_evidence": false,
+              "answer_name_and_address_supported": false,
+              "answer": "",
+              "results_heading_ignored": true,
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 117,
+            "browser_cost_usd": 0.02847224600000003,
+            "browser_reported_cost_usd": 0.02847224600000003,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "text_helper": 8,
+              "operator": 106,
+              "planner": 3
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 117,
+            "inclusive_cost_usd": 0.02847224600000003,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 8,
+                "operator": 106,
+                "planner": 3
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.02847224600000003,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 4,
+          "arguments": "Sagrada Família",
+          "mission": "find the Sagrada Família, then find a cafe near it with a rating over 4 and give me its name and address",
+          "fresh_agent": false,
+          "learning_mode": "auto",
+          "status": "blocked",
+          "answer": null,
+          "exit_code": 0,
+          "reason": "the operator found no available action; unsupported visible UI: canvas; the planner turn cap of 3 was reached",
+          "elapsed_s": 127.67683302600017,
+          "independent_verification": {
+            "verified": false,
+            "judged": true,
+            "raw_verifier": {
+              "verified": false,
+              "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+              "cafe_name": "",
+              "visible_ratings": [],
+              "address": null,
+              "distance_m": null,
+              "cafe_category_visible": false,
+              "requested_landmark_in_drive_navigation_evidence": false,
+              "answer_name_and_address_supported": false,
+              "answer": "",
+              "results_heading_ignored": true,
+              "needs_manual_review": true
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": 175,
+            "browser_cost_usd": 0.03493209900000001,
+            "browser_reported_cost_usd": 0.03493209900000001,
+            "browser_unpriced_calls": 0,
+            "browser_calls_by_kind": {
+              "text_helper": 6,
+              "operator": 166,
+              "planner": 3
+            },
+            "learning_calls": 0,
+            "learning_cost_usd": 0.0,
+            "inclusive_calls": 175,
+            "inclusive_cost_usd": 0.03493209900000001,
+            "fully_reported": true,
+            "pending_finished": true,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {
+              "model_calls_by_kind": {
+                "text_helper": 6,
+                "operator": 166,
+                "planner": 3
+              },
+              "cost_unreported": 0,
+              "reported_cost": 0.03493209900000001,
+              "count": 0,
+              "first": [],
+              "pages": 0,
+              "scripts": []
+            },
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "judged": true
+        },
+        {
+          "number": 5,
+          "arguments": "Tower of London",
+          "mission": "find the Tower of London, then find a cafe near it with a rating over 4 and give me its name and address",
+          "fresh_agent": true,
+          "learning_mode": "off",
+          "status": "killed-infrastructure",
+          "answer": null,
+          "exit_code": null,
+          "reason": null,
+          "elapsed_s": 0,
+          "independent_verification": {
+            "verified": false,
+            "judged": false,
+            "reason": "infrastructure SIGTERM; no drive reply; no harness bug; no rerun",
+            "raw_verifier": {
+              "verified": false,
+              "reason": "RuntimeError: Signal 15; close private processes"
+            }
+          },
+          "goal_verified": false,
+          "accounting": {
+            "browser_calls": null,
+            "browser_cost_usd": null,
+            "browser_reported_cost_usd": null,
+            "browser_unpriced_calls": null,
+            "browser_calls_by_kind": null,
+            "learning_calls": null,
+            "learning_cost_usd": null,
+            "inclusive_calls": null,
+            "inclusive_cost_usd": null,
+            "fully_reported": false,
+            "pending_finished": false,
+            "new_last_work_meter": false,
+            "learning_account": null,
+            "status_site": {}
+          },
+          "procedures": [],
+          "compiled_after": [],
+          "installed_after": [],
+          "provenance_sidecars_after": [],
+          "delivered_result": {
+            "answer": null,
+            "collected": 0,
+            "data": {},
+            "output": []
+          },
+          "raw_sidecar_capture_note": "Sidecars rederived from exact artifact copies; launched observer had a guarded ordering defect.",
+          "raw_status": "harness-error",
+          "judged": false
+        }
+      ],
+      "installed_playbooks_full": {},
+      "installed_snapshot": [],
+      "compiled_drafts": [],
+      "repairs": [],
+      "cleanup": {
+        "training": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        },
+        "fresh": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        }
+      }
+    }
+  },
+  "exclusions": {
+    "books-killed": "infrastructure killed during mission 3; not judged",
+    "flights-killed": "infrastructure killed during mission 3; not judged",
+    "maps-mission-5": "infrastructure killed; not judged; no rerun because not a harness bug"
+  },
+  "cost_notes": [
+    "USD provider-reported model costs; browser is synchronous drive model usage, not a count of DOM calls.",
+    "Inclusive = browser plus asynchronous learning after pending == 0.",
+    "Unknown/unreported or killed usage remains null, never zero.",
+    "Raw verifier retained; strict delivered-result check excludes diagnostic DOM.",
+    "Retained Maps mission 5 has null cost and cannot support a cheaper-run comparison."
+  ]
+}

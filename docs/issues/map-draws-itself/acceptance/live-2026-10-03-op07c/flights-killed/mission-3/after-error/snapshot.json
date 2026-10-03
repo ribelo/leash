@@ -1,0 +1,13 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": -15,
+  "elapsed_s": 0.0010856949993467424,
+  "reply": null,
+  "stdout": "",
+  "stderr": ""
+}

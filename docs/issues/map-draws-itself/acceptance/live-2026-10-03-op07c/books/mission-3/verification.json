@@ -1,0 +1,147 @@
+{
+  "verified": false,
+  "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+  "site": {
+    "category": "Poetry",
+    "total_reported": 19,
+    "records": [
+      {
+        "title": "A Light in the Attic",
+        "price": "£51.77"
+      },
+      {
+        "title": "The Black Maria",
+        "price": "£52.15"
+      },
+      {
+        "title": "Shakespeare's Sonnets",
+        "price": "£20.66"
+      },
+      {
+        "title": "Olio",
+        "price": "£23.88"
+      },
+      {
+        "title": "You can't bury them all: Poems",
+        "price": "£33.63"
+      },
+      {
+        "title": "Slow States of Collapse: Poems",
+        "price": "£57.31"
+      },
+      {
+        "title": "Untitled Collection: Sabbath Poems 2014",
+        "price": "£14.27"
+      },
+      {
+        "title": "Poems That Make Grown Women Cry",
+        "price": "£14.19"
+      },
+      {
+        "title": "Night Sky with Exit Wounds",
+        "price": "£41.05"
+      },
+      {
+        "title": "salt.",
+        "price": "£46.78"
+      },
+      {
+        "title": "Quarter Life Poetry: Poems for the Young, Broke and Hangry",
+        "price": "£50.89"
+      },
+      {
+        "title": "Out of Print: City Lights Spotlight No. 14",
+        "price": "£53.64"
+      },
+      {
+        "title": "Les Fleurs du Mal",
+        "price": "£29.04"
+      },
+      {
+        "title": "Howl and Other Poems",
+        "price": "£40.45"
+      },
+      {
+        "title": "Leave This Song Behind: Teen Poetry at Its Best",
+        "price": "£51.17"
+      },
+      {
+        "title": "The Collected Poems of W.B. Yeats (The Collected Works of W.B. Yeats #1)",
+        "price": "£15.42"
+      },
+      {
+        "title": "The Crossover",
+        "price": "£38.77"
+      },
+      {
+        "title": "Booked",
+        "price": "£17.49"
+      },
+      {
+        "title": "Twenty Love Poems and a Song of Despair",
+        "price": "£30.95"
+      }
+    ],
+    "pages": [
+      {
+        "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+        "status": 200,
+        "count": 19,
+        "heading": "Poetry"
+      }
+    ],
+    "counts_match": true,
+    "next_page_unvisited": false
+  },
+  "answer_record_matches": 7,
+  "missing_records": [
+    {
+      "title": "A Light in the Attic",
+      "price": "£51.77"
+    },
+    {
+      "title": "The Black Maria",
+      "price": "£52.15"
+    },
+    {
+      "title": "Shakespeare's Sonnets",
+      "price": "£20.66"
+    },
+    {
+      "title": "Olio",
+      "price": "£23.88"
+    },
+    {
+      "title": "You can't bury them all: Poems",
+      "price": "£33.63"
+    },
+    {
+      "title": "Slow States of Collapse: Poems",
+      "price": "£57.31"
+    },
+    {
+      "title": "Untitled Collection: Sabbath Poems 2014",
+      "price": "£14.27"
+    },
+    {
+      "title": "Poems That Make Grown Women Cry",
+      "price": "£14.19"
+    },
+    {
+      "title": "Night Sky with Exit Wounds",
+      "price": "£41.05"
+    },
+    {
+      "title": "salt.",
+      "price": "£46.78"
+    },
+    {
+      "title": "Quarter Life Poetry: Poems for the Young, Broke and Hangry",
+      "price": "£50.89"
+    },
+    {
+      "title": "Out of Print: City Lights Spotlight No. 14",
+      "price": "£53.64"
+    }
+  ]
+}

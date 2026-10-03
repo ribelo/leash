@@ -1,0 +1,468 @@
+[
+  {
+    "number": 1,
+    "arguments": "Travel",
+    "mission": "collect every book title and price in the Travel category",
+    "fresh_agent": false,
+    "learning_mode": "auto",
+    "status": "done",
+    "answer": null,
+    "exit_code": 0,
+    "reason": null,
+    "elapsed_s": 9.467899704999581,
+    "independent_verification": {
+      "verified": false,
+      "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+      "site": {
+        "category": "Travel",
+        "total_reported": 11,
+        "records": [
+          {
+            "title": "It's Only the Himalayas",
+            "price": "£45.17"
+          },
+          {
+            "title": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond",
+            "price": "£49.43"
+          },
+          {
+            "title": "See America: A Celebration of Our National Parks & Treasured Sites",
+            "price": "£48.87"
+          },
+          {
+            "title": "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel",
+            "price": "£36.94"
+          },
+          {
+            "title": "Under the Tuscan Sun",
+            "price": "£37.33"
+          },
+          {
+            "title": "A Summer In Europe",
+            "price": "£44.34"
+          },
+          {
+            "title": "The Great Railway Bazaar",
+            "price": "£30.54"
+          },
+          {
+            "title": "A Year in Provence (Provence #1)",
+            "price": "£56.88"
+          },
+          {
+            "title": "The Road to Little Dribbling: Adventures of an American in Britain (Notes From a Small Island #2)",
+            "price": "£23.21"
+          },
+          {
+            "title": "Neither Here nor There: Travels in Europe",
+            "price": "£38.95"
+          },
+          {
+            "title": "1,000 Places to See Before You Die",
+            "price": "£26.08"
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+            "status": 200,
+            "count": 11,
+            "heading": "Travel"
+          }
+        ],
+        "counts_match": true,
+        "next_page_unvisited": false
+      },
+      "answer_record_matches": 0,
+      "missing_records": [
+        {
+          "title": "It's Only the Himalayas",
+          "price": "£45.17"
+        },
+        {
+          "title": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond",
+          "price": "£49.43"
+        },
+        {
+          "title": "See America: A Celebration of Our National Parks & Treasured Sites",
+          "price": "£48.87"
+        },
+        {
+          "title": "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel",
+          "price": "£36.94"
+        },
+        {
+          "title": "Under the Tuscan Sun",
+          "price": "£37.33"
+        },
+        {
+          "title": "A Summer In Europe",
+          "price": "£44.34"
+        },
+        {
+          "title": "The Great Railway Bazaar",
+          "price": "£30.54"
+        },
+        {
+          "title": "A Year in Provence (Provence #1)",
+          "price": "£56.88"
+        },
+        {
+          "title": "The Road to Little Dribbling: Adventures of an American in Britain (Notes From a Small Island #2)",
+          "price": "£23.21"
+        },
+        {
+          "title": "Neither Here nor There: Travels in Europe",
+          "price": "£38.95"
+        },
+        {
+          "title": "1,000 Places to See Before You Die",
+          "price": "£26.08"
+        }
+      ]
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 4,
+      "browser_cost_usd": 0.000937188,
+      "browser_reported_cost_usd": 0.000937188,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "operator": 4
+      },
+      "learning_calls": 0,
+      "learning_cost_usd": 0.0,
+      "inclusive_calls": 4,
+      "inclusive_cost_usd": 0.000937188,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": false,
+      "learning_account": null,
+      "status_site": {}
+    },
+    "procedures": [],
+    "compiled_after": [],
+    "installed_after": [],
+    "provenance_sidecars_after": []
+  },
+  {
+    "number": 2,
+    "arguments": "Mystery",
+    "mission": "collect every book title and price in the Mystery category",
+    "fresh_agent": false,
+    "learning_mode": "auto",
+    "status": "limit",
+    "answer": null,
+    "exit_code": 0,
+    "reason": "action budget exhausted (60 executed actions)",
+    "elapsed_s": 59.62222543899952,
+    "independent_verification": {
+      "verified": false,
+      "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+      "site": {
+        "category": "Mystery",
+        "total_reported": 32,
+        "records": [
+          {
+            "title": "Sharp Objects",
+            "price": "£47.82"
+          },
+          {
+            "title": "In a Dark, Dark Wood",
+            "price": "£19.63"
+          },
+          {
+            "title": "The Past Never Ends",
+            "price": "£56.50"
+          },
+          {
+            "title": "A Murder in Time",
+            "price": "£16.64"
+          },
+          {
+            "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+            "price": "£44.10"
+          },
+          {
+            "title": "The Last Mile (Amos Decker #2)",
+            "price": "£54.21"
+          },
+          {
+            "title": "That Darkness (Gardiner and Renner #1)",
+            "price": "£13.92"
+          },
+          {
+            "title": "Tastes Like Fear (DI Marnie Rome #3)",
+            "price": "£10.69"
+          },
+          {
+            "title": "A Time of Torment (Charlie Parker #14)",
+            "price": "£48.35"
+          },
+          {
+            "title": "A Study in Scarlet (Sherlock Holmes #1)",
+            "price": "£16.73"
+          },
+          {
+            "title": "Poisonous (Max Revere Novels #3)",
+            "price": "£26.80"
+          },
+          {
+            "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+            "price": "£54.36"
+          },
+          {
+            "title": "Most Wanted",
+            "price": "£35.28"
+          },
+          {
+            "title": "Hide Away (Eve Duncan #20)",
+            "price": "£11.84"
+          },
+          {
+            "title": "Boar Island (Anna Pigeon #19)",
+            "price": "£59.48"
+          },
+          {
+            "title": "The Widow",
+            "price": "£27.26"
+          },
+          {
+            "title": "Playing with Fire",
+            "price": "£13.71"
+          },
+          {
+            "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+            "price": "£25.37"
+          },
+          {
+            "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+            "price": "£52.30"
+          },
+          {
+            "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+            "price": "£20.89"
+          },
+          {
+            "title": "The Mysterious Affair at Styles (Hercule Poirot #1)",
+            "price": "£24.80"
+          },
+          {
+            "title": "In the Woods (Dublin Murder Squad #1)",
+            "price": "£38.38"
+          },
+          {
+            "title": "The Silkworm (Cormoran Strike #2)",
+            "price": "£23.05"
+          },
+          {
+            "title": "The Exiled",
+            "price": "£43.45"
+          },
+          {
+            "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+            "price": "£19.21"
+          },
+          {
+            "title": "Extreme Prey (Lucas Davenport #26)",
+            "price": "£25.40"
+          },
+          {
+            "title": "Career of Evil (Cormoran Strike #3)",
+            "price": "£24.72"
+          },
+          {
+            "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+            "price": "£57.70"
+          },
+          {
+            "title": "The Girl You Lost",
+            "price": "£12.29"
+          },
+          {
+            "title": "The Girl In The Ice (DCI Erika Foster #1)",
+            "price": "£15.85"
+          },
+          {
+            "title": "Blood Defense (Samantha Brinkman #1)",
+            "price": "£20.30"
+          },
+          {
+            "title": "1st to Die (Women's Murder Club #1)",
+            "price": "£53.98"
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+            "status": 200,
+            "count": 20,
+            "heading": "Mystery"
+          },
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
+            "status": 200,
+            "count": 12,
+            "heading": "Mystery"
+          }
+        ],
+        "counts_match": true,
+        "next_page_unvisited": false
+      },
+      "answer_record_matches": 0,
+      "missing_records": [
+        {
+          "title": "Sharp Objects",
+          "price": "£47.82"
+        },
+        {
+          "title": "In a Dark, Dark Wood",
+          "price": "£19.63"
+        },
+        {
+          "title": "The Past Never Ends",
+          "price": "£56.50"
+        },
+        {
+          "title": "A Murder in Time",
+          "price": "£16.64"
+        },
+        {
+          "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+          "price": "£44.10"
+        },
+        {
+          "title": "The Last Mile (Amos Decker #2)",
+          "price": "£54.21"
+        },
+        {
+          "title": "That Darkness (Gardiner and Renner #1)",
+          "price": "£13.92"
+        },
+        {
+          "title": "Tastes Like Fear (DI Marnie Rome #3)",
+          "price": "£10.69"
+        },
+        {
+          "title": "A Time of Torment (Charlie Parker #14)",
+          "price": "£48.35"
+        },
+        {
+          "title": "A Study in Scarlet (Sherlock Holmes #1)",
+          "price": "£16.73"
+        },
+        {
+          "title": "Poisonous (Max Revere Novels #3)",
+          "price": "£26.80"
+        },
+        {
+          "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+          "price": "£54.36"
+        },
+        {
+          "title": "Most Wanted",
+          "price": "£35.28"
+        },
+        {
+          "title": "Hide Away (Eve Duncan #20)",
+          "price": "£11.84"
+        },
+        {
+          "title": "Boar Island (Anna Pigeon #19)",
+          "price": "£59.48"
+        },
+        {
+          "title": "The Widow",
+          "price": "£27.26"
+        },
+        {
+          "title": "Playing with Fire",
+          "price": "£13.71"
+        },
+        {
+          "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+          "price": "£25.37"
+        },
+        {
+          "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+          "price": "£52.30"
+        },
+        {
+          "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+          "price": "£20.89"
+        },
+        {
+          "title": "The Mysterious Affair at Styles (Hercule Poirot #1)",
+          "price": "£24.80"
+        },
+        {
+          "title": "In the Woods (Dublin Murder Squad #1)",
+          "price": "£38.38"
+        },
+        {
+          "title": "The Silkworm (Cormoran Strike #2)",
+          "price": "£23.05"
+        },
+        {
+          "title": "The Exiled",
+          "price": "£43.45"
+        },
+        {
+          "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+          "price": "£19.21"
+        },
+        {
+          "title": "Extreme Prey (Lucas Davenport #26)",
+          "price": "£25.40"
+        },
+        {
+          "title": "Career of Evil (Cormoran Strike #3)",
+          "price": "£24.72"
+        },
+        {
+          "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+          "price": "£57.70"
+        },
+        {
+          "title": "The Girl You Lost",
+          "price": "£12.29"
+        },
+        {
+          "title": "The Girl In The Ice (DCI Erika Foster #1)",
+          "price": "£15.85"
+        },
+        {
+          "title": "Blood Defense (Samantha Brinkman #1)",
+          "price": "£20.30"
+        },
+        {
+          "title": "1st to Die (Women's Murder Club #1)",
+          "price": "£53.98"
+        }
+      ]
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 62,
+      "browser_cost_usd": 0.014595294000000009,
+      "browser_reported_cost_usd": 0.014595294000000009,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "operator": 62
+      },
+      "learning_calls": 0,
+      "learning_cost_usd": 0.0,
+      "inclusive_calls": 62,
+      "inclusive_cost_usd": 0.014595294000000009,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": false,
+      "learning_account": null,
+      "status_site": {}
+    },
+    "procedures": [],
+    "compiled_after": [],
+    "installed_after": [],
+    "provenance_sidecars_after": []
+  }
+]

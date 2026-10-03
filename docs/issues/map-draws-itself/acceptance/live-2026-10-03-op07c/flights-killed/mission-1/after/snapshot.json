@@ -1,0 +1,382 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.22016898099900573,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhooEgoyMDI2LTExLTMwagwIAxIIL20vMDgxbV9yDAgDEggvbS8wNGxsYkABSAFwAYIBCwj___________8BmAEC&hl=en",
+    "title": "Warsaw to Lisbon | Google Flights",
+    "page_kind": {
+      "name": "search",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "button",
+        "name": "Main menu",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "link",
+        "name": "Google"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Skip to main content"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Accessibility feedback"
+      },
+      {
+        "index": 5,
+        "role": "link",
+        "name": "Explore"
+      },
+      {
+        "index": 6,
+        "role": "link",
+        "name": "Flights"
+      },
+      {
+        "index": 7,
+        "role": "link",
+        "name": "Hotels"
+      },
+      {
+        "index": 8,
+        "role": "link",
+        "name": "Vacation rentals"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Change appearance",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 11,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 12,
+        "role": "heading",
+        "name": "Flight search"
+      },
+      {
+        "index": 13,
+        "role": "combobox",
+        "name": "Change ticket type. One way",
+        "value": "One way",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "1 passenger, change number of passengers."
+      },
+      {
+        "index": 15,
+        "role": "combobox",
+        "name": "Change seating class. Economy",
+        "value": "Economy",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 16,
+        "role": "combobox",
+        "name": "Where from?",
+        "value": "Warsaw",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 17,
+        "role": "button",
+        "name": "Swap origin and destination."
+      },
+      {
+        "index": 18,
+        "role": "combobox",
+        "name": "Where to?",
+        "value": "Lisbon",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 19,
+        "role": "textbox",
+        "name": "Departure",
+        "value": "Mon, Nov 30"
+      },
+      {
+        "index": 20,
+        "role": "heading",
+        "name": "Filters"
+      },
+      {
+        "index": 21,
+        "role": "button",
+        "name": "All filters"
+      },
+      {
+        "index": 22,
+        "role": "button",
+        "name": "Stops, Not selected"
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Airlines, Not selected"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "Bags, Not selected"
+      },
+      {
+        "index": 25,
+        "role": "button",
+        "name": "Price, Not selected"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "Times, Not selected"
+      },
+      {
+        "index": 27,
+        "role": "button",
+        "name": "Emissions, Not selected"
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Connecting airports, Not selected"
+      },
+      {
+        "index": 29,
+        "role": "button",
+        "name": "Duration, Not selected"
+      },
+      {
+        "index": 30,
+        "role": "heading",
+        "name": "Search results"
+      },
+      {
+        "index": 31,
+        "role": "tab",
+        "name": "Best Learn more about ranking",
+        "state": [
+          "selected"
+        ]
+      },
+      {
+        "index": 32,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 33,
+        "role": "tab",
+        "name": "Cheapest from 130 Polish zlotys Learn more about ranking"
+      },
+      {
+        "index": 34,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 35,
+        "role": "heading",
+        "name": "Top flights"
+      },
+      {
+        "index": 36,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "bag fees"
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "Passenger assistance"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Sorted by top flights, Change sort order."
+      },
+      {
+        "index": 40,
+        "role": "link",
+        "name": "From 130 Polish zlotys.This price does not include overhead bin access. Nonstop flight with Ryanair. Operated by Ryanair Sun. Leaves Warsaw Modlin Airport at 1:20 PM on Monday, November 30 and arrives at Humberto Delgado Airport at 4:40 PM on Monday, November 30. Total duration 4 hr 20 min. Select flight"
+      },
+      {
+        "index": 41,
+        "role": "button",
+        "name": "Carbon emissions estimate: 176 kilograms. -32% emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "This price for this flight doesn't include overhead bin access. If you need a carry-on bag, use the Bags filter to update prices."
+      },
+      {
+        "index": 43,
+        "role": "button",
+        "name": "Flight details. Leaves Warsaw Modlin Airport at 1:20 PM on Monday, November 30 and arrives at Humberto Delgado Airport at 4:40 PM on Monday, November 30.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 44,
+        "role": "link",
+        "name": "From 382 Polish zlotys. 1 stop flight with KLM. Operated by KLM Cityhopper. Leaves Warsaw Chopin Airport at 4:55 PM on Monday, November 30 and arrives at Humberto Delgado Airport at 11:10 PM on Monday, November 30. Total duration 7 hr 15 min. Layover (1 of 1) is a 2 hr 15 min layover at Amsterdam Airport Schiphol in Amsterdam. Select flight"
+      },
+      {
+        "index": 45,
+        "role": "button",
+        "name": "Carbon emissions estimate: 243 kilograms. Average emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 46,
+        "role": "button",
+        "name": "Flight details. Leaves Warsaw Chopin Airport at 4:55 PM on Monday, November 30 and arrives at Humberto Delgado Airport at 11:10 PM on Monday, November 30.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 47,
+        "role": "link",
+        "name": "From 468 Polish zlotys. Nonstop flight with LOT. Leaves Warsaw Chopin Airport at 10:25 AM on Monday, November 30 and arrives at Humberto Delgado Airport at 1:55 PM on Monday, November 30. Total duration 4 hr 30 min. Select flight"
+      },
+      {
+        "index": 48,
+        "role": "button",
+        "name": "Carbon emissions estimate: 195 kilograms. -24% emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Flight details. Leaves Warsaw Chopin Airport at 10:25 AM on Monday, November 30 and arrives at Humberto Delgado Airport at 1:55 PM on Monday, November 30.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 50,
+        "role": "heading",
+        "name": "Price insights"
+      },
+      {
+        "index": 51,
+        "role": "heading",
+        "name": "The cheapest time to book is usually now, until Oct 31"
+      },
+      {
+        "index": 52,
+        "role": "heading",
+        "name": "Prices are currently low"
+      },
+      {
+        "index": 53,
+        "role": "button",
+        "name": "View price history",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 54,
+        "role": "heading",
+        "name": "Track prices"
+      },
+      {
+        "index": 55,
+        "role": "button",
+        "name": "Learn more about tracked prices"
+      },
+      {
+        "index": 56,
+        "role": "link",
+        "name": "Learn more about tracked prices"
+      },
+      {
+        "index": 57,
+        "role": "switch",
+        "name": "Track prices from Warsaw to Lisbon departing 2026-11-30",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 58,
+        "role": "switch",
+        "name": "Track prices from Warsaw to Lisbon - Any dates",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 59,
+        "role": "button",
+        "name": "Date grid"
+      },
+      {
+        "index": 60,
+        "role": "button",
+        "name": "Price graph"
+      },
+      {
+        "index": 61,
+        "role": "heading",
+        "name": "Other flights"
+      }
+    ],
+    "total": 61,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

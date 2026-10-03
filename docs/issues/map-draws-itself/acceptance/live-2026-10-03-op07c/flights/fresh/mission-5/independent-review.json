@@ -1,0 +1,13 @@
+{
+  "verified": false,
+  "judged": true,
+  "method": "Review of terminal answer/script records and retained independent post-drive verification; operator-state diagnostics excluded from delivered results.",
+  "finding": "No terminal answer or script-record collection was delivered. Selected-date fares in the diagnostic page do not prove the cheapest flight across November 2026.",
+  "page_state_only": true,
+  "month_wide_minimum_proven": false,
+  "observed_route": "Poznań to Amsterdam",
+  "observed_departure": "2026-11-01",
+  "observed_return": "2026-11-04",
+  "observed_selected_date_cheapest_price": "PLN 751",
+  "screenshot_reviewed": true
+}

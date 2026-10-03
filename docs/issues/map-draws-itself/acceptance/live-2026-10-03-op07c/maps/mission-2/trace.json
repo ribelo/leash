@@ -1,0 +1,1814 @@
+{
+  "unattended": [],
+  "version": 1,
+  "time": "2026-10-03T13:37:35.663064Z",
+  "site": "google.com",
+  "mission": "find the Colosseum, then find a cafe near it with a rating over 4 and give me its name and address",
+  "arguments": [],
+  "outcome": "done",
+  "cost": 0.0044451970000000006,
+  "duration_ms": 25750,
+  "model_calls": 21,
+  "start_url": "https://www.google.com/maps?hl=en",
+  "page_kind_path": [
+    "maps",
+    "place-<slug>",
+    "search-<slug>"
+  ],
+  "inferred_pages": [
+    {
+      "name": "maps",
+      "url_pattern": "https://www.google.com/maps"
+    },
+    {
+      "name": "place-<slug>",
+      "url_pattern": "https://www.google.com/maps/place/<slug>*"
+    },
+    {
+      "name": "search-<slug>",
+      "url_pattern": "https://www.google.com/maps/search/<slug>*"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search Google Maps"
+      },
+      "text": "Colosseum",
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 1.0
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps?hl=en",
+        "title": "Google Maps"
+      },
+      "elapsed_ms": 2039
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.05
+        },
+        {
+          "key": "click",
+          "probability": 0.92
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.03
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.2
+        },
+        {
+          "key": "2",
+          "probability": 0.8
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Colosseum/@41.8902142,12.489656,17z/data=!3m1!4b1!4m6!3m5!1s0x132f61b6532013ad:0x28f1c82e908503c4!8m2!3d41.8902102!4d12.4922309!16zL20vMGQ1cXg?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Colosseum - Google Maps"
+      },
+      "elapsed_ms": 4029
+    },
+    {
+      "non_repeatable": true,
+      "n": 3,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Nearby"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "click",
+          "probability": 0.96
+        },
+        {
+          "key": "type_text",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.02
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.21
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.76
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Colosseum/@41.8902142,12.489656,17z/data=!4m6!3m5!1s0x132f61b6532013ad:0x28f1c82e908503c4!8m2!3d41.8902102!4d12.4922309!16zL20vMGQ1cXg?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Colosseum - Google Maps"
+      },
+      "elapsed_ms": 5294
+    },
+    {
+      "non_repeatable": false,
+      "n": 4,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search nearby Colosseum"
+      },
+      "text": "cafe near Colosseum",
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.73
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.26
+        },
+        {
+          "key": "blocked",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Colosseum/@41.8902142,12.489656,17z/data=!4m6!3m5!1s0x132f61b6532013ad:0x28f1c82e908503c4!8m2!3d41.8902102!4d12.4922309!16zL20vMGQ1cXg?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Colosseum - Google Maps"
+      },
+      "elapsed_ms": 8668
+    },
+    {
+      "non_repeatable": false,
+      "n": 5,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.97
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.05
+        },
+        {
+          "key": "2",
+          "probability": 0.9
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.02
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.03
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8902142,12.489656,17z/data=!4m7!2m6!3m5!2sColosseum,+P.za+del+Colosseo,+1,+00184+Roma+RM,+Italy!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Colosseum - Google Maps"
+      },
+      "elapsed_ms": 9832
+    },
+    {
+      "non_repeatable": false,
+      "n": 6,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.7
+        },
+        {
+          "key": "blocked",
+          "probability": 0.15
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.14
+        },
+        {
+          "key": "done",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.06
+        },
+        {
+          "key": "2",
+          "probability": 0.35000000000000003
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.17
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.03
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.04
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.34
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8902142,12.489656,17z/data=!4m7!2m6!3m5!2sColosseum,+P.za+del+Colosseo,+1,+00184+Roma+RM,+Italy!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Colosseum - Google Maps"
+      },
+      "elapsed_ms": 10293
+    },
+    {
+      "non_repeatable": true,
+      "n": 7,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.73
+        },
+        {
+          "key": "wait",
+          "probability": 0.11
+        },
+        {
+          "key": "done",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.15
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.13
+        },
+        {
+          "key": "3",
+          "probability": 0.03
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.44
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.04
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.060000000000000005
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.29000000000000004
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.01
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8902142,12.489656,17z/data=!4m7!2m6!3m5!2sColosseum,+P.za+del+Colosseo,+1,+00184+Roma+RM,+Italy!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Colosseum - Google Maps"
+      },
+      "elapsed_ms": 10795
+    },
+    {
+      "non_repeatable": true,
+      "n": 8,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.1
+        },
+        {
+          "key": "done",
+          "probability": 0.01
+        },
+        {
+          "key": "wait",
+          "probability": 0.08
+        },
+        {
+          "key": "click",
+          "probability": 0.8099999999999999
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.05
+        },
+        {
+          "key": "2",
+          "probability": 0.22
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.47000000000000003
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.03
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.04
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.19
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8902142,12.489656,17z/data=!4m7!2m6!3m5!2sColosseum,+P.za+del+Colosseo,+1,+00184+Roma+RM,+Italy!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Colosseum - Google Maps"
+      },
+      "elapsed_ms": 11327
+    },
+    {
+      "non_repeatable": true,
+      "n": 9,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.05
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.89
+        },
+        {
+          "key": "blocked",
+          "probability": 0.05
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.01
+        },
+        {
+          "key": "2",
+          "probability": 0.02
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.73
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.04
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.03
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.15000000000000002
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.02
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8902142,12.489656,17z/data=!4m7!2m6!3m5!2sColosseum,+P.za+del+Colosseo,+1,+00184+Roma+RM,+Italy!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Colosseum - Google Maps"
+      },
+      "elapsed_ms": 12368
+    },
+    {
+      "non_repeatable": true,
+      "n": 10,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.04
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.93
+        },
+        {
+          "key": "blocked",
+          "probability": 0.03
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.86
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.02
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.02
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.08
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.01
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8902221,12.489656,17z/data=!3m1!4b1!4m7!2m6!3m5!2sColosseum,+P.za+del+Colosseo,+1,+00184+Roma+RM,+Italy!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Colosseum - Google Maps"
+      },
+      "elapsed_ms": 13621
+    }
+  ],
+  "structural_outline": "ul.XOaW9c\n  li.opFIdd\n    button.jDuUC\n      div.gR3rXe.fxM27e\n      label.SemQB.fontBodySmall\n  li.opFIdd\n    button.jDuUC\n      div.gR3rXe.Tjyu8b\n      label.SemQB.fontBodySmall\n  li.opFIdd\n    button.jDuUC\n      div.gR3rXe.P1cYkf\n      label.SemQB.fontBodySmall\ndiv.W4Efsd\n  div.W4Efsd\n    span\n      span\n    span\n      span\n      span\n  div.W4Efsd\n    span\n      span\n        span\n        span\nspan\n  span.U8T7xe\n  ol.U6stEc\n    li.HFPZDd.gMWVP\n    li.HFPZDd.gMWVP\n    li.HFPZDd.gMWVP\n    li.HFPZDd.gMWVP\n    li.HFPZDd.gMWVP\nli.opFIdd\n  button.xzUcD.gGbc7c\n    span.xXq44b.google-symbols.c1G10c\n    label.GKsdTb.fontBodyMedium\n  div.AwF2Ef.gGbc7c\n    span.nRBXvb.google-symbols.G47vBd\n",
+  "out_requested": true,
+  "final": {
+    "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8902221,12.489656,17z/data=!3m1!4b1!4m7!2m6!3m5!2sColosseum,+P.za+del+Colosseo,+1,+00184+Roma+RM,+Italy!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "cafe near Colosseum - Google Maps"
+  }
+}

@@ -1,0 +1,380 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.0243888290005998,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+    "title": "Travel | Books to Scrape - Sandbox",
+    "page_kind": {
+      "name": "books-<slug>",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "link",
+        "name": "Horror"
+      },
+      {
+        "index": 2,
+        "role": "link",
+        "name": "History"
+      },
+      {
+        "index": 3,
+        "role": "link",
+        "name": "Food and Drink"
+      },
+      {
+        "index": 4,
+        "role": "link",
+        "name": "Christian Fiction"
+      },
+      {
+        "index": 5,
+        "role": "link",
+        "name": "Business"
+      },
+      {
+        "index": 6,
+        "role": "link",
+        "name": "Biography"
+      },
+      {
+        "index": 7,
+        "role": "link",
+        "name": "Thriller"
+      },
+      {
+        "index": 8,
+        "role": "link",
+        "name": "Contemporary"
+      },
+      {
+        "index": 9,
+        "role": "link",
+        "name": "Spirituality"
+      },
+      {
+        "index": 10,
+        "role": "link",
+        "name": "Academic"
+      },
+      {
+        "index": 11,
+        "role": "link",
+        "name": "Self Help"
+      },
+      {
+        "index": 12,
+        "role": "link",
+        "name": "Historical"
+      },
+      {
+        "index": 13,
+        "role": "link",
+        "name": "Christian"
+      },
+      {
+        "index": 14,
+        "role": "link",
+        "name": "Suspense"
+      },
+      {
+        "index": 15,
+        "role": "link",
+        "name": "Short Stories"
+      },
+      {
+        "index": 16,
+        "role": "link",
+        "name": "Novels"
+      },
+      {
+        "index": 17,
+        "role": "link",
+        "name": "Health"
+      },
+      {
+        "index": 18,
+        "role": "link",
+        "name": "Politics"
+      },
+      {
+        "index": 19,
+        "role": "link",
+        "name": "Cultural"
+      },
+      {
+        "index": 20,
+        "role": "link",
+        "name": "Erotica"
+      },
+      {
+        "index": 21,
+        "role": "link",
+        "name": "Crime"
+      },
+      {
+        "index": 22,
+        "role": "link",
+        "name": "Under the Tuscan Sun"
+      },
+      {
+        "index": 23,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 24,
+        "role": "heading",
+        "name": "Under the Tuscan Sun"
+      },
+      {
+        "index": 25,
+        "role": "link",
+        "name": "Under the Tuscan Sun"
+      },
+      {
+        "index": 26,
+        "role": "paragraph",
+        "name": "£37.33"
+      },
+      {
+        "index": 27,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 29,
+        "role": "link",
+        "name": "A Summer In Europe"
+      },
+      {
+        "index": 30,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 31,
+        "role": "heading",
+        "name": "A Summer In Europe"
+      },
+      {
+        "index": 32,
+        "role": "link",
+        "name": "A Summer In Europe"
+      },
+      {
+        "index": 33,
+        "role": "paragraph",
+        "name": "£44.34"
+      },
+      {
+        "index": 34,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 36,
+        "role": "link",
+        "name": "The Great Railway Bazaar"
+      },
+      {
+        "index": 37,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 38,
+        "role": "heading",
+        "name": "The Great Railway Bazaar"
+      },
+      {
+        "index": 39,
+        "role": "link",
+        "name": "The Great Railway Bazaar"
+      },
+      {
+        "index": 40,
+        "role": "paragraph",
+        "name": "£30.54"
+      },
+      {
+        "index": 41,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 43,
+        "role": "link",
+        "name": "A Year in Provence (Provence #1)"
+      },
+      {
+        "index": 44,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 45,
+        "role": "heading",
+        "name": "A Year in Provence ..."
+      },
+      {
+        "index": 46,
+        "role": "link",
+        "name": "A Year in Provence ..."
+      },
+      {
+        "index": 47,
+        "role": "paragraph",
+        "name": "£56.88"
+      },
+      {
+        "index": 48,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 50,
+        "role": "link",
+        "name": "The Road to Little Dribbling: Adventures of an American in Britain (Notes From a Small Island #2)"
+      },
+      {
+        "index": 51,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 52,
+        "role": "heading",
+        "name": "The Road to Little ..."
+      },
+      {
+        "index": 53,
+        "role": "link",
+        "name": "The Road to Little ..."
+      },
+      {
+        "index": 54,
+        "role": "paragraph",
+        "name": "£23.21"
+      },
+      {
+        "index": 55,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 56,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 57,
+        "role": "link",
+        "name": "Neither Here nor There: Travels in Europe"
+      },
+      {
+        "index": 58,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 59,
+        "role": "heading",
+        "name": "Neither Here nor There: ..."
+      },
+      {
+        "index": 60,
+        "role": "link",
+        "name": "Neither Here nor There: ..."
+      },
+      {
+        "index": 61,
+        "role": "paragraph",
+        "name": "£38.95"
+      },
+      {
+        "index": 62,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 63,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 64,
+        "role": "link",
+        "name": "1,000 Places to See Before You Die"
+      },
+      {
+        "index": 65,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 66,
+        "role": "heading",
+        "name": "1,000 Places to See ..."
+      },
+      {
+        "index": 67,
+        "role": "link",
+        "name": "1,000 Places to See ..."
+      },
+      {
+        "index": 68,
+        "role": "paragraph",
+        "name": "£26.08"
+      },
+      {
+        "index": 69,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 70,
+        "role": "button",
+        "name": "Add to basket"
+      }
+    ],
+    "total": 70,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

@@ -1,0 +1,1754 @@
+{
+  "bound_seconds": 900,
+  "completed": true,
+  "elapsed_s": 590.4047021179995,
+  "history": [
+    {
+      "elapsed_s": 0.003370600999915041,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 5.00673204800114,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 10.010005746000388,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 15.01351685500049,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 20.016988687000776,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 25.02110160600023,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 30.024707073000172,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 35.0280806640003,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 40.031498537000516,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 45.03505843600033,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 50.038336965999406,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 55.042224033999446,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 60.04571527400003,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 65.0492330649995,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 70.05247258999952,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 75.05593025500093,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 80.05915085699962,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 85.06252191699969,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 90.0658909169997,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 95.06943592400057,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 100.07305585100039,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 105.07628575600029,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 110.07969887199943,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 115.08314443000017,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 120.08649236699966,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 125.09005948999948,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 130.09339350200025,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 135.09675167500063,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 140.09996773400053,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 145.10341102600069,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 150.10692162600026,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 155.1103591480005,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 160.1140087340009,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 165.11762117599937,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 170.12101839800016,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 175.1244488299999,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 180.12798626699987,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 185.1312957400005,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 190.134521461001,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 195.13778150600047,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 200.14123361800011,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 205.1447359140002,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 210.1483082600007,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 215.15184657499958,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 220.1552637349996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 225.1587224140003,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 230.16215575200113,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 235.1657864860008,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 240.16892334000113,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 245.1723605290008,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 250.1757936869999,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 255.17919889900077,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 260.1824805640008,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 265.1856878899998,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 270.1895257920005,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 275.1930374679996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 280.1962632979994,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 285.19956776099934,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 290.20303278199935,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 295.2063547350008,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 300.20948259000033,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 305.2128646399997,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 310.21619259600084,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 315.2193719179995,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 320.22277451800073,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 325.22605207200104,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 330.2292314360002,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 335.2325700479996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 340.23605130599935,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 345.2391176180008,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 350.24236102299983,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 355.2458252569995,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 360.24900078800056,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 365.2521287870004,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 370.2552566329996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 375.2582538349998,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 380.2615382490003,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 385.26439660899996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 390.26752563599985,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 395.2705093959994,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 400.27359073200023,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 405.2767694760005,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 410.27997533100097,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 415.2830954180008,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 420.28607317299975,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 425.28908597400005,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 430.2922687730006,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 435.2955545010009,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 440.2988854390005,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 445.30217008100044,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 450.30559044800066,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 455.3091444210004,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 460.3125109909997,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 465.315827679,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 470.31946782399973,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 475.3230493880001,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 480.3265516980009,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 485.3300960159995,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 490.33329718300047,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 495.336782882001,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 500.34063466000043,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 505.344082525,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 510.34757807000096,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 515.3510183649996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 520.3546731469996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 525.3582294200005,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 530.3618231250002,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 535.3653058239997,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 540.3693481209993,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 545.3729717509996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 550.3763937120002,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 555.3798318230001,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 560.3833023070001,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 565.3866716989996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 570.3901051550001,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 575.393706027,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 580.3974672959994,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 585.4009263650005,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T13:55:25.739542Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.032179575
+        }
+      ]
+    },
+    {
+      "elapsed_s": 590.4046184580002,
+      "pending": 0,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T14:05:51.063668Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.03392017
+        }
+      ]
+    }
+  ],
+  "final_status": {
+    "key_present": true,
+    "commit": "1690f4923596052da145f48cd86783457113aab7",
+    "skill": {
+      "state": "missing",
+      "version": "0.0.0",
+      "commit": "1690f4923596052da145f48cd86783457113aab7",
+      "installs": [
+        {
+          "path": "/home/ribelo/.claude/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.codex/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.agents/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        }
+      ]
+    },
+    "generation": 1,
+    "tabs": {
+      "open": 3,
+      "cap": 8
+    },
+    "chrome": "running",
+    "uptime_s": 1191.0151948928833,
+    "models": {
+      "configured": true,
+      "jev_model": "typesafe/jev-1.13-20260917",
+      "text_model": "inception/mercury-2.5",
+      "systemone_endpoint": "https://openrouter.ai/api/v1/systemone",
+      "chat_base_url": "https://openrouter.ai/api/v1"
+    },
+    "version": "0.0.0",
+    "pid": 965914,
+    "headed": false,
+    "learning": {
+      "mode": "auto",
+      "pending": 0,
+      "drafts": 0,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T14:05:51.063668Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.03392017
+        }
+      ]
+    }
+  },
+  "before": {
+    "mtime_ns": 1791035725739757673,
+    "state": {
+      "account:google.com": {
+        "model_calls": 2,
+        "model_cost": 0.032179575
+      },
+      "compile:google.com": "2026-10-03T13:55:25.739542Z"
+    }
+  },
+  "after": {
+    "mtime_ns": 1791036351063900264,
+    "state": {
+      "account:google.com": {
+        "model_calls": 2,
+        "model_cost": 0.03392017
+      },
+      "compile:google.com": "2026-10-03T14:05:51.063668Z"
+    }
+  }
+}

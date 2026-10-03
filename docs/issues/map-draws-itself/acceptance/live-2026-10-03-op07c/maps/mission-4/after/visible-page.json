@@ -1,0 +1,35 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005060452000179794,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/search/cafe+near+Sagrada+Fam%C3%ADlia/@41.4086662,2.1706703,17z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "cafe near Sagrada Família - Google Maps",
+      "text": "\n\nSaved\n\nRecents\n3\nBarcelona\n\nGet app\n\nClear\nDone\nPrice\n€1.00-€100.00+\nRating at least\nAny rating \nHours\nAny time\nOpen now\nOpen 24 hours\n\nSign in\n\n\n\n Layers\nMap data ©2026 Google, Inst. Geogr. Nacional, Institut Cartografic de CatalunyaPolandTermsPrivacySend Product Feedback\n\t100 m ",
+      "headings": [
+        "",
+        "",
+        "Price",
+        "Map details",
+        "Map tools",
+        "Map type"
+      ],
+      "labels": [
+        " stars",
+        "Rating"
+      ],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T13:42:07.208Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

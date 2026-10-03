@@ -1,0 +1,350 @@
+{
+  "story": "map-op07",
+  "sites": {
+    "books": {
+      "mission_count": 5,
+      "no_mission_retries": true,
+      "learning_waits": [
+        {
+          "mission": 1,
+          "pending_finished": true
+        },
+        {
+          "mission": 2,
+          "pending_finished": true
+        },
+        {
+          "mission": 3,
+          "pending_finished": true
+        },
+        {
+          "mission": 4,
+          "pending_finished": true
+        }
+      ],
+      "cleanup": {
+        "training": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        },
+        "fresh": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        }
+      },
+      "artifacts": {
+        "final_installed_files": {},
+        "final_installed_snapshot": [],
+        "compiled_draft_versions": [
+          {
+            "first_observed": "books/mission-4",
+            "path": "state/leash/proposed/toscrape.com-open-books-category.json",
+            "json": {
+              "site": "toscrape.com",
+              "entry": "https://books.toscrape.com/",
+              "description": "Learned toscrape.com",
+              "pages": [
+                {
+                  "name": "books-category",
+                  "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html"
+                },
+                {
+                  "name": "home",
+                  "url_pattern": "https://books.toscrape.com/"
+                }
+              ],
+              "procedures": [
+                {
+                  "slug": "open-books-category",
+                  "description": "Open the requested books category and collect every book title and price.",
+                  "args": {
+                    "category": {
+                      "from": "mission"
+                    }
+                  },
+                  "steps": [
+                    {
+                      "goal": "Click the link named {category}"
+                    },
+                    {
+                      "goal": "Collect every book title and price in the {category} category"
+                    }
+                  ],
+                  "expect": [
+                    "the page is books-category",
+                    "every book title and price in the requested category is collected"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "final_proposed_files": {
+          ".proposal.lock": "",
+          "open-books-category.provenance.json": "{\n  \"traces\": [\n    \"<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T13:46:15.658484Z-done.json\",\n    \"<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T13:47:20.896986Z-done.json\"\n  ],\n  \"model\": \"openai/gpt-6-luna\",\n  \"time\": \"2026-10-03T14:01:17.860524Z\",\n  \"tries\": 0,\n  \"path\": [ \"home\", \"books-category\" ],\n  \"entry_kind\": \"home\",\n  \"exit_kind\": \"books-<slug>\",\n  \"signature\": [ [ \"click\", { \"role\": \"link\", \"label\": \"travel\" } ] ],\n  \"kind_mapping\": [ [ \"books-<slug>\", \"books-category\" ] ],\n  \"repeatable\": true,\n  \"reason\": \"no irreversible submission in the observed path\",\n  \"gate\": \"replay\",\n  \"repair\": false,\n  \"model_calls\": 2,\n  \"model_cost\": 0.013367475\n}\n",
+          "toscrape.com-open-books-category.json": "{\n  \"site\": \"toscrape.com\",\n  \"entry\": \"https://books.toscrape.com/\",\n  \"description\": \"Learned toscrape.com\",\n  \"pages\": [\n    {\n      \"name\": \"books-category\",\n      \"url_pattern\": \"https://books.toscrape.com/catalogue/category/books/*/index.html\"\n    },\n    { \"name\": \"home\", \"url_pattern\": \"https://books.toscrape.com/\" }\n  ],\n  \"procedures\": [\n    {\n      \"slug\": \"open-books-category\",\n      \"description\": \"Open the requested books category and collect every book title and price.\",\n      \"args\": { \"category\": { \"from\": \"mission\" } },\n      \"steps\": [\n        { \"goal\": \"Click the link named {category}\" },\n        {\n          \"goal\": \"Collect every book title and price in the {category} category\"\n        }\n      ],\n      \"expect\": [\n        \"the page is books-category\",\n        \"every book title and price in the requested category is collected\"\n      ]\n    }\n  ]\n}\n"
+        },
+        "repair_or_retirement_artifacts": []
+      },
+      "harness_observer_guard": {
+        "reason": "sidecar collector ordering defect in already-loaded harness; ignored metadata initializes observer; sidecars rederived from artifact copies",
+        "services": [
+          {
+            "private_browser_pid": 965910,
+            "service_pid": 965908,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 965914,
+            "service_pid": 965912,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 1009805,
+            "service_pid": 1009803,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 1023372,
+            "service_pid": 1023370,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          }
+        ]
+      },
+      "bounded_wait_timeout_branch_exercised": false,
+      "format_stories": {
+        "map-fmt01": {
+          "observed": "Books draft uses goal steps/args/expect and has no removed fields; old-file rejection not exercised.",
+          "end_to_end_proven": false
+        },
+        "map-fmt02": {
+          "observed": "Full provenance sidecar is separate from executable Books draft.",
+          "end_to_end_proven": false
+        },
+        "map-fmt03": {
+          "observed": "Two compiler drops then one replay-gated draft; no install or correction-success proof.",
+          "end_to_end_proven": false
+        },
+        "map-fmt04": {
+          "observed": "Missing/invalid structural_outline; invalid script declaration; script rejected without observed outline; final draft has no script.",
+          "end_to_end_proven": false
+        }
+      }
+    },
+    "flights": {
+      "mission_count": 5,
+      "no_mission_retries": true,
+      "learning_waits": [
+        {
+          "mission": 1,
+          "pending_finished": true
+        },
+        {
+          "mission": 2,
+          "pending_finished": true
+        },
+        {
+          "mission": 3,
+          "pending_finished": true
+        },
+        {
+          "mission": 4,
+          "pending_finished": true
+        }
+      ],
+      "cleanup": {
+        "training": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        },
+        "fresh": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        }
+      },
+      "artifacts": {
+        "final_installed_files": {},
+        "final_installed_snapshot": [],
+        "compiled_draft_versions": [],
+        "final_proposed_files": {},
+        "repair_or_retirement_artifacts": []
+      },
+      "harness_observer_guard": {
+        "reason": "sidecar collector ordering defect in already-loaded harness; ignored metadata initializes observer; sidecars rederived from artifact copies",
+        "services": [
+          {
+            "private_browser_pid": 965910,
+            "service_pid": 965908,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 965914,
+            "service_pid": 965912,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 1009805,
+            "service_pid": 1009803,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 1023372,
+            "service_pid": 1023370,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          }
+        ]
+      },
+      "bounded_wait_timeout_branch_exercised": false,
+      "format_stories": {
+        "map-fmt01": {
+          "observed": "No persisted playbook to inspect.",
+          "end_to_end_proven": false
+        },
+        "map-fmt02": {
+          "observed": "No persisted sidecar; unexercised.",
+          "end_to_end_proven": false
+        },
+        "map-fmt03": {
+          "observed": "Two compiler drops: scripts require a repeatable collection procedure; no draft/install.",
+          "end_to_end_proven": false
+        },
+        "map-fmt04": {
+          "observed": "Scripts rejected because procedure was not repeatable collection; no retained script.",
+          "end_to_end_proven": false
+        }
+      }
+    },
+    "maps": {
+      "mission_count": 5,
+      "no_mission_retries": true,
+      "learning_waits": [
+        {
+          "mission": 1,
+          "pending_finished": true
+        },
+        {
+          "mission": 2,
+          "pending_finished": true
+        },
+        {
+          "mission": 3,
+          "pending_finished": true
+        },
+        {
+          "mission": 4,
+          "pending_finished": true
+        }
+      ],
+      "cleanup": {
+        "training": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        },
+        "fresh": {
+          "service_exit": 0,
+          "profile_processes_after_service": [],
+          "loopback_server_closed": true
+        }
+      },
+      "artifacts": {
+        "final_installed_files": {},
+        "final_installed_snapshot": [],
+        "compiled_draft_versions": [],
+        "final_proposed_files": {},
+        "repair_or_retirement_artifacts": []
+      },
+      "harness_observer_guard": {
+        "reason": "sidecar collector ordering defect in already-loaded harness; ignored metadata initializes observer; sidecars rederived from artifact copies",
+        "services": [
+          {
+            "private_browser_pid": 965910,
+            "service_pid": 965908,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 965914,
+            "service_pid": 965912,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 1009805,
+            "service_pid": 1009803,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          },
+          {
+            "private_browser_pid": 1023372,
+            "service_pid": 1023370,
+            "metadata_outside_playbook_directory": true,
+            "product_config_unchanged": true
+          }
+        ]
+      },
+      "bounded_wait_timeout_branch_exercised": false,
+      "format_stories": {
+        "map-fmt01": {
+          "observed": "No persisted playbook to inspect.",
+          "end_to_end_proven": false
+        },
+        "map-fmt02": {
+          "observed": "No persisted sidecar; unexercised.",
+          "end_to_end_proven": false
+        },
+        "map-fmt03": {
+          "observed": "No compiler/draft/install exercised.",
+          "end_to_end_proven": false
+        },
+        "map-fmt04": {
+          "observed": "No compiled collection script.",
+          "end_to_end_proven": false
+        }
+      }
+    }
+  },
+  "isolation": "private headless services, all-temp XDG/profile; key via secret-env ai --; user service untouched",
+  "security_scans": {
+    "files_scanned": 378,
+    "exact_key_matches": 0,
+    "files_with_exact_key": 0,
+    "handles": 0,
+    "private_temp_paths": 0,
+    "other_temp_paths": 0,
+    "nonkey_matches_per_file": []
+  },
+  "final_process_scan": {
+    "op07c_binary_processes": 0,
+    "private_chrome_profile_processes": 0,
+    "private_runtime_paths_in_process_arguments": 0,
+    "real_service": {
+      "ActiveState": "active",
+      "SubState": "running",
+      "MainPID": "3662"
+    },
+    "real_service_main_pid_unchanged": true
+  },
+  "maps_diagnosis": {
+    "signal": 15,
+    "source": "maps/fresh/mission-5/verification.json",
+    "harness_bug": false,
+    "rerun": false
+  },
+  "preserved_killed_runs": [
+    "books-killed",
+    "flights-killed"
+  ]
+}

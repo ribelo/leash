@@ -1,0 +1,49 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005772833999799332,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8902221,12.489656,17z/data=!3m1!4b1!4m7!2m6!3m5!2sColosseum,+P.za+del+Colosseo,+1,+00184+Roma+RM,+Italy!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "cafe near Colosseum - Google Maps",
+      "text": "Any rating\n2.0\n2.5\n3.0\n3.5\n4.0\n4.5\n\n\n\n\nSearch this area\n\nPrice\n\n\nRating\n\n\nHours\n\n\nAll filters\n\n\nSaved\n\nRecents\nColosseum\n\nGet app\nResults\n\n\nShare\nSan pietrino\nSponsored\n\nSan pietrino\n4.7\nRestaurant · 23 Via Plauto\nCloses soon · 4 pm · Opens 11 am Sun\nDa Benny | Pasta in Padella & Crispy Pizza\nSponsored\n\nDa Benny | Pasta in Padella & Crispy Pizza\n3.7\nRoman restaurant · 32 Via di San Giovanni in Laterano\nOpen · Closes 12 am\n \nFori Imperiali\nPan-fried pasta and crispy pizza just steps from the Colosseum. The true taste of Rome\nVisit Site\nRoYaL Art Cafè\nRoYaL Art Cafè\n4.7\nRestaurant ·  · P.za del Colosseo, 1\nItalian fine dining with Colosseum views\nOpen · Closes 12 am\n \n\nOrder online\nRistorante Caffè Martini\nRistorante Caffè Martini\n4.8\nItalian restaurant ·  · P.za del Colosseo, 3\nRefined Italian plates & Colosseum views\nOpen · Closes 12 am\n \n\nReserve a table\nCaffè Antica Roma\nCaffè Antica Roma\n4.8\nEspresso bar ·  · Via Marco Aurelio, 28\nClosed · Opens 6 am Mon\nRistoro Della Salute\nRistoro Della Salute\n4.8\nItalian restaurant ·  · P.za del Colosseo, 2A\nInformal eatery for regional fare\nOpen · Closes 12 am\n \n\nReserve a table\n\nYou're seeing a limited view of Google Maps. Learn more\nGet the most out of Google Maps\nSign in\nAbout pricing\n\nUpdate results when map moves\n\nSign in\n15 min\n\n\n\nZoom out to see walk time\n\n\n\n Layers\nMap data ©2026 GooglePolandTermsPrivacySend Product Feedback\n\t100 m ",
+      "headings": [
+        "Results",
+        "",
+        "Sponsored\n",
+        "Sponsored\n",
+        "Get the most out of Google Maps\nSign in",
+        "Map details",
+        "Map tools",
+        "Map type"
+      ],
+      "labels": [
+        " stars",
+        "Rating",
+        "2.0 stars",
+        "2.5 stars",
+        "3.0 stars",
+        "3.5 stars",
+        "4.0 stars",
+        "4.5 stars",
+        "4.7 stars",
+        "3.7 stars",
+        "4.7 stars",
+        "4.8 stars",
+        "4.8 stars",
+        "4.8 stars"
+      ],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T13:37:35.814Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

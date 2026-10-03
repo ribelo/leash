@@ -1,0 +1,16 @@
+{
+  "story": "map-op07",
+  "missions": [
+    "find the cheapest flight from Warsaw to Lisbon next month and tell me its price and dates",
+    "find the cheapest flight from Kraków to Barcelona next month and tell me its price and dates",
+    "find the cheapest flight from Gdańsk to Rome next month and tell me its price and dates",
+    "find the cheapest flight from Wrocław to Paris next month and tell me its price and dates",
+    "find the cheapest flight from Poznań to Amsterdam next month and tell me its price and dates"
+  ],
+  "next_month": "November 2026",
+  "not_reworded": true,
+  "retries": 0,
+  "training_learning": "auto",
+  "acceptance_learning": "off",
+  "fresh_agent_evidence": "new service process; empty private Chrome profile and XDG; only installed playbook files copied"
+}

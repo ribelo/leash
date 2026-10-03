@@ -1,0 +1,5 @@
+{"ts":"2026-10-03T13:46:15.658Z","level":"warn","service":"leash","msg":"structural outline capture failed","fields":{"error":"structural outline: missing, invalid or empty skeleton"},"context":{"cmd":"drive"}}
+{"ts":"2026-10-03T13:47:20.897Z","level":"warn","service":"leash","msg":"structural outline capture failed","fields":{"error":"structural outline: missing, invalid or empty skeleton"},"context":{"cmd":"drive"}}
+{"ts":"2026-10-03T13:51:47.790Z","level":"warn","service":"leash","msg":"learning: learning compile dropped: t.scripts: scripts must be an object of script name to declaration","context":{"cmd":"drive"}}
+{"ts":"2026-10-03T13:56:29.665Z","level":"warn","service":"leash","msg":"learning: learning compile dropped: compiled collection scripts require observed structural_outline","context":{"cmd":"drive"}}
+{"ts":"2026-10-03T13:57:13.459Z","level":"warn","service":"leash","msg":"structural outline capture failed","fields":{"error":"structural outline: missing, invalid or empty skeleton"},"context":{"cmd":"drive"}}

@@ -1,0 +1,1201 @@
+{
+  "command": [
+    "drive",
+    "collect every book title and price in the Poetry category",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "900",
+    "--max-steps",
+    "60",
+    "--max-procedures",
+    "20",
+    "--out",
+    "<PRIVATE_ROOT>/output-3.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 6.160256995000964,
+  "reply": {
+    "unattended": [],
+    "playbook_choices": [
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      }
+    ],
+    "status": "done",
+    "site": null,
+    "procedures": [],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "operator": 7
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.001356264,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 7,
+    "model_cost": 0.001356264,
+    "operator_steps": [
+      {
+        "non_repeatable": false,
+        "n": 1,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 25,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "BLOCKED": 0.0,
+            "SCROLL_DOWN": 0.0,
+            "WAIT": 0.0,
+            "CLICK": 1.0
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.01,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.99,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "32": 0.0,
+            "35": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "42": 0.0,
+            "45": 0.0,
+            "46": 0.0,
+            "49": 0.0,
+            "52": 0.0,
+            "53": 0.0,
+            "56": 0.0,
+            "59": 0.0
+          }
+        },
+        "target": {
+          "role": "link",
+          "label": "Poetry"
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+          "title": "Poetry | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 1059
+      },
+      {
+        "non_repeatable": false,
+        "n": 2,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.0,
+            "SCROLL_DOWN": 0.97,
+            "WAIT": 0.0,
+            "DONE": 0.02,
+            "BLOCKED": 0.01
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+          "title": "Poetry | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 2174
+      },
+      {
+        "non_repeatable": false,
+        "n": 3,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.01,
+            "DONE": 0.05,
+            "SCROLL_UP": 0.0,
+            "WAIT": 0.0,
+            "SCROLL_DOWN": 0.9299999999999999,
+            "BLOCKED": 0.01
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+          "title": "Poetry | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 5208
+      },
+      {
+        "non_repeatable": false,
+        "n": 4,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.0,
+            "SCROLL_UP": 0.01,
+            "BLOCKED": 0.01,
+            "CLICK": 0.01,
+            "DONE": 0.23,
+            "SCROLL_DOWN": 0.74
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+          "title": "Poetry | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 5727
+      },
+      {
+        "non_repeatable": false,
+        "n": 5,
+        "snapshot": "[redacted capability]",
+        "operation": "done",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.12,
+            "SCROLL_UP": 0.15,
+            "DONE": 0.67,
+            "CLICK": 0.04,
+            "WAIT": 0.02
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+          "title": "Poetry | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 6086
+      }
+    ],
+    "operator_state": {
+      "status": "done",
+      "reason": null,
+      "error": null,
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+          "title": "Poetry | Books to Scrape - Sandbox",
+          "page_kind": {
+            "name": "books-<slug>",
+            "source": "inferred"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "link",
+              "name": "Les Fleurs du Mal"
+            },
+            {
+              "index": 2,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 3,
+              "role": "heading",
+              "name": "Les Fleurs du Mal"
+            },
+            {
+              "index": 4,
+              "role": "link",
+              "name": "Les Fleurs du Mal"
+            },
+            {
+              "index": 5,
+              "role": "paragraph",
+              "name": "£29.04"
+            },
+            {
+              "index": 6,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 7,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 8,
+              "role": "link",
+              "name": "Howl and Other Poems"
+            },
+            {
+              "index": 9,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 10,
+              "role": "heading",
+              "name": "Howl and Other Poems"
+            },
+            {
+              "index": 11,
+              "role": "link",
+              "name": "Howl and Other Poems"
+            },
+            {
+              "index": 12,
+              "role": "paragraph",
+              "name": "£40.45"
+            },
+            {
+              "index": 13,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 14,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 15,
+              "role": "link",
+              "name": "Leave This Song Behind: Teen Poetry at Its Best"
+            },
+            {
+              "index": 16,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 17,
+              "role": "heading",
+              "name": "Leave This Song Behind: ..."
+            },
+            {
+              "index": 18,
+              "role": "link",
+              "name": "Leave This Song Behind: ..."
+            },
+            {
+              "index": 19,
+              "role": "paragraph",
+              "name": "£51.17"
+            },
+            {
+              "index": 20,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 21,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 22,
+              "role": "link",
+              "name": "The Collected Poems of W.B. Yeats (The Collected Works of W.B. Yeats #1)"
+            },
+            {
+              "index": 23,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 24,
+              "role": "heading",
+              "name": "The Collected Poems of ..."
+            },
+            {
+              "index": 25,
+              "role": "link",
+              "name": "The Collected Poems of ..."
+            },
+            {
+              "index": 26,
+              "role": "paragraph",
+              "name": "£15.42"
+            },
+            {
+              "index": 27,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 28,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 29,
+              "role": "link",
+              "name": "The Crossover"
+            },
+            {
+              "index": 30,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 31,
+              "role": "heading",
+              "name": "The Crossover"
+            },
+            {
+              "index": 32,
+              "role": "link",
+              "name": "The Crossover"
+            },
+            {
+              "index": 33,
+              "role": "paragraph",
+              "name": "£38.77"
+            },
+            {
+              "index": 34,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 35,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 36,
+              "role": "link",
+              "name": "Booked"
+            },
+            {
+              "index": 37,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 38,
+              "role": "heading",
+              "name": "Booked"
+            },
+            {
+              "index": 39,
+              "role": "link",
+              "name": "Booked"
+            },
+            {
+              "index": 40,
+              "role": "paragraph",
+              "name": "£17.49"
+            },
+            {
+              "index": 41,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 42,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 43,
+              "role": "link",
+              "name": "Twenty Love Poems and a Song of Despair"
+            },
+            {
+              "index": 44,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 45,
+              "role": "heading",
+              "name": "Twenty Love Poems and ..."
+            },
+            {
+              "index": 46,
+              "role": "link",
+              "name": "Twenty Love Poems and ..."
+            },
+            {
+              "index": 47,
+              "role": "paragraph",
+              "name": "£30.95"
+            },
+            {
+              "index": 48,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 49,
+              "role": "button",
+              "name": "Add to basket"
+            }
+          ],
+          "total": 49,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+        "title": "Poetry | Books to Scrape - Sandbox",
+        "page_kind": "books-<slug>",
+        "page_kind_source": "inferred",
+        "text": "Les Fleurs du Mal\n£29.04\nIn stock\nAdd to basket\nHowl and Other Poems\n£40.45\nIn stock\nAdd to basket\nLeave This Song Behind: ...\n£51.17\nIn stock\nAdd to basket\nThe Collected Poems of ...\n£15.42\nIn stock\nAdd to basket\nThe Crossover\n£38.77\nIn stock\nAdd to basket\nBooked\n£17.49\nIn stock\nAdd to basket\nTwenty Love Poems and ...\n£30.95\nIn stock\nAdd to basket",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [],
+        "can_scroll_down": false,
+        "can_scroll_up": true,
+        "coverage": "viewport+above",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": true,
+          "can_scroll_down": false,
+          "coverage": "viewport+above",
+          "unsupported_states": []
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 25,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "BLOCKED": 0.0,
+                "SCROLL_DOWN": 0.0,
+                "WAIT": 0.0,
+                "CLICK": 1.0
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.01,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.99,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "32": 0.0,
+                "35": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "42": 0.0,
+                "45": 0.0,
+                "46": 0.0,
+                "49": 0.0,
+                "52": 0.0,
+                "53": 0.0,
+                "56": 0.0,
+                "59": 0.0
+              }
+            },
+            "target": {
+              "role": "link",
+              "label": "Poetry"
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+              "title": "Poetry | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 1059
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 5,
+          "settle_ms": 601
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 2,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.0,
+                "SCROLL_DOWN": 0.97,
+                "WAIT": 0.0,
+                "DONE": 0.02,
+                "BLOCKED": 0.01
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+              "title": "Poetry | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 2174
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 516,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 3,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.01,
+                "DONE": 0.05,
+                "SCROLL_UP": 0.0,
+                "WAIT": 0.0,
+                "SCROLL_DOWN": 0.9299999999999999,
+                "BLOCKED": 0.01
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+              "title": "Poetry | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 5208
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 1480,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 4,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.0,
+                "SCROLL_UP": 0.01,
+                "BLOCKED": 0.01,
+                "CLICK": 0.01,
+                "DONE": 0.23,
+                "SCROLL_DOWN": 0.74
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+              "title": "Poetry | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 5727
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 30,
+          "settle_ms": 50
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "executed",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 25,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "BLOCKED": 0.0,
+              "SCROLL_DOWN": 0.0,
+              "WAIT": 0.0,
+              "CLICK": 1.0
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.01,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.99,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "32": 0.0,
+              "35": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "42": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "49": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "56": 0.0,
+              "59": 0.0
+            }
+          },
+          "confidence": 0.99,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4926,
+            "output_tokens": 399,
+            "cost": 0.000206892,
+            "retries": 0
+          },
+          "elapsed_ms": 363
+        },
+        {
+          "outcome": "executed",
+          "n": 2,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.0,
+              "SCROLL_DOWN": 0.97,
+              "WAIT": 0.0,
+              "DONE": 0.02,
+              "BLOCKED": 0.01
+            },
+            "target": {}
+          },
+          "confidence": 0.96,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5039,
+            "output_tokens": 409,
+            "cost": 0.000211638,
+            "retries": 0
+          },
+          "elapsed_ms": 505
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 3,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.01,
+              "CLICK": 0.02,
+              "DONE": 0.21,
+              "SCROLL_UP": 0.01,
+              "BLOCKED": 0.05,
+              "SCROLL_DOWN": 0.7
+            },
+            "target": {}
+          },
+          "confidence": 0.64,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 7093,
+            "output_tokens": 585,
+            "cost": 0.000297906,
+            "retries": 0
+          },
+          "elapsed_ms": 482
+        },
+        {
+          "outcome": "collection DONE refused: the page can still scroll down",
+          "n": 4,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_UP": 0.03,
+              "WAIT": 0.0,
+              "BLOCKED": 0.08,
+              "CLICK": 0.03,
+              "SCROLL_DOWN": 0.28,
+              "DONE": 0.58
+            },
+            "target": {}
+          },
+          "confidence": 0.49,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4270,
+            "output_tokens": 328,
+            "cost": 0.00017934,
+            "retries": 0
+          },
+          "elapsed_ms": 546
+        },
+        {
+          "outcome": "executed",
+          "n": 5,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.01,
+              "DONE": 0.05,
+              "SCROLL_UP": 0.0,
+              "WAIT": 0.0,
+              "SCROLL_DOWN": 0.9299999999999999,
+              "BLOCKED": 0.01
+            },
+            "target": {}
+          },
+          "confidence": 0.92,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4310,
+            "output_tokens": 330,
+            "cost": 0.00018102,
+            "retries": 0
+          },
+          "elapsed_ms": 350
+        },
+        {
+          "outcome": "executed",
+          "n": 6,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.0,
+              "SCROLL_UP": 0.01,
+              "BLOCKED": 0.01,
+              "CLICK": 0.01,
+              "DONE": 0.23,
+              "SCROLL_DOWN": 0.74
+            },
+            "target": {}
+          },
+          "confidence": 0.68,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3320,
+            "output_tokens": 241,
+            "cost": 0.00013944,
+            "retries": 0
+          },
+          "elapsed_ms": 397
+        },
+        {
+          "outcome": "terminal",
+          "n": 7,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.12,
+              "SCROLL_UP": 0.15,
+              "DONE": 0.67,
+              "CLICK": 0.04,
+              "WAIT": 0.02
+            },
+            "target": {}
+          },
+          "confidence": 0.6,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3334,
+            "output_tokens": 230,
+            "cost": 0.000140028,
+            "retries": 0
+          },
+          "elapsed_ms": 320
+        }
+      ],
+      "text_calls": [],
+      "metrics": {
+        "actions": 4,
+        "predictions": 7,
+        "text_calls": 0,
+        "observation_calls": 8,
+        "observation_retries": 0,
+        "stale_decisions": 1,
+        "bootstrap_ms": 0,
+        "observation_ms": 1057,
+        "prediction_ms": 2963,
+        "text_helper_ms": 0,
+        "input_ms": 2031,
+        "settle_ms": 751,
+        "elapsed_ms": 6086
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+      "title": "Poetry | Books to Scrape - Sandbox",
+      "page_kind": {
+        "name": "books-<slug>",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "link",
+          "name": "Les Fleurs du Mal"
+        },
+        {
+          "index": 2,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 3,
+          "role": "heading",
+          "name": "Les Fleurs du Mal"
+        },
+        {
+          "index": 4,
+          "role": "link",
+          "name": "Les Fleurs du Mal"
+        },
+        {
+          "index": 5,
+          "role": "paragraph",
+          "name": "£29.04"
+        },
+        {
+          "index": 6,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 7,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Howl and Other Poems"
+        },
+        {
+          "index": 9,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 10,
+          "role": "heading",
+          "name": "Howl and Other Poems"
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Howl and Other Poems"
+        },
+        {
+          "index": 12,
+          "role": "paragraph",
+          "name": "£40.45"
+        },
+        {
+          "index": 13,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 14,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 15,
+          "role": "link",
+          "name": "Leave This Song Behind: Teen Poetry at Its Best"
+        },
+        {
+          "index": 16,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 17,
+          "role": "heading",
+          "name": "Leave This Song Behind: ..."
+        },
+        {
+          "index": 18,
+          "role": "link",
+          "name": "Leave This Song Behind: ..."
+        },
+        {
+          "index": 19,
+          "role": "paragraph",
+          "name": "£51.17"
+        },
+        {
+          "index": 20,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 21,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 22,
+          "role": "link",
+          "name": "The Collected Poems of W.B. Yeats (The Collected Works of W.B. Yeats #1)"
+        },
+        {
+          "index": 23,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 24,
+          "role": "heading",
+          "name": "The Collected Poems of ..."
+        },
+        {
+          "index": 25,
+          "role": "link",
+          "name": "The Collected Poems of ..."
+        },
+        {
+          "index": 26,
+          "role": "paragraph",
+          "name": "£15.42"
+        },
+        {
+          "index": 27,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 28,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 29,
+          "role": "link",
+          "name": "The Crossover"
+        },
+        {
+          "index": 30,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 31,
+          "role": "heading",
+          "name": "The Crossover"
+        },
+        {
+          "index": 32,
+          "role": "link",
+          "name": "The Crossover"
+        },
+        {
+          "index": 33,
+          "role": "paragraph",
+          "name": "£38.77"
+        },
+        {
+          "index": 34,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 35,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 36,
+          "role": "link",
+          "name": "Booked"
+        },
+        {
+          "index": 37,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 38,
+          "role": "heading",
+          "name": "Booked"
+        },
+        {
+          "index": 39,
+          "role": "link",
+          "name": "Booked"
+        },
+        {
+          "index": 40,
+          "role": "paragraph",
+          "name": "£17.49"
+        },
+        {
+          "index": 41,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 42,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 43,
+          "role": "link",
+          "name": "Twenty Love Poems and a Song of Despair"
+        },
+        {
+          "index": 44,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 45,
+          "role": "heading",
+          "name": "Twenty Love Poems and ..."
+        },
+        {
+          "index": 46,
+          "role": "link",
+          "name": "Twenty Love Poems and ..."
+        },
+        {
+          "index": 47,
+          "role": "paragraph",
+          "name": "£30.95"
+        },
+        {
+          "index": 48,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 49,
+          "role": "button",
+          "name": "Add to basket"
+        }
+      ],
+      "total": 49,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T13:36:06.251666Z-done.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}

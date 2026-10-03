@@ -1,0 +1,6 @@
+flights mission 1: status=done verified=False browser=0.005410836000000001 learning=0.0 inclusive=0.005410836000000001 installed=0
+flights mission 2: status=done verified=False browser=0.0044472819999999995 learning=0.032179575 inclusive=0.036626857 installed=0
+flights mission 3: status=done verified=False browser=0.0153666 learning=0.03392017 inclusive=0.04928677 installed=0
+flights mission 4: status=done verified=False browser=0.009802438000000002 learning=0.0 inclusive=0.009802438000000002 installed=0
+flights mission 5: status=done verified=False browser=0.013961107999999998 learning=0.0 inclusive=0.013961107999999998 installed=0
+{"site": "flights", "training_missions": 4, "fresh_missions": 1, "failures": []}

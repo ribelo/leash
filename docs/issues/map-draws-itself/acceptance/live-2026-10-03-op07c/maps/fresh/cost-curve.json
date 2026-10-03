@@ -1,0 +1,39 @@
+[
+  {
+    "number": 5,
+    "arguments": "Tower of London",
+    "mission": "find the Tower of London, then find a cafe near it with a rating over 4 and give me its name and address",
+    "fresh_agent": true,
+    "learning_mode": "off",
+    "status": "harness-error",
+    "answer": null,
+    "exit_code": null,
+    "reason": null,
+    "elapsed_s": 0,
+    "independent_verification": {
+      "verified": false,
+      "reason": "RuntimeError: Signal 15; close private processes"
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": null,
+      "browser_cost_usd": null,
+      "browser_reported_cost_usd": null,
+      "browser_unpriced_calls": null,
+      "browser_calls_by_kind": null,
+      "learning_calls": null,
+      "learning_cost_usd": null,
+      "inclusive_calls": null,
+      "inclusive_cost_usd": null,
+      "fully_reported": false,
+      "pending_finished": false,
+      "new_last_work_meter": false,
+      "learning_account": null,
+      "status_site": {}
+    },
+    "procedures": [],
+    "compiled_after": [],
+    "installed_after": [],
+    "provenance_sidecars_after": []
+  }
+]

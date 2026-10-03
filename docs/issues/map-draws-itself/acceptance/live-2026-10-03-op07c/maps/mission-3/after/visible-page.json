@@ -1,0 +1,35 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.00559428199994727,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/search/Cafe/@52.516445,13.3653659,15z/data=!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "Cafe - Google Maps",
+      "text": "\n\nSaved\n\nRecents\nBrandenburg Gate\n\nGet app\n\nClear\nDone\nPrice\n€1.00-€100.00+\nRating at least\nAny rating \nHours\nAny time\nOpen now\nOpen 24 hours\n\nSign in\n15 min\n\n\n\nShowing walking time around the selected place\n\n\n\n Layers\nMap data ©2026 GeoBasis-DE/BKG (©2009), GooglePolandTermsPrivacySend Product Feedback\n\t200 m ",
+      "headings": [
+        "",
+        "",
+        "Price",
+        "Map details",
+        "Map tools",
+        "Map type"
+      ],
+      "labels": [
+        " stars",
+        "Rating"
+      ],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T13:39:28.864Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

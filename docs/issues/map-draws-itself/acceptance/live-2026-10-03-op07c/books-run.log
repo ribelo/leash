@@ -1,0 +1,6 @@
+books mission 1: status=done verified=False browser=0.000937188 learning=0.0 inclusive=0.000937188 installed=0
+books mission 2: status=limit verified=False browser=0.014604618000000008 learning=0.0 inclusive=0.014604618000000008 installed=0
+books mission 3: status=done verified=False browser=0.0013589519999999999 learning=0.0306789 inclusive=0.032037852 installed=0
+books mission 4: status=done verified=False browser=0.00292173 learning=0.013367475 inclusive=0.016289205 installed=0
+books mission 5: status=done verified=False browser=0.00283745 learning=0.0 inclusive=0.00283745 installed=0
+{"site": "books", "training_missions": 4, "fresh_missions": 1, "failures": []}

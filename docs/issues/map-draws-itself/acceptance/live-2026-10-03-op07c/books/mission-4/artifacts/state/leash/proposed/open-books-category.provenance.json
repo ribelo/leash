@@ -1,0 +1,20 @@
+{
+  "traces": [
+    "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T13:46:15.658484Z-done.json",
+    "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T13:47:20.896986Z-done.json"
+  ],
+  "model": "openai/gpt-6-luna",
+  "time": "2026-10-03T14:01:17.860524Z",
+  "tries": 0,
+  "path": [ "home", "books-category" ],
+  "entry_kind": "home",
+  "exit_kind": "books-<slug>",
+  "signature": [ [ "click", { "role": "link", "label": "travel" } ] ],
+  "kind_mapping": [ [ "books-<slug>", "books-category" ] ],
+  "repeatable": true,
+  "reason": "no irreversible submission in the observed path",
+  "gate": "replay",
+  "repair": false,
+  "model_calls": 2,
+  "model_cost": 0.013367475
+}

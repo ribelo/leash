@@ -1,0 +1,55 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005020915001296089,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhooEgoyMDI2LTEwLTAzagwIAxIIL20vMDQ5MXlyDAgDEggvbS8wMWY2MhooEgoyMDI2LTEwLTIyagwIAxIIL20vMDFmNjJyDAgDEggvbS8wNDkxeUABSAFwAYIBCwj___________8BmAEB&hl=en",
+      "title": "Kraków to Barcelona | Google Flights",
+      "text": "Skip to main content\nAccessibility feedback\nExplore\nFlights\nHotels\nVacation rentals\nChange appearance\nSign in\nLoading results\nFlight search\nRound trip\n1\nEconomy\nKraków\nBarcelona\nFilters\nAll filters\nStops\nAirlines\nBags\nPrice\nTimes\nEmissions\nConnecting airports\nDuration\nSearch results\n3 results returned.\nBest\nCheapest\nfrom PLN 1,038\nPrice insights\nThe cheapest time to book is usually earlier, about 1–4 months before takeoff\nPrices are currently high\nView price history\nTrack prices\nTrack prices from Kraków to Barcelona departing 2026-10-03 and returning 2026-10-22\nOct 3 – 22\nTrack prices from Kraków to Barcelona - Any dates\nAny dates\nTravel Oct 4 – 22 for PLN 538\nChange dates\nExpanded\nDate grid\nPrice graph\nDeparting flights\nPrices include required taxes + fees for 1 adult. Optional charges and bag fees may apply. Passenger assistance info.\nSorted by top flights\n4:45 PM\n – \n10:25 PM\nAir Dolomiti, Lufthansa\n5 hr 40 min\nKRK–BCN\n1 stop\n2 hr 5 min MUC\n204 kg CO2e\n+62% emissions\nPLN 1,038\nround trip\n4:45 PM\n – \n7:35 PM\nLOT\n2 hr 50 min\nKRK–BCN\nNonstop\n127 kg CO2e\nAvg emissions\nPLN 1,247\nround trip\n7:10 PM\n – \n9:35 AM+1\nLufthansa\n14 hr 25 min\nKRK–BCN\n1 stop\n10 hr 40 min FRA\n169 kg CO2e\n+34% emissions\nPLN 1,376\nround trip\nView more flights\nLanguage​English (United States)\nLocation​Poland\nCurrencyPLN\nAbout\nPrivacy\nTerms\nJoin user studies\nReport Illegal Content\nFeedback\nHelp Center and Consumer Information\n\nDisplayed currencies may differ from the currencies used to purchase flights. Learn more\n\nPrices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.\n\nfrom PLN 1,038 ",
+      "headings": [
+        "Flight search",
+        "Filters",
+        "Search results"
+      ],
+      "labels": [
+        "Departure",
+        "Return",
+        "Departure",
+        "Return",
+        "Saturday, October 3, 2026, departure date.",
+        "Thursday, October 22, 2026, return date.",
+        "Track prices from Kraków to Barcelona departing 2026-10-03 and returning 2026-10-22",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 7:10 PM.",
+        "Departure time: 7:10 PM.",
+        "Departure time: 7:10 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 4:45 PM.",
+        "Departure time: 7:10 PM.",
+        "Departure time: 7:10 PM.",
+        "Departure time: 7:10 PM."
+      ],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T13:55:29.021Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

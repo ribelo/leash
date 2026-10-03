@@ -1,0 +1,29 @@
+{
+  "reason": "sidecar collector ordering defect in already-loaded harness; ignored metadata initializes observer; sidecars rederived from artifact copies",
+  "services": [
+    {
+      "private_browser_pid": 965910,
+      "service_pid": 965908,
+      "metadata_outside_playbook_directory": true,
+      "product_config_unchanged": true
+    },
+    {
+      "private_browser_pid": 965914,
+      "service_pid": 965912,
+      "metadata_outside_playbook_directory": true,
+      "product_config_unchanged": true
+    },
+    {
+      "private_browser_pid": 1009805,
+      "service_pid": 1009803,
+      "metadata_outside_playbook_directory": true,
+      "product_config_unchanged": true
+    },
+    {
+      "private_browser_pid": 1023372,
+      "service_pid": 1023370,
+      "metadata_outside_playbook_directory": true,
+      "product_config_unchanged": true
+    }
+  ]
+}

@@ -1,0 +1,1123 @@
+{
+  "unattended": [],
+  "version": 1,
+  "time": "2026-10-03T13:57:13.459075Z",
+  "site": "toscrape.com",
+  "mission": "collect every book title and price in the Historical Fiction category",
+  "arguments": [],
+  "outcome": "done",
+  "cost": 0.00292173,
+  "duration_ms": 11930,
+  "model_calls": 13,
+  "start_url": "https://books.toscrape.com/",
+  "page_kind_path": [
+    "home",
+    "books-<slug>",
+    "page-<id>"
+  ],
+  "inferred_pages": [
+    {
+      "name": "home",
+      "url_pattern": "https://books.toscrape.com/"
+    },
+    {
+      "name": "books-<slug>",
+      "url_pattern": "https://books.toscrape.com/catalogue/category/books/<slug>/index.html"
+    },
+    {
+      "name": "page-<id>",
+      "url_pattern": "https://books.toscrape.com/catalogue/category/books/<slug>/page-<id>.html"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "link",
+        "label": "Historical Fiction"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.99
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.01
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.99
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 1164
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.01
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.02
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.95
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 2497
+    },
+    {
+      "non_repeatable": false,
+      "n": 3,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.07
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.61
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.02
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.17
+        },
+        {
+          "key": "blocked",
+          "probability": 0.12
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 3016
+    },
+    {
+      "non_repeatable": false,
+      "n": 4,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "scroll_down",
+          "probability": 0.52
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.07
+        },
+        {
+          "key": "click",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.38
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 4029
+    },
+    {
+      "non_repeatable": false,
+      "n": 5,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "link",
+        "label": "next"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.08
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.06
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.84
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.15
+        },
+        {
+          "key": "4",
+          "probability": 0.03
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.8200000000000001
+        }
+      ],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 4855
+    },
+    {
+      "non_repeatable": false,
+      "n": 6,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.04
+        },
+        {
+          "key": "blocked",
+          "probability": 0.05
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.71
+        },
+        {
+          "key": "done",
+          "probability": 0.19
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 6331
+    },
+    {
+      "non_repeatable": false,
+      "n": 7,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "link",
+        "label": "previous"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.32
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.15
+        },
+        {
+          "key": "click",
+          "probability": 0.33999999999999997
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.18
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.06999999999999999
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.03
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.22
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.060000000000000005
+        },
+        {
+          "key": "42",
+          "probability": 0.01
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        },
+        {
+          "key": "60",
+          "probability": 0.0
+        },
+        {
+          "key": "63",
+          "probability": 0.0
+        },
+        {
+          "key": "66",
+          "probability": 0.0
+        },
+        {
+          "key": "67",
+          "probability": 0.0
+        },
+        {
+          "key": "70",
+          "probability": 0.0
+        },
+        {
+          "key": "73",
+          "probability": 0.0
+        },
+        {
+          "key": "74",
+          "probability": 0.01
+        },
+        {
+          "key": "77",
+          "probability": 0.0
+        },
+        {
+          "key": "80",
+          "probability": 0.0
+        },
+        {
+          "key": "81",
+          "probability": 0.6
+        }
+      ],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 7038
+    },
+    {
+      "non_repeatable": false,
+      "n": 8,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.03
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.91
+        },
+        {
+          "key": "click",
+          "probability": 0.02
+        },
+        {
+          "key": "blocked",
+          "probability": 0.04
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 8629
+    },
+    {
+      "non_repeatable": false,
+      "n": 9,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "scroll_down",
+          "probability": 0.51
+        },
+        {
+          "key": "done",
+          "probability": 0.16
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.15
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.16
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 9146
+    },
+    {
+      "non_repeatable": false,
+      "n": 10,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.02
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.41
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.01
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.47000000000000003
+        },
+        {
+          "key": "blocked",
+          "probability": 0.09
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 10161
+    },
+    {
+      "non_repeatable": false,
+      "n": 11,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "link",
+        "label": "next"
+      },
+      "operations": [
+        {
+          "key": "scroll_up",
+          "probability": 0.0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.08
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.1
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "click",
+          "probability": 0.8
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.11
+        },
+        {
+          "key": "4",
+          "probability": 0.02
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.87
+        }
+      ],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 10565
+    },
+    {
+      "non_repeatable": false,
+      "n": 12,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.08
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.55
+        },
+        {
+          "key": "done",
+          "probability": 0.29
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.07
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 11483
+    },
+    {
+      "non_repeatable": false,
+      "n": 13,
+      "operation": "done",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.15
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.25
+        },
+        {
+          "key": "click",
+          "probability": 0.28
+        },
+        {
+          "key": "done",
+          "probability": 0.32
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox"
+      },
+      "elapsed_ms": 11863
+    }
+  ],
+  "out_requested": true,
+  "final": {
+    "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+    "title": "Historical Fiction | Books to Scrape - Sandbox"
+  }
+}

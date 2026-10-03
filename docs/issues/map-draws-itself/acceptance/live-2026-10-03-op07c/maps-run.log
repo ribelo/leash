@@ -1,0 +1,6 @@
+maps mission 1: status=limit verified=False browser=None learning=0.0 inclusive=None installed=0
+maps mission 2: status=done verified=False browser=0.0044451970000000006 learning=0.0 inclusive=0.0044451970000000006 installed=0
+maps mission 3: status=limit verified=False browser=0.02847224600000003 learning=0.0 inclusive=0.02847224600000003 installed=0
+maps mission 4: status=blocked verified=False browser=0.03493209900000001 learning=0.0 inclusive=0.03493209900000001 installed=0
+maps mission 5: status=harness-error verified=False browser=None learning=None inclusive=None installed=0
+{"site": "maps", "training_missions": 4, "fresh_missions": 1, "failures": []}

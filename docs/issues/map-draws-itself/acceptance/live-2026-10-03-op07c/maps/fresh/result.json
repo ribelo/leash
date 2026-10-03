@@ -1,0 +1,15 @@
+{
+  "gate": "maps",
+  "passed": false,
+  "missions_recorded": 1,
+  "failures": [
+    "Mission 5: RuntimeError: Signal 15; close private processes",
+    "Mission 5: status lacks usable learning.pending; no retry"
+  ],
+  "elapsed_s": 20.96627902984619,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

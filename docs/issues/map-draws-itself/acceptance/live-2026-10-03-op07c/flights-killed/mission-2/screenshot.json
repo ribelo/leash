@@ -1,0 +1,35 @@
+{
+  "command": [
+    "shot",
+    "[redacted]",
+    "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-03-op07c/flights/mission-2/page.png"
+  ],
+  "exit_code": 75,
+  "elapsed_s": 30.00618471800044,
+  "reply": {
+    "code": "renderer-unresponsive",
+    "message": "browser operation timed out",
+    "hint": "the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off",
+    "detail": {
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhojEgoyMDI2LTExLTI0agcIARIDS1JLcgwIAxIIL20vMDFmNjIaIxIKMjAyNi0xMS0yNWoMCAMSCC9tLzAxZjYycgcIARIDS1JLQAFIAXABggELCP___________wGYAQE&hl=en",
+      "title": "Kraków to Barcelona | Google Flights",
+      "entries": [
+        {
+          "at": "2026-10-03T13:35:42Z",
+          "kind": "console",
+          "level": "log",
+          "text": "%c%s font-size: 18px; Using this console may allow attackers to impersonate you and steal your information using an attack called Self-XSS.\nDo not enter or paste code that you do not understand."
+        },
+        {
+          "at": "2026-10-03T13:35:42Z",
+          "kind": "console",
+          "level": "log",
+          "text": "%c%s color: red; background: yellow; font-size: 24px; WARNING!"
+        }
+      ]
+    }
+  },
+  "stdout": null,
+  "stderr": null
+}

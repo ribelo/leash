@@ -1,0 +1,38 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005173998999453033,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/place/Sunflower+Caf%C3%A9/@48.8541807,2.2940586,17z/data=!4m6!3m5!1s0x47e6701ee2cad7fb:0x416aa141baa67851!8m2!3d48.8541772!4d2.2966335!16s%2Fg%2F1thq94wt?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "Sunflower Café - Google Maps",
+      "text": "\n\n\nNearby restaurants\n\nHotels\n\nThings to do\n\nBars\n\nCoffee\n\nTakeout\n\nGroceries\n\n\n\nSaved\n\nRecents\n2\nParis\n\nGet app\n\nSee photos\nSunflower Café\n4.7\n\nCafe\nOverview\nAbout\n\nDirections\n\nSave\n\nNearby\n\nSend to phone\n\nShare\nLaid-back hangout dishing up bowls, salads & sandwiches with health-conscious ingredients.\n\n \n\n41 Av. de Suffren, 75007 Paris, France\n\n\nOpen · Closes 10 pm\n\nSee more hours\n\n\n\n+33 1 42 73 68 84\n\n\n\nV73W+MM Paris, France\n\n\n \n\nSuggest an edit\n \nAdd missing information\n\n\nAdd website\n \nPhotos\n\n \n\nAdd photos & videos\n \n \n\nWrite a review\n \nAbout this data\n\nYou're seeing a limited view of Google Maps. Learn more\nGet the most out of Google Maps\nSign in\n\nSign in\n\n\n\n\n Layers\nMap data ©2026 GooglePolandTermsPrivacySend Product Feedback\n\t50 m \nWalking, 6 min, 450 m",
+      "headings": [
+        "Sunflower Café",
+        "Add missing information",
+        "Photos",
+        "Get the most out of Google Maps\nSign in",
+        "Map details",
+        "Map tools",
+        "Map type"
+      ],
+      "labels": [
+        " stars",
+        "4.7 stars ",
+        "Address: 41 Av. de Suffren, 75007 Paris, France ",
+        "Copy address"
+      ],
+      "address": "Address: 41 Av. de Suffren, 75007 Paris, France ",
+      "time": {
+        "now": "2026-10-03T13:36:40.120Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

@@ -1,0 +1,33 @@
+{
+  "command": [
+    "shot",
+    "[redacted]",
+    "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-03-op07c/books/mission-3/page.png"
+  ],
+  "exit_code": 75,
+  "elapsed_s": 30.004471387001104,
+  "reply": {
+    "code": "renderer-unresponsive",
+    "message": "browser operation timed out",
+    "hint": "the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off",
+    "detail": {
+      "tab": "[redacted capability]",
+      "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+      "title": "Poetry | Books to Scrape - Sandbox",
+      "entries": [
+        {
+          "at": "2026-10-03T13:47:16Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T13:47:15Z",
+          "kind": "request-failed",
+          "text": ""
+        }
+      ]
+    }
+  },
+  "stdout": null,
+  "stderr": null
+}

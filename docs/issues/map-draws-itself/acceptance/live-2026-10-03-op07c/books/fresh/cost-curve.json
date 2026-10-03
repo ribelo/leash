@@ -1,0 +1,177 @@
+[
+  {
+    "number": 5,
+    "arguments": "Horror",
+    "mission": "collect every book title and price in the Horror category",
+    "fresh_agent": true,
+    "learning_mode": "off",
+    "status": "done",
+    "answer": null,
+    "exit_code": 0,
+    "reason": null,
+    "elapsed_s": 27.159956456000145,
+    "independent_verification": {
+      "verified": false,
+      "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+      "site": {
+        "category": "Horror",
+        "total_reported": 17,
+        "records": [
+          {
+            "title": "Security",
+            "price": "£39.25"
+          },
+          {
+            "title": "Follow You Home",
+            "price": "£21.36"
+          },
+          {
+            "title": "The Loney",
+            "price": "£23.40"
+          },
+          {
+            "title": "Pet Sematary",
+            "price": "£10.56"
+          },
+          {
+            "title": "Doctor Sleep (The Shining #2)",
+            "price": "£40.12"
+          },
+          {
+            "title": "Psycho: Sanitarium (Psycho #1.5)",
+            "price": "£36.97"
+          },
+          {
+            "title": "Can You Keep a Secret? (Fear Street Relaunch #4)",
+            "price": "£48.64"
+          },
+          {
+            "title": "Red Dragon (Hannibal Lecter #1)",
+            "price": "£23.37"
+          },
+          {
+            "title": "Dracula the Un-Dead",
+            "price": "£35.63"
+          },
+          {
+            "title": "Night Shift (Night Shift #1-20)",
+            "price": "£12.75"
+          },
+          {
+            "title": "Needful Things",
+            "price": "£47.51"
+          },
+          {
+            "title": "Misery",
+            "price": "£34.79"
+          },
+          {
+            "title": "It",
+            "price": "£25.01"
+          },
+          {
+            "title": "'Salem's Lot",
+            "price": "£49.56"
+          },
+          {
+            "title": "The Stand",
+            "price": "£57.86"
+          },
+          {
+            "title": "The Girl with All the Gifts",
+            "price": "£49.47"
+          },
+          {
+            "title": "House of Leaves",
+            "price": "£54.89"
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+            "status": 200,
+            "count": 17,
+            "heading": "Horror"
+          }
+        ],
+        "counts_match": true,
+        "next_page_unvisited": false
+      },
+      "answer_record_matches": 5,
+      "missing_records": [
+        {
+          "title": "Security",
+          "price": "£39.25"
+        },
+        {
+          "title": "Follow You Home",
+          "price": "£21.36"
+        },
+        {
+          "title": "The Loney",
+          "price": "£23.40"
+        },
+        {
+          "title": "Pet Sematary",
+          "price": "£10.56"
+        },
+        {
+          "title": "Doctor Sleep (The Shining #2)",
+          "price": "£40.12"
+        },
+        {
+          "title": "Psycho: Sanitarium (Psycho #1.5)",
+          "price": "£36.97"
+        },
+        {
+          "title": "Can You Keep a Secret? (Fear Street Relaunch #4)",
+          "price": "£48.64"
+        },
+        {
+          "title": "Red Dragon (Hannibal Lecter #1)",
+          "price": "£23.37"
+        },
+        {
+          "title": "Dracula the Un-Dead",
+          "price": "£35.63"
+        },
+        {
+          "title": "Night Shift (Night Shift #1-20)",
+          "price": "£12.75"
+        },
+        {
+          "title": "Needful Things",
+          "price": "£47.51"
+        },
+        {
+          "title": "Misery",
+          "price": "£34.79"
+        }
+      ]
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 12,
+      "browser_cost_usd": 0.00283745,
+      "browser_reported_cost_usd": 0.00283745,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "operator": 10,
+        "planner": 2
+      },
+      "learning_calls": 0,
+      "learning_cost_usd": 0.0,
+      "inclusive_calls": 12,
+      "inclusive_cost_usd": 0.00283745,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": false,
+      "learning_account": null,
+      "status_site": {}
+    },
+    "procedures": [],
+    "compiled_after": [],
+    "installed_after": [],
+    "provenance_sidecars_after": []
+  }
+]

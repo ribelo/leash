@@ -1,0 +1,16 @@
+{
+  "story": "map-op07",
+  "missions": [
+    "collect every book title and price in the Travel category",
+    "collect every book title and price in the Mystery category",
+    "collect every book title and price in the Poetry category",
+    "collect every book title and price in the Historical Fiction category",
+    "collect every book title and price in the Horror category"
+  ],
+  "next_month": "November 2026",
+  "not_reworded": true,
+  "retries": 0,
+  "training_learning": "auto",
+  "acceptance_learning": "off",
+  "fresh_agent_evidence": "new service process; empty private Chrome profile and XDG; only installed playbook files copied"
+}

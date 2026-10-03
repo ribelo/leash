@@ -1,0 +1,1438 @@
+{
+  "bound_seconds": 900,
+  "completed": true,
+  "elapsed_s": 550.3993856129982,
+  "history": [
+    {
+      "elapsed_s": 0.005223852998824441,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 5.009846567998466,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 10.012850824999987,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 15.015982038999937,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 20.020893316999718,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 25.028433490999305,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 30.031347711999842,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 35.03451638399929,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 40.037514476998695,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 45.04197891499825,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 50.04652162399907,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 55.04977404099918,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 60.05325930299841,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 65.0566237389994,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 70.05974049499855,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 75.06295720699927,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 80.06646756599912,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 85.06972340399989,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 90.07293225699868,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 95.07628233599826,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 100.0794893659986,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 105.0829418659996,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 110.08625298299921,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 115.08955616099956,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 120.09286264099865,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 125.09619064899925,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 130.0995422069991,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 135.1029092259996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 140.106424865,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 145.1099082919991,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 150.1133677199996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 155.11674740099988,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 160.11998169699837,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 165.12400332499965,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 170.12736713199956,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 175.13085144599972,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 180.1342736459992,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 185.13762734199918,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 190.14092129599885,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 195.14435037699877,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 200.14774560099977,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 205.15107401099885,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 210.15441481199923,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 215.15812289699898,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 220.1616076749997,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 225.16494146999867,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 230.16828351799995,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 235.17170723599884,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 240.17496442599986,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 245.17822874599915,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 250.18137031699916,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 255.18459085499853,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 260.1883290679998,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 265.1918280009995,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:49:09.416321Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 270.1951531979994,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 275.19858540599853,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 280.2018950369984,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 285.2052892749998,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 290.20857147699826,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 295.21209080899825,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 300.215673753999,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 305.2190992679989,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 310.22250831699967,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 315.22607103599876,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 320.22971292999864,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 325.23310877899894,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 330.2364384839984,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 335.24005798099824,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 340.2435229619987,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 345.2472415829998,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 350.25074193399996,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 355.25443749699843,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 360.25795733199993,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 365.2613634239988,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 370.26532747999954,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 375.2686423219984,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 380.27204697699926,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 385.27523265499985,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 390.27858259499953,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 395.2834782869995,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 400.2909197729987,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 405.2953879029992,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 410.2990421049999,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 415.30243390299984,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 420.306075126,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 425.3095530149985,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 430.3128240949991,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 435.31640566199894,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 440.32028719499976,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 445.32378550499925,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 450.327405394999,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 455.3309760489992,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 460.334326709999,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 465.3379761829983,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 470.341825866999,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 475.3454686219993,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 480.3489404209995,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 485.3527694789991,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 490.3562688989987,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 495.3595179779986,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 500.36292774399953,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 505.36628777199985,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 510.3696641889983,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 515.3729562089993,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 520.3764397599989,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 525.3799436289992,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 530.383244781,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 535.3864647759983,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 540.3897366269994,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 545.3930034489986,
+      "pending": 1,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:51:47.790092Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 0,
+          "learning_cost": null
+        }
+      ]
+    },
+    {
+      "elapsed_s": 550.3992867139987,
+      "pending": 0,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:56:29.665137Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 4,
+          "learning_cost": 0.0306789
+        }
+      ]
+    }
+  ],
+  "final_status": {
+    "key_present": true,
+    "commit": "1690f4923596052da145f48cd86783457113aab7",
+    "skill": {
+      "state": "missing",
+      "version": "0.0.0",
+      "commit": "1690f4923596052da145f48cd86783457113aab7",
+      "installs": [
+        {
+          "path": "/home/ribelo/.claude/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.codex/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.agents/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        }
+      ]
+    },
+    "generation": 1,
+    "tabs": {
+      "open": 3,
+      "cap": 8
+    },
+    "chrome": "running",
+    "uptime_s": 626.3861179351807,
+    "models": {
+      "configured": true,
+      "jev_model": "typesafe/jev-1.13-20260917",
+      "text_model": "inception/mercury-2.5",
+      "systemone_endpoint": "https://openrouter.ai/api/v1/systemone",
+      "chat_base_url": "https://openrouter.ai/api/v1"
+    },
+    "version": "0.0.0",
+    "pid": 965910,
+    "headed": false,
+    "learning": {
+      "mode": "auto",
+      "pending": 0,
+      "drafts": 0,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T13:56:29.665137Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 4,
+          "learning_cost": 0.0306789
+        }
+      ]
+    }
+  },
+  "before": {
+    "mtime_ns": null,
+    "state": {}
+  },
+  "after": {
+    "mtime_ns": 1791035789665394631,
+    "state": {
+      "account:toscrape.com": {
+        "model_calls": 4,
+        "model_cost": 0.0306789
+      },
+      "compile:toscrape.com": "2026-10-03T13:56:29.665137Z"
+    }
+  }
+}

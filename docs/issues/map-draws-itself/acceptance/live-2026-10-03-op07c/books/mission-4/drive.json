@@ -1,0 +1,2471 @@
+{
+  "command": [
+    "drive",
+    "collect every book title and price in the Historical Fiction category",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "900",
+    "--max-steps",
+    "60",
+    "--max-procedures",
+    "20",
+    "--out",
+    "<PRIVATE_ROOT>/output-4.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 11.938049170999875,
+  "reply": {
+    "unattended": [],
+    "playbook_choices": [
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      }
+    ],
+    "status": "done",
+    "site": null,
+    "procedures": [],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "operator": 13
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.00292173,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 13,
+    "model_cost": 0.00292173,
+    "operator_steps": [
+      {
+        "non_repeatable": false,
+        "n": 1,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 6,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.01,
+            "DONE": 0.0,
+            "CLICK": 0.99,
+            "WAIT": 0.0,
+            "SCROLL_DOWN": 0.0
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.01,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.99,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "32": 0.0,
+            "35": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "42": 0.0,
+            "45": 0.0,
+            "46": 0.0,
+            "49": 0.0,
+            "52": 0.0,
+            "53": 0.0,
+            "56": 0.0,
+            "59": 0.0
+          }
+        },
+        "target": {
+          "role": "link",
+          "label": "Historical Fiction"
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 1164
+      },
+      {
+        "non_repeatable": false,
+        "n": 2,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.01,
+            "WAIT": 0.0,
+            "DONE": 0.02,
+            "SCROLL_DOWN": 0.95,
+            "BLOCKED": 0.02
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 2497
+      },
+      {
+        "non_repeatable": false,
+        "n": 3,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.07,
+            "SCROLL_DOWN": 0.61,
+            "SCROLL_UP": 0.02,
+            "WAIT": 0.01,
+            "DONE": 0.17,
+            "BLOCKED": 0.12
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 3016
+      },
+      {
+        "non_repeatable": false,
+        "n": 4,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "SCROLL_DOWN": 0.52,
+            "SCROLL_UP": 0.01,
+            "BLOCKED": 0.07,
+            "CLICK": 0.02,
+            "DONE": 0.38,
+            "WAIT": 0.0
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 4029
+      },
+      {
+        "non_repeatable": false,
+        "n": 5,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 57,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.0,
+            "BLOCKED": 0.02,
+            "DONE": 0.08,
+            "SCROLL_DOWN": 0.06,
+            "SCROLL_UP": 0.0,
+            "CLICK": 0.84
+          },
+          "target": {
+            "1": 0.15,
+            "4": 0.03,
+            "7": 0.0,
+            "8": 0.0,
+            "11": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "18": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "25": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "32": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "39": 0.0,
+            "42": 0.0,
+            "43": 0.0,
+            "46": 0.0,
+            "49": 0.0,
+            "50": 0.0,
+            "53": 0.0,
+            "56": 0.0,
+            "57": 0.8200000000000001
+          }
+        },
+        "target": {
+          "role": "link",
+          "label": "next"
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 4855
+      },
+      {
+        "non_repeatable": false,
+        "n": 6,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.01,
+            "CLICK": 0.04,
+            "BLOCKED": 0.05,
+            "SCROLL_DOWN": 0.71,
+            "DONE": 0.19
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 6331
+      },
+      {
+        "non_repeatable": false,
+        "n": 7,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 81,
+        "probabilities": {
+          "op": {
+            "DONE": 0.32,
+            "WAIT": 0.01,
+            "BLOCKED": 0.15,
+            "CLICK": 0.33999999999999997,
+            "SCROLL_UP": 0.18
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.06999999999999999,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.03,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.22,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.060000000000000005,
+            "42": 0.01,
+            "45": 0.0,
+            "46": 0.0,
+            "49": 0.0,
+            "52": 0.0,
+            "53": 0.0,
+            "56": 0.0,
+            "59": 0.0,
+            "60": 0.0,
+            "63": 0.0,
+            "66": 0.0,
+            "67": 0.0,
+            "70": 0.0,
+            "73": 0.0,
+            "74": 0.01,
+            "77": 0.0,
+            "80": 0.0,
+            "81": 0.6
+          }
+        },
+        "target": {
+          "role": "link",
+          "label": "previous"
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 7038
+      },
+      {
+        "non_repeatable": false,
+        "n": 8,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "DONE": 0.03,
+            "WAIT": 0.0,
+            "SCROLL_DOWN": 0.91,
+            "CLICK": 0.02,
+            "BLOCKED": 0.04
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 8629
+      },
+      {
+        "non_repeatable": false,
+        "n": 9,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "SCROLL_DOWN": 0.51,
+            "DONE": 0.16,
+            "WAIT": 0.01,
+            "CLICK": 0.15,
+            "SCROLL_UP": 0.01,
+            "BLOCKED": 0.16
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 9146
+      },
+      {
+        "non_repeatable": false,
+        "n": 10,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.02,
+            "WAIT": 0.0,
+            "DONE": 0.41,
+            "SCROLL_UP": 0.01,
+            "SCROLL_DOWN": 0.47000000000000003,
+            "BLOCKED": 0.09
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 10161
+      },
+      {
+        "non_repeatable": false,
+        "n": 11,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 57,
+        "probabilities": {
+          "op": {
+            "SCROLL_UP": 0.0,
+            "SCROLL_DOWN": 0.08,
+            "WAIT": 0.0,
+            "DONE": 0.1,
+            "BLOCKED": 0.02,
+            "CLICK": 0.8
+          },
+          "target": {
+            "1": 0.11,
+            "4": 0.02,
+            "7": 0.0,
+            "8": 0.0,
+            "11": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "18": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "25": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "32": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "39": 0.0,
+            "42": 0.0,
+            "43": 0.0,
+            "46": 0.0,
+            "49": 0.0,
+            "50": 0.0,
+            "53": 0.0,
+            "56": 0.0,
+            "57": 0.87
+          }
+        },
+        "target": {
+          "role": "link",
+          "label": "next"
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 10565
+      },
+      {
+        "non_repeatable": false,
+        "n": 12,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.08,
+            "SCROLL_DOWN": 0.55,
+            "DONE": 0.29,
+            "WAIT": 0.01,
+            "CLICK": 0.07
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 11483
+      },
+      {
+        "non_repeatable": false,
+        "n": 13,
+        "snapshot": "[redacted capability]",
+        "operation": "done",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.15,
+            "SCROLL_UP": 0.25,
+            "CLICK": 0.28,
+            "DONE": 0.32,
+            "WAIT": 0.0
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 11863
+      }
+    ],
+    "operator_state": {
+      "status": "done",
+      "reason": null,
+      "error": null,
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+          "title": "Historical Fiction | Books to Scrape - Sandbox",
+          "page_kind": {
+            "name": "page-<id>",
+            "source": "inferred"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "link",
+              "name": "Music"
+            },
+            {
+              "index": 2,
+              "role": "link",
+              "name": "Default"
+            },
+            {
+              "index": 3,
+              "role": "link",
+              "name": "Science Fiction"
+            },
+            {
+              "index": 4,
+              "role": "link",
+              "name": "Sports and Games"
+            },
+            {
+              "index": 5,
+              "role": "link",
+              "name": "Add a comment"
+            },
+            {
+              "index": 6,
+              "role": "link",
+              "name": "Fantasy"
+            },
+            {
+              "index": 7,
+              "role": "link",
+              "name": "New Adult"
+            },
+            {
+              "index": 8,
+              "role": "link",
+              "name": "Young Adult"
+            },
+            {
+              "index": 9,
+              "role": "link",
+              "name": "Science"
+            },
+            {
+              "index": 10,
+              "role": "link",
+              "name": "Poetry"
+            },
+            {
+              "index": 11,
+              "role": "link",
+              "name": "Paranormal"
+            },
+            {
+              "index": 12,
+              "role": "link",
+              "name": "Art"
+            },
+            {
+              "index": 13,
+              "role": "link",
+              "name": "Psychology"
+            },
+            {
+              "index": 14,
+              "role": "link",
+              "name": "Autobiography"
+            },
+            {
+              "index": 15,
+              "role": "link",
+              "name": "Parenting"
+            },
+            {
+              "index": 16,
+              "role": "link",
+              "name": "Adult Fiction"
+            },
+            {
+              "index": 17,
+              "role": "link",
+              "name": "Humor"
+            },
+            {
+              "index": 18,
+              "role": "link",
+              "name": "Horror"
+            },
+            {
+              "index": 19,
+              "role": "link",
+              "name": "History"
+            },
+            {
+              "index": 20,
+              "role": "link",
+              "name": "Food and Drink"
+            },
+            {
+              "index": 21,
+              "role": "link",
+              "name": "Christian Fiction"
+            },
+            {
+              "index": 22,
+              "role": "link",
+              "name": "Business"
+            },
+            {
+              "index": 23,
+              "role": "link",
+              "name": "Biography"
+            },
+            {
+              "index": 24,
+              "role": "link",
+              "name": "Thriller"
+            },
+            {
+              "index": 25,
+              "role": "link",
+              "name": "Contemporary"
+            },
+            {
+              "index": 26,
+              "role": "link",
+              "name": "Spirituality"
+            },
+            {
+              "index": 27,
+              "role": "link",
+              "name": "Academic"
+            },
+            {
+              "index": 28,
+              "role": "link",
+              "name": "Self Help"
+            },
+            {
+              "index": 29,
+              "role": "link",
+              "name": "Historical"
+            },
+            {
+              "index": 30,
+              "role": "link",
+              "name": "Christian"
+            },
+            {
+              "index": 31,
+              "role": "link",
+              "name": "Suspense"
+            },
+            {
+              "index": 32,
+              "role": "link",
+              "name": "Short Stories"
+            },
+            {
+              "index": 33,
+              "role": "link",
+              "name": "Novels"
+            },
+            {
+              "index": 34,
+              "role": "link",
+              "name": "Health"
+            },
+            {
+              "index": 35,
+              "role": "link",
+              "name": "Politics"
+            },
+            {
+              "index": 36,
+              "role": "link",
+              "name": "Cultural"
+            },
+            {
+              "index": 37,
+              "role": "link",
+              "name": "Erotica"
+            },
+            {
+              "index": 38,
+              "role": "link",
+              "name": "Crime"
+            },
+            {
+              "index": 39,
+              "role": "link",
+              "name": "Between Shades of Gray"
+            },
+            {
+              "index": 40,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 41,
+              "role": "heading",
+              "name": "Between Shades of Gray"
+            },
+            {
+              "index": 42,
+              "role": "link",
+              "name": "Between Shades of Gray"
+            },
+            {
+              "index": 43,
+              "role": "paragraph",
+              "name": "£20.79"
+            },
+            {
+              "index": 44,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 45,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 46,
+              "role": "link",
+              "name": "While You Were Mine"
+            },
+            {
+              "index": 47,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 48,
+              "role": "heading",
+              "name": "While You Were Mine"
+            },
+            {
+              "index": 49,
+              "role": "link",
+              "name": "While You Were Mine"
+            },
+            {
+              "index": 50,
+              "role": "paragraph",
+              "name": "£41.32"
+            },
+            {
+              "index": 51,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 52,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 53,
+              "role": "link",
+              "name": "The Secret Healer"
+            },
+            {
+              "index": 54,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 55,
+              "role": "heading",
+              "name": "The Secret Healer"
+            },
+            {
+              "index": 56,
+              "role": "link",
+              "name": "The Secret Healer"
+            },
+            {
+              "index": 57,
+              "role": "paragraph",
+              "name": "£34.56"
+            },
+            {
+              "index": 58,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 59,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 60,
+              "role": "link",
+              "name": "Starlark"
+            },
+            {
+              "index": 61,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 62,
+              "role": "heading",
+              "name": "Starlark"
+            },
+            {
+              "index": 63,
+              "role": "link",
+              "name": "Starlark"
+            },
+            {
+              "index": 64,
+              "role": "paragraph",
+              "name": "£25.83"
+            },
+            {
+              "index": 65,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 66,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 67,
+              "role": "link",
+              "name": "Lost Among the Living"
+            },
+            {
+              "index": 68,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 69,
+              "role": "heading",
+              "name": "Lost Among the Living"
+            },
+            {
+              "index": 70,
+              "role": "link",
+              "name": "Lost Among the Living"
+            },
+            {
+              "index": 71,
+              "role": "paragraph",
+              "name": "£27.70"
+            },
+            {
+              "index": 72,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 73,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 74,
+              "role": "link",
+              "name": "A Spy's Devotion (The Regency Spies of London #1)"
+            },
+            {
+              "index": 75,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 76,
+              "role": "heading",
+              "name": "A Spy's Devotion (The ..."
+            },
+            {
+              "index": 77,
+              "role": "link",
+              "name": "A Spy's Devotion (The ..."
+            },
+            {
+              "index": 78,
+              "role": "paragraph",
+              "name": "£16.97"
+            },
+            {
+              "index": 79,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 80,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 81,
+              "role": "link",
+              "name": "previous"
+            }
+          ],
+          "total": 81,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+        "title": "Historical Fiction | Books to Scrape - Sandbox",
+        "page_kind": "page-<id>",
+        "page_kind_source": "inferred",
+        "text": "Music\nDefault\nScience Fiction\nSports and Games\nAdd a comment\nFantasy\nNew Adult\nYoung Adult\nScience\nPoetry\nParanormal\nArt\nPsychology\nAutobiography\nParenting\nAdult Fiction\nHumor\nHorror\nHistory\nFood and Drink\nChristian Fiction\nBusiness\nBiography\nThriller\nContemporary\nSpirituality\nAcademic\nSelf Help\nHistorical\nChristian\nSuspense\nShort Stories\nNovels\nHealth\nPolitics\nCultural\nErotica\nCrime\nBetween Shades of Gray\n£20.79\nIn stock\nAdd to basket\nWhile You Were Mine\n£41.32\nIn stock\nAdd to basket\nThe Secret Healer\n£34.56\nIn stock\nAdd to basket\nStarlark\n£25.83\nIn stock\nAdd to basket\nLost Among the Living\n£27.70\nIn stock\nAdd to basket\nA Spy's Devotion (The ...\n£16.97\nIn stock\nAdd to basket\nprevious\nPage 2 of 2",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [],
+        "can_scroll_down": false,
+        "can_scroll_up": true,
+        "coverage": "viewport+above",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": true,
+          "can_scroll_down": false,
+          "coverage": "viewport+above",
+          "unsupported_states": []
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 6,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.01,
+                "DONE": 0.0,
+                "CLICK": 0.99,
+                "WAIT": 0.0,
+                "SCROLL_DOWN": 0.0
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.01,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.99,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "32": 0.0,
+                "35": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "42": 0.0,
+                "45": 0.0,
+                "46": 0.0,
+                "49": 0.0,
+                "52": 0.0,
+                "53": 0.0,
+                "56": 0.0,
+                "59": 0.0
+              }
+            },
+            "target": {
+              "role": "link",
+              "label": "Historical Fiction"
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 1164
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 701
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 2,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.01,
+                "WAIT": 0.0,
+                "DONE": 0.02,
+                "SCROLL_DOWN": 0.95,
+                "BLOCKED": 0.02
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 2497
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 911,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 3,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.07,
+                "SCROLL_DOWN": 0.61,
+                "SCROLL_UP": 0.02,
+                "WAIT": 0.01,
+                "DONE": 0.17,
+                "BLOCKED": 0.12
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 3016
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 40,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 4,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "SCROLL_DOWN": 0.52,
+                "SCROLL_UP": 0.01,
+                "BLOCKED": 0.07,
+                "CLICK": 0.02,
+                "DONE": 0.38,
+                "WAIT": 0.0
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 4029
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 576,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 5,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 57,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.0,
+                "BLOCKED": 0.02,
+                "DONE": 0.08,
+                "SCROLL_DOWN": 0.06,
+                "SCROLL_UP": 0.0,
+                "CLICK": 0.84
+              },
+              "target": {
+                "1": 0.15,
+                "4": 0.03,
+                "7": 0.0,
+                "8": 0.0,
+                "11": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "18": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "25": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "32": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "39": 0.0,
+                "42": 0.0,
+                "43": 0.0,
+                "46": 0.0,
+                "49": 0.0,
+                "50": 0.0,
+                "53": 0.0,
+                "56": 0.0,
+                "57": 0.8200000000000001
+              }
+            },
+            "target": {
+              "role": "link",
+              "label": "next"
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 4855
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 450
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 6,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.01,
+                "CLICK": 0.04,
+                "BLOCKED": 0.05,
+                "SCROLL_DOWN": 0.71,
+                "DONE": 0.19
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 6331
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 1042,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 7,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 81,
+            "probabilities": {
+              "op": {
+                "DONE": 0.32,
+                "WAIT": 0.01,
+                "BLOCKED": 0.15,
+                "CLICK": 0.33999999999999997,
+                "SCROLL_UP": 0.18
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.06999999999999999,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.03,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.22,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.060000000000000005,
+                "42": 0.01,
+                "45": 0.0,
+                "46": 0.0,
+                "49": 0.0,
+                "52": 0.0,
+                "53": 0.0,
+                "56": 0.0,
+                "59": 0.0,
+                "60": 0.0,
+                "63": 0.0,
+                "66": 0.0,
+                "67": 0.0,
+                "70": 0.0,
+                "73": 0.0,
+                "74": 0.01,
+                "77": 0.0,
+                "80": 0.0,
+                "81": 0.6
+              }
+            },
+            "target": {
+              "role": "link",
+              "label": "previous"
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 7038
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 300
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 8,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "DONE": 0.03,
+                "WAIT": 0.0,
+                "SCROLL_DOWN": 0.91,
+                "CLICK": 0.02,
+                "BLOCKED": 0.04
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 8629
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 1135,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 9,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "SCROLL_DOWN": 0.51,
+                "DONE": 0.16,
+                "WAIT": 0.01,
+                "CLICK": 0.15,
+                "SCROLL_UP": 0.01,
+                "BLOCKED": 0.16
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 9146
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 75,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 10,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.02,
+                "WAIT": 0.0,
+                "DONE": 0.41,
+                "SCROLL_UP": 0.01,
+                "SCROLL_DOWN": 0.47000000000000003,
+                "BLOCKED": 0.09
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-1.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 10161
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 599,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 11,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 57,
+            "probabilities": {
+              "op": {
+                "SCROLL_UP": 0.0,
+                "SCROLL_DOWN": 0.08,
+                "WAIT": 0.0,
+                "DONE": 0.1,
+                "BLOCKED": 0.02,
+                "CLICK": 0.8
+              },
+              "target": {
+                "1": 0.11,
+                "4": 0.02,
+                "7": 0.0,
+                "8": 0.0,
+                "11": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "18": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "25": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "32": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "39": 0.0,
+                "42": 0.0,
+                "43": 0.0,
+                "46": 0.0,
+                "49": 0.0,
+                "50": 0.0,
+                "53": 0.0,
+                "56": 0.0,
+                "57": 0.87
+              }
+            },
+            "target": {
+              "role": "link",
+              "label": "next"
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 10565
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 13
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 12,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.08,
+                "SCROLL_DOWN": 0.55,
+                "DONE": 0.29,
+                "WAIT": 0.01,
+                "CLICK": 0.07
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+              "title": "Historical Fiction | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 11483
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 516,
+          "settle_ms": 50
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "executed",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 6,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.01,
+              "DONE": 0.0,
+              "CLICK": 0.99,
+              "WAIT": 0.0,
+              "SCROLL_DOWN": 0.0
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.01,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.99,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "32": 0.0,
+              "35": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "42": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "49": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "56": 0.0,
+              "59": 0.0
+            }
+          },
+          "confidence": 0.97,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4929,
+            "output_tokens": 398,
+            "cost": 0.000207018,
+            "retries": 0
+          },
+          "elapsed_ms": 367
+        },
+        {
+          "outcome": "executed",
+          "n": 2,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.01,
+              "WAIT": 0.0,
+              "DONE": 0.02,
+              "SCROLL_DOWN": 0.95,
+              "BLOCKED": 0.02
+            },
+            "target": {}
+          },
+          "confidence": 0.94,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5121,
+            "output_tokens": 409,
+            "cost": 0.000215082,
+            "retries": 0
+          },
+          "elapsed_ms": 327
+        },
+        {
+          "outcome": "executed",
+          "n": 3,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.07,
+              "SCROLL_DOWN": 0.61,
+              "SCROLL_UP": 0.02,
+              "WAIT": 0.01,
+              "DONE": 0.17,
+              "BLOCKED": 0.12
+            },
+            "target": {}
+          },
+          "confidence": 0.52,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 7104,
+            "output_tokens": 586,
+            "cost": 0.000298368,
+            "retries": 0
+          },
+          "elapsed_ms": 384
+        },
+        {
+          "outcome": "executed",
+          "n": 4,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.52,
+              "SCROLL_UP": 0.01,
+              "BLOCKED": 0.07,
+              "CLICK": 0.02,
+              "DONE": 0.38,
+              "WAIT": 0.0
+            },
+            "target": {}
+          },
+          "confidence": 0.43,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4244,
+            "output_tokens": 330,
+            "cost": 0.000178248,
+            "retries": 0
+          },
+          "elapsed_ms": 343
+        },
+        {
+          "outcome": "executed",
+          "n": 5,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 57,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.0,
+              "BLOCKED": 0.02,
+              "DONE": 0.08,
+              "SCROLL_DOWN": 0.06,
+              "SCROLL_UP": 0.0,
+              "CLICK": 0.84
+            },
+            "target": {
+              "1": 0.15,
+              "4": 0.03,
+              "7": 0.0,
+              "8": 0.0,
+              "11": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "18": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "25": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "32": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "39": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "46": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "53": 0.0,
+              "56": 0.0,
+              "57": 0.8200000000000001
+            }
+          },
+          "confidence": 0.81,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3677,
+            "output_tokens": 272,
+            "cost": 0.000154434,
+            "retries": 0
+          },
+          "elapsed_ms": 341
+        },
+        {
+          "outcome": "executed",
+          "n": 6,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.01,
+              "CLICK": 0.04,
+              "BLOCKED": 0.05,
+              "SCROLL_DOWN": 0.71,
+              "DONE": 0.19
+            },
+            "target": {}
+          },
+          "confidence": 0.63,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5181,
+            "output_tokens": 408,
+            "cost": 0.000217602,
+            "retries": 0
+          },
+          "elapsed_ms": 355
+        },
+        {
+          "outcome": "executed",
+          "n": 7,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 81,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.32,
+              "WAIT": 0.01,
+              "BLOCKED": 0.15,
+              "CLICK": 0.33999999999999997,
+              "SCROLL_UP": 0.18
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.06999999999999999,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.03,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.22,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.060000000000000005,
+              "42": 0.01,
+              "45": 0.0,
+              "46": 0.0,
+              "49": 0.0,
+              "52": 0.0,
+              "53": 0.0,
+              "56": 0.0,
+              "59": 0.0,
+              "60": 0.0,
+              "63": 0.0,
+              "66": 0.0,
+              "67": 0.0,
+              "70": 0.0,
+              "73": 0.0,
+              "74": 0.01,
+              "77": 0.0,
+              "80": 0.0,
+              "81": 0.6
+            }
+          },
+          "confidence": 0.19,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6468,
+            "output_tokens": 519,
+            "cost": 0.000271656,
+            "retries": 0
+          },
+          "elapsed_ms": 357
+        },
+        {
+          "outcome": "executed",
+          "n": 8,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.03,
+              "WAIT": 0.0,
+              "SCROLL_DOWN": 0.91,
+              "CLICK": 0.02,
+              "BLOCKED": 0.04
+            },
+            "target": {}
+          },
+          "confidence": 0.89,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5311,
+            "output_tokens": 408,
+            "cost": 0.000223062,
+            "retries": 0
+          },
+          "elapsed_ms": 362
+        },
+        {
+          "outcome": "executed",
+          "n": 9,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_DOWN": 0.51,
+              "DONE": 0.16,
+              "WAIT": 0.01,
+              "CLICK": 0.15,
+              "SCROLL_UP": 0.01,
+              "BLOCKED": 0.16
+            },
+            "target": {}
+          },
+          "confidence": 0.41,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 7294,
+            "output_tokens": 586,
+            "cost": 0.000306348,
+            "retries": 0
+          },
+          "elapsed_ms": 347
+        },
+        {
+          "outcome": "executed",
+          "n": 10,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.02,
+              "WAIT": 0.0,
+              "DONE": 0.41,
+              "SCROLL_UP": 0.01,
+              "SCROLL_DOWN": 0.47000000000000003,
+              "BLOCKED": 0.09
+            },
+            "target": {}
+          },
+          "confidence": 0.36,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4434,
+            "output_tokens": 330,
+            "cost": 0.000186228,
+            "retries": 0
+          },
+          "elapsed_ms": 324
+        },
+        {
+          "outcome": "executed",
+          "n": 11,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 57,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "SCROLL_UP": 0.0,
+              "SCROLL_DOWN": 0.08,
+              "WAIT": 0.0,
+              "DONE": 0.1,
+              "BLOCKED": 0.02,
+              "CLICK": 0.8
+            },
+            "target": {
+              "1": 0.11,
+              "4": 0.02,
+              "7": 0.0,
+              "8": 0.0,
+              "11": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "18": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "25": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "32": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "39": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "46": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "53": 0.0,
+              "56": 0.0,
+              "57": 0.87
+            }
+          },
+          "confidence": 0.75,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3867,
+            "output_tokens": 272,
+            "cost": 0.000162414,
+            "retries": 0
+          },
+          "elapsed_ms": 357
+        },
+        {
+          "outcome": "executed",
+          "n": 12,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.08,
+              "SCROLL_DOWN": 0.55,
+              "DONE": 0.29,
+              "WAIT": 0.01,
+              "CLICK": 0.07
+            },
+            "target": {}
+          },
+          "confidence": 0.44,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5340,
+            "output_tokens": 408,
+            "cost": 0.00022428,
+            "retries": 0
+          },
+          "elapsed_ms": 325
+        },
+        {
+          "outcome": "terminal",
+          "n": 13,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.15,
+              "SCROLL_UP": 0.25,
+              "CLICK": 0.28,
+              "DONE": 0.32,
+              "WAIT": 0.0
+            },
+            "target": {}
+          },
+          "confidence": 0.13,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6595,
+            "output_tokens": 519,
+            "cost": 0.00027699,
+            "retries": 0
+          },
+          "elapsed_ms": 352
+        }
+      ],
+      "text_calls": [],
+      "metrics": {
+        "actions": 12,
+        "predictions": 13,
+        "text_calls": 0,
+        "observation_calls": 14,
+        "observation_retries": 0,
+        "stale_decisions": 0,
+        "bootstrap_ms": 0,
+        "observation_ms": 2340,
+        "prediction_ms": 4541,
+        "text_helper_ms": 0,
+        "input_ms": 4908,
+        "settle_ms": 1864,
+        "elapsed_ms": 11863
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+      "title": "Historical Fiction | Books to Scrape - Sandbox",
+      "page_kind": {
+        "name": "page-<id>",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "link",
+          "name": "Music"
+        },
+        {
+          "index": 2,
+          "role": "link",
+          "name": "Default"
+        },
+        {
+          "index": 3,
+          "role": "link",
+          "name": "Science Fiction"
+        },
+        {
+          "index": 4,
+          "role": "link",
+          "name": "Sports and Games"
+        },
+        {
+          "index": 5,
+          "role": "link",
+          "name": "Add a comment"
+        },
+        {
+          "index": 6,
+          "role": "link",
+          "name": "Fantasy"
+        },
+        {
+          "index": 7,
+          "role": "link",
+          "name": "New Adult"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "Young Adult"
+        },
+        {
+          "index": 9,
+          "role": "link",
+          "name": "Science"
+        },
+        {
+          "index": 10,
+          "role": "link",
+          "name": "Poetry"
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "Paranormal"
+        },
+        {
+          "index": 12,
+          "role": "link",
+          "name": "Art"
+        },
+        {
+          "index": 13,
+          "role": "link",
+          "name": "Psychology"
+        },
+        {
+          "index": 14,
+          "role": "link",
+          "name": "Autobiography"
+        },
+        {
+          "index": 15,
+          "role": "link",
+          "name": "Parenting"
+        },
+        {
+          "index": 16,
+          "role": "link",
+          "name": "Adult Fiction"
+        },
+        {
+          "index": 17,
+          "role": "link",
+          "name": "Humor"
+        },
+        {
+          "index": 18,
+          "role": "link",
+          "name": "Horror"
+        },
+        {
+          "index": 19,
+          "role": "link",
+          "name": "History"
+        },
+        {
+          "index": 20,
+          "role": "link",
+          "name": "Food and Drink"
+        },
+        {
+          "index": 21,
+          "role": "link",
+          "name": "Christian Fiction"
+        },
+        {
+          "index": 22,
+          "role": "link",
+          "name": "Business"
+        },
+        {
+          "index": 23,
+          "role": "link",
+          "name": "Biography"
+        },
+        {
+          "index": 24,
+          "role": "link",
+          "name": "Thriller"
+        },
+        {
+          "index": 25,
+          "role": "link",
+          "name": "Contemporary"
+        },
+        {
+          "index": 26,
+          "role": "link",
+          "name": "Spirituality"
+        },
+        {
+          "index": 27,
+          "role": "link",
+          "name": "Academic"
+        },
+        {
+          "index": 28,
+          "role": "link",
+          "name": "Self Help"
+        },
+        {
+          "index": 29,
+          "role": "link",
+          "name": "Historical"
+        },
+        {
+          "index": 30,
+          "role": "link",
+          "name": "Christian"
+        },
+        {
+          "index": 31,
+          "role": "link",
+          "name": "Suspense"
+        },
+        {
+          "index": 32,
+          "role": "link",
+          "name": "Short Stories"
+        },
+        {
+          "index": 33,
+          "role": "link",
+          "name": "Novels"
+        },
+        {
+          "index": 34,
+          "role": "link",
+          "name": "Health"
+        },
+        {
+          "index": 35,
+          "role": "link",
+          "name": "Politics"
+        },
+        {
+          "index": 36,
+          "role": "link",
+          "name": "Cultural"
+        },
+        {
+          "index": 37,
+          "role": "link",
+          "name": "Erotica"
+        },
+        {
+          "index": 38,
+          "role": "link",
+          "name": "Crime"
+        },
+        {
+          "index": 39,
+          "role": "link",
+          "name": "Between Shades of Gray"
+        },
+        {
+          "index": 40,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 41,
+          "role": "heading",
+          "name": "Between Shades of Gray"
+        },
+        {
+          "index": 42,
+          "role": "link",
+          "name": "Between Shades of Gray"
+        },
+        {
+          "index": 43,
+          "role": "paragraph",
+          "name": "£20.79"
+        },
+        {
+          "index": 44,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 45,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 46,
+          "role": "link",
+          "name": "While You Were Mine"
+        },
+        {
+          "index": 47,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 48,
+          "role": "heading",
+          "name": "While You Were Mine"
+        },
+        {
+          "index": 49,
+          "role": "link",
+          "name": "While You Were Mine"
+        },
+        {
+          "index": 50,
+          "role": "paragraph",
+          "name": "£41.32"
+        },
+        {
+          "index": 51,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 52,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 53,
+          "role": "link",
+          "name": "The Secret Healer"
+        },
+        {
+          "index": 54,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 55,
+          "role": "heading",
+          "name": "The Secret Healer"
+        },
+        {
+          "index": 56,
+          "role": "link",
+          "name": "The Secret Healer"
+        },
+        {
+          "index": 57,
+          "role": "paragraph",
+          "name": "£34.56"
+        },
+        {
+          "index": 58,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 59,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 60,
+          "role": "link",
+          "name": "Starlark"
+        },
+        {
+          "index": 61,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 62,
+          "role": "heading",
+          "name": "Starlark"
+        },
+        {
+          "index": 63,
+          "role": "link",
+          "name": "Starlark"
+        },
+        {
+          "index": 64,
+          "role": "paragraph",
+          "name": "£25.83"
+        },
+        {
+          "index": 65,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 66,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 67,
+          "role": "link",
+          "name": "Lost Among the Living"
+        },
+        {
+          "index": 68,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 69,
+          "role": "heading",
+          "name": "Lost Among the Living"
+        },
+        {
+          "index": 70,
+          "role": "link",
+          "name": "Lost Among the Living"
+        },
+        {
+          "index": 71,
+          "role": "paragraph",
+          "name": "£27.70"
+        },
+        {
+          "index": 72,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 73,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 74,
+          "role": "link",
+          "name": "A Spy's Devotion (The Regency Spies of London #1)"
+        },
+        {
+          "index": 75,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 76,
+          "role": "heading",
+          "name": "A Spy's Devotion (The ..."
+        },
+        {
+          "index": 77,
+          "role": "link",
+          "name": "A Spy's Devotion (The ..."
+        },
+        {
+          "index": 78,
+          "role": "paragraph",
+          "name": "£16.97"
+        },
+        {
+          "index": 79,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 80,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 81,
+          "role": "link",
+          "name": "previous"
+        }
+      ],
+      "total": 81,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T13:57:13.459075Z-done.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}
