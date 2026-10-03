@@ -1982,8 +1982,8 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
     ?(text_helper = fun () -> Text_helper.unavailable)
-    ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?reached ?label t ~model
-    tab (args : P.drive_args) =
+    ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?label t ~model tab
+    (args : P.drive_args) =
   (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
          drive's own deadline: the caller's remaining budget is what the model call is
          bounded by, so a slow provider cannot outlast the reply the client is waiting
@@ -2210,7 +2210,7 @@ let drive_locked ?recent ?on_step ?(observed = fun (_ : Drive.observation) -> ()
   (* fly-4mio: acquire already retries ten times at 20 ms. One Drive attempt,
      or the two loops would nest to a hundred observations. *)
   Drive.run ~validate ~coverage ~usage:(usage meter) ~telemetry:(telemetry meter)
-    ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script ?reached ?label
+    ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script ?label
     ~handler:Drive.{ observe; decide; text_value; act }
     ~now:(fun () -> now t)
     ~model ~args
@@ -2535,13 +2535,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                         request.Run.script_offers ~url:page.Drive.snapshot.url
                           ~text:page.text)
                       ~run_script:(fun ~url name -> request.Run.on_script ~url name)
-                      ?reached:
-                        (Option.map
-                           (fun until ~(start : Drive.observation)
-                                (page : Drive.observation) ->
-                             until ~start_url:start.snapshot.url page.snapshot
-                               ~text:page.text)
-                           request.Run.reached)
                       t ~model tab
                       P.
                         {

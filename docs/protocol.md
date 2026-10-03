@@ -372,8 +372,7 @@ they are not listed there. `status.learning` and the proposal or playbook files 
 them once that work finishes. An omitted `installed` decodes as []. Use
 `status.learning.drafts` for pending learned procedures, not `proposals.length`.
 
-`Provenance` is the optional `provenance` object on a learned procedure in
-playbook or draft JSON, not a field of `RunProcedure`. It records source trace
+`Provenance` is a sidecar `<slug>.provenance.json` beside `playbook.json` and beside a proposal, never a field inside `playbook.json` and never read by the runner. Learning and `playbook show` read it. A `provenance` field inside `playbook.json` is refused. It is not a field of `RunProcedure`. It records source trace
 paths, the compiler model, a UTC timestamp, the failed replay count and
 optional last failure, the operation page-kind path, raw entry and exit kinds,
 the ordered action/role/label signature, raw-to-meaningful kind mappings, repeatability and its reason, the
@@ -555,7 +554,7 @@ Rules:
   (`$[3].price: expected number, got string`). A script that threw or rejected, or whose value the browser could not
   return, is `script-failed` with what it threw. A script's calls are serialized on the tab like `eval`, bounded by the
   CDP call's 30 s deadline.
-- L40 (`extr-uhnc`): `{"navigate": {"script": "<name>", "args": {...}}}` runs a prepared script returning exactly `{url: string}`, then navigates the real browser tab and observes the resulting page. Only HTTP(S) and `about:blank` are permitted. `repeat.until` accepts either an existing expectation string or `{"script":"<name>"}` returning exactly `{done: boolean}`. Control scripts use their declared shape validation and appear in script traces with zero collected records; their values never enter JSONL. Termination is checked before the page cap; a cap with more pages remaining fails explicitly. Repeat targets are internal helpers, not mission choices.
+- map-fmt01: a `navigate` step is refused. Navigation is a goal; the procedure `expect` verifies the landing page. (Retired 2026-10-03 by map-fmt01; the former L40 navigate step is gone.) `repeat.until` accepts either an existing expectation string or `{"script":"<name>"}` returning exactly `{done: boolean}`. Control scripts use their declared shape validation and appear in script traces with zero collected records; their values never enter JSONL. Termination is checked before the page cap; a cap with more pages remaining fails explicitly. Repeat targets are internal helpers, not mission choices.
 - A `{"script": "<name>", "args": {...}}` step in a procedure runs the playbook's script. `args` is an object of strings with
   `{name}` placeholders substituted from the run's arguments. A rejected script (`script-failed`, `script-invalid`,
   `too-large`) fails that attempt of the procedure — nothing is verified, the whole procedure is replayed once, and a second
@@ -760,7 +759,7 @@ Wire shapes stay in the sections above. Each field's meaning is the linked topic
 | `snapshot`, `rows`, `index`, `role`, `name`, `value`, `options`, `match`, `limit`, `offset`, `truncated`, `settled`, `source` | this file; acting on a row needs the handle in [handles](help/handles.md) | [errors](help/errors.md) |
 | `mission`, `start_url`, `max_steps`, `max_procedures`, `deadline_s`, `dry_run`, `expect`, `out`, `status`, `playbook_choices`, `procedures`, `mission_expectations`, `operator_state`, `operator_steps`, `output_kinds`, `collected`, `model_cost`, `final`, `Step`, `Operation` | [drive](help/drive.md) | [errors](help/errors.md) |
 | `site`, `entry`, `pages`, `shapes`, `procedures`, `slug`, `repeat`, `until`, `goal`, `use` | [playbooks](help/playbooks.md) | [errors](help/errors.md) |
-| `script`, `file`, `source`, `returns`, `pages` (script), `args`, `max_bytes`, `records` | [scripts](help/scripts.md) | [errors](help/errors.md) |
+| `script`, `file`, `source`, `returns`, `pages` (script), `args`, `records` | [scripts](help/scripts.md) | [errors](help/errors.md) |
 | `checker`, `sentence`, `passed`, `score`, page-kind sentences | [expectations](help/expectations.md) | [errors](help/errors.md) |
 | how to write a book | [authoring](help/authoring.md) |
 

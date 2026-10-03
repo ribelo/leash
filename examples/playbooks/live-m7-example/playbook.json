@@ -5,7 +5,6 @@
   "pages": [
     {
       "name": "example",
-      "description": "Example Domain landing page",
       "url_pattern": "https://example.com/",
       "text_marker": "Example Domain"
     }

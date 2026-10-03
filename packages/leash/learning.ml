@@ -262,11 +262,18 @@ let proposal_files t =
   | Error _ -> []
   | Ok files ->
       Array.to_list files
-      |> List.filter (fun name -> Filename.check_suffix name ".json")
+      |> List.filter (fun name ->
+          Filename.check_suffix name ".json"
+          && not (Filename.check_suffix name ".provenance.json"))
       |> List.sort String.compare
       |> List.map (Filename.concat (root t))
 
-type draft = { file : string; book : B.loaded; proc : B.procedure }
+type draft = {
+  file : string;
+  book : B.loaded;
+  proc : B.procedure;
+  provenance : B.provenance;
+}
 
 let proposals t =
   List.concat_map
@@ -300,9 +307,16 @@ let proposals t =
           | Ok book ->
               List.filter_map
                 (fun (proc : B.procedure) ->
-                  match proc.provenance with
-                  | Some _ -> Some { file; book; proc }
-                  | None -> None)
+                  match
+                    B.read_provenance ~caps:t.caps
+                      (Filename.concat (Filename.dirname file)
+                         (B.provenance_filename proc.slug))
+                  with
+                  | Ok (Some provenance) -> Some { file; book; proc; provenance }
+                  | Ok None -> None
+                  | Error why ->
+                      t.warn why;
+                      None)
                 book.playbook.procedures))
     (proposal_files t)
 
@@ -311,28 +325,29 @@ let drafts t ~site ~kind =
   else
     proposals t
     |> List.filter_map (fun d ->
-        match d.proc.provenance with
-        | Some p
-          when d.book.playbook.site = site && p.repeatable && p.tries < t.config.max_tries
-               &&
-               match (p.path, kind) with
-               | first :: _, Some kind ->
-                   let named =
-                     Option.value ~default:kind (List.assoc_opt kind p.kind_mapping)
-                   in
-                   first = named
-                   || p.kind_mapping = []
-                      && Page_kind.playbook_name first = Page_kind.playbook_name kind
-               | _ -> false ->
-            Some
-              B.
-                {
-                  procedure = d.proc;
-                  pages = d.book.playbook.pages;
-                  scripts = d.book.scripts;
-                  revision = B.draft_revision d.book.playbook;
-                }
-        | _ -> None)
+        let p = d.provenance in
+        if
+          d.book.playbook.site = site && p.repeatable && p.tries < t.config.max_tries
+          &&
+          match (p.path, kind) with
+          | first :: _, Some kind ->
+              let named =
+                Option.value ~default:kind (List.assoc_opt kind p.kind_mapping)
+              in
+              first = named
+              || p.kind_mapping = []
+                 && Page_kind.playbook_name first = Page_kind.playbook_name kind
+          | _ -> false
+        then
+          Some
+            B.
+              {
+                procedure = d.proc;
+                pages = d.book.playbook.pages;
+                scripts = d.book.scripts;
+                revision = B.draft_revision d.book.playbook;
+              }
+        else None)
 
 let books t installed =
   if t.config.mode <> Config.Learning_mode.Auto then installed
@@ -345,8 +360,8 @@ let books t installed =
             books
         then books
         else
-          match draft.proc.provenance with
-          | Some p when p.repeatable && p.tries < t.config.max_tries ->
+          match draft.provenance with
+          | p when p.repeatable && p.tries < t.config.max_tries ->
               books
               @ [
                   {
@@ -381,19 +396,24 @@ let status t =
         `List
           (List.map
              (fun site ->
-               let procedures =
-                 List.concat_map
-                   (fun (b : B.loaded) ->
-                     if b.playbook.site = site then b.playbook.procedures else [])
-                   installed
-               in
                let count gate =
                  List.fold_left
-                   (fun n (p : B.procedure) ->
-                     match p.provenance with
-                     | Some v when contains v.gate gate -> n + 1
-                     | _ -> n)
-                   0 procedures
+                   (fun n (b : B.loaded) ->
+                     if b.playbook.site <> site then n
+                     else
+                       List.fold_left
+                         (fun n (p : B.procedure) ->
+                           match b.dir with
+                           | None -> n
+                           | Some dir -> (
+                               match
+                                 B.read_provenance ~caps:t.caps
+                                   (Filename.concat dir (B.provenance_filename p.slug))
+                               with
+                               | Ok (Some v) when contains v.gate gate -> n + 1
+                               | _ -> n))
+                         n b.playbook.procedures)
+                   0 installed
                in
                let fields = state t in
                let calls =
@@ -446,7 +466,6 @@ let inferred_pages traces =
          B.
            {
              name = p.name;
-             description = "Inferred " ^ p.name;
              url_pattern = Some (Page_kind.playbook_pattern p.url_pattern);
              text_marker = None;
              repeatable = true;
@@ -529,9 +548,8 @@ let placeholders text =
   in
   loop 0 []
 
-let validate_generalization book traces (proc : B.procedure) =
-  let* () = B.check_procedure book proc in
-  let* () = B.check_goal_count ~minimum:2 book proc in
+let validate_generalization (book : B.t) traces (proc : B.procedure) =
+  let* () = B.check_draft proc in
   let goals =
     List.filter_map (function B.Goal goal -> Some goal | _ -> None) proc.steps
   in
@@ -578,10 +596,7 @@ let validate_generalization book traces (proc : B.procedure) =
   in
   let text =
     proc.expect
-    @ List.concat_map
-        (fun (g : B.goal_step) ->
-          (g.goal :: Option.to_list g.hint) @ Option.value ~default:[] g.until)
-        goals
+    @ List.concat_map (fun (g : B.goal_step) -> g.goal :: Option.to_list g.hint) goals
   in
   let* () =
     if
@@ -595,34 +610,6 @@ let validate_generalization book traces (proc : B.procedure) =
     if List.exists (fun (g : B.goal_step) -> contains g.goal "index ") goals then
       Error "goals must name accessible roles and labels, never indices"
     else Ok ()
-  in
-  let untils =
-    List.concat_map (fun (g : B.goal_step) -> Option.value ~default:[] g.until) goals
-  in
-  let navigations =
-    match traces with
-    | [] -> []
-    | trace :: _ ->
-        let previous = ref trace.Trace.start_url in
-        List.filter_map
-          (fun (s : Trace.trace_step) ->
-            let changed =
-              List.mem s.operation [ "navigate"; "nav" ]
-              || Option.fold ~none:false ~some:(fun url -> url <> s.after.url) !previous
-            in
-            previous := Some s.after.url;
-            if changed then
-              Some (B.page_kind book.B.pages ~url:s.after.url ~text:s.after.title)
-            else None)
-          (steps trace)
-  in
-  let* () =
-    if
-      List.for_all
-        (function Some kind -> List.mem ("the page is " ^ kind) untils | None -> false)
-        navigations
-    then Ok ()
-    else Error "every navigation needs an explicit the page is <kind> until expectation"
   in
   (* map-bjon: a page-kind check can pass while the page still says it is loading.
      The mission result needs its own expectation. *)
@@ -694,17 +681,17 @@ let snapshot_agrees (book : B.t) (snapshot : P.snapshot) (proc : B.procedure) =
     in
     List.length matches = 1
   in
+  let kind_ok =
+    List.for_all
+      (fun sentence ->
+        match B.resolve book.pages sentence with
+        | Ok (B.Page_kind expected) -> kind = Some expected
+        | Ok (B.Not_page_kind expected) -> kind <> Some expected
+        | _ -> true)
+      proc.expect
+  in
   List.for_all
     (fun (g : B.goal_step) ->
-      let kind_ok =
-        List.for_all
-          (fun sentence ->
-            match B.resolve book.pages sentence with
-            | Ok (B.Page_kind expected) -> kind = Some expected
-            | Ok (B.Not_page_kind expected) -> kind <> Some expected
-            | _ -> false)
-          (Option.value ~default:[] g.until)
-      in
       kind_ok
       && (target_agrees g.goal
          || Option.fold ~none:false
@@ -719,7 +706,7 @@ let snapshot_agrees (book : B.t) (snapshot : P.snapshot) (proc : B.procedure) =
               kind))
     goals
 
-let persist ?revision t (book : B.t) (proc : B.procedure) =
+let persist ?revision ?provenance t (book : B.t) (proc : B.procedure) =
   let names =
     List.filter_map (function B.Script s -> Some s.script | _ -> None) proc.steps
   in
@@ -727,7 +714,8 @@ let persist ?revision t (book : B.t) (proc : B.procedure) =
     Option.map (List.filter (fun (name, _) -> List.mem name names)) book.B.scripts
   in
   let scripts = match scripts with Some [] -> None | other -> other in
-  B.propose ?revision ~caps:t.caps ~book:{ book with scripts } ~site:book.B.site proc
+  B.propose ?revision ?provenance ~caps:t.caps ~book:{ book with scripts }
+    ~site:book.B.site proc
 
 let archive t draft =
   B.archive_proposal
@@ -736,21 +724,38 @@ let archive t draft =
 
 let install ?revision ?(replayed_scripts = []) t file slug (result : P.run_result) =
   match B.accept ?revision ~consume:true ~replayed_scripts ~caps:t.caps file with
-  | Error why ->
-      t.warn why;
-      result
+  | Error why -> Error why
   | Ok _ ->
       update t ("fail:" ^ Option.value ~default:"" result.P.site ^ ":" ^ slug) (`Int 0);
       update t
         ("repair-fail:" ^ Option.value ~default:"" result.site ^ ":" ^ slug)
         (`Int 0);
-      {
-        result with
-        P.installed = List.sort_uniq String.compare (slug :: result.installed);
-      }
+      Ok
+        {
+          result with
+          P.installed = List.sort_uniq String.compare (slug :: result.installed);
+        }
 
-let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~existing
-    ~repair ~snapshot (result : P.run_result) =
+let book_mapping t (book : B.loaded) =
+  let extra =
+    match book.dir with
+    | None -> []
+    | Some dir ->
+        List.concat_map
+          (fun (p : B.procedure) ->
+            match
+              B.read_provenance ~caps:t.caps
+                (Filename.concat dir (B.provenance_filename p.slug))
+            with
+            | Ok (Some prov) -> prov.kind_mapping
+            | _ -> [])
+          book.playbook.procedures
+  in
+  Learning_pages.mapping ~extra book.playbook
+
+let rec compile ?prior ?revision ?operation ?entry_url ?(errors = "")
+    ?(install_retry = true) t ~meter ~files ~traces ~existing ~repair ~snapshot
+    (result : P.run_result) =
   let planner request =
     Model_usage.with_meter (observe_usage meter) (fun () -> t.planner request)
   in
@@ -761,7 +766,11 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
       (fun operation ->
         let mapping =
           Option.fold ~none:[]
-            ~some:(fun (book : B.loaded) -> Learning_pages.mapping book.playbook)
+            ~some:(fun (book : B.loaded) ->
+              book_mapping t book
+              @ Option.fold ~none:[]
+                  ~some:(fun (p : B.provenance) -> p.kind_mapping)
+                  prior)
             existing
         in
         let declared =
@@ -779,7 +788,8 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
     match existing with
     | None -> []
     | Some (b : B.loaded) ->
-        Learning_pages.mapping b.playbook
+        book_mapping t b
+        @ Option.fold ~none:[] ~some:(fun (p : B.provenance) -> p.kind_mapping) prior
         @ List.map (fun (p : B.page) -> (p.name, p.name)) b.playbook.pages
         @ List.filter_map
             (fun (page : B.page) ->
@@ -845,8 +855,8 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
   in
   let repeatable, reason = classify_named seed known in
   let repeatable, reason =
-    match repair with
-    | Some { B.provenance = Some p; _ } ->
+    match prior with
+    | Some p when repair <> None ->
         (p.repeatable && repeatable, if repeatable then p.reason else reason)
     | _ -> (repeatable, reason)
   in
@@ -866,41 +876,63 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
             | [] -> false)
           traces
   in
+  let script_first =
+    List.exists
+      (fun (trace : Trace.t) ->
+        trace.out_requested
+        || trace.structural_outline <> None
+           && Structural_outline.collection trace.mission)
+      traces
+  in
+  let outline =
+    List.find_map (fun (trace : Trace.t) -> trace.structural_outline) traces
+  in
   let request errors =
     `Assoc
-      [
-        ("prompt_version", `String Planner.learning_prompt_version);
-        ("task", `String (if repair = None then "compile" else "repair"));
-        ("traces", `List (List.map trace_input traces));
-        ("page_observations", Learning_pages.observations traces);
-        ("kind_mapping", `Assoc (List.map (fun (key, name) -> (key, `String name)) known));
-        ( "operation",
-          Option.fold ~none:`Null
-            ~some:(fun (op : O.t) ->
-              `Assoc
-                [
-                  ("entry_kind", `String op.entry_kind);
-                  ("exit_kind", `String op.exit_kind);
-                  ( "arguments",
-                    `List
-                      (List.map
-                         (fun (n, names) ->
-                           `Assoc
-                             [
-                               ("step", `Int n);
-                               ("names", `List (List.map (fun name -> `String name) names));
-                             ])
-                         op.arguments) );
-                ])
-            operation );
-        ("trace_files", `List (List.map (fun s -> `String s) files));
-        ("playbook", B.yojson_of_t seed);
-        ("repair", Option.fold ~none:`Null ~some:B.yojson_of_procedure repair);
-        ("snapshot", if repair = None then `Null else P.yojson_of_snapshot snapshot);
-        ("agreement", `Bool agreed);
-        ("repeatable", `Bool repeatable);
-        ("validation_errors", `String errors);
-      ]
+      ([
+         ("script_first", `Bool script_first);
+         ( "compile_order",
+           `List
+             (List.map
+                (fun name -> `String name)
+                (if script_first then [ "script"; "procedure" ] else [ "procedure" ])) );
+         ("structural_outline", match outline with None -> `Null | Some s -> `String s);
+         ("prompt_version", `String Planner.learning_prompt_version);
+         ("task", `String (if repair = None then "compile" else "repair"));
+       ]
+      @ [
+          ("traces", `List (List.map trace_input traces));
+          ("page_observations", Learning_pages.observations traces);
+          ( "kind_mapping",
+            `Assoc (List.map (fun (key, name) -> (key, `String name)) known) );
+          ( "operation",
+            Option.fold ~none:`Null
+              ~some:(fun (op : O.t) ->
+                `Assoc
+                  [
+                    ("entry_kind", `String op.entry_kind);
+                    ("exit_kind", `String op.exit_kind);
+                    ( "arguments",
+                      `List
+                        (List.map
+                           (fun (n, names) ->
+                             `Assoc
+                               [
+                                 ("step", `Int n);
+                                 ( "names",
+                                   `List (List.map (fun name -> `String name) names) );
+                               ])
+                           op.arguments) );
+                  ])
+              operation );
+          ("trace_files", `List (List.map (fun s -> `String s) files));
+          ("playbook", B.yojson_of_t seed);
+          ("repair", Option.fold ~none:`Null ~some:B.yojson_of_procedure repair);
+          ("snapshot", if repair = None then `Null else P.yojson_of_snapshot snapshot);
+          ("agreement", `Bool agreed);
+          ("repeatable", `Bool repeatable);
+          ("validation_errors", `String errors);
+        ])
   in
   let decode json =
     let procedure_json = match get "procedure" json with `Null -> json | p -> p in
@@ -1044,12 +1076,13 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
     else Ok (proc, book, mapping, repeatable, reason)
   in
   let answer =
-    let* json = planner (request "") in
+    let* json = planner (request errors) in
     match decode json with
     | Ok proc -> Ok proc
-    | Error why ->
+    | Error why when errors = "" ->
         let* json = planner (request why) in
         decode json
+    | Error why -> Error why
   in
   update t ("compile:" ^ first.site)
     (`String (Traces.timestamp (U.gettimeofday ~caps:t.caps ())));
@@ -1063,11 +1096,7 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
         else if repair <> None then "agreement-repair"
         else "agreement"
       in
-      let origin =
-        match prior with
-        | Some p -> Some p
-        | None -> Option.bind repair (fun (p : B.procedure) -> p.provenance)
-      in
+      let origin = prior in
       let provenance =
         B.
           {
@@ -1116,32 +1145,49 @@ let compile ?prior ?revision ?operation ?entry_url t ~meter ~files ~traces ~exis
             model_cost = priced meter;
           }
       in
-      let proc = B.with_learned_timeout { proc with B.provenance = Some provenance } in
       let book = { seed with B.procedures = [ proc ] } in
-      match persist ?revision t book proc with
+      match B.check_goal_count ~minimum:2 book proc with
+      | Error why when install_retry ->
+          compile ?prior ?revision ?operation ?entry_url ~errors:why ~install_retry:false
+            t ~meter ~files ~traces ~existing ~repair ~snapshot result
       | Error why ->
-          t.warn why;
+          t.warn ("learning install dropped: " ^ why);
           result
-      | Ok file ->
-          List.iter
-            (fun trace_file ->
-              match read t trace_file with
-              | Ok json -> (
-                  match Trace.t_of_yojson json with
-                  | Ok trace -> (
-                      match
-                        write t trace_file
-                          (Trace.yojson_of_t { trace with compiled = true })
-                      with
-                      | Ok () -> ()
+      | Ok () -> (
+          match persist ?revision ~provenance t book proc with
+          | Error why ->
+              t.warn why;
+              result
+          | Ok file ->
+              List.iter
+                (fun trace_file ->
+                  match read t trace_file with
+                  | Ok json -> (
+                      match Trace.t_of_yojson json with
+                      | Ok trace -> (
+                          match
+                            write t trace_file
+                              (Trace.yojson_of_t { trace with compiled = true })
+                          with
+                          | Ok () -> ()
+                          | Error why -> t.warn why)
                       | Error why -> t.warn why)
                   | Error why -> t.warn why)
-              | Error why -> t.warn why)
-            files;
-          let result = { result with P.proposals = file :: result.proposals } in
-          if t.config.mode = Config.Learning_mode.Auto && not repeatable then
-            install ~revision:(B.draft_revision book) t file proc.slug result
-          else result)
+                files;
+              let result = { result with P.proposals = file :: result.proposals } in
+              if t.config.mode = Config.Learning_mode.Auto && not repeatable then (
+                match
+                  install ~revision:(B.draft_revision book) t file proc.slug result
+                with
+                | Ok result -> result
+                | Error why when install_retry ->
+                    compile ?prior ~revision:(B.draft_revision book) ?operation ?entry_url
+                      ~errors:why ~install_retry:false t ~meter ~files ~traces ~existing
+                      ~repair ~snapshot result
+                | Error why ->
+                    t.warn ("learning install dropped: " ^ why);
+                    result)
+              else result))
 
 let after_trace_unmetered t ~meter ~store ~file trace result =
   if t.config.mode = Config.Learning_mode.Off || trace.Trace.site = "unknown" then result
@@ -1171,9 +1217,9 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
                     && (not p.planned)
                     && p.revision = Some (B.draft_revision draft.book.playbook))
                   result.P.procedures,
-                draft.proc.provenance )
+                draft.provenance )
             with
-            | Some attempted, Some provenance
+            | Some attempted, provenance
               when t.config.mode = Config.Learning_mode.Auto && provenance.repeatable ->
                 if
                   done_
@@ -1190,10 +1236,20 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
                        (fun (e : P.run_expectation) -> e.passed)
                        attempted.expectations
                 then
-                  install ?revision:attempted.revision
-                    ~replayed_scripts:
-                      (List.map (fun (s : P.run_script) -> s.script) attempted.scripts)
-                    t draft.file draft.proc.slug result
+                  match
+                    install ?revision:attempted.revision
+                      ~replayed_scripts:
+                        (List.map (fun (s : P.run_script) -> s.script) attempted.scripts)
+                      t draft.file draft.proc.slug result
+                  with
+                  | Ok result -> result
+                  | Error why ->
+                      compile ~prior:draft.provenance
+                        ~revision:(B.draft_revision draft.book.playbook)
+                        ~errors:why ~install_retry:false t ~meter
+                        ~files:(draft.provenance.traces @ [ file ])
+                        ~traces:[ trace ] ~existing:(Some draft.book)
+                        ~repair:(Some draft.proc) ~snapshot:result.final result
                 else if attempted.outcome = "failed" then (
                   let tries = provenance.tries + 1 in
                   if provenance.repair then (
@@ -1221,9 +1277,9 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
                             (Option.value ~default:"expectation failed" attempted.reason);
                       }
                     in
-                    let proc = { draft.proc with B.provenance = Some p } in
+                    let proc = draft.proc in
                     match
-                      persist
+                      persist ~provenance:p
                         ~revision:(B.draft_revision draft.book.playbook)
                         t
                         { draft.book.playbook with B.procedures = [ proc ] }
@@ -1318,7 +1374,20 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
             book.playbook.procedures
         with
         | Some proc ->
-            compile t ~meter ~files:[ file ] ~traces:[ trace ] ~existing
+            let prior =
+              match book.dir with
+              | None -> None
+              | Some dir -> (
+                  match
+                    B.read_provenance ~caps:t.caps
+                      (Filename.concat dir (B.provenance_filename proc.slug))
+                  with
+                  | Ok prov -> prov
+                  | Error why ->
+                      t.warn why;
+                      None)
+            in
+            compile ?prior t ~meter ~files:[ file ] ~traces:[ trace ] ~existing
               ~repair:(Some proc) ~snapshot:result.final result
         | None -> result)
     | _ when done_ ->
@@ -1341,9 +1410,10 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
           List.concat_map (fun (book : B.loaded) -> book.playbook.pages) vocabulary
         in
         let mapping =
-          List.concat_map
-            (fun (book : B.loaded) -> Learning_pages.mapping book.playbook)
-            vocabulary
+          List.concat_map (fun (book : B.loaded) -> book_mapping t book) vocabulary
+          @ List.concat_map
+              (fun draft -> draft.provenance.kind_mapping)
+              (List.filter (fun draft -> draft.book.playbook.site = trace.site) pending)
         in
         List.fold_left
           (fun (result : P.run_result) (operation : O.t) ->
@@ -1356,22 +1426,31 @@ let after_trace_unmetered t ~meter ~store ~file trace result =
                   List.find_opt (fun (b : B.loaded) -> b.playbook.site = trace.site) books
               | Error _ -> existing
             in
-            let covered (proc : B.procedure) =
-              Option.fold ~none:false
-                ~some:(fun (p : B.provenance) ->
-                  p.entry_kind = operation.entry_kind
-                  &&
-                  if p.repeatable && operation.repeatable then
-                    p.exit_kind = operation.exit_kind
-                    && O.compatible p.signature (O.signature operation)
-                  else p.signature = O.signature operation)
-                proc.provenance
+            let covers (p : B.provenance) =
+              p.entry_kind = operation.entry_kind
+              &&
+              if p.repeatable && operation.repeatable then
+                p.exit_kind = operation.exit_kind
+                && O.compatible p.signature (O.signature operation)
+              else p.signature = O.signature operation
             in
             let covered =
               Option.fold ~none:false
-                ~some:(fun (b : B.loaded) -> List.exists covered b.playbook.procedures)
+                ~some:(fun (b : B.loaded) ->
+                  List.exists
+                    (fun (proc : B.procedure) ->
+                      match b.dir with
+                      | None -> false
+                      | Some dir -> (
+                          match
+                            B.read_provenance ~caps:t.caps
+                              (Filename.concat dir (B.provenance_filename proc.slug))
+                          with
+                          | Ok (Some p) -> covers p
+                          | _ -> false))
+                    b.playbook.procedures)
                 installed
-              || List.exists (fun d -> covered d.proc) pending
+              || List.exists (fun d -> covers d.provenance) pending
             in
             let cohort =
               List.filter_map

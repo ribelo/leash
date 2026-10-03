@@ -134,8 +134,7 @@ let fresh_agent_guidance () =
       ( "authoring",
         [
           "exactly once";
-          "not an exactly-once guarantee";
-          "model that scores available actions";
+          "procedure expect";
           "sampled field values";
           "must contain at least one goal";
         ] );

@@ -139,7 +139,7 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
         match (capture, outcome) with
         | Some _, Ok result
           when P.Run_status.to_string result.P.status = "done"
-               && Structural_outline.collection args.mission -> (
+               && (Structural_outline.collection args.mission || args.out <> None) -> (
             match
               Tabs.structural_outline tabs ~tab:result.final.tab ~url:result.final.url
             with
@@ -160,11 +160,13 @@ let dispatch ?learning ?(planner_actions = 5) ?traces ?logger ?(model = "unconfi
             Eio.Cancel.protect (fun () ->
                 let now = Traces.now store in
                 let trace = Traces.finish capture ~now outcome in
+                let trace = { trace with out_requested = args.out <> None } in
                 let trace =
                   match outcome with
                   | Ok _
                     when trace.outcome = "done"
-                         && Structural_outline.collection args.mission ->
+                         && (Structural_outline.collection args.mission
+                            || args.out <> None) ->
                       { trace with structural_outline = !final_outline }
                   | _ -> trace
                 in

@@ -5,13 +5,11 @@
   "pages": [
     {
       "name": "home",
-      "description": "The shop front page with the category list",
       "url_pattern": "https://books.toscrape.com/",
       "text_marker": null
     },
     {
       "name": "category",
-      "description": "A category listing",
       "url_pattern": "https://books.toscrape.com/catalogue/category/*",
       "text_marker": null
     }
@@ -35,7 +33,9 @@
     "list-page": {
       "file": "scripts/list-page.js",
       "description": "Collect every book card on this category page as records.",
-      "pages": ["category"]
+      "pages": [
+        "category"
+      ]
     },
     "last-page": {
       "file": "scripts/last-page.js",
@@ -48,17 +48,27 @@
       "slug": "open-category",
       "description": "Open a category listing and collect its books.",
       "args": {
-        "category": { "from": "mission" }
+        "category": {
+          "from": "mission"
+        }
       },
       "steps": [
-        { "goal": "Open the {category} category." },
-        { "use": "collect-page" }
+        {
+          "goal": "Open the {category} category."
+        },
+        {
+          "use": "collect-page"
+        }
       ],
-      "expect": ["the page is category"],
+      "expect": [
+        "the page is category"
+      ],
       "repeat": {
         "next": "next-page",
         "max": 60,
-        "until": { "script": "last-page" },
+        "until": {
+          "script": "last-page"
+        },
         "delay_ms": 200,
         "key": "url"
       }
@@ -66,23 +76,41 @@
     {
       "slug": "collect-page",
       "description": "Collect the books listed on this category page.",
-      "steps": [{ "script": "list-page" }],
-      "expect": ["the page is category"]
+      "steps": [
+        {
+          "script": "list-page"
+        }
+      ],
+      "expect": [
+        "the page is category"
+      ]
     },
     {
       "slug": "next-page",
       "description": "Open the next page of this category and collect its books.",
       "steps": [
-        { "goal": "Open the next page of this category.", "until": ["the address changed", "the page is category"] },
-        { "use": "collect-page" }
+        {
+          "goal": "Open the next page of this category."
+        },
+        {
+          "use": "collect-page"
+        }
       ],
-      "expect": ["the page is category"]
+      "expect": [
+        "the page is category"
+      ]
     },
     {
       "slug": "read-page",
       "description": "Collect the books shown on the current category page.",
-      "steps": [{ "goal": "Collect the books on this category page." }],
-      "expect": ["the page is category"]
+      "steps": [
+        {
+          "goal": "Collect the books on this category page."
+        }
+      ],
+      "expect": [
+        "the page is category"
+      ]
     }
   ]
 }

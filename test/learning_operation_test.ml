@@ -218,14 +218,7 @@ let book pages procedures =
     }
 
 let declared name pattern =
-  B.
-    {
-      name;
-      description = name;
-      url_pattern = Some pattern;
-      text_marker = None;
-      repeatable = true;
-    }
+  B.{ name; url_pattern = Some pattern; text_marker = None; repeatable = true }
 
 (* map-op04 op07b: compiler replies were not retained. These faithful fixtures
    reconstruct the recorded flights-without-mapping and page-<id> cases. *)
@@ -257,7 +250,7 @@ let naming () =
     ((List.hd renamed.pages).name = "flights-explore")
 
 let goals () =
-  let goal = B.Goal { goal = "Inspect the page"; hint = None; until = None } in
+  let goal = B.Goal { goal = "Inspect the page"; hint = None } in
   let proc =
     B.
       {
@@ -266,11 +259,7 @@ let goals () =
         steps = [ goal ];
         expect = [ "the page is a" ];
         args = None;
-        provenance = None;
-        expect_timeout_s = None;
         repeat = None;
-        max_steps = None;
-        deadline_s = None;
       }
   in
   let seed = book [ declared "a" (page "a").url ] [ proc ] in
@@ -288,8 +277,8 @@ let goals () =
   check "map-op06 direct use exempts the child"
     (Result.is_ok
        (B.check_goal_count ~minimum:2 { seed with procedures = [ parent; proc ] } proc));
-  let parent = { parent with steps = [ B.Navigate { script = "child"; args = None } ] } in
-  check "map-op06 navigation is not a use exemption"
+  let parent = { parent with steps = [ B.Script { script = "child"; args = None } ] } in
+  check "map-fmt01 a script step is not a use exemption"
     (Result.is_error
        (B.check_goal_count ~minimum:2 { seed with procedures = [ parent; proc ] } proc));
   let provenance =
@@ -313,11 +302,9 @@ let goals () =
         model_cost = None;
       }
   in
-  check "map-op06 shared loader rejects learned one-goal top level"
-    (Result.is_error
-       (B.of_json ~file:"learned"
-          (B.yojson_of_t
-             { seed with procedures = [ { proc with provenance = Some provenance } ] })));
+  check "map-op06 install bar rejects a learned one-goal top level"
+    (Result.is_error (B.check_goal_count ~minimum:2 seed proc));
+  ignore provenance;
   List.iter
     (fun n ->
       let trace = fixture ("google3-flights-" ^ n) in

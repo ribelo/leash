@@ -184,7 +184,7 @@ let eval browser (args : P.eval_args) =
    the playbook loader makes, from a playbook directory. The text is called as the body of
    an async function of [args] on the page's global object, [returnByValue] and
    [awaitPromise], so a script may [await fetch(...)] the site's own endpoints with the
-   page's cookies and origin. The result is bounded by the script's [max_bytes] and
+   page's cookies and origin. The result is bounded by {!Playbook.script_max_bytes} and
    validated against its [returns] before anyone sees it. *)
 let script_failed message = error "script-failed" message
 
@@ -244,11 +244,11 @@ let script browser (script : Playbook.script) ~args =
     in
     let elapsed_ms = int_of_float ((browser.now () -. started) *. 1000.) in
     let bytes = String.length (Ox_json.to_string value) in
-    if bytes > script.Playbook.max_bytes then
+    if bytes > Playbook.script_max_bytes then
       Error
         (error "too-large"
            (Printf.sprintf "the script's result is %d bytes, over its bound of %d" bytes
-              script.Playbook.max_bytes))
+              Playbook.script_max_bytes))
     else
       match Shape.validate script.Playbook.returns value with
       | Error why -> Error (error "script-invalid" why)

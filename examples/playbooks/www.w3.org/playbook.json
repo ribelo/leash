@@ -5,7 +5,6 @@
   "pages": [
     {
       "name": "guidance",
-      "description": "W3C accessibility pages",
       "url_pattern": "https://www.w3.org/WAI/*",
       "text_marker": null
     }

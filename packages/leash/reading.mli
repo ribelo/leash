@@ -99,9 +99,9 @@ val script :
     {!Playbook.script}, which only the playbook loader makes.
 
     A script that threw or that the browser could not return is [script-failed]; a result
-    over the script's [max_bytes] is [too-large]; a result that does not fit its [returns]
-    is [script-invalid] with the path of the first mismatch; a dialog the script opened is
-    [dialog-open]. Arguments over 64 KiB are [too-large]. *)
+    over {!Playbook.script_max_bytes} is [too-large]; a result that does not fit its
+    [returns] is [script-invalid] with the path of the first mismatch; a dialog the script
+    opened is [dialog-open]. Arguments over 64 KiB are [too-large]. *)
 
 val script_syntax : browser -> Playbook.script -> (string option, Protocol.error) result
 (** extr-lslp: compile the script, without calling it, as [new Function] in the page —

@@ -1,15 +1,15 @@
 type page = {
   name : string;
-  description : string;
   url_pattern : string option;
   text_marker : string option;
   repeatable : bool;
 }
+(** map-fmt01: a page kind is a name, a URL pattern or text marker, and an optional
+    repeatable pin. A [description] on a page is a removed field. *)
 
-(* pbk-eyya: [until] sentences end the step as soon as all hold after an executed action;
-   each is a code checker or "the address changed" (the URL differs from the step's
-   start). A judgment sentence is refused at load. *)
-type goal_step = { goal : string; hint : string option; until : string list option }
+(* map-fmt01: JEV sees [goal]; [hint] is appended to that goal, so it stays. [until] is
+   removed — a procedure verifies at its end, not mid-step. *)
+type goal_step = { goal : string; hint : string option }
 type use_step = { use : string; args : Yojson.Safe.t option; optional : bool option }
 
 type script_step = { script : string; args : Yojson.Safe.t option }
@@ -20,7 +20,8 @@ type step =
   | Goal of goal_step
   | Use of use_step
   | Script of script_step
-  | Navigate of script_step
+      (** map-fmt01: a step is a goal, a [use:] of another procedure, or a script.
+          [navigate] is a removed step kind; a goal covers navigation. *)
 
 type repeat_until = Expectation of string | Script_check of string
 
@@ -66,22 +67,16 @@ type provenance = {
 }
 
 type procedure = {
-  provenance : provenance option;
   slug : string;
   description : string;
   args : arg_decl list option;
   steps : step list;
   expect : string list;
-  expect_timeout_s : int option;
-  max_steps : int option;
-      (** L31 run-d82w: the cap the operator level runs one of this procedure's steps
-          under; [None] is the operator's own default (30), and the loader accepts 1..30.
-      *)
   repeat : repeat option;
-  deadline_s : int option;
-      (** L31 run-d82w: the step's own deadline; [None] is the operator's own default (120
-          s), the loader accepts 1..600, and what is left of the run always bounds it. *)
 }
+(** map-fmt01: a procedure is a slug, a description JEV chooses on, args, steps, expect,
+    and optional repeat. [provenance], [expect_timeout_s], [max_steps] and [deadline_s]
+    are removed fields. Provenance lives in a sidecar the runner does not read. *)
 
 type script_decl = {
   file : string option;
@@ -94,13 +89,13 @@ type script_decl = {
   returns_json : Yojson.Safe.t option;
       (** A shape name, or an inline shape. An inline shape is the old form and is refused
           after the script file resolves (pbk-i0zl). *)
-  max_bytes : int option;
 }
-(** extr-plaz extr-zdst pbk-46fr pbk-lvy9: a script as `playbook.json` writes it — exactly
-    one of a [file] relative to the playbook directory and a short inline [source] (at
-    most 4096 bytes), a one-sentence [description], the page kinds it applies to, and an
-    optional bound on the result ([max_bytes], default 8 MiB, at most 16 MiB). The result
-    shape sits beside the script, not in this object as an inline shape. *)
+(** extr-plaz extr-zdst pbk-46fr pbk-lvy9 map-fmt01: a script as `playbook.json` writes it
+    — exactly one of a [file] relative to the playbook directory and a short inline
+    [source] (at most 4096 bytes), a one-sentence [description], and the page kinds it
+    applies to. The result is bounded by {!script_max_bytes}. [max_bytes] and [origin] are
+    removed fields. The result shape sits beside the script, not in this object as an
+    inline shape. *)
 
 type scripts = (string * script_decl) list
 (** The [scripts] section: an object of script name to declaration. *)
@@ -132,8 +127,6 @@ type script = private {
   name : string;
   code : string;  (** The text of the script's function body, read at load. *)
   returns : Shape.t;
-  max_bytes : int;
-  origin : string;  (** [file <path>] or [inline]. *)
   description : string;
   pages : string list option;
   args : arg_decl list;
@@ -259,6 +252,11 @@ val check_goal_count :
   minimum:int -> ?file:string -> t -> procedure -> (unit, string) result
 (** map-op06: the shared top-level goal-count rule; a use: sub-procedure is exempt. *)
 
+val check_draft : procedure -> (unit, string) result
+(** map-fmt03: the draft bar — a non-empty description, well-formed args, at least one
+    goal step, and at least one expect sentence. Page names and the two-goal install rule
+    are not this bar. *)
+
 val check_procedure : ?file:string -> t -> procedure -> (unit, string) result
 (** run-rq6i run-m0r8: the loader's own rules for one procedure, applied to a procedure
     that did not come from a validated file — a planner's answer, before the loop executes
@@ -272,15 +270,36 @@ val proposed_directory : caps:< Ox_caps.Cap.env ; .. > -> unit -> string
     unset), where a run writes the procedures the planner wrote and verified. The playbook
     directory is never written by a run. *)
 
+val provenance_of_yojson : Yojson.Safe.t -> (provenance, string) result
+val yojson_of_provenance : provenance -> Yojson.Safe.t
+
+val provenance_filename : string -> string
+(** map-fmt02: [<slug>.provenance.json], the only sidecar a playbook directory may hold
+    beside [playbook.json]. *)
+
+val write_provenance :
+  caps:< Ox_caps.Cap.fs_write ; .. > ->
+  dir:string ->
+  slug:string ->
+  provenance ->
+  (unit, string) result
+
+val read_provenance :
+  caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (provenance option, string) result
+(** [read_provenance path] is [Ok None] when the sidecar is absent. *)
+
 val propose :
   ?book:t ->
   ?revision:string ->
+  ?provenance:provenance ->
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
   site:string ->
   procedure ->
   (string, string) result
-(** run-m0r8: write one proposed procedure to [<proposed_directory>/<site>-<slug>.json],
-    0600, and answer the path written. *)
+(** run-m0r8 map-fmt02: write one proposed procedure to
+    [<proposed_directory>/<site>-<slug>.json], 0600, and answer the path written.
+    Provenance, when given, is written beside it as [<slug>.provenance.json], never inside
+    the proposal. *)
 
 val retire :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
@@ -323,9 +342,11 @@ val accept :
 (* run-k8bx: restart every step from the beginning after the first failed check. *)
 val retry_once : execute:(unit -> unit) -> verify:(unit -> bool) -> bool
 
-val inspect : ?code:bool -> loaded -> Yojson.Safe.t
-(** The playbook, its scripts (origin, size, [returns], and with [code] their text —
-    extr-lslp) and its resolved checkers. *)
+val inspect :
+  ?code:bool -> ?provenances:(string * provenance) list -> loaded -> Yojson.Safe.t
+(** The playbook, its scripts (size, [returns], and with [code] their text — extr-lslp)
+    and its resolved checkers. [provenances] is display-only, read from sidecars by
+    [show]; the runner does not pass it. *)
 
 type observation = {
   kind : string option;
@@ -334,17 +355,6 @@ type observation = {
   rows : (string * string) list;
   downloads : (string * string * string) list;
 }
-
-val until_holds :
-  ?values:(string * string) list ->
-  t ->
-  string list ->
-  start_url:string ->
-  url:string ->
-  observation ->
-  bool
-(** pbk-eyya: whether every [until] sentence of a goal step holds for the page an executed
-    action produced; "the address changed" compares [url] with [start_url]. *)
 
 val substitute : (string * string) list -> string -> string
 (** run-2lei run-84ds run-5rll: a placeholder in braces is replaced by the value the run
@@ -368,14 +378,12 @@ type checked = {
 }
 (** run-xqh8: one expectation's verdict, which is what a run's trace records. *)
 
-val expect_timeout : procedure -> int
-(** Seconds a procedure's expectations may wait. The procedure's [expect_timeout_s] when
-    set; otherwise 15 for a learned procedure (one with provenance) and 5 for an authored
-    one. map-bjon. *)
+val expect_timeout_s : int
+(** map-fmt01: the one wait for a procedure's expectations. The per-procedure field and
+    the learned 15 s wait are removed. *)
 
-val with_learned_timeout : procedure -> procedure
-(** A compiled procedure waits 15 s for its result check when the draft omitted
-    [expect_timeout_s]. An explicit value is kept. *)
+val script_max_bytes : int
+(** map-fmt01: the one bound on a script result, 8 MiB. *)
 
 val await_results :
   now:(unit -> float) ->

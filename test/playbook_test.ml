@@ -3,7 +3,7 @@ module B = Leash.Playbook
 let base =
   {|{
  "site":"allegro.pl", "entry":"https://allegro.pl/", "description":"Allegro",
- "pages":[{"name":"offer","description":"An offer","url_pattern":"https://allegro.pl/oferta/*"}],
+ "pages":[{"name":"offer","url_pattern":"https://allegro.pl/oferta/*"}],
  "procedures":[{"slug":"open","description":"Open an offer","steps":[{"goal":"Open product","hint":"Offer"}],"expect":["the page is offer"]}]
 }|}
 
@@ -127,7 +127,6 @@ let grammar () =
         B.
           {
             name = "offer";
-            description = "";
             url_pattern = Some "https://allegro.pl/oferta/*";
             text_marker = None;
             repeatable = true;
@@ -166,7 +165,6 @@ let grammar () =
     B.
       {
         name = "offer";
-        description = "";
         url_pattern = Some "https://allegro.pl/oferta/*";
         text_marker = None;
         repeatable = true;
@@ -188,7 +186,6 @@ let example_title_is_not_body () =
     B.
       {
         name = "example";
-        description = "";
         url_pattern = Some "https://example.com/";
         text_marker = Some title;
         repeatable = true;
@@ -229,7 +226,6 @@ let consent_cleared () =
       B.
         {
           name = "consent";
-          description = "privacy overlay";
           url_pattern = None;
           text_marker = Some "privacy overlay";
           repeatable = true;
@@ -390,7 +386,7 @@ let books
   Printf.sprintf
     {|{
  "site":"books.example","entry":"https://books.example/","description":"Books",
- "pages":[{"name":"list","description":"List","url_pattern":"https://books.example/*"}],
+ "pages":[{"name":"list","url_pattern":"https://books.example/*"}],
  "shapes":{"list":[{"title":"string","price":"number"}],"count":{"n":"number"},"item":[{"title":"string"}]},
  "scripts": %s,
  "procedures":[{"slug":"collect","description":"Collect","args":{"page":{"from":"mission"}},"steps":[%s],"expect":["the page is list"]}]
@@ -422,7 +418,7 @@ let directory_and_scripts () =
     books
       ~scripts:
         {|{"list":{"file":"scripts/list.js","description":"List the page.","returns":"list"},
-           "count":{"source":"return {n: 1}","description":"Count the page.","returns":"count","max_bytes":1000}}|}
+           "count":{"source":"return {n: 1}","description":"Count the page.","returns":"count"}}|}
       ()
   in
   with_playbook ~files:[ list_js ] json (fun dir file ->
@@ -436,16 +432,15 @@ let directory_and_scripts () =
               Alcotest.(check string)
                 "extr-plaz a file script's text is read at load"
                 "return [{title: 'A', price: 1}];" script.code;
-              Alcotest.(check string)
-                "extr-plaz origin names the file" "file scripts/list.js" script.origin;
               Alcotest.(check int)
-                "extr-8o1h the default bound is 8 MiB" 8_388_608 script.max_bytes
+                "map-fmt01 the one script bound is 8 MiB" 8_388_608 B.script_max_bytes
           | None -> Alcotest.fail "extr-plaz file script missing");
           match B.script_named book "count" with
           | Some script ->
               Alcotest.(check string)
                 "extr-plaz inline source" "return {n: 1}" script.code;
-              Alcotest.(check int) "extr-8o1h a per-script bound" 1000 script.max_bytes
+              Alcotest.(check bool)
+                "map-fmt01 inline script has no per-script bound" true (script.code <> "")
           | None -> Alcotest.fail "extr-plaz inline script missing"))
 
 let script_refusals () =
@@ -482,7 +477,7 @@ let script_refusals () =
   expect_load_error ~story "name must be a lowercase slug"
     (books ~steps:{|{"goal":"x"}|}
        ~scripts:{|{"List":{"source":"return []","returns":[{"title":"string"}]}}|} ());
-  expect_load_error ~story "max_bytes must be"
+  expect_load_error ~story "removed field max_bytes"
     (books
        ~scripts:
          {|{"list":{"source":"return []","returns":[{"title":"string"}],"max_bytes":0}}|}
@@ -509,7 +504,7 @@ let script_refusals () =
   expect_load_error ~story:"extr-8o1h" "args must be an object of strings"
     (books ~steps:{|{"script":"list","args":{"page":1}}|} ());
   (* hdoc-vqj7: the exclusivity refusal must name the navigate variant too. *)
-  expect_load_error ~story:"extr-8o1h" "exactly one of goal, use, script or navigate"
+  expect_load_error ~story:"extr-8o1h" "exactly one of goal, use or script"
     (books ~steps:{|{"script":"list","goal":"x"}|} ())
 
 let symlinks () =
@@ -760,8 +755,7 @@ let books_toscrape_example () =
       in
       Alcotest.(check bool)
         "pbk-abr3 the list script is a file of the directory" true
-        (String.length (script "list-page").B.code > 80
-        && (script "list-page").B.origin = "file scripts/list-page.js");
+        (String.length (script "list-page").B.code > 80);
       Alcotest.(check (option (list string)))
         "pbk-46fr list-page applies to category pages" (Some [ "category" ])
         (script "list-page").B.pages;
@@ -878,13 +872,9 @@ let pinned_script_arguments () =
         (ok
            (B.of_json ~file:"hdoc-vqj7.json"
               (Yojson.Safe.from_string (data {|{"from":"mission","optional":true}|} step)))))
-    [ {|{"navigate":{"script":"product_url"}}|}; {|{"script":"product_url"}|} ];
-  ignore
-    (ok
-       (B.of_json ~file:"hdoc-vqj7.json"
-          (Yojson.Safe.from_string
-             (data {|{"from":"mission"}|}
-                {|{"navigate":{"script":"product_url","args":{"product":"https://example.com/cart"}}}|}))))
+    [ {|{"script":"product_url"}|} ];
+  expect_error "removed field navigate"
+    (data {|{"from":"mission"}|} {|{"navigate":{"script":"product_url"}}|})
 
 (* extr-uhnc: control scripts are typed steps/checks, not collected records. *)
 let control_scripts () =
@@ -892,9 +882,9 @@ let control_scripts () =
     {|{"site":"example.com","entry":"https://example.com/","description":"Catalogue",
     "pages":[],"scripts":{"next":{"source":"/** returns: {\"url\":\"url\"} */\nreturn {url: location.href};","description":"The next page URL."},
     "last":{"source":"/** returns: {\"done\":\"boolean\"} */\nreturn {done: true};","description":"Whether the listing is finished."}},
-    "procedures":[{"slug":"collect","description":"Collect pages","steps":[{"navigate":{"script":"next"}}],
+    "procedures":[{"slug":"collect","description":"Collect pages","steps":[{"script":"next"}],
     "expect":["no dialog is open"],"repeat":{"next":"next-page","max":8,"until":{"script":"last"},"key":"url"}},
-    {"slug":"next-page","description":"Next page","steps":[{"navigate":{"script":"next"}}],"expect":["no dialog is open"]},
+    {"slug":"next-page","description":"Next page","steps":[{"script":"next"}],"expect":["no dialog is open"]},
     {"slug":"open","description":"Open the catalogue.","steps":[{"goal":"Open the catalogue."},{"use":"collect"}],"expect":["no dialog is open"]}]}|}
   in
   with_playbook data (fun dir _ ->
@@ -905,7 +895,7 @@ let control_scripts () =
           Alcotest.(check bool)
             "extr-uhnc typed navigation" true
             (match proc.steps with
-            | [ B.Navigate { script = "next"; _ } ] -> true
+            | [ B.Script { script = "next"; _ } ] -> true
             | _ -> false);
           Alcotest.(check bool)
             "extr-uhnc typed termination" true
@@ -915,9 +905,8 @@ let control_scripts () =
   let replace old next = Str.global_replace (Str.regexp_string old) next data in
   expect_error "repeat until script must be declared"
     (replace {|"script":"last"|} {|"script":"missing"|});
-  expect_error "step must"
-    (replace {|{"navigate":{"script":"next"}}|}
-       {|{"navigate":{"script":"next"},"goal":"unsafe"}|})
+  expect_error "removed field navigate"
+    (replace {|{"script":"next"}|} {|{"navigate":{"script":"next"}}|})
 
 let format_refusals () =
   let goal = {|{"goal":"Open the list."}|} in
@@ -938,7 +927,7 @@ let format_refusals () =
        ());
   with_playbook
     {|{"site":"books.example","entry":"https://books.example/","description":"Books",
- "pages":[{"name":"list","description":"List","url_pattern":"https://books.example/*"}],
+ "pages":[{"name":"list","url_pattern":"https://books.example/*"}],
  "procedures":[{"slug":"collect","description":"Collect","args":["page"],"steps":[{"goal":"Open."}],"expect":["the page is list"]}]}|}
     (fun _ file ->
       match B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname file) with
@@ -959,7 +948,7 @@ let format_refusals () =
             (contains "repeat.json" message && contains "stray JSON" message));
   with_playbook
     {|{"site":"books.example","entry":"https://books.example/","description":"Books","returns":{"n":"number"},
- "pages":[{"name":"list","description":"List","url_pattern":"https://books.example/*"}],
+ "pages":[{"name":"list","url_pattern":"https://books.example/*"}],
  "procedures":[{"slug":"collect","description":"Collect","steps":[{"goal":"Open."}],"expect":["the page is list"]}]}|}
     (fun _ file ->
       match B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname file) with
@@ -969,49 +958,49 @@ let format_refusals () =
             "pbk-i0zl names the new returns form" true
             (contains "not at the playbook top level" message))
 
-(* pbk-eyya: a goal step's until is code-checked; a judgment sentence is refused at load,
-   and "the address changed" compares with the step's start. *)
-let goal_until () =
-  let steps until =
-    Printf.sprintf
-      {|{"goal":"Open the next page.","until":%s},{"script":"list","args":{"page":"{page}"}}|}
-      until
+(* map-fmt01: old files are refused by the field they still carry. *)
+let removed_fields () =
+  let base = books () in
+  let swap old next = Str.global_replace (Str.regexp_string old) next base in
+  let cases =
+    [
+      ( "until",
+        "removed field until",
+        swap "{\"goal\":\"Open the list.\"}"
+          "{\"goal\":\"Open the list.\",\"until\":[\"the page is list\"]}" );
+      ( "expect_timeout_s",
+        "removed field expect_timeout_s",
+        swap "\"expect\":[\"the page is list\"]"
+          "\"expect\":[\"the page is list\"],\"expect_timeout_s\":5" );
+      ( "max_steps",
+        "removed field max_steps",
+        swap "\"expect\":[\"the page is list\"]"
+          "\"expect\":[\"the page is list\"],\"max_steps\":10" );
+      ( "deadline_s",
+        "removed field deadline_s",
+        swap "\"expect\":[\"the page is list\"]"
+          "\"expect\":[\"the page is list\"],\"deadline_s\":30" );
+      ( "description",
+        "removed field description",
+        swap "{\"name\":\"list\"" "{\"name\":\"list\",\"description\":\"List\"" );
+      ( "max_bytes",
+        "removed field max_bytes",
+        swap "\"returns\":\"list\"" "\"returns\":\"list\",\"max_bytes\":1000" );
+      ( "origin",
+        "removed field origin",
+        swap "\"returns\":\"list\"" "\"returns\":\"list\",\"origin\":\"inline\"" );
+      ( "navigate",
+        "removed field navigate",
+        swap "{\"goal\":\"Open the list.\"}" "{\"navigate\":{\"script\":\"list\"}}" );
+      ( "provenance",
+        "removed field provenance",
+        swap "{\n \"site\"" "{\"provenance\":{},\n \"site\"" );
+    ]
   in
-  expect_load_error ~story:"pbk-eyya" "goal until must be a code checker"
-    (books ~steps:(steps {|["the address changed","the shop looks happy"]|}) ());
-  expect_load_error ~story:"pbk-eyya" "goal until: unknown page kind"
-    (books ~steps:(steps {|["the page is cart"]|}) ());
-  expect_load_error ~story:"pbk-eyya" "goal until must not be empty"
-    (books ~steps:(steps "[]") ());
-  with_playbook ~files:[ list_js ]
-    (books ~steps:(steps {|["the address changed","the page is list"]|}) ())
-    (fun dir _ ->
-      match B.load ~caps:(Ox_test.powerbox ()) dir with
-      | Error why -> Alcotest.fail why
-      | Ok book ->
-          let until =
-            match (List.hd book.playbook.procedures).steps with
-            | B.Goal { until = Some until; _ } :: _ -> until
-            | _ -> Alcotest.fail "pbk-eyya until was not decoded"
-          in
-          let observation =
-            B.{ kind = Some "list"; text = ""; dialog = false; rows = []; downloads = [] }
-          in
-          let holds ~start_url ~url observation =
-            B.until_holds book.playbook until ~start_url ~url observation
-          in
-          Alcotest.(check bool)
-            "pbk-eyya holds after the address changed" true
-            (holds ~start_url:"https://books.example/1" ~url:"https://books.example/2"
-               observation);
-          Alcotest.(check bool)
-            "pbk-eyya not while the address is the start" false
-            (holds ~start_url:"https://books.example/1" ~url:"https://books.example/1"
-               observation);
-          Alcotest.(check bool)
-            "pbk-eyya not on another page kind" false
-            (holds ~start_url:"https://books.example/1" ~url:"https://books.example/2"
-               { observation with kind = None }))
+  List.iter
+    (fun (field, needle, json) ->
+      expect_load_error ~story:("map-fmt01 " ^ field) needle json)
+    cases
 
 let page text =
   B.{ kind = Some "travel-slug"; text; dialog = false; rows = []; downloads = [] }
@@ -1068,56 +1057,55 @@ let judgment_loading () =
     (!calls > 1 && !elapsed <= 1. && !elapsed > 0.5)
 
 let learned_timeout () =
-  let learned =
-    B.
-      {
-        traces = [];
-        model = "test";
-        time = "t";
-        tries = 0;
-        last_failure = None;
-        path = [];
-        entry_kind = "";
-        exit_kind = "";
-        signature = [];
-        kind_mapping = [];
-        repeatable = true;
-        reason = "test";
-        gate = "replay";
-        repair = false;
-        model_calls = 0;
-        model_cost = None;
-      }
-  in
-  let proc timeout provenance =
-    B.
-      {
-        slug = "explore";
-        description = "explore";
-        provenance;
-        args = None;
-        steps =
-          [ Goal { goal = "Click the button named Explore"; hint = None; until = None } ];
-        expect = [ "destination prices are shown" ];
-        expect_timeout_s = timeout;
-        max_steps = None;
-        repeat = None;
-        deadline_s = None;
-      }
-  in
-  Alcotest.(check int) "map-bjon authored default" 5 (B.expect_timeout (proc None None));
-  Alcotest.(check int)
-    "map-bjon learned default" 15
-    (B.expect_timeout (proc None (Some learned)));
-  Alcotest.(check int)
-    "map-bjon explicit timeout" 8
-    (B.expect_timeout (proc (Some 8) (Some learned)));
-  Alcotest.(check (option int))
-    "map-bjon compiler fills 15" (Some 15)
-    (B.with_learned_timeout (proc None None)).expect_timeout_s;
-  Alcotest.(check (option int))
-    "map-bjon compiler keeps an explicit timeout" (Some 8)
-    (B.with_learned_timeout (proc (Some 8) None)).expect_timeout_s
+  Alcotest.(check int) "map-fmt01 one expect wait" 5 B.expect_timeout_s
+
+let provenance_sidecar () =
+  with_playbook ~files:[ list_js ] (books ()) (fun dir file ->
+      let prov =
+        B.
+          {
+            traces = [ "trace-1" ];
+            model = "test";
+            time = "t";
+            tries = 0;
+            last_failure = None;
+            path = [ "list" ];
+            entry_kind = "list";
+            exit_kind = "list";
+            signature = [];
+            kind_mapping = [];
+            repeatable = true;
+            reason = "test";
+            gate = "replay";
+            repair = false;
+            model_calls = 1;
+            model_cost = None;
+          }
+      in
+      (match B.write_provenance ~caps:(Ox_test.powerbox ()) ~dir ~slug:"collect" prov with
+      | Ok () -> ()
+      | Error why -> Alcotest.fail why);
+      (match B.load ~caps:(Ox_test.powerbox ()) dir with
+      | Error why -> Alcotest.fail why
+      | Ok book ->
+          Alcotest.(check string)
+            "map-fmt02 runner loads the book" "collect"
+            (List.hd book.playbook.procedures).slug);
+      let body = In_channel.with_open_text file In_channel.input_all in
+      Alcotest.(check bool)
+        "map-fmt02 provenance is not a playbook field" false
+        (try
+           ignore (Str.search_forward (Str.regexp_string "\"provenance\"") body 0);
+           true
+         with Not_found -> false);
+      match
+        B.read_provenance ~caps:(Ox_test.powerbox ())
+          (Filename.concat dir (B.provenance_filename "collect"))
+      with
+      | Ok (Some read) ->
+          Alcotest.(check string) "map-fmt02 sidecar gate" "replay" read.gate
+      | Ok None -> Alcotest.fail "map-fmt02 sidecar missing"
+      | Error why -> Alcotest.fail why)
 
 let () =
   Alcotest.run "playbooks"
@@ -1159,6 +1147,7 @@ let () =
             books_toscrape_example;
           Alcotest.test_case "pbk-85m1 pbk-lww9 pbk-8n2l pbk-i0zl format refusals" `Quick
             format_refusals;
-          Alcotest.test_case "pbk-eyya goal until" `Quick goal_until;
+          Alcotest.test_case "map-fmt01 removed fields" `Quick removed_fields;
+          Alcotest.test_case "map-fmt02 provenance sidecar" `Quick provenance_sidecar;
         ] );
     ]

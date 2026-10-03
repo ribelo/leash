@@ -143,6 +143,7 @@ let trace ?(kinds = [ "catalog" ]) ?(steps = [ step () ]) ?(outcome = "done") ti
         [ { name = "catalog"; url_pattern = "https://example.com/catalog" } ];
       compiled = false;
       structural_outline = None;
+      out_requested = false;
       procedures = [];
       steps;
       final = Some { url = "https://example.com/catalog"; title = "Catalog" };
@@ -153,38 +154,43 @@ let page ?(repeatable = true) () =
   B.
     {
       name = "catalog";
-      description = "catalog";
       url_pattern = Some "https://example.com/catalog*";
       text_marker = None;
       repeatable;
     }
 
-let procedure ?(slug = "inspect") ?(goal = "Click the button named View") ?(args = [])
-    ?(until = [ "the page is catalog" ]) () =
+let procedure ?(slug = "inspect") ?(goal = "Click the button named View") ?(args = []) ()
+    =
   B.
     {
       slug;
       description = "inspect catalog";
       steps =
         [
-          Goal { goal; hint = None; until = Some until };
-          Goal { goal = "Observe the catalog page"; hint = None; until = None };
+          Goal { goal; hint = None };
+          Goal { goal = "Observe the catalog page"; hint = None };
         ];
       expect = [ "the page is catalog"; "catalog entries are shown" ];
       args = Some args;
-      provenance = None;
-      expect_timeout_s = None;
       repeat = None;
-      max_steps = None;
-      deadline_s = None;
     }
+
+let sidecar_provenance ~dir slug =
+  match B.read_provenance ~caps (Filename.concat dir (B.provenance_filename slug)) with
+  | Ok p -> p
+  | Error why -> Alcotest.fail why
+
+let installed_provenance (book : B.loaded) slug =
+  match book.dir with
+  | Some dir -> sidecar_provenance ~dir slug
+  | None -> Alcotest.fail "installed book has no directory"
 
 let book ?(repeatable = true) proc =
   B.
     {
       site = "example.com";
       entry = "https://example.com/catalog";
-      description = "catalog";
+      description = "Example catalogue";
       pages = [ page ~repeatable () ];
       procedures = [ proc ];
       scripts = None;
@@ -199,11 +205,13 @@ let answer ?(confirm = true) ?(kinds = [ ("catalog", "catalog") ]) proc =
       ("confirm", `Bool confirm);
     ]
 
-let install_authored ?(repeatable = true) proc =
+let install_authored ?(repeatable = true) ?provenance proc =
   ignore
     (ok
        (B.accept ~caps
-          (ok (B.propose ~book:(book ~repeatable proc) ~caps ~site:"example.com" proc))))
+          (ok
+             (B.propose ?provenance ~book:(book ~repeatable proc) ~caps
+                ~site:"example.com" proc))))
 
 let save store trace = ok (T.write store trace)
 let learning_switch = ref None
@@ -232,7 +240,9 @@ let proposal_files () =
   | exception Sys_error _ -> []
   | names ->
       Array.to_list names
-      |> List.filter (fun name -> Filename.check_suffix name ".json")
+      |> List.filter (fun name ->
+          Filename.check_suffix name ".json"
+          && not (Filename.check_suffix name ".provenance.json"))
       |> List.map (Filename.concat root)
       |> List.sort String.compare
 
@@ -602,7 +612,15 @@ let draft_compile () =
              ~file:(List.hd (proposal_files ()))
              (Yojson.Safe.from_file (List.hd (proposal_files ()))))
       in
-      let p = Option.get (List.hd proposed.playbook.procedures).provenance in
+      let slug = (List.hd proposed.playbook.procedures).slug in
+      let p =
+        Option.get
+          (ok
+             (B.read_provenance ~caps
+                (Filename.concat
+                   (Filename.dirname (List.hd (proposal_files ())))
+                   (B.provenance_filename slug))))
+      in
       bool "map-2l5q durable provenance"
         (List.length p.traces = 2 && p.gate = "replay" && p.repeatable && p.tries = 0);
       bool "map-6m3c inferred pages persisted"
@@ -680,7 +698,9 @@ let replay () =
         (installed_slugs () = [ "inspect" ] && drafts learning = []);
       let installed = List.hd (ok (B.list ~caps ())) in
       bool "map-2ga3 install remembers gate"
-        ((Option.get (List.hd installed.playbook.procedures).provenance).gate = "replay"))
+        ((Option.get
+            (installed_provenance installed (List.hd installed.playbook.procedures).slug))
+           .gate = "replay"))
 
 let tries () =
   temp (fun root ->
@@ -722,7 +742,7 @@ let agreement_gate () =
       bool "map-itbt agreement installs with no trial"
         (installed_slugs () = [ "inspect" ] && drafts learning = []);
       let b = List.hd (ok (B.list ~caps ())) in
-      let p = Option.get (List.hd b.playbook.procedures).provenance in
+      let p = Option.get (installed_provenance b (List.hd b.playbook.procedures).slug) in
       bool "map-2ga3 agreement provenance" (p.gate = "agreement" && not p.repeatable))
 
 let repair () =
@@ -745,13 +765,20 @@ let repair () =
               ()));
       let p = (List.hd (drafts learning)).procedure in
       bool "map-ptnk repair keeps slug and waits"
-        (p.slug = "inspect" && (Option.get p.provenance).repair);
+        (p.slug = "inspect"
+       && (Option.get
+             (sidecar_provenance
+                ~dir:(Filename.dirname (List.hd (proposal_files ())))
+                p.slug))
+            .repair);
       let unchanged =
         after learning store (trace 1.5) (result ~procedures:[ entry "inspect" ] ())
       in
       bool "map-pd0q original success cannot bypass repair trial"
         (drafts learning <> []
-        && (List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures).provenance
+        && installed_provenance
+             (List.hd (ok (B.list ~caps ())))
+             (List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures).slug
            = None);
       let r =
         after learning store (trace 2.)
@@ -885,10 +912,11 @@ let nonrepeatable_repair () =
             P.final = snap;
           }
       in
-      let proc = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
+      let book = List.hd (ok (B.list ~caps ())) in
+      let proc = List.hd book.playbook.procedures in
       bool "map-itbt observed non-repeatable repair installs without replay"
         (installed_slugs () = [ "inspect" ]
-        && (Option.get proc.provenance).gate = "agreement-repair"))
+        && (Option.get (installed_provenance book proc.slug)).gate = "agreement-repair"))
 
 let unsafe_repair () =
   temp (fun root ->
@@ -909,18 +937,17 @@ let unsafe_repair () =
       let repaired =
         List.exists
           (fun file ->
-            match
-              (List.hd
-                 (ok (B.of_json ~file (Yojson.Safe.from_file file))).playbook.procedures)
-                .provenance
-            with
+            let book = ok (B.of_json ~file (Yojson.Safe.from_file file)) in
+            let slug = (List.hd book.playbook.procedures).slug in
+            match sidecar_provenance ~dir:(Filename.dirname file) slug with
             | Some p -> p.repair
             | None -> false)
           (proposal_files ())
       in
-      let kept = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
+      let kept_book = List.hd (ok (B.list ~caps ())) in
+      let kept = List.hd kept_book.playbook.procedures in
       bool "map-itbt unknown target cannot pass by naming the kind"
-        ((not repaired) && kept.provenance = None))
+        ((not repaired) && installed_provenance kept_book kept.slug = None))
 
 let resets () =
   temp (fun root ->
@@ -1142,14 +1169,7 @@ let agreement_all_targets () =
                 valid with
                 B.steps =
                   valid.steps
-                  @ [
-                      B.Goal
-                        {
-                          goal = "Click the button named Absent";
-                          hint = None;
-                          until = Some [ "the page is catalog" ];
-                        };
-                    ];
+                  @ [ B.Goal { goal = "Click the button named Absent"; hint = None } ];
               }
           in
           let learning =
@@ -1185,8 +1205,10 @@ let agreement_all_targets () =
                 P.final;
               }
           in
-          let kept = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
-          bool "map-itbt every required exact target must agree" (kept.provenance = None);
+          let kept_book = List.hd (ok (B.list ~caps ())) in
+          let kept = List.hd kept_book.playbook.procedures in
+          bool "map-itbt every required exact target must agree"
+            (installed_provenance kept_book kept.slug = None);
           bool "map-itbt uncertain compound goals fail closed" (drafts learning = [])))
     [ (false, false); (true, false); (true, true) ]
 
@@ -1194,37 +1216,33 @@ let bounded_risk_agreement () =
   List.iter
     (fun (pinned, previously_repeatable) ->
       temp (fun root ->
-          let old =
-            {
-              (procedure ()) with
-              B.provenance =
-                Some
-                  B.
-                    {
-                      traces = [];
-                      entry_kind = "";
-                      exit_kind = "";
-                      signature = [];
-                      kind_mapping = [];
-                      path = [ "catalog" ];
-                      model = "test";
-                      time = "earlier";
-                      repeatable = previously_repeatable;
-                      reason = "earlier classified trial";
-                      tries = 0;
-                      last_failure = None;
-                      gate = "replay";
-                      repair = false;
-                      model_calls = 0;
-                      model_cost = None;
-                    };
-            }
+          let old = procedure () in
+          let provenance =
+            B.
+              {
+                traces = [];
+                entry_kind = "";
+                exit_kind = "";
+                signature = [];
+                kind_mapping = [];
+                path = [ "catalog" ];
+                model = "test";
+                time = "earlier";
+                repeatable = previously_repeatable;
+                reason = "earlier classified trial";
+                tries = 0;
+                last_failure = None;
+                gate = "replay";
+                repair = false;
+                model_calls = 0;
+                model_cost = None;
+              }
           in
           ignore
             (ok
                (B.accept ~consume:true ~caps
                   (ok
-                     (B.propose
+                     (B.propose ~provenance
                         ~book:(book ~repeatable:(not pinned) old)
                         ~caps ~site:"example.com" old))));
           let learning =
@@ -1276,8 +1294,9 @@ let bounded_risk_agreement () =
             (drafts learning = []);
           bool "map-itbt one unsafe failure may repair by snapshot agreement"
             (installed_slugs () = [ "inspect" ]);
-          let proc = List.hd (List.hd (ok (B.list ~caps ()))).playbook.procedures in
-          match proc.provenance with
+          let book = List.hd (ok (B.list ~caps ())) in
+          let proc = List.hd book.playbook.procedures in
+          match installed_provenance book proc.slug with
           | Some p ->
               bool "map-yzqp bounded bit remains authoritative"
                 ((not p.repeatable) && p.gate = "agreement-repair")
@@ -1306,10 +1325,7 @@ let inferred_navigation_patterns () =
               (answer
                  ~kinds:[ ("home", "home"); ("books-<slug>", "books-category") ]
                  {
-                   (procedure ~goal:"Click the link named Mystery"
-                      ~until:[ "the page is books-category" ]
-                      ())
-                   with
+                   (procedure ~goal:"Click the link named Mystery" ()) with
                    B.expect = [ "the page is books-category"; "book prices are shown" ];
                  }))
           ()
@@ -1510,13 +1526,7 @@ let learning_cost_accounting () =
                 incr calls;
                 Leash__Model_usage.start "planner";
                 Leash__Model_usage.report "planner" reported;
-                Ok
-                  (answer
-                     (procedure
-                        ~until:
-                          (if !calls = 1 then [ "unsupported" ]
-                           else [ "the page is catalog" ])
-                        ())))
+                Ok (answer (procedure ())))
               ()
           in
           let store = store root in
@@ -1529,7 +1539,7 @@ let learning_cost_accounting () =
           in
           L.await_pending learning;
           let durable = ok (Trace.t_of_yojson (Yojson.Safe.from_file file)) in
-          let learning_cost = Option.map (fun cost -> 2. *. cost) reported in
+          let learning_cost = reported in
           Alcotest.(check int) "reply does not wait for learning calls" 3 r.model_calls;
           Alcotest.(check (option (float 0.000001)))
             "reply does not fold learning cost" (Some 0.5) r.model_cost;
@@ -1544,9 +1554,14 @@ let learning_cost_accounting () =
                  ~file:(List.hd (proposal_files ()))
                  (Yojson.Safe.from_file (List.hd (proposal_files ()))))
           in
-          let provenance = Option.get (List.hd proposed.playbook.procedures).provenance in
+          let file = List.hd (proposal_files ()) in
+          let provenance =
+            Option.get
+              (sidecar_provenance ~dir:(Filename.dirname file)
+                 (List.hd proposed.playbook.procedures).slug)
+          in
           Alcotest.(check int)
-            "provenance counts compiler and validation retry" 2 provenance.model_calls;
+            "map-fmt01 one valid compile is one call" 1 provenance.model_calls;
           Alcotest.(check (option (float 0.000001)))
             "unknown learning cost stays unknown" learning_cost provenance.model_cost;
           let site =
@@ -1555,7 +1570,7 @@ let learning_cost_accounting () =
             | _ -> Alcotest.fail "status omitted the site"
           in
           Alcotest.(check int)
-            "status counts learning calls" 2
+            "status counts learning calls" 1
             (Yojson.Safe.Util.to_int (Yojson.Safe.Util.member "learning_calls" site));
           Alcotest.(check (option (float 0.000001)))
             "status records learning cost" learning_cost
@@ -1693,7 +1708,7 @@ let google_paths () =
           ~config:(configure C.Learning_mode.Draft)
           ~planner:(fun _ ->
             incr calls;
-            let proc = procedure ~until:[ "the page is maps" ] () in
+            let proc = procedure () in
             Ok
               (answer
                  ~kinds:[ ("maps", "maps"); ("place-<slug>", "maps-place") ]
@@ -1757,7 +1772,7 @@ let result_expectation () =
         && contains "destination prices are shown" !retry_reason);
       let request = Option.get !first in
       Alcotest.(check string)
-        "map-bjon compiler prompt" "map-5"
+        "map-bjon compiler prompt" "map-6"
         (match Yojson.Safe.Util.member "prompt_version" request with
         | `String version -> version
         | _ -> "");
@@ -1786,8 +1801,7 @@ let result_expectation () =
              (Yojson.Safe.from_file (List.hd (proposal_files ()))))
       in
       let proc = List.hd proposed.playbook.procedures in
-      Alcotest.(check (option int))
-        "map-bjon learned wait is 15 s" (Some 15) proc.expect_timeout_s;
+      Alcotest.(check int) "map-fmt01 one expect wait" 5 B.expect_timeout_s;
       bool "map-bjon expect keeps the page kind and adds a result check"
         (List.mem "the page is catalog" proc.expect
         && List.exists (( <> ) "the page is catalog") proc.expect);
@@ -1806,21 +1820,16 @@ let google_procedure () =
          "Type {query} in the combobox named Search Google Maps, then click the button \
           named Search"
        ~args:[ B.{ name = "query"; source = From_mission { optional = false } } ]
-       ~until:[ "the page is maps-place" ] ())
+       ())
     with
     B.steps =
       [
         B.Goal
-          {
-            goal = "Type {query} in the combobox named Search Google Maps";
-            hint = None;
-            until = Some [ "the page is maps-search" ];
-          };
+          { goal = "Type {query} in the combobox named Search Google Maps"; hint = None };
         B.Goal
           {
             goal = "Click the button named Search and read the place details";
             hint = None;
-            until = Some [ "the page is maps-place" ];
           };
       ];
     expect = [ "the page is maps-place"; "place details are shown" ];
@@ -1873,7 +1882,12 @@ let google_operation_protocol () =
       let proc =
         (List.hd (L.drafts learning ~site:"google.com" ~kind:(Some "maps"))).B.procedure
       in
-      let p = Option.get proc.provenance in
+      let p =
+        Option.get
+          (sidecar_provenance
+             ~dir:(Filename.dirname (List.hd (proposal_files ())))
+             proc.slug)
+      in
       bool "map-op04 meaningful name and raw mapping survive codec"
         (List.assoc "maps" p.kind_mapping = "maps-search"
         && p.entry_kind = "maps"
@@ -1945,7 +1959,7 @@ let named_consent_protocol () =
             List.mapi
               (fun n -> function
                 | B.Goal goal when n = 0 ->
-                    B.Goal { goal with until = Some [ "the page is consent" ] }
+                    B.Goal { goal with goal = goal.goal ^ " The page is consent." }
                 | step -> step)
               base.steps;
         }
@@ -1975,7 +1989,6 @@ let pending_vocabulary_protocol () =
         {
           (page ~repeatable ()) with
           B.name;
-          description = name;
           url_pattern = Some ("https://example.com/" ^ name);
         }
       in
@@ -1983,53 +1996,45 @@ let pending_vocabulary_protocol () =
         (fun (name, repeatable) ->
           let proc =
             {
-              (procedure ~slug:("pending-" ^ name) ~until:[ "the page is " ^ name ] ()) with
+              (procedure ~slug:("pending-" ^ name) ()) with
               B.expect = [ "the page is " ^ name; name ^ " details are shown" ];
-              provenance =
-                Some
-                  B.
-                    {
-                      traces = [];
-                      model = "test";
-                      time = "earlier";
-                      tries = 0;
-                      last_failure = None;
-                      path = [ name ];
-                      entry_kind = name;
-                      exit_kind = name;
-                      signature = [];
-                      kind_mapping = [ (name, name) ];
-                      repeatable;
-                      reason = "fixture";
-                      gate = "replay";
-                      repair = false;
-                      model_calls = 0;
-                      model_cost = None;
-                    };
             }
+          in
+          let provenance =
+            B.
+              {
+                traces = [];
+                model = "test";
+                time = "earlier";
+                tries = 0;
+                last_failure = None;
+                path = [ name ];
+                entry_kind = name;
+                exit_kind = name;
+                signature = [];
+                kind_mapping = [ (name, name) ];
+                repeatable;
+                reason = "fixture";
+                gate = "replay";
+                repair = false;
+                model_calls = 0;
+                model_cost = None;
+              }
           in
           let pending =
             { (book proc) with B.pages = [ page (); named_page name repeatable ] }
           in
-          ignore (ok (B.propose ~caps ~book:pending ~site:"example.com" proc)))
+          ignore (ok (B.propose ~provenance ~caps ~book:pending ~site:"example.com" proc)))
         [ ("account", true); ("checkout", false) ];
       let original_files = proposal_files () in
       let seen = ref None and calls = ref 0 in
       let proc =
         {
-          (procedure ~slug:"profile-operation"
-             ~until:[ "the page is profile-details" ]
-             ())
-          with
+          (procedure ~slug:"profile-operation" ()) with
           B.steps =
             [
-              B.Goal
-                {
-                  goal = "Click the button named View";
-                  hint = None;
-                  until = Some [ "the page is profile-details" ];
-                };
-              B.Goal { goal = "Read the profile details"; hint = None; until = None };
+              B.Goal { goal = "Click the button named View"; hint = None };
+              B.Goal { goal = "Observe the profile page"; hint = None };
             ];
           expect = [ "the page is profile-details"; "profile details are shown" ];
         }
@@ -2103,17 +2108,11 @@ let flights_one_goal_protocol () =
       let proc =
         {
           (procedure ~slug:"explore" ~goal:"Click the button named Explore destinations"
-             ~until:[ "the page is flights-explore" ]
              ())
           with
           B.steps =
             [
-              B.Goal
-                {
-                  goal = "Click the button named Explore destinations";
-                  hint = None;
-                  until = Some [ "the page is flights-explore" ];
-                };
+              B.Goal { goal = "Click the button named Explore destinations"; hint = None };
             ];
           expect = [ "the page is flights-explore"; "destination prices are shown" ];
         }
@@ -2132,6 +2131,44 @@ let flights_one_goal_protocol () =
         (after learning (store root) (google_fixture "google3-flights-2") (result ()));
       bool "map-op06 real one-click Explore output is retried once then dropped"
         (!calls = 2 && !retry && proposal_files () = [] && installed_slugs () = []))
+
+(* map-fmt04: a collection mission asks for the read-only script before the procedure. *)
+let script_first_request () =
+  temp (fun root ->
+      let seen = ref None in
+      let learning =
+        L.create ~sw:(learning_sw ()) ~caps
+          ~config:(configure C.Learning_mode.Auto)
+          ~planner:(fun request ->
+            seen := Some request;
+            Ok (answer (procedure ())))
+          ()
+      in
+      let store = store root in
+      let one time =
+        {
+          (trace time) with
+          Trace.mission = "collect every title";
+          structural_outline = Some "article.product_pod\n";
+        }
+      in
+      ignore (after learning store (one 1.) (result ()));
+      ignore (after learning store (one 2.) (result ()));
+      match !seen with
+      | None -> Alcotest.fail "map-fmt04 compiler was not asked"
+      | Some request ->
+          let fields =
+            match request with
+            | `Assoc fields -> fields
+            | _ -> Alcotest.fail "map-fmt04 request is not an object"
+          in
+          Alcotest.(check bool)
+            "map-fmt04 script_first" true
+            (List.assoc_opt "script_first" fields = Some (`Bool true));
+          Alcotest.(check bool)
+            "map-fmt04 script before procedure" true
+            (List.assoc_opt "compile_order" fields
+            = Some (`List [ `String "script"; `String "procedure" ])))
 
 let () =
   Eio_main.run (fun _ ->
@@ -2165,6 +2202,7 @@ let () =
                     ("draft compile", draft_compile);
                     ( "map-op08 map-op09 collection compile replay",
                       collection_compile_replay );
+                    ("map-fmt04 script-first compile request", script_first_request);
                     ("map-op08 compiler refusal cases", collection_compiler_refusals);
                     ( "map-op08 preserve authored scripts",
                       collection_keeps_authored_scripts );

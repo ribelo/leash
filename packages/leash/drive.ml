@@ -75,7 +75,7 @@ type page_label = { kind : string; source : string; url : string }
 
 let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent
-    ~scripts ~run_script ~reached ~on_step ~label =
+    ~scripts ~run_script ~on_step ~label =
   let started = now () in
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
   let cap = Option.value ~default:60 args.P.max_steps in
@@ -495,8 +495,6 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                                    match acted.dialog, acted.popups with
                                    | Some dialog, _ -> finish ~reason:(dialog_reason dialog) "error" steps next
                                    | None, _ :: _ -> finish ~reason:(popup_reason acted.popups) "error" steps next
-                                   | None, [] when reached ~start:first next ->
-                                       finish ~reason:"the step's until checks hold" "done" steps next
                                    | None, [] when J.stalled (List.rev recent) ->
                                        finish ~reason:"the operator repeated three non-WAIT actions without changing the page" "blocked" steps next
                                    | None, [] -> go next steps recent)
@@ -505,7 +503,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
 
 let run ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(telemetry = fun () -> `Assoc []) ?(observe_attempts = 10) ?(recent = [])
-    ?(scripts = fun _ -> []) ?run_script ?(reached = fun ~start:_ _ -> false) ?label
+    ?(scripts = fun _ -> []) ?run_script ?label
     ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run () =
   if Option.value ~default:60 args.P.max_steps < 1 ||
      Option.value ~default:120 args.deadline_s < 1 || observe_attempts < 1 || observe_attempts > 10 then
@@ -528,7 +526,7 @@ let run ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(cover
       text_value = (fun context -> Effect.perform (M.Text context));
       act = (fun page choice text -> Effect.perform (M.Act (page, choice, text)));
     } in
-    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~reached ~on_step ~label) ()
+    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~on_step ~label) ()
       { retc = Fun.id; exnc = raise;
         effc = (fun (type a) (eff : a Effect.t) -> match eff with
           | M.Observe -> Some (fun (k : (a, (P.drive_result, P.error) result) Effect.Deep.continuation) -> Effect.Deep.continue k (handler.observe ()))

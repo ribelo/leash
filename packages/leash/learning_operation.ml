@@ -22,7 +22,6 @@ let pages (trace : Trace.t) =
       B.
         {
           name = p.name;
-          description = p.name;
           url_pattern = Some (Page_kind.playbook_pattern p.url_pattern);
           text_marker = None;
           repeatable = true;

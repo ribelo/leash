@@ -64,7 +64,6 @@ type step_request = {
   dry_run : bool;
   script_offers : url:string -> text:string -> Jev_request.offered_script list;
   on_script : url:string -> string -> (Jev_request.script_effect, P.error) result;
-  reached : (start_url:string -> P.snapshot -> text:string -> bool) option;
 }
 (** run-d82w: one playbook step as the operator level receives it — the goal with the
     hint shaping it, and the step's own cap and deadline. *)
@@ -1096,14 +1095,8 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
             match goal.Playbook.hint with None -> text | Some hint -> text ^ " Hint: " ^ hint
           in
           let first = first_drive drives in
-          let cap =
-            match proc.Playbook.max_steps with
-            | Some n -> if optional && first then min 2 n else n
-            | None -> if optional && first then 2 else 30
-          in
-          let deadline_s =
-            min (remaining ()) (Option.value ~default:120 proc.Playbook.deadline_s)
-          in
+          let cap = if optional && first then 2 else 30 in
+          let deadline_s = min (remaining ()) 120 in
           let cap = min cap (args.max_steps - st.steps_used) in
           let started_url = st.observation.url in
           let side = ref st in
@@ -1218,22 +1211,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                 List.map (fun (script : Playbook.script) -> Jev_request.{ name = script.name; description = script.description })
                   (Playbook.offered_scripts book ~url ~text));
               on_script;
-              reached =
-                Option.map
-                  (fun sentences ~start_url (snapshot : P.snapshot) ~text ->
-                    Playbook.until_holds ~values book.Playbook.playbook sentences ~start_url
-                      ~url:snapshot.P.url
-                      Playbook.
-                        {
-                          kind =
-                            page_kind book.Playbook.playbook.pages ~url:snapshot.P.url ~text;
-                          text;
-                          dialog = snapshot.P.dialog <> None;
-                          rows =
-                            List.map (fun (row : P.row) -> (row.P.role, row.P.name)) snapshot.P.rows;
-                          downloads = [];
-                        })
-                  goal.Playbook.until }
+            }
           in
           (if cap <= 0 then
              Ok (Steps_finish (finish st (status "limit") ~reason:"the mission action budget was exhausted" ()))
@@ -1308,23 +1286,6 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                     in
                     Ok (Steps_interrupted (st, List.rev (entry :: drives), reason))
                   else Ok (Steps_done (st, List.rev (entry :: drives), None))))
-      | Playbook.Navigate step :: rest ->
-          let arguments = match step.Playbook.args with
-            | Some (`Assoc fields) -> List.filter_map (function name, `String value -> Some (name, Playbook.substitute values value) | _ -> None) fields
-            | _ -> [] in
-          (match control_script st book step.script arguments with
-          | Error error -> Error error
-          | Ok (st, Error reason) -> Ok (Steps_failed (st, List.rev drives, reason))
-          | Ok (st, Ok value) ->
-              match value with
-              | `Assoc [ ("url", `String url) ] when
-                  String.starts_with ~prefix:"https://" url || String.starts_with ~prefix:"http://" url || url = "about:blank" ->
-                  (match navigate t url with
-                  | Error error -> Error error
-                  | Ok () -> match observe t () with
-                    | Error error -> Error error
-                    | Ok observation -> go { st with observation } drives rest)
-              | _ -> Ok (Steps_failed (st, List.rev drives, "navigation script must return {url: an http(s) URL or about:blank}")))
       | Playbook.Script step :: rest -> (
           match Playbook.script_named book step.Playbook.script with
           | None ->
@@ -1540,7 +1501,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                           ~outcome:"skipped" ~attempts:n ~elapsed ~reason:(Some reason)))
               | None -> (
                   let checks = resolved_checks book proc values in
-                  let timeout_s = Playbook.expect_timeout proc in
+                  let timeout_s = Playbook.expect_timeout_s in
                   match verify t ~pages:book.Playbook.playbook.pages ~checks ~timeout_s with
                   | Error error -> Error (with_trace st error)
                   | Ok (results, observation) when observation.dialog <> None ->
@@ -1556,7 +1517,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                         (* run-4j1v: the verified procedure's expectations are what the
                            DONE guard re-verifies when the mission carries none. *)
                         let st =
-                          { st with checks; expect_timeout_s = Playbook.expect_timeout proc }
+                          { st with checks; expect_timeout_s = Playbook.expect_timeout_s }
                         in
                         (match propose_verified st with
                         | Error error -> Error error
@@ -1664,7 +1625,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                   Ok (Finish (finish st (status "blocked") ~reason ()))
               | Ok (Steps_done (st, drives, _)) ->
                   let checks = resolved_checks book next values in
-                  let timeout_s = Playbook.expect_timeout next in
+                  let timeout_s = Playbook.expect_timeout_s in
                   match verify t ~pages:book.Playbook.playbook.pages ~checks ~timeout_s with
                   | Error error -> Error (with_trace st error)
                   | Ok (results, observation) ->
@@ -1680,7 +1641,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
                           {
                             st with
                             checks;
-                            expect_timeout_s = Playbook.expect_timeout next;
+                            expect_timeout_s = Playbook.expect_timeout_s;
                             pages = st.pages + 1;
                           }
                         in
@@ -1856,7 +1817,7 @@ let compute (t : token) ~direct_fill ~direct_script ~on_book ~on_record ~planner
       max_steps = max 0 (args.max_steps - st.steps_used); deadline_s = remaining (); dry_run = args.dry_run;
       script_offers = (fun ~url:_ ~text:_ -> []);
       on_script = (fun ~url:_ _ -> Error (internal "on-the-fly missions have no scripts"));
-      reached = None } in
+      } in
     if request.max_steps = 0 then
       Ok (Finish (finish st (status "limit") ~reason:"the mission action budget was exhausted before operator fallback" ()))
     else match execute_step t request with

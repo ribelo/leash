@@ -6,11 +6,7 @@ let get name = function
   | `Assoc fields -> Option.value ~default:`Null (List.assoc_opt name fields)
   | _ -> `Null
 
-let mapping (book : B.t) =
-  List.concat_map
-    (fun (p : B.procedure) ->
-      Option.fold ~none:[] ~some:(fun (p : B.provenance) -> p.kind_mapping) p.provenance)
-    book.procedures
+let mapping ?(extra = []) (_book : B.t) = extra
 
 let observations traces =
   let rows =
@@ -23,7 +19,6 @@ let observations traces =
                 B.
                   {
                     name = p.name;
-                    description = "";
                     url_pattern = Some (Page_kind.playbook_pattern p.url_pattern);
                     text_marker = None;
                     repeatable = true;

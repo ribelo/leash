@@ -77,32 +77,13 @@ let observation ?(url = home_url) ?(title = "Site A") ?(text = home_text) ?dialo
     }
 
 let page name url_pattern =
-  B.
-    {
-      name;
-      description = name ^ " page";
-      url_pattern = Some url_pattern;
-      text_marker = None;
-      repeatable = true;
-    }
+  B.{ name; url_pattern = Some url_pattern; text_marker = None; repeatable = true }
 
-let goal text = B.Goal B.{ goal = text; hint = None; until = None }
+let goal text = B.Goal B.{ goal = text; hint = None }
 let mission name = B.{ name; source = From_mission { optional = false } }
 
 let procedure ?(args = []) ?(expect = [ "the page is home" ]) ~slug ~description steps =
-  B.
-    {
-      slug;
-      description;
-      args = Some args;
-      steps;
-      expect;
-      expect_timeout_s = None;
-      provenance = None;
-      repeat = None;
-      max_steps = None;
-      deadline_s = None;
-    }
+  B.{ slug; description; args = Some args; steps; expect; repeat = None }
 
 (* run-rq6i's playbook: two page kinds, so a planner procedure can name the cart, and one
    procedure the run's own level can be asked for. *)
@@ -569,7 +550,6 @@ let file_scripts_plan () =
                           pages = Some [ "home" ];
                           args = [];
                           returns_json = None;
-                          max_bytes = None;
                         } );
                   ];
             }
@@ -1276,7 +1256,6 @@ let draft_playbook_accept () =
               [
                 {
                   name = "home";
-                  description = "Home page";
                   url_pattern = Some "https://new.example/*";
                   text_marker = None;
                   repeatable = true;
@@ -1288,13 +1267,9 @@ let draft_playbook_accept () =
                   slug = "browse";
                   description = "Browse home";
                   args = None;
-                  steps = [ Goal { goal = "Inspect home"; hint = None; until = None } ];
+                  steps = [ Goal { goal = "Open home."; hint = None } ];
                   expect = [ "the page is home" ];
-                  expect_timeout_s = None;
-                  provenance = None;
                   repeat = None;
-                  max_steps = None;
-                  deadline_s = None;
                 };
               ];
             shapes = None;

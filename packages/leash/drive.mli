@@ -46,7 +46,6 @@ val run :
   ?recent:Jev_request.recent_action list ->
   ?scripts:(observation -> Jev_request.offered_script list) ->
   ?run_script:(url:string -> string -> (Jev_request.script_effect, Protocol.error) result) ->
-  ?reached:(start:observation -> observation -> bool) ->
   ?label:(url:string -> title:string -> text:string -> page_label) ->
   handler:handler ->
   now:(unit -> float) ->
@@ -70,8 +69,4 @@ val run :
     procedures. [coverage], [usage] and [telemetry] attach guarded bounds, reported model
     usage (unknown costs remain null), and input/settle timing to the structured operator
     state. Once a valid page exists, provider/browser failures return terminal evidence
-    rather than discarding it.
-
-    pbk-eyya: [reached] is the goal step's [until], asked after every executed action with
-    the drive's first observation and the page the action produced; [true] ends the drive
-    [done] without another prediction. *)
+    rather than discarding it. *)

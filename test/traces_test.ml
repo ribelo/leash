@@ -42,6 +42,7 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") ?(compiled = false) time 
       inferred_pages = [];
       compiled;
       structural_outline = None;
+      out_requested = false;
       procedures = [];
       steps = [];
       final = Some { url = "https://books.toscrape.com/"; title = "Catalog" };
@@ -55,6 +56,7 @@ let structural_outline () =
       let saved =
         {
           (trace 1000.) with
+          out_requested = false;
           structural_outline = Some "article.product_pod\n  h3\n    a\n  p.price_color\n";
         }
       in

@@ -2712,17 +2712,9 @@ let run_proposal () =
                   description = "Check the added-to-cart modal.";
                   args = None;
                   steps =
-                    [
-                      Goal
-                        Leash.Playbook.
-                          { goal = "Look at the page."; hint = None; until = None };
-                    ];
+                    [ Goal Leash.Playbook.{ goal = "Look at the page."; hint = None } ];
                   expect = [ "the page is post-add" ];
-                  expect_timeout_s = None;
-                  provenance = None;
                   repeat = None;
-                  max_steps = None;
-                  deadline_s = None;
                 }
           in
           let plan = Run.{ answer = planned; expect = []; usage = None } in
@@ -2987,11 +2979,11 @@ let list_js =
 let books_json =
   {|{
  "site":"books.example","entry":"https://books.example/","description":"Books to collect",
- "pages":[{"name":"page","description":"Any page","url_pattern":"https://automationexercise.com/*"}],
+ "pages":[{"name":"page","url_pattern":"https://automationexercise.com/*"}],
  "shapes":{"row":[{"title":"string","price":"number"}],"title":[{"title":"string"}]},
  "scripts":{
    "list":{"file":"scripts/list.js","description":"List the books.","returns":"row"},
-   "tiny":{"source":"return [{title: 'a long title that is over ten bytes'}]","description":"A tiny list.","returns":"title","max_bytes":10},
+   "tiny":{"source":"return [{title: 'a long title that is over ten bytes'}]","description":"A tiny list.","returns":"title"},
    "broken":{"source":"return [SYNTAX_BAD","description":"Broken on purpose.","returns":"title"}
  },
  "procedures":[{"slug":"collect","description":"Collect the list.","args":{"q":{"from":"mission"}},
@@ -3158,7 +3150,12 @@ let playbook_test_command () =
             value_reply
               (`List
                  [ `Assoc [ ("title", `String "a long title that is over ten bytes") ] ]);
-          check_code "extr-8o1h too large" "too-large" (test "books/tiny");
+          (* map-fmt01: the bound is one global 8 MiB, not a per-script 10-byte cap. *)
+          (match test "books/tiny" with
+          | P.Success _ -> ()
+          | P.Failure error ->
+              Alcotest.failf "map-fmt01 a small result fits the global bound: %s"
+                error.P.message);
           (* names: nothing else is looked up, nothing is sent for what is not a script *)
           let before = List.length (payloads f) in
           check_code "extr-mp5z no such script" "invalid-request" (test "books/absent");

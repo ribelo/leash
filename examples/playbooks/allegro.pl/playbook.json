@@ -5,25 +5,21 @@
   "pages": [
     {
       "name": "home",
-      "description": "Allegro home with search field",
       "url_pattern": "https://allegro.pl/",
       "text_marker": null
     },
     {
       "name": "search",
-      "description": "Results of a product search",
       "url_pattern": "https://allegro.pl/listing*",
       "text_marker": null
     },
     {
       "name": "offer",
-      "description": "A product offer with add-to-cart action",
       "url_pattern": "https://allegro.pl/oferta/*",
       "text_marker": null
     },
     {
       "name": "cart",
-      "description": "Shopping cart listing chosen product",
       "url_pattern": "https://allegro.pl/koszyk*",
       "text_marker": null
     }
@@ -32,7 +28,11 @@
     {
       "slug": "find-product",
       "description": "Search Allegro for the named product.",
-      "args": {"product": {"from": "mission"}},
+      "args": {
+        "product": {
+          "from": "mission"
+        }
+      },
       "steps": [
         {
           "goal": "Search for {product} on Allegro.",
@@ -47,7 +47,11 @@
     {
       "slug": "open-offer",
       "description": "Open the product offer from results.",
-      "args": {"product": {"from": "mission"}},
+      "args": {
+        "product": {
+          "from": "mission"
+        }
+      },
       "steps": [
         {
           "goal": "Open the offer for {product}.",

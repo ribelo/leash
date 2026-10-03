@@ -8,9 +8,7 @@ let collection mission =
       true
     with Not_found -> false
   in
-  has "\\bcollect\\b"
-  || has "\\b\\(every\\|all\\)\\b"
-     && has "\\b\\(titles?\\|prices?\\|books?\\|products?\\|records?\\)\\b"
+  has "\\bcollect\\b" || has "\\blist\\b" || has "\\bevery\\b" || has "\\ball\\b"
 
 let expression =
   {|(() => {

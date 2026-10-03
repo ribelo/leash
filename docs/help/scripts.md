@@ -4,7 +4,7 @@ A script is prepared JavaScript that belongs to a playbook. It is a `.js` file b
 
 `eval` is a different thing: the agent's own one-off function body. JEV may choose a declared script or an argument value; the argument travels as JSON, never inside the function text. The learning compiler may write an inline collection script for a repeatable draft (map-op08). It needs observed final-page structure and declared `returns`. The loader refuses navigation, submission, input/event, network, storage and dynamic-code references; this conservative source check is not a JavaScript sandbox. Compiled scripts are never allowed in non-repeatable agreement-gate procedures. They install only after JEV selected that exact draft revision, each script actually succeeded, and non-empty expectations passed. Manual `playbook accept` cannot bypass that replay proof.
 
-A script is the body of an async function of `args`, an object of strings. It may `await fetch` the site's own endpoints with the page's cookies. Collection scripts should read, not click, scroll, or change the page. A navigate control script may read same-site pages or endpoints to find a destination, but should return the URL rather than mutate the current page. Leash performs the navigation after validation. Throw when the page is the wrong one; an empty list is a valid result (an empty cart).
+A script is the body of an async function of `args`, an object of strings. It may `await fetch` the site's own endpoints with the page's cookies. Collection scripts should read, not click, scroll, or change the page. Navigation is a goal, not a script step. Throw when the page is the wrong one; an empty list is a valid result (an empty cart).
 
 ## pages
 
@@ -24,7 +24,7 @@ Declare returns in exactly one place:
 - `scripts/<name>.returns.json` beside the playbook
 - `"returns": "<shape>"` naming a shape in `shapes`
 
-An inline shape object on the declaration is refused. A missing returns, or two of them, is refused. `max_bytes` bounds the serialized result: default 8 MiB, at most 16 MiB. A file script is at most 1 MiB. Inline source is at most 4096 bytes.
+An inline shape object on the declaration is refused. A missing returns, or two of them, is refused. Every script result is bounded by one global limit, 8 MiB. `max_bytes` is a removed field. A file script is at most 1 MiB. Inline source is at most 4096 bytes.
 
 ## args
 
@@ -40,9 +40,9 @@ There are three argument locations:
 
 1. Procedure `args` declares the values the text helper or constants fill. A goal substitutes `{product}`; a `use` can pass an object of strings to its child.
 2. Script declaration `args` declares every value its source reads. When JEV chooses `run_script:name`, these sources fill its inputs.
-3. Pinned step `args` supplies the actual values. This is inside `{"script":"name","args":{...}}` or `{"navigate":{"script":"name","args":{...}}}`. Values are strings, and `{product}` substitutes a previously filled procedure argument. These steps do not run the text helper or apply declaration constants: missing required declared inputs are refused at load, instead of silently ignored. Optional inputs may be omitted.
+3. Pinned step `args` supplies the actual values. This is inside `{"script":"name","args":{...}}`. Values are strings, and `{product}` substitutes a previously filled procedure argument. These steps do not run the text helper or apply declaration constants: missing required declared inputs are refused at load, instead of silently ignored. Optional inputs may be omitted. A `navigate` step is refused.
 
-For example, declare `product` with `{"from":"mission"}` on both the procedure and script, then use `{"navigate":{"script":"product-url","args":{"product":"{product}"}}}`. The script can read `args.product` and return `{url: resolvedUrl}`.
+For example, declare `product` with `{"from":"mission"}` on both the procedure and script, then use `{"script":"list-page","args":{"product":"{product}"}}`. The script can read `args.product` and return records.
 
 ## How JEV chooses one
 

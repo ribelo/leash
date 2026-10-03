@@ -9,19 +9,87 @@ let ( let* ) = Result.bind
 
 type page = {
   name : string;
-  description : string;
   url_pattern : string option;
   text_marker : string option;
-  repeatable : bool; [@json.default true]
+  repeatable : bool;
 }
-[@@deriving yojson]
 
-(* pbk-eyya: [until] ends a goal step as soon as every sentence holds after an executed
-   action — code checkers only, plus "the address changed" (relative to the step's start).
-   A relative goal ("open the next page") is not a question a stateless operator can
-   answer from the page it lands on; the author states what reaching it looks like. *)
-type goal_step = { goal : string; hint : string option; until : string list option }
-[@@deriving yojson]
+(* map-fmt01: JEV sees [goal]; [hint] is appended to that goal. [until] is removed. *)
+type goal_step = { goal : string; hint : string option }
+
+let removed_field name = Error ("removed field " ^ name)
+let json_member key = function `Assoc fields -> List.assoc_opt key fields | _ -> None
+
+let page_of_yojson json =
+  match json with
+  | `Assoc fields -> (
+      match List.find_opt (fun key -> List.mem_assoc key fields) [ "description" ] with
+      | Some name -> removed_field name
+      | None ->
+          let ( let* ) = Result.bind in
+          let* name =
+            match json_member "name" json with
+            | Some (`String name) -> Ok name
+            | Some _ -> Error "name must be a string"
+            | None -> Error "page needs a name"
+          in
+          let* url_pattern =
+            match json_member "url_pattern" json with
+            | None | Some `Null -> Ok None
+            | Some (`String value) -> Ok (Some value)
+            | Some _ -> Error "url_pattern must be a string"
+          in
+          let* text_marker =
+            match json_member "text_marker" json with
+            | None | Some `Null -> Ok None
+            | Some (`String value) -> Ok (Some value)
+            | Some _ -> Error "text_marker must be a string"
+          in
+          let* repeatable =
+            match json_member "repeatable" json with
+            | None -> Ok true
+            | Some (`Bool value) -> Ok value
+            | Some _ -> Error "repeatable must be a boolean"
+          in
+          Ok { name; url_pattern; text_marker; repeatable })
+  | _ -> Error "page must be an object"
+
+let yojson_of_page (page : page) =
+  `Assoc
+    (List.filter_map
+       (fun (key, value) -> Option.map (fun v -> (key, v)) value)
+       [
+         ("name", Some (`String page.name));
+         ("url_pattern", Option.map (fun s -> `String s) page.url_pattern);
+         ("text_marker", Option.map (fun s -> `String s) page.text_marker);
+         ("repeatable", if page.repeatable then None else Some (`Bool false));
+       ])
+
+let goal_step_of_yojson json =
+  match json with
+  | `Assoc fields -> (
+      match List.find_opt (fun key -> List.mem_assoc key fields) [ "until" ] with
+      | Some name -> removed_field name
+      | None ->
+          let ( let* ) = Result.bind in
+          let* goal =
+            match json_member "goal" json with
+            | Some (`String goal) -> Ok goal
+            | _ -> Error "goal must be a string"
+          in
+          let* hint =
+            match json_member "hint" json with
+            | None | Some `Null -> Ok None
+            | Some (`String value) -> Ok (Some value)
+            | Some _ -> Error "hint must be a string"
+          in
+          Ok { goal; hint })
+  | _ -> Error "goal step must be an object"
+
+let yojson_of_goal_step (step : goal_step) =
+  match step.hint with
+  | None -> `Assoc [ ("goal", `String step.goal) ]
+  | Some hint -> `Assoc [ ("goal", `String step.goal); ("hint", `String hint) ]
 
 type use_step = { use : string; args : Yojson.Safe.t option; optional : bool option }
 [@@deriving yojson]
@@ -29,35 +97,25 @@ type use_step = { use : string; args : Yojson.Safe.t option; optional : bool opt
 (* extr-8o1h: a step that runs one of the playbook's own scripts by name; [args] are
    strings with the run's placeholders substituted, like a [use] step's. *)
 type script_step = { script : string; args : Yojson.Safe.t option } [@@deriving yojson]
-
-type step =
-  | Goal of goal_step
-  | Use of use_step
-  | Script of script_step
-  | Navigate of script_step
+type step = Goal of goal_step | Use of use_step | Script of script_step
 
 let step_of_yojson = function
   | `Assoc fields as json -> (
-      match
-        List.filter
-          (fun key -> List.mem_assoc key fields)
-          [ "goal"; "use"; "script"; "navigate" ]
-      with
-      | [ "goal" ] -> Result.map (fun x -> Goal x) (goal_step_of_yojson json)
-      | [ "use" ] -> Result.map (fun x -> Use x) (use_step_of_yojson json)
-      | [ "script" ] -> Result.map (fun x -> Script x) (script_step_of_yojson json)
-      | [ "navigate" ] when List.length fields = 1 ->
-          Result.map
-            (fun x -> Navigate x)
-            (script_step_of_yojson (List.assoc "navigate" fields))
-      | _ -> Error "step must have exactly one of goal, use, script or navigate")
+      if List.mem_assoc "navigate" fields then removed_field "navigate"
+      else
+        match
+          List.filter (fun key -> List.mem_assoc key fields) [ "goal"; "use"; "script" ]
+        with
+        | [ "goal" ] -> Result.map (fun x -> Goal x) (goal_step_of_yojson json)
+        | [ "use" ] -> Result.map (fun x -> Use x) (use_step_of_yojson json)
+        | [ "script" ] -> Result.map (fun x -> Script x) (script_step_of_yojson json)
+        | _ -> Error "step must have exactly one of goal, use or script")
   | _ -> Error "step must be an object"
 
 let yojson_of_step = function
   | Goal step -> yojson_of_goal_step step
   | Use step -> yojson_of_use_step step
   | Script step -> yojson_of_script_step step
-  | Navigate step -> `Assoc [ ("navigate", yojson_of_script_step step) ]
 
 type repeat_until = Expectation of string | Script_check of string
 
@@ -170,22 +228,87 @@ type provenance = {
 [@@deriving yojson]
 
 type procedure = {
-  provenance : provenance option;
   slug : string;
   description : string;
   args : arg_decls option;
   steps : step list;
   expect : string list;
-  expect_timeout_s : int option;
-  max_steps : int option;
-      (* L31 run-d82w: the cap one step of this procedure runs the operator level under;
-         [None] is the operator's own default. *)
   repeat : repeat option;
-  deadline_s : int option;
-      (* L31 run-d82w: the same step's own deadline, still bounded by what is left of the
-         run. *)
 }
-[@@deriving yojson]
+
+let procedure_removed = [ "provenance"; "expect_timeout_s"; "max_steps"; "deadline_s" ]
+
+let procedure_of_yojson json =
+  match json with
+  | `Assoc fields -> (
+      match
+        List.find_opt (fun key -> List.mem key procedure_removed) (List.map fst fields)
+      with
+      | Some name -> removed_field name
+      | None ->
+          let ( let* ) = Result.bind in
+          let* slug =
+            match json_member "slug" json with
+            | Some (`String slug) -> Ok slug
+            | _ -> Error "slug must be a string"
+          in
+          let* description =
+            match json_member "description" json with
+            | Some (`String description) -> Ok description
+            | _ -> Error "description must be a string"
+          in
+          let* args =
+            match json_member "args" json with
+            | None | Some `Null -> Ok None
+            | Some value ->
+                Result.map (fun decls -> Some decls) (arg_decls_of_yojson value)
+          in
+          let* steps =
+            match json_member "steps" json with
+            | Some (`List items) ->
+                let rec go acc = function
+                  | [] -> Ok (List.rev acc)
+                  | item :: rest -> (
+                      match step_of_yojson item with
+                      | Ok step -> go (step :: acc) rest
+                      | Error why -> Error why)
+                in
+                go [] items
+            | _ -> Error "steps must be a list"
+          in
+          let* expect =
+            match json_member "expect" json with
+            | Some (`List items) ->
+                let rec go acc = function
+                  | [] -> Ok (List.rev acc)
+                  | `String sentence :: rest -> go (sentence :: acc) rest
+                  | _ -> Error "expect must be a list of sentences"
+                in
+                go [] items
+            | _ -> Error "expect must be a list of sentences"
+          in
+          let* repeat =
+            match json_member "repeat" json with
+            | None | Some `Null -> Ok None
+            | Some value ->
+                Result.map (fun repeat -> Some repeat) (repeat_of_yojson value)
+          in
+          Ok { slug; description; args; steps; expect; repeat })
+  | _ -> Error "procedure must be an object"
+
+let yojson_of_procedure (proc : procedure) =
+  let fields =
+    [
+      ("slug", Some (`String proc.slug));
+      ("description", Some (`String proc.description));
+      ("args", Option.map yojson_of_arg_decls proc.args);
+      ("steps", Some (`List (List.map yojson_of_step proc.steps)));
+      ("expect", Some (`List (List.map (fun s -> `String s) proc.expect)));
+      ("repeat", Option.map yojson_of_repeat proc.repeat);
+    ]
+  in
+  `Assoc
+    (List.filter_map (fun (key, value) -> Option.map (fun v -> (key, v)) value) fields)
 
 (* extr-plaz extr-zdst pbk-46fr pbk-lvy9: a script as the playbook writes it. The
    result shape is not an inline object here — that is the old form (pbk-i0zl). *)
@@ -196,7 +319,6 @@ type script_decl = {
   pages : string list option;
   args : arg_decl list;
   returns_json : Yojson.Safe.t option;
-  max_bytes : int option;
 }
 
 let returns_form =
@@ -240,13 +362,14 @@ let script_decl_of_yojson = function
         | Some value -> arg_decls_of_yojson value
       in
       let returns_json = member "returns" json in
-      let* max_bytes =
-        match member "max_bytes" json with
-        | None -> Ok None
-        | Some (`Int n) -> Ok (Some n)
-        | Some _ -> Error "max_bytes must be an integer"
+      let* () =
+        match
+          List.find_opt (fun key -> member key json <> None) [ "max_bytes"; "origin" ]
+        with
+        | Some name -> removed_field name
+        | None -> Ok ()
       in
-      Ok { file; source; description; pages; args; returns_json; max_bytes }
+      Ok { file; source; description; pages; args; returns_json }
   | _ -> Error "a script declaration must be an object"
 
 let yojson_of_script_decl (decl : script_decl) =
@@ -260,7 +383,6 @@ let yojson_of_script_decl (decl : script_decl) =
       );
       ("args", if decl.args = [] then None else Some (yojson_of_arg_decls decl.args));
       ("returns", decl.returns_json);
-      ("max_bytes", Option.map (fun n -> `Int n) decl.max_bytes);
     ]
   in
   `Assoc
@@ -333,12 +455,12 @@ type script = {
   name : string;
   code : string;
   returns : Shape.t;
-  max_bytes : int;
-  origin : string;
   description : string;
   pages : string list option;
   args : arg_decl list;
 }
+
+let script_max_bytes = 8 * 1024 * 1024
 
 type draft = {
   procedure : procedure;
@@ -540,23 +662,6 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
   let* () = require (proc.steps <> []) "steps must not be empty" in
   let* () =
     require
-      (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 30) proc.expect_timeout_s)
-      "expect_timeout_s must be 1..30"
-  in
-  (* L31 run-d82w: a step's own bounds are the operator level's, so they carry its
-     limits: at most 30 steps, and a deadline the drive accepts. *)
-  let* () =
-    require
-      (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 30) proc.max_steps)
-      "max_steps must be 1..30"
-  in
-  let* () =
-    require
-      (Option.fold ~none:true ~some:(fun n -> n > 0 && n <= 600) proc.deadline_s)
-      "deadline_s must be 1..600"
-  in
-  let* () =
-    require
       (let names =
          List.map
            (fun (decl : arg_decl) -> decl.name)
@@ -609,25 +714,6 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
     | [] -> Ok ()
     | Goal goal :: tail ->
         let* () = require (trim goal.goal <> "") "goal must not be empty" in
-        let* () =
-          match goal.until with
-          | None -> Ok ()
-          | Some [] -> refuse "goal until must not be empty"
-          | Some sentences ->
-              List.fold_left
-                (fun acc sentence ->
-                  let* () = acc in
-                  if address_changed sentence then Ok ()
-                  else
-                    match resolve book.pages sentence with
-                    | Error message -> refuse ("goal until: " ^ message)
-                    | Ok (Judgment _) ->
-                        refuse
-                          ("goal until must be a code checker or \"the address \
-                            changed\": " ^ sentence)
-                    | Ok _ -> Ok ())
-                (Ok ()) sentences
-        in
         steps tail
     | Use use :: tail ->
         let* () =
@@ -645,7 +731,7 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
             "use args must be an object of strings"
         in
         steps tail
-    | (Script step | Navigate step) :: tail ->
+    | Script step :: tail ->
         let* () =
           require
             (List.mem step.script script_names)
@@ -702,8 +788,6 @@ let check_procedure ?(file = "<procedure>") (book : t) (proc : procedure) =
    after every symlink is resolved must still be inside the directory — a link may point
    at another file of the playbook, never out of it. The text is read here, once, so a run
    works from what the operator saw at load. *)
-let default_max_bytes = 8 * 1024 * 1024
-let ceiling_max_bytes = 16 * 1024 * 1024
 let max_inline_bytes = 4096
 let max_file_bytes = 1024 * 1024
 
@@ -828,32 +912,24 @@ let resolve_scripts ~file ~dir (book : t) =
         if not (valid_name name) then refuse name "name must be a lowercase slug"
         else if List.mem name seen then refuse name "declared twice"
         else
-          match
-            Option.fold ~none:(Ok default_max_bytes)
-              ~some:(fun n ->
-                if n >= 1 && n <= ceiling_max_bytes then Ok n
-                else Error (Printf.sprintf "max_bytes must be 1..%d" ceiling_max_bytes))
-              decl.max_bytes
-          with
+          match Ok () with
           | Error why -> refuse name why
-          | Ok max_bytes -> (
+          | Ok () -> (
               let code =
                 match (decl.file, decl.source) with
                 | Some path, None ->
-                    Result.map
-                      (fun code -> (code, "file " ^ path))
-                      (read_script_file ~dir path)
+                    Result.map (fun code -> code) (read_script_file ~dir path)
                 | None, Some source ->
                     if String.length source > max_inline_bytes then
                       Error
                         (Printf.sprintf "inline source is over %d bytes: put it in a file"
                            max_inline_bytes)
-                    else Ok (source, "inline")
+                    else Ok source
                 | _ -> Error "declare exactly one of file or source"
               in
               match code with
               | Error why -> refuse name why
-              | Ok (code, origin) -> (
+              | Ok code -> (
                   if String.trim code = "" then refuse name "the script is empty"
                   else if String.contains code (Char.chr 0) then
                     refuse name "the script contains NUL"
@@ -932,8 +1008,6 @@ let resolve_scripts ~file ~dir (book : t) =
                                                      name;
                                                      code;
                                                      returns;
-                                                     max_bytes;
-                                                     origin;
                                                      description =
                                                        String.trim decl.description;
                                                      pages = decl.pages;
@@ -1078,7 +1152,7 @@ let validate ~file ~dir (book : t) =
       let proc = List.find (fun (p : procedure) -> p.slug = slug) book.procedures in
       let rec steps = function
         | [] -> Ok ()
-        | (Goal _ | Script _ | Navigate _) :: tail -> steps tail
+        | (Goal _ | Script _) :: tail -> steps tail
         | Use use :: tail ->
             let* () = visit (slug :: path) use.use in
             steps tail
@@ -1121,8 +1195,7 @@ let validate ~file ~dir (book : t) =
         | [] -> Ok ()
         | proc :: rest ->
             let* () =
-              if proc.provenance <> None then check_goal_count ~minimum:2 ~file book proc
-              else if has_goal proc || List.mem proc.slug subs then Ok ()
+              if has_goal proc || List.mem proc.slug subs then Ok ()
               else check_goal_count ~minimum:1 ~file book proc
             in
             orphan rest
@@ -1132,38 +1205,14 @@ let validate ~file ~dir (book : t) =
   in
   let* scripts = resolve_scripts ~file ~dir book in
   let* () =
-    List.fold_left
-      (fun result (proc : procedure) ->
-        let* () = result in
-        match proc.provenance with
-        | None -> Ok ()
-        | Some provenance ->
-            let names =
-              List.filter_map
-                (function Script step -> Some step.script | _ -> None)
-                proc.steps
-            in
-            if names <> [] && ((not provenance.repeatable) || provenance.gate <> "replay")
-            then
-              refuse ~procedure:proc.slug
-                "compiled scripts require a repeatable replay-gate procedure"
-            else
-              List.fold_left
-                (fun result name ->
-                  let* () = result in
-                  match List.find_opt (fun (s : script) -> s.name = name) scripts with
-                  | None -> refuse ~procedure:proc.slug ("unknown compiled script " ^ name)
-                  | Some script -> check_compiled_script script.code)
-                (Ok ()) names)
-      (Ok ()) book.procedures
-  in
-  let* () =
     require (List.length scripts <= 246) "more than 246 scripts (255-option JEV ceiling)"
   in
   Ok { file; dir = Option.map snd dir; playbook = book; checks; scripts }
 
 let of_json ?dir ~file json =
   match json with
+  | `Assoc fields when List.mem_assoc "provenance" fields ->
+      Error (file ^ ": removed field provenance")
   | `Assoc fields when List.mem_assoc "returns" fields ->
       Error
         (file ^ ": returns belongs beside the script (" ^ returns_form
@@ -1183,9 +1232,18 @@ let revalidate ~caps (book : loaded) playbook =
     ~dir:(Option.map (fun dir -> (reads caps, dir)) book.dir)
     playbook
 
+let provenance_filename slug = slug ^ ".provenance.json"
+
+let is_provenance_sidecar name =
+  let suffix = ".provenance.json" in
+  String.ends_with ~suffix name
+  &&
+  let stem = String.sub name 0 (String.length name - String.length suffix) in
+  valid_slug stem
+
 (* extr-plaz: a playbook is a directory, [<name>/playbook.json] and whatever files sit
    beside it. Errors name the playbook.json path — or the path given when it is not a
-   directory at all. *)
+   directory at all. Provenance sidecars are the only other JSON allowed (map-fmt02). *)
 let load ~caps dir =
   let file = Filename.concat dir "playbook.json" in
   if Sys.file_exists dir && not (Sys.is_directory dir) then
@@ -1203,7 +1261,8 @@ let load ~caps dir =
       |> List.filter (fun name ->
           (not (String.starts_with ~prefix:"." name))
           && String.ends_with ~suffix:".json" name
-          && name <> "playbook.json")
+          && name <> "playbook.json"
+          && not (is_provenance_sidecar name))
       |> List.sort String.compare
     in
     if extra <> [] then
@@ -1448,11 +1507,9 @@ let non_repeatable_action ~context operation =
        [ "submit"; "press"; "click"; "upload"; "select"; "type_text"; "fill" ]
 
 let procedure_repeatable (book : t) ~context (proc : procedure) =
-  (* Authored pins are authoritative even when the procedure has no provenance,
-     or its learned provenance optimistically calls it repeatable. Conservatively
-     exclude replay whenever this book can enter a pinned non-repeatable page. *)
+  (* map-fmt02: the runner does not read provenance. Page pins and the procedure's own
+     words decide replay. Learning reads the sidecar when it chooses a gate. *)
   List.for_all (fun (page : page) -> page.repeatable) book.pages
-  && Option.fold ~none:true ~some:(fun (p : provenance) -> p.repeatable) proc.provenance
   && not
        (non_repeatable_context
           (String.concat " "
@@ -1608,16 +1665,14 @@ let retry_once ~execute ~verify =
     execute ();
     verify ())
 
-let inspect ?(code = false) book =
+let inspect ?(code = false) ?(provenances = []) book =
   let scripts =
     List.map
       (fun (script : script) ->
         `Assoc
           ([
              ("script", `String script.name);
-             ("origin", `String script.origin);
              ("bytes", `Int (String.length script.code));
-             ("max_bytes", `Int script.max_bytes);
              ("returns", Shape.yojson_of_t script.returns);
            ]
           @ if code then [ ("code", `String script.code) ] else []))
@@ -1639,6 +1694,13 @@ let inspect ?(code = false) book =
       ("playbook", yojson_of_t book.playbook);
       ("scripts", `List scripts);
       ("resolved", `List checks);
+      ( "provenances",
+        `List
+          (List.map
+             (fun (slug, prov) ->
+               `Assoc
+                 [ ("slug", `String slug); ("provenance", yojson_of_provenance prov) ])
+             provenances) );
     ]
 
 type observation = {
@@ -1726,20 +1788,7 @@ let passes checker (snapshot : observation) =
 (* map-bjon: an authored procedure waits 5 s. A learned one waits 15 s unless the
    draft named its own bound, because a page-kind match can land while the result
    is still loading. *)
-let default_expect_timeout_s = 5
-let learned_expect_timeout_s = 15
-
-let expect_timeout (proc : procedure) =
-  match proc.expect_timeout_s with
-  | Some seconds -> seconds
-  | None ->
-      if proc.provenance = None then default_expect_timeout_s
-      else learned_expect_timeout_s
-
-let with_learned_timeout (proc : procedure) =
-  match proc.expect_timeout_s with
-  | Some _ -> proc
-  | None -> { proc with expect_timeout_s = Some learned_expect_timeout_s }
+let expect_timeout_s = 5
 
 (* run-l06s run-vbys: the bounded wait, keeping what each expectation came to, so the run's
    trace can say which checker decided it and — for a judgment — the score it carried. The
@@ -1789,25 +1838,80 @@ let await_results ~now ~sleep ~observe ~score ?(threshold = 0.8) ?(timeout_s = 5
   in
   loop ()
 
-(* pbk-eyya: a goal step's [until], decided in code against the page an executed action
-   produced. Sentences were validated at load; one that no longer resolves after
-   substitution does not hold. *)
-let until_holds ?(values = []) (book : t) sentences ~start_url ~url observation =
-  List.for_all
-    (fun sentence ->
-      let sentence = substitute values sentence in
-      if address_changed sentence then url <> start_url
-      else
-        match resolve book.pages sentence with
-        | Ok (Judgment _) | Error _ -> false
-        | Ok checker -> passes checker observation)
-    sentences
-
 let await ~now ~sleep ~observe ~score ?threshold ?timeout_s checks =
   List.for_all
     (fun (result : checked) -> result.passed)
     (await_results ~now ~sleep ~observe ~score ?threshold ?timeout_s
        (List.map (fun checker -> ("", checker)) checks))
+
+let check_draft (proc : procedure) =
+  let require condition message = if condition then Ok () else Error message in
+  let ( let* ) = Result.bind in
+  let* () = require (trim proc.description <> "") "description must not be empty" in
+  let* () =
+    require
+      (proc.expect <> [] && List.for_all (fun s -> trim s <> "") proc.expect)
+      "expect must be a non-empty list of sentences"
+  in
+  let goals =
+    List.length (List.filter (function Goal _ -> true | _ -> false) proc.steps)
+  in
+  require (goals >= 1) "a draft needs at least one goal step"
+
+let write_provenance ~caps ~dir ~slug prov =
+  atomic_write_json ~caps ~mode:0o600
+    (Filename.concat dir (provenance_filename slug))
+    (yojson_of_provenance prov)
+
+let read_provenance ~caps path =
+  if not (Sys.file_exists path) then Ok None
+  else
+    try
+      let json =
+        Cap_stdlib.In_channel.with_open_bin ~caps path Yojson.Safe.from_channel
+      in
+      match provenance_of_yojson json with
+      | Ok prov -> Ok (Some prov)
+      | Error why -> Error (path ^ ": " ^ why)
+    with
+    | Sys_error why -> Error (path ^ ": " ^ why)
+    | Yojson.Json_error why -> Error (path ^ ": invalid JSON: " ^ why)
+
+let learned_install ~caps ~from_dir ~to_dir ~file (book : t) (proc : procedure) =
+  let src = Filename.concat from_dir (provenance_filename proc.slug) in
+  let* prov = read_provenance ~caps src in
+  match prov with
+  | None -> Ok ()
+  | Some prov ->
+      let* () = check_goal_count ~minimum:2 ~file book proc in
+      let* () =
+        if
+          List.exists (function Script _ -> true | _ -> false) proc.steps
+          && ((not prov.repeatable) || prov.gate <> "replay")
+        then
+          Error
+            (file ^ ": procedure " ^ proc.slug
+           ^ ": compiled scripts require a repeatable replay-gate procedure")
+        else Ok ()
+      in
+      let* () =
+        List.fold_left
+          (fun result step ->
+            let* () = result in
+            match step with
+            | Script step -> (
+                match
+                  List.assoc_opt step.script (Option.value ~default:[] book.scripts)
+                with
+                | None -> Ok ()
+                | Some decl -> (
+                    match decl.source with
+                    | None -> Ok ()
+                    | Some source -> check_compiled_script source))
+            | _ -> Ok ())
+          (Ok ()) proc.steps
+      in
+      write_provenance ~caps ~dir:to_dir ~slug:proc.slug prov
 
 let accept_unlocked ?revision ?(replayed_scripts = []) ~caps path =
   let ( let* ) = Result.bind in
@@ -1906,6 +2010,15 @@ let accept_unlocked ?revision ?(replayed_scripts = []) ~caps path =
             (Ok ()) old.playbook.procedures
     in
     let* () = Config.ensure_dir ~caps (Filename.dirname destination) in
+    let* () =
+      List.fold_left
+        (fun result (proc : procedure) ->
+          let* () = result in
+          learned_install ~caps ~from_dir:(Filename.dirname path)
+            ~to_dir:(Filename.dirname destination)
+            ~file:destination merged proc)
+        (Ok ()) draft.procedures
+    in
     let* () = atomic_book ~caps destination merged in
     Ok { site = draft.site; slug = "*"; playbook = destination; replaced }
   else
@@ -1941,6 +2054,10 @@ let accept_unlocked ?revision ?(replayed_scripts = []) ~caps path =
              (fun (proc : procedure) -> proc.slug = proposal.procedure.slug)
              book.playbook.procedures)
       else Ok ()
+    in
+    let* () =
+      learned_install ~caps ~from_dir:(Filename.dirname path)
+        ~to_dir:(Filename.dirname book.file) ~file:book.file merged proposal.procedure
     in
     let* () = atomic_book ~caps book.file merged in
     Ok
@@ -2005,7 +2122,7 @@ let retire_draft ~caps ~file ~revision ~site ~slug =
    may replace only the revision it inspected; successful acceptance consumes that
    precise revision before another compiler can replace its pathname. *)
 
-let propose ?book ?revision ~caps ~site (proc : procedure) =
+let propose ?book ?revision ?provenance ~caps ~site (proc : procedure) =
   let directory = proposed_directory ~caps () in
   let path = Filename.concat directory (site ^ "-" ^ proc.slug ^ ".json") in
   let* () = Config.ensure_dir ~caps directory in
@@ -2017,6 +2134,11 @@ let propose ?book ?revision ~caps ~site (proc : procedure) =
         | Some book -> yojson_of_t { book with procedures = [ proc ] }
       in
       let* () = atomic_write_json ~caps ~mode:0o600 path json in
+      let* () =
+        match provenance with
+        | None -> Ok ()
+        | Some prov -> write_provenance ~caps ~dir:directory ~slug:proc.slug prov
+      in
       Ok path)
 
 let archive_proposal ~revision ~caps path =

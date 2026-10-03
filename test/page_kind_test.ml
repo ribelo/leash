@@ -287,7 +287,6 @@ let maps_routes () =
             Leash.Playbook.
               {
                 name = p.name;
-                description = "inferred";
                 url_pattern = Some p.url_pattern;
                 text_marker = None;
                 repeatable = true;
@@ -326,7 +325,6 @@ let executable_patterns () =
         Leash.Playbook.
           {
             name = inferred.name;
-            description = "inferred";
             url_pattern = Some inferred.url_pattern;
             text_marker = None;
             repeatable = true;
@@ -348,7 +346,6 @@ let executable_patterns () =
     Leash.Playbook.
       {
         name = "safe";
-        description = "safe";
         url_pattern = Some "https://example.com/list?mode=safe";
         text_marker = None;
         repeatable = true;

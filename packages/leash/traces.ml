@@ -564,6 +564,7 @@ let finish t ~now outcome =
       procedures;
       steps;
       structural_outline = None;
+      out_requested = false;
       final;
       error_code;
     }

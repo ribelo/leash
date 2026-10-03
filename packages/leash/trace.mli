@@ -51,6 +51,8 @@ type t = {
   steps : trace_step list;
   structural_outline : string option; [@json.default None]
       (** map-op09: at most 4096 bytes of tag/class skeleton, never page text. *)
+  out_requested : bool; [@json.default false]
+      (** map-fmt04: the mission asked for [--out]. Absent JSON is false. *)
   final : trace_page option; [@json.null]
   error_code : string option;
 }

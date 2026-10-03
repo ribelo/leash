@@ -5,7 +5,6 @@
   "pages": [
     {
       "name": "pdf-source",
-      "description": "Mozilla PDF.js public test PDF source",
       "url_pattern": "https://github.com/mozilla/pdf.js/blob/*/test/pdfs/tracemonkey.pdf",
       "text_marker": null
     }
@@ -14,7 +13,6 @@
     {
       "slug": "download-pdf",
       "description": "Download the public tracemonkey.pdf test fixture from the Mozilla PDF.js repository, then switch to example.com for the second part of the mission.",
-      "max_steps": 1,
       "steps": [
         {
           "goal": "On this public GitHub PDF fixture page, click Download raw file once to save tracemonkey.pdf. Do not edit the repository.",

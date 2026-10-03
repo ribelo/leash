@@ -1,6 +1,6 @@
 # Playbooks
 
-A playbook describes one site. It is a directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/`, holding `playbook.json` and the files beside it (usually `~/.config/leash/playbooks/<name>/` when that variable is unset). The operator or an agent writes it. Learning can also compile validated procedures and read-only collection scripts from completed mission traces, then install them through the matching verification gate. Nothing but `playbook.json` and the script files may sit in that directory: another `.json` file beside `playbook.json` is refused. A `.json` file left in the playbooks root is not a playbook.
+A playbook describes one site. It is a directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/`, holding `playbook.json` and the files beside it (usually `~/.config/leash/playbooks/<name>/` when that variable is unset). The operator or an agent writes it. Learning can also compile validated procedures and read-only collection scripts from completed mission traces, then install them through the matching verification gate. Beside `playbook.json`, the only other JSON allowed is a learned procedure sidecar named `<slug>.provenance.json`. The runner never reads those sidecars. Any other `.json` file beside `playbook.json` is refused. A `.json` file left in the playbooks root is not a playbook.
 
 Install by copying the directory. `leash playbook list` lists validated installed books. `leash playbook show NAME` prints one, including script text. `leash playbook check ./DIR` validates a directory and skips JavaScript compilation. `leash playbook check NAME` does the same for an installed name and compiles each script in a blank tab. `leash playbook accept FILE` merges a reviewed proposal. The format below is what `check` accepts.
 
@@ -12,29 +12,26 @@ Install by copying the directory. `leash playbook list` lists validated installe
 
 `description` is one non-empty string. JEV reads it when choosing a book.
 
-`pages` is the list of page kinds. Each has `name` (a unique lowercase slug: `a-z`, `0-9`, `-`, `_`), `description`, and at least one of `url_pattern` or `text_marker`. `url_pattern` matches the whole URL; `*` matches any characters, including `?` and `#`; without `*` it is exact. `text_marker` is a case-insensitive substring of the page text. `null` means that recogniser is absent. `repeatable` defaults to `true`; set it to `false` for irreversible pages such as checkout or upload, overriding inferred safety.
+`pages` is the list of page kinds. Each has `name` (a unique lowercase slug: `a-z`, `0-9`, `-`, `_`) and at least one of `url_pattern` or `text_marker`. A page `description` is a removed field and is refused. `url_pattern` matches the whole URL; `*` matches any characters, including `?` and `#`; without `*` it is exact. `text_marker` is a case-insensitive substring of the page text. `null` means that recogniser is absent. `repeatable` defaults to `true`; set it to `false` for irreversible pages such as checkout or upload, overriding inferred safety.
 
 `shapes` is an object of shape name (a lowercase slug) to a shape. A shape is `string`, `number`, `boolean`, `url`, an object of field to shape, or a one-element array for a list. A field name ending in `?` is optional. Nesting is at most eight deep. See `leash help scripts`.
 
-`scripts` is an object of script name (a lowercase slug) to a declaration: exactly one of `file` or `source`, a one-sentence `description`, optional `pages`, optional `args`, optional `returns` naming a shape, optional `max_bytes`. `file` is relative to the playbook directory, ends in `.js`, has no `..`, and is not absolute. See `leash help scripts`.
+`scripts` is an object of script name (a lowercase slug) to a declaration: exactly one of `file` or `source`, a one-sentence `description`, optional `pages`, optional `args`, optional `returns` naming a shape. `max_bytes` and `origin` are removed fields. Every script result is bounded by one global limit, 8 MiB. `file` is relative to the playbook directory, ends in `.js`, has no `..`, and is not absolute. See `leash help scripts`.
 
 `procedures` is the list of procedures, at most 200. Each has:
 
 - `slug` — a unique lowercase slug.
 - `description` — non-empty. JEV chooses on this.
 - `args` — optional object of argument name to a source. Not a list of names.
-- `steps` — a non-empty list. Each step is exactly one of `goal`, `use`, `script`, or `navigate`.
-- `expect` — a non-empty list of sentences. See `leash help expectations`.
-- `expect_timeout_s` — optional, 1 to 30. Default 5.
-- `max_steps` — optional, 1 to 30. The operator cap for one goal step.
-- `deadline_s` — optional, 1 to 600.
+- `steps` — a non-empty list. Each step is exactly one of `goal`, `use`, or `script`. `navigate` is a removed step kind; a goal covers navigation.
+- `expect` — a non-empty list of sentences. See `leash help expectations`. Expectations are the one verification, checked at the end of the procedure. The wait is 5 seconds; `expect_timeout_s` is a removed field.
 - `repeat` — optional. `next` names another procedure that does not itself repeat. `max` is 1 to 1000. `until` is an expectation sentence or `{"script":"name"}`. `delay_ms` is optional, 0 to 60000, default 500. `key` is a non-empty string used to drop a record seen twice.
 
-A goal step is `{"goal":"..."}` with optional `until` (a non-empty list of code checkers, or `the address changed`) and optional `hint`. The goal text must not be empty.
+A goal step is `{"goal":"..."}` with optional `hint`. JEV sees the goal, including the hint when one is set. `until` on a step is a removed field. The goal text must not be empty. A procedure `max_steps` or `deadline_s` is a removed field; the operator uses its own cap and deadline.
 
 A use step is `{"use":"slug"}` with optional `args` (an object of strings) and optional `optional`. It must not form a cycle.
 
-A script step is `{"script":"name"}` with optional `args` (an object of strings). A navigation step is `{"navigate":{"script":"name","args":{"product":"{product}"}}}`: run the declared script, validate exactly `{url}`, then navigate the tab to that URL. It does not collect a record. For pinned script and navigate steps, pass each required script argument here; declaration sources do not fill these steps. See `leash help scripts` for the three argument locations.
+A script step is `{"script":"name"}` with optional `args` (an object of strings). For a pinned script step, pass each required script argument here; declaration sources do not fill these steps. See `leash help scripts`. A `navigate` step is refused; write a goal instead.
 
 A procedure with no goal step is allowed only when another procedure `use:`s it, or it is a `repeat.next` helper. A playbook whose every procedure is only scripts is refused.
 
@@ -50,13 +47,11 @@ Here is a complete `playbook.json` for the bookshop catalogue. Save it in your o
   "pages": [
     {
       "name": "home",
-      "description": "The shop front page with the category list",
       "url_pattern": "https://books.toscrape.com/",
       "text_marker": null
     },
     {
       "name": "category",
-      "description": "A category listing",
       "url_pattern": "https://books.toscrape.com/catalogue/category/*",
       "text_marker": null
     }
@@ -118,7 +113,7 @@ Here is a complete `playbook.json` for the bookshop catalogue. Save it in your o
       "slug": "next-page",
       "description": "Open the next page of this category and collect its books.",
       "steps": [
-        { "goal": "Open the next page of this category.", "until": ["the address changed", "the page is category"] },
+        { "goal": "Open the next page of this category." },
         { "use": "collect-page" }
       ],
       "expect": ["the page is category"]

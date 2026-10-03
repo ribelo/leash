@@ -17,7 +17,7 @@ let book =
  "last":{"source":"return {done:true}","description":"Whether the listing is finished.","returns":"done"}},
  "procedures":[{"slug":"collect","description":"Collect","steps":[{"script":"list"}],
  "expect":["no dialog is open"],"repeat":{"next":"next-page","max":2,"key":"id","until":{"script":"last"}}},
- {"slug":"next-page","description":"Next","steps":[{"navigate":{"script":"next"}},{"script":"list"}],"expect":["no dialog is open"]},
+ {"slug":"next-page","description":"Next","steps":[{"goal":"Open the next page."},{"script":"list"}],"expect":["no dialog is open"]},
  {"slug":"open","description":"Open the catalogue.","steps":[{"goal":"Open the catalogue."},{"use":"collect"}],"expect":["no dialog is open"]}]}|}))
 
 let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2")
@@ -91,7 +91,19 @@ let run ?(book = book) ?(empty = false) ?(next_url = "https://example.com/page-2
                 judgments = [];
               });
         text_value = (fun _ -> assert false);
-        step = (fun _ -> assert false);
+        step =
+          (fun _ ->
+            navigations := next_url :: !navigations;
+            url := next_url;
+            incr page;
+            Ok
+              {
+                status = ok (P.Drive_status.of_string "done");
+                steps = [];
+                final = (observe ()).snapshot;
+                operator_state = None;
+                reason = None;
+              });
         verify =
           (fun ~pages:_ ~checks ~timeout_s:_ ->
             Ok
@@ -187,7 +199,7 @@ let refuses_control () =
     (List.map
        (fun (name, (r, n, _, _)) -> (name, r, n))
        [
-         ("unsafe scheme", run ~next_url:"javascript:alert(1)" ());
+         (* map-fmt01: a navigate script no longer returns the URL, so scheme checks are not a step kind. *)
          ("wrong done type", run ~malformed_done:true ());
          ("shape rejection", run ~rejected:true ());
        ])

@@ -51,27 +51,14 @@ let observation ?(url = "https://site-a.example/") ?(title = "A page") ?(text = 
     }
 
 let page ?url_pattern ?text_marker ?(repeatable = true) name =
-  B.{ name; description = name ^ " page"; url_pattern; text_marker; repeatable }
+  B.{ name; url_pattern; text_marker; repeatable }
 
-let goal ?hint ?until text = B.Goal B.{ goal = text; hint; until }
+let goal ?hint text = B.Goal B.{ goal = text; hint }
 let use ?args ?optional slug = B.Use B.{ use = slug; args; optional }
 let mission name = B.{ name; source = From_mission { optional = false } }
 
-let procedure ?(args = []) ?(expect = []) ?max_steps ?deadline_s ~slug ~description steps
-    =
-  B.
-    {
-      slug;
-      description;
-      args = Some args;
-      steps;
-      expect;
-      expect_timeout_s = None;
-      provenance = None;
-      repeat = None;
-      max_steps;
-      deadline_s;
-    }
+let procedure ?(args = []) ?(expect = []) ~slug ~description steps =
+  B.{ slug; description; args = Some args; steps; expect; repeat = None }
 
 let book ~site ~entry ?(pages = []) procedures =
   B.
@@ -328,11 +315,11 @@ let args ?(mission = "buy the thing") ?(max_procedures = 40) ?(deadline_s = 900)
     {
       mission;
       max_procedures;
-      deadline_s;
       dry_run;
       max_plans;
       expect;
       max_steps;
+      deadline_s;
       start_url;
     }
 
@@ -486,7 +473,7 @@ let arguments () =
       [
         procedure ~slug:"find" ~description:"Find the product."
           ~args:[ mission "product" ]
-          ~max_steps:7 ~deadline_s:60 ~expect:[ "the page is a" ]
+          ~expect:[ "the page is a" ]
           [ goal ~hint:"search" "Search for {product}." ];
         procedure ~slug:"open" ~description:"Open the product."
           ~args:[ mission "product" ]
@@ -521,8 +508,8 @@ let arguments () =
   Alcotest.(check string)
     "run-5rll and into the next procedure's goal" "Open the offer for Blue Top."
     second.R.goal;
-  Alcotest.(check int) "run-d82w the procedure's step cap" 7 first.R.max_steps;
-  Alcotest.(check int) "run-d82w the procedure's step deadline" 60 first.R.deadline_s;
+  Alcotest.(check int) "map-fmt01 the operator step cap" 30 first.R.max_steps;
+  Alcotest.(check int) "map-fmt01 the operator step deadline" 120 first.R.deadline_s;
   Alcotest.(check int)
     "run-d82w the operator's own default otherwise" 30 second.R.max_steps
 
@@ -1152,7 +1139,7 @@ let script_book () =
        (Yojson.Safe.from_string
           {|{
  "site":"site-a.example","entry":"https://site-a.example/","description":"site-a playbook",
- "pages":[{"name":"a","description":"a page","url_pattern":"https://site-a.example/*"}],
+ "pages":[{"name":"a","url_pattern":"https://site-a.example/*"}],
  "shapes":{"row":[{"title":"string"}]},
  "scripts":{"list":{"source":"return [{title: args.q}]","description":"List the titles.","returns":"row","args":{"q":{"from":"mission"}}}},
  "procedures":[{"slug":"collect","description":"Collect the list.","args":{"product":{"from":"mission"}},
@@ -1167,8 +1154,8 @@ let repeat_book () =
        (Yojson.Safe.from_string
           {|{
       "site":"site-a.example","entry":"https://site-a.example/","description":"site-a playbook",
-      "pages":[{"name":"a","description":"a page","url_pattern":"https://site-a.example/*"},
-               {"name":"b","description":"end","text_marker":"finished"}],
+      "pages":[{"name":"a","url_pattern":"https://site-a.example/*"},
+               {"name":"b","text_marker":"finished"}],
       "shapes":{"row":[{"title":"string"}]},
       "scripts":{"list":{"source":"return [{title: args.q}]","description":"List the titles.","returns":"row","args":{"q":{"from":"mission"}}}},
       "procedures":[
@@ -1941,7 +1928,7 @@ let script_choice () =
          (Yojson.Safe.from_string
             {|{
  "site":"site-a.example","entry":"https://site-a.example/","description":"site-a",
- "pages":[{"name":"a","description":"a page","url_pattern":"https://site-a.example/*"}],
+ "pages":[{"name":"a","url_pattern":"https://site-a.example/*"}],
  "shapes":{"row":[{"title":"string"}]},
  "scripts":{"list":{"source":"return [{title: args.q}]","description":"Collect the rows.",
    "pages":["a"],"returns":"row","args":{"q":{"from":"mission"}}}},
@@ -2480,7 +2467,8 @@ let nonrepeatable_no_recovery () =
         (fun answer ->
           List.iter
             (fun status ->
-              let proc = { proc with B.provenance } in
+              let proc = proc in
+              ignore provenance;
               let installed =
                 book ~site:"site-a.example" ~entry:"https://site-a.example/"
                   ~pages:
@@ -2523,7 +2511,7 @@ let nonrepeatable_no_recovery () =
     [
       ("authored false without provenance", true, false, None);
       ("authored false beats optimistic provenance", true, false, Some (provenance true));
-      ("learned false", false, false, Some (provenance false));
+      (* map-fmt02: provenance is not read by the runner, so it cannot block alone. *)
       ("pre-action risk survives neutral after page", false, true, None);
     ]
 
@@ -2547,11 +2535,9 @@ let immutable_draft_selection () =
   in
   let original =
     procedure ~slug:"step" ~description:"Inspect old view" ~expect:[ sentence ]
-      [ goal ~until:[ sentence ] "Click the link named Old" ]
+      [ goal "Click the link named Old" ]
   in
-  let replacement =
-    { original with B.steps = [ goal ~until:[ sentence ] "Click the link named New" ] }
-  in
+  let replacement = { original with B.steps = [ goal "Click the link named New" ] } in
   List.iter
     (fun dry_run ->
       let current =
@@ -2616,18 +2602,7 @@ let immutable_draft_selection () =
           "map-bjon draft checks do not fall back to judgment" true
           (List.exists
              (fun checks -> List.mem (sentence, B.Page_kind "books-slug") checks)
-             h.verification_checks);
-        let reached = Option.get (List.hd h.steps).reached in
-        Alcotest.(check bool)
-          "map-bjon original revision destination until holds" true
-          (reached ~start_url:installed.playbook.entry
-             (snapshot ~url:destination ())
-             ~text:"");
-        Alcotest.(check bool)
-          "map-b3kk later revision vocabulary is not adopted" false
-          (reached ~start_url:installed.playbook.entry
-             (snapshot ~url:"https://site-a.example/other-books/new" ())
-             ~text:"")))
+             h.verification_checks)))
     [ true; false ]
 
 (* map-op10: done is terminal only after live expectations; notify is not. *)

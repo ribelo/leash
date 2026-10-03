@@ -5,43 +5,36 @@
   "pages": [
     {
       "name": "consent",
-      "description": "Funding Choices privacy dialog currently covers this page",
       "url_pattern": null,
       "text_marker": "This site asks for consent to use your data"
     },
     {
       "name": "cart",
-      "description": "Cart containing Blue Top",
       "url_pattern": "https://automationexercise.com/view_cart",
       "text_marker": null
     },
     {
       "name": "post-add",
-      "description": "Add succeeded; Added! dialog offers View Cart",
       "url_pattern": null,
       "text_marker": "Added!"
     },
     {
       "name": "home",
-      "description": "Home with Products navigation",
       "url_pattern": "https://automationexercise.com/",
       "text_marker": null
     },
     {
       "name": "products",
-      "description": "Product listing with Search Product field",
       "url_pattern": "https://automationexercise.com/products",
       "text_marker": "ALL PRODUCTS"
     },
     {
       "name": "search",
-      "description": "Submitted Blue Top product search results",
       "url_pattern": "https://automationexercise.com/products?search=*",
       "text_marker": "SEARCHED PRODUCTS"
     },
     {
       "name": "offer",
-      "description": "Blue Top product detail and Add to cart button",
       "url_pattern": "https://automationexercise.com/product_details/*",
       "text_marker": "Blue Top"
     }
@@ -63,7 +56,11 @@
     {
       "slug": "find-product",
       "description": "From the Products listing: search for the named product before any offer is available.",
-      "args": {"product": {"from": "mission"}},
+      "args": {
+        "product": {
+          "from": "mission"
+        }
+      },
       "steps": [
         {
           "goal": "Find the Search Product field, enter {product}, and submit the search button. Stop on SEARCHED PRODUCTS results.",
@@ -78,7 +75,11 @@
     {
       "slug": "open-offer",
       "description": "Only after SEARCHED PRODUCTS results appear: open the matching product detail.",
-      "args": {"product": {"from": "mission"}},
+      "args": {
+        "product": {
+          "from": "mission"
+        }
+      },
       "steps": [
         {
           "goal": "Click the View Product link beneath the {product} card on SEARCHED PRODUCTS, not the search icon or Add to cart. If View Product is absent from the current snapshot, scroll down to reveal it before clicking. Stop on the product detail page.",
@@ -119,7 +120,11 @@
     {
       "slug": "go-to-cart",
       "description": "Navigate to the cart and stop before payment.",
-      "args": {"product": {"from": "mission"}},
+      "args": {
+        "product": {
+          "from": "mission"
+        }
+      },
       "steps": [
         {
           "goal": "Follow View Cart and stop before checkout/payment; verify {product} appears in the cart.",

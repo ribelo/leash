@@ -73,7 +73,7 @@ let args ?(max_steps = 30) ?(deadline_s = 120) () =
     }
 
 let run ?(clock_step = 0.) ?(max_steps = 30) ?(deadline_s = 120) ?(dry_run = false)
-    ?(change = false) ?reached choices =
+    ?(change = false) choices =
   let time = ref 0. and calls = ref 0 and actions = ref 0 and state = ref "Initial" in
   let queue = ref choices in
   let decide _ =
@@ -103,7 +103,7 @@ let run ?(clock_step = 0.) ?(max_steps = 30) ?(deadline_s = 120) ?(dry_run = fal
         }
   in
   let reply =
-    D.run ?reached
+    D.run
       ~handler:D.{ observe; decide; text_value; act }
       ~now:(fun () -> !time)
       ~model:"test-model"
@@ -121,29 +121,7 @@ let done_path () =
   Alcotest.(check int) "drive-4zlp action" 1 acts;
   check "final" "Changed1" r.final.title
 
-(* pbk-eyya: a goal step's until ends the drive done after the action that reached it,
-   without asking JEV to judge the page it landed on; it is never asked before an action. *)
-let until_reached () =
-  let asked = ref [] in
-  let reached ~(start : D.observation) (page : D.observation) =
-    asked := (start.snapshot.title, page.snapshot.title) :: !asked;
-    page.snapshot.title = "Changed1"
-  in
-  let r, acts, calls = run ~change:true ~reached [ "click"; "blocked" ] in
-  check "pbk-eyya until ends the step done" "done" (status r);
-  Alcotest.(check int) "pbk-eyya one action" 1 acts;
-  Alcotest.(check int) "pbk-eyya no prediction after the action" 1 calls;
-  Alcotest.(check (list (pair string string)))
-    "pbk-eyya until sees the step's start and the page the action produced"
-    [ ("Initial", "Changed1") ]
-    !asked;
-  check "pbk-eyya reason" "the step's until checks hold"
-    (Option.value ~default:"" r.reason);
-  let r, acts, _ =
-    run ~change:true ~reached:(fun ~start:_ _ -> false) [ "click"; "done" ]
-  in
-  check "pbk-eyya until unmet leaves JEV to decide" "done" (status r);
-  Alcotest.(check int) "pbk-eyya unmet until" 1 acts
+(* map-fmt01: a goal step no longer ends on until. Expect verifies the procedure. *)
 
 let blocked_reasons () =
   List.iter
@@ -1335,7 +1313,6 @@ let () =
             ("fly-g0uh fly-9e0f fly-u9eg fly-gn5z state", fly_structured_state);
             ("kind-ir9l trace-qe8c shown request real reply", semantic_request_real_reply);
             ("done", done_path);
-            ("pbk-eyya goal until", until_reached);
             ("daily-9ggi blocked reasons", blocked_reasons);
             ("map-op11 consent default decline", consent_guard);
             ("map-op11 consent refusal context", consent_dispatch);
