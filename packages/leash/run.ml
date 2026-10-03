@@ -581,6 +581,23 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
       after = {url = page.url; title = page.title}; elapsed_ms = ms (now () -. at);
       error = (match outcome with Ok _ -> None | Error e -> Some (scrub e.message)) } in
     on_planner_step step;
+    (* pilot-x1f3: the pilot's own actions are part of the history it is shown, in JEV's
+       language, so it knows a field is already filled (U1 on Tauron, 2026-10-04: twelve
+       turns filled the login and never moved on). Secret values stay names. *)
+    let target = Option.bind (command_row command) (fun index ->
+      List.find_opt (fun (r : P.row) -> r.index = index) page.snapshot.rows) in
+    let named = match target with
+      | Some r -> Printf.sprintf "the %s named %s" r.role (scrub r.name)
+      | None -> "the page" in
+    let described = match command with
+      | P.Click _ -> "Click " ^ named
+      | P.Fill a -> Printf.sprintf "Type %s into %s" (scrub a.text) named
+      | P.Select _ -> "Choose an option in " ^ named
+      | P.Press a -> Printf.sprintf "Press %s on %s" a.key named
+      | _ -> name in
+    legs := !legs @ [ { goal = described;
+      outcome = (match step.error with None -> "done" | Some why -> "refused: " ^ why);
+      steps = [] } ];
     step in
   let rec turn (page : observation) =
     if now () >= deadline then finish page "deadline" ~reason:"pilot deadline reached" ()

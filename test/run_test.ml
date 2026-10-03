@@ -325,7 +325,7 @@ let empty_result () =
   Alcotest.(check string) "empty done refused" "failed" (P.Run_status.to_string r.status)
 
 let secret_dispatch () =
-  let h, _, _ =
+  let h, requests, _ =
     harness
       [
         reply
@@ -391,7 +391,14 @@ let secret_dispatch () =
                 })
           (params ())));
   Alcotest.(check (option string))
-    "dispatch resolves secret name" (Some "actual-password") !sent
+    "dispatch resolves secret name" (Some "actual-password") !sent;
+  (* pilot-x1f3: the pilot sees its own act in the next turn's history, by secret name. *)
+  let history = (List.hd !requests).R.legs in
+  Alcotest.(check (list string))
+    "act is in the history"
+    [ "Type PASS into the textbox named Password" ]
+    (List.map (fun (leg : R.leg) -> leg.goal) history);
+  Alcotest.(check string) "act outcome" "done" (List.hd history).outcome
 
 let leg_failure_visible () =
   let h, requests, _ = harness [ reply (R.Leg "Open account"); finish ] in
