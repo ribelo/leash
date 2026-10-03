@@ -76,6 +76,16 @@ let refuses () =
       {|{"answer":"act","action":{"cmd":"nav","args":{"tab":"t_test","url":"https://evil.example/"}}}|};
     ]
 
+(* pilot-x1f3: the pilot writes {cmd, args} without the wire version (U1 live run,
+   2026-10-04: "missing field v" before the first turn). *)
+let act_without_version () =
+  match
+    M.decode_pilot request
+      {|{"answer":"act","action":{"cmd":"press","args":{"tab":"t_test","snapshot":"s_test","key":"Enter"}}}|}
+  with
+  | Ok _ -> ()
+  | Error why -> Alcotest.fail why
+
 let generated () =
   let reply =
     ok
@@ -114,6 +124,7 @@ let () =
           [
             ("shapes", shapes);
             ("refusals", refuses);
+            ("act without wire version", act_without_version);
             ("generated secret", generated);
             ("bounded request", bounded);
             ("redaction", redact);

@@ -1491,11 +1491,20 @@ let decode_request json =
 (* map-7xrq map-3qag: reuse the public action protocol, never a JS escape hatch. *)
 type planner_action = command
 
+(* pilot-x1f3: the pilot writes an action as {cmd, args}; the wire version belongs to
+   the control socket, not to the model, so it is supplied here when absent (U1 live run
+   2026-10-04 failed on "missing field v" before its first turn). *)
 let planner_action_of_yojson json =
+  let json =
+    match json with
+    | `Assoc fields when not (List.mem_assoc "v" fields) ->
+        `Assoc (("v", `Int version) :: fields)
+    | json -> json
+  in
   Result.bind (decode_request json) (fun request ->
       match request.command with
-      | Click _ | Fill _ | Press _ | Scroll _ | Nav _ -> Ok request.command
-      | _ -> Error "continue accepts only click, fill, press, scroll and nav")
+      | Click _ | Fill _ | Select _ | Press _ | Scroll _ | Nav _ -> Ok request.command
+      | _ -> Error "act accepts only click, fill, select, press, scroll and nav")
 
 let yojson_of_planner_action command = encode_request { command }
 
