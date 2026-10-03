@@ -182,6 +182,15 @@ Playbooks compile from successful traces and are verified by the site before ins
 
 L53 map-op01–map-op06 have automated operation, compiler-protocol and loader coverage, including minimized Google2/Google3 Maps and Flights evidence. Map-op07 remains open: these offline tests do not claim a live learn/install/reuse loop.
 
+## Milestone 13 — the pilot drives (ADR-0012, `docs/use-cases.md`)
+
+L53's compile-from-traces failed three honest rounds; the cause was the loop's shape, not the compiler. Luna owns the mission and reads the page; JEV drives legs. Playbooks are memory the pilot writes. Ten use cases from the operator's daily life are the acceptance. L54 is superseded by U1–U4 (operator-run) and the gates below.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L56 | **The pilot loop** (`pilot/01-pilot.md`). Planner-first drive with leg/read/act/handoff/notify/done{result,evidence}/fail; JEV runs legs; `--secret`; refusals; compile-from-traces removed; playbooks as memory via replay gate; prompt under 300 words; `--dry-run` shows intent. | pilot-ukoh, pilot-eu1c, pilot-x1f3, pilot-8csf, pilot-gt2h, pilot-s954, pilot-rdjv, pilot-02ij, pilot-e4sh, pilot-a4ua, pilot-3egp, pilot-oijk, pilot-c77y, pilot-ffqa, pilot-r94o, pilot-cnp5 | L55 | [ ] |
+| L57 | **Use-case gates** (`docs/use-cases.md`). U5/U6/U8 live with independent checks; U7/U9/U10 on fixtures; U1–U4 by the operator with `--secret`; each run twice (memory measured); failures become stories; skill and help rewritten. | pilot-kkq2, pilot-7boq, pilot-sa3f, pilot-ivzx, pilot-lo8y, pilot-bkw9 | L56 | [ ] |
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
