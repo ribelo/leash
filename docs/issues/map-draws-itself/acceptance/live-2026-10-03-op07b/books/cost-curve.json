@@ -1,0 +1,1274 @@
+[
+  {
+    "number": 1,
+    "arguments": "Travel",
+    "mission": "collect every book title and price in the Travel category",
+    "fresh_agent": false,
+    "learning_mode": "auto",
+    "status": "done",
+    "exit_code": 0,
+    "reason": null,
+    "elapsed_s": 4.110995406999791,
+    "independent_verification": {
+      "verified": false,
+      "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+      "site": {
+        "category": "Travel",
+        "total_reported": 11,
+        "records": [
+          {
+            "title": "It's Only the Himalayas",
+            "price": "£45.17"
+          },
+          {
+            "title": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond",
+            "price": "£49.43"
+          },
+          {
+            "title": "See America: A Celebration of Our National Parks & Treasured Sites",
+            "price": "£48.87"
+          },
+          {
+            "title": "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel",
+            "price": "£36.94"
+          },
+          {
+            "title": "Under the Tuscan Sun",
+            "price": "£37.33"
+          },
+          {
+            "title": "A Summer In Europe",
+            "price": "£44.34"
+          },
+          {
+            "title": "The Great Railway Bazaar",
+            "price": "£30.54"
+          },
+          {
+            "title": "A Year in Provence (Provence #1)",
+            "price": "£56.88"
+          },
+          {
+            "title": "The Road to Little Dribbling: Adventures of an American in Britain (Notes From a Small Island #2)",
+            "price": "£23.21"
+          },
+          {
+            "title": "Neither Here nor There: Travels in Europe",
+            "price": "£38.95"
+          },
+          {
+            "title": "1,000 Places to See Before You Die",
+            "price": "£26.08"
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
+            "status": 200,
+            "count": 11,
+            "heading": "Travel"
+          }
+        ],
+        "counts_match": true,
+        "next_page_unvisited": false
+      },
+      "answer_record_matches": 7,
+      "missing_records": [
+        {
+          "title": "It's Only the Himalayas",
+          "price": "£45.17"
+        },
+        {
+          "title": "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond",
+          "price": "£49.43"
+        },
+        {
+          "title": "See America: A Celebration of Our National Parks & Treasured Sites",
+          "price": "£48.87"
+        },
+        {
+          "title": "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel",
+          "price": "£36.94"
+        }
+      ]
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 4,
+      "browser_cost_usd": 0.000935844,
+      "browser_reported_cost_usd": 0.000935844,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "operator": 4
+      },
+      "learning_calls": 0,
+      "learning_cost_usd": 0.0,
+      "inclusive_calls": 4,
+      "inclusive_cost_usd": 0.000935844,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": false,
+      "learning_account": null,
+      "status_site": {}
+    },
+    "procedures": [],
+    "compiled_after": [],
+    "installed_after": []
+  },
+  {
+    "number": 2,
+    "arguments": "Mystery",
+    "mission": "collect every book title and price in the Mystery category",
+    "fresh_agent": false,
+    "learning_mode": "auto",
+    "status": "limit",
+    "exit_code": 0,
+    "reason": "action budget exhausted (60 executed actions)",
+    "elapsed_s": 59.84689524800069,
+    "independent_verification": {
+      "verified": false,
+      "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+      "site": {
+        "category": "Mystery",
+        "total_reported": 32,
+        "records": [
+          {
+            "title": "Sharp Objects",
+            "price": "£47.82"
+          },
+          {
+            "title": "In a Dark, Dark Wood",
+            "price": "£19.63"
+          },
+          {
+            "title": "The Past Never Ends",
+            "price": "£56.50"
+          },
+          {
+            "title": "A Murder in Time",
+            "price": "£16.64"
+          },
+          {
+            "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+            "price": "£44.10"
+          },
+          {
+            "title": "The Last Mile (Amos Decker #2)",
+            "price": "£54.21"
+          },
+          {
+            "title": "That Darkness (Gardiner and Renner #1)",
+            "price": "£13.92"
+          },
+          {
+            "title": "Tastes Like Fear (DI Marnie Rome #3)",
+            "price": "£10.69"
+          },
+          {
+            "title": "A Time of Torment (Charlie Parker #14)",
+            "price": "£48.35"
+          },
+          {
+            "title": "A Study in Scarlet (Sherlock Holmes #1)",
+            "price": "£16.73"
+          },
+          {
+            "title": "Poisonous (Max Revere Novels #3)",
+            "price": "£26.80"
+          },
+          {
+            "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+            "price": "£54.36"
+          },
+          {
+            "title": "Most Wanted",
+            "price": "£35.28"
+          },
+          {
+            "title": "Hide Away (Eve Duncan #20)",
+            "price": "£11.84"
+          },
+          {
+            "title": "Boar Island (Anna Pigeon #19)",
+            "price": "£59.48"
+          },
+          {
+            "title": "The Widow",
+            "price": "£27.26"
+          },
+          {
+            "title": "Playing with Fire",
+            "price": "£13.71"
+          },
+          {
+            "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+            "price": "£25.37"
+          },
+          {
+            "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+            "price": "£52.30"
+          },
+          {
+            "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+            "price": "£20.89"
+          },
+          {
+            "title": "The Mysterious Affair at Styles (Hercule Poirot #1)",
+            "price": "£24.80"
+          },
+          {
+            "title": "In the Woods (Dublin Murder Squad #1)",
+            "price": "£38.38"
+          },
+          {
+            "title": "The Silkworm (Cormoran Strike #2)",
+            "price": "£23.05"
+          },
+          {
+            "title": "The Exiled",
+            "price": "£43.45"
+          },
+          {
+            "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+            "price": "£19.21"
+          },
+          {
+            "title": "Extreme Prey (Lucas Davenport #26)",
+            "price": "£25.40"
+          },
+          {
+            "title": "Career of Evil (Cormoran Strike #3)",
+            "price": "£24.72"
+          },
+          {
+            "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+            "price": "£57.70"
+          },
+          {
+            "title": "The Girl You Lost",
+            "price": "£12.29"
+          },
+          {
+            "title": "The Girl In The Ice (DCI Erika Foster #1)",
+            "price": "£15.85"
+          },
+          {
+            "title": "Blood Defense (Samantha Brinkman #1)",
+            "price": "£20.30"
+          },
+          {
+            "title": "1st to Die (Women's Murder Club #1)",
+            "price": "£53.98"
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html",
+            "status": 200,
+            "count": 20,
+            "heading": "Mystery"
+          },
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
+            "status": 200,
+            "count": 12,
+            "heading": "Mystery"
+          }
+        ],
+        "counts_match": true,
+        "next_page_unvisited": false
+      },
+      "answer_record_matches": 4,
+      "missing_records": [
+        {
+          "title": "Sharp Objects",
+          "price": "£47.82"
+        },
+        {
+          "title": "In a Dark, Dark Wood",
+          "price": "£19.63"
+        },
+        {
+          "title": "The Past Never Ends",
+          "price": "£56.50"
+        },
+        {
+          "title": "A Murder in Time",
+          "price": "£16.64"
+        },
+        {
+          "title": "The Murder of Roger Ackroyd (Hercule Poirot #4)",
+          "price": "£44.10"
+        },
+        {
+          "title": "The Last Mile (Amos Decker #2)",
+          "price": "£54.21"
+        },
+        {
+          "title": "That Darkness (Gardiner and Renner #1)",
+          "price": "£13.92"
+        },
+        {
+          "title": "Tastes Like Fear (DI Marnie Rome #3)",
+          "price": "£10.69"
+        },
+        {
+          "title": "A Time of Torment (Charlie Parker #14)",
+          "price": "£48.35"
+        },
+        {
+          "title": "A Study in Scarlet (Sherlock Holmes #1)",
+          "price": "£16.73"
+        },
+        {
+          "title": "Poisonous (Max Revere Novels #3)",
+          "price": "£26.80"
+        },
+        {
+          "title": "Murder at the 42nd Street Library (Raymond Ambler #1)",
+          "price": "£54.36"
+        },
+        {
+          "title": "Most Wanted",
+          "price": "£35.28"
+        },
+        {
+          "title": "Hide Away (Eve Duncan #20)",
+          "price": "£11.84"
+        },
+        {
+          "title": "Boar Island (Anna Pigeon #19)",
+          "price": "£59.48"
+        },
+        {
+          "title": "The Widow",
+          "price": "£27.26"
+        },
+        {
+          "title": "Playing with Fire",
+          "price": "£13.71"
+        },
+        {
+          "title": "What Happened on Beale Street (Secrets of the South Mysteries #2)",
+          "price": "£25.37"
+        },
+        {
+          "title": "The Bachelor Girl's Guide to Murder (Herringford and Watts Mysteries #1)",
+          "price": "£52.30"
+        },
+        {
+          "title": "Delivering the Truth (Quaker Midwife Mystery #1)",
+          "price": "£20.89"
+        },
+        {
+          "title": "The Cuckoo's Calling (Cormoran Strike #1)",
+          "price": "£19.21"
+        },
+        {
+          "title": "Extreme Prey (Lucas Davenport #26)",
+          "price": "£25.40"
+        },
+        {
+          "title": "Career of Evil (Cormoran Strike #3)",
+          "price": "£24.72"
+        },
+        {
+          "title": "The No. 1 Ladies' Detective Agency (No. 1 Ladies' Detective Agency #1)",
+          "price": "£57.70"
+        },
+        {
+          "title": "The Girl You Lost",
+          "price": "£12.29"
+        },
+        {
+          "title": "The Girl In The Ice (DCI Erika Foster #1)",
+          "price": "£15.85"
+        },
+        {
+          "title": "Blood Defense (Samantha Brinkman #1)",
+          "price": "£20.30"
+        },
+        {
+          "title": "1st to Die (Women's Murder Club #1)",
+          "price": "£53.98"
+        }
+      ]
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 62,
+      "browser_cost_usd": 0.014604618000000008,
+      "browser_reported_cost_usd": 0.014604618000000008,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "operator": 62
+      },
+      "learning_calls": 0,
+      "learning_cost_usd": 0.0,
+      "inclusive_calls": 62,
+      "inclusive_cost_usd": 0.014604618000000008,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": false,
+      "learning_account": null,
+      "status_site": {}
+    },
+    "procedures": [],
+    "compiled_after": [],
+    "installed_after": []
+  },
+  {
+    "number": 3,
+    "arguments": "Poetry",
+    "mission": "collect every book title and price in the Poetry category",
+    "fresh_agent": false,
+    "learning_mode": "auto",
+    "status": "done",
+    "exit_code": 0,
+    "reason": null,
+    "elapsed_s": 2.958093956999619,
+    "independent_verification": {
+      "verified": false,
+      "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+      "site": {
+        "category": "Poetry",
+        "total_reported": 19,
+        "records": [
+          {
+            "title": "A Light in the Attic",
+            "price": "£51.77"
+          },
+          {
+            "title": "The Black Maria",
+            "price": "£52.15"
+          },
+          {
+            "title": "Shakespeare's Sonnets",
+            "price": "£20.66"
+          },
+          {
+            "title": "Olio",
+            "price": "£23.88"
+          },
+          {
+            "title": "You can't bury them all: Poems",
+            "price": "£33.63"
+          },
+          {
+            "title": "Slow States of Collapse: Poems",
+            "price": "£57.31"
+          },
+          {
+            "title": "Untitled Collection: Sabbath Poems 2014",
+            "price": "£14.27"
+          },
+          {
+            "title": "Poems That Make Grown Women Cry",
+            "price": "£14.19"
+          },
+          {
+            "title": "Night Sky with Exit Wounds",
+            "price": "£41.05"
+          },
+          {
+            "title": "salt.",
+            "price": "£46.78"
+          },
+          {
+            "title": "Quarter Life Poetry: Poems for the Young, Broke and Hangry",
+            "price": "£50.89"
+          },
+          {
+            "title": "Out of Print: City Lights Spotlight No. 14",
+            "price": "£53.64"
+          },
+          {
+            "title": "Les Fleurs du Mal",
+            "price": "£29.04"
+          },
+          {
+            "title": "Howl and Other Poems",
+            "price": "£40.45"
+          },
+          {
+            "title": "Leave This Song Behind: Teen Poetry at Its Best",
+            "price": "£51.17"
+          },
+          {
+            "title": "The Collected Poems of W.B. Yeats (The Collected Works of W.B. Yeats #1)",
+            "price": "£15.42"
+          },
+          {
+            "title": "The Crossover",
+            "price": "£38.77"
+          },
+          {
+            "title": "Booked",
+            "price": "£17.49"
+          },
+          {
+            "title": "Twenty Love Poems and a Song of Despair",
+            "price": "£30.95"
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+            "status": 200,
+            "count": 19,
+            "heading": "Poetry"
+          }
+        ],
+        "counts_match": true,
+        "next_page_unvisited": false
+      },
+      "answer_record_matches": 8,
+      "missing_records": [
+        {
+          "title": "A Light in the Attic",
+          "price": "£51.77"
+        },
+        {
+          "title": "The Black Maria",
+          "price": "£52.15"
+        },
+        {
+          "title": "Shakespeare's Sonnets",
+          "price": "£20.66"
+        },
+        {
+          "title": "Olio",
+          "price": "£23.88"
+        },
+        {
+          "title": "You can't bury them all: Poems",
+          "price": "£33.63"
+        },
+        {
+          "title": "Slow States of Collapse: Poems",
+          "price": "£57.31"
+        },
+        {
+          "title": "Untitled Collection: Sabbath Poems 2014",
+          "price": "£14.27"
+        },
+        {
+          "title": "Poems That Make Grown Women Cry",
+          "price": "£14.19"
+        },
+        {
+          "title": "The Crossover",
+          "price": "£38.77"
+        },
+        {
+          "title": "Booked",
+          "price": "£17.49"
+        },
+        {
+          "title": "Twenty Love Poems and a Song of Despair",
+          "price": "£30.95"
+        }
+      ]
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 4,
+      "browser_cost_usd": 0.00089712,
+      "browser_reported_cost_usd": 0.00089712,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "operator": 4
+      },
+      "learning_calls": 4,
+      "learning_cost_usd": 0.024647235,
+      "inclusive_calls": 8,
+      "inclusive_cost_usd": 0.025544355,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": true,
+      "learning_account": {
+        "model_calls": 4,
+        "model_cost": 0.024647235
+      },
+      "status_site": {
+        "site": "toscrape.com",
+        "last_compile": "2026-10-03T11:51:27.743048Z",
+        "installed_by_replay": 0,
+        "installed_by_agreement": 0,
+        "learning_calls": 4,
+        "learning_cost": 0.024647235
+      }
+    },
+    "procedures": [],
+    "compiled_after": [
+      {
+        "site": "toscrape.com",
+        "entry": "https://books.toscrape.com/",
+        "description": "Learned toscrape.com",
+        "pages": [
+          {
+            "name": "books-category",
+            "description": "Inferred books-<slug>",
+            "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+            "repeatable": true
+          },
+          {
+            "name": "books-categories",
+            "description": "Inferred home",
+            "url_pattern": "https://books.toscrape.com/",
+            "repeatable": true
+          }
+        ],
+        "procedures": [
+          {
+            "provenance": {
+              "traces": [
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+              ],
+              "model": "openai/gpt-6-luna",
+              "time": "2026-10-03T11:51:27.743218Z",
+              "tries": 0,
+              "path": [
+                "books-category"
+              ],
+              "entry_kind": "books-<slug>",
+              "exit_kind": "books-<slug>",
+              "signature": [
+                [
+                  "scroll_down",
+                  null
+                ]
+              ],
+              "kind_mapping": [
+                [
+                  "books-<slug>",
+                  "books-category"
+                ],
+                [
+                  "home",
+                  "books-categories"
+                ],
+                [
+                  "books-category",
+                  "books-category"
+                ],
+                [
+                  "books-categories",
+                  "books-categories"
+                ],
+                [
+                  "books-<slug>",
+                  "books-category"
+                ]
+              ],
+              "repeatable": true,
+              "reason": "no irreversible submission in the observed path",
+              "gate": "replay",
+              "repair": false,
+              "model_calls": 4,
+              "model_cost": 0.024647235
+            },
+            "slug": "collect-category-book-titles-and-prices",
+            "description": "Collect every book title and price from the currently open category page.",
+            "steps": [
+              {
+                "goal": "Scroll down",
+                "until": [
+                  "the page is books-category"
+                ]
+              },
+              {
+                "goal": "Collect every book title and price from the category page",
+                "until": [
+                  "the page is books-category"
+                ]
+              }
+            ],
+            "expect": [
+              "the page is books-category",
+              "all book titles and prices in the category are collected"
+            ],
+            "expect_timeout_s": 15
+          }
+        ]
+      },
+      {
+        "site": "toscrape.com",
+        "entry": "https://books.toscrape.com/",
+        "description": "Learned toscrape.com",
+        "pages": [
+          {
+            "name": "books-category",
+            "description": "Inferred books-<slug>",
+            "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+            "repeatable": true
+          },
+          {
+            "name": "books-categories",
+            "description": "Inferred home",
+            "url_pattern": "https://books.toscrape.com/",
+            "repeatable": true
+          }
+        ],
+        "procedures": [
+          {
+            "provenance": {
+              "traces": [
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+              ],
+              "model": "openai/gpt-6-luna",
+              "time": "2026-10-03T11:47:43.587238Z",
+              "tries": 0,
+              "path": [
+                "books-categories",
+                "books-category"
+              ],
+              "entry_kind": "home",
+              "exit_kind": "books-<slug>",
+              "signature": [
+                [
+                  "click",
+                  {
+                    "role": "link",
+                    "label": "travel"
+                  }
+                ]
+              ],
+              "kind_mapping": [
+                [
+                  "books-<slug>",
+                  "books-category"
+                ],
+                [
+                  "home",
+                  "books-categories"
+                ]
+              ],
+              "repeatable": true,
+              "reason": "no irreversible submission in the observed path",
+              "gate": "replay",
+              "repair": false,
+              "model_calls": 2,
+              "model_cost": 0.011815929999999999
+            },
+            "slug": "open-book-category",
+            "description": "Open the requested book category from the category links.",
+            "args": {
+              "category": {
+                "from": "mission"
+              }
+            },
+            "steps": [
+              {
+                "goal": "Wait for a link named {category} to be present",
+                "until": [
+                  "a link named {category} is present"
+                ]
+              },
+              {
+                "goal": "Click the link named {category}",
+                "until": [
+                  "the page is books-category"
+                ]
+              }
+            ],
+            "expect": [
+              "the page is books-category",
+              "the requested category is displayed"
+            ],
+            "expect_timeout_s": 15
+          }
+        ]
+      }
+    ],
+    "installed_after": []
+  },
+  {
+    "number": 4,
+    "arguments": "Historical Fiction",
+    "mission": "collect every book title and price in the Historical Fiction category",
+    "fresh_agent": false,
+    "learning_mode": "auto",
+    "status": "done",
+    "exit_code": 0,
+    "reason": null,
+    "elapsed_s": 66.914716323,
+    "independent_verification": {
+      "verified": false,
+      "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+      "site": {
+        "category": "Historical Fiction",
+        "total_reported": 26,
+        "records": [
+          {
+            "title": "Tipping the Velvet",
+            "price": "£53.74"
+          },
+          {
+            "title": "Forever and Forever: The Courtship of Henry Longfellow and Fanny Appleton",
+            "price": "£29.69"
+          },
+          {
+            "title": "A Flight of Arrows (The Pathfinders #2)",
+            "price": "£55.53"
+          },
+          {
+            "title": "The House by the Lake",
+            "price": "£36.95"
+          },
+          {
+            "title": "Mrs. Houdini",
+            "price": "£30.25"
+          },
+          {
+            "title": "The Marriage of Opposites",
+            "price": "£28.08"
+          },
+          {
+            "title": "Glory over Everything: Beyond The Kitchen House",
+            "price": "£45.84"
+          },
+          {
+            "title": "Love, Lies and Spies",
+            "price": "£20.55"
+          },
+          {
+            "title": "A Paris Apartment",
+            "price": "£39.01"
+          },
+          {
+            "title": "Lilac Girls",
+            "price": "£17.28"
+          },
+          {
+            "title": "The Constant Princess (The Tudor Court #1)",
+            "price": "£16.62"
+          },
+          {
+            "title": "The Invention of Wings",
+            "price": "£37.34"
+          },
+          {
+            "title": "World Without End (The Pillars of the Earth #2)",
+            "price": "£32.97"
+          },
+          {
+            "title": "The Passion of Dolssa",
+            "price": "£28.32"
+          },
+          {
+            "title": "Girl With a Pearl Earring",
+            "price": "£26.77"
+          },
+          {
+            "title": "Voyager (Outlander #3)",
+            "price": "£21.07"
+          },
+          {
+            "title": "The Red Tent",
+            "price": "£35.66"
+          },
+          {
+            "title": "The Last Painting of Sara de Vos",
+            "price": "£55.55"
+          },
+          {
+            "title": "The Guernsey Literary and Potato Peel Pie Society",
+            "price": "£49.53"
+          },
+          {
+            "title": "Girl in the Blue Coat",
+            "price": "£46.83"
+          },
+          {
+            "title": "Between Shades of Gray",
+            "price": "£20.79"
+          },
+          {
+            "title": "While You Were Mine",
+            "price": "£41.32"
+          },
+          {
+            "title": "The Secret Healer",
+            "price": "£34.56"
+          },
+          {
+            "title": "Starlark",
+            "price": "£25.83"
+          },
+          {
+            "title": "Lost Among the Living",
+            "price": "£27.70"
+          },
+          {
+            "title": "A Spy's Devotion (The Regency Spies of London #1)",
+            "price": "£16.97"
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+            "status": 200,
+            "count": 20,
+            "heading": "Historical Fiction"
+          },
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+            "status": 200,
+            "count": 6,
+            "heading": "Historical Fiction"
+          }
+        ],
+        "counts_match": true,
+        "next_page_unvisited": false
+      },
+      "answer_record_matches": 6,
+      "missing_records": [
+        {
+          "title": "Tipping the Velvet",
+          "price": "£53.74"
+        },
+        {
+          "title": "Forever and Forever: The Courtship of Henry Longfellow and Fanny Appleton",
+          "price": "£29.69"
+        },
+        {
+          "title": "A Flight of Arrows (The Pathfinders #2)",
+          "price": "£55.53"
+        },
+        {
+          "title": "The House by the Lake",
+          "price": "£36.95"
+        },
+        {
+          "title": "Mrs. Houdini",
+          "price": "£30.25"
+        },
+        {
+          "title": "The Marriage of Opposites",
+          "price": "£28.08"
+        },
+        {
+          "title": "Glory over Everything: Beyond The Kitchen House",
+          "price": "£45.84"
+        },
+        {
+          "title": "Love, Lies and Spies",
+          "price": "£20.55"
+        },
+        {
+          "title": "A Paris Apartment",
+          "price": "£39.01"
+        },
+        {
+          "title": "Lilac Girls",
+          "price": "£17.28"
+        },
+        {
+          "title": "The Constant Princess (The Tudor Court #1)",
+          "price": "£16.62"
+        },
+        {
+          "title": "The Invention of Wings",
+          "price": "£37.34"
+        },
+        {
+          "title": "World Without End (The Pillars of the Earth #2)",
+          "price": "£32.97"
+        },
+        {
+          "title": "The Passion of Dolssa",
+          "price": "£28.32"
+        },
+        {
+          "title": "Girl With a Pearl Earring",
+          "price": "£26.77"
+        },
+        {
+          "title": "Voyager (Outlander #3)",
+          "price": "£21.07"
+        },
+        {
+          "title": "The Red Tent",
+          "price": "£35.66"
+        },
+        {
+          "title": "The Last Painting of Sara de Vos",
+          "price": "£55.55"
+        },
+        {
+          "title": "The Guernsey Literary and Potato Peel Pie Society",
+          "price": "£49.53"
+        },
+        {
+          "title": "Girl in the Blue Coat",
+          "price": "£46.83"
+        }
+      ]
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 13,
+      "browser_cost_usd": 0.004113208,
+      "browser_reported_cost_usd": 0.004113208,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 6,
+        "playbook": 1,
+        "planner": 1,
+        "verifier": 2,
+        "procedure": 2
+      },
+      "learning_calls": 2,
+      "learning_cost_usd": 0.029058430000000003,
+      "inclusive_calls": 15,
+      "inclusive_cost_usd": 0.033171638,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": true,
+      "learning_account": {
+        "model_calls": 2,
+        "model_cost": 0.029058430000000003
+      },
+      "status_site": {
+        "site": "toscrape.com",
+        "last_compile": "2026-10-03T12:02:27.527926Z",
+        "installed_by_replay": 1,
+        "installed_by_agreement": 0,
+        "learning_calls": 2,
+        "learning_cost": 0.029058430000000003
+      }
+    },
+    "procedures": [
+      {
+        "slug": "draft:open-book-category",
+        "outcome": "verified",
+        "planned": false,
+        "expectations": [
+          {
+            "sentence": "the page is books-category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          },
+          {
+            "sentence": "the requested category is displayed",
+            "checker": "judgment",
+            "passed": true,
+            "score": 0.99
+          }
+        ],
+        "arguments": null
+      },
+      {
+        "slug": "draft:collect-category-book-titles-and-prices",
+        "outcome": "failed",
+        "planned": false,
+        "expectations": [
+          {
+            "sentence": "the page is books-category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          },
+          {
+            "sentence": "all book titles and prices in the category are collected",
+            "checker": "judgment",
+            "passed": false,
+            "score": 0.19
+          }
+        ],
+        "arguments": null
+      }
+    ],
+    "compiled_after": [
+      {
+        "site": "toscrape.com",
+        "entry": "https://books.toscrape.com/",
+        "description": "Learned toscrape.com",
+        "pages": [
+          {
+            "name": "books-category",
+            "description": "Inferred books-<slug>",
+            "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+            "repeatable": true
+          },
+          {
+            "name": "books-categories",
+            "description": "Inferred home",
+            "url_pattern": "https://books.toscrape.com/",
+            "repeatable": true
+          }
+        ],
+        "procedures": [
+          {
+            "provenance": {
+              "traces": [
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+              ],
+              "model": "openai/gpt-6-luna",
+              "time": "2026-10-03T11:51:27.743218Z",
+              "tries": 1,
+              "last_failure": "procedure draft:collect-category-book-titles-and-prices failed its expectations twice: all book titles and prices in the category are collected",
+              "path": [
+                "books-category"
+              ],
+              "entry_kind": "books-<slug>",
+              "exit_kind": "books-<slug>",
+              "signature": [
+                [
+                  "scroll_down",
+                  null
+                ]
+              ],
+              "kind_mapping": [
+                [
+                  "books-<slug>",
+                  "books-category"
+                ],
+                [
+                  "home",
+                  "books-categories"
+                ],
+                [
+                  "books-category",
+                  "books-category"
+                ],
+                [
+                  "books-categories",
+                  "books-categories"
+                ],
+                [
+                  "books-<slug>",
+                  "books-category"
+                ]
+              ],
+              "repeatable": true,
+              "reason": "no irreversible submission in the observed path",
+              "gate": "replay",
+              "repair": false,
+              "model_calls": 4,
+              "model_cost": 0.024647235
+            },
+            "slug": "collect-category-book-titles-and-prices",
+            "description": "Collect every book title and price from the currently open category page.",
+            "steps": [
+              {
+                "goal": "Scroll down",
+                "until": [
+                  "the page is books-category"
+                ]
+              },
+              {
+                "goal": "Collect every book title and price from the category page",
+                "until": [
+                  "the page is books-category"
+                ]
+              }
+            ],
+            "expect": [
+              "the page is books-category",
+              "all book titles and prices in the category are collected"
+            ],
+            "expect_timeout_s": 15
+          }
+        ]
+      }
+    ],
+    "installed_after": [
+      {
+        "site": "toscrape.com",
+        "entry": "https://books.toscrape.com/",
+        "description": "Learned toscrape.com",
+        "pages": [
+          {
+            "name": "books-category",
+            "description": "Inferred books-<slug>",
+            "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+            "repeatable": true
+          },
+          {
+            "name": "books-categories",
+            "description": "Inferred home",
+            "url_pattern": "https://books.toscrape.com/",
+            "repeatable": true
+          }
+        ],
+        "procedures": [
+          {
+            "provenance": {
+              "traces": [
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+              ],
+              "model": "openai/gpt-6-luna",
+              "time": "2026-10-03T11:47:43.587238Z",
+              "tries": 0,
+              "path": [
+                "books-categories",
+                "books-category"
+              ],
+              "entry_kind": "home",
+              "exit_kind": "books-<slug>",
+              "signature": [
+                [
+                  "click",
+                  {
+                    "role": "link",
+                    "label": "travel"
+                  }
+                ]
+              ],
+              "kind_mapping": [
+                [
+                  "books-<slug>",
+                  "books-category"
+                ],
+                [
+                  "home",
+                  "books-categories"
+                ]
+              ],
+              "repeatable": true,
+              "reason": "no irreversible submission in the observed path",
+              "gate": "replay",
+              "repair": false,
+              "model_calls": 2,
+              "model_cost": 0.011815929999999999
+            },
+            "slug": "open-book-category",
+            "description": "Open the requested book category from the category links.",
+            "args": {
+              "category": {
+                "from": "mission"
+              }
+            },
+            "steps": [
+              {
+                "goal": "Wait for a link named {category} to be present",
+                "until": [
+                  "a link named {category} is present"
+                ]
+              },
+              {
+                "goal": "Click the link named {category}",
+                "until": [
+                  "the page is books-category"
+                ]
+              }
+            ],
+            "expect": [
+              "the page is books-category",
+              "the requested category is displayed"
+            ],
+            "expect_timeout_s": 15
+          }
+        ]
+      }
+    ]
+  }
+]

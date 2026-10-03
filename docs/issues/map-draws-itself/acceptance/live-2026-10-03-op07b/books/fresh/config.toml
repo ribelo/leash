@@ -1,0 +1,29 @@
+[chrome]
+binary = "/etc/profiles/per-user/ribelo/bin/google-chrome-stable"
+profile_dir = "<PRIVATE_ROOT>/profile"
+workspace = "test"
+headless = true
+[tabs]
+cap = 8
+[expiry]
+idle_s = 3600
+tombstone_s = 3600
+[models]
+jev_model = "typesafe/jev-1.13-20260917"
+text_model = "inception/mercury-2.5"
+planner_model = "openai/gpt-6-luna"
+planner_reasoning = "max"
+systemone_endpoint = "https://openrouter.ai/api/v1/systemone"
+chat_base_url = "https://openrouter.ai/api/v1"
+[learning]
+mode = "off"
+successes = 2
+timeout_s = 900
+planner_model = "openai/gpt-6-luna"
+planner_reasoning = "max"
+[handoff]
+timeout_s = 10
+focus_command = []
+notify_command = []
+[challenges]
+attempt = false

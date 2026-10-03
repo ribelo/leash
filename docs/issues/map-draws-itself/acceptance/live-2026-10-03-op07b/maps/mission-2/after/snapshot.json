@@ -1,0 +1,275 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.05331745300009061,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/maps/search/cafe+near+Colosseum/@41.8900046,12.4916954,17z/data=!4m7!2m6!3m5!2sColosseum!3s0x132f61b6532013ad:0x28f1c82e908503c4!4m2!1d12.4922309!2d41.8902102?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "cafe near Colosseum - Google Maps",
+    "page_kind": {
+      "name": "search-<slug>",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "combobox",
+        "name": "",
+        "value": "cafe near Colosseum",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "button",
+        "name": "Search"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Cancel search nearby"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Price"
+      },
+      {
+        "index": 5,
+        "role": "button",
+        "name": "Rating"
+      },
+      {
+        "index": 6,
+        "role": "button",
+        "name": "Hours"
+      },
+      {
+        "index": 7,
+        "role": "button",
+        "name": "All filters"
+      },
+      {
+        "index": 8,
+        "role": "button",
+        "name": "Menu"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Saved"
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Recents"
+      },
+      {
+        "index": 11,
+        "role": "button",
+        "name": "3 places Rome"
+      },
+      {
+        "index": 12,
+        "role": "button",
+        "name": "Get app"
+      },
+      {
+        "index": 13,
+        "role": "heading",
+        "name": "Results"
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+      },
+      {
+        "index": 15,
+        "role": "button",
+        "name": "Share"
+      },
+      {
+        "index": 16,
+        "role": "link",
+        "name": "San pietrino"
+      },
+      {
+        "index": 17,
+        "role": "heading",
+        "name": "Sponsored"
+      },
+      {
+        "index": 18,
+        "role": "button",
+        "name": "Why this ad?"
+      },
+      {
+        "index": 19,
+        "role": "link",
+        "name": "Da Benny | Pasta in Padella & Crispy Pizza"
+      },
+      {
+        "index": 20,
+        "role": "heading",
+        "name": "Sponsored"
+      },
+      {
+        "index": 21,
+        "role": "button",
+        "name": "Why this ad?"
+      },
+      {
+        "index": 22,
+        "role": "link",
+        "name": "Ad · Fori Imperiali · Pan-fried pasta and crispy pizza just steps from the <b>Colosseum</b>. The true taste of Rome · Visit Site · dabennycolosseo.it"
+      },
+      {
+        "index": 23,
+        "role": "link",
+        "name": "RoYaL Art Cafè"
+      },
+      {
+        "index": 24,
+        "role": "link",
+        "name": "Order online"
+      },
+      {
+        "index": 25,
+        "role": "link",
+        "name": "Ristorante Caffè Martini"
+      },
+      {
+        "index": 26,
+        "role": "link",
+        "name": "About pricing"
+      },
+      {
+        "index": 27,
+        "role": "checkbox",
+        "name": "Update results when map moves",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Collapse side panel"
+      },
+      {
+        "index": 29,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 30,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 31,
+        "role": "button",
+        "name": "15 min",
+        "state": [
+          "disabled"
+        ]
+      },
+      {
+        "index": 32,
+        "role": "radio",
+        "name": "Walking",
+        "state": [
+          "checked"
+        ]
+      },
+      {
+        "index": 33,
+        "role": "radio",
+        "name": "Driving",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 34,
+        "role": "switch",
+        "name": "Turn off travel time tool",
+        "state": [
+          "checked"
+        ]
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Show Your Location"
+      },
+      {
+        "index": 36,
+        "role": "button",
+        "name": "Zoom in"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Zoom out"
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "Browse Street View images"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Layers",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 40,
+        "role": "button",
+        "name": "Poland"
+      },
+      {
+        "index": 41,
+        "role": "button",
+        "name": "Terms"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "Privacy"
+      },
+      {
+        "index": 43,
+        "role": "button",
+        "name": "Send Product Feedback"
+      },
+      {
+        "index": 44,
+        "role": "button",
+        "name": "100 m"
+      }
+    ],
+    "total": 44,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

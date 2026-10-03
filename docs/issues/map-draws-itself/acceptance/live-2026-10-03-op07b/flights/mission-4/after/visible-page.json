@@ -1,0 +1,36 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005081756000436144,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/travel/flights?tfs=CBwQARocagwIAhIIL20vMDg0NWJyDAgDEggvbS8wNXF0ahocagwIAxIIL20vMDVxdGpyDAgCEggvbS8wODQ1YkABSAFwAYIBCwj___________8BmAEB&tfu=KgIIAw&hl=en",
+      "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+      "text": "Skip to main content\nAccessibility feedback\nExplore\nFlights\nHotels\nVacation rentals\nChange appearance\nSign in\nFlights\nRound trip\n1\nEconomy\nWrocław\nParis\nRound trip\nReset\nOctober\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\nNovember\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\nDecember\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\nJanuary 2027\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\nFebruary 2027\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\nMarch 2027\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\nApril 2027\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\nMay 2027\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\nJune 2027\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\nJuly 2027\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\nAugust 2027\nM\nT\nW\nT\nF\nS\nS\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\nShowing prices in PLN for\n7 day trips\nUnderlined prices indicate cheapest compared with other prices shown\nDone\nSearch\nFlexible? Discover the best flight deals with AI\nDescribe your ideal trip, and let Google Flights find the best deals for you\nExplore deals with AI\nFind and book cheap flights worldwide and track prices\nFind cheap flights to anywhere\nExplore destinations\nUseful tools to help you find the best airline tickets\nFind the cheapest days to fly\nThe Date grid and Price graph make it easy to find the best flight deals\nKnow when to book with price insights\nPrice history and trend data show you the best time to book your airline ticket to get the cheapest price for your flight\nTrack flight prices for a trip\nNot ready to book yet? Observe price changes for a route or flight and get notified when prices drop.\nExplore the best flight deals with AI\nDescribe your ideal trip and let Google Flights find you the best deals\nInsightful tools help you choose your trip dates\nIf your travel plans are flexible, use the form above to start searching for a specific trip. Then, play around with the Date grid and Price graph options on the Search page to find the cheapest days to fly and book your tickets.\nFrequently asked questions\nHow can I find last-minute flight deals?\nHow can I find cheap flights for a weekend getaway?\nHow can I find flight deals if my travel plans are flexible?\nHow can I find cheap flights to anywhere?\nHow can I get flight alerts for my trip?\nFind cheap flights on popular routes\nFlights from popular destinations\nFlights to popular destinations\nPopular flights routes\nFlights from New York\nFlights from Paris\nFlights from London\nFlights from Toronto\nFlights from Rome\nFlights from Milan\nFlights from Madrid\nFlights from Chicago\nFlights from Sao Paulo\nFlights from Berlin\nFlights from Los Angeles\nFlights from Bangkok\nFlights from Marrakech\nFlights from Orlando\nFlights from Montreal\nLanguage​English (United States)\nLocation​Poland\nCurrencyPLN\n\nCurrent language and currency options applied: English (United States) - Poland - PLN\n\nDisplayed currencies may differ from the currencies used to purchase flights. Learn more\n\nPrices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.\n\nAbout\nPrivacy\nTerms\nJoin user studies\nReport Illegal Content\nFeedback\nHelp Center and Consumer Information\nInternational sites\nExplore flights\nLoading prices. ",
+      "headings": [
+        "Flexible? Discover the best flight deals with AI",
+        "Find and book cheap flights worldwide and track prices",
+        "Find cheap flights to anywhere",
+        "Useful tools to help you find the best airline tickets",
+        "Frequently asked questions"
+      ],
+      "labels": [
+        "Departure",
+        "Return",
+        "Departure",
+        "Return"
+      ],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T12:02:26.588Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

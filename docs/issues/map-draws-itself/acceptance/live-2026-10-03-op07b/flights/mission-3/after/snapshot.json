@@ -1,0 +1,378 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.14491512200038414,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhooEgoyMDI2LTExLTI1agwIAxIIL20vMDM1bTZyDAgDEggvbS8wNmM2MhooEgoyMDI2LTExLTMwagwIAxIIL20vMDZjNjJyDAgDEggvbS8wMzVtNkABSAFwAYIBCwj___________8BmAEB&hl=en",
+    "title": "Gdańsk to Rome | Google Flights",
+    "page_kind": {
+      "name": "search",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "button",
+        "name": "Main menu",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "link",
+        "name": "Google"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Skip to main content"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Accessibility feedback"
+      },
+      {
+        "index": 5,
+        "role": "link",
+        "name": "Explore"
+      },
+      {
+        "index": 6,
+        "role": "link",
+        "name": "Flights"
+      },
+      {
+        "index": 7,
+        "role": "link",
+        "name": "Hotels"
+      },
+      {
+        "index": 8,
+        "role": "link",
+        "name": "Vacation rentals"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Change appearance",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 11,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 12,
+        "role": "heading",
+        "name": "Flight search"
+      },
+      {
+        "index": 13,
+        "role": "combobox",
+        "name": "Change ticket type. Round trip",
+        "value": "Round trip",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "1 passenger, change number of passengers."
+      },
+      {
+        "index": 15,
+        "role": "combobox",
+        "name": "Change seating class. Economy",
+        "value": "Economy",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 16,
+        "role": "combobox",
+        "name": "Where from?",
+        "value": "Gdańsk",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 17,
+        "role": "button",
+        "name": "Swap origin and destination."
+      },
+      {
+        "index": 18,
+        "role": "combobox",
+        "name": "Where to?",
+        "value": "Rome",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 19,
+        "role": "textbox",
+        "name": "Departure",
+        "value": "Wed, Nov 25"
+      },
+      {
+        "index": 20,
+        "role": "textbox",
+        "name": "Return",
+        "value": "Mon, Nov 30"
+      },
+      {
+        "index": 21,
+        "role": "heading",
+        "name": "Filters"
+      },
+      {
+        "index": 22,
+        "role": "button",
+        "name": "All filters"
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Stops, Not selected"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "Airlines, Not selected"
+      },
+      {
+        "index": 25,
+        "role": "button",
+        "name": "Bags, Not selected"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "Price, Not selected"
+      },
+      {
+        "index": 27,
+        "role": "button",
+        "name": "Times, Not selected"
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Emissions, Not selected"
+      },
+      {
+        "index": 29,
+        "role": "button",
+        "name": "Connecting airports, Not selected"
+      },
+      {
+        "index": 30,
+        "role": "button",
+        "name": "Duration, Not selected"
+      },
+      {
+        "index": 31,
+        "role": "heading",
+        "name": "Search results"
+      },
+      {
+        "index": 32,
+        "role": "tab",
+        "name": "Best Learn more about ranking",
+        "state": [
+          "selected"
+        ]
+      },
+      {
+        "index": 33,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 34,
+        "role": "tab",
+        "name": "Cheapest from 284 Polish zlotys Learn more about ranking"
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 36,
+        "role": "heading",
+        "name": "Top departing flights"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "bag fees"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Passenger assistance"
+      },
+      {
+        "index": 40,
+        "role": "button",
+        "name": "Sorted by top flights, Change sort order."
+      },
+      {
+        "index": 41,
+        "role": "link",
+        "name": "From 284 Polish zlotys round trip total.This price does not include overhead bin access. Nonstop flight with Wizz Air. Leaves Gdansk Lech Walesa Airport at 6:55 PM on Wednesday, November 25 and arrives at Leonardo da Vinci International Airport at 9:30 PM on Wednesday, November 25. Total duration 2 hr 35 min. Unknown emissions. Select flight"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "This price for this flight doesn't include overhead bin access. If you need a carry-on bag, use the Bags filter to update prices."
+      },
+      {
+        "index": 43,
+        "role": "button",
+        "name": "Flight details. Leaves Gdansk Lech Walesa Airport at 6:55 PM on Wednesday, November 25 and arrives at Leonardo da Vinci International Airport at 9:30 PM on Wednesday, November 25.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 44,
+        "role": "link",
+        "name": "From 801 Polish zlotys round trip total. 1 stop flight with LOT. Leaves Gdansk Lech Walesa Airport at 11:55 AM on Wednesday, November 25 and arrives at Leonardo da Vinci International Airport at 6:35 PM on Wednesday, November 25. Total duration 6 hr 40 min. Layover (1 of 1) is a 3 hr 15 min layover at Warsaw Chopin Airport in Warsaw. Select flight"
+      },
+      {
+        "index": 45,
+        "role": "button",
+        "name": "Carbon emissions estimate: 198 kilograms. +17% emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 46,
+        "role": "button",
+        "name": "Flight details. Leaves Gdansk Lech Walesa Airport at 11:55 AM on Wednesday, November 25 and arrives at Leonardo da Vinci International Airport at 6:35 PM on Wednesday, November 25.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 47,
+        "role": "link",
+        "name": "From 879 Polish zlotys round trip total. 1 stop flight with KLM. Operated by KLM Cityhopper. Leaves Gdansk Lech Walesa Airport at 2:20 PM on Wednesday, November 25 and arrives at Leonardo da Vinci International Airport at 7:30 PM on Wednesday, November 25. Total duration 5 hr 10 min. Layover (1 of 1) is a 1 hr layover at Amsterdam Airport Schiphol in Amsterdam. Select flight"
+      },
+      {
+        "index": 48,
+        "role": "button",
+        "name": "Carbon emissions estimate: 197 kilograms. +17% emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Flight details. Leaves Gdansk Lech Walesa Airport at 2:20 PM on Wednesday, November 25 and arrives at Leonardo da Vinci International Airport at 7:30 PM on Wednesday, November 25.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 50,
+        "role": "heading",
+        "name": "Price insights"
+      },
+      {
+        "index": 51,
+        "role": "heading",
+        "name": "Prices are currently low — PLN 230 cheaper than usual for your search"
+      },
+      {
+        "index": 52,
+        "role": "button",
+        "name": "View price history",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 53,
+        "role": "heading",
+        "name": "Track prices"
+      },
+      {
+        "index": 54,
+        "role": "button",
+        "name": "Learn more about tracked prices"
+      },
+      {
+        "index": 55,
+        "role": "link",
+        "name": "Learn more about tracked prices"
+      },
+      {
+        "index": 56,
+        "role": "switch",
+        "name": "Track prices from Gdańsk to Rome departing 2026-11-25 and returning 2026-11-30",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 57,
+        "role": "switch",
+        "name": "Track prices from Gdańsk to Rome - Any dates",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 58,
+        "role": "button",
+        "name": "Date grid"
+      },
+      {
+        "index": 59,
+        "role": "button",
+        "name": "Price graph"
+      },
+      {
+        "index": 60,
+        "role": "heading",
+        "name": "Other departing flights"
+      }
+    ],
+    "total": 60,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

@@ -1,0 +1,216 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.04243184500046482,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "cafes near Sagrada Família - Google Maps",
+    "page_kind": {
+      "name": "search-<slug>",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "button",
+        "name": "Menu"
+      },
+      {
+        "index": 2,
+        "role": "button",
+        "name": "Saved"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Recents"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "2 places Barcelona"
+      },
+      {
+        "index": 5,
+        "role": "button",
+        "name": "Get app"
+      },
+      {
+        "index": 6,
+        "role": "button",
+        "name": "Back"
+      },
+      {
+        "index": 7,
+        "role": "button",
+        "name": "Clear"
+      },
+      {
+        "index": 8,
+        "role": "button",
+        "name": "Done"
+      },
+      {
+        "index": 9,
+        "role": "heading",
+        "name": "Price"
+      },
+      {
+        "index": 10,
+        "role": "slider",
+        "name": "",
+        "value": "0"
+      },
+      {
+        "index": 11,
+        "role": "slider",
+        "name": "",
+        "value": "11"
+      },
+      {
+        "index": 12,
+        "role": "button",
+        "name": "Any rating"
+      },
+      {
+        "index": 13,
+        "role": "radio",
+        "name": "Any time",
+        "state": [
+          "checked"
+        ]
+      },
+      {
+        "index": 14,
+        "role": "radio",
+        "name": "Open now",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 15,
+        "role": "radio",
+        "name": "Open 24 hours",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 16,
+        "role": "button",
+        "name": "Collapse side panel"
+      },
+      {
+        "index": 17,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 18,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 19,
+        "role": "button",
+        "name": "15 min"
+      },
+      {
+        "index": 20,
+        "role": "radio",
+        "name": "Walking",
+        "state": [
+          "checked"
+        ]
+      },
+      {
+        "index": 21,
+        "role": "radio",
+        "name": "Driving",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 22,
+        "role": "switch",
+        "name": "Turn off travel time tool",
+        "state": [
+          "checked"
+        ]
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Show Your Location"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "Zoom in"
+      },
+      {
+        "index": 25,
+        "role": "button",
+        "name": "Zoom out"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "Browse Street View images"
+      },
+      {
+        "index": 27,
+        "role": "button",
+        "name": "Layers",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Poland"
+      },
+      {
+        "index": 29,
+        "role": "button",
+        "name": "Terms"
+      },
+      {
+        "index": 30,
+        "role": "button",
+        "name": "Privacy"
+      },
+      {
+        "index": 31,
+        "role": "button",
+        "name": "Send Product Feedback"
+      },
+      {
+        "index": 32,
+        "role": "button",
+        "name": "200 m"
+      }
+    ],
+    "total": 32,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

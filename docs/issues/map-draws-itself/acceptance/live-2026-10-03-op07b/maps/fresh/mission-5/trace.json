@@ -1,0 +1,7204 @@
+{
+  "unattended": [],
+  "version": 1,
+  "time": "2026-10-03T11:51:20.180511Z",
+  "site": "google.com",
+  "mission": "find the Tower of London, then find a cafe near it with a rating over 4 and give me its name and address",
+  "arguments": [],
+  "outcome": "done",
+  "cost": 0.018040662999999995,
+  "duration_ms": 74067,
+  "model_calls": 81,
+  "start_url": "https://consent.google.com/m?continue=https://www.google.com/maps?hl%3Den&gl=PL&m=0&pc=m&uxe=eomtm&cm=2&hl=en&src=1",
+  "page_kind_path": [
+    "m",
+    "maps",
+    "place-<slug>",
+    "cafe",
+    "place-<slug>",
+    "search-<slug>",
+    "maps",
+    "place-<slug>",
+    "cafe"
+  ],
+  "inferred_pages": [
+    {
+      "name": "m",
+      "url_pattern": "https://consent.google.com/m"
+    },
+    {
+      "name": "maps",
+      "url_pattern": "https://www.google.com/maps*"
+    },
+    {
+      "name": "place-<slug>",
+      "url_pattern": "https://www.google.com/maps/place/<slug>*"
+    },
+    {
+      "name": "cafe",
+      "url_pattern": "https://www.google.com/maps/search/cafe*"
+    },
+    {
+      "name": "search-<slug>",
+      "url_pattern": "https://www.google.com/maps/search/<slug>*"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "scroll_down",
+      "source": "operator",
+      "operations": [
+        {
+          "key": "scroll_down",
+          "probability": 0.18
+        },
+        {
+          "key": "click",
+          "probability": 0.11
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.69
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        }
+      ],
+      "targets": [],
+      "after": {
+        "url": "https://consent.google.com/m?continue=https://www.google.com/maps?hl%3Den&gl=PL&m=0&pc=m&uxe=eomtm&cm=2&hl=en&src=1",
+        "title": "Before you continue to Google Maps"
+      },
+      "elapsed_ms": 525
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Reject all"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.3
+        },
+        {
+          "key": "scroll_up",
+          "probability": 0.07
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.6
+        },
+        {
+          "key": "wait",
+          "probability": 0.03
+        }
+      ],
+      "targets": [
+        {
+          "key": "5",
+          "probability": 0.96
+        },
+        {
+          "key": "7",
+          "probability": 0.04
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps?hl=en",
+        "title": "Google Maps"
+      },
+      "elapsed_ms": 1824
+    },
+    {
+      "non_repeatable": false,
+      "n": 3,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search Google Maps"
+      },
+      "text": "Tower of London",
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.99
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/@51.1701458,16.574885,14z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Google Maps"
+      },
+      "elapsed_ms": 9653
+    },
+    {
+      "non_repeatable": false,
+      "n": 4,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.05
+        },
+        {
+          "key": "click",
+          "probability": 0.91
+        },
+        {
+          "key": "wait",
+          "probability": 0.04
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.31
+        },
+        {
+          "key": "2",
+          "probability": 0.69
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Tower+of+London/@51.5081157,-0.0785242,17z/data=!3m1!4b1!4m6!3m5!1s0x48760349331f38dd:0xa8bf49dde1d56467!8m2!3d51.5081124!4d-0.0759493!16zL20vMDducW4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Tower of London - Google Maps"
+      },
+      "elapsed_ms": 11709
+    },
+    {
+      "non_repeatable": true,
+      "n": 5,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Nearby"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.95
+        },
+        {
+          "key": "blocked",
+          "probability": 0.03
+        },
+        {
+          "key": "type_text",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.02
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.28
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.68
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        },
+        {
+          "key": "55",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Tower+of+London/@51.5081157,-0.0785242,17z/data=!3m1!4b1!4m6!3m5!1s0x48760349331f38dd:0xa8bf49dde1d56467!8m2!3d51.5081124!4d-0.0759493!16zL20vMDducW4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Tower of London - Google Maps"
+      },
+      "elapsed_ms": 12194
+    },
+    {
+      "non_repeatable": false,
+      "n": 6,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search nearby Tower of London"
+      },
+      "text": "cafe",
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.27
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.71
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Tower+of+London/@51.5081157,-0.0785242,17z/data=!4m6!3m5!1s0x48760349331f38dd:0xa8bf49dde1d56467!8m2!3d51.5081124!4d-0.0759493!16zL20vMDducW4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Tower of London - Google Maps"
+      },
+      "elapsed_ms": 15448
+    },
+    {
+      "non_repeatable": false,
+      "n": 7,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.98
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.01
+        },
+        {
+          "key": "2",
+          "probability": 0.93
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.02
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.04
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@51.5081157,-0.0785242,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 16585
+    },
+    {
+      "non_repeatable": true,
+      "n": 8,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.84
+        },
+        {
+          "key": "blocked",
+          "probability": 0.08
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.06
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.02
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.63
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.11
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.12
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.04
+        },
+        {
+          "key": "17",
+          "probability": 0.01
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.060000000000000005
+        },
+        {
+          "key": "20",
+          "probability": 0.01
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@51.5081157,-0.0785242,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 17508
+    },
+    {
+      "non_repeatable": true,
+      "n": 9,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.9
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.06
+        },
+        {
+          "key": "done",
+          "probability": 0.03
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.01
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.87
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.01
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.04
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.01
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.05
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@51.5081223,-0.0785242,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 18773
+    },
+    {
+      "non_repeatable": true,
+      "n": 10,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "All filters"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.92
+        },
+        {
+          "key": "done",
+          "probability": 0.02
+        },
+        {
+          "key": "blocked",
+          "probability": 0.060000000000000005
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.03
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.02
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.71
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.09999999999999999
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.04
+        },
+        {
+          "key": "18",
+          "probability": 0.01
+        },
+        {
+          "key": "19",
+          "probability": 0.01
+        },
+        {
+          "key": "20",
+          "probability": 0.07
+        },
+        {
+          "key": "21",
+          "probability": 0.01
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@51.5081223,-0.0785242,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 19302
+    },
+    {
+      "non_repeatable": true,
+      "n": 11,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Any rating"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.03
+        },
+        {
+          "key": "click",
+          "probability": 0.84
+        },
+        {
+          "key": "blocked",
+          "probability": 0.13
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.34
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.07
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.59
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@51.5081223,-0.0785242,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 20664
+    },
+    {
+      "non_repeatable": true,
+      "n": 12,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Tower of London"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.03
+        },
+        {
+          "key": "click",
+          "probability": 0.82
+        },
+        {
+          "key": "blocked",
+          "probability": 0.15
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.46
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.41000000000000003
+        },
+        {
+          "key": "10",
+          "probability": 0.06
+        },
+        {
+          "key": "11",
+          "probability": 0.05
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.01
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@51.5081223,-0.0785242,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Tower of London - Google Maps"
+      },
+      "elapsed_ms": 22582
+    },
+    {
+      "non_repeatable": true,
+      "n": 13,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "link",
+        "label": "WatchHouse Tower Bridge"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.17
+        },
+        {
+          "key": "done",
+          "probability": 0.07
+        },
+        {
+          "key": "click",
+          "probability": 0.73
+        },
+        {
+          "key": "wait",
+          "probability": 0.03
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.04
+        },
+        {
+          "key": "2",
+          "probability": 0.16
+        },
+        {
+          "key": "3",
+          "probability": 0.01
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.11
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.28
+        },
+        {
+          "key": "13",
+          "probability": 0.05
+        },
+        {
+          "key": "14",
+          "probability": 0.01
+        },
+        {
+          "key": "15",
+          "probability": 0.13
+        },
+        {
+          "key": "16",
+          "probability": 0.02
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.01
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.15000000000000002
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.02
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/WatchHouse+Tower+Bridge/@51.5081223,-0.0785242,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124!3m6!1s0x48760346368fffff:0x1ea60db680a2fa69!8m2!3d51.5037368!4d-0.0746038!15sCgRjYWZlWgYiBGNhZmWSAQtjb2ZmZWVfc2hvcJoBJENoZERTVWhOTUc5blMwVkpRMEZuU1VONGMzTmZSRFZuUlJBQuABAPoBBAgAEDI!16s%2Fg%2F11c0tjjlww?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "WatchHouse Tower Bridge - Google Maps"
+      },
+      "elapsed_ms": 24925
+    },
+    {
+      "non_repeatable": true,
+      "n": 14,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": ""
+      },
+      "text": "cafe near Tower of London rating over 4",
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.29
+        },
+        {
+          "key": "blocked",
+          "probability": 0.09
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.61
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/WatchHouse+Tower+Bridge/@51.5037368,-0.0746038,17z/data=!3m2!4b1!5s0x487603466bed9985:0x4d8fe383237004cc!4m16!1m8!2m7!1scafe!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124!3m6!1s0x48760346368fffff:0x1ea60db680a2fa69!8m2!3d51.5037368!4d-0.0746038!15sCgRjYWZlWgYiBGNhZmWSAQtjb2ZmZWVfc2hvcJoBJENoZERTVWhOTUc5blMwVkpRMEZuU1VONGMzTmZSRFZuUlJBQuABAPoBBAgAEDI!16s%2Fg%2F11c0tjjlww?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "WatchHouse Tower Bridge - Google Maps"
+      },
+      "elapsed_ms": 28886
+    },
+    {
+      "non_repeatable": false,
+      "n": 15,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.06
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "wait",
+          "probability": 0.03
+        },
+        {
+          "key": "click",
+          "probability": 0.89
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.18000000000000002
+        },
+        {
+          "key": "2",
+          "probability": 0.73
+        },
+        {
+          "key": "3",
+          "probability": 0.02
+        },
+        {
+          "key": "4",
+          "probability": 0.05
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.02
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        },
+        {
+          "key": "55",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.0
+        },
+        {
+          "key": "58",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        },
+        {
+          "key": "60",
+          "probability": 0.0
+        },
+        {
+          "key": "61",
+          "probability": 0.0
+        },
+        {
+          "key": "62",
+          "probability": 0.0
+        },
+        {
+          "key": "63",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037368,-0.0746038,17z/data=!3m1!5s0x487603466bed9985:0x4d8fe383237004cc!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 30631
+    },
+    {
+      "non_repeatable": true,
+      "n": 16,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        },
+        {
+          "key": "blocked",
+          "probability": 0.17
+        },
+        {
+          "key": "done",
+          "probability": 0.14
+        },
+        {
+          "key": "click",
+          "probability": 0.66
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.14
+        },
+        {
+          "key": "2",
+          "probability": 0.11
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.36
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.08
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.01
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.02
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.11
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.15000000000000002
+        },
+        {
+          "key": "21",
+          "probability": 0.02
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 32101
+    },
+    {
+      "non_repeatable": true,
+      "n": 17,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.12
+        },
+        {
+          "key": "done",
+          "probability": 0.05
+        },
+        {
+          "key": "click",
+          "probability": 0.81
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.12
+        },
+        {
+          "key": "2",
+          "probability": 0.06999999999999999
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.02
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.65
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.060000000000000005
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.01
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.02
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.05
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 32617
+    },
+    {
+      "non_repeatable": true,
+      "n": 18,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "All filters"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.8
+        },
+        {
+          "key": "blocked",
+          "probability": 0.14
+        },
+        {
+          "key": "done",
+          "probability": 0.04
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.17
+        },
+        {
+          "key": "2",
+          "probability": 0.11
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.01
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.55
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.01
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.07
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.06
+        },
+        {
+          "key": "22",
+          "probability": 0.01
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 33068
+    },
+    {
+      "non_repeatable": true,
+      "n": 19,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Any rating"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.1
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.43
+        },
+        {
+          "key": "click",
+          "probability": 0.47000000000000003
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.02
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.02
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.14
+        },
+        {
+          "key": "10",
+          "probability": 0.01
+        },
+        {
+          "key": "11",
+          "probability": 0.01
+        },
+        {
+          "key": "12",
+          "probability": 0.74
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.01
+        },
+        {
+          "key": "25",
+          "probability": 0.01
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.02
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 33968
+    },
+    {
+      "non_repeatable": true,
+      "n": 20,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Done"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.36
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.07
+        },
+        {
+          "key": "click",
+          "probability": 0.5700000000000001
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.01
+        },
+        {
+          "key": "4",
+          "probability": 0.05
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.03
+        },
+        {
+          "key": "7",
+          "probability": 0.03
+        },
+        {
+          "key": "8",
+          "probability": 0.67
+        },
+        {
+          "key": "10",
+          "probability": 0.04
+        },
+        {
+          "key": "11",
+          "probability": 0.03
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.06999999999999999
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.01
+        },
+        {
+          "key": "25",
+          "probability": 0.02
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.01
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.01
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 34820
+    },
+    {
+      "non_repeatable": false,
+      "n": 21,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.03
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.14
+        },
+        {
+          "key": "click",
+          "probability": 0.82
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.11
+        },
+        {
+          "key": "2",
+          "probability": 0.4
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.31
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.15000000000000002
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 35369
+    },
+    {
+      "non_repeatable": true,
+      "n": 22,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.75
+        },
+        {
+          "key": "wait",
+          "probability": 0.04
+        },
+        {
+          "key": "blocked",
+          "probability": 0.19
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.02
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.19
+        },
+        {
+          "key": "3",
+          "probability": 0.01
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.5700000000000001
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.02
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.01
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.02
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.16
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 35832
+    },
+    {
+      "non_repeatable": false,
+      "n": 23,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.06
+        },
+        {
+          "key": "click",
+          "probability": 0.75
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.18
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.16
+        },
+        {
+          "key": "2",
+          "probability": 0.34
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.28
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.03
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.17
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 36289
+    },
+    {
+      "non_repeatable": false,
+      "n": 24,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.03
+        },
+        {
+          "key": "click",
+          "probability": 0.89
+        },
+        {
+          "key": "blocked",
+          "probability": 0.07
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.060000000000000005
+        },
+        {
+          "key": "2",
+          "probability": 0.48
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.3
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.14
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 36790
+    },
+    {
+      "non_repeatable": true,
+      "n": 25,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.07
+        },
+        {
+          "key": "type_text",
+          "probability": 0.04
+        },
+        {
+          "key": "click",
+          "probability": 0.88
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.12
+        },
+        {
+          "key": "3",
+          "probability": 0.03
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.68
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.02
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.12
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 37243
+    },
+    {
+      "non_repeatable": false,
+      "n": 26,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.08
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.89
+        },
+        {
+          "key": "type_text",
+          "probability": 0.02
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.05
+        },
+        {
+          "key": "2",
+          "probability": 0.45
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.3
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.17
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 38646
+    },
+    {
+      "non_repeatable": true,
+      "n": 27,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.14
+        },
+        {
+          "key": "type_text",
+          "probability": 0.04
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.17
+        },
+        {
+          "key": "click",
+          "probability": 0.63
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.06
+        },
+        {
+          "key": "2",
+          "probability": 0.18000000000000002
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.37
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.08
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.03
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.09999999999999999
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.15000000000000002
+        },
+        {
+          "key": "21",
+          "probability": 0.03
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 39747
+    },
+    {
+      "non_repeatable": true,
+      "n": 28,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.05
+        },
+        {
+          "key": "blocked",
+          "probability": 0.11
+        },
+        {
+          "key": "done",
+          "probability": 0.05
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.78
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.05
+        },
+        {
+          "key": "2",
+          "probability": 0.14
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.58
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.08
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.05
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.08
+        },
+        {
+          "key": "21",
+          "probability": 0.01
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.5037434,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 40220
+    },
+    {
+      "non_repeatable": true,
+      "n": 29,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.07
+        },
+        {
+          "key": "blocked",
+          "probability": 0.1
+        },
+        {
+          "key": "type_text",
+          "probability": 0.04
+        },
+        {
+          "key": "click",
+          "probability": 0.78
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.06
+        },
+        {
+          "key": "2",
+          "probability": 0.14
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.54
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.09
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.02
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.05
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.07
+        },
+        {
+          "key": "21",
+          "probability": 0.02
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.50375,-0.0746038,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 41207
+    },
+    {
+      "non_repeatable": true,
+      "n": 30,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "All filters"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.75
+        },
+        {
+          "key": "blocked",
+          "probability": 0.11
+        },
+        {
+          "key": "done",
+          "probability": 0.06
+        },
+        {
+          "key": "type_text",
+          "probability": 0.07
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.09
+        },
+        {
+          "key": "2",
+          "probability": 0.27
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.01
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.41000000000000003
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.11
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.07
+        },
+        {
+          "key": "21",
+          "probability": 0.02
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.50375,-0.0746038,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 41736
+    },
+    {
+      "non_repeatable": true,
+      "n": 31,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Any rating"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.59
+        },
+        {
+          "key": "blocked",
+          "probability": 0.39
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.08
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.05
+        },
+        {
+          "key": "7",
+          "probability": 0.06
+        },
+        {
+          "key": "8",
+          "probability": 0.04
+        },
+        {
+          "key": "10",
+          "probability": 0.01
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.7
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.02
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.01
+        },
+        {
+          "key": "25",
+          "probability": 0.01
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.02
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.50375,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe near Tower of London rating over 4 - Google Maps"
+      },
+      "elapsed_ms": 42589
+    },
+    {
+      "non_repeatable": true,
+      "n": 32,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "2 places London"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.59
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        },
+        {
+          "key": "blocked",
+          "probability": 0.39
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.01
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.02
+        },
+        {
+          "key": "4",
+          "probability": 0.2
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.11
+        },
+        {
+          "key": "7",
+          "probability": 0.14
+        },
+        {
+          "key": "8",
+          "probability": 0.16
+        },
+        {
+          "key": "10",
+          "probability": 0.06
+        },
+        {
+          "key": "11",
+          "probability": 0.04
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.07
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.01
+        },
+        {
+          "key": "25",
+          "probability": 0.04
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.01
+        },
+        {
+          "key": "28",
+          "probability": 0.12
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.01
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe+near+Tower+of+London+rating+over+4/@51.50375,-0.0746038,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Google Maps"
+      },
+      "elapsed_ms": 43532
+    },
+    {
+      "non_repeatable": true,
+      "n": 33,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "WatchHouse Tower Bridge 4.6 stars Coffee shop"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.59
+        },
+        {
+          "key": "type_text",
+          "probability": 0.27
+        },
+        {
+          "key": "blocked",
+          "probability": 0.03
+        },
+        {
+          "key": "done",
+          "probability": 0.1
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.03
+        },
+        {
+          "key": "2",
+          "probability": 0.25
+        },
+        {
+          "key": "3",
+          "probability": 0.19
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.01
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.41000000000000003
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.09
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.02
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/@51.50375,-0.0746038,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "WatchHouse Tower Bridge - Google Maps"
+      },
+      "elapsed_ms": 44814
+    },
+    {
+      "non_repeatable": true,
+      "n": 34,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Nearby"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.34
+        },
+        {
+          "key": "blocked",
+          "probability": 0.04
+        },
+        {
+          "key": "type_text",
+          "probability": 0.08
+        },
+        {
+          "key": "click",
+          "probability": 0.53
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.08
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.01
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.02
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.06
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.33
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.43
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.05
+        },
+        {
+          "key": "34",
+          "probability": 0.01
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        },
+        {
+          "key": "55",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.0
+        },
+        {
+          "key": "58",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        },
+        {
+          "key": "60",
+          "probability": 0.0
+        },
+        {
+          "key": "61",
+          "probability": 0.0
+        },
+        {
+          "key": "62",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/WatchHouse+Tower+Bridge/@51.5059247,-0.0804264,16z/data=!3m1!5s0x487603466bed9985:0x4d8fe383237004cc!4m6!3m5!1s0x48760346368fffff:0x1ea60db680a2fa69!8m2!3d51.5037368!4d-0.0746038!16s%2Fg%2F11c0tjjlww?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "WatchHouse Tower Bridge - Google Maps"
+      },
+      "elapsed_ms": 47334
+    },
+    {
+      "non_repeatable": false,
+      "n": 35,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search nearby WatchHouse Tower Bridge"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.27
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.23
+        },
+        {
+          "key": "click",
+          "probability": 0.48
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.33
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.02
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.02
+        },
+        {
+          "key": "7",
+          "probability": 0.02
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.19
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.06999999999999999
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.01
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.02
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.25
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.04
+        },
+        {
+          "key": "33",
+          "probability": 0.01
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.01
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        },
+        {
+          "key": "55",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.0
+        },
+        {
+          "key": "58",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        },
+        {
+          "key": "60",
+          "probability": 0.0
+        },
+        {
+          "key": "61",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/WatchHouse+Tower+Bridge/@51.50374,-0.0792172,17z/data=!3m1!5s0x487603466bed9985:0x4d8fe383237004cc!4m6!3m5!1s0x48760346368fffff:0x1ea60db680a2fa69!8m2!3d51.5037368!4d-0.0746038!16s%2Fg%2F11c0tjjlww?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "WatchHouse Tower Bridge - Google Maps"
+      },
+      "elapsed_ms": 48952
+    },
+    {
+      "non_repeatable": true,
+      "n": 36,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Nearby"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.44
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.18
+        },
+        {
+          "key": "type_text",
+          "probability": 0.36
+        }
+      ],
+      "targets": [
+        {
+          "key": "2",
+          "probability": 0.03
+        },
+        {
+          "key": "3",
+          "probability": 0.04
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.06
+        },
+        {
+          "key": "7",
+          "probability": 0.02
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.11
+        },
+        {
+          "key": "12",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0.14
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.01
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.01
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.03
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.42
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.09
+        },
+        {
+          "key": "33",
+          "probability": 0.02
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.01
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        },
+        {
+          "key": "55",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.0
+        },
+        {
+          "key": "58",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        },
+        {
+          "key": "60",
+          "probability": 0.0
+        },
+        {
+          "key": "61",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/WatchHouse+Tower+Bridge/@51.50374,-0.0792172,17z/data=!3m1!5s0x487603466bed9985:0x4d8fe383237004cc!4m6!3m5!1s0x48760346368fffff:0x1ea60db680a2fa69!8m2!3d51.5037368!4d-0.0746038!16s%2Fg%2F11c0tjjlww?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "WatchHouse Tower Bridge - Google Maps"
+      },
+      "elapsed_ms": 49492
+    },
+    {
+      "non_repeatable": true,
+      "n": 37,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Tower of London 4.7 stars Castle"
+      },
+      "operations": [
+        {
+          "key": "type_text",
+          "probability": 0.06
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.45
+        },
+        {
+          "key": "blocked",
+          "probability": 0.04
+        },
+        {
+          "key": "done",
+          "probability": 0.45
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.13
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.01
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.04
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.48
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.27
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.03
+        },
+        {
+          "key": "33",
+          "probability": 0.02
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        },
+        {
+          "key": "55",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.0
+        },
+        {
+          "key": "58",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        },
+        {
+          "key": "60",
+          "probability": 0.0
+        },
+        {
+          "key": "61",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Tower+of+London/@51.50374,-0.0792172,17z/data=!4m6!3m5!1s0x48760349331f38dd:0xa8bf49dde1d56467!8m2!3d51.5081124!4d-0.0759493!16zL20vMDducW4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Tower of London - Google Maps"
+      },
+      "elapsed_ms": 51006
+    },
+    {
+      "non_repeatable": true,
+      "n": 38,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Nearby"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.03
+        },
+        {
+          "key": "click",
+          "probability": 0.95
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.11
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.89
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        },
+        {
+          "key": "55",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.0
+        },
+        {
+          "key": "58",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        },
+        {
+          "key": "60",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Tower+of+London/@51.50374,-0.0792172,17z/data=!4m6!3m5!1s0x48760349331f38dd:0xa8bf49dde1d56467!8m2!3d51.5081124!4d-0.0759493!16zL20vMDducW4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Tower of London - Google Maps"
+      },
+      "elapsed_ms": 51979
+    },
+    {
+      "non_repeatable": false,
+      "n": 39,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search nearby Tower of London"
+      },
+      "text": "cafe",
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.59
+        },
+        {
+          "key": "done",
+          "probability": 0.03
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.37
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Tower+of+London/@51.5081156,-0.0805627,17z/data=!4m6!3m5!1s0x48760349331f38dd:0xa8bf49dde1d56467!8m2!3d51.5081124!4d-0.0759493!16zL20vMDducW4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Tower of London - Google Maps"
+      },
+      "elapsed_ms": 54044
+    },
+    {
+      "non_repeatable": false,
+      "n": 40,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.03
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "click",
+          "probability": 0.9299999999999999
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.03
+        },
+        {
+          "key": "2",
+          "probability": 0.75
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.15000000000000002
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.06
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        },
+        {
+          "key": "53",
+          "probability": 0.0
+        },
+        {
+          "key": "54",
+          "probability": 0.0
+        },
+        {
+          "key": "55",
+          "probability": 0.0
+        },
+        {
+          "key": "56",
+          "probability": 0.0
+        },
+        {
+          "key": "57",
+          "probability": 0.0
+        },
+        {
+          "key": "58",
+          "probability": 0.0
+        },
+        {
+          "key": "59",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@51.5081156,-0.0805627,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 55495
+    },
+    {
+      "non_repeatable": true,
+      "n": 41,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": ""
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.06
+        },
+        {
+          "key": "done",
+          "probability": 0.04
+        },
+        {
+          "key": "click",
+          "probability": 0.24
+        },
+        {
+          "key": "type_text",
+          "probability": 0.66
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@51.5081156,-0.0805627,17z/data=!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 58049
+    }
+  ],
+  "final": {
+    "url": "https://www.google.com/maps/search/cafe/@51.5081223,-0.0805627,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "cafe - Google Maps"
+  }
+}

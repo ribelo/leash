@@ -1,0 +1,355 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.10752891399988584,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/travel/flights/search?tfs=CBwQAhoiEgoyMDI2LTExLTAxagcIARIDUE9acgsIAxIHL20vMGszcBoiEgoyMDI2LTExLTA0agsIAxIHL20vMGszcHIHCAESA1BPWkABSAFwAYIBCwj___________8BmAEB&tfu=EgoIABAAGAAgAigB&hl=en",
+    "title": "Poznań to Amsterdam | Google Flights",
+    "page_kind": {
+      "name": "search",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "button",
+        "name": "Main menu",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "link",
+        "name": "Google"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Skip to main content"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Accessibility feedback"
+      },
+      {
+        "index": 5,
+        "role": "link",
+        "name": "Explore"
+      },
+      {
+        "index": 6,
+        "role": "link",
+        "name": "Flights"
+      },
+      {
+        "index": 7,
+        "role": "link",
+        "name": "Hotels"
+      },
+      {
+        "index": 8,
+        "role": "link",
+        "name": "Vacation rentals"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Change appearance",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 11,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 12,
+        "role": "heading",
+        "name": "Flight search"
+      },
+      {
+        "index": 13,
+        "role": "combobox",
+        "name": "Change ticket type. Round trip",
+        "value": "Round trip",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "1 passenger"
+      },
+      {
+        "index": 15,
+        "role": "combobox",
+        "name": "Change seating class. Economy",
+        "value": "Economy",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 16,
+        "role": "combobox",
+        "name": "Where from? Poznań POZ",
+        "value": "Poznań",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 17,
+        "role": "button",
+        "name": "Swap origin and destination."
+      },
+      {
+        "index": 18,
+        "role": "combobox",
+        "name": "Where to?",
+        "value": "Amsterdam",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 19,
+        "role": "textbox",
+        "name": "Departure",
+        "value": "Sun, Nov 1"
+      },
+      {
+        "index": 20,
+        "role": "textbox",
+        "name": "Return",
+        "value": "Wed, Nov 4"
+      },
+      {
+        "index": 21,
+        "role": "heading",
+        "name": "Filters"
+      },
+      {
+        "index": 22,
+        "role": "button",
+        "name": "All filters"
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Stops, Not selected"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "Airlines, Not selected"
+      },
+      {
+        "index": 25,
+        "role": "button",
+        "name": "Bags, Not selected"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "Price, Not selected"
+      },
+      {
+        "index": 27,
+        "role": "button",
+        "name": "Times, Not selected"
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Emissions, Not selected"
+      },
+      {
+        "index": 29,
+        "role": "button",
+        "name": "Connecting airports, Not selected"
+      },
+      {
+        "index": 30,
+        "role": "button",
+        "name": "Duration, Not selected"
+      },
+      {
+        "index": 31,
+        "role": "heading",
+        "name": "Search results"
+      },
+      {
+        "index": 32,
+        "role": "tab",
+        "name": "Best Learn more about ranking"
+      },
+      {
+        "index": 33,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 34,
+        "role": "tab",
+        "name": "Cheapest from 751 Polish zlotys Learn more about ranking",
+        "state": [
+          "selected"
+        ]
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 36,
+        "role": "heading",
+        "name": "Top departing flights"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Learn more about ranking"
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "bag fees"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Passenger assistance"
+      },
+      {
+        "index": 40,
+        "role": "button",
+        "name": "Sorted by top flights, Change sort order."
+      },
+      {
+        "index": 41,
+        "role": "link",
+        "name": "From 874 Polish zlotys round trip total. Nonstop flight with KLM. Operated by KLM Cityhopper. Leaves Poznań Airport at 2:10 PM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 3:50 PM on Sunday, November 1. Total duration 1 hr 40 min. Select flight"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "Carbon emissions estimate: 115 kilograms. Average emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 43,
+        "role": "button",
+        "name": "Flight details. Leaves Poznań Airport at 2:10 PM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 3:50 PM on Sunday, November 1.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 44,
+        "role": "link",
+        "name": "From 874 Polish zlotys round trip total. Nonstop flight with KLM. Operated by KLM Cityhopper. Leaves Poznań Airport at 6:00 PM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 7:40 PM on Sunday, November 1. Total duration 1 hr 40 min. Select flight"
+      },
+      {
+        "index": 45,
+        "role": "button",
+        "name": "Carbon emissions estimate: 98 kilograms. -13% emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 46,
+        "role": "button",
+        "name": "Flight details. Leaves Poznań Airport at 6:00 PM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 7:40 PM on Sunday, November 1.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 47,
+        "role": "link",
+        "name": "From 912 Polish zlotys round trip total. Nonstop flight with KLM. Operated by KLM Cityhopper. Leaves Poznań Airport at 6:15 AM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 8:00 AM on Sunday, November 1. Total duration 1 hr 45 min. Select flight"
+      },
+      {
+        "index": 48,
+        "role": "button",
+        "name": "Carbon emissions estimate: 115 kilograms. Average emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Flight details. Leaves Poznań Airport at 6:15 AM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 8:00 AM on Sunday, November 1.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 50,
+        "role": "heading",
+        "name": "Other departing flights"
+      },
+      {
+        "index": 51,
+        "role": "link",
+        "name": "From 751 Polish zlotys round trip total. 1 stop flight with LOT. Leaves Poznań Airport at 6:20 PM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 9:40 AM on Monday, November 2. Total duration 15 hr 20 min. Layover (1 of 1) is a 12 hr 10 min layover at Warsaw Chopin Airport in Warsaw. Select flight"
+      },
+      {
+        "index": 52,
+        "role": "button",
+        "name": "Carbon emissions estimate: 158 kilograms. +40% emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 53,
+        "role": "button",
+        "name": "Flight details. Leaves Poznań Airport at 6:20 PM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 9:40 AM on Monday, November 2.",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 54,
+        "role": "link",
+        "name": "From 1012 Polish zlotys round trip total. 1 stop flight with LOT. Leaves Poznań Airport at 2:50 PM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 6:55 PM on Sunday, November 1. Total duration 4 hr 5 min. Layover (1 of 1) is a 1 hr layover at Warsaw Chopin Airport in Warsaw. Select flight"
+      },
+      {
+        "index": 55,
+        "role": "button",
+        "name": "Carbon emissions estimate: 158 kilograms. +40% emissions. Learn more about this emissions estimate"
+      },
+      {
+        "index": 56,
+        "role": "button",
+        "name": "Flight details. Leaves Poznań Airport at 2:50 PM on Sunday, November 1 and arrives at Amsterdam Airport Schiphol at 6:55 PM on Sunday, November 1.",
+        "state": [
+          "collapsed"
+        ]
+      }
+    ],
+    "total": 56,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

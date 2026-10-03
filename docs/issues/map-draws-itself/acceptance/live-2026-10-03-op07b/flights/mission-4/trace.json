@@ -1,0 +1,376 @@
+{
+  "unattended": [],
+  "version": 1,
+  "time": "2026-10-03T12:02:26.370803Z",
+  "site": "google.com",
+  "mission": "find the cheapest flight from Wrocław to Paris next month and tell me its price and dates",
+  "arguments": [],
+  "outcome": "error",
+  "cost": 0.001431548,
+  "duration_ms": 7028,
+  "model_calls": 8,
+  "start_url": "https://www.google.com/travel/flights?hl=en",
+  "page_kind_path": [
+    "flights"
+  ],
+  "inferred_pages": [
+    {
+      "name": "flights",
+      "url_pattern": "https://www.google.com/travel/flights"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Where to? "
+      },
+      "text": "Paris",
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.99
+        },
+        {
+          "key": "blocked",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 1.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights?hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 1916
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "option",
+        "label": "Paris, France"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.07
+        },
+        {
+          "key": "type_text",
+          "probability": 0.03
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.86
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.03
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.93
+        },
+        {
+          "key": "5",
+          "probability": 0.01
+        },
+        {
+          "key": "6",
+          "probability": 0.03
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.01
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights?tfs=CBwQARocagwIAhIIL20vMDg0NWJyDAgDEggvbS8wNXF0ahocagwIAxIIL20vMDVxdGpyDAgCEggvbS8wODQ1YkABSAFwAYIBCwj___________8BmAEB&tfu=KgIIAw&hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 2824
+    },
+    {
+      "non_repeatable": false,
+      "n": 3,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "textbox",
+        "label": "Departure"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.5
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        },
+        {
+          "key": "type_text",
+          "probability": 0.43
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "scroll_down",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.05
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.01
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.01
+        },
+        {
+          "key": "19",
+          "probability": 0.89
+        },
+        {
+          "key": "20",
+          "probability": 0.01
+        },
+        {
+          "key": "21",
+          "probability": 0.08
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights?tfs=CBwQARocagwIAhIIL20vMDg0NWJyDAgDEggvbS8wNXF0ahocagwIAxIIL20vMDVxdGpyDAgCEggvbS8wODQ1YkABSAFwAYIBCwj___________8BmAEB&tfu=KgIIAw&hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 3405
+    },
+    {
+      "non_repeatable": false,
+      "n": 4,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "textbox",
+        "label": "Departure"
+      },
+      "text": "November 1",
+      "operations": [
+        {
+          "key": "scroll_down",
+          "probability": 0.04
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.13
+        },
+        {
+          "key": "click",
+          "probability": 0.23
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        },
+        {
+          "key": "type_text",
+          "probability": 0.58
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.56
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.43
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/travel/flights?tfs=CBwQARocagwIAhIIL20vMDg0NWJyDAgDEggvbS8wNXF0ahocagwIAxIIL20vMDVxdGpyDAgCEggvbS8wODQ1YkABSAFwAYIBCwj___________8BmAEB&tfu=KgIIAw&hl=en",
+        "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+      },
+      "elapsed_ms": 6662
+    }
+  ],
+  "final": {
+    "url": "https://www.google.com/travel/flights?tfs=CBwQARocagwIAhIIL20vMDg0NWJyDAgDEggvbS8wNXF0ahocagwIAxIIL20vMDVxdGpyDAgCEggvbS8wODQ1YkABSAFwAYIBCwj___________8BmAEB&tfu=KgIIAw&hl=en",
+    "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights"
+  }
+}

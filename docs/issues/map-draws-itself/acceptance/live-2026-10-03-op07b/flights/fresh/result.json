@@ -1,0 +1,12 @@
+{
+  "gate": "flights",
+  "passed": true,
+  "missions_recorded": 1,
+  "failures": [],
+  "elapsed_s": 100.71951150894165,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

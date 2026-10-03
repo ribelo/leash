@@ -1,0 +1,2001 @@
+{
+  "unattended": [],
+  "version": 1,
+  "time": "2026-10-03T11:46:30.333945Z",
+  "site": "google.com",
+  "mission": "find the Brandenburg Gate, then find a cafe near it with a rating over 4 and give me its name and address",
+  "arguments": [],
+  "outcome": "error",
+  "cost": null,
+  "duration_ms": 22752,
+  "model_calls": 29,
+  "start_url": "https://www.google.com/maps?hl=en",
+  "page_kind_path": [
+    "maps",
+    "place-<slug>",
+    "cafe",
+    "maps",
+    "cafe",
+    "place-<slug>"
+  ],
+  "inferred_pages": [
+    {
+      "name": "maps",
+      "url_pattern": "https://www.google.com/maps*"
+    },
+    {
+      "name": "place-<slug>",
+      "url_pattern": "https://www.google.com/maps/place/<slug>*"
+    },
+    {
+      "name": "cafe",
+      "url_pattern": "https://www.google.com/maps/search/cafe*"
+    }
+  ],
+  "compiled": false,
+  "procedures": [],
+  "steps": [
+    {
+      "non_repeatable": false,
+      "n": 1,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search Google Maps"
+      },
+      "text": "Brandenburg Gate",
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 1.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps?hl=en",
+        "title": "Google Maps"
+      },
+      "elapsed_ms": 2136
+    },
+    {
+      "non_repeatable": false,
+      "n": 2,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "blocked",
+          "probability": 0.04
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.03
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.93
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.17
+        },
+        {
+          "key": "2",
+          "probability": 0.81
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.01
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m2!4b1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Brandenburg Gate - Google Maps"
+      },
+      "elapsed_ms": 3579
+    },
+    {
+      "non_repeatable": true,
+      "n": 3,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Nearby"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.02
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.95
+        },
+        {
+          "key": "blocked",
+          "probability": 0.03
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.02
+        },
+        {
+          "key": "2",
+          "probability": 0.01
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.2
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.77
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Brandenburg Gate - Google Maps"
+      },
+      "elapsed_ms": 4863
+    },
+    {
+      "non_repeatable": false,
+      "n": 4,
+      "operation": "type_text",
+      "source": "operator",
+      "target": {
+        "role": "combobox",
+        "label": "Search nearby Brandenburg Gate"
+      },
+      "text": "cafe",
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.02
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.23
+        },
+        {
+          "key": "type_text",
+          "probability": 0.75
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 1.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Brandenburg Gate - Google Maps"
+      },
+      "elapsed_ms": 9602
+    },
+    {
+      "non_repeatable": false,
+      "n": 5,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Search"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.98
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.02
+        },
+        {
+          "key": "2",
+          "probability": 0.92
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.02
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.04
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 10855
+    },
+    {
+      "non_repeatable": true,
+      "n": 6,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Nearby"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.18
+        },
+        {
+          "key": "click",
+          "probability": 0.71
+        },
+        {
+          "key": "blocked",
+          "probability": 0.09
+        },
+        {
+          "key": "type_text",
+          "probability": 0.01
+        },
+        {
+          "key": "done",
+          "probability": 0.01
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.02
+        },
+        {
+          "key": "2",
+          "probability": 0.18000000000000002
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.12
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.02
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.07
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.59
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 11322
+    },
+    {
+      "non_repeatable": true,
+      "n": 7,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "done",
+          "probability": 0.02
+        },
+        {
+          "key": "blocked",
+          "probability": 0.12
+        },
+        {
+          "key": "click",
+          "probability": 0.85
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.03
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.63
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.17
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.06
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.09999999999999999
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.01
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 12288
+    },
+    {
+      "non_repeatable": true,
+      "n": 8,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Rating"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.92
+        },
+        {
+          "key": "wait",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.06
+        },
+        {
+          "key": "done",
+          "probability": 0.02
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.02
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.81
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.09
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.03
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.04
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 12812
+    },
+    {
+      "non_repeatable": true,
+      "n": 9,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "All filters"
+      },
+      "operations": [
+        {
+          "key": "done",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.06
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        },
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "click",
+          "probability": 0.92
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.01
+        },
+        {
+          "key": "2",
+          "probability": 0.09
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.75
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "9",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.05
+        },
+        {
+          "key": "12",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.08
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.02
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.0
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "36",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 13304
+    },
+    {
+      "non_repeatable": true,
+      "n": 10,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Any rating"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.88
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "blocked",
+          "probability": 0.1
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.31
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.0
+        },
+        {
+          "key": "8",
+          "probability": 0.12
+        },
+        {
+          "key": "10",
+          "probability": 0.0
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.5700000000000001
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafe - Google Maps"
+      },
+      "elapsed_ms": 14203
+    },
+    {
+      "non_repeatable": true,
+      "n": 11,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "button",
+        "label": "Brandenburg Gate"
+      },
+      "operations": [
+        {
+          "key": "wait",
+          "probability": 0.01
+        },
+        {
+          "key": "blocked",
+          "probability": 0.12
+        },
+        {
+          "key": "done",
+          "probability": 0.0
+        },
+        {
+          "key": "click",
+          "probability": 0.87
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.0
+        },
+        {
+          "key": "2",
+          "probability": 0.0
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.7
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.01
+        },
+        {
+          "key": "8",
+          "probability": 0.24000000000000002
+        },
+        {
+          "key": "10",
+          "probability": 0.04
+        },
+        {
+          "key": "11",
+          "probability": 0.01
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.0
+        },
+        {
+          "key": "15",
+          "probability": 0.0
+        },
+        {
+          "key": "16",
+          "probability": 0.0
+        },
+        {
+          "key": "17",
+          "probability": 0.0
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "24",
+          "probability": 0.0
+        },
+        {
+          "key": "25",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.0
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!4m12!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m2!1s0x47a851c655f20989:0x26bbfb4e84674c63!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "Brandenburg Gate - Google Maps"
+      },
+      "elapsed_ms": 15656
+    },
+    {
+      "non_repeatable": true,
+      "n": 12,
+      "operation": "click",
+      "source": "operator",
+      "target": {
+        "role": "link",
+        "label": "ama Café"
+      },
+      "operations": [
+        {
+          "key": "click",
+          "probability": 0.65
+        },
+        {
+          "key": "done",
+          "probability": 0.05
+        },
+        {
+          "key": "blocked",
+          "probability": 0.28
+        },
+        {
+          "key": "wait",
+          "probability": 0.02
+        },
+        {
+          "key": "type_text",
+          "probability": 0.0
+        }
+      ],
+      "targets": [
+        {
+          "key": "1",
+          "probability": 0.06999999999999999
+        },
+        {
+          "key": "2",
+          "probability": 0.12
+        },
+        {
+          "key": "3",
+          "probability": 0.0
+        },
+        {
+          "key": "4",
+          "probability": 0.0
+        },
+        {
+          "key": "5",
+          "probability": 0.0
+        },
+        {
+          "key": "6",
+          "probability": 0.0
+        },
+        {
+          "key": "7",
+          "probability": 0.06999999999999999
+        },
+        {
+          "key": "8",
+          "probability": 0.0
+        },
+        {
+          "key": "10",
+          "probability": 0.01
+        },
+        {
+          "key": "11",
+          "probability": 0.0
+        },
+        {
+          "key": "12",
+          "probability": 0.51
+        },
+        {
+          "key": "13",
+          "probability": 0.0
+        },
+        {
+          "key": "14",
+          "probability": 0.02
+        },
+        {
+          "key": "15",
+          "probability": 0.01
+        },
+        {
+          "key": "16",
+          "probability": 0.01
+        },
+        {
+          "key": "17",
+          "probability": 0.02
+        },
+        {
+          "key": "18",
+          "probability": 0.0
+        },
+        {
+          "key": "19",
+          "probability": 0.0
+        },
+        {
+          "key": "20",
+          "probability": 0.0
+        },
+        {
+          "key": "21",
+          "probability": 0.0
+        },
+        {
+          "key": "22",
+          "probability": 0.0
+        },
+        {
+          "key": "23",
+          "probability": 0.0
+        },
+        {
+          "key": "26",
+          "probability": 0.04
+        },
+        {
+          "key": "27",
+          "probability": 0.0
+        },
+        {
+          "key": "28",
+          "probability": 0.0
+        },
+        {
+          "key": "29",
+          "probability": 0.0
+        },
+        {
+          "key": "30",
+          "probability": 0.0
+        },
+        {
+          "key": "31",
+          "probability": 0.0
+        },
+        {
+          "key": "32",
+          "probability": 0.12
+        },
+        {
+          "key": "33",
+          "probability": 0.0
+        },
+        {
+          "key": "34",
+          "probability": 0.0
+        },
+        {
+          "key": "35",
+          "probability": 0.0
+        },
+        {
+          "key": "37",
+          "probability": 0.0
+        },
+        {
+          "key": "38",
+          "probability": 0.0
+        },
+        {
+          "key": "39",
+          "probability": 0.0
+        },
+        {
+          "key": "40",
+          "probability": 0.0
+        },
+        {
+          "key": "41",
+          "probability": 0.0
+        },
+        {
+          "key": "42",
+          "probability": 0.0
+        },
+        {
+          "key": "43",
+          "probability": 0.0
+        },
+        {
+          "key": "44",
+          "probability": 0.0
+        },
+        {
+          "key": "45",
+          "probability": 0.0
+        },
+        {
+          "key": "46",
+          "probability": 0.0
+        },
+        {
+          "key": "47",
+          "probability": 0.0
+        },
+        {
+          "key": "48",
+          "probability": 0.0
+        },
+        {
+          "key": "49",
+          "probability": 0.0
+        },
+        {
+          "key": "50",
+          "probability": 0.0
+        },
+        {
+          "key": "51",
+          "probability": 0.0
+        },
+        {
+          "key": "52",
+          "probability": 0.0
+        }
+      ],
+      "after": {
+        "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5162778,13.3730907,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "ama Café - Google Maps"
+      },
+      "elapsed_ms": 18182
+    }
+  ],
+  "final": {
+    "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5183219,13.379638,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "ama Café - Google Maps"
+  }
+}

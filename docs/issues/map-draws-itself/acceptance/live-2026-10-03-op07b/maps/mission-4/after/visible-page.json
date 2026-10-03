@@ -1,0 +1,35 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005329457000698312,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "cafes near Sagrada Família - Google Maps",
+      "text": "\n\nSaved\n\nRecents\n2\nBarcelona\n\nGet app\n\nClear\nDone\nPrice\n€1.00-€100.00+\nRating at least\nAny rating \nHours\nAny time\nOpen now\nOpen 24 hours\n\nSign in\n15 min\n\n\n\nShowing walking time around the selected place\n\n\n\n Layers\nMap data ©2026 Google, Inst. Geogr. NacionalPolandTermsPrivacySend Product Feedback\n\t200 m ",
+      "headings": [
+        "",
+        "",
+        "Price",
+        "Map details",
+        "Map tools",
+        "Map type"
+      ],
+      "labels": [
+        " stars",
+        "Rating"
+      ],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T11:49:30.108Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

@@ -1,0 +1,21 @@
+{
+  "verified": false,
+  "method": "independent post-drive visible DOM; reviewer must corroborate route, November dates, real fare amount and cheapest-month evidence (currency selector alone never counts)",
+  "requested_route": [
+    "Wrocław",
+    "Paris"
+  ],
+  "next_month": "November 2026",
+  "visible_price_amounts": [],
+  "visible_date_or_cheapest_lines": [
+    "November",
+    "Underlined prices indicate cheapest compared with other prices shown",
+    "Find the cheapest days to fly",
+    "Price history and trend data show you the best time to book your airline ticket to get the cheapest price for your flight",
+    "If your travel plans are flexible, use the form above to start searching for a specific trip. Then, play around with the Date grid and Price graph options on the Search page to find the cheapest days to fly and book your tickets.",
+    "Prices are final prices and include all taxes and fees, including payment fees for the cheapest common payment method (which may differ depending on the provider). Additional charges may apply for other types of payment, luggage, meals, WLAN or other additional services. Prices, availability and travel details are provided based on the latest information received from our partners. This information is reflected in the results within a period of less than 24 hours. Additional conditions may also be applied by our partners. You should then check prices and conditions with the services providers before booking.",
+    "Departure",
+    "Departure"
+  ],
+  "needs_manual_review": true
+}

@@ -1,0 +1,296 @@
+[
+  {
+    "number": 5,
+    "arguments": "Horror",
+    "mission": "collect every book title and price in the Horror category",
+    "fresh_agent": true,
+    "learning_mode": "off",
+    "status": "done",
+    "exit_code": 0,
+    "reason": null,
+    "elapsed_s": 15.202769723000529,
+    "independent_verification": {
+      "verified": false,
+      "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+      "site": {
+        "category": "Horror",
+        "total_reported": 17,
+        "records": [
+          {
+            "title": "Security",
+            "price": "£39.25"
+          },
+          {
+            "title": "Follow You Home",
+            "price": "£21.36"
+          },
+          {
+            "title": "The Loney",
+            "price": "£23.40"
+          },
+          {
+            "title": "Pet Sematary",
+            "price": "£10.56"
+          },
+          {
+            "title": "Doctor Sleep (The Shining #2)",
+            "price": "£40.12"
+          },
+          {
+            "title": "Psycho: Sanitarium (Psycho #1.5)",
+            "price": "£36.97"
+          },
+          {
+            "title": "Can You Keep a Secret? (Fear Street Relaunch #4)",
+            "price": "£48.64"
+          },
+          {
+            "title": "Red Dragon (Hannibal Lecter #1)",
+            "price": "£23.37"
+          },
+          {
+            "title": "Dracula the Un-Dead",
+            "price": "£35.63"
+          },
+          {
+            "title": "Night Shift (Night Shift #1-20)",
+            "price": "£12.75"
+          },
+          {
+            "title": "Needful Things",
+            "price": "£47.51"
+          },
+          {
+            "title": "Misery",
+            "price": "£34.79"
+          },
+          {
+            "title": "It",
+            "price": "£25.01"
+          },
+          {
+            "title": "'Salem's Lot",
+            "price": "£49.56"
+          },
+          {
+            "title": "The Stand",
+            "price": "£57.86"
+          },
+          {
+            "title": "The Girl with All the Gifts",
+            "price": "£49.47"
+          },
+          {
+            "title": "House of Leaves",
+            "price": "£54.89"
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+            "status": 200,
+            "count": 17,
+            "heading": "Horror"
+          }
+        ],
+        "counts_match": true,
+        "next_page_unvisited": false
+      },
+      "answer_record_matches": 5,
+      "missing_records": [
+        {
+          "title": "Security",
+          "price": "£39.25"
+        },
+        {
+          "title": "Follow You Home",
+          "price": "£21.36"
+        },
+        {
+          "title": "The Loney",
+          "price": "£23.40"
+        },
+        {
+          "title": "Pet Sematary",
+          "price": "£10.56"
+        },
+        {
+          "title": "Doctor Sleep (The Shining #2)",
+          "price": "£40.12"
+        },
+        {
+          "title": "Psycho: Sanitarium (Psycho #1.5)",
+          "price": "£36.97"
+        },
+        {
+          "title": "Can You Keep a Secret? (Fear Street Relaunch #4)",
+          "price": "£48.64"
+        },
+        {
+          "title": "Red Dragon (Hannibal Lecter #1)",
+          "price": "£23.37"
+        },
+        {
+          "title": "Dracula the Un-Dead",
+          "price": "£35.63"
+        },
+        {
+          "title": "Night Shift (Night Shift #1-20)",
+          "price": "£12.75"
+        },
+        {
+          "title": "Needful Things",
+          "price": "£47.51"
+        },
+        {
+          "title": "Misery",
+          "price": "£34.79"
+        }
+      ]
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 12,
+      "browser_cost_usd": 0.001572642,
+      "browser_reported_cost_usd": 0.001572642,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 7,
+        "playbook": 1,
+        "verifier": 1,
+        "procedure": 2
+      },
+      "learning_calls": 0,
+      "learning_cost_usd": 0.0,
+      "inclusive_calls": 12,
+      "inclusive_cost_usd": 0.001572642,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": false,
+      "learning_account": null,
+      "status_site": {
+        "site": "toscrape.com",
+        "last_compile": null,
+        "installed_by_replay": 1,
+        "installed_by_agreement": 0,
+        "learning_calls": 0,
+        "learning_cost": null
+      }
+    },
+    "procedures": [
+      {
+        "slug": "open-book-category",
+        "outcome": "verified",
+        "planned": false,
+        "expectations": [
+          {
+            "sentence": "the page is books-category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          },
+          {
+            "sentence": "the requested category is displayed",
+            "checker": "judgment",
+            "passed": true,
+            "score": 0.99
+          }
+        ],
+        "arguments": null
+      }
+    ],
+    "compiled_after": [],
+    "installed_after": [
+      {
+        "site": "toscrape.com",
+        "entry": "https://books.toscrape.com/",
+        "description": "Learned toscrape.com",
+        "pages": [
+          {
+            "name": "books-category",
+            "description": "Inferred books-<slug>",
+            "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+            "repeatable": true
+          },
+          {
+            "name": "books-categories",
+            "description": "Inferred home",
+            "url_pattern": "https://books.toscrape.com/",
+            "repeatable": true
+          }
+        ],
+        "procedures": [
+          {
+            "provenance": {
+              "traces": [
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+              ],
+              "model": "openai/gpt-6-luna",
+              "time": "2026-10-03T11:47:43.587238Z",
+              "tries": 0,
+              "path": [
+                "books-categories",
+                "books-category"
+              ],
+              "entry_kind": "home",
+              "exit_kind": "books-<slug>",
+              "signature": [
+                [
+                  "click",
+                  {
+                    "role": "link",
+                    "label": "travel"
+                  }
+                ]
+              ],
+              "kind_mapping": [
+                [
+                  "books-<slug>",
+                  "books-category"
+                ],
+                [
+                  "home",
+                  "books-categories"
+                ]
+              ],
+              "repeatable": true,
+              "reason": "no irreversible submission in the observed path",
+              "gate": "replay",
+              "repair": false,
+              "model_calls": 2,
+              "model_cost": 0.011815929999999999
+            },
+            "slug": "open-book-category",
+            "description": "Open the requested book category from the category links.",
+            "args": {
+              "category": {
+                "from": "mission"
+              }
+            },
+            "steps": [
+              {
+                "goal": "Wait for a link named {category} to be present",
+                "until": [
+                  "a link named {category} is present"
+                ]
+              },
+              {
+                "goal": "Click the link named {category}",
+                "until": [
+                  "the page is books-category"
+                ]
+              }
+            ],
+            "expect": [
+              "the page is books-category",
+              "the requested category is displayed"
+            ],
+            "expect_timeout_s": 15
+          }
+        ]
+      }
+    ]
+  }
+]

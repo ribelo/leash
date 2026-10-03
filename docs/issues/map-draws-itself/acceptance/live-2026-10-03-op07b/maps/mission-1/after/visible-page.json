@@ -1,0 +1,42 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.007103271999767458,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/search/cafes+near+Eiffel+Tower/@48.8588715,2.2939877,17z/data=!4m7!2m6!3m5!2sEiffel+Tower!3s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!4m2!1d2.2944813!2d48.8583701?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "cafes near Eiffel Tower - Google Maps",
+      "text": "\n\n\n\nPrice\n\n\nRating\n\n\nHours\n\n\nAll filters\n\n\nSaved\n\nRecents\n3\nParis\n\nGet app\nResults\n\n\nShare\nMaison Fleuret Paris\nSponsored\n\nMaison Fleuret Paris\n4.2\nCoffee shop · 30 Rue des Saints-Pères\nOpen · Closes 6 pm\n \nEvolved from Paris's past wild, undeveloped areas of Paris\nIn 1825, Brillat-Savarin, father of modern gastronomy, wrote his famous Physiologie du goût, our first-ever food guide, on Rue de Grenelle\nVisit Site\nFRAME BRASSERIE\nSponsored\n\nFRAME BRASSERIE\n4.2\nRestaurant · 18 avenue de Suffren\nOpen · Closes 10:30 pm\n \nEnjoy dining near Eiffel Tower\nDine at Frame Brasserie with Eiffel Tower views and modern French cuisine\nVisit Site\nPâtisserie de la Bourdonnais - Eiffel\nPâtisserie de la Bourdonnais - Eiffel\n4.7\nBrunch restaurant ·  · 54 Av. de la Bourdonnais\nOpen · Closes 10 pm\n \n\nReserve a table\nSunflower Café\nSunflower Café\n4.7\nCafe · 41 Av. de Suffren\nChill spot for health-focused fare\nOpen · Closes 10 pm\nKozy Bosquet\nKozy Bosquet\n4.7\nCafe ·  · 79 Av. Bosquet\nOpen · Closes 4:30 pm\n \n\nOrder online\nTerres de Café\nTerres de Café\n4.3\nCafe · 67 Av. de la Bourdonnais\nOpen · Closes 7 pm\n\nYou're seeing a limited view of Google Maps. Learn more\nGet the most out of Google Maps\nSign in\n\nUpdate results when map moves\n\nSign in\n\n\n\n Layers\nMap data ©2026 GooglePolandTermsPrivacySend Product Feedback\n\t50 m ",
+      "headings": [
+        "Results",
+        "",
+        "Sponsored\n",
+        "Sponsored\n",
+        "Get the most out of Google Maps\nSign in",
+        "Map details",
+        "Map tools",
+        "Map type"
+      ],
+      "labels": [
+        " stars",
+        "4.2 stars",
+        "4.2 stars",
+        "4.7 stars",
+        "4.7 stars",
+        "4.7 stars",
+        "4.3 stars"
+      ],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T11:44:46.933Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

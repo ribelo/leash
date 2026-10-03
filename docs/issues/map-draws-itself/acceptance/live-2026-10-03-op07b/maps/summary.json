@@ -1,0 +1,278 @@
+{
+  "site": "maps",
+  "story": "map-op07",
+  "passed": false,
+  "criterion": {
+    "installed_playbook_present": false,
+    "fresh_session": true,
+    "fifth_goal_independently_verified": false,
+    "lower_inclusive_cost_than_mission_1": true,
+    "no_learning_during_acceptance": true
+  },
+  "missions": [
+    {
+      "number": 1,
+      "arguments": "Eiffel Tower",
+      "mission": "find the Eiffel Tower, then find a cafe near it with a rating over 4 and give me its name and address",
+      "fresh_agent": false,
+      "learning_mode": "auto",
+      "status": "error",
+      "exit_code": 0,
+      "reason": "JEV prediction failed (model-unavailable): Invalid TypeSafe response; no action executed.",
+      "elapsed_s": 131.1586917880004,
+      "independent_verification": {
+        "verified": false,
+        "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+        "cafe_name": "Results",
+        "visible_ratings": [
+          4.2,
+          4.2,
+          4.7,
+          4.7,
+          4.7,
+          4.3
+        ],
+        "address": null,
+        "distance_m": null,
+        "cafe_category_visible": true,
+        "requested_landmark_in_drive_navigation_evidence": false,
+        "needs_manual_review": true
+      },
+      "goal_verified": false,
+      "accounting": {
+        "browser_calls": 169,
+        "browser_cost_usd": 0.03587522400000002,
+        "browser_reported_cost_usd": 0.03587522400000002,
+        "browser_unpriced_calls": 0,
+        "browser_calls_by_kind": {
+          "text_helper": 4,
+          "operator": 161,
+          "planner": 2,
+          "verifier": 2
+        },
+        "learning_calls": 0,
+        "learning_cost_usd": 0.0,
+        "inclusive_calls": 169,
+        "inclusive_cost_usd": 0.03587522400000002,
+        "fully_reported": true,
+        "pending_finished": true,
+        "new_last_work_meter": false,
+        "learning_account": null,
+        "status_site": {}
+      },
+      "procedures": [],
+      "compiled_after": [],
+      "installed_after": []
+    },
+    {
+      "number": 2,
+      "arguments": "Colosseum",
+      "mission": "find the Colosseum, then find a cafe near it with a rating over 4 and give me its name and address",
+      "fresh_agent": false,
+      "learning_mode": "auto",
+      "status": "limit",
+      "exit_code": 0,
+      "reason": "action budget exhausted (60 executed actions)",
+      "elapsed_s": 74.51489822799977,
+      "independent_verification": {
+        "verified": false,
+        "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+        "cafe_name": "Results",
+        "visible_ratings": [
+          4.7,
+          3.7,
+          4.7,
+          4.8,
+          4.8,
+          4.8
+        ],
+        "address": null,
+        "distance_m": null,
+        "cafe_category_visible": false,
+        "requested_landmark_in_drive_navigation_evidence": false,
+        "needs_manual_review": true
+      },
+      "goal_verified": false,
+      "accounting": {
+        "browser_calls": 106,
+        "browser_cost_usd": 0.022698868000000018,
+        "browser_reported_cost_usd": 0.022698868000000018,
+        "browser_unpriced_calls": 0,
+        "browser_calls_by_kind": {
+          "text_helper": 12,
+          "operator": 94
+        },
+        "learning_calls": 0,
+        "learning_cost_usd": 0.0,
+        "inclusive_calls": 106,
+        "inclusive_cost_usd": 0.022698868000000018,
+        "fully_reported": true,
+        "pending_finished": true,
+        "new_last_work_meter": false,
+        "learning_account": null,
+        "status_site": {}
+      },
+      "procedures": [],
+      "compiled_after": [],
+      "installed_after": []
+    },
+    {
+      "number": 3,
+      "arguments": "Brandenburg Gate",
+      "mission": "find the Brandenburg Gate, then find a cafe near it with a rating over 4 and give me its name and address",
+      "fresh_agent": false,
+      "learning_mode": "auto",
+      "status": "error",
+      "exit_code": 0,
+      "reason": "TYPE_TEXT helper failed (model-unavailable): invalid response: response.choices.[0]: choice.message: message.content: expected string, got null, got {\"id\":\"gen-1791027988-g2NFEP9dehsOjrP1Iwjl\",\"object\":\"chat.completion\",\"created\":1791027988,\"model\":\"inception/mercury-2.5\",\"provider\":\"Inception\",\"system_fingerprint\":null,\"service_tier\":null,\"choice...",
+      "elapsed_s": 22.765549021999504,
+      "independent_verification": {
+        "verified": false,
+        "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+        "cafe_name": "Results",
+        "visible_ratings": [
+          4.8,
+          4.6,
+          4.9,
+          4.5,
+          4.7,
+          4.8,
+          4.8
+        ],
+        "address": "Address: Dorotheenstraße 83, 10117 Berlin, Germany ",
+        "distance_m": 492.1237179651496,
+        "cafe_category_visible": true,
+        "requested_landmark_in_drive_navigation_evidence": false,
+        "needs_manual_review": true
+      },
+      "goal_verified": false,
+      "accounting": {
+        "browser_calls": 29,
+        "browser_cost_usd": null,
+        "browser_reported_cost_usd": 0.00533539,
+        "browser_unpriced_calls": 1,
+        "browser_calls_by_kind": {
+          "text_helper": 6,
+          "operator": 23
+        },
+        "learning_calls": 0,
+        "learning_cost_usd": 0.0,
+        "inclusive_calls": 29,
+        "inclusive_cost_usd": null,
+        "fully_reported": false,
+        "pending_finished": true,
+        "new_last_work_meter": false,
+        "learning_account": null,
+        "status_site": {}
+      },
+      "procedures": [],
+      "compiled_after": [],
+      "installed_after": []
+    },
+    {
+      "number": 4,
+      "arguments": "Sagrada Família",
+      "mission": "find the Sagrada Família, then find a cafe near it with a rating over 4 and give me its name and address",
+      "fresh_agent": false,
+      "learning_mode": "auto",
+      "status": "blocked",
+      "exit_code": 0,
+      "reason": "planner done refused: The page lists cafés near Sagrada Família.; The page shows Súper cafe with a 4.7 rating and the address Plaça de la Sagrada Família, 23.; the planner turn cap of 3 was reached",
+      "elapsed_s": 158.04929821899987,
+      "independent_verification": {
+        "verified": false,
+        "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+        "cafe_name": "",
+        "visible_ratings": [],
+        "address": null,
+        "distance_m": null,
+        "cafe_category_visible": false,
+        "requested_landmark_in_drive_navigation_evidence": false,
+        "needs_manual_review": true
+      },
+      "goal_verified": false,
+      "accounting": {
+        "browser_calls": 136,
+        "browser_cost_usd": 0.03261244899999999,
+        "browser_reported_cost_usd": 0.03261244899999999,
+        "browser_unpriced_calls": 0,
+        "browser_calls_by_kind": {
+          "text_helper": 12,
+          "operator": 118,
+          "planner": 5,
+          "verifier": 1
+        },
+        "learning_calls": 0,
+        "learning_cost_usd": 0.0,
+        "inclusive_calls": 136,
+        "inclusive_cost_usd": 0.03261244899999999,
+        "fully_reported": true,
+        "pending_finished": true,
+        "new_last_work_meter": false,
+        "learning_account": null,
+        "status_site": {}
+      },
+      "procedures": [],
+      "compiled_after": [],
+      "installed_after": []
+    },
+    {
+      "number": 5,
+      "arguments": "Tower of London",
+      "mission": "find the Tower of London, then find a cafe near it with a rating over 4 and give me its name and address",
+      "fresh_agent": true,
+      "learning_mode": "off",
+      "status": "done",
+      "exit_code": 0,
+      "reason": null,
+      "elapsed_s": 74.0817933950002,
+      "independent_verification": {
+        "verified": false,
+        "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+        "cafe_name": "Results",
+        "visible_ratings": [
+          4.6,
+          4.1,
+          5.0,
+          4.2,
+          4.5,
+          4.3
+        ],
+        "address": null,
+        "distance_m": null,
+        "cafe_category_visible": true,
+        "requested_landmark_in_drive_navigation_evidence": false,
+        "needs_manual_review": true
+      },
+      "goal_verified": false,
+      "accounting": {
+        "browser_calls": 81,
+        "browser_cost_usd": 0.018040662999999995,
+        "browser_reported_cost_usd": 0.018040662999999995,
+        "browser_unpriced_calls": 0,
+        "browser_calls_by_kind": {
+          "text_helper": 6,
+          "operator": 72,
+          "planner": 1,
+          "verifier": 2
+        },
+        "learning_calls": 0,
+        "learning_cost_usd": 0.0,
+        "inclusive_calls": 81,
+        "inclusive_cost_usd": 0.018040662999999995,
+        "fully_reported": true,
+        "pending_finished": true,
+        "new_last_work_meter": false,
+        "learning_account": null,
+        "status_site": {}
+      },
+      "procedures": [],
+      "compiled_after": [],
+      "installed_after": []
+    }
+  ],
+  "installed_playbooks": [],
+  "training_failures": [],
+  "fresh_failures": [],
+  "next_month": "November 2026"
+}

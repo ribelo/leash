@@ -1,0 +1,2 @@
+{"ts":"2026-10-03T11:53:33.205Z","level":"warn","service":"leash","msg":"learning: learning compile dropped: name page kind flights from its observed title and labels in kinds, not its URL shape","context":{"cmd":"drive"}}
+{"ts":"2026-10-03T12:01:48.229Z","level":"warn","service":"leash","msg":"learning: learning compile dropped: <procedure>: procedure find-cheapest-flight: goal until must not be empty","context":{"cmd":"drive"}}

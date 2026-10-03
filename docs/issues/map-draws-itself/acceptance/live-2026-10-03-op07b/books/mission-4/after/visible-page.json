@@ -1,0 +1,27 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.00752766799996607,
+  "reply": {
+    "value": {
+      "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+      "title": "Historical Fiction | Books to Scrape - Sandbox",
+      "text": "Books to Scrape We love being scraped!\nHome  Books Historical Fiction\nBooks\nTravel\nMystery\nHistorical Fiction\nSequential Art\nClassics\nPhilosophy\nRomance\nWomens Fiction\nFiction\nChildrens\nReligion\nNonfiction\nMusic\nDefault\nScience Fiction\nSports and Games\nAdd a comment\nFantasy\nNew Adult\nYoung Adult\nScience\nPoetry\nParanormal\nArt\nPsychology\nAutobiography\nParenting\nAdult Fiction\nHumor\nHorror\nHistory\nFood and Drink\nChristian Fiction\nBusiness\nBiography\nThriller\nContemporary\nSpirituality\nAcademic\nSelf Help\nHistorical\nChristian\nSuspense\nShort Stories\nNovels\nHealth\nPolitics\nCultural\nErotica\nCrime\nHistorical Fiction\n26 results - showing 21 to 26.\nWarning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.\n\n    \n\nBetween Shades of Gray\n\n£20.79\n\n In stock\n\nAdd to basket\n\n    \n\nWhile You Were Mine\n\n£41.32\n\n In stock\n\nAdd to basket\n\n    \n\nThe Secret Healer\n\n£34.56\n\n In stock\n\nAdd to basket\n\n    \n\nStarlark\n\n£25.83\n\n In stock\n\nAdd to basket\n\n    \n\nLost Among the Living\n\n£27.70\n\n In stock\n\nAdd to basket\n\n    \n\nA Spy's Devotion (The ...\n\n£16.97\n\n In stock\n\nAdd to basket\nprevious\nPage 2 of 2",
+      "headings": [
+        "Historical Fiction"
+      ],
+      "labels": [],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T12:02:27.648Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

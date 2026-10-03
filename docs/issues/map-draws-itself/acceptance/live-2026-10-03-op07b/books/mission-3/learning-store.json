@@ -1,0 +1,264 @@
+{
+  "proposed": [
+    {
+      "path": "state/leash/proposed/toscrape.com-collect-category-book-titles-and-prices.json",
+      "json": {
+        "site": "toscrape.com",
+        "entry": "https://books.toscrape.com/",
+        "description": "Learned toscrape.com",
+        "pages": [
+          {
+            "name": "books-category",
+            "description": "Inferred books-<slug>",
+            "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+            "repeatable": true
+          },
+          {
+            "name": "books-categories",
+            "description": "Inferred home",
+            "url_pattern": "https://books.toscrape.com/",
+            "repeatable": true
+          }
+        ],
+        "procedures": [
+          {
+            "provenance": {
+              "traces": [
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+              ],
+              "model": "openai/gpt-6-luna",
+              "time": "2026-10-03T11:51:27.743218Z",
+              "tries": 0,
+              "path": [
+                "books-category"
+              ],
+              "entry_kind": "books-<slug>",
+              "exit_kind": "books-<slug>",
+              "signature": [
+                [
+                  "scroll_down",
+                  null
+                ]
+              ],
+              "kind_mapping": [
+                [
+                  "books-<slug>",
+                  "books-category"
+                ],
+                [
+                  "home",
+                  "books-categories"
+                ],
+                [
+                  "books-category",
+                  "books-category"
+                ],
+                [
+                  "books-categories",
+                  "books-categories"
+                ],
+                [
+                  "books-<slug>",
+                  "books-category"
+                ]
+              ],
+              "repeatable": true,
+              "reason": "no irreversible submission in the observed path",
+              "gate": "replay",
+              "repair": false,
+              "model_calls": 4,
+              "model_cost": 0.024647235
+            },
+            "slug": "collect-category-book-titles-and-prices",
+            "description": "Collect every book title and price from the currently open category page.",
+            "steps": [
+              {
+                "goal": "Scroll down",
+                "until": [
+                  "the page is books-category"
+                ]
+              },
+              {
+                "goal": "Collect every book title and price from the category page",
+                "until": [
+                  "the page is books-category"
+                ]
+              }
+            ],
+            "expect": [
+              "the page is books-category",
+              "all book titles and prices in the category are collected"
+            ],
+            "expect_timeout_s": 15
+          }
+        ]
+      }
+    },
+    {
+      "path": "state/leash/proposed/toscrape.com-open-book-category.json",
+      "json": {
+        "site": "toscrape.com",
+        "entry": "https://books.toscrape.com/",
+        "description": "Learned toscrape.com",
+        "pages": [
+          {
+            "name": "books-category",
+            "description": "Inferred books-<slug>",
+            "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+            "repeatable": true
+          },
+          {
+            "name": "books-categories",
+            "description": "Inferred home",
+            "url_pattern": "https://books.toscrape.com/",
+            "repeatable": true
+          }
+        ],
+        "procedures": [
+          {
+            "provenance": {
+              "traces": [
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+                "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+              ],
+              "model": "openai/gpt-6-luna",
+              "time": "2026-10-03T11:47:43.587238Z",
+              "tries": 0,
+              "path": [
+                "books-categories",
+                "books-category"
+              ],
+              "entry_kind": "home",
+              "exit_kind": "books-<slug>",
+              "signature": [
+                [
+                  "click",
+                  {
+                    "role": "link",
+                    "label": "travel"
+                  }
+                ]
+              ],
+              "kind_mapping": [
+                [
+                  "books-<slug>",
+                  "books-category"
+                ],
+                [
+                  "home",
+                  "books-categories"
+                ]
+              ],
+              "repeatable": true,
+              "reason": "no irreversible submission in the observed path",
+              "gate": "replay",
+              "repair": false,
+              "model_calls": 2,
+              "model_cost": 0.011815929999999999
+            },
+            "slug": "open-book-category",
+            "description": "Open the requested book category from the category links.",
+            "args": {
+              "category": {
+                "from": "mission"
+              }
+            },
+            "steps": [
+              {
+                "goal": "Wait for a link named {category} to be present",
+                "until": [
+                  "a link named {category} is present"
+                ]
+              },
+              {
+                "goal": "Click the link named {category}",
+                "until": [
+                  "the page is books-category"
+                ]
+              }
+            ],
+            "expect": [
+              "the page is books-category",
+              "the requested category is displayed"
+            ],
+            "expect_timeout_s": 15
+          }
+        ]
+      }
+    }
+  ],
+  "installed": [],
+  "learning_state": {
+    "mtime_ns": 1791028287743755371,
+    "state": {
+      "account:toscrape.com": {
+        "model_calls": 4,
+        "model_cost": 0.024647235
+      },
+      "compile:toscrape.com": "2026-10-03T11:51:27.743048Z"
+    }
+  },
+  "status": {
+    "key_present": true,
+    "commit": "8e5e92d379c6a785788c030e5a82a92d1e2cd674",
+    "skill": {
+      "state": "missing",
+      "version": "0.0.0",
+      "commit": "8e5e92d379c6a785788c030e5a82a92d1e2cd674",
+      "installs": [
+        {
+          "path": "/home/ribelo/.claude/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.codex/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.agents/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        }
+      ]
+    },
+    "generation": 1,
+    "tabs": {
+      "open": 2,
+      "cap": 8
+    },
+    "chrome": "running",
+    "uptime_s": 577.1223790645599,
+    "models": {
+      "configured": true,
+      "jev_model": "typesafe/jev-1.13-20260917",
+      "text_model": "inception/mercury-2.5",
+      "systemone_endpoint": "https://openrouter.ai/api/v1/systemone",
+      "chat_base_url": "https://openrouter.ai/api/v1"
+    },
+    "version": "0.0.0",
+    "pid": 397752,
+    "headed": false,
+    "learning": {
+      "mode": "auto",
+      "pending": 0,
+      "drafts": 2,
+      "sites": [
+        {
+          "site": "toscrape.com",
+          "last_compile": "2026-10-03T11:51:27.743048Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 4,
+          "learning_cost": 0.024647235
+        }
+      ]
+    }
+  },
+  "status_exit": 0
+}

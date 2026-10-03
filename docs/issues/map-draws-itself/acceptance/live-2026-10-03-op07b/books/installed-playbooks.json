@@ -1,0 +1,91 @@
+[
+  {
+    "site": "toscrape.com",
+    "entry": "https://books.toscrape.com/",
+    "description": "Learned toscrape.com",
+    "pages": [
+      {
+        "name": "books-category",
+        "description": "Inferred books-<slug>",
+        "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+        "repeatable": true
+      },
+      {
+        "name": "books-categories",
+        "description": "Inferred home",
+        "url_pattern": "https://books.toscrape.com/",
+        "repeatable": true
+      }
+    ],
+    "procedures": [
+      {
+        "provenance": {
+          "traces": [
+            "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+            "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+          ],
+          "model": "openai/gpt-6-luna",
+          "time": "2026-10-03T11:47:43.587238Z",
+          "tries": 0,
+          "path": [
+            "books-categories",
+            "books-category"
+          ],
+          "entry_kind": "home",
+          "exit_kind": "books-<slug>",
+          "signature": [
+            [
+              "click",
+              {
+                "role": "link",
+                "label": "travel"
+              }
+            ]
+          ],
+          "kind_mapping": [
+            [
+              "books-<slug>",
+              "books-category"
+            ],
+            [
+              "home",
+              "books-categories"
+            ]
+          ],
+          "repeatable": true,
+          "reason": "no irreversible submission in the observed path",
+          "gate": "replay",
+          "repair": false,
+          "model_calls": 2,
+          "model_cost": 0.011815929999999999
+        },
+        "slug": "open-book-category",
+        "description": "Open the requested book category from the category links.",
+        "args": {
+          "category": {
+            "from": "mission"
+          }
+        },
+        "steps": [
+          {
+            "goal": "Wait for a link named {category} to be present",
+            "until": [
+              "a link named {category} is present"
+            ]
+          },
+          {
+            "goal": "Click the link named {category}",
+            "until": [
+              "the page is books-category"
+            ]
+          }
+        ],
+        "expect": [
+          "the page is books-category",
+          "the requested category is displayed"
+        ],
+        "expect_timeout_s": 15
+      }
+    ]
+  }
+]

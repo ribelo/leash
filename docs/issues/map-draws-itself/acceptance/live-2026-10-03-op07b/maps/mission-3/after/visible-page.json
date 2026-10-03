@@ -1,0 +1,45 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005287048999889521,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5183219,13.379638,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "ama Café - Google Maps",
+      "text": "\n\n\nSearch this area\n\n\nSaved\n\nRecents\n2\nBerlin\n\nGet app\nResults\n\n\nShare\nama Café\nama Café\n4.8\nCafe ·  · Dorotheenstraße 83\nRelaxed option for light fare & coffee\nOpen · Closes 6 pm\n \n\nReserve a table\nCafé Nénom\nCafé Nénom\n4.6\nCafe ·  · Charlottenstraße 34\nOpen · Closes 6 pm\nBoundless Berlin\nBoundless Berlin\n4.9\nCafe ·  · Wilhelmstraße 38\nOpen · Closes 8 pm\nSteel Vintage Bikes Café\nSteel Vintage Bikes Café\n4.5\nCafe ·  · Wilhelmstraße 91\nOpen · Closes 5 pm\nCappuccino Grand Café - Mitte\nCappuccino Grand Café - Mitte\n4.7\nCafe ·  · Tucholskystraße 36\nContemporary setting for global fare\nOpen · Closes 7 pm\n \n\nReserve a table\n\nOrder online\nStudentisches Café Flora\nStudentisches Café Flora\n4.8\nCafe · \nClosed · Opens 10 am Mon\n\nYou're seeing a limited view of Google Maps. Learn more\nGet the most out of Google Maps\nSign in\n\nUpdate results when map moves\n\nSee photos\nama Café\n4.8\n\nCafe·\nOverview\nAbout\n\nDirections\n\nSave\n\nNearby\n\nSend to phone\n\nShare\n\nReserve a table\n \nUnderstated venue with sidewalk tables serving bagel sandwiches, pizza & desserts, plus coffee.\n\n \n\nDorotheenstraße 83, 10117 Berlin, Germany\n\n\nOpen · Closes 6 pm\n\nGerman Unity Day might affect these hours\n\nFind a table\ndish.co\n\n\namagastro.de\n\n\n\n+49 30 20644444\n\n\n\nG99M+8M Berlin, Germany\n\n\n \n\nSuggest an edit\n \nAdd missing information\n\n\nAdd a photo\n \n \n\nWrite a review\n \nAbout this data\n\nYou're seeing a limited view of Google Maps. Learn more\n\nSign in\n\n\n\n\nMap data ©2026 GeoBasis-DE/BKG (©2009), GooglePolandTermsPrivacySend Product Feedback\n\t50 m ",
+      "headings": [
+        "Results",
+        "",
+        "Get the most out of Google Maps\nSign in",
+        "ama Café",
+        "Add missing information",
+        "Map details",
+        "Map tools",
+        "Map type"
+      ],
+      "labels": [
+        " stars",
+        "4.8 stars",
+        "4.6 stars",
+        "4.9 stars",
+        "4.5 stars",
+        "4.7 stars",
+        "4.8 stars",
+        "4.8 stars ",
+        "Address: Dorotheenstraße 83, 10117 Berlin, Germany ",
+        "Copy address"
+      ],
+      "address": "Address: Dorotheenstraße 83, 10117 Berlin, Germany ",
+      "time": {
+        "now": "2026-10-03T11:46:30.513Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

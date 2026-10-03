@@ -1,0 +1,316 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.05381219500031875,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5183219,13.379638,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "ama Café - Google Maps",
+    "page_kind": {
+      "name": "place-<slug>",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "combobox",
+        "name": "",
+        "value": "cafe",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "button",
+        "name": "Search"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Close"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Search this area"
+      },
+      {
+        "index": 5,
+        "role": "button",
+        "name": "Menu"
+      },
+      {
+        "index": 6,
+        "role": "button",
+        "name": "Saved"
+      },
+      {
+        "index": 7,
+        "role": "button",
+        "name": "Recents"
+      },
+      {
+        "index": 8,
+        "role": "button",
+        "name": "2 places Berlin"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Get app"
+      },
+      {
+        "index": 10,
+        "role": "heading",
+        "name": "Results"
+      },
+      {
+        "index": 11,
+        "role": "button",
+        "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+      },
+      {
+        "index": 12,
+        "role": "button",
+        "name": "Share"
+      },
+      {
+        "index": 13,
+        "role": "link",
+        "name": "ama Café"
+      },
+      {
+        "index": 14,
+        "role": "link",
+        "name": "Reserve a table"
+      },
+      {
+        "index": 15,
+        "role": "link",
+        "name": "Café Nénom"
+      },
+      {
+        "index": 16,
+        "role": "link",
+        "name": "Boundless Berlin"
+      },
+      {
+        "index": 17,
+        "role": "link",
+        "name": "Steel Vintage Bikes Café"
+      },
+      {
+        "index": 18,
+        "role": "link",
+        "name": "Cappuccino Grand Café - Mitte"
+      },
+      {
+        "index": 19,
+        "role": "link",
+        "name": "Reserve a table"
+      },
+      {
+        "index": 20,
+        "role": "link",
+        "name": "Order online"
+      },
+      {
+        "index": 21,
+        "role": "checkbox",
+        "name": "Update results when map moves",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 22,
+        "role": "button",
+        "name": "Close"
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Photo of ama Café"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "See photos"
+      },
+      {
+        "index": 25,
+        "role": "heading",
+        "name": "ama Café"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+      },
+      {
+        "index": 27,
+        "role": "button",
+        "name": "Cafe"
+      },
+      {
+        "index": 28,
+        "role": "tab",
+        "name": "Overview of ama Café",
+        "state": [
+          "selected"
+        ]
+      },
+      {
+        "index": 29,
+        "role": "tab",
+        "name": "About ama Café"
+      },
+      {
+        "index": 30,
+        "role": "button",
+        "name": "Directions"
+      },
+      {
+        "index": 31,
+        "role": "button",
+        "name": "Save"
+      },
+      {
+        "index": 32,
+        "role": "button",
+        "name": "Nearby"
+      },
+      {
+        "index": 33,
+        "role": "button",
+        "name": "Send to phone"
+      },
+      {
+        "index": 34,
+        "role": "button",
+        "name": "Share"
+      },
+      {
+        "index": 35,
+        "role": "link",
+        "name": "Reserve a table"
+      },
+      {
+        "index": 36,
+        "role": "button",
+        "name": "Understated venue with sidewalk tables serving bagel sandwiches, pizza & desserts, plus coffee."
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Address: Dorotheenstraße 83, 10117 Berlin, Germany "
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "Copy address"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Hours Open · Closes 6 pm Show open hours for the week German Unity Day might affect these hours",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 40,
+        "role": "link",
+        "name": "Find a table dish.co"
+      },
+      {
+        "index": 41,
+        "role": "link",
+        "name": "Open reservation link"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "Collapse side panel"
+      },
+      {
+        "index": 43,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 44,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 45,
+        "role": "button",
+        "name": "Show Your Location"
+      },
+      {
+        "index": 46,
+        "role": "button",
+        "name": "Zoom in"
+      },
+      {
+        "index": 47,
+        "role": "button",
+        "name": "Zoom out"
+      },
+      {
+        "index": 48,
+        "role": "button",
+        "name": "Browse Street View images"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Street View"
+      },
+      {
+        "index": 50,
+        "role": "button",
+        "name": "Poland"
+      },
+      {
+        "index": 51,
+        "role": "button",
+        "name": "Terms"
+      },
+      {
+        "index": 52,
+        "role": "button",
+        "name": "Privacy"
+      },
+      {
+        "index": 53,
+        "role": "button",
+        "name": "Send Product Feedback"
+      },
+      {
+        "index": 54,
+        "role": "button",
+        "name": "50 m"
+      }
+    ],
+    "total": 54,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

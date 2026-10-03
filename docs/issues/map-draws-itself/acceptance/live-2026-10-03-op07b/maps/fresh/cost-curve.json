@@ -1,0 +1,56 @@
+[
+  {
+    "number": 5,
+    "arguments": "Tower of London",
+    "mission": "find the Tower of London, then find a cafe near it with a rating over 4 and give me its name and address",
+    "fresh_agent": true,
+    "learning_mode": "off",
+    "status": "done",
+    "exit_code": 0,
+    "reason": null,
+    "elapsed_s": 74.0817933950002,
+    "independent_verification": {
+      "verified": false,
+      "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+      "cafe_name": "Results",
+      "visible_ratings": [
+        4.6,
+        4.1,
+        5.0,
+        4.2,
+        4.5,
+        4.3
+      ],
+      "address": null,
+      "distance_m": null,
+      "cafe_category_visible": true,
+      "requested_landmark_in_drive_navigation_evidence": false,
+      "needs_manual_review": true
+    },
+    "goal_verified": false,
+    "accounting": {
+      "browser_calls": 81,
+      "browser_cost_usd": 0.018040662999999995,
+      "browser_reported_cost_usd": 0.018040662999999995,
+      "browser_unpriced_calls": 0,
+      "browser_calls_by_kind": {
+        "text_helper": 6,
+        "operator": 72,
+        "planner": 1,
+        "verifier": 2
+      },
+      "learning_calls": 0,
+      "learning_cost_usd": 0.0,
+      "inclusive_calls": 81,
+      "inclusive_cost_usd": 0.018040662999999995,
+      "fully_reported": true,
+      "pending_finished": true,
+      "new_last_work_meter": false,
+      "learning_account": null,
+      "status_site": {}
+    },
+    "procedures": [],
+    "compiled_after": [],
+    "installed_after": []
+  }
+]

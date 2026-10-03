@@ -1,0 +1,706 @@
+{
+  "bound_seconds": 900,
+  "completed": true,
+  "elapsed_s": 610.4419417870004,
+  "history": [
+    {
+      "elapsed_s": 0.0027498210001795087,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 5.010965143999783,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 10.017943677000403,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 15.023611470000105,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 20.031024308999804,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 25.038522277000084,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 30.04454863800038,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 35.04915792199972,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 40.05254868999964,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 45.05619560800005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 50.05963295499987,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 55.06278621100046,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 60.06587807300002,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 65.06903260000036,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 70.07225651800036,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 75.07580760200017,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 80.07900573999996,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 85.08242917799998,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 90.08570040599989,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 95.08918868300043,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 100.09241647500039,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 105.09557830700032,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 110.09895364499971,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 115.10249976799969,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 120.1064515779999,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 125.1101855500001,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 130.11334869999973,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 135.11681019499974,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 140.1203437109998,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 145.12438738000037,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 150.127856393,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 155.13091571899986,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 160.1343467859997,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 165.1375949909998,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 170.14071610300016,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 175.14439959500032,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 180.14750680500038,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 185.15064881499984,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 190.15403898499972,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 195.15714633900006,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 200.16124322500036,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 205.16438370700052,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 210.16746411199983,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 215.17085270799998,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 220.17390898699978,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 225.17702386099973,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 230.18030223000005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 235.18342037599996,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 240.18654236400016,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 245.18953222399978,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 250.19339915100045,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 255.19651306200012,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 260.1995539620002,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 265.2029162159997,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 270.20613878099994,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 275.2093921269998,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 280.21281313500003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 285.21595296800024,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 290.2195478860003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 295.22312512200006,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 300.226392863,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 305.22980804100007,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 310.2330240250003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 315.23609191299965,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 320.23922911200043,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 325.2430608499999,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 330.24834597100016,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 335.2514401369999,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 340.25477602699993,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 345.2578924700001,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 350.26100607900025,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 355.2645480030005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 360.26782366099997,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 365.2706949399999,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 370.27402009399975,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 375.27741187300035,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 380.28099966300033,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 385.2845249130005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 390.2879254520003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 395.29109332200005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 400.2943983570003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 405.2978552149998,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 410.3011602730003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 415.30429896500027,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 420.30788412699985,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 425.31121307099966,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 430.3146372700003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 435.3183290960005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 440.32154078799977,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 445.3247844590005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 450.32795746099964,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 455.3314306330003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 460.3349903690005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 465.33849032000035,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 470.3419775430002,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 475.3452345169999,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 480.34845945899997,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 485.35173892700004,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 490.3550783520004,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 495.3582363309997,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 500.3616302440005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 505.3649332670002,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 510.3682400400003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 515.3717116930002,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 520.3751104620005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 525.3786096189997,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 530.3821031799998,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 535.3854122250004,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 540.38872876,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 545.3921208990005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 550.3951211430003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 555.3983158090005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 560.4015394090002,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 565.405359159,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 570.4109043030003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 575.4143216129996,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 580.4175546719998,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 585.4213930409996,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 590.4247168860002,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 595.4321029600005,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 600.4353669450002,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 605.4386215060003,
+      "pending": 1,
+      "sites": []
+    },
+    {
+      "elapsed_s": 610.4418571440001,
+      "pending": 0,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T11:53:33.204482Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.035356139999999994
+        }
+      ]
+    }
+  ],
+  "final_status": {
+    "key_present": true,
+    "commit": "8e5e92d379c6a785788c030e5a82a92d1e2cd674",
+    "skill": {
+      "state": "missing",
+      "version": "0.0.0",
+      "commit": "8e5e92d379c6a785788c030e5a82a92d1e2cd674",
+      "installs": [
+        {
+          "path": "/home/ribelo/.claude/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.codex/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        },
+        {
+          "path": "/home/ribelo/.agents/skills/leash",
+          "state": "missing",
+          "version": null,
+          "commit": null
+        }
+      ]
+    },
+    "generation": 1,
+    "tabs": {
+      "open": 3,
+      "cap": 8
+    },
+    "chrome": "running",
+    "uptime_s": 672.4466238021851,
+    "models": {
+      "configured": true,
+      "jev_model": "typesafe/jev-1.13-20260917",
+      "text_model": "inception/mercury-2.5",
+      "systemone_endpoint": "https://openrouter.ai/api/v1/systemone",
+      "chat_base_url": "https://openrouter.ai/api/v1"
+    },
+    "version": "0.0.0",
+    "pid": 397751,
+    "headed": false,
+    "learning": {
+      "mode": "auto",
+      "pending": 0,
+      "drafts": 0,
+      "sites": [
+        {
+          "site": "google.com",
+          "last_compile": "2026-10-03T11:53:33.204482Z",
+          "installed_by_replay": 0,
+          "installed_by_agreement": 0,
+          "learning_calls": 2,
+          "learning_cost": 0.035356139999999994
+        }
+      ]
+    }
+  },
+  "before": {
+    "mtime_ns": null,
+    "state": {}
+  },
+  "after": {
+    "mtime_ns": 1791028413204664209,
+    "state": {
+      "account:google.com": {
+        "model_calls": 2,
+        "model_cost": 0.035356139999999994
+      },
+      "compile:google.com": "2026-10-03T11:53:33.204482Z"
+    }
+  }
+}

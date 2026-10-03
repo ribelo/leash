@@ -1,0 +1,275 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.04079831300077785,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+    "title": "Poetry | Books to Scrape - Sandbox",
+    "page_kind": {
+      "name": "books-<slug>",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "link",
+        "name": "Les Fleurs du Mal"
+      },
+      {
+        "index": 2,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 3,
+        "role": "heading",
+        "name": "Les Fleurs du Mal"
+      },
+      {
+        "index": 4,
+        "role": "link",
+        "name": "Les Fleurs du Mal"
+      },
+      {
+        "index": 5,
+        "role": "paragraph",
+        "name": "£29.04"
+      },
+      {
+        "index": 6,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 7,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 8,
+        "role": "link",
+        "name": "Howl and Other Poems"
+      },
+      {
+        "index": 9,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 10,
+        "role": "heading",
+        "name": "Howl and Other Poems"
+      },
+      {
+        "index": 11,
+        "role": "link",
+        "name": "Howl and Other Poems"
+      },
+      {
+        "index": 12,
+        "role": "paragraph",
+        "name": "£40.45"
+      },
+      {
+        "index": 13,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 15,
+        "role": "link",
+        "name": "Leave This Song Behind: Teen Poetry at Its Best"
+      },
+      {
+        "index": 16,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 17,
+        "role": "heading",
+        "name": "Leave This Song Behind: ..."
+      },
+      {
+        "index": 18,
+        "role": "link",
+        "name": "Leave This Song Behind: ..."
+      },
+      {
+        "index": 19,
+        "role": "paragraph",
+        "name": "£51.17"
+      },
+      {
+        "index": 20,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 21,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 22,
+        "role": "link",
+        "name": "The Collected Poems of W.B. Yeats (The Collected Works of W.B. Yeats #1)"
+      },
+      {
+        "index": 23,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 24,
+        "role": "heading",
+        "name": "The Collected Poems of ..."
+      },
+      {
+        "index": 25,
+        "role": "link",
+        "name": "The Collected Poems of ..."
+      },
+      {
+        "index": 26,
+        "role": "paragraph",
+        "name": "£15.42"
+      },
+      {
+        "index": 27,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 29,
+        "role": "link",
+        "name": "The Crossover"
+      },
+      {
+        "index": 30,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 31,
+        "role": "heading",
+        "name": "The Crossover"
+      },
+      {
+        "index": 32,
+        "role": "link",
+        "name": "The Crossover"
+      },
+      {
+        "index": 33,
+        "role": "paragraph",
+        "name": "£38.77"
+      },
+      {
+        "index": 34,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 36,
+        "role": "link",
+        "name": "Booked"
+      },
+      {
+        "index": 37,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 38,
+        "role": "heading",
+        "name": "Booked"
+      },
+      {
+        "index": 39,
+        "role": "link",
+        "name": "Booked"
+      },
+      {
+        "index": 40,
+        "role": "paragraph",
+        "name": "£17.49"
+      },
+      {
+        "index": 41,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "Add to basket"
+      },
+      {
+        "index": 43,
+        "role": "link",
+        "name": "Twenty Love Poems and a Song of Despair"
+      },
+      {
+        "index": 44,
+        "role": "paragraph",
+        "name": ""
+      },
+      {
+        "index": 45,
+        "role": "heading",
+        "name": "Twenty Love Poems and ..."
+      },
+      {
+        "index": 46,
+        "role": "link",
+        "name": "Twenty Love Poems and ..."
+      },
+      {
+        "index": 47,
+        "role": "paragraph",
+        "name": "£30.95"
+      },
+      {
+        "index": 48,
+        "role": "paragraph",
+        "name": " In stock"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Add to basket"
+      }
+    ],
+    "total": 49,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

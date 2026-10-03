@@ -1,0 +1,3498 @@
+{
+  "command": [
+    "drive",
+    "find the Brandenburg Gate, then find a cafe near it with a rating over 4 and give me its name and address",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "900",
+    "--max-steps",
+    "60",
+    "--max-procedures",
+    "20",
+    "--out",
+    "<PRIVATE_ROOT>/output-3.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 22.765549021999504,
+  "reply": {
+    "unattended": [],
+    "playbook_choices": [
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      }
+    ],
+    "status": "error",
+    "site": null,
+    "procedures": [],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "text_helper": 6,
+        "operator": 23
+      },
+      "cost_unreported": 1,
+      "reported_cost": 0.00533539,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 29,
+    "model_cost": null,
+    "operator_steps": [
+      {
+        "non_repeatable": false,
+        "n": 1,
+        "snapshot": "[redacted capability]",
+        "operation": "type_text",
+        "index": 1,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.0,
+            "CLICK": 0.0,
+            "WAIT": 0.0,
+            "DONE": 0.0,
+            "TYPE_TEXT": 1.0
+          },
+          "target": {
+            "1": 1.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": "Search Google Maps"
+        },
+        "text": "Brandenburg Gate",
+        "after": {
+          "url": "https://www.google.com/maps?hl=en",
+          "title": "Google Maps"
+        },
+        "elapsed_ms": 2136
+      },
+      {
+        "non_repeatable": false,
+        "n": 2,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.04,
+            "TYPE_TEXT": 0.0,
+            "WAIT": 0.03,
+            "DONE": 0.0,
+            "CLICK": 0.93
+          },
+          "target": {
+            "1": 0.17,
+            "2": 0.81,
+            "3": 0.0,
+            "5": 0.0,
+            "6": 0.01,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m2!4b1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Brandenburg Gate - Google Maps"
+        },
+        "elapsed_ms": 3579
+      },
+      {
+        "non_repeatable": true,
+        "n": 3,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 27,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.02,
+            "WAIT": 0.0,
+            "CLICK": 0.95,
+            "BLOCKED": 0.03
+          },
+          "target": {
+            "1": 0.02,
+            "2": 0.01,
+            "3": 0.0,
+            "4": 0.2,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.77,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "40": 0.0,
+            "41": 0.0,
+            "42": 0.0,
+            "43": 0.0,
+            "44": 0.0,
+            "45": 0.0,
+            "46": 0.0,
+            "47": 0.0,
+            "48": 0.0,
+            "49": 0.0,
+            "50": 0.0,
+            "51": 0.0,
+            "52": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Nearby"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Brandenburg Gate - Google Maps"
+        },
+        "elapsed_ms": 4863
+      },
+      {
+        "non_repeatable": false,
+        "n": 4,
+        "snapshot": "[redacted capability]",
+        "operation": "type_text",
+        "index": 1,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.0,
+            "BLOCKED": 0.02,
+            "DONE": 0.0,
+            "CLICK": 0.23,
+            "TYPE_TEXT": 0.75
+          },
+          "target": {
+            "1": 1.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": "Search nearby Brandenburg Gate"
+        },
+        "text": "cafe",
+        "after": {
+          "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Brandenburg Gate - Google Maps"
+        },
+        "elapsed_ms": 9602
+      },
+      {
+        "non_repeatable": false,
+        "n": 5,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.01,
+            "BLOCKED": 0.01,
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.0,
+            "CLICK": 0.98
+          },
+          "target": {
+            "1": 0.02,
+            "2": 0.92,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.02,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.04,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "40": 0.0,
+            "41": 0.0,
+            "42": 0.0,
+            "43": 0.0,
+            "44": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "cafe - Google Maps"
+        },
+        "elapsed_ms": 10855
+      },
+      {
+        "non_repeatable": true,
+        "n": 6,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 23,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.18,
+            "CLICK": 0.71,
+            "BLOCKED": 0.09,
+            "TYPE_TEXT": 0.01,
+            "DONE": 0.01
+          },
+          "target": {
+            "1": 0.02,
+            "2": 0.18000000000000002,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.12,
+            "6": 0.0,
+            "7": 0.02,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.07,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.59,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "40": 0.0,
+            "41": 0.0,
+            "42": 0.0,
+            "43": 0.0,
+            "44": 0.0,
+            "45": 0.0,
+            "46": 0.0,
+            "47": 0.0,
+            "48": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Nearby"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "cafe - Google Maps"
+        },
+        "elapsed_ms": 11322
+      },
+      {
+        "non_repeatable": true,
+        "n": 7,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 5,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.01,
+            "TYPE_TEXT": 0.0,
+            "DONE": 0.02,
+            "BLOCKED": 0.12,
+            "CLICK": 0.85
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.03,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.63,
+            "6": 0.0,
+            "7": 0.17,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.06,
+            "12": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.09999999999999999,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.01,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "37": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Rating"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "cafe - Google Maps"
+        },
+        "elapsed_ms": 12288
+      },
+      {
+        "non_repeatable": true,
+        "n": 8,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 5,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.92,
+            "WAIT": 0.0,
+            "BLOCKED": 0.06,
+            "DONE": 0.02,
+            "TYPE_TEXT": 0.0
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.02,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.81,
+            "6": 0.0,
+            "7": 0.09,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.03,
+            "12": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.04,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "37": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Rating"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "cafe - Google Maps"
+        },
+        "elapsed_ms": 12812
+      },
+      {
+        "non_repeatable": true,
+        "n": 9,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 7,
+        "probabilities": {
+          "op": {
+            "DONE": 0.01,
+            "BLOCKED": 0.06,
+            "TYPE_TEXT": 0.0,
+            "WAIT": 0.01,
+            "CLICK": 0.92
+          },
+          "target": {
+            "1": 0.01,
+            "2": 0.09,
+            "3": 0.0,
+            "4": 0.0,
+            "6": 0.0,
+            "7": 0.75,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.05,
+            "12": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.08,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.02,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "36": 0.0,
+            "37": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "All filters"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "cafe - Google Maps"
+        },
+        "elapsed_ms": 13304
+      },
+      {
+        "non_repeatable": true,
+        "n": 10,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 12,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.88,
+            "DONE": 0.0,
+            "BLOCKED": 0.1,
+            "WAIT": 0.02
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.31,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.12,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.5700000000000001,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Any rating"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "cafe - Google Maps"
+        },
+        "elapsed_ms": 14203
+      },
+      {
+        "non_repeatable": true,
+        "n": 11,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 4,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.01,
+            "BLOCKED": 0.12,
+            "DONE": 0.0,
+            "CLICK": 0.87
+          },
+          "target": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.7,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.01,
+            "8": 0.24000000000000002,
+            "10": 0.04,
+            "11": 0.01,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Brandenburg Gate"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!4m12!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m2!1s0x47a851c655f20989:0x26bbfb4e84674c63!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Brandenburg Gate - Google Maps"
+        },
+        "elapsed_ms": 15656
+      },
+      {
+        "non_repeatable": true,
+        "n": 12,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 12,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.65,
+            "DONE": 0.05,
+            "BLOCKED": 0.28,
+            "WAIT": 0.02,
+            "TYPE_TEXT": 0.0
+          },
+          "target": {
+            "1": 0.06999999999999999,
+            "2": 0.12,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.06999999999999999,
+            "8": 0.0,
+            "10": 0.01,
+            "11": 0.0,
+            "12": 0.51,
+            "13": 0.0,
+            "14": 0.02,
+            "15": 0.01,
+            "16": 0.01,
+            "17": 0.02,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "26": 0.04,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.12,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0,
+            "40": 0.0,
+            "41": 0.0,
+            "42": 0.0,
+            "43": 0.0,
+            "44": 0.0,
+            "45": 0.0,
+            "46": 0.0,
+            "47": 0.0,
+            "48": 0.0,
+            "49": 0.0,
+            "50": 0.0,
+            "51": 0.0,
+            "52": 0.0
+          }
+        },
+        "target": {
+          "role": "link",
+          "label": "ama Café"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5162778,13.3730907,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "ama Café - Google Maps"
+        },
+        "elapsed_ms": 18182
+      }
+    ],
+    "operator_state": {
+      "status": "error",
+      "reason": "TYPE_TEXT helper failed (model-unavailable): invalid response: response.choices.[0]: choice.message: message.content: expected string, got null, got {\"id\":\"gen-1791027988-g2NFEP9dehsOjrP1Iwjl\",\"object\":\"chat.completion\",\"created\":1791027988,\"model\":\"inception/mercury-2.5\",\"provider\":\"Inception\",\"system_fingerprint\":null,\"service_tier\":null,\"choice...",
+      "error": {
+        "code": "model-unavailable",
+        "message": "invalid response: response.choices.[0]: choice.message: message.content: expected string, got null, got {\"id\":\"gen-1791027988-g2NFEP9dehsOjrP1Iwjl\",\"object\":\"chat.completion\",\"created\":1791027988,\"model\":\"inception/mercury-2.5\",\"provider\":\"Inception\",\"system_fingerprint\":null,\"service_tier\":null,\"choice...",
+        "hint": "read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry",
+        "detail": {
+          "model_kind": "text",
+          "code": "invalid-response"
+        }
+      },
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5183219,13.379638,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "ama Café - Google Maps",
+          "page_kind": {
+            "name": "place-<slug>",
+            "source": "inferred"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "combobox",
+              "name": "",
+              "value": "cafe",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 2,
+              "role": "button",
+              "name": "Search"
+            },
+            {
+              "index": 3,
+              "role": "button",
+              "name": "Close"
+            },
+            {
+              "index": 4,
+              "role": "button",
+              "name": "Search this area"
+            },
+            {
+              "index": 5,
+              "role": "button",
+              "name": "Menu"
+            },
+            {
+              "index": 6,
+              "role": "button",
+              "name": "Saved"
+            },
+            {
+              "index": 7,
+              "role": "button",
+              "name": "Recents"
+            },
+            {
+              "index": 8,
+              "role": "button",
+              "name": "2 places Berlin"
+            },
+            {
+              "index": 9,
+              "role": "button",
+              "name": "Get app"
+            },
+            {
+              "index": 10,
+              "role": "heading",
+              "name": "Results"
+            },
+            {
+              "index": 11,
+              "role": "button",
+              "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+            },
+            {
+              "index": 12,
+              "role": "button",
+              "name": "Share"
+            },
+            {
+              "index": 13,
+              "role": "link",
+              "name": "ama Café"
+            },
+            {
+              "index": 14,
+              "role": "link",
+              "name": "Reserve a table"
+            },
+            {
+              "index": 15,
+              "role": "link",
+              "name": "Café Nénom"
+            },
+            {
+              "index": 16,
+              "role": "link",
+              "name": "Boundless Berlin"
+            },
+            {
+              "index": 17,
+              "role": "link",
+              "name": "Steel Vintage Bikes Café"
+            },
+            {
+              "index": 18,
+              "role": "link",
+              "name": "Cappuccino Grand Café - Mitte"
+            },
+            {
+              "index": 19,
+              "role": "link",
+              "name": "Reserve a table"
+            },
+            {
+              "index": 20,
+              "role": "link",
+              "name": "Order online"
+            },
+            {
+              "index": 21,
+              "role": "checkbox",
+              "name": "Update results when map moves",
+              "state": [
+                "unchecked"
+              ]
+            },
+            {
+              "index": 22,
+              "role": "button",
+              "name": "Close"
+            },
+            {
+              "index": 23,
+              "role": "button",
+              "name": "Photo of ama Café"
+            },
+            {
+              "index": 24,
+              "role": "button",
+              "name": "See photos"
+            },
+            {
+              "index": 25,
+              "role": "heading",
+              "name": "ama Café"
+            },
+            {
+              "index": 26,
+              "role": "button",
+              "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+            },
+            {
+              "index": 27,
+              "role": "button",
+              "name": "Cafe"
+            },
+            {
+              "index": 28,
+              "role": "tab",
+              "name": "Overview of ama Café",
+              "state": [
+                "selected"
+              ]
+            },
+            {
+              "index": 29,
+              "role": "tab",
+              "name": "About ama Café"
+            },
+            {
+              "index": 30,
+              "role": "button",
+              "name": "Directions"
+            },
+            {
+              "index": 31,
+              "role": "button",
+              "name": "Save"
+            },
+            {
+              "index": 32,
+              "role": "button",
+              "name": "Nearby"
+            },
+            {
+              "index": 33,
+              "role": "button",
+              "name": "Send to phone"
+            },
+            {
+              "index": 34,
+              "role": "button",
+              "name": "Share"
+            },
+            {
+              "index": 35,
+              "role": "link",
+              "name": "Reserve a table"
+            },
+            {
+              "index": 36,
+              "role": "button",
+              "name": "Understated venue with sidewalk tables serving bagel sandwiches, pizza & desserts, plus coffee."
+            },
+            {
+              "index": 37,
+              "role": "button",
+              "name": "Address: Dorotheenstraße 83, 10117 Berlin, Germany "
+            },
+            {
+              "index": 38,
+              "role": "button",
+              "name": "Copy address"
+            },
+            {
+              "index": 39,
+              "role": "button",
+              "name": "Hours Open · Closes 6 pm Show open hours for the week German Unity Day might affect these hours",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 40,
+              "role": "link",
+              "name": "Find a table dish.co"
+            },
+            {
+              "index": 41,
+              "role": "link",
+              "name": "Open reservation link"
+            },
+            {
+              "index": 42,
+              "role": "button",
+              "name": "Collapse side panel"
+            },
+            {
+              "index": 43,
+              "role": "button",
+              "name": "Google apps",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 44,
+              "role": "link",
+              "name": "Sign in"
+            },
+            {
+              "index": 45,
+              "role": "button",
+              "name": "Show Your Location"
+            },
+            {
+              "index": 46,
+              "role": "button",
+              "name": "Zoom in"
+            },
+            {
+              "index": 47,
+              "role": "button",
+              "name": "Zoom out"
+            },
+            {
+              "index": 48,
+              "role": "button",
+              "name": "Browse Street View images"
+            },
+            {
+              "index": 49,
+              "role": "button",
+              "name": "Street View"
+            },
+            {
+              "index": 50,
+              "role": "button",
+              "name": "Poland"
+            },
+            {
+              "index": 51,
+              "role": "button",
+              "name": "Terms"
+            },
+            {
+              "index": 52,
+              "role": "button",
+              "name": "Privacy"
+            },
+            {
+              "index": 53,
+              "role": "button",
+              "name": "Send Product Feedback"
+            },
+            {
+              "index": 54,
+              "role": "button",
+              "name": "50 m"
+            }
+          ],
+          "total": 54,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5183219,13.379638,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "ama Café - Google Maps",
+        "page_kind": "place-<slug>",
+        "page_kind_source": "inferred",
+        "text": "Search this area\nSaved\nRecents\n2\nBerlin\nGet app\nResults\nShare\nama Café\nama Café\n\nCafe\n\nDorotheenstraße 83\nRelaxed option for light fare & coffee\nOpen\n· Closes 6 pm\nReserve a table\nCafé Nénom\nCafé Nénom\n\nCafe\n\nCharlottenstraße 34\nOpen\n· Closes 6 pm\nBoundless Berlin\nBoundless Berlin\n\nCafe\n\nWilhelmstraße 38\nOpen\n· Closes 8 pm\nSteel Vintage Bikes Café\nSteel Vintage Bikes Café\n\nCafe\n\nWilhelmstraße 91\nOpen\n· Closes 5 pm\nCappuccino Grand Café - Mitte\nCappuccino Grand Café - Mitte\n\nCafe\n\nTucholskystraße 36\nContemporary setting for global fare\nOpen\n· Closes 7 pm\nUpdate results when map moves\nama Café\nCafe\n\nDirections\nSave\nNearby\nSend to phone\nShare\nReserve a table\nUnderstated venue with sidewalk tables serving bagel sandwiches, pizza & desserts, plus coffee.\nDorotheenstraße 83, 10117 Berlin, Germany\n\nOpen\n· Closes 6 pm\n\nGerman Unity Day\nmight affect these hours\nFind a table\ndish.co\nSign in\nMap data ©2026 GeoBasis-DE/BKG (©2009), Google\nPoland\nTerms\nPrivacy\nSend Product Feedback\n50 m",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [
+          "canvas",
+          "nested-scroll-container"
+        ],
+        "can_scroll_down": false,
+        "can_scroll_up": false,
+        "coverage": "viewport",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": false,
+          "can_scroll_down": false,
+          "coverage": "viewport",
+          "unsupported_states": [
+            "canvas",
+            "nested-scroll-container"
+          ]
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "type_text",
+            "index": 1,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.0,
+                "CLICK": 0.0,
+                "WAIT": 0.0,
+                "DONE": 0.0,
+                "TYPE_TEXT": 1.0
+              },
+              "target": {
+                "1": 1.0
+              }
+            },
+            "target": {
+              "role": "combobox",
+              "label": "Search Google Maps"
+            },
+            "text": "Brandenburg Gate",
+            "after": {
+              "url": "https://www.google.com/maps?hl=en",
+              "title": "Google Maps"
+            },
+            "elapsed_ms": 2136
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "type_text",
+          "rescue": false,
+          "input_ms": 12,
+          "settle_ms": 200
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 2,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.04,
+                "TYPE_TEXT": 0.0,
+                "WAIT": 0.03,
+                "DONE": 0.0,
+                "CLICK": 0.93
+              },
+              "target": {
+                "1": 0.17,
+                "2": 0.81,
+                "3": 0.0,
+                "5": 0.0,
+                "6": 0.01,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m2!4b1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Brandenburg Gate - Google Maps"
+            },
+            "elapsed_ms": 3579
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 7,
+          "settle_ms": 952
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 3,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 27,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.02,
+                "WAIT": 0.0,
+                "CLICK": 0.95,
+                "BLOCKED": 0.03
+              },
+              "target": {
+                "1": 0.02,
+                "2": 0.01,
+                "3": 0.0,
+                "4": 0.2,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.77,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.0,
+                "41": 0.0,
+                "42": 0.0,
+                "43": 0.0,
+                "44": 0.0,
+                "45": 0.0,
+                "46": 0.0,
+                "47": 0.0,
+                "48": 0.0,
+                "49": 0.0,
+                "50": 0.0,
+                "51": 0.0,
+                "52": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Nearby"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Brandenburg Gate - Google Maps"
+            },
+            "elapsed_ms": 4863
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 16,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 4,
+            "snapshot": "[redacted capability]",
+            "operation": "type_text",
+            "index": 1,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.0,
+                "BLOCKED": 0.02,
+                "DONE": 0.0,
+                "CLICK": 0.23,
+                "TYPE_TEXT": 0.75
+              },
+              "target": {
+                "1": 1.0
+              }
+            },
+            "target": {
+              "role": "combobox",
+              "label": "Search nearby Brandenburg Gate"
+            },
+            "text": "cafe",
+            "after": {
+              "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m6!3m5!1s0x47a851c655f20989:0x26bbfb4e84674c63!8m2!3d52.5162746!4d13.3777041!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Brandenburg Gate - Google Maps"
+            },
+            "elapsed_ms": 9602
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "type_text",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 200
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 5,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.01,
+                "BLOCKED": 0.01,
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.0,
+                "CLICK": 0.98
+              },
+              "target": {
+                "1": 0.02,
+                "2": 0.92,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.02,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.04,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.0,
+                "41": 0.0,
+                "42": 0.0,
+                "43": 0.0,
+                "44": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafe - Google Maps"
+            },
+            "elapsed_ms": 10855
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 7,
+          "settle_ms": 702
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 6,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 23,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.18,
+                "CLICK": 0.71,
+                "BLOCKED": 0.09,
+                "TYPE_TEXT": 0.01,
+                "DONE": 0.01
+              },
+              "target": {
+                "1": 0.02,
+                "2": 0.18000000000000002,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.12,
+                "6": 0.0,
+                "7": 0.02,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.07,
+                "12": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.59,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.0,
+                "41": 0.0,
+                "42": 0.0,
+                "43": 0.0,
+                "44": 0.0,
+                "45": 0.0,
+                "46": 0.0,
+                "47": 0.0,
+                "48": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Nearby"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!3m1!5s0x47a851c6f6399a69:0xcda158542550640e!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafe - Google Maps"
+            },
+            "elapsed_ms": 11322
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 9,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 7,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.01,
+                "TYPE_TEXT": 0.0,
+                "DONE": 0.02,
+                "BLOCKED": 0.12,
+                "CLICK": 0.85
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.03,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.63,
+                "6": 0.0,
+                "7": 0.17,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.06,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.09999999999999999,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.01,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafe - Google Maps"
+            },
+            "elapsed_ms": 12288
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 8,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.92,
+                "WAIT": 0.0,
+                "BLOCKED": 0.06,
+                "DONE": 0.02,
+                "TYPE_TEXT": 0.0
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.02,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.81,
+                "6": 0.0,
+                "7": 0.09,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.03,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.04,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafe - Google Maps"
+            },
+            "elapsed_ms": 12812
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 9,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 7,
+            "probabilities": {
+              "op": {
+                "DONE": 0.01,
+                "BLOCKED": 0.06,
+                "TYPE_TEXT": 0.0,
+                "WAIT": 0.01,
+                "CLICK": 0.92
+              },
+              "target": {
+                "1": 0.01,
+                "2": 0.09,
+                "3": 0.0,
+                "4": 0.0,
+                "6": 0.0,
+                "7": 0.75,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.05,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.08,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.02,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "All filters"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/@52.5162778,13.3751292,17z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafe - Google Maps"
+            },
+            "elapsed_ms": 13304
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 10,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 10,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 12,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.88,
+                "DONE": 0.0,
+                "BLOCKED": 0.1,
+                "WAIT": 0.02
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.31,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.0,
+                "8": 0.12,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.5700000000000001,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Any rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafe/@52.5162778,13.3751292,17z/data=!4m7!2m6!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafe - Google Maps"
+            },
+            "elapsed_ms": 14203
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 11,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 4,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.01,
+                "BLOCKED": 0.12,
+                "DONE": 0.0,
+                "CLICK": 0.87
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.7,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.01,
+                "8": 0.24000000000000002,
+                "10": 0.04,
+                "11": 0.01,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Brandenburg Gate"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Brandenburg+Gate/@52.5162778,13.3751292,17z/data=!4m12!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m2!1s0x47a851c655f20989:0x26bbfb4e84674c63!16zL20vMDE0a2Y4?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Brandenburg Gate - Google Maps"
+            },
+            "elapsed_ms": 15656
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 6,
+          "settle_ms": 702
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 12,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 12,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.65,
+                "DONE": 0.05,
+                "BLOCKED": 0.28,
+                "WAIT": 0.02,
+                "TYPE_TEXT": 0.0
+              },
+              "target": {
+                "1": 0.06999999999999999,
+                "2": 0.12,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.0,
+                "6": 0.0,
+                "7": 0.06999999999999999,
+                "8": 0.0,
+                "10": 0.01,
+                "11": 0.0,
+                "12": 0.51,
+                "13": 0.0,
+                "14": 0.02,
+                "15": 0.01,
+                "16": 0.01,
+                "17": 0.02,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "26": 0.04,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.12,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.0,
+                "41": 0.0,
+                "42": 0.0,
+                "43": 0.0,
+                "44": 0.0,
+                "45": 0.0,
+                "46": 0.0,
+                "47": 0.0,
+                "48": 0.0,
+                "49": 0.0,
+                "50": 0.0,
+                "51": 0.0,
+                "52": 0.0
+              }
+            },
+            "target": {
+              "role": "link",
+              "label": "ama Café"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5162778,13.3730907,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "ama Café - Google Maps"
+            },
+            "elapsed_ms": 18182
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 8,
+          "settle_ms": 651
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "stale; no input",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 1,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.0,
+              "BLOCKED": 0.0,
+              "DONE": 0.0,
+              "CLICK": 0.01,
+              "TYPE_TEXT": 0.99
+            },
+            "target": {
+              "1": 1.0
+            }
+          },
+          "confidence": 0.99,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3954,
+            "output_tokens": 301,
+            "cost": 0.000166068,
+            "retries": 0
+          },
+          "elapsed_ms": 353
+        },
+        {
+          "outcome": "executed",
+          "n": 2,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 1,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.0,
+              "CLICK": 0.0,
+              "WAIT": 0.0,
+              "DONE": 0.0,
+              "TYPE_TEXT": 1.0
+            },
+            "target": {
+              "1": 1.0
+            }
+          },
+          "confidence": 0.99,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4047,
+            "output_tokens": 309,
+            "cost": 0.000169974,
+            "retries": 0
+          },
+          "elapsed_ms": 323
+        },
+        {
+          "outcome": "executed",
+          "n": 3,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.04,
+              "TYPE_TEXT": 0.0,
+              "WAIT": 0.03,
+              "DONE": 0.0,
+              "CLICK": 0.93
+            },
+            "target": {
+              "1": 0.17,
+              "2": 0.81,
+              "3": 0.0,
+              "5": 0.0,
+              "6": 0.01,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0
+            }
+          },
+          "confidence": 0.91,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4119,
+            "output_tokens": 308,
+            "cost": 0.000172998,
+            "retries": 0
+          },
+          "elapsed_ms": 348
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 4,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 4,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.91,
+              "WAIT": 0.01,
+              "BLOCKED": 0.05,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.03
+            },
+            "target": {
+              "1": 0.03,
+              "2": 0.060000000000000005,
+              "3": 0.0,
+              "4": 0.86,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.03,
+              "16": 0.0,
+              "17": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.01,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.01,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0
+            }
+          },
+          "confidence": 0.9,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5349,
+            "output_tokens": 412,
+            "cost": 0.000224658,
+            "retries": 0
+          },
+          "elapsed_ms": 346
+        },
+        {
+          "outcome": "executed",
+          "n": 5,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 27,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.02,
+              "WAIT": 0.0,
+              "CLICK": 0.95,
+              "BLOCKED": 0.03
+            },
+            "target": {
+              "1": 0.02,
+              "2": 0.01,
+              "3": 0.0,
+              "4": 0.2,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.77,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0
+            }
+          },
+          "confidence": 0.94,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6247,
+            "output_tokens": 485,
+            "cost": 0.000262374,
+            "retries": 0
+          },
+          "elapsed_ms": 511
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 6,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 1,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.0,
+              "BLOCKED": 0.02,
+              "TYPE_TEXT": 0.66,
+              "DONE": 0.0,
+              "CLICK": 0.32
+            },
+            "target": {
+              "1": 1.0
+            }
+          },
+          "confidence": 0.56,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6694,
+            "output_tokens": 517,
+            "cost": 0.000281148,
+            "retries": 0
+          },
+          "elapsed_ms": 366
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 7,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 1,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.02,
+              "TYPE_TEXT": 0.64,
+              "DONE": 0.0,
+              "CLICK": 0.34,
+              "WAIT": 0.0
+            },
+            "target": {
+              "1": 1.0
+            }
+          },
+          "confidence": 0.55,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5989,
+            "output_tokens": 454,
+            "cost": 0.000251538,
+            "retries": 0
+          },
+          "elapsed_ms": 324
+        },
+        {
+          "outcome": "executed",
+          "n": 8,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 1,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.0,
+              "BLOCKED": 0.02,
+              "DONE": 0.0,
+              "CLICK": 0.23,
+              "TYPE_TEXT": 0.75
+            },
+            "target": {
+              "1": 1.0
+            }
+          },
+          "confidence": 0.68,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5608,
+            "output_tokens": 413,
+            "cost": 0.000235536,
+            "retries": 0
+          },
+          "elapsed_ms": 318
+        },
+        {
+          "outcome": "executed",
+          "n": 9,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.01,
+              "BLOCKED": 0.01,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.0,
+              "CLICK": 0.98
+            },
+            "target": {
+              "1": 0.02,
+              "2": 0.92,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.02,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.04,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0
+            }
+          },
+          "confidence": 0.98,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5618,
+            "output_tokens": 412,
+            "cost": 0.000235956,
+            "retries": 0
+          },
+          "elapsed_ms": 485
+        },
+        {
+          "outcome": "executed",
+          "n": 10,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 23,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.18,
+              "CLICK": 0.71,
+              "BLOCKED": 0.09,
+              "TYPE_TEXT": 0.01,
+              "DONE": 0.01
+            },
+            "target": {
+              "1": 0.02,
+              "2": 0.18000000000000002,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.12,
+              "6": 0.0,
+              "7": 0.02,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.07,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.59,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0
+            }
+          },
+          "confidence": 0.65,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5987,
+            "output_tokens": 445,
+            "cost": 0.000251454,
+            "retries": 0
+          },
+          "elapsed_ms": 336
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 11,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 23,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.01,
+              "WAIT": 0.05,
+              "CLICK": 0.86,
+              "BLOCKED": 0.08
+            },
+            "target": {
+              "1": 0.01,
+              "2": 0.12,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.06,
+              "6": 0.0,
+              "7": 0.02,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.04,
+              "12": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.75,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0
+            }
+          },
+          "confidence": 0.82,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5728,
+            "output_tokens": 421,
+            "cost": 0.000240576,
+            "retries": 0
+          },
+          "elapsed_ms": 377
+        },
+        {
+          "outcome": "executed",
+          "n": 12,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.01,
+              "TYPE_TEXT": 0.0,
+              "DONE": 0.02,
+              "BLOCKED": 0.12,
+              "CLICK": 0.85
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.03,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.63,
+              "6": 0.0,
+              "7": 0.17,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.06,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.09999999999999999,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.01,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0
+            }
+          },
+          "confidence": 0.8,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5228,
+            "output_tokens": 372,
+            "cost": 0.000219576,
+            "retries": 0
+          },
+          "elapsed_ms": 354
+        },
+        {
+          "outcome": "executed",
+          "n": 13,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.92,
+              "WAIT": 0.0,
+              "BLOCKED": 0.06,
+              "DONE": 0.02,
+              "TYPE_TEXT": 0.0
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.02,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.81,
+              "6": 0.0,
+              "7": 0.09,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.03,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.04,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0
+            }
+          },
+          "confidence": 0.89,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5262,
+            "output_tokens": 372,
+            "cost": 0.000221004,
+            "retries": 0
+          },
+          "elapsed_ms": 338
+        },
+        {
+          "outcome": "executed",
+          "n": 14,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 7,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.01,
+              "BLOCKED": 0.06,
+              "TYPE_TEXT": 0.0,
+              "WAIT": 0.01,
+              "CLICK": 0.92
+            },
+            "target": {
+              "1": 0.01,
+              "2": 0.09,
+              "3": 0.0,
+              "4": 0.0,
+              "6": 0.0,
+              "7": 0.75,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.05,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.08,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.02,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0
+            }
+          },
+          "confidence": 0.9,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5253,
+            "output_tokens": 365,
+            "cost": 0.000220626,
+            "retries": 0
+          },
+          "elapsed_ms": 372
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 15,
+          "snapshot": "[redacted capability]",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.03,
+              "BLOCKED": 0.5,
+              "CLICK": 0.45,
+              "DONE": 0.02
+            },
+            "target": {}
+          },
+          "confidence": 0.33,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4262,
+            "output_tokens": 287,
+            "cost": 0.000179004,
+            "retries": 0
+          },
+          "elapsed_ms": 369
+        },
+        {
+          "outcome": "executed",
+          "n": 16,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.88,
+              "DONE": 0.0,
+              "BLOCKED": 0.1,
+              "WAIT": 0.02
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.31,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.12,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.5700000000000001,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0
+            }
+          },
+          "confidence": 0.84,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3856,
+            "output_tokens": 270,
+            "cost": 0.000161952,
+            "retries": 0
+          },
+          "elapsed_ms": 393
+        },
+        {
+          "outcome": "refused; no input: the row is covered at its click point",
+          "n": 17,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.08,
+              "WAIT": 0.01,
+              "DONE": 0.0,
+              "CLICK": 0.91
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.24000000000000002,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.0,
+              "8": 0.14,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.62,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0
+            }
+          },
+          "confidence": 0.86,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3890,
+            "output_tokens": 270,
+            "cost": 0.00016338,
+            "retries": 0
+          },
+          "elapsed_ms": 342
+        },
+        {
+          "outcome": "executed",
+          "n": 18,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 4,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.01,
+              "BLOCKED": 0.12,
+              "DONE": 0.0,
+              "CLICK": 0.87
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.7,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.01,
+              "8": 0.24000000000000002,
+              "10": 0.04,
+              "11": 0.01,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0
+            }
+          },
+          "confidence": 0.82,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 3848,
+            "output_tokens": 261,
+            "cost": 0.000161616,
+            "retries": 0
+          },
+          "elapsed_ms": 307
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 19,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.39,
+              "TYPE_TEXT": 0.01,
+              "DONE": 0.03,
+              "CLICK": 0.55,
+              "WAIT": 0.02
+            },
+            "target": {
+              "1": 0.04,
+              "2": 0.15000000000000002,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.08,
+              "8": 0.0,
+              "10": 0.08,
+              "11": 0.0,
+              "12": 0.5700000000000001,
+              "13": 0.0,
+              "14": 0.02,
+              "15": 0.01,
+              "16": 0.01,
+              "17": 0.02,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.01,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0
+            }
+          },
+          "confidence": 0.44,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4915,
+            "output_tokens": 333,
+            "cost": 0.00020643,
+            "retries": 0
+          },
+          "elapsed_ms": 350
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 20,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.25,
+              "WAIT": 0.02,
+              "CLICK": 0.67,
+              "DONE": 0.06,
+              "TYPE_TEXT": 0.0
+            },
+            "target": {
+              "1": 0.05,
+              "2": 0.09999999999999999,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.06999999999999999,
+              "8": 0.0,
+              "10": 0.01,
+              "11": 0.0,
+              "12": 0.55,
+              "13": 0.0,
+              "14": 0.02,
+              "15": 0.01,
+              "16": 0.0,
+              "17": 0.02,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "26": 0.03,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.13,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0
+            }
+          },
+          "confidence": 0.58,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6608,
+            "output_tokens": 469,
+            "cost": 0.000277536,
+            "retries": 0
+          },
+          "elapsed_ms": 338
+        },
+        {
+          "outcome": "executed",
+          "n": 21,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.65,
+              "DONE": 0.05,
+              "BLOCKED": 0.28,
+              "WAIT": 0.02,
+              "TYPE_TEXT": 0.0
+            },
+            "target": {
+              "1": 0.06999999999999999,
+              "2": 0.12,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.0,
+              "6": 0.0,
+              "7": 0.06999999999999999,
+              "8": 0.0,
+              "10": 0.01,
+              "11": 0.0,
+              "12": 0.51,
+              "13": 0.0,
+              "14": 0.02,
+              "15": 0.01,
+              "16": 0.01,
+              "17": 0.02,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "26": 0.04,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.12,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0,
+              "44": 0.0,
+              "45": 0.0,
+              "46": 0.0,
+              "47": 0.0,
+              "48": 0.0,
+              "49": 0.0,
+              "50": 0.0,
+              "51": 0.0,
+              "52": 0.0
+            }
+          },
+          "confidence": 0.55,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6608,
+            "output_tokens": 469,
+            "cost": 0.000277536,
+            "retries": 0
+          },
+          "elapsed_ms": 372
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 22,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 1,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.13,
+              "CLICK": 0.12,
+              "DONE": 0.01,
+              "WAIT": 0.0,
+              "TYPE_TEXT": 0.74
+            },
+            "target": {
+              "1": 1.0
+            }
+          },
+          "confidence": 0.68,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6892,
+            "output_tokens": 493,
+            "cost": 0.000289464,
+            "retries": 0
+          },
+          "elapsed_ms": 346
+        },
+        {
+          "n": 23,
+          "snapshot": "[redacted capability]",
+          "operation": "type_text",
+          "index": 1,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.75,
+              "WAIT": 0.0,
+              "BLOCKED": 0.09,
+              "CLICK": 0.15,
+              "DONE": 0.01
+            },
+            "target": {
+              "1": 1.0
+            }
+          },
+          "confidence": 0.69,
+          "outcome": "predicted",
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 6983,
+            "output_tokens": 501,
+            "cost": 0.000293286,
+            "retries": 0
+          },
+          "elapsed_ms": 346
+        }
+      ],
+      "text_calls": [
+        {
+          "field": "Search Google Maps",
+          "value": "Brandenburg Gate",
+          "outcome": "value",
+          "usage": {
+            "input_tokens": 222,
+            "output_tokens": 62,
+            "cost": 1.818e-05,
+            "retries": null
+          },
+          "elapsed_ms": 1000
+        },
+        {
+          "field": "Search nearby Brandenburg Gate",
+          "value": "cafe",
+          "outcome": "value",
+          "usage": {
+            "input_tokens": 353,
+            "output_tokens": 71,
+            "cost": 2.477e-05,
+            "retries": null
+          },
+          "elapsed_ms": 1172
+        },
+        {
+          "field": "Search nearby Brandenburg Gate",
+          "value": "cafe",
+          "outcome": "value",
+          "usage": {
+            "input_tokens": 449,
+            "output_tokens": 79,
+            "cost": 2.981e-05,
+            "retries": null
+          },
+          "elapsed_ms": 2177
+        },
+        {
+          "field": "combobox",
+          "value": "ama Café, Dorotheenstraße 83",
+          "outcome": "value",
+          "usage": {
+            "input_tokens": 605,
+            "output_tokens": 295,
+            "cost": 6.845e-05,
+            "retries": null
+          },
+          "elapsed_ms": 1898
+        },
+        {
+          "field": "combobox",
+          "value": null,
+          "outcome": "provider-error",
+          "usage": null,
+          "elapsed_ms": 1805
+        }
+      ],
+      "metrics": {
+        "actions": 12,
+        "predictions": 23,
+        "text_calls": 5,
+        "observation_calls": 23,
+        "observation_retries": 13,
+        "stale_decisions": 10,
+        "bootstrap_ms": 0,
+        "observation_ms": 6038,
+        "prediction_ms": 8314,
+        "text_helper_ms": 8052,
+        "input_ms": 91,
+        "settle_ms": 3707,
+        "elapsed_ms": 22658
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/maps/place/ama+Caf%C3%A9/@52.5183219,13.379638,17z/data=!4m16!1m8!2m7!1scafe!3m5!2sBrandenburg+Gate,+Pariser+Platz,+10117+Berlin,+Germany!3s0x47a851c655f20989:0x26bbfb4e84674c63!4m2!1d13.3777041!2d52.5162746!3m6!1s0x47a8517bec30900d:0x58141b0e4e12fa41!8m2!3d52.5183219!4d13.3841441!15sCgRjYWZlWgYiBGNhZmWSAQRjYWZlmgEkQ2hkRFNVaE5NRzluUzBWSlEwRm5TVU40TUhSaE9ETm5SUkFC4AEA-gEECCwQHw!16s%2Fg%2F11j3vzxbw1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "ama Café - Google Maps",
+      "page_kind": {
+        "name": "place-<slug>",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "combobox",
+          "name": "",
+          "value": "cafe",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 2,
+          "role": "button",
+          "name": "Search"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Close"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "Search this area"
+        },
+        {
+          "index": 5,
+          "role": "button",
+          "name": "Menu"
+        },
+        {
+          "index": 6,
+          "role": "button",
+          "name": "Saved"
+        },
+        {
+          "index": 7,
+          "role": "button",
+          "name": "Recents"
+        },
+        {
+          "index": 8,
+          "role": "button",
+          "name": "2 places Berlin"
+        },
+        {
+          "index": 9,
+          "role": "button",
+          "name": "Get app"
+        },
+        {
+          "index": 10,
+          "role": "heading",
+          "name": "Results"
+        },
+        {
+          "index": 11,
+          "role": "button",
+          "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+        },
+        {
+          "index": 12,
+          "role": "button",
+          "name": "Share"
+        },
+        {
+          "index": 13,
+          "role": "link",
+          "name": "ama Café"
+        },
+        {
+          "index": 14,
+          "role": "link",
+          "name": "Reserve a table"
+        },
+        {
+          "index": 15,
+          "role": "link",
+          "name": "Café Nénom"
+        },
+        {
+          "index": 16,
+          "role": "link",
+          "name": "Boundless Berlin"
+        },
+        {
+          "index": 17,
+          "role": "link",
+          "name": "Steel Vintage Bikes Café"
+        },
+        {
+          "index": 18,
+          "role": "link",
+          "name": "Cappuccino Grand Café - Mitte"
+        },
+        {
+          "index": 19,
+          "role": "link",
+          "name": "Reserve a table"
+        },
+        {
+          "index": 20,
+          "role": "link",
+          "name": "Order online"
+        },
+        {
+          "index": 21,
+          "role": "checkbox",
+          "name": "Update results when map moves",
+          "state": [
+            "unchecked"
+          ]
+        },
+        {
+          "index": 22,
+          "role": "button",
+          "name": "Close"
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Photo of ama Café"
+        },
+        {
+          "index": 24,
+          "role": "button",
+          "name": "See photos"
+        },
+        {
+          "index": 25,
+          "role": "heading",
+          "name": "ama Café"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+        },
+        {
+          "index": 27,
+          "role": "button",
+          "name": "Cafe"
+        },
+        {
+          "index": 28,
+          "role": "tab",
+          "name": "Overview of ama Café",
+          "state": [
+            "selected"
+          ]
+        },
+        {
+          "index": 29,
+          "role": "tab",
+          "name": "About ama Café"
+        },
+        {
+          "index": 30,
+          "role": "button",
+          "name": "Directions"
+        },
+        {
+          "index": 31,
+          "role": "button",
+          "name": "Save"
+        },
+        {
+          "index": 32,
+          "role": "button",
+          "name": "Nearby"
+        },
+        {
+          "index": 33,
+          "role": "button",
+          "name": "Send to phone"
+        },
+        {
+          "index": 34,
+          "role": "button",
+          "name": "Share"
+        },
+        {
+          "index": 35,
+          "role": "link",
+          "name": "Reserve a table"
+        },
+        {
+          "index": 36,
+          "role": "button",
+          "name": "Understated venue with sidewalk tables serving bagel sandwiches, pizza & desserts, plus coffee."
+        },
+        {
+          "index": 37,
+          "role": "button",
+          "name": "Address: Dorotheenstraße 83, 10117 Berlin, Germany "
+        },
+        {
+          "index": 38,
+          "role": "button",
+          "name": "Copy address"
+        },
+        {
+          "index": 39,
+          "role": "button",
+          "name": "Hours Open · Closes 6 pm Show open hours for the week German Unity Day might affect these hours",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 40,
+          "role": "link",
+          "name": "Find a table dish.co"
+        },
+        {
+          "index": 41,
+          "role": "link",
+          "name": "Open reservation link"
+        },
+        {
+          "index": 42,
+          "role": "button",
+          "name": "Collapse side panel"
+        },
+        {
+          "index": 43,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 44,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 45,
+          "role": "button",
+          "name": "Show Your Location"
+        },
+        {
+          "index": 46,
+          "role": "button",
+          "name": "Zoom in"
+        },
+        {
+          "index": 47,
+          "role": "button",
+          "name": "Zoom out"
+        },
+        {
+          "index": 48,
+          "role": "button",
+          "name": "Browse Street View images"
+        },
+        {
+          "index": 49,
+          "role": "button",
+          "name": "Street View"
+        },
+        {
+          "index": 50,
+          "role": "button",
+          "name": "Poland"
+        },
+        {
+          "index": 51,
+          "role": "button",
+          "name": "Terms"
+        },
+        {
+          "index": 52,
+          "role": "button",
+          "name": "Privacy"
+        },
+        {
+          "index": 53,
+          "role": "button",
+          "name": "Send Product Feedback"
+        },
+        {
+          "index": 54,
+          "role": "button",
+          "name": "50 m"
+        }
+      ],
+      "total": 54,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "reason": "TYPE_TEXT helper failed (model-unavailable): invalid response: response.choices.[0]: choice.message: message.content: expected string, got null, got {\"id\":\"gen-1791027988-g2NFEP9dehsOjrP1Iwjl\",\"object\":\"chat.completion\",\"created\":1791027988,\"model\":\"inception/mercury-2.5\",\"provider\":\"Inception\",\"system_fingerprint\":null,\"service_tier\":null,\"choice...",
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-03T11:46:30.333945Z-error.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}

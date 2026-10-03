@@ -1,0 +1,467 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.1467926109999098,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/travel/flights?tfs=CBwQARocagwIAhIIL20vMDg0NWJyDAgDEggvbS8wNXF0ahocagwIAxIIL20vMDVxdGpyDAgCEggvbS8wODQ1YkABSAFwAYIBCwj___________8BmAEB&tfu=KgIIAw&hl=en",
+    "title": "Find Cheap Flights Worldwide & Book Your Ticket - Google Flights",
+    "page_kind": {
+      "name": "flights",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "textbox",
+        "name": "Departure"
+      },
+      {
+        "index": 2,
+        "role": "textbox",
+        "name": "Return"
+      },
+      {
+        "index": 3,
+        "role": "textbox",
+        "name": "Departure"
+      },
+      {
+        "index": 4,
+        "role": "textbox",
+        "name": "Return"
+      },
+      {
+        "index": 5,
+        "role": "combobox",
+        "name": "Select your ticket type. Round trip",
+        "value": "Round trip",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 6,
+        "role": "button",
+        "name": "Reset",
+        "state": [
+          "disabled"
+        ]
+      },
+      {
+        "index": 7,
+        "role": "button",
+        "name": "Saturday, October 3, 2026"
+      },
+      {
+        "index": 8,
+        "role": "button",
+        "name": "Sunday, October 4, 2026"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Monday, October 5, 2026"
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Tuesday, October 6, 2026"
+      },
+      {
+        "index": 11,
+        "role": "button",
+        "name": "Wednesday, October 7, 2026"
+      },
+      {
+        "index": 12,
+        "role": "button",
+        "name": "Thursday, October 8, 2026"
+      },
+      {
+        "index": 13,
+        "role": "button",
+        "name": "Friday, October 9, 2026"
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "Saturday, October 10, 2026"
+      },
+      {
+        "index": 15,
+        "role": "button",
+        "name": "Sunday, October 11, 2026"
+      },
+      {
+        "index": 16,
+        "role": "button",
+        "name": "Monday, October 12, 2026"
+      },
+      {
+        "index": 17,
+        "role": "button",
+        "name": "Tuesday, October 13, 2026"
+      },
+      {
+        "index": 18,
+        "role": "button",
+        "name": "Wednesday, October 14, 2026"
+      },
+      {
+        "index": 19,
+        "role": "button",
+        "name": "Thursday, October 15, 2026"
+      },
+      {
+        "index": 20,
+        "role": "button",
+        "name": "Friday, October 16, 2026"
+      },
+      {
+        "index": 21,
+        "role": "button",
+        "name": "Saturday, October 17, 2026"
+      },
+      {
+        "index": 22,
+        "role": "button",
+        "name": "Sunday, October 18, 2026"
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Monday, October 19, 2026"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "Tuesday, October 20, 2026"
+      },
+      {
+        "index": 25,
+        "role": "button",
+        "name": "Wednesday, October 21, 2026"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "Thursday, October 22, 2026"
+      },
+      {
+        "index": 27,
+        "role": "button",
+        "name": "Friday, October 23, 2026"
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Saturday, October 24, 2026"
+      },
+      {
+        "index": 29,
+        "role": "button",
+        "name": "Sunday, October 25, 2026"
+      },
+      {
+        "index": 30,
+        "role": "button",
+        "name": "Monday, October 26, 2026"
+      },
+      {
+        "index": 31,
+        "role": "button",
+        "name": "Tuesday, October 27, 2026"
+      },
+      {
+        "index": 32,
+        "role": "button",
+        "name": "Wednesday, October 28, 2026"
+      },
+      {
+        "index": 33,
+        "role": "button",
+        "name": "Thursday, October 29, 2026"
+      },
+      {
+        "index": 34,
+        "role": "button",
+        "name": "Friday, October 30, 2026"
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Saturday, October 31, 2026"
+      },
+      {
+        "index": 36,
+        "role": "button",
+        "name": "Sunday, November 1, 2026"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Monday, November 2, 2026"
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "Tuesday, November 3, 2026"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Wednesday, November 4, 2026"
+      },
+      {
+        "index": 40,
+        "role": "button",
+        "name": "Thursday, November 5, 2026"
+      },
+      {
+        "index": 41,
+        "role": "button",
+        "name": "Friday, November 6, 2026"
+      },
+      {
+        "index": 42,
+        "role": "button",
+        "name": "Saturday, November 7, 2026"
+      },
+      {
+        "index": 43,
+        "role": "button",
+        "name": "Sunday, November 8, 2026"
+      },
+      {
+        "index": 44,
+        "role": "button",
+        "name": "Monday, November 9, 2026"
+      },
+      {
+        "index": 45,
+        "role": "button",
+        "name": "Tuesday, November 10, 2026"
+      },
+      {
+        "index": 46,
+        "role": "button",
+        "name": "Wednesday, November 11, 2026"
+      },
+      {
+        "index": 47,
+        "role": "button",
+        "name": "Thursday, November 12, 2026"
+      },
+      {
+        "index": 48,
+        "role": "button",
+        "name": "Friday, November 13, 2026"
+      },
+      {
+        "index": 49,
+        "role": "button",
+        "name": "Saturday, November 14, 2026"
+      },
+      {
+        "index": 50,
+        "role": "button",
+        "name": "Sunday, November 15, 2026"
+      },
+      {
+        "index": 51,
+        "role": "button",
+        "name": "Monday, November 16, 2026"
+      },
+      {
+        "index": 52,
+        "role": "button",
+        "name": "Tuesday, November 17, 2026"
+      },
+      {
+        "index": 53,
+        "role": "button",
+        "name": "Wednesday, November 18, 2026"
+      },
+      {
+        "index": 54,
+        "role": "button",
+        "name": "Thursday, November 19, 2026"
+      },
+      {
+        "index": 55,
+        "role": "button",
+        "name": "Friday, November 20, 2026"
+      },
+      {
+        "index": 56,
+        "role": "button",
+        "name": "Saturday, November 21, 2026"
+      },
+      {
+        "index": 57,
+        "role": "button",
+        "name": "Sunday, November 22, 2026"
+      },
+      {
+        "index": 58,
+        "role": "button",
+        "name": "Monday, November 23, 2026"
+      },
+      {
+        "index": 59,
+        "role": "button",
+        "name": "Tuesday, November 24, 2026"
+      },
+      {
+        "index": 60,
+        "role": "button",
+        "name": "Wednesday, November 25, 2026"
+      },
+      {
+        "index": 61,
+        "role": "button",
+        "name": "Thursday, November 26, 2026"
+      },
+      {
+        "index": 62,
+        "role": "button",
+        "name": "Friday, November 27, 2026"
+      },
+      {
+        "index": 63,
+        "role": "button",
+        "name": "Saturday, November 28, 2026"
+      },
+      {
+        "index": 64,
+        "role": "button",
+        "name": "Sunday, November 29, 2026"
+      },
+      {
+        "index": 65,
+        "role": "button",
+        "name": "Monday, November 30, 2026"
+      },
+      {
+        "index": 66,
+        "role": "button",
+        "name": "Tuesday, December 1, 2026"
+      },
+      {
+        "index": 67,
+        "role": "button",
+        "name": "Wednesday, December 2, 2026"
+      },
+      {
+        "index": 68,
+        "role": "button",
+        "name": "Thursday, December 3, 2026"
+      },
+      {
+        "index": 69,
+        "role": "button",
+        "name": "Monday, December 7, 2026"
+      },
+      {
+        "index": 70,
+        "role": "button",
+        "name": "Tuesday, December 8, 2026"
+      },
+      {
+        "index": 71,
+        "role": "button",
+        "name": "Wednesday, December 9, 2026"
+      },
+      {
+        "index": 72,
+        "role": "button",
+        "name": "Thursday, December 10, 2026"
+      },
+      {
+        "index": 73,
+        "role": "button",
+        "name": "Monday, December 14, 2026"
+      },
+      {
+        "index": 74,
+        "role": "button",
+        "name": "Tuesday, December 15, 2026"
+      },
+      {
+        "index": 75,
+        "role": "button",
+        "name": "Wednesday, December 16, 2026"
+      },
+      {
+        "index": 76,
+        "role": "button",
+        "name": "Thursday, December 17, 2026"
+      },
+      {
+        "index": 77,
+        "role": "button",
+        "name": "Monday, December 21, 2026"
+      },
+      {
+        "index": 78,
+        "role": "button",
+        "name": "Tuesday, December 22, 2026"
+      },
+      {
+        "index": 79,
+        "role": "button",
+        "name": "Wednesday, December 23, 2026"
+      },
+      {
+        "index": 80,
+        "role": "button",
+        "name": "Thursday, December 24, 2026"
+      },
+      {
+        "index": 81,
+        "role": "button",
+        "name": "Monday, December 28, 2026"
+      },
+      {
+        "index": 82,
+        "role": "button",
+        "name": "Tuesday, December 29, 2026"
+      },
+      {
+        "index": 83,
+        "role": "button",
+        "name": "Wednesday, December 30, 2026"
+      },
+      {
+        "index": 84,
+        "role": "button",
+        "name": "Thursday, December 31, 2026"
+      },
+      {
+        "index": 85,
+        "role": "button",
+        "name": "Next"
+      },
+      {
+        "index": 86,
+        "role": "button",
+        "name": "Done. "
+      }
+    ],
+    "total": 86,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

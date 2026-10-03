@@ -1,0 +1,208 @@
+{
+  "story": "map-op07",
+  "head": "8e5e92d379c6a785788c030e5a82a92d1e2cd674",
+  "binary_sha256": "e5c23867dcf38e8225e3a7b08e14fdb16ab1f3be395db302245dd76f5e8f40eb",
+  "next_month": "November 2026",
+  "criterion": "mission 5, fresh service, only the installed playbook, learning off, different arguments, independently verified from the page, inclusive cost lower than mission 1",
+  "sites": {
+    "books": {
+      "passed": false,
+      "installed_playbook": true,
+      "mission_5_independently_verified": false,
+      "mission_5_lower_inclusive_cost_than_mission_1": false,
+      "learning_off_on_mission_5": true,
+      "cost_inclusive_usd": [
+        0.000935844,
+        0.014604618,
+        0.025544355,
+        0.033171638,
+        0.001572642
+      ],
+      "cost_browser_usd": [
+        0.000935844,
+        0.014604618,
+        0.00089712,
+        0.004113208,
+        0.001572642
+      ],
+      "cost_learning_usd": [
+        0,
+        0,
+        0.024647235,
+        0.02905843,
+        0
+      ],
+      "statuses": [
+        "done",
+        "limit",
+        "done",
+        "done",
+        "done"
+      ],
+      "mission_5_answer": null,
+      "mission_5_page": "Horror category viewport; 5 of 17 titles visible and matched; 12 missing",
+      "installed_playbooks": [
+        {
+          "site": "toscrape.com",
+          "entry": "https://books.toscrape.com/",
+          "description": "Learned toscrape.com",
+          "pages": [
+            {
+              "name": "books-category",
+              "description": "Inferred books-<slug>",
+              "url_pattern": "https://books.toscrape.com/catalogue/category/books/*/index.html",
+              "repeatable": true
+            },
+            {
+              "name": "books-categories",
+              "description": "Inferred home",
+              "url_pattern": "https://books.toscrape.com/",
+              "repeatable": true
+            }
+          ],
+          "procedures": [
+            {
+              "provenance": {
+                "traces": [
+                  "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:42:38.372912Z-done.json",
+                  "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T11:44:19.590018Z-done.json"
+                ],
+                "model": "openai/gpt-6-luna",
+                "time": "2026-10-03T11:47:43.587238Z",
+                "tries": 0,
+                "path": [
+                  "books-categories",
+                  "books-category"
+                ],
+                "entry_kind": "home",
+                "exit_kind": "books-<slug>",
+                "signature": [
+                  [
+                    "click",
+                    {
+                      "role": "link",
+                      "label": "travel"
+                    }
+                  ]
+                ],
+                "kind_mapping": [
+                  [
+                    "books-<slug>",
+                    "books-category"
+                  ],
+                  [
+                    "home",
+                    "books-categories"
+                  ]
+                ],
+                "repeatable": true,
+                "reason": "no irreversible submission in the observed path",
+                "gate": "replay",
+                "repair": false,
+                "model_calls": 2,
+                "model_cost": 0.011815929999999999
+              },
+              "slug": "open-book-category",
+              "description": "Open the requested book category from the category links.",
+              "args": {
+                "category": {
+                  "from": "mission"
+                }
+              },
+              "steps": [
+                {
+                  "goal": "Wait for a link named {category} to be present",
+                  "until": [
+                    "a link named {category} is present"
+                  ]
+                },
+                {
+                  "goal": "Click the link named {category}",
+                  "until": [
+                    "the page is books-category"
+                  ]
+                }
+              ],
+              "expect": [
+                "the page is books-category",
+                "the requested category is displayed"
+              ],
+              "expect_timeout_s": 15
+            }
+          ]
+        }
+      ],
+      "scripts": []
+    },
+    "flights": {
+      "passed": false,
+      "installed_playbook": false,
+      "mission_5_independently_verified": false,
+      "mission_5_lower_inclusive_cost_than_mission_1": false,
+      "learning_off_on_mission_5": true,
+      "cost_inclusive_usd": [
+        0.005253754,
+        0.043409826,
+        0.028846993,
+        0.001431548,
+        0.04095649
+      ],
+      "cost_browser_usd": [
+        0.005253754,
+        0.008053686,
+        0.004542568,
+        0.001431548,
+        0.04095649
+      ],
+      "cost_learning_usd": [
+        0,
+        0.03535614,
+        0.024304425,
+        0,
+        0
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done",
+        "error",
+        "done"
+      ],
+      "mission_5_answer": null,
+      "mission_5_page": "Poznań to Amsterdam, URL dates 2026-11-01 to 2026-11-04, page text says cheapest shown is 751 PLN on Sun, Nov 1. Not a returned answer and not proof of the cheapest fare for the whole month.",
+      "installed_playbooks": [],
+      "scripts": [],
+      "compile_drops": [
+        "name page kind flights from its observed title and labels in kinds, not its URL shape",
+        "procedure find-cheapest-flight: goal until must not be empty"
+      ]
+    },
+    "maps": {
+      "passed": false,
+      "installed_playbook": false,
+      "harness_mission_5_verified": false,
+      "reviewer_page_supports_answer": true,
+      "mission_5_lower_inclusive_cost_than_mission_1": true,
+      "learning_off_on_mission_5": true,
+      "cost_inclusive_usd": [
+        0.035875224,
+        0.022698868,
+        null,
+        0.032612449,
+        0.018040663
+      ],
+      "statuses": [
+        "error",
+        "limit",
+        "error",
+        "blocked",
+        "done"
+      ],
+      "mission_5_answer": "WatchHouse Tower Bridge — 37 Shad Thames, rated 4.6, near the Tower of London.",
+      "mission_5_page": "Results list shows WatchHouse Tower Bridge, 4.6, Coffee shop, 37 Shad Thames, in a cafe search anchored on Tower of London. Harness verifier false-negative: first heading is Results, no address element, no !3d!4d pair, landmark not in reply.steps.",
+      "installed_playbooks": [],
+      "scripts": [],
+      "note": "Mission 3 browser cost unreported because the text-helper error reply did not carry a top-level model_cost."
+    }
+  }
+}

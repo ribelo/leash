@@ -1,0 +1,118 @@
+{
+  "command": [
+    "shot",
+    "[redacted]",
+    "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-03-op07b/books/mission-2/page.png"
+  ],
+  "exit_code": 75,
+  "elapsed_s": 30.008508421999977,
+  "reply": {
+    "code": "renderer-unresponsive",
+    "message": "browser operation timed out",
+    "hint": "the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off",
+    "detail": {
+      "tab": "[redacted capability]",
+      "url": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html",
+      "title": "Mystery | Books to Scrape - Sandbox",
+      "entries": [
+        {
+          "at": "2026-10-03T11:43:45Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:42Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:38Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:35Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:33Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:29Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:26Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:22Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:19Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:15Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:12Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:09Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:06Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:43:02Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:42:59Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:42:54Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:42:51Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:42:46Z",
+          "kind": "request-failed",
+          "text": ""
+        },
+        {
+          "at": "2026-10-03T11:42:46Z",
+          "kind": "request-failed",
+          "text": ""
+        }
+      ]
+    }
+  },
+  "stdout": null,
+  "stderr": null
+}

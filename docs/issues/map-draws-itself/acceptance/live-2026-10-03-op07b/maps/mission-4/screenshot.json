@@ -1,0 +1,73 @@
+{
+  "command": [
+    "shot",
+    "[redacted]",
+    "/home/ribelo/projects/ribelo/leash/docs/issues/map-draws-itself/acceptance/live-2026-10-03-op07b/maps/mission-4/page.png"
+  ],
+  "exit_code": 75,
+  "elapsed_s": 30.00532414999998,
+  "reply": {
+    "code": "renderer-unresponsive",
+    "message": "browser operation timed out",
+    "hint": "the page's renderer is not answering; a bot-detection challenge or a hung script is likely; shot may still work; close the tab or hand off",
+    "detail": {
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "cafes near Sagrada Família - Google Maps",
+      "entries": [
+        {
+          "at": "2026-10-03T11:48:44Z",
+          "kind": "request-failed",
+          "text": "net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "at": "2026-10-03T11:48:20Z",
+          "kind": "request-failed",
+          "text": "net::ERR_ABORTED"
+        },
+        {
+          "at": "2026-10-03T11:48:13Z",
+          "kind": "request-failed",
+          "text": "net::ERR_BLOCKED_BY_ORB"
+        },
+        {
+          "at": "2026-10-03T11:48:13Z",
+          "kind": "request-failed",
+          "text": "net::ERR_BLOCKED_BY_ORB"
+        },
+        {
+          "at": "2026-10-03T11:47:28Z",
+          "kind": "request-failed",
+          "text": "net::ERR_ABORTED"
+        },
+        {
+          "at": "2026-10-03T11:47:18Z",
+          "kind": "request-failed",
+          "text": "net::ERR_ABORTED"
+        },
+        {
+          "at": "2026-10-03T11:47:07Z",
+          "kind": "request-failed",
+          "text": "net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "at": "2026-10-03T11:46:55Z",
+          "kind": "request-failed",
+          "text": "net::ERR_CONNECTION_REFUSED"
+        },
+        {
+          "at": "2026-10-03T11:46:52Z",
+          "kind": "request-failed",
+          "text": "net::ERR_ABORTED"
+        },
+        {
+          "at": "2026-10-03T11:46:52Z",
+          "kind": "request-failed",
+          "text": "net::ERR_CONNECTION_REFUSED"
+        }
+      ]
+    }
+  },
+  "stdout": null,
+  "stderr": null
+}

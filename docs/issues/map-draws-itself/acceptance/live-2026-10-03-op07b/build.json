@@ -1,0 +1,11 @@
+{
+  "git_head": "8e5e92d379c6a785788c030e5a82a92d1e2cd674",
+  "binary": "/home/ribelo/projects/ribelo/leash/_build_op07b/default/packages/leash/bin/main.exe",
+  "binary_sha256": "e5c23867dcf38e8225e3a7b08e14fdb16ab1f3be395db302245dd76f5e8f40eb",
+  "binary_bytes": 16408680,
+  "binary_mtime": 1791027657.8105361,
+  "build_command": "timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_op07b bash -c 'ulimit -v 16777216; exec dune build @install'",
+  "build_exit": 0,
+  "build_log_bytes": 7,
+  "recorded_unix": 1791027735.8309834
+}

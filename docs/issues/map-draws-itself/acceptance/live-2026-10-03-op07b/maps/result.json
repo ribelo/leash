@@ -1,0 +1,12 @@
+{
+  "gate": "maps",
+  "passed": true,
+  "missions_recorded": 4,
+  "failures": [],
+  "elapsed_s": 457.43842697143555,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

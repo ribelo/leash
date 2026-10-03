@@ -1,0 +1,1016 @@
+{
+  "command": [
+    "drive",
+    "collect every book title and price in the Horror category",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "900",
+    "--max-steps",
+    "60",
+    "--max-procedures",
+    "20",
+    "--out",
+    "<PRIVATE_ROOT>/output-5.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 15.202769723000529,
+  "reply": {
+    "unattended": [],
+    "playbook_choices": [
+      {
+        "source": "jev",
+        "key": "book:<PRIVATE_ROOT>/config/leash/playbooks/toscrape.com/playbook.json",
+        "probabilities": {
+          "none": 0.37,
+          "book:<PRIVATE_ROOT>/config/leash/playbooks/toscrape.com/playbook.json": 0.63
+        },
+        "confidence": 0.25,
+        "usage": {
+          "input_tokens": 558,
+          "output_tokens": 92,
+          "cost": 2.3436e-05
+        },
+        "note": null
+      },
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      }
+    ],
+    "status": "done",
+    "site": null,
+    "procedures": [
+      {
+        "slug": "open-book-category",
+        "site": "toscrape.com",
+        "planned": false,
+        "attempts": 1,
+        "choice": {
+          "key": "open-book-category",
+          "probabilities": {
+            "NONE": 0.02,
+            "open-book-category": 0.98,
+            "DONE": 0.0
+          },
+          "confidence": 0.97,
+          "usage": {
+            "input_tokens": 523,
+            "output_tokens": 45,
+            "cost": 2.1966e-05
+          }
+        },
+        "drives": [
+          {
+            "goal": "Wait for a link named Horror to be present",
+            "status": "done",
+            "steps": [
+              {
+                "non_repeatable": false,
+                "n": 1,
+                "snapshot": "[redacted capability]",
+                "operation": "scroll_down",
+                "index": null,
+                "probabilities": {
+                  "op": {
+                    "CLICK": 0.02,
+                    "SCROLL_DOWN": 0.77,
+                    "BLOCKED": 0.09,
+                    "DONE": 0.0,
+                    "WAIT": 0.12
+                  },
+                  "target": {}
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/",
+                  "title": "All products | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 601
+              }
+            ],
+            "reason": "the step's until checks hold"
+          },
+          {
+            "goal": "Click the link named Horror",
+            "status": "done",
+            "steps": [
+              {
+                "non_repeatable": false,
+                "n": 1,
+                "snapshot": "[redacted capability]",
+                "operation": "click",
+                "index": 16,
+                "probabilities": {
+                  "op": {
+                    "WAIT": 0.0,
+                    "SCROLL_UP": 0.0,
+                    "DONE": 0.0,
+                    "CLICK": 1.0,
+                    "BLOCKED": 0.0,
+                    "SCROLL_DOWN": 0.0
+                  },
+                  "target": {
+                    "1": 0.0,
+                    "2": 0.0,
+                    "3": 0.0,
+                    "4": 0.0,
+                    "5": 0.0,
+                    "6": 0.0,
+                    "7": 0.0,
+                    "8": 0.0,
+                    "9": 0.0,
+                    "10": 0.0,
+                    "11": 0.0,
+                    "12": 0.0,
+                    "13": 0.0,
+                    "14": 0.0,
+                    "15": 0.0,
+                    "16": 1.0,
+                    "17": 0.0,
+                    "18": 0.0,
+                    "19": 0.0,
+                    "20": 0.0,
+                    "21": 0.0,
+                    "22": 0.0,
+                    "23": 0.0,
+                    "24": 0.0,
+                    "25": 0.0,
+                    "26": 0.0,
+                    "27": 0.0,
+                    "28": 0.0,
+                    "29": 0.0,
+                    "30": 0.0,
+                    "31": 0.0,
+                    "32": 0.0,
+                    "33": 0.0,
+                    "34": 0.0,
+                    "35": 0.0,
+                    "36": 0.0,
+                    "37": 0.0,
+                    "40": 0.0,
+                    "43": 0.0,
+                    "44": 0.0,
+                    "47": 0.0,
+                    "50": 0.0,
+                    "51": 0.0,
+                    "54": 0.0,
+                    "57": 0.0,
+                    "58": 0.0,
+                    "61": 0.0,
+                    "64": 0.0,
+                    "65": 0.0,
+                    "68": 0.0,
+                    "71": 0.0,
+                    "72": 0.0,
+                    "75": 0.0,
+                    "78": 0.0,
+                    "79": 0.0,
+                    "82": 0.0,
+                    "85": 0.0,
+                    "86": 0.0,
+                    "89": 0.0,
+                    "92": 0.0,
+                    "93": 0.0,
+                    "94": 0.0,
+                    "95": 0.0,
+                    "96": 0.0
+                  }
+                },
+                "target": {
+                  "role": "link",
+                  "label": "Horror"
+                },
+                "after": {
+                  "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+                  "title": "Horror | Books to Scrape - Sandbox"
+                },
+                "elapsed_ms": 1562
+              }
+            ],
+            "reason": "the step's until checks hold"
+          }
+        ],
+        "scripts": [],
+        "expectations": [
+          {
+            "sentence": "the page is books-category",
+            "checker": "page_kind",
+            "passed": true,
+            "score": null
+          },
+          {
+            "sentence": "the requested category is displayed",
+            "checker": "judgment",
+            "passed": true,
+            "score": 0.99
+          }
+        ],
+        "outcome": "verified",
+        "elapsed_ms": 3954
+      }
+    ],
+    "mission_expectations": [],
+    "planner_turns": [],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "text_helper": 1,
+        "operator": 7,
+        "playbook": 1,
+        "verifier": 1,
+        "procedure": 2
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.001572642,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 12,
+    "model_cost": 0.001572642,
+    "operator_steps": [
+      {
+        "non_repeatable": false,
+        "n": 1,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.01,
+            "SCROLL_DOWN": 0.88,
+            "WAIT": 0.0,
+            "DONE": 0.09,
+            "BLOCKED": 0.02
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+          "title": "Horror | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 1179
+      },
+      {
+        "non_repeatable": false,
+        "n": 2,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.07,
+            "WAIT": 0.01,
+            "CLICK": 0.02,
+            "SCROLL_DOWN": 0.74,
+            "DONE": 0.15,
+            "SCROLL_UP": 0.01
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+          "title": "Horror | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 7447
+      },
+      {
+        "non_repeatable": false,
+        "n": 3,
+        "snapshot": "[redacted capability]",
+        "operation": "scroll_down",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.01,
+            "WAIT": 0.0,
+            "SCROLL_UP": 0.01,
+            "SCROLL_DOWN": 0.56,
+            "DONE": 0.36,
+            "BLOCKED": 0.06
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+          "title": "Horror | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 9478
+      },
+      {
+        "non_repeatable": false,
+        "n": 4,
+        "snapshot": "[redacted capability]",
+        "operation": "done",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.01,
+            "WAIT": 0.01,
+            "DONE": 0.67,
+            "SCROLL_UP": 0.19,
+            "BLOCKED": 0.12
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+          "title": "Horror | Books to Scrape - Sandbox"
+        },
+        "elapsed_ms": 9982
+      }
+    ],
+    "operator_state": {
+      "status": "done",
+      "reason": null,
+      "error": null,
+      "initial_recent_actions": [
+        {
+          "action": "scroll_down",
+          "kind": "scroll",
+          "text": null,
+          "page_changed": null
+        },
+        {
+          "action": "click",
+          "kind": "click",
+          "text": null,
+          "page_changed": null
+        }
+      ],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+          "title": "Horror | Books to Scrape - Sandbox",
+          "page_kind": {
+            "name": "books-category",
+            "source": "declared"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "link",
+              "name": "It"
+            },
+            {
+              "index": 2,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 3,
+              "role": "heading",
+              "name": "It"
+            },
+            {
+              "index": 4,
+              "role": "link",
+              "name": "It"
+            },
+            {
+              "index": 5,
+              "role": "paragraph",
+              "name": "£25.01"
+            },
+            {
+              "index": 6,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 7,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 8,
+              "role": "link",
+              "name": "'Salem's Lot"
+            },
+            {
+              "index": 9,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 10,
+              "role": "heading",
+              "name": "'Salem's Lot"
+            },
+            {
+              "index": 11,
+              "role": "link",
+              "name": "'Salem's Lot"
+            },
+            {
+              "index": 12,
+              "role": "paragraph",
+              "name": "£49.56"
+            },
+            {
+              "index": 13,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 14,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 15,
+              "role": "link",
+              "name": "The Stand"
+            },
+            {
+              "index": 16,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 17,
+              "role": "heading",
+              "name": "The Stand"
+            },
+            {
+              "index": 18,
+              "role": "link",
+              "name": "The Stand"
+            },
+            {
+              "index": 19,
+              "role": "paragraph",
+              "name": "£57.86"
+            },
+            {
+              "index": 20,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 21,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 22,
+              "role": "link",
+              "name": "The Girl with All the Gifts"
+            },
+            {
+              "index": 23,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 24,
+              "role": "heading",
+              "name": "The Girl with All ..."
+            },
+            {
+              "index": 25,
+              "role": "link",
+              "name": "The Girl with All ..."
+            },
+            {
+              "index": 26,
+              "role": "paragraph",
+              "name": "£49.47"
+            },
+            {
+              "index": 27,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 28,
+              "role": "button",
+              "name": "Add to basket"
+            },
+            {
+              "index": 29,
+              "role": "link",
+              "name": "House of Leaves"
+            },
+            {
+              "index": 30,
+              "role": "paragraph",
+              "name": ""
+            },
+            {
+              "index": 31,
+              "role": "heading",
+              "name": "House of Leaves"
+            },
+            {
+              "index": 32,
+              "role": "link",
+              "name": "House of Leaves"
+            },
+            {
+              "index": 33,
+              "role": "paragraph",
+              "name": "£54.89"
+            },
+            {
+              "index": 34,
+              "role": "paragraph",
+              "name": " In stock"
+            },
+            {
+              "index": 35,
+              "role": "button",
+              "name": "Add to basket"
+            }
+          ],
+          "total": 35,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+        "title": "Horror | Books to Scrape - Sandbox",
+        "page_kind": "books-<slug>",
+        "page_kind_source": "inferred",
+        "text": "It\n£25.01\nIn stock\nAdd to basket\n'Salem's Lot\n£49.56\nIn stock\nAdd to basket\nThe Stand\n£57.86\nIn stock\nAdd to basket\nThe Girl with All ...\n£49.47\nIn stock\nAdd to basket\nHouse of Leaves\n£54.89\nIn stock\nAdd to basket",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [],
+        "can_scroll_down": false,
+        "can_scroll_up": true,
+        "coverage": "viewport+above",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": true,
+          "can_scroll_down": false,
+          "coverage": "viewport+above",
+          "unsupported_states": []
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.01,
+                "SCROLL_DOWN": 0.88,
+                "WAIT": 0.0,
+                "DONE": 0.09,
+                "BLOCKED": 0.02
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+              "title": "Horror | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 1179
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 597,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 2,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.07,
+                "WAIT": 0.01,
+                "CLICK": 0.02,
+                "SCROLL_DOWN": 0.74,
+                "DONE": 0.15,
+                "SCROLL_UP": 0.01
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+              "title": "Horror | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 7447
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 516,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 3,
+            "snapshot": "[redacted capability]",
+            "operation": "scroll_down",
+            "index": null,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.01,
+                "WAIT": 0.0,
+                "SCROLL_UP": 0.01,
+                "SCROLL_DOWN": 0.56,
+                "DONE": 0.36,
+                "BLOCKED": 0.06
+              },
+              "target": {}
+            },
+            "after": {
+              "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+              "title": "Horror | Books to Scrape - Sandbox"
+            },
+            "elapsed_ms": 9478
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "scroll_down",
+          "rescue": false,
+          "input_ms": 1120,
+          "settle_ms": 50
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "executed",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.01,
+              "SCROLL_DOWN": 0.88,
+              "WAIT": 0.0,
+              "DONE": 0.09,
+              "BLOCKED": 0.02
+            },
+            "target": {}
+          },
+          "confidence": 0.85,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5049,
+            "output_tokens": 409,
+            "cost": 0.000212058,
+            "retries": 0
+          },
+          "elapsed_ms": 456
+        },
+        {
+          "outcome": "executed",
+          "n": 2,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.07,
+              "WAIT": 0.01,
+              "CLICK": 0.02,
+              "SCROLL_DOWN": 0.74,
+              "DONE": 0.15,
+              "SCROLL_UP": 0.01
+            },
+            "target": {}
+          },
+          "confidence": 0.68,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 7133,
+            "output_tokens": 586,
+            "cost": 0.000299586,
+            "retries": 0
+          },
+          "elapsed_ms": 5661
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 3,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.01,
+              "CLICK": 0.02,
+              "SCROLL_UP": 0.01,
+              "SCROLL_DOWN": 0.54,
+              "BLOCKED": 0.12,
+              "DONE": 0.3
+            },
+            "target": {}
+          },
+          "confidence": 0.45,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4207,
+            "output_tokens": 330,
+            "cost": 0.000176694,
+            "retries": 0
+          },
+          "elapsed_ms": 418
+        },
+        {
+          "outcome": "executed",
+          "n": 4,
+          "snapshot": "[redacted capability]",
+          "operation": "scroll_down",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.01,
+              "WAIT": 0.0,
+              "SCROLL_UP": 0.01,
+              "SCROLL_DOWN": 0.56,
+              "DONE": 0.36,
+              "BLOCKED": 0.06
+            },
+            "target": {}
+          },
+          "confidence": 0.47,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2627,
+            "output_tokens": 193,
+            "cost": 0.000110334,
+            "retries": 0
+          },
+          "elapsed_ms": 367
+        },
+        {
+          "outcome": "terminal",
+          "n": 5,
+          "snapshot": "[redacted capability]",
+          "operation": "done",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.01,
+              "WAIT": 0.01,
+              "DONE": 0.67,
+              "SCROLL_UP": 0.19,
+              "BLOCKED": 0.12
+            },
+            "target": {}
+          },
+          "confidence": 0.59,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 2641,
+            "output_tokens": 182,
+            "cost": 0.000110922,
+            "retries": 0
+          },
+          "elapsed_ms": 467
+        }
+      ],
+      "text_calls": [],
+      "metrics": {
+        "actions": 3,
+        "predictions": 5,
+        "text_calls": 0,
+        "observation_calls": 6,
+        "observation_retries": 0,
+        "stale_decisions": 1,
+        "bootstrap_ms": 0,
+        "observation_ms": 358,
+        "prediction_ms": 7369,
+        "text_helper_ms": 0,
+        "input_ms": 2347,
+        "settle_ms": 1203,
+        "elapsed_ms": 9982
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://books.toscrape.com/catalogue/category/books/horror_31/index.html",
+      "title": "Horror | Books to Scrape - Sandbox",
+      "page_kind": {
+        "name": "books-category",
+        "source": "declared"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "link",
+          "name": "It"
+        },
+        {
+          "index": 2,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 3,
+          "role": "heading",
+          "name": "It"
+        },
+        {
+          "index": 4,
+          "role": "link",
+          "name": "It"
+        },
+        {
+          "index": 5,
+          "role": "paragraph",
+          "name": "£25.01"
+        },
+        {
+          "index": 6,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 7,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 8,
+          "role": "link",
+          "name": "'Salem's Lot"
+        },
+        {
+          "index": 9,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 10,
+          "role": "heading",
+          "name": "'Salem's Lot"
+        },
+        {
+          "index": 11,
+          "role": "link",
+          "name": "'Salem's Lot"
+        },
+        {
+          "index": 12,
+          "role": "paragraph",
+          "name": "£49.56"
+        },
+        {
+          "index": 13,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 14,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 15,
+          "role": "link",
+          "name": "The Stand"
+        },
+        {
+          "index": 16,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 17,
+          "role": "heading",
+          "name": "The Stand"
+        },
+        {
+          "index": 18,
+          "role": "link",
+          "name": "The Stand"
+        },
+        {
+          "index": 19,
+          "role": "paragraph",
+          "name": "£57.86"
+        },
+        {
+          "index": 20,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 21,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 22,
+          "role": "link",
+          "name": "The Girl with All the Gifts"
+        },
+        {
+          "index": 23,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 24,
+          "role": "heading",
+          "name": "The Girl with All ..."
+        },
+        {
+          "index": 25,
+          "role": "link",
+          "name": "The Girl with All ..."
+        },
+        {
+          "index": 26,
+          "role": "paragraph",
+          "name": "£49.47"
+        },
+        {
+          "index": 27,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 28,
+          "role": "button",
+          "name": "Add to basket"
+        },
+        {
+          "index": 29,
+          "role": "link",
+          "name": "House of Leaves"
+        },
+        {
+          "index": 30,
+          "role": "paragraph",
+          "name": ""
+        },
+        {
+          "index": 31,
+          "role": "heading",
+          "name": "House of Leaves"
+        },
+        {
+          "index": 32,
+          "role": "link",
+          "name": "House of Leaves"
+        },
+        {
+          "index": 33,
+          "role": "paragraph",
+          "name": "£54.89"
+        },
+        {
+          "index": 34,
+          "role": "paragraph",
+          "name": " In stock"
+        },
+        {
+          "index": 35,
+          "role": "button",
+          "name": "Add to basket"
+        }
+      ],
+      "total": 35,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/toscrape.com/2026-10-03T12:03:00.075859Z-done.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}

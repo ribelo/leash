@@ -1,0 +1,19 @@
+{
+  "verified": false,
+  "method": "post-drive independent DOM observation; cafe name/category, displayed rating, address, landmark visit and coordinate proximity (<2 km)",
+  "cafe_name": "Results",
+  "visible_ratings": [
+    4.8,
+    4.6,
+    4.9,
+    4.5,
+    4.7,
+    4.8,
+    4.8
+  ],
+  "address": "Address: Dorotheenstraße 83, 10117 Berlin, Germany ",
+  "distance_m": 492.1237179651496,
+  "cafe_category_visible": true,
+  "requested_landmark_in_drive_navigation_evidence": false,
+  "needs_manual_review": true
+}

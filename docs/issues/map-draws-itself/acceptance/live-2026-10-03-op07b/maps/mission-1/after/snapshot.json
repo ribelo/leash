@@ -1,0 +1,243 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.05088361899925076,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/maps/search/cafes+near+Eiffel+Tower/@48.8588715,2.2939877,17z/data=!4m7!2m6!3m5!2sEiffel+Tower!3s0x47e66e2964e34e2d:0x8ddca9ee380ef7e0!4m2!1d2.2944813!2d48.8583701?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "cafes near Eiffel Tower - Google Maps",
+    "page_kind": {
+      "name": "search-<slug>",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "combobox",
+        "name": "",
+        "value": "cafes near Eiffel Tower",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "button",
+        "name": "Search"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Cancel search nearby"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Price"
+      },
+      {
+        "index": 5,
+        "role": "button",
+        "name": "Rating"
+      },
+      {
+        "index": 6,
+        "role": "button",
+        "name": "Hours"
+      },
+      {
+        "index": 7,
+        "role": "button",
+        "name": "All filters"
+      },
+      {
+        "index": 8,
+        "role": "button",
+        "name": "Menu"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Saved"
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Recents"
+      },
+      {
+        "index": 11,
+        "role": "button",
+        "name": "3 places Paris"
+      },
+      {
+        "index": 12,
+        "role": "button",
+        "name": "Get app"
+      },
+      {
+        "index": 13,
+        "role": "heading",
+        "name": "Results"
+      },
+      {
+        "index": 14,
+        "role": "button",
+        "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+      },
+      {
+        "index": 15,
+        "role": "button",
+        "name": "Share"
+      },
+      {
+        "index": 16,
+        "role": "link",
+        "name": "Maison Fleuret Paris"
+      },
+      {
+        "index": 17,
+        "role": "heading",
+        "name": "Sponsored"
+      },
+      {
+        "index": 18,
+        "role": "button",
+        "name": "Why this ad?"
+      },
+      {
+        "index": 19,
+        "role": "link",
+        "name": "Ad · Evolved from Paris's past wild, undeveloped areas of Paris · In 1825, Brillat-Savarin, father of modern gastronomy, wrote his famous Physiologie du goût, our first-ever food guide, on Rue de Grenelle · Visit Site · maisonfleuret.fr"
+      },
+      {
+        "index": 20,
+        "role": "link",
+        "name": "FRAME BRASSERIE"
+      },
+      {
+        "index": 21,
+        "role": "heading",
+        "name": "Sponsored"
+      },
+      {
+        "index": 22,
+        "role": "button",
+        "name": "Why this ad?"
+      },
+      {
+        "index": 23,
+        "role": "link",
+        "name": "Ad · Enjoy dining near Eiffel Tower · Dine at Frame Brasserie with <b>Eiffel Tower</b> views and modern French cuisine · Visit Site · pullmanparistoureiffel.fr"
+      },
+      {
+        "index": 24,
+        "role": "link",
+        "name": "Pâtisserie de la Bourdonnais - Eiffel"
+      },
+      {
+        "index": 25,
+        "role": "link",
+        "name": "Reserve a table"
+      },
+      {
+        "index": 26,
+        "role": "link",
+        "name": "Sunflower Café"
+      },
+      {
+        "index": 27,
+        "role": "checkbox",
+        "name": "Update results when map moves",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 28,
+        "role": "button",
+        "name": "Collapse side panel"
+      },
+      {
+        "index": 29,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 30,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 31,
+        "role": "button",
+        "name": "Show Your Location"
+      },
+      {
+        "index": 32,
+        "role": "button",
+        "name": "Zoom in"
+      },
+      {
+        "index": 33,
+        "role": "button",
+        "name": "Zoom out"
+      },
+      {
+        "index": 34,
+        "role": "button",
+        "name": "Browse Street View images"
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Layers",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 36,
+        "role": "button",
+        "name": "Poland"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Terms"
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "Privacy"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "Send Product Feedback"
+      },
+      {
+        "index": 40,
+        "role": "button",
+        "name": "50 m"
+      }
+    ],
+    "total": 40,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

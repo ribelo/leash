@@ -1,0 +1,16 @@
+{
+  "story": "map-op07",
+  "missions": [
+    "find the Eiffel Tower, then find a cafe near it with a rating over 4 and give me its name and address",
+    "find the Colosseum, then find a cafe near it with a rating over 4 and give me its name and address",
+    "find the Brandenburg Gate, then find a cafe near it with a rating over 4 and give me its name and address",
+    "find the Sagrada Família, then find a cafe near it with a rating over 4 and give me its name and address",
+    "find the Tower of London, then find a cafe near it with a rating over 4 and give me its name and address"
+  ],
+  "next_month": "November 2026",
+  "not_reworded": true,
+  "retries": 0,
+  "training_learning": "auto",
+  "acceptance_learning": "off",
+  "fresh_agent_evidence": "new service process; empty private Chrome profile and XDG; only installed playbook files copied"
+}

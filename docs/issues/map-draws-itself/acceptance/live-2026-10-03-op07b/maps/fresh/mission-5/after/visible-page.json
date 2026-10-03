@@ -1,0 +1,39 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {url:location.href,title:document.title,text:document.body.innerText.slice(0,24000),headings:[...document.querySelectorAll('h1,h2')].map(x=>x.innerText),labels:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>/address|star|rating|depart|return|date|lowest|cheapest/i.test(x)).slice(0,100),address:document.querySelector('[data-item-id=address]')?.getAttribute('aria-label')||null,time:{now:new Date().toISOString(),zone:Intl.DateTimeFormat().resolvedOptions().timeZone}}"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.005293236000397883,
+  "reply": {
+    "value": {
+      "url": "https://www.google.com/maps/search/cafe/@51.5081223,-0.0805627,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "cafe - Google Maps",
+      "text": "\n\n\n\nSearch this area\n\nPrice\n\n\nRating\n\n\nHours\n\n\nAll filters\n\n\nSaved\n\nRecents\n2\nLondon\n\nGet app\nResults\n\n\nShare\nWatchHouse Tower Bridge\nWatchHouse Tower Bridge\n4.6\nCoffee shop ·  · 37 Shad Thames\nCool venue for coffee & brunch\nOpen · Closes 6 pm\nSt Katharine Docks Cafe\nSt Katharine Docks Cafe\n4.1\nCoffee shop ·  · C2 Ivory House St Katharine Docks St Katharine Docks &\nOpen · Closes 5 pm\nDe Vine\nDe Vine\n5.0\nCafe ·  · under railway bridge, to, 19 Vine st next, 2 America Square\nLow-key cafe & deli serving casual bites\nClosed · Opens 7 am Mon\nTower of London Cafe\nTower of London Cafe\n4.2\nCafe · \nOpen · Closes 7 pm\nCinnamon Coffee Shop\nCinnamon Coffee Shop\n4.5\nCoffee shop ·  · 103 Wapping Ln\nCompact cafe for coffees & snacks\nOpen · Closes 5 pm\nUrban Baristas - Wapping\nUrban Baristas - Wapping\n4.3\nCoffee shop ·  · 138 Wapping High St\nOpen · Closes 6 pm\n \n\nOrder online\n\nYou're seeing a limited view of Google Maps. See more\n\nUpdate results when map moves\n\nSign in\n15 min\n\n\n\nZoom out to see walk time\n\n\n\n Layers\nMap data ©2026 GooglePolandTermsPrivacySend Product Feedback\n\t50 m ",
+      "headings": [
+        "Results",
+        "",
+        "Map details",
+        "Map tools",
+        "Map type"
+      ],
+      "labels": [
+        " stars",
+        "4.6 stars",
+        "4.1 stars",
+        "5.0 stars",
+        "4.2 stars",
+        "4.5 stars",
+        "4.3 stars"
+      ],
+      "address": null,
+      "time": {
+        "now": "2026-10-03T11:51:20.555Z",
+        "zone": "Europe/Warsaw"
+      }
+    }
+  },
+  "stdout": null,
+  "stderr": ""
+}

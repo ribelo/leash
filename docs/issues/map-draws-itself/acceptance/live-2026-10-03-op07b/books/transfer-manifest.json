@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": ".install.lock",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "toscrape.com/playbook.json",
+      "sha256": "c818b243a167b6cee1172b86cbe2f955bb71058d2687b7f3dad99e535d5cb67f",
+      "bytes": 2059
+    }
+  ],
+  "copied_traces": 0,
+  "copied_learning_state": 0,
+  "copied_drafts": 0,
+  "copied_cookies": 0
+}

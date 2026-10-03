@@ -1,0 +1,12 @@
+{
+  "gate": "books",
+  "passed": true,
+  "missions_recorded": 1,
+  "failures": [],
+  "elapsed_s": 23.172261476516724,
+  "cleanup": {
+    "service_exit": 0,
+    "profile_processes_after_service": [],
+    "loopback_server_closed": true
+  }
+}

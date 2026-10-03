@@ -1,0 +1,48 @@
+{
+  "head": "8e5e92d379c6a785788c030e5a82a92d1e2cd674",
+  "branch": "master",
+  "clean_at_start": true,
+  "product_edits": false,
+  "commit": false,
+  "build": {
+    "command": "timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_op07b bash -c 'ulimit -v 16777216; exec dune build @install'",
+    "exit": 0,
+    "binary": "_build_op07b/default/packages/leash/bin/main.exe",
+    "binary_sha256": "e5c23867dcf38e8225e3a7b08e14fdb16ab1f3be395db302245dd76f5e8f40eb",
+    "binary_bytes": 16408680
+  },
+  "harness": "/home/ribelo/projects/ribelo/leash-op07-evidence-wip/harness.py",
+  "harness_copied_into_scripts": false,
+  "reason": "No product edits. The parked harness was executed unchanged.",
+  "missions_retried": 0,
+  "secret_scan": {
+    "method": "secret-env ai -- python, key compared in memory, counts only",
+    "files_scanned": 272,
+    "key_present_in_memory": true,
+    "key_length": 73,
+    "exact_key_occurrences": 0,
+    "exact_key_files": 0,
+    "handle_occurrences": 0,
+    "handle_files": 0,
+    "temp_path_occurrences": 0,
+    "temp_path_files": 0,
+    "redacted_marker_occurrences": 102
+  },
+  "isolation": {
+    "user_leash_service_pid": 3662,
+    "user_leash_service_started": "Sat Oct 3 11:54:12 2026",
+    "user_chrome_pid": 3730,
+    "user_chrome_started": "Sat Oct 3 11:54:12 2026",
+    "pids_unchanged": true,
+    "config_mtime_unchanged": 1790943013,
+    "share_dir_mtime_unchanged": 1790761282,
+    "profile_mtime_before": 1791026664,
+    "profile_mtime_after": 1791028481,
+    "profile_note": "The already-running user Chrome kept writing inside its profile. This run did not signal that process and did not use that profile.",
+    "private_processes_after": 0
+  },
+  "git_porcelain": [
+    "?? docs/issues/map-draws-itself/acceptance/live-2026-10-03-op07b/"
+  ],
+  "harness_result_json_passed_true_is_not_the_criterion": true
+}

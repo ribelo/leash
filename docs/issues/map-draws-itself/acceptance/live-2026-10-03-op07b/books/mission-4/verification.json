@@ -1,0 +1,213 @@
+{
+  "verified": false,
+  "method": "independent category HTML reads executed through private Leash eval; compare every full title and price with terminal drive output/validated records, not the verifier output",
+  "site": {
+    "category": "Historical Fiction",
+    "total_reported": 26,
+    "records": [
+      {
+        "title": "Tipping the Velvet",
+        "price": "£53.74"
+      },
+      {
+        "title": "Forever and Forever: The Courtship of Henry Longfellow and Fanny Appleton",
+        "price": "£29.69"
+      },
+      {
+        "title": "A Flight of Arrows (The Pathfinders #2)",
+        "price": "£55.53"
+      },
+      {
+        "title": "The House by the Lake",
+        "price": "£36.95"
+      },
+      {
+        "title": "Mrs. Houdini",
+        "price": "£30.25"
+      },
+      {
+        "title": "The Marriage of Opposites",
+        "price": "£28.08"
+      },
+      {
+        "title": "Glory over Everything: Beyond The Kitchen House",
+        "price": "£45.84"
+      },
+      {
+        "title": "Love, Lies and Spies",
+        "price": "£20.55"
+      },
+      {
+        "title": "A Paris Apartment",
+        "price": "£39.01"
+      },
+      {
+        "title": "Lilac Girls",
+        "price": "£17.28"
+      },
+      {
+        "title": "The Constant Princess (The Tudor Court #1)",
+        "price": "£16.62"
+      },
+      {
+        "title": "The Invention of Wings",
+        "price": "£37.34"
+      },
+      {
+        "title": "World Without End (The Pillars of the Earth #2)",
+        "price": "£32.97"
+      },
+      {
+        "title": "The Passion of Dolssa",
+        "price": "£28.32"
+      },
+      {
+        "title": "Girl With a Pearl Earring",
+        "price": "£26.77"
+      },
+      {
+        "title": "Voyager (Outlander #3)",
+        "price": "£21.07"
+      },
+      {
+        "title": "The Red Tent",
+        "price": "£35.66"
+      },
+      {
+        "title": "The Last Painting of Sara de Vos",
+        "price": "£55.55"
+      },
+      {
+        "title": "The Guernsey Literary and Potato Peel Pie Society",
+        "price": "£49.53"
+      },
+      {
+        "title": "Girl in the Blue Coat",
+        "price": "£46.83"
+      },
+      {
+        "title": "Between Shades of Gray",
+        "price": "£20.79"
+      },
+      {
+        "title": "While You Were Mine",
+        "price": "£41.32"
+      },
+      {
+        "title": "The Secret Healer",
+        "price": "£34.56"
+      },
+      {
+        "title": "Starlark",
+        "price": "£25.83"
+      },
+      {
+        "title": "Lost Among the Living",
+        "price": "£27.70"
+      },
+      {
+        "title": "A Spy's Devotion (The Regency Spies of London #1)",
+        "price": "£16.97"
+      }
+    ],
+    "pages": [
+      {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html",
+        "status": 200,
+        "count": 20,
+        "heading": "Historical Fiction"
+      },
+      {
+        "url": "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/page-2.html",
+        "status": 200,
+        "count": 6,
+        "heading": "Historical Fiction"
+      }
+    ],
+    "counts_match": true,
+    "next_page_unvisited": false
+  },
+  "answer_record_matches": 6,
+  "missing_records": [
+    {
+      "title": "Tipping the Velvet",
+      "price": "£53.74"
+    },
+    {
+      "title": "Forever and Forever: The Courtship of Henry Longfellow and Fanny Appleton",
+      "price": "£29.69"
+    },
+    {
+      "title": "A Flight of Arrows (The Pathfinders #2)",
+      "price": "£55.53"
+    },
+    {
+      "title": "The House by the Lake",
+      "price": "£36.95"
+    },
+    {
+      "title": "Mrs. Houdini",
+      "price": "£30.25"
+    },
+    {
+      "title": "The Marriage of Opposites",
+      "price": "£28.08"
+    },
+    {
+      "title": "Glory over Everything: Beyond The Kitchen House",
+      "price": "£45.84"
+    },
+    {
+      "title": "Love, Lies and Spies",
+      "price": "£20.55"
+    },
+    {
+      "title": "A Paris Apartment",
+      "price": "£39.01"
+    },
+    {
+      "title": "Lilac Girls",
+      "price": "£17.28"
+    },
+    {
+      "title": "The Constant Princess (The Tudor Court #1)",
+      "price": "£16.62"
+    },
+    {
+      "title": "The Invention of Wings",
+      "price": "£37.34"
+    },
+    {
+      "title": "World Without End (The Pillars of the Earth #2)",
+      "price": "£32.97"
+    },
+    {
+      "title": "The Passion of Dolssa",
+      "price": "£28.32"
+    },
+    {
+      "title": "Girl With a Pearl Earring",
+      "price": "£26.77"
+    },
+    {
+      "title": "Voyager (Outlander #3)",
+      "price": "£21.07"
+    },
+    {
+      "title": "The Red Tent",
+      "price": "£35.66"
+    },
+    {
+      "title": "The Last Painting of Sara de Vos",
+      "price": "£55.55"
+    },
+    {
+      "title": "The Guernsey Literary and Potato Peel Pie Society",
+      "price": "£49.53"
+    },
+    {
+      "title": "Girl in the Blue Coat",
+      "price": "£46.83"
+    }
+  ]
+}

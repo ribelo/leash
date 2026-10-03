@@ -1,0 +1,247 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--limit",
+    "160"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 0.05291491599928122,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "https://www.google.com/maps/search/cafe/@51.5081223,-0.0805627,17z/data=!3m1!4b1!4m7!2m6!3m5!2sTower+of+London,+London+EC3N+4AB,+United+Kingdom!3s0x48760349331f38dd:0xa8bf49dde1d56467!4m2!1d-0.0759493!2d51.5081124?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+    "title": "cafe - Google Maps",
+    "page_kind": {
+      "name": "cafe",
+      "source": "inferred"
+    },
+    "rows": [
+      {
+        "index": 1,
+        "role": "combobox",
+        "name": "",
+        "value": "cafe",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 2,
+        "role": "button",
+        "name": "Search"
+      },
+      {
+        "index": 3,
+        "role": "button",
+        "name": "Cancel search nearby"
+      },
+      {
+        "index": 4,
+        "role": "button",
+        "name": "Search this area"
+      },
+      {
+        "index": 5,
+        "role": "button",
+        "name": "Price"
+      },
+      {
+        "index": 6,
+        "role": "button",
+        "name": "Rating"
+      },
+      {
+        "index": 7,
+        "role": "button",
+        "name": "Hours"
+      },
+      {
+        "index": 8,
+        "role": "button",
+        "name": "All filters"
+      },
+      {
+        "index": 9,
+        "role": "button",
+        "name": "Menu"
+      },
+      {
+        "index": 10,
+        "role": "button",
+        "name": "Saved"
+      },
+      {
+        "index": 11,
+        "role": "button",
+        "name": "Recents"
+      },
+      {
+        "index": 12,
+        "role": "button",
+        "name": "2 places London"
+      },
+      {
+        "index": 13,
+        "role": "button",
+        "name": "Get app"
+      },
+      {
+        "index": 14,
+        "role": "heading",
+        "name": "Results"
+      },
+      {
+        "index": 15,
+        "role": "button",
+        "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+      },
+      {
+        "index": 16,
+        "role": "button",
+        "name": "Share"
+      },
+      {
+        "index": 17,
+        "role": "link",
+        "name": "WatchHouse Tower Bridge"
+      },
+      {
+        "index": 18,
+        "role": "link",
+        "name": "St Katharine Docks Cafe"
+      },
+      {
+        "index": 19,
+        "role": "link",
+        "name": "De Vine"
+      },
+      {
+        "index": 20,
+        "role": "link",
+        "name": "Tower of London Cafe"
+      },
+      {
+        "index": 21,
+        "role": "link",
+        "name": "Cinnamon Coffee Shop"
+      },
+      {
+        "index": 22,
+        "role": "checkbox",
+        "name": "Update results when map moves",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 23,
+        "role": "button",
+        "name": "Collapse side panel"
+      },
+      {
+        "index": 24,
+        "role": "button",
+        "name": "Google apps",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 25,
+        "role": "link",
+        "name": "Sign in"
+      },
+      {
+        "index": 26,
+        "role": "button",
+        "name": "15 min"
+      },
+      {
+        "index": 27,
+        "role": "radio",
+        "name": "Walking",
+        "state": [
+          "checked"
+        ]
+      },
+      {
+        "index": 28,
+        "role": "radio",
+        "name": "Driving",
+        "state": [
+          "unchecked"
+        ]
+      },
+      {
+        "index": 29,
+        "role": "switch",
+        "name": "Turn off travel time tool",
+        "state": [
+          "checked"
+        ]
+      },
+      {
+        "index": 30,
+        "role": "button",
+        "name": "Show Your Location"
+      },
+      {
+        "index": 31,
+        "role": "button",
+        "name": "Zoom in"
+      },
+      {
+        "index": 32,
+        "role": "button",
+        "name": "Zoom out"
+      },
+      {
+        "index": 33,
+        "role": "button",
+        "name": "Browse Street View images"
+      },
+      {
+        "index": 34,
+        "role": "button",
+        "name": "Layers",
+        "state": [
+          "collapsed"
+        ]
+      },
+      {
+        "index": 35,
+        "role": "button",
+        "name": "Poland"
+      },
+      {
+        "index": 36,
+        "role": "button",
+        "name": "Terms"
+      },
+      {
+        "index": 37,
+        "role": "button",
+        "name": "Privacy"
+      },
+      {
+        "index": 38,
+        "role": "button",
+        "name": "Send Product Feedback"
+      },
+      {
+        "index": 39,
+        "role": "button",
+        "name": "50 m"
+      }
+    ],
+    "total": 39,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "dialog": null
+  },
+  "stdout": null,
+  "stderr": ""
+}

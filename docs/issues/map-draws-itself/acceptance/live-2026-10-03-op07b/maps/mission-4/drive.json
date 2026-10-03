@@ -1,0 +1,4616 @@
+{
+  "command": [
+    "drive",
+    "find the Sagrada Família, then find a cafe near it with a rating over 4 and give me its name and address",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "900",
+    "--max-steps",
+    "60",
+    "--max-procedures",
+    "20",
+    "--out",
+    "<PRIVATE_ROOT>/output-4.jsonl"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 158.04929821899987,
+  "reply": {
+    "unattended": [],
+    "playbook_choices": [
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      },
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      },
+      {
+        "source": "route",
+        "key": "operator",
+        "probabilities": {},
+        "confidence": null,
+        "usage": null,
+        "note": "No fitting playbook/procedure; the full mission continues on the current page without a planner."
+      }
+    ],
+    "status": "blocked",
+    "site": null,
+    "procedures": [],
+    "mission_expectations": [
+      {
+        "sentence": "The page lists cafés near Sagrada Família.",
+        "checker": "judgment",
+        "passed": false,
+        "score": 0.09
+      },
+      {
+        "sentence": "The page shows Súper cafe with a 4.7 rating and the address Plaça de la Sagrada Família, 23.",
+        "checker": "text",
+        "passed": false,
+        "score": null
+      }
+    ],
+    "planner_turns": [
+      {
+        "n": 1,
+        "trigger": "blocked",
+        "answer": "continue",
+        "steps": [
+          {
+            "non_repeatable": true,
+            "n": 1,
+            "command": "fill",
+            "target": {
+              "role": "combobox",
+              "label": ""
+            },
+            "text": "Sagrada Família, Barcelona",
+            "after": {
+              "url": "https://www.google.com/maps/search/Cafes/@51.1656664,16.5894643,16z/data=!3m1!4b1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Cafes - Google Maps"
+            },
+            "elapsed_ms": 25
+          },
+          {
+            "non_repeatable": true,
+            "n": 2,
+            "command": "click",
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/place/Basilica+of+the+Sagrada+Familia/@41.4036339,2.1717809,17z/data=!3m2!4b1!5s0x12a4a2ee7b50e075:0x12761d4cda88089f!4m6!3m5!1s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!8m2!3d41.4036299!4d2.1743558!16zL20vMGc2bjM?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Basilica of the Sagrada Familia - Google Maps"
+            },
+            "elapsed_ms": 1509
+          }
+        ],
+        "usage": {
+          "input_tokens": 4246,
+          "output_tokens": 911,
+          "cost": 0.000752995
+        }
+      },
+      {
+        "n": 2,
+        "trigger": "blocked",
+        "answer": "continue",
+        "steps": [
+          {
+            "non_repeatable": true,
+            "n": 3,
+            "command": "fill",
+            "target": {
+              "role": "combobox",
+              "label": ""
+            },
+            "text": "cafes near Sagrada Família",
+            "after": {
+              "url": "https://www.google.com/maps/search/Sagrada+Fam%C3%ADlia/@41.4037473,2.1620176,15z/data=!3m1!4b1!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 25
+          }
+        ],
+        "usage": {
+          "input_tokens": 4322,
+          "output_tokens": 1356,
+          "cost": 0.000977405
+        }
+      },
+      {
+        "n": 3,
+        "trigger": "blocked",
+        "answer": "done",
+        "steps": [],
+        "reason": "planner done refused: The page lists cafés near Sagrada Família.; The page shows Súper cafe with a 4.7 rating and the address Plaça de la Sagrada Família, 23.",
+        "usage": {
+          "input_tokens": 2094,
+          "output_tokens": 1273,
+          "cost": 0.000898175
+        }
+      }
+    ],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "model_calls_by_kind": {
+        "text_helper": 12,
+        "operator": 118,
+        "planner": 5,
+        "verifier": 1
+      },
+      "cost_unreported": 0,
+      "reported_cost": 0.03261244899999999,
+      "count": 0,
+      "first": [],
+      "pages": 0,
+      "scripts": []
+    },
+    "model_calls": 136,
+    "model_cost": 0.03261244899999999,
+    "operator_steps": [
+      {
+        "non_repeatable": false,
+        "n": 1,
+        "snapshot": "[redacted capability]",
+        "operation": "type_text",
+        "index": 1,
+        "probabilities": {
+          "op": {
+            "TYPE_TEXT": 0.99,
+            "BLOCKED": 0.0,
+            "WAIT": 0.0,
+            "DONE": 0.0,
+            "CLICK": 0.01
+          },
+          "target": {
+            "1": 1.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": "Search Google Maps"
+        },
+        "text": "Sagrada Família",
+        "after": {
+          "url": "https://www.google.com/maps?hl=en",
+          "title": "Google Maps"
+        },
+        "elapsed_ms": 1823
+      },
+      {
+        "non_repeatable": false,
+        "n": 2,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "WAIT": 0.04,
+            "BLOCKED": 0.04,
+            "CLICK": 0.92,
+            "TYPE_TEXT": 0.0
+          },
+          "target": {
+            "1": 0.23,
+            "2": 0.76,
+            "3": 0.0,
+            "5": 0.0,
+            "6": 0.01,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "13": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps?hl=en",
+          "title": "Sagrada Família - Google Maps"
+        },
+        "elapsed_ms": 2261
+      },
+      {
+        "non_repeatable": true,
+        "n": 3,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 3,
+        "probabilities": {
+          "op": {
+            "BLOCKED": 0.07,
+            "TYPE_TEXT": 0.05,
+            "DONE": 0.0,
+            "CLICK": 0.83,
+            "WAIT": 0.05
+          },
+          "target": {
+            "1": 0.11,
+            "2": 0.38,
+            "3": 0.5,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.0,
+            "8": 0.0,
+            "9": 0.0,
+            "10": 0.0,
+            "11": 0.0,
+            "12": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "17": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "20": 0.0,
+            "21": 0.0,
+            "22": 0.01,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Restaurants"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/search/Restaurants/@51.1701458,16.574885,14z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Restaurants - Google Maps"
+        },
+        "elapsed_ms": 4016
+      },
+      {
+        "non_repeatable": true,
+        "n": 4,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 1,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.07,
+            "CLICK": 0.34,
+            "TYPE_TEXT": 0.33,
+            "BLOCKED": 0.26,
+            "DONE": 0.0
+          },
+          "target": {
+            "1": 0.66,
+            "2": 0.18,
+            "3": 0.01,
+            "4": 0.05,
+            "5": 0.0,
+            "6": 0.08,
+            "7": 0.0,
+            "8": 0.01,
+            "9": 0.0,
+            "10": 0.0,
+            "12": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.01,
+            "36": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": ""
+        },
+        "after": {
+          "url": "https://www.google.com/maps/search/Restaurants/@51.1656532,16.5894643,16z/data=!3m1!4b1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Restaurants - Google Maps"
+        },
+        "elapsed_ms": 10347
+      },
+      {
+        "non_repeatable": true,
+        "n": 5,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 1,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.28,
+            "BLOCKED": 0.28,
+            "CLICK": 0.38,
+            "WAIT": 0.06
+          },
+          "target": {
+            "1": 0.61,
+            "2": 0.22,
+            "3": 0.03,
+            "4": 0.05,
+            "5": 0.0,
+            "6": 0.07,
+            "7": 0.0,
+            "8": 0.01,
+            "9": 0.0,
+            "10": 0.0,
+            "12": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.01,
+            "36": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": ""
+        },
+        "after": {
+          "url": "https://www.google.com/maps/search/Restaurants/@51.1656532,16.5894643,16z/data=!3m1!4b1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Restaurants - Google Maps"
+        },
+        "elapsed_ms": 12149
+      },
+      {
+        "non_repeatable": true,
+        "n": 6,
+        "snapshot": "[redacted capability]",
+        "operation": "type_text",
+        "index": 1,
+        "probabilities": {
+          "op": {
+            "WAIT": 0.05,
+            "DONE": 0.0,
+            "BLOCKED": 0.23,
+            "CLICK": 0.33,
+            "TYPE_TEXT": 0.39
+          },
+          "target": {
+            "1": 1.0
+          }
+        },
+        "target": {
+          "role": "combobox",
+          "label": ""
+        },
+        "text": "Cafes",
+        "after": {
+          "url": "https://www.google.com/maps/search/Restaurants/@51.1656532,16.5894643,16z/data=!3m1!4b1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Restaurants - Google Maps"
+        },
+        "elapsed_ms": 13812
+      },
+      {
+        "non_repeatable": false,
+        "n": 7,
+        "snapshot": "[redacted capability]",
+        "operation": "click",
+        "index": 2,
+        "probabilities": {
+          "op": {
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.06,
+            "WAIT": 0.03,
+            "CLICK": 0.82,
+            "BLOCKED": 0.09
+          },
+          "target": {
+            "1": 0.01,
+            "2": 0.73,
+            "3": 0.09,
+            "4": 0.04,
+            "5": 0.0,
+            "6": 0.1,
+            "7": 0.0,
+            "8": 0.01,
+            "9": 0.0,
+            "10": 0.0,
+            "12": 0.0,
+            "14": 0.0,
+            "15": 0.0,
+            "16": 0.0,
+            "18": 0.0,
+            "19": 0.0,
+            "21": 0.0,
+            "22": 0.0,
+            "23": 0.0,
+            "24": 0.0,
+            "25": 0.0,
+            "26": 0.0,
+            "27": 0.0,
+            "28": 0.0,
+            "29": 0.0,
+            "30": 0.0,
+            "31": 0.0,
+            "32": 0.0,
+            "33": 0.0,
+            "34": 0.0,
+            "35": 0.02,
+            "36": 0.0,
+            "37": 0.0,
+            "38": 0.0,
+            "39": 0.0
+          }
+        },
+        "target": {
+          "role": "button",
+          "label": "Search"
+        },
+        "after": {
+          "url": "https://www.google.com/maps/search/Cafes/@51.1656532,16.5894643,16z?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Cafes - Google Maps"
+        },
+        "elapsed_ms": 14849
+      },
+      {
+        "non_repeatable": false,
+        "n": 8,
+        "snapshot": "[redacted capability]",
+        "operation": "blocked",
+        "index": null,
+        "probabilities": {
+          "op": {
+            "CLICK": 0.32,
+            "BLOCKED": 0.37,
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.29,
+            "WAIT": 0.02
+          },
+          "target": {}
+        },
+        "after": {
+          "url": "https://www.google.com/maps/search/Cafes/@51.1656664,16.5894643,16z/data=!3m1!4b1?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "Cafes - Google Maps"
+        },
+        "elapsed_ms": 18081
+      }
+    ],
+    "operator_state": {
+      "status": "blocked",
+      "reason": "the operator found no available action; unsupported visible UI: canvas, nested-scroll-container",
+      "error": null,
+      "initial_recent_actions": [],
+      "page": {
+        "snapshot": {
+          "snapshot": "[redacted capability]",
+          "tab": "[redacted capability]",
+          "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+          "title": "cafes near Sagrada Família - Google Maps",
+          "page_kind": {
+            "name": "search-<slug>",
+            "source": "inferred"
+          },
+          "rows": [
+            {
+              "index": 1,
+              "role": "button",
+              "name": "Menu"
+            },
+            {
+              "index": 2,
+              "role": "button",
+              "name": "Saved"
+            },
+            {
+              "index": 3,
+              "role": "button",
+              "name": "Recents"
+            },
+            {
+              "index": 4,
+              "role": "button",
+              "name": "2 places Barcelona"
+            },
+            {
+              "index": 5,
+              "role": "button",
+              "name": "Get app"
+            },
+            {
+              "index": 6,
+              "role": "heading",
+              "name": "Results"
+            },
+            {
+              "index": 7,
+              "role": "button",
+              "name": "Learn more about legal disclosure regarding public reviews on Google Maps"
+            },
+            {
+              "index": 8,
+              "role": "button",
+              "name": "Share"
+            },
+            {
+              "index": 9,
+              "role": "link",
+              "name": "Nora Coffee"
+            },
+            {
+              "index": 10,
+              "role": "link",
+              "name": "Súper cafe"
+            },
+            {
+              "index": 11,
+              "role": "link",
+              "name": "Café Luna Barcelona"
+            },
+            {
+              "index": 12,
+              "role": "link",
+              "name": "Order online"
+            },
+            {
+              "index": 13,
+              "role": "link",
+              "name": "Sagra Specialty Coffee & Brunch"
+            },
+            {
+              "index": 14,
+              "role": "link",
+              "name": "Blackbird Coffee Corner - Sagrada Familia"
+            },
+            {
+              "index": 15,
+              "role": "checkbox",
+              "name": "Update results when map moves",
+              "state": [
+                "unchecked"
+              ]
+            },
+            {
+              "index": 16,
+              "role": "button",
+              "name": "Collapse side panel"
+            },
+            {
+              "index": 17,
+              "role": "button",
+              "name": "Google apps",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 18,
+              "role": "link",
+              "name": "Sign in"
+            },
+            {
+              "index": 19,
+              "role": "button",
+              "name": "15 min"
+            },
+            {
+              "index": 20,
+              "role": "radio",
+              "name": "Walking",
+              "state": [
+                "checked"
+              ]
+            },
+            {
+              "index": 21,
+              "role": "radio",
+              "name": "Driving",
+              "state": [
+                "unchecked"
+              ]
+            },
+            {
+              "index": 22,
+              "role": "switch",
+              "name": "Turn off travel time tool",
+              "state": [
+                "checked"
+              ]
+            },
+            {
+              "index": 23,
+              "role": "button",
+              "name": "Show Your Location"
+            },
+            {
+              "index": 24,
+              "role": "button",
+              "name": "Zoom in"
+            },
+            {
+              "index": 25,
+              "role": "button",
+              "name": "Zoom out"
+            },
+            {
+              "index": 26,
+              "role": "button",
+              "name": "Browse Street View images"
+            },
+            {
+              "index": 27,
+              "role": "button",
+              "name": "Layers",
+              "state": [
+                "collapsed"
+              ]
+            },
+            {
+              "index": 28,
+              "role": "button",
+              "name": "Poland"
+            },
+            {
+              "index": 29,
+              "role": "button",
+              "name": "Terms"
+            },
+            {
+              "index": 30,
+              "role": "button",
+              "name": "Privacy"
+            },
+            {
+              "index": 31,
+              "role": "button",
+              "name": "Send Product Feedback"
+            },
+            {
+              "index": 32,
+              "role": "button",
+              "name": "200 m"
+            }
+          ],
+          "total": 32,
+          "offset": 0,
+          "truncated": false,
+          "settled": true,
+          "source": "ax",
+          "dialog": null
+        },
+        "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+        "title": "cafes near Sagrada Família - Google Maps",
+        "page_kind": "search-<slug>",
+        "page_kind_source": "inferred",
+        "text": "Saved\nRecents\n2\nBarcelona\nGet app\nResults\nShare\nNora Coffee\nNora Coffee\n\nCoffee shop\n\nCarrer de Lepant, 257\nOpen\n· Closes 4:30 pm\nSúper cafe\nSúper cafe\n\nCafe\n\nPlaça de la Sagrada Família, 23\nOpen\n· Closes 9:30 pm\nCafé Luna Barcelona\nCafé Luna Barcelona\n\nEspresso bar\n\nCarrer de Còrsega, 611\nOpen\n· Closes 11:30 pm\nOrder online\nSagra Specialty Coffee & Brunch\nSagra Specialty Coffee & Brunch\n\nCafe\nCarrer del Rosselló, 419\nOpen\n· Closes 5 pm\nBlackbird Coffee Corner - Sagrada Familia\nBlackbird Coffee Corner - Sagrada Familia\n\nEspresso bar\n\nCarrer de València, 418\nUpdate results when map moves\nSign in\n15 min\nShowing walking time around the selected place\nLayers\nMap data ©2026 Google, Inst. Geogr. Nacional\nPoland\nTerms\nPrivacy\nSend Product Feedback\n200 m",
+        "text_truncated": false,
+        "omitted_elements": 0,
+        "unsupported_states": [
+          "canvas",
+          "nested-scroll-container"
+        ],
+        "can_scroll_down": false,
+        "can_scroll_up": false,
+        "coverage": "viewport",
+        "bounds": {
+          "text_truncated": false,
+          "omitted_elements": 0,
+          "can_scroll_up": false,
+          "can_scroll_down": false,
+          "coverage": "viewport",
+          "unsupported_states": [
+            "canvas",
+            "nested-scroll-container"
+          ]
+        }
+      },
+      "history": [
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 1,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.05,
+                "WAIT": 0.01,
+                "BLOCKED": 0.04,
+                "CLICK": 0.9
+              },
+              "target": {
+                "1": 0.08,
+                "2": 0.84,
+                "3": 0.0,
+                "4": 0.04,
+                "5": 0.0,
+                "6": 0.01,
+                "7": 0.0,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.02,
+                "16": 0.01,
+                "17": 0.0,
+                "19": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037473,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 2508
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 7,
+          "settle_ms": 752
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 2,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.03,
+                "BLOCKED": 0.21,
+                "CLICK": 0.75,
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.01
+              },
+              "target": {
+                "1": 0.01,
+                "2": 0.22,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.35000000000000003,
+                "6": 0.0,
+                "7": 0.06999999999999999,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.29000000000000004,
+                "17": 0.05,
+                "18": 0.0,
+                "20": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037473,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 3184
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 7,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 3,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "TYPE_TEXT": 0.02,
+                "CLICK": 0.84,
+                "BLOCKED": 0.07,
+                "WAIT": 0.01,
+                "DONE": 0.06
+              },
+              "target": {
+                "1": 0.04,
+                "2": 0.01,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.7,
+                "6": 0.0,
+                "7": 0.05,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.08,
+                "25": 0.12,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.0,
+                "41": 0.0,
+                "42": 0.0,
+                "43": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037473,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 4045
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 4,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 7,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.86,
+                "DONE": 0.04,
+                "TYPE_TEXT": 0.01,
+                "WAIT": 0.01,
+                "BLOCKED": 0.08
+              },
+              "target": {
+                "1": 0.09,
+                "2": 0.060000000000000005,
+                "3": 0.0,
+                "4": 0.01,
+                "6": 0.0,
+                "7": 0.45,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.19,
+                "25": 0.2,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0,
+                "40": 0.0,
+                "41": 0.0,
+                "42": 0.0,
+                "43": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "All filters"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037785,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 4567
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 7,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 5,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 12,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.34,
+                "WAIT": 0.03,
+                "DONE": 0.0,
+                "CLICK": 0.63
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.05,
+                "5": 0.0,
+                "6": 0.04,
+                "7": 0.01,
+                "8": 0.02,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.85,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.01,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.01,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.01,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Any rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037785,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 5024
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 6,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 8,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.35,
+                "CLICK": 0.62,
+                "DONE": 0.0,
+                "WAIT": 0.03
+              },
+              "target": {
+                "1": 0.01,
+                "2": 0.0,
+                "3": 0.03,
+                "4": 0.12,
+                "5": 0.0,
+                "6": 0.13,
+                "7": 0.09,
+                "8": 0.22,
+                "10": 0.11,
+                "11": 0.06,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.1,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.02,
+                "25": 0.01,
+                "26": 0.0,
+                "27": 0.01,
+                "28": 0.06,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.03
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Done"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037785,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 5865
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 6,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 7,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "BLOCKED": 0.09,
+                "CLICK": 0.87,
+                "DONE": 0.0,
+                "WAIT": 0.02,
+                "TYPE_TEXT": 0.02
+              },
+              "target": {
+                "1": 0.04,
+                "2": 0.34,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.35000000000000003,
+                "6": 0.0,
+                "7": 0.01,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.02,
+                "12": 0.0,
+                "13": 0.01,
+                "14": 0.0,
+                "15": 0.01,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.2,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.01,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037785,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 6311
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": false,
+            "n": 8,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 2,
+            "probabilities": {
+              "op": {
+                "TYPE_TEXT": 0.01,
+                "WAIT": 0.01,
+                "DONE": 0.0,
+                "BLOCKED": 0.1,
+                "CLICK": 0.88
+              },
+              "target": {
+                "1": 0.04,
+                "2": 0.37,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.32,
+                "6": 0.0,
+                "7": 0.01,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.02,
+                "12": 0.0,
+                "13": 0.01,
+                "14": 0.0,
+                "15": 0.01,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.21000000000000002,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.01,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Search"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037785,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 7522
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 6,
+          "settle_ms": 802
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 9,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.84,
+                "WAIT": 0.01,
+                "BLOCKED": 0.12,
+                "DONE": 0.02,
+                "TYPE_TEXT": 0.01
+              },
+              "target": {
+                "1": 0.05,
+                "2": 0.01,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.75,
+                "6": 0.0,
+                "7": 0.13,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.04,
+                "17": 0.02,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037785,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 8465
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 10,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "DONE": 0.02,
+                "TYPE_TEXT": 0.01,
+                "BLOCKED": 0.09,
+                "CLICK": 0.87,
+                "WAIT": 0.01
+              },
+              "target": {
+                "1": 0.04,
+                "2": 0.01,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.84,
+                "6": 0.0,
+                "7": 0.08,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.02,
+                "17": 0.01,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4037785,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 8943
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 11,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "DONE": 0.02,
+                "TYPE_TEXT": 0.02,
+                "WAIT": 0.01,
+                "CLICK": 0.88,
+                "BLOCKED": 0.07
+              },
+              "target": {
+                "1": 0.05,
+                "2": 0.02,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.8,
+                "6": 0.0,
+                "7": 0.08,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.03,
+                "17": 0.01,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!3m1!4b1!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 9869
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 12,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 7,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.87,
+                "BLOCKED": 0.1,
+                "TYPE_TEXT": 0.01,
+                "DONE": 0.01,
+                "WAIT": 0.01
+              },
+              "target": {
+                "1": 0.13,
+                "2": 0.05,
+                "3": 0.0,
+                "4": 0.01,
+                "6": 0.0,
+                "7": 0.67,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.05,
+                "17": 0.06,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.01,
+                "21": 0.01,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "All filters"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!3m1!4b1!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 10346
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 8,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 13,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 12,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.03,
+                "BLOCKED": 0.33,
+                "CLICK": 0.64,
+                "DONE": 0.0
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.02,
+                "5": 0.0,
+                "6": 0.04,
+                "7": 0.01,
+                "8": 0.03,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.86,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.01,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.01,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.02,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Any rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 11297
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 14,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 8,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.63,
+                "WAIT": 0.04,
+                "DONE": 0.0,
+                "BLOCKED": 0.33
+              },
+              "target": {
+                "1": 0.01,
+                "2": 0.0,
+                "3": 0.03,
+                "4": 0.12,
+                "5": 0.0,
+                "6": 0.08,
+                "7": 0.08,
+                "8": 0.23,
+                "10": 0.14,
+                "11": 0.07,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.07,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.01,
+                "25": 0.01,
+                "26": 0.0,
+                "27": 0.01,
+                "28": 0.11,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.03
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Done"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 12178
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 7,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 15,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "DONE": 0.02,
+                "WAIT": 0.01,
+                "CLICK": 0.86,
+                "TYPE_TEXT": 0.01,
+                "BLOCKED": 0.1
+              },
+              "target": {
+                "1": 0.060000000000000005,
+                "2": 0.03,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.7,
+                "6": 0.0,
+                "7": 0.12,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.060000000000000005,
+                "17": 0.02,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.01,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 18588
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 16,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "TYPE_TEXT": 0.01,
+                "CLICK": 0.88,
+                "BLOCKED": 0.08,
+                "WAIT": 0.01,
+                "DONE": 0.02
+              },
+              "target": {
+                "1": 0.05,
+                "2": 0.01,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.84,
+                "6": 0.0,
+                "7": 0.06999999999999999,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.02,
+                "17": 0.01,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 19105
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 17,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 7,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.88,
+                "BLOCKED": 0.09,
+                "TYPE_TEXT": 0.01,
+                "DONE": 0.01,
+                "WAIT": 0.01
+              },
+              "target": {
+                "1": 0.09,
+                "2": 0.03,
+                "3": 0.0,
+                "4": 0.01,
+                "6": 0.0,
+                "7": 0.75,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.060000000000000005,
+                "17": 0.04,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.01,
+                "21": 0.01,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "All filters"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 19604
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 6,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 18,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 12,
+            "probabilities": {
+              "op": {
+                "DONE": 0.0,
+                "CLICK": 0.65,
+                "BLOCKED": 0.32,
+                "WAIT": 0.03
+              },
+              "target": {
+                "1": 0.0,
+                "2": 0.0,
+                "3": 0.0,
+                "4": 0.05,
+                "5": 0.0,
+                "6": 0.03,
+                "7": 0.02,
+                "8": 0.03,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.81,
+                "13": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.01,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.01,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.02,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.01
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Any rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 25419
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 19,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 8,
+            "probabilities": {
+              "op": {
+                "WAIT": 0.02,
+                "CLICK": 0.68,
+                "BLOCKED": 0.3,
+                "DONE": 0.0
+              },
+              "target": {
+                "1": 0.01,
+                "2": 0.0,
+                "3": 0.02,
+                "4": 0.14,
+                "5": 0.0,
+                "6": 0.12,
+                "7": 0.1,
+                "8": 0.22,
+                "10": 0.11,
+                "11": 0.05,
+                "13": 0.01,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.07,
+                "17": 0.0,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.01,
+                "25": 0.01,
+                "26": 0.0,
+                "27": 0.01,
+                "28": 0.08,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.03
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Done"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 26356
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 5,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 20,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.82,
+                "DONE": 0.02,
+                "BLOCKED": 0.13,
+                "WAIT": 0.01,
+                "TYPE_TEXT": 0.02
+              },
+              "target": {
+                "1": 0.06,
+                "2": 0.02,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.68,
+                "6": 0.0,
+                "7": 0.16,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.05,
+                "17": 0.02,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.01,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 32242
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 3,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 21,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 5,
+            "probabilities": {
+              "op": {
+                "TYPE_TEXT": 0.01,
+                "WAIT": 0.01,
+                "BLOCKED": 0.07,
+                "CLICK": 0.9,
+                "DONE": 0.01
+              },
+              "target": {
+                "1": 0.06,
+                "2": 0.02,
+                "3": 0.0,
+                "4": 0.0,
+                "5": 0.79,
+                "6": 0.0,
+                "7": 0.09,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.03,
+                "17": 0.01,
+                "18": 0.0,
+                "19": 0.0,
+                "20": 0.0,
+                "21": 0.0,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "Rating"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 32702
+          },
+          "page_changed": false,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 4,
+          "settle_ms": 50
+        },
+        {
+          "step": {
+            "non_repeatable": true,
+            "n": 22,
+            "snapshot": "[redacted capability]",
+            "operation": "click",
+            "index": 7,
+            "probabilities": {
+              "op": {
+                "CLICK": 0.87,
+                "WAIT": 0.01,
+                "DONE": 0.02,
+                "TYPE_TEXT": 0.01,
+                "BLOCKED": 0.09
+              },
+              "target": {
+                "1": 0.06999999999999999,
+                "2": 0.03,
+                "3": 0.0,
+                "4": 0.01,
+                "6": 0.0,
+                "7": 0.74,
+                "8": 0.0,
+                "9": 0.0,
+                "10": 0.0,
+                "11": 0.0,
+                "12": 0.0,
+                "14": 0.0,
+                "15": 0.0,
+                "16": 0.08,
+                "17": 0.04,
+                "18": 0.01,
+                "19": 0.0,
+                "20": 0.01,
+                "21": 0.01,
+                "22": 0.0,
+                "23": 0.0,
+                "24": 0.0,
+                "25": 0.0,
+                "26": 0.0,
+                "27": 0.0,
+                "28": 0.0,
+                "29": 0.0,
+                "30": 0.0,
+                "31": 0.0,
+                "32": 0.0,
+                "33": 0.0,
+                "34": 0.0,
+                "35": 0.0,
+                "36": 0.0,
+                "37": 0.0,
+                "38": 0.0,
+                "39": 0.0
+              }
+            },
+            "target": {
+              "role": "button",
+              "label": "All filters"
+            },
+            "after": {
+              "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+              "title": "cafes near Sagrada Família - Google Maps"
+            },
+            "elapsed_ms": 33168
+          },
+          "page_changed": true,
+          "option": null,
+          "outcome": "executed",
+          "model_operation": "click",
+          "rescue": false,
+          "input_ms": 5,
+          "settle_ms": 50
+        }
+      ],
+      "predictions": [
+        {
+          "outcome": "stale; no input",
+          "n": 1,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "WAIT": 0.0,
+              "CLICK": 0.91,
+              "TYPE_TEXT": 0.06,
+              "BLOCKED": 0.03
+            },
+            "target": {
+              "1": 0.08,
+              "2": 0.85,
+              "3": 0.0,
+              "4": 0.02,
+              "5": 0.0,
+              "6": 0.01,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.03,
+              "16": 0.01,
+              "17": 0.0,
+              "19": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.88,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5059,
+            "output_tokens": 372,
+            "cost": 0.000212478,
+            "retries": 0
+          },
+          "elapsed_ms": 999
+        },
+        {
+          "outcome": "executed",
+          "n": 2,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.05,
+              "WAIT": 0.01,
+              "BLOCKED": 0.04,
+              "CLICK": 0.9
+            },
+            "target": {
+              "1": 0.08,
+              "2": 0.84,
+              "3": 0.0,
+              "4": 0.04,
+              "5": 0.0,
+              "6": 0.01,
+              "7": 0.0,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.02,
+              "16": 0.01,
+              "17": 0.0,
+              "19": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.87,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5059,
+            "output_tokens": 372,
+            "cost": 0.000212478,
+            "retries": 0
+          },
+          "elapsed_ms": 593
+        },
+        {
+          "outcome": "executed",
+          "n": 3,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.03,
+              "BLOCKED": 0.21,
+              "CLICK": 0.75,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.01
+            },
+            "target": {
+              "1": 0.01,
+              "2": 0.22,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.35000000000000003,
+              "6": 0.0,
+              "7": 0.06999999999999999,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.29000000000000004,
+              "17": 0.05,
+              "18": 0.0,
+              "20": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0
+            }
+          },
+          "confidence": 0.68,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5177,
+            "output_tokens": 380,
+            "cost": 0.000217434,
+            "retries": 0
+          },
+          "elapsed_ms": 555
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 4,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.02,
+              "CLICK": 0.78,
+              "BLOCKED": 0.19,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.01
+            },
+            "target": {
+              "1": 0.01,
+              "2": 0.13,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.43,
+              "6": 0.0,
+              "7": 0.04,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.31,
+              "17": 0.07,
+              "18": 0.0,
+              "20": 0.01,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0
+            }
+          },
+          "confidence": 0.72,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5211,
+            "output_tokens": 380,
+            "cost": 0.000218862,
+            "retries": 0
+          },
+          "elapsed_ms": 350
+        },
+        {
+          "outcome": "executed",
+          "n": 5,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.02,
+              "CLICK": 0.84,
+              "BLOCKED": 0.07,
+              "WAIT": 0.01,
+              "DONE": 0.06
+            },
+            "target": {
+              "1": 0.04,
+              "2": 0.01,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.7,
+              "6": 0.0,
+              "7": 0.05,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.08,
+              "25": 0.12,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0
+            }
+          },
+          "confidence": 0.8,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5606,
+            "output_tokens": 404,
+            "cost": 0.000235452,
+            "retries": 0
+          },
+          "elapsed_ms": 328
+        },
+        {
+          "outcome": "executed",
+          "n": 6,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 7,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.86,
+              "DONE": 0.04,
+              "TYPE_TEXT": 0.01,
+              "WAIT": 0.01,
+              "BLOCKED": 0.08
+            },
+            "target": {
+              "1": 0.09,
+              "2": 0.060000000000000005,
+              "3": 0.0,
+              "4": 0.01,
+              "6": 0.0,
+              "7": 0.45,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.19,
+              "25": 0.2,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0,
+              "40": 0.0,
+              "41": 0.0,
+              "42": 0.0,
+              "43": 0.0
+            }
+          },
+          "confidence": 0.83,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5597,
+            "output_tokens": 397,
+            "cost": 0.000235074,
+            "retries": 0
+          },
+          "elapsed_ms": 332
+        },
+        {
+          "outcome": "executed",
+          "n": 7,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.34,
+              "WAIT": 0.03,
+              "DONE": 0.0,
+              "CLICK": 0.63
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.05,
+              "5": 0.0,
+              "6": 0.04,
+              "7": 0.01,
+              "8": 0.02,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.85,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.01,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.01,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.01,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0
+            }
+          },
+          "confidence": 0.5,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4107,
+            "output_tokens": 302,
+            "cost": 0.000172494,
+            "retries": 0
+          },
+          "elapsed_ms": 346
+        },
+        {
+          "outcome": "refused; no input: the row is covered at its click point",
+          "n": 8,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.27,
+              "DONE": 0.0,
+              "WAIT": 0.02,
+              "CLICK": 0.71
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.02,
+              "5": 0.0,
+              "6": 0.02,
+              "7": 0.01,
+              "8": 0.02,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.91,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.01,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.01,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0
+            }
+          },
+          "confidence": 0.6,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4141,
+            "output_tokens": 302,
+            "cost": 0.000173922,
+            "retries": 0
+          },
+          "elapsed_ms": 363
+        },
+        {
+          "outcome": "executed",
+          "n": 9,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 8,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.35,
+              "CLICK": 0.62,
+              "DONE": 0.0,
+              "WAIT": 0.03
+            },
+            "target": {
+              "1": 0.01,
+              "2": 0.0,
+              "3": 0.03,
+              "4": 0.12,
+              "5": 0.0,
+              "6": 0.13,
+              "7": 0.09,
+              "8": 0.22,
+              "10": 0.11,
+              "11": 0.06,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.1,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.02,
+              "25": 0.01,
+              "26": 0.0,
+              "27": 0.01,
+              "28": 0.06,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.03
+            }
+          },
+          "confidence": 0.49,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4136,
+            "output_tokens": 293,
+            "cost": 0.000173712,
+            "retries": 0
+          },
+          "elapsed_ms": 318
+        },
+        {
+          "outcome": "executed",
+          "n": 10,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "BLOCKED": 0.09,
+              "CLICK": 0.87,
+              "DONE": 0.0,
+              "WAIT": 0.02,
+              "TYPE_TEXT": 0.02
+            },
+            "target": {
+              "1": 0.04,
+              "2": 0.34,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.35000000000000003,
+              "6": 0.0,
+              "7": 0.01,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.02,
+              "12": 0.0,
+              "13": 0.01,
+              "14": 0.0,
+              "15": 0.01,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.2,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.01,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.84,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5287,
+            "output_tokens": 388,
+            "cost": 0.000222054,
+            "retries": 0
+          },
+          "elapsed_ms": 341
+        },
+        {
+          "outcome": "executed",
+          "n": 11,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.01,
+              "WAIT": 0.01,
+              "DONE": 0.0,
+              "BLOCKED": 0.1,
+              "CLICK": 0.88
+            },
+            "target": {
+              "1": 0.04,
+              "2": 0.37,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.32,
+              "6": 0.0,
+              "7": 0.01,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.02,
+              "12": 0.0,
+              "13": 0.01,
+              "14": 0.0,
+              "15": 0.01,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.21000000000000002,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.01,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.84,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5321,
+            "output_tokens": 388,
+            "cost": 0.000223482,
+            "retries": 0
+          },
+          "elapsed_ms": 355
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 12,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "BLOCKED": 0.1,
+              "TYPE_TEXT": 0.02,
+              "CLICK": 0.86,
+              "WAIT": 0.02
+            },
+            "target": {
+              "1": 0.03,
+              "2": 0.43,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.3,
+              "6": 0.0,
+              "7": 0.01,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.02,
+              "12": 0.0,
+              "13": 0.01,
+              "14": 0.0,
+              "15": 0.01,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.17,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.02,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.82,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5349,
+            "output_tokens": 388,
+            "cost": 0.000224658,
+            "retries": 0
+          },
+          "elapsed_ms": 359
+        },
+        {
+          "outcome": "executed",
+          "n": 13,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.84,
+              "WAIT": 0.01,
+              "BLOCKED": 0.12,
+              "DONE": 0.02,
+              "TYPE_TEXT": 0.01
+            },
+            "target": {
+              "1": 0.05,
+              "2": 0.01,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.75,
+              "6": 0.0,
+              "7": 0.13,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.04,
+              "17": 0.02,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.81,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5591,
+            "output_tokens": 388,
+            "cost": 0.000234822,
+            "retries": 0
+          },
+          "elapsed_ms": 405
+        },
+        {
+          "outcome": "executed",
+          "n": 14,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.02,
+              "TYPE_TEXT": 0.01,
+              "BLOCKED": 0.09,
+              "CLICK": 0.87,
+              "WAIT": 0.01
+            },
+            "target": {
+              "1": 0.04,
+              "2": 0.01,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.84,
+              "6": 0.0,
+              "7": 0.08,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.02,
+              "17": 0.01,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.84,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5625,
+            "output_tokens": 388,
+            "cost": 0.00023625,
+            "retries": 0
+          },
+          "elapsed_ms": 361
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 15,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 7,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.86,
+              "DONE": 0.02,
+              "BLOCKED": 0.1,
+              "WAIT": 0.01,
+              "TYPE_TEXT": 0.01
+            },
+            "target": {
+              "1": 0.12,
+              "2": 0.03,
+              "3": 0.0,
+              "4": 0.01,
+              "6": 0.0,
+              "7": 0.68,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.07,
+              "17": 0.05,
+              "18": 0.01,
+              "19": 0.0,
+              "20": 0.01,
+              "21": 0.01,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.83,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5585,
+            "output_tokens": 381,
+            "cost": 0.00023457,
+            "retries": 0
+          },
+          "elapsed_ms": 399
+        },
+        {
+          "outcome": "executed",
+          "n": 16,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.02,
+              "TYPE_TEXT": 0.02,
+              "WAIT": 0.01,
+              "CLICK": 0.88,
+              "BLOCKED": 0.07
+            },
+            "target": {
+              "1": 0.05,
+              "2": 0.02,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.8,
+              "6": 0.0,
+              "7": 0.08,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.03,
+              "17": 0.01,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.86,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5625,
+            "output_tokens": 388,
+            "cost": 0.00023625,
+            "retries": 0
+          },
+          "elapsed_ms": 349
+        },
+        {
+          "outcome": "executed",
+          "n": 17,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 7,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.87,
+              "BLOCKED": 0.1,
+              "TYPE_TEXT": 0.01,
+              "DONE": 0.01,
+              "WAIT": 0.01
+            },
+            "target": {
+              "1": 0.13,
+              "2": 0.05,
+              "3": 0.0,
+              "4": 0.01,
+              "6": 0.0,
+              "7": 0.67,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.05,
+              "17": 0.06,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.01,
+              "21": 0.01,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.84,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5585,
+            "output_tokens": 381,
+            "cost": 0.00023457,
+            "retries": 0
+          },
+          "elapsed_ms": 350
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 18,
+          "snapshot": "[redacted capability]",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.01,
+              "CLICK": 0.45,
+              "BLOCKED": 0.51,
+              "DONE": 0.03
+            },
+            "target": {}
+          },
+          "confidence": 0.35,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4542,
+            "output_tokens": 303,
+            "cost": 0.000190764,
+            "retries": 0
+          },
+          "elapsed_ms": 319
+        },
+        {
+          "outcome": "executed",
+          "n": 19,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.03,
+              "BLOCKED": 0.33,
+              "CLICK": 0.64,
+              "DONE": 0.0
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.02,
+              "5": 0.0,
+              "6": 0.04,
+              "7": 0.01,
+              "8": 0.03,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.86,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.01,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.01,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.02,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0
+            }
+          },
+          "confidence": 0.52,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4300,
+            "output_tokens": 302,
+            "cost": 0.0001806,
+            "retries": 0
+          },
+          "elapsed_ms": 389
+        },
+        {
+          "outcome": "refused; no input: the row is covered at its click point",
+          "n": 20,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "BLOCKED": 0.28,
+              "WAIT": 0.02,
+              "CLICK": 0.7
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.02,
+              "5": 0.0,
+              "6": 0.02,
+              "7": 0.01,
+              "8": 0.02,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.91,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.01,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.01,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0
+            }
+          },
+          "confidence": 0.6,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4303,
+            "output_tokens": 302,
+            "cost": 0.000180726,
+            "retries": 0
+          },
+          "elapsed_ms": 355
+        },
+        {
+          "outcome": "executed",
+          "n": 21,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 8,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.63,
+              "WAIT": 0.04,
+              "DONE": 0.0,
+              "BLOCKED": 0.33
+            },
+            "target": {
+              "1": 0.01,
+              "2": 0.0,
+              "3": 0.03,
+              "4": 0.12,
+              "5": 0.0,
+              "6": 0.08,
+              "7": 0.08,
+              "8": 0.23,
+              "10": 0.14,
+              "11": 0.07,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.07,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.01,
+              "25": 0.01,
+              "26": 0.0,
+              "27": 0.01,
+              "28": 0.11,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.03
+            }
+          },
+          "confidence": 0.51,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4267,
+            "output_tokens": 293,
+            "cost": 0.000179214,
+            "retries": 0
+          },
+          "elapsed_ms": 368
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 22,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.02,
+              "BLOCKED": 0.1,
+              "TYPE_TEXT": 0.02,
+              "DONE": 0.0,
+              "CLICK": 0.86
+            },
+            "target": {
+              "1": 0.04,
+              "2": 0.31,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.4,
+              "6": 0.0,
+              "7": 0.01,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.02,
+              "12": 0.0,
+              "13": 0.02,
+              "14": 0.0,
+              "15": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.18000000000000002,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.02,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.83,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5380,
+            "output_tokens": 388,
+            "cost": 0.00022596,
+            "retries": 0
+          },
+          "elapsed_ms": 5883
+        },
+        {
+          "outcome": "executed",
+          "n": 23,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.02,
+              "WAIT": 0.01,
+              "CLICK": 0.86,
+              "TYPE_TEXT": 0.01,
+              "BLOCKED": 0.1
+            },
+            "target": {
+              "1": 0.060000000000000005,
+              "2": 0.03,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.7,
+              "6": 0.0,
+              "7": 0.12,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.060000000000000005,
+              "17": 0.02,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.01,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.82,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5622,
+            "output_tokens": 388,
+            "cost": 0.000236124,
+            "retries": 0
+          },
+          "elapsed_ms": 349
+        },
+        {
+          "outcome": "executed",
+          "n": 24,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.01,
+              "CLICK": 0.88,
+              "BLOCKED": 0.08,
+              "WAIT": 0.01,
+              "DONE": 0.02
+            },
+            "target": {
+              "1": 0.05,
+              "2": 0.01,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.84,
+              "6": 0.0,
+              "7": 0.06999999999999999,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.02,
+              "17": 0.01,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.86,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5625,
+            "output_tokens": 388,
+            "cost": 0.00023625,
+            "retries": 0
+          },
+          "elapsed_ms": 402
+        },
+        {
+          "outcome": "executed",
+          "n": 25,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 7,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.88,
+              "BLOCKED": 0.09,
+              "TYPE_TEXT": 0.01,
+              "DONE": 0.01,
+              "WAIT": 0.01
+            },
+            "target": {
+              "1": 0.09,
+              "2": 0.03,
+              "3": 0.0,
+              "4": 0.01,
+              "6": 0.0,
+              "7": 0.75,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.060000000000000005,
+              "17": 0.04,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.01,
+              "21": 0.01,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.86,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5585,
+            "output_tokens": 381,
+            "cost": 0.00023457,
+            "retries": 0
+          },
+          "elapsed_ms": 381
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 26,
+          "snapshot": "[redacted capability]",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.02,
+              "BLOCKED": 0.5,
+              "DONE": 0.02,
+              "CLICK": 0.46
+            },
+            "target": {}
+          },
+          "confidence": 0.33,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4542,
+            "output_tokens": 303,
+            "cost": 0.000190764,
+            "retries": 0
+          },
+          "elapsed_ms": 339
+        },
+        {
+          "outcome": "executed",
+          "n": 27,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "DONE": 0.0,
+              "CLICK": 0.65,
+              "BLOCKED": 0.32,
+              "WAIT": 0.03
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.05,
+              "5": 0.0,
+              "6": 0.03,
+              "7": 0.02,
+              "8": 0.03,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.81,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.01,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.01,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.02,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.01
+            }
+          },
+          "confidence": 0.52,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4300,
+            "output_tokens": 302,
+            "cost": 0.0001806,
+            "retries": 0
+          },
+          "elapsed_ms": 5330
+        },
+        {
+          "outcome": "refused; no input: the row is covered at its click point",
+          "n": 28,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 12,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.02,
+              "BLOCKED": 0.24,
+              "DONE": 0.0,
+              "CLICK": 0.74
+            },
+            "target": {
+              "1": 0.0,
+              "2": 0.0,
+              "3": 0.0,
+              "4": 0.01,
+              "5": 0.0,
+              "6": 0.02,
+              "7": 0.01,
+              "8": 0.01,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.93,
+              "13": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.01,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0
+            }
+          },
+          "confidence": 0.66,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4303,
+            "output_tokens": 302,
+            "cost": 0.000180726,
+            "retries": 0
+          },
+          "elapsed_ms": 357
+        },
+        {
+          "outcome": "executed",
+          "n": 29,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 8,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.02,
+              "CLICK": 0.68,
+              "BLOCKED": 0.3,
+              "DONE": 0.0
+            },
+            "target": {
+              "1": 0.01,
+              "2": 0.0,
+              "3": 0.02,
+              "4": 0.14,
+              "5": 0.0,
+              "6": 0.12,
+              "7": 0.1,
+              "8": 0.22,
+              "10": 0.11,
+              "11": 0.05,
+              "13": 0.01,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.07,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.01,
+              "25": 0.01,
+              "26": 0.0,
+              "27": 0.01,
+              "28": 0.08,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.03
+            }
+          },
+          "confidence": 0.57,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4267,
+            "output_tokens": 293,
+            "cost": 0.000179214,
+            "retries": 0
+          },
+          "elapsed_ms": 363
+        },
+        {
+          "outcome": "stale; no input",
+          "n": 30,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 2,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.85,
+              "WAIT": 0.01,
+              "BLOCKED": 0.11,
+              "DONE": 0.0,
+              "TYPE_TEXT": 0.03
+            },
+            "target": {
+              "1": 0.04,
+              "2": 0.36,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.32,
+              "6": 0.0,
+              "7": 0.01,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.02,
+              "12": 0.0,
+              "13": 0.01,
+              "14": 0.0,
+              "15": 0.0,
+              "17": 0.0,
+              "18": 0.0,
+              "19": 0.23,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.01,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.81,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5387,
+            "output_tokens": 388,
+            "cost": 0.000226254,
+            "retries": 0
+          },
+          "elapsed_ms": 5359
+        },
+        {
+          "outcome": "executed",
+          "n": 31,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.82,
+              "DONE": 0.02,
+              "BLOCKED": 0.13,
+              "WAIT": 0.01,
+              "TYPE_TEXT": 0.02
+            },
+            "target": {
+              "1": 0.06,
+              "2": 0.02,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.68,
+              "6": 0.0,
+              "7": 0.16,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.05,
+              "17": 0.02,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.01,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.78,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5629,
+            "output_tokens": 388,
+            "cost": 0.000236418,
+            "retries": 0
+          },
+          "elapsed_ms": 350
+        },
+        {
+          "outcome": "executed",
+          "n": 32,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 5,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "TYPE_TEXT": 0.01,
+              "WAIT": 0.01,
+              "BLOCKED": 0.07,
+              "CLICK": 0.9,
+              "DONE": 0.01
+            },
+            "target": {
+              "1": 0.06,
+              "2": 0.02,
+              "3": 0.0,
+              "4": 0.0,
+              "5": 0.79,
+              "6": 0.0,
+              "7": 0.09,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.03,
+              "17": 0.01,
+              "18": 0.0,
+              "19": 0.0,
+              "20": 0.0,
+              "21": 0.0,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.87,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5632,
+            "output_tokens": 388,
+            "cost": 0.000236544,
+            "retries": 0
+          },
+          "elapsed_ms": 342
+        },
+        {
+          "outcome": "executed",
+          "n": 33,
+          "snapshot": "[redacted capability]",
+          "operation": "click",
+          "index": 7,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "CLICK": 0.87,
+              "WAIT": 0.01,
+              "DONE": 0.02,
+              "TYPE_TEXT": 0.01,
+              "BLOCKED": 0.09
+            },
+            "target": {
+              "1": 0.06999999999999999,
+              "2": 0.03,
+              "3": 0.0,
+              "4": 0.01,
+              "6": 0.0,
+              "7": 0.74,
+              "8": 0.0,
+              "9": 0.0,
+              "10": 0.0,
+              "11": 0.0,
+              "12": 0.0,
+              "14": 0.0,
+              "15": 0.0,
+              "16": 0.08,
+              "17": 0.04,
+              "18": 0.01,
+              "19": 0.0,
+              "20": 0.01,
+              "21": 0.01,
+              "22": 0.0,
+              "23": 0.0,
+              "24": 0.0,
+              "25": 0.0,
+              "26": 0.0,
+              "27": 0.0,
+              "28": 0.0,
+              "29": 0.0,
+              "30": 0.0,
+              "31": 0.0,
+              "32": 0.0,
+              "33": 0.0,
+              "34": 0.0,
+              "35": 0.0,
+              "36": 0.0,
+              "37": 0.0,
+              "38": 0.0,
+              "39": 0.0
+            }
+          },
+          "confidence": 0.85,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 5592,
+            "output_tokens": 381,
+            "cost": 0.000234864,
+            "retries": 0
+          },
+          "elapsed_ms": 351
+        },
+        {
+          "outcome": "terminal",
+          "n": 34,
+          "snapshot": "[redacted capability]",
+          "operation": "blocked",
+          "index": null,
+          "option": null,
+          "probabilities": {
+            "op": {
+              "WAIT": 0.01,
+              "DONE": 0.02,
+              "BLOCKED": 0.51,
+              "CLICK": 0.46
+            },
+            "target": {}
+          },
+          "confidence": 0.34,
+          "rescued_operation": null,
+          "usage": {
+            "input_tokens": 4542,
+            "output_tokens": 303,
+            "cost": 0.000190764,
+            "retries": 0
+          },
+          "elapsed_ms": 331
+        }
+      ],
+      "text_calls": [],
+      "metrics": {
+        "actions": 22,
+        "predictions": 34,
+        "text_calls": 0,
+        "observation_calls": 35,
+        "observation_retries": 25,
+        "stale_decisions": 11,
+        "bootstrap_ms": 0,
+        "observation_ms": 4565,
+        "prediction_ms": 28671,
+        "text_helper_ms": 0,
+        "input_ms": 436,
+        "settle_ms": 17180,
+        "elapsed_ms": 33553
+      }
+    },
+    "output_kinds": [
+      "operator-state"
+    ],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "https://www.google.com/maps/search/cafes+near+Sagrada+Fam%C3%ADlia/@41.4038098,2.1620176,15z/data=!4m7!2m6!3m5!2sBasilica+of+the+Sagrada+Familia,+Carrer+de+Mallorca,+401,+Eixample,+08013+Barcelona,+Spain!3s0x12a4a2dcd83dfb93:0x9bd8aac21bc3c950!4m2!1d2.1743558!2d41.4036299?hl=en&entry=ttu&g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D",
+      "title": "cafes near Sagrada Família - Google Maps",
+      "page_kind": {
+        "name": "search-<slug>",
+        "source": "inferred"
+      },
+      "rows": [
+        {
+          "index": 1,
+          "role": "button",
+          "name": "Menu"
+        },
+        {
+          "index": 2,
+          "role": "button",
+          "name": "Saved"
+        },
+        {
+          "index": 3,
+          "role": "button",
+          "name": "Recents"
+        },
+        {
+          "index": 4,
+          "role": "button",
+          "name": "2 places Barcelona"
+        },
+        {
+          "index": 5,
+          "role": "button",
+          "name": "Get app"
+        },
+        {
+          "index": 6,
+          "role": "button",
+          "name": "Back"
+        },
+        {
+          "index": 7,
+          "role": "button",
+          "name": "Clear"
+        },
+        {
+          "index": 8,
+          "role": "button",
+          "name": "Done"
+        },
+        {
+          "index": 9,
+          "role": "heading",
+          "name": "Price"
+        },
+        {
+          "index": 10,
+          "role": "slider",
+          "name": "",
+          "value": "0"
+        },
+        {
+          "index": 11,
+          "role": "slider",
+          "name": "",
+          "value": "11"
+        },
+        {
+          "index": 12,
+          "role": "button",
+          "name": "Any rating"
+        },
+        {
+          "index": 13,
+          "role": "radio",
+          "name": "Any time",
+          "state": [
+            "checked"
+          ]
+        },
+        {
+          "index": 14,
+          "role": "radio",
+          "name": "Open now",
+          "state": [
+            "unchecked"
+          ]
+        },
+        {
+          "index": 15,
+          "role": "radio",
+          "name": "Open 24 hours",
+          "state": [
+            "unchecked"
+          ]
+        },
+        {
+          "index": 16,
+          "role": "button",
+          "name": "Collapse side panel"
+        },
+        {
+          "index": 17,
+          "role": "button",
+          "name": "Google apps",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 18,
+          "role": "link",
+          "name": "Sign in"
+        },
+        {
+          "index": 19,
+          "role": "button",
+          "name": "15 min"
+        },
+        {
+          "index": 20,
+          "role": "radio",
+          "name": "Walking",
+          "state": [
+            "checked"
+          ]
+        },
+        {
+          "index": 21,
+          "role": "radio",
+          "name": "Driving",
+          "state": [
+            "unchecked"
+          ]
+        },
+        {
+          "index": 22,
+          "role": "switch",
+          "name": "Turn off travel time tool",
+          "state": [
+            "checked"
+          ]
+        },
+        {
+          "index": 23,
+          "role": "button",
+          "name": "Show Your Location"
+        },
+        {
+          "index": 24,
+          "role": "button",
+          "name": "Zoom in"
+        },
+        {
+          "index": 25,
+          "role": "button",
+          "name": "Zoom out"
+        },
+        {
+          "index": 26,
+          "role": "button",
+          "name": "Browse Street View images"
+        },
+        {
+          "index": 27,
+          "role": "button",
+          "name": "Layers",
+          "state": [
+            "collapsed"
+          ]
+        },
+        {
+          "index": 28,
+          "role": "button",
+          "name": "Poland"
+        },
+        {
+          "index": 29,
+          "role": "button",
+          "name": "Terms"
+        },
+        {
+          "index": 30,
+          "role": "button",
+          "name": "Privacy"
+        },
+        {
+          "index": 31,
+          "role": "button",
+          "name": "Send Product Feedback"
+        },
+        {
+          "index": 32,
+          "role": "button",
+          "name": "200 m"
+        }
+      ],
+      "total": 32,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "dialog": null
+    },
+    "reason": "planner done refused: The page lists cafés near Sagrada Família.; The page shows Súper cafe with a 4.7 rating and the address Plaça de la Sagrada Família, 23.; the planner turn cap of 3 was reached",
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/google.com/2026-10-03T11:49:29.879755Z-blocked.json"
+  },
+  "stdout": null,
+  "stderr": ""
+}
