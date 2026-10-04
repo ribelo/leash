@@ -639,6 +639,17 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
         snapshot; planner_actions; page_kind = Option.map scrub kind; title = page.title; url = page.url;
         text = if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text } in
       match handler.plan request with
+      | Error error when (match error.P.detail with
+          | Some (`Assoc fields) -> List.assoc_opt "code" fields = Some (`String "invalid-response")
+          | _ -> false) ->
+          (* pilot-x1f3: a reply the decoder refused twice costs a turn, not the mission;
+             the pilot sees the refusal in its history and answers again (U2 on Tauron
+             ended on one refused act). Bounded by the turn cap. *)
+          let n = List.length !turns + 1 in
+          turns := P.{n; trigger = "pilot"; answer = "invalid";
+            steps = []; reason = Some (scrub error.P.message); usage = None} :: !turns;
+          legs := !legs @ [ { goal = "(answer refused)"; outcome = "refused: " ^ scrub error.P.message; steps = [] } ];
+          (match observe () with Ok page -> turn page | Error error -> failed error)
       | Error error -> failed error
       | Ok reply ->
           private_values := !private_values @ reply.secrets_for_operator;

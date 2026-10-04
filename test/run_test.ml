@@ -432,6 +432,31 @@ let dangerous_leg () =
   Alcotest.(check string)
     "unsafe leg is audited" "refused" (List.hd (List.hd !requests).R.legs).outcome
 
+(* pilot-x1f3: a twice-refused pilot reply costs one turn, not the mission. *)
+let refused_reply_costs_a_turn () =
+  let h, requests, _ = harness [ finish ] in
+  let first = ref true in
+  let h =
+    {
+      h with
+      R.plan =
+        (fun request ->
+          if !first then (
+            first := false;
+            Error
+              (P.make_error
+                 ~detail:(`Assoc [ ("code", `String "invalid-response") ])
+                 (ok (P.Error_code.of_string "model-unavailable"))
+                 ~message:"act refused"))
+          else h.R.plan request);
+    }
+  in
+  let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
+  Alcotest.(check string) "mission still done" "done" (P.Run_status.to_string r.status);
+  Alcotest.(check string)
+    "refusal is in the next history" "refused: act refused"
+    (List.hd (List.hd !requests).R.legs).outcome
+
 (* pilot-gt2h: whole words; navigation that names a section is not an action (U1, Tauron). *)
 let unsafe_words () =
   List.iter
@@ -482,5 +507,6 @@ let () =
             ("redaction fails closed", schema_redaction);
             ("dangerous leg refusal", dangerous_leg);
             ("refusal words are whole words", unsafe_words);
+            ("refused reply costs a turn", refused_reply_costs_a_turn);
           ] );
     ]
