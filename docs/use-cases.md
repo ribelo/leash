@@ -332,3 +332,12 @@ Independent check: the harness fetched `https://books.toscrape.com/catalogue/cat
 Cost: 5 pilot turns, 0 navigator steps, 6 calls, $0.00511723.
 
 **Fail: the file was not written.** `--out` produced a 0-byte file and the reply's `output_kinds` is empty. A collection file can only be written by a validated playbook script record, and the pilot's answers are `leg`, `read`, `act`, `handoff`, `notify`, `done`, `fail` — there is no script answer and no writer for `--out`, so the mission's records can only be returned as text. Story `pilot-sc9t`.
+### U10 — read the new portal message, fixture (pilot-sa3f)
+
+Mission, verbatim: "Is there a new message in my fixture portal inbox, and what does it say" (`--url http://127.0.0.1:33343/portal`, portal credentials passed with `--secret portal_user=@file --secret portal_password=@file`).
+
+`result`: "Yes. There is a new message titled "Your appointment is confirmed." It says: "Your appointment is confirmed for Tuesday at 10:30. Please bring your reference number REF-2048.""
+
+Independent check, from the fixture's state file: `portal.logins == 1`, `opened_messages == ["new"]`, the `new` message has `read == true`, and the subject and body match the state's `portal.messages` word for word. No configured username or password occurs anywhere in the state.
+
+Cost: 8 pilot turns, 0 navigator steps, 8 calls, $0.0018486.
