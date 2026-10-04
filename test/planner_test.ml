@@ -129,6 +129,16 @@ let select_label () =
   | Ok _ -> Alcotest.fail "not a select"
   | Error why -> Alcotest.fail why
 
+(* pilot-x1f3: the prompt offers act scroll; the decoder and the check accept it. *)
+let act_scroll () =
+  match
+    M.decode_pilot request
+      {|{"answer":"act","action":{"cmd":"scroll","args":{"tab":"t_test","direction":"down"}}}|}
+  with
+  | Ok { answer = R.Act (P.Scroll _); _ } -> ()
+  | Ok _ -> Alcotest.fail "not a scroll"
+  | Error why -> Alcotest.fail why
+
 (* pilot-02ij: the pilot prompt stays under 300 words. *)
 let prompt_size () =
   let words =
@@ -182,6 +192,7 @@ let () =
             ("act without wire version", act_without_version);
             ("prompt under 300 words", prompt_size);
             ("select option by label", select_label);
+            ("act scroll", act_scroll);
             ("generated secret", generated);
             ("bounded request", bounded);
             ("redaction", redact);

@@ -1585,7 +1585,15 @@ let check_planner_action (page : snapshot) action =
           match args.index with
           | Some index -> row args.snapshot index
           | None -> Error "continue press must name an offered row")
-  | _ -> Error "pilot act accepts only click, select, fill and press on offered rows"
+  | Scroll args ->
+      (* pilot-x1f3: the element table is viewport-only, so the pilot scrolls to reach a
+         row the text shows (U2 on Tauron, 2026-10-04, was refused). *)
+      same_tab args.tab (fun () ->
+          match args.index with
+          | Some index when not (named index) ->
+              Error "continue scroll names no offered row"
+          | _ -> Ok ())
+  | _ -> Error "pilot act accepts only click, select, fill, press and scroll"
 
 (* pilot-02ij: redact values before any model, trace or diagnostic boundary. *)
 let redact_string secrets text =
