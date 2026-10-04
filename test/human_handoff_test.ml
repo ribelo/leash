@@ -537,7 +537,7 @@ let focus_finds_the_chrome_window () =
         (warnings (result (reply !cell))));
   let without_chrome = "[{\"id\":2,\"app_id\":\"google-chrome\"}]" in
   rig
-    ~scripts:[ output [ out (without_chrome ^ "\n") ] exit_ok; exit_ok; blocked ]
+    ~scripts:[ output [ out (without_chrome ^ "\n") ] exit_ok; blocked ]
     ~focus:[ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
@@ -590,6 +590,58 @@ let reply_shapes () =
     "hand-rg9h and carries them when there are any" [ "notify: exited 1" ]
     (warnings warned)
 
+(* pilot-9u3q: notify-send exits successfully without an action on dismissal.
+   Both that close and the explicit Cancel action must settle before the deadline. *)
+let notification_cancel_ends ~dismissed () =
+  let event =
+    if dismissed then output [ out ~after:(Ox.Duration.seconds 2) "" ] exit_ok
+    else output [ out ~after:(Ox.Duration.seconds 2) "cancel\n" ] blocked
+  in
+  rig ~scripts:[ exit_ok; event ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
+      let h = handle_new tabs in
+      let cell = ref None in
+      Eio.Fiber.fork ~sw (fun () ->
+          cell :=
+            Some
+              (request tabs "alice"
+                 (P.Handoff
+                    { tab = h; reason = "operator decision"; timeout_s = Some 300 })));
+      until 1000 "notification starts" (fun () -> List.length (commands process) = 2);
+      advance env 2;
+      settle ();
+      Alcotest.(check bool)
+        "pilot-9u3q cancellation replies before timeout" true (answered cell);
+      check_code "pilot-9u3q distinct cancellation outcome" "canceled-by-operator"
+        (reply !cell);
+      Alcotest.(check int) "pilot-9u3q handoff released" 0 (with_human_count tabs);
+      check_code "pilot-9u3q no waiting handoff remains" "no-handoff"
+        (request tabs "human" (P.Resume { tab = h })))
+
+let notification_first_action_wins () =
+  List.iter
+    (fun (actions, canceled) ->
+      rig
+        ~scripts:[ exit_ok; output [ out actions ] exit_ok ]
+        (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log:_ ->
+          let h = handle_new tabs in
+          let cell = ref None in
+          Eio.Fiber.fork ~sw (fun () ->
+              cell :=
+                Some
+                  (request tabs "alice"
+                     (P.Handoff { tab = h; reason = "one decision"; timeout_s = Some 300 })));
+          until 1000 "first notification action settles" (fun () -> answered cell);
+          if canceled then
+            check_code "pilot-9u3q cancellation wins" "canceled-by-operator" (reply !cell)
+          else
+            Alcotest.(check bool)
+              "pilot-9u3q Done wins" true
+              (get "resumed" (result (reply !cell)) = `Bool true);
+          settle ();
+          Alcotest.(check int)
+            "pilot-9u3q ledger survives competing outcomes" 0 (with_human_count tabs)))
+    [ ("cancel\ndone\ncancel\n", true); ("done\ncancel\n", false) ]
+
 let test name case = Alcotest.test_case name `Quick case
 
 let () =
@@ -603,6 +655,9 @@ let () =
       ( "notification",
         [
           test "hand-phof" notification_done_resumes;
+          test "pilot-9u3q dismissed" (notification_cancel_ends ~dismissed:true);
+          test "pilot-9u3q cancel action" (notification_cancel_ends ~dismissed:false);
+          test "pilot-9u3q first action wins" notification_first_action_wins;
           test "hand-phof hand-04rb" notifier_stopped_before_printing;
         ] );
       ( "warnings",

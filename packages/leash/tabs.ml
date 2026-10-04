@@ -224,6 +224,12 @@ type request =
   | Hand_over_held of { reason : string; handle : P.Handle.t; at : float }
   | Resume of { handle : P.Handle.t; at : float }
   | Restore of { handle : P.Handle.t; waiting : waiting; at : float }
+  | Answer_handoff of {
+      handle : P.Handle.t;
+      waiting : waiting;
+      outcome : outcome;
+      at : float;
+    }
   | Touch of { handle : P.Handle.t; at : float }
   | Register of {
       id : string;
@@ -486,6 +492,15 @@ let fold ~fresh ~logger ~tombstone_s ~generation ledger request =
               in
               settle waiting Resumed;
               Ok (with_entry ledger entry, Entry entry)))
+  | Answer_handoff { handle; waiting; outcome; at } -> (
+      match Keys.find_opt (key handle) ledger.entries with
+      | Some ({ handoff = Some current; _ } as entry) when current == waiting ->
+          settle waiting outcome;
+          Ok
+            ( with_entry ledger
+                { entry with handoff = None; with_human = false; last_activity = at },
+              Nothing )
+      | _ -> Ok (ledger, Nothing))
   | Restore { handle; waiting; at } -> (
       match Keys.find_opt (key handle) ledger.entries with
       | Some ({ handoff = Some current; _ } as entry) when current == waiting ->
@@ -1123,7 +1138,7 @@ let step_deadline = Ox.Duration.seconds 5
      stopped the moment the handoff ends by any path — resume, deadline, disconnect, or
      the tab going away. Its Done action is the human's [resume] (hand-0sja); one that
      arrives after the handoff already ended is logged, not retried. *)
-let announce t ~sw ~tab ~reason ~warn ~clean =
+let announce t ~sw ~tab ~waiting ~reason ~warn ~clean =
   let context =
     Desktop.
       {
@@ -1162,14 +1177,16 @@ let announce t ~sw ~tab ~reason ~warn ~clean =
      what stops the child and reaps it before the request answers. *)
   Eio.Fiber.fork_daemon ~sw (fun () ->
       guarded "notify" (fun () ->
-          Desktop.notify t.desktop ~sw context ~on_done:(fun () ->
-              match resume t (credential tab) with
-              | Ok _ -> ()
-              | Error error ->
-                  Ox_observability.Logger.info t.logger
-                    ~fields:[ ("url", Ox_observability.Logger.String (clean tab.url)) ]
-                    ("the notification answered a handoff that had already ended: "
-                   ^ clean error.P.message)));
+          let answer outcome =
+            ignore
+              (call t
+                 (Answer_handoff { handle = credential tab; waiting; outcome; at = now t }))
+          in
+          Desktop.notify t.desktop ~sw context
+            ~on_cancel:(fun () ->
+              answer
+                (Ended (error "canceled-by-operator" "the operator canceled the handoff")))
+            ~on_done:(fun () -> answer Resumed));
       `Stop_daemon)
 
 let handoff ?(secrets = []) t ~reason ~timeout_s handle =
@@ -1235,7 +1252,7 @@ let handoff ?(secrets = []) t ~reason ~timeout_s handle =
       Eio.Switch.run (fun human ->
           (* hand-04rb hand-phof: the human-facing steps, on this handoff's own switch, so
              the notifier is stopped when the request ends however it ends. *)
-          announce t ~sw:human ~tab ~reason ~warn ~clean;
+          announce t ~sw:human ~tab ~waiting ~reason ~warn ~clean;
           let left = remaining () in
           if not (Ox.Duration.is_zero left) then
             ignore (t.await_handoff left waiting.promise);

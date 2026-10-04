@@ -23,6 +23,7 @@ action.
 | `dialog-open` | 65 | a dialog blocks page reads and actions; answer it first | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry |
 | `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown |
 | `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it |
+| `canceled-by-operator` | 77 | the operator canceled or dismissed the handoff notification | stop this mission; do not retry without a new instruction from the operator |
 | `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank |
 | `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` |
 | `timeout` | 75 | wait, handoff, or a bounded operation ran out of time; a handoff's detail.warnings lists the steps that failed | retry; for a wait raise `--timeout-ms`, for a handoff raise the timeout or `leash resume TAB` |

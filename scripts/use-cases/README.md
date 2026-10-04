@@ -67,3 +67,15 @@ python3 scripts/use-cases/test_fixtures.py
 ```
 
 Five stdlib `unittest` cases start isolated server subprocesses on free loopback ports, exercise all three flows through `urllib` and cookie handling, and assert the JSON file. They additionally check rejected actions leave state unchanged, binary downloads match, page refreshes do not repeat uploads, duplicate upload POSTs remain visible, and server stdout/stderr contain no request logs. Temporary state is cleaned up and server processes stopped after each case. No browser or Leash service is launched.
+
+## Notification cancellation — pilot-9u3q
+
+[notification-cancel.py](notification-cancel.py) exercises the real CLI, service, headless Chrome, notify-send and durable trace writer. A local model fixture makes one handoff decision. A private D-Bus daemon emits standard user-dismissal and button-action signals; it cannot activate desktop services. No operator input, credentials, real provider calls or user notification-daemon changes are needed. Python dbus-next is test-only, not a Leash runtime dependency.
+
+From the repository root, after building the binary:
+
+```sh
+nix shell --impure --expr 'let f = builtins.getFlake (toString ./.); pkgs = import f.inputs.nixpkgs { system = builtins.currentSystem; }; in pkgs.python3.withPackages (p: [ p.dbus-next ])' -c dbus-run-session --config-file=scripts/use-cases/notification-bus.conf -- python3 scripts/use-cases/notification-cancel.py _build_cancel/default/packages/leash/bin/main.exe /tmp/leash-cancel-evidence
+```
+
+Use a new evidence directory for each run; existing evidence is never overwritten. The test asserts immediate canceled-by-operator results for dismissal and Cancel, Done resumes, a genuine deadline expires, failed delivery does not mean cancellation, no pilot retry follows cancellation, and the outcome survives in the durable trace. It checks Done/Cancel actions and requests no independent notification expiry (notifications remain enabled). It stops its private service in a finalizer. Expected D-Bus delivery-error logging appears in the deliberately failing-delivery case.

@@ -278,9 +278,12 @@ let default_notify_command =
   [
     "notify-send";
     "--urgency=critical";
+    "--expire-time=0";
     "--app-name=Leash";
     "--action";
     "done=Done";
+    "--action";
+    "cancel=Cancel";
     "Leash needs you";
     "{reason}";
   ]

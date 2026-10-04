@@ -36,7 +36,7 @@ Help is offline and short first contact is not the full manual.
   $ grep -q 'agent tabs close after 30 idle minutes; human tabs are never closed unless an agent takes one' handles
   $ leash help errors >errors 2>err
   $ ./daily_cli_fixture.exe error-help errors; test ! -s err
-  all 38 error codes, exit classes, meanings and hints are discoverable
+  all 39 error codes, exit classes, meanings and hints are discoverable
   $ leash playbook --help=plain >playbook-help 2>err; test ! -s err
   $ grep -q 'A playbook is a directory that describes one site: pages, procedures, and scripts.' playbook-help
   $ grep -q 'The operator writes it. A model never does. The pilot can select it when a mission fits.' playbook-help

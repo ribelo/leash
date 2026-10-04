@@ -39,11 +39,14 @@ let decision name =
     }
 
 let rig ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
-    ?(notify = fun _ -> Ok ()) f =
+    ?(notify = fun _ -> Ok ()) ?notification f =
   Eio_main.run (fun env ->
       Eio.Time.with_timeout_exn env#clock 10. (fun () ->
           Eio.Switch.run (fun sw ->
-              let process = Ox_test.Process.make [ Block_until_signal ] in
+              let process =
+                Ox_test.Process.make
+                  (Ox_test.Process.Block_until_signal :: Option.to_list notification)
+              in
               let current = ref None in
               let launch ~sw ~clock ~mgr:_ config =
                 let fake, client = Fake.create ~sw () in
@@ -82,7 +85,14 @@ let rig ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
                     Tabs.chrome;
                     clock = env#clock;
                     logger;
-                    desktop = Desktop.disabled;
+                    desktop =
+                      (match notification with
+                      | None -> Desktop.disabled
+                      | Some _ ->
+                          Desktop.create
+                            ~caps:(Ox_test.powerbox () :> Desktop.caps)
+                            ~clock:env#clock ~mgr:(Ox_test.Process.mgr process)
+                            { Desktop.focus_command = []; notify_command = [ "sh" ] });
                     caps = (Ox_test.powerbox () :> Tabs.caps);
                   }
               in
@@ -601,6 +611,42 @@ let resumed () =
            (member "outcome" (List.hd (events result "handoff"))));
       tab_open tabs result)
 
+let canceled_notification () =
+  let calls = ref 0 and messages = ref [] in
+  rig
+    ~notification:(Ox_test.Process.Exit (`Exited 0))
+    ~notify:(fun message ->
+      messages := message :: !messages;
+      Ok ())
+    (fun _ _ tabs _ ->
+      let result =
+        run tabs
+          ~plan:(fun _ ->
+            incr calls;
+            reply (R.Handoff "operator decision"))
+          ~decide:(fun _ -> Alcotest.fail "canceled mission must not navigate")
+      in
+      status "canceled-by-operator" result;
+      Alcotest.(check int) "pilot-9u3q no pilot retry" 1 !calls;
+      boolean "pilot-9u3q no gave-up notification" (!messages = []);
+      eq "pilot-9u3q cancellation audited" "canceled-by-operator"
+        (Yojson.Safe.Util.to_string
+           (member "outcome" (List.hd (events result "handoff"))));
+      let saved =
+        Leash.Traces.finish
+          (Leash.Traces.capture ~mission:"operator decision" ~now:0.)
+          ~now:0.1 (Ok result)
+      in
+      let restored = ok (P.drive_trace_of_yojson (P.yojson_of_drive_trace saved)) in
+      eq "pilot-9u3q durable outcome" "canceled-by-operator" restored.outcome;
+      boolean "pilot-9u3q durable cancellation event"
+        (restored.unattended = result.unattended);
+      boolean "pilot-9u3q no outstanding human ownership"
+        (List.for_all
+           (fun (tab : P.tab_listing) -> not tab.with_human)
+           (Tabs.list tabs).tabs);
+      tab_open tabs result)
+
 let debug_challenge () =
   rig ~attempt:false (fun _ _ tabs fake ->
       let tab = succeeded (Tabs.new_tab tabs ~url:(Some "https://example.com/")) in
@@ -776,6 +822,8 @@ let () =
                     (Result.is_error (P.Operation.of_string name)))
                 [ "handoff"; "notify" ]);
           Alcotest.test_case "notif-oslv normal resume cancels expiry" `Quick resumed;
+          Alcotest.test_case "pilot-9u3q canceled notification stops pilot and trace"
+            `Quick canceled_notification;
           Alcotest.test_case
             "notif-p4yk failed row actions reach bounded captcha fallback" `Quick
             (challenge_case ~broken:true ~attempt:true ~clears:false ~actions:true);

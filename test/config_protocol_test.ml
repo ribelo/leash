@@ -803,13 +803,16 @@ let handoff_commands () =
     "daily-n7on a handoff takes no focus by default (operator 2026-10-01)" []
     value.C.handoff.focus_command;
   Alcotest.(check (list string))
-    "daily-n7on the default notification is critical, so it waits for Done"
+    "pilot-9u3q persistent notification offers Done and Cancel"
     [
       "notify-send";
       "--urgency=critical";
+      "--expire-time=0";
       "--app-name=Leash";
       "--action";
       "done=Done";
+      "--action";
+      "cancel=Cancel";
       "Leash needs you";
       "{reason}";
     ]

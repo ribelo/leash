@@ -240,6 +240,7 @@ type run_status =
   | Run_failed [@json.name "failed"]
   | Run_handoff [@json.name "handoff"]
   | Run_handoff_expired [@json.name "handoff-expired"]
+  | Run_canceled_by_operator [@json.name "canceled-by-operator"]
   | Run_limit [@json.name "limit"]
   | Run_deadline [@json.name "deadline"]
   | Run_error [@json.name "error"]
@@ -302,6 +303,7 @@ type error_code =
   | Dialog_open [@json.name "dialog-open"]
   | No_dialog [@json.name "no-dialog"]
   | No_handoff [@json.name "no-handoff"]
+  | Canceled_by_operator [@json.name "canceled-by-operator"]
   | Url_refused [@json.name "url-refused"]
   | Tab_cap [@json.name "tab-cap"]
   | Timeout [@json.name "timeout"]
@@ -398,6 +400,9 @@ module Error_code = struct
         info 64 "resume on a tab nobody is waiting on"
           "nobody is waiting; `leash handoff TAB REASON` starts one, and only then does \
            `leash resume TAB` finish it"
+    | Canceled_by_operator ->
+        info 77 "the operator canceled or dismissed the handoff notification"
+          "stop this mission; do not retry without a new instruction from the operator"
     | Url_refused ->
         info 64 "scheme is not http, https, or about:blank, or the URL has userinfo"
           "use an http or https URL with no userinfo, or about:blank"
@@ -508,6 +513,7 @@ module Error_code = struct
       Dialog_open;
       No_dialog;
       No_handoff;
+      Canceled_by_operator;
       Url_refused;
       Tab_cap;
       Timeout;

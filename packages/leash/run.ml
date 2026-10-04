@@ -711,9 +711,12 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
               recorded [] (Some reason);
               let started=now () in
               let outcome=handler.hand_off ~reason:(scrub reason) in
-              let expired=match outcome with Error error -> P.Error_code.to_string error.P.code="timeout" | Ok _ -> false in
-              unattended := `Assoc ["kind",`String "handoff";"reason",`String (scrub reason);"elapsed_ms",`Int (int_of_float ((now ()-.started)*.1000.));"outcome",`String (if expired then "expired" else if Result.is_ok outcome then "resumed" else "failed")] :: !unattended;
+              let code=match outcome with Error error -> P.Error_code.to_string error.P.code | Ok _ -> "" in
+              let expired=code="timeout" in
+              let canceled=code="canceled-by-operator" in
+              unattended := `Assoc ["kind",`String "handoff";"reason",`String (scrub reason);"elapsed_ms",`Int (int_of_float ((now ()-.started)*.1000.));"outcome",`String (if canceled then "canceled-by-operator" else if expired then "expired" else if Result.is_ok outcome then "resumed" else "failed")] :: !unattended;
               (match outcome with
+              | Error _ when canceled -> finish page "canceled-by-operator" ~reason:"the operator canceled the handoff" ()
               | Error _ when expired -> ignore (notify "the agent gave up waiting; the tab is still open"); finish page "handoff-expired" ~reason:(scrub reason) ()
               | Error error -> failed error
               | Ok _ -> next ())

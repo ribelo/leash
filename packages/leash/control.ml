@@ -207,7 +207,7 @@ let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
               | Ok result
                 when List.mem
                        (P.Run_status.to_string result.P.status)
-                       [ "handoff"; "handoff-expired" ]
+                       [ "handoff"; "handoff-expired"; "canceled-by-operator" ]
                      || result.detail <> None ->
                   outcome
               | _ when args.P.tab <> None -> outcome

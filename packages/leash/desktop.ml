@@ -58,7 +58,12 @@ type context = { tab : Protocol.Handle.t; reason : string; url : string; title :
 
 type t = {
   focus : context -> (unit, string) result;
-  notify : sw:Eio.Switch.t -> context -> on_done:(unit -> unit) -> (unit, string) result;
+  notify :
+    sw:Eio.Switch.t ->
+    context ->
+    on_done:(unit -> unit) ->
+    on_cancel:(unit -> unit) ->
+    (unit, string) result;
 }
 
 (* A configuration comes from a file, so its values are untrusted text: a NUL byte cannot
@@ -187,20 +192,37 @@ let create ~(caps : caps) ~clock ~mgr commands =
                    command)
                 ~on_line:ignore)
   in
-  let notify ~sw context ~on_done =
+  let notify ~sw context ~on_done ~on_cancel =
     match commands.notify_command with
     | [] -> Ok ()
     | command ->
-        run_command ~grace:retirement_grace ~caps ~clock ~mgr ~sw
-          ~argv:(List.map (render (values context)) command)
-          ~on_line:(fun line ->
-            if String.lowercase_ascii (String.trim line) = "done" then on_done ())
+        (* pilot-9u3q: notify-send prints an action, or exits zero without one when
+           dismissed. Cancellation of this fiber and failed delivery are neither. *)
+        let answered = ref false in
+        let answer f =
+          if not !answered then (
+            answered := true;
+            f ())
+        in
+        let outcome =
+          run_command ~grace:retirement_grace ~caps ~clock ~mgr ~sw
+            ~argv:(List.map (render (values context)) command)
+            ~on_line:(fun line ->
+              match String.lowercase_ascii (String.trim line) with
+              | "done" -> answer on_done
+              | "cancel" -> answer on_cancel
+              | _ -> ())
+        in
+        (match outcome with Ok () -> answer on_cancel | Error _ -> ());
+        outcome
   in
   { focus; notify }
 
 let focus t context = t.focus context
-let notify t ~sw context ~on_done = t.notify ~sw context ~on_done
-let disabled = { focus = (fun _ -> Ok ()); notify = (fun ~sw:_ _ ~on_done:_ -> Ok ()) }
+let notify t ~sw context ~on_done ~on_cancel = t.notify ~sw context ~on_done ~on_cancel
+
+let disabled =
+  { focus = (fun _ -> Ok ()); notify = (fun ~sw:_ _ ~on_done:_ ~on_cancel:_ -> Ok ()) }
 
 (* notif-7pha: argv only, bounded best effort; no shell or notification action wait. *)
 let notifier ~(caps : caps) ~clock ~mgr ~command =

@@ -239,7 +239,7 @@ UnattendedEvent is one of:
 
 ```text
 {kind: "notify", message, elapsed_ms, outcome: "sent"|"failed", error: string|null}
-{kind: "handoff", reason, elapsed_ms, outcome: "resumed"|"expired"|"failed"}
+{kind: "handoff", reason, elapsed_ms, outcome: "resumed"|"canceled-by-operator"|"expired"|"failed"}
 {kind: "challenge", origin, attempt: bool, turns: int, outcome: string}
 ```
 
@@ -336,7 +336,7 @@ PlannerStep = {n: int, command: "click"|"fill"|"press"|"scroll"|"nav",
                after: {url, title}, elapsed_ms: int, error?: string}
                  non_repeatable defaults to false; error is the failed action's protocol error code
 Usage       = {input_tokens: int, output_tokens: int, cost: float}
-status (run) = "done"|"blocked"|"failed"|"handoff"|"limit"|"deadline"|"error"
+status (run) = "done"|"blocked"|"failed"|"handoff"|"handoff-expired"|"canceled-by-operator"|"limit"|"deadline"|"error"
                max_steps defaults to 60; max_procedures defaults to 40; deadline_s defaults to 900;
                each must be positive when present. model_cost is number|null.
 Models       = {configured: bool, jev_model: string, text_model: string,
@@ -628,11 +628,15 @@ Rules:
 - `list` shows all tabs and never returns handles. A label is nullable display metadata, not a credential. `new [URL] --label TEXT` creates a labelled agent tab.
 - `take --url PREFIX | --title TEXT | --label TEXT` requires exactly one selector. Matching is case-insensitive: URL prefix, title substring, whole label. No match returns `no-match`; several return `ambiguous` with handle-free listings in `detail.matches`. A live capability returns `taken` with a sharing hint; a handed-off tab returns `with-human`. A successful take permanently changes origin to agent and returns its new capability. The journal records URL and time, never the capability.
 - `downloads` requires the handle and refuses during handoff. Only downloads attributed to the tab main frame appear; files remain under the managed profile downloads directory.
-- `handoff HANDLE REASON` waits for handle-based `resume`, the deadline (default fifteen minutes), client disconnection, or disappearance. Resume, timeout and disconnection restore ordinary use and restart the idle clock; disappearance returns `tab-gone`. Resume outside a handoff returns `no-handoff`. A human hold cannot be bypassed by close or take.
+- `handoff HANDLE REASON` waits for handle-based `resume`, notification cancellation/dismissal, the deadline (default 300 seconds), client disconnection, or disappearance. Cancellation immediately returns `canceled-by-operator` (CLI exit 77); a mission returns the same terminal status and durable handoff event, with no pilot retry. The tab stays open. Resume, cancellation, timeout and disconnection restore ordinary use and restart the idle clock; disappearance returns `tab-gone`. Resume outside a handoff returns `no-handoff`. A human hold cannot be bypassed by close or take.
 - The human-facing side of a `handoff` runs in the order the story says: `Target.activateTarget`
   for the tab, then `handoff.focus_command`, then `handoff.notify_command`, whose stdout
   carries the action the human took and whose Done action (`done`, what
-  `notify-send --action done=Done` prints) is a `resume`. All three are best effort by
+  `notify-send --action done=Done` prints) is a `resume`. `cancel` on stdout or a successful
+  exit without an action means cancellation/dismissal; nonzero exit is a delivery failure.
+  The default also offers `--action cancel=Cancel` and requests `--expire-time=0`, so only
+  the handoff deadline expires the wait. First settlement wins; later notification events
+  cannot affect another handoff. All three are best effort by
   contract: each one that fails is a log line and a `warnings` entry on the successful
   reply — omitted when there is none — and none of them fails the handoff. A handoff that
   ends `timeout` carries the same list in `detail.warnings`, because a human who was never
@@ -799,6 +803,7 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `state-unchanged` | 65 | a check or uncheck did not change the control's checked state | snap and read the row's state; the control did not toggle, so pick another row or click its label | [errors](help/errors.md) |
 | `dialog-open` | 65 | a dialog blocks page reads and actions; answer it first | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry | [errors](help/errors.md) |
 | `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown | [errors](help/errors.md) |
+| `canceled-by-operator` | 77 | the operator canceled or dismissed the handoff notification | stop this mission; do not retry without a new instruction from the operator | [errors](help/errors.md) |
 | `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it | [errors](help/errors.md) |
 | `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank | [errors](help/errors.md) |
 | `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` | [errors](help/errors.md) |

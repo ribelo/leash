@@ -51,10 +51,18 @@ val focus : t -> context -> (unit, string) result
     for a window that is not there). *)
 
 val notify :
-  t -> sw:Eio.Switch.t -> context -> on_done:(unit -> unit) -> (unit, string) result
+  t ->
+  sw:Eio.Switch.t ->
+  context ->
+  on_done:(unit -> unit) ->
+  on_cancel:(unit -> unit) ->
+  (unit, string) result
 (** hand-phof: show the human the reason and the Done action, calling [on_done] when the
-    Done action's name reaches stdout. Blocks for the command's whole life: the caller
-    forks it on the handoff's switch so the handoff ending stops it. *)
+    Done action's name reaches stdout. [on_cancel] is called for the Cancel action or a
+    successful command exit without a selected action (notification dismissal). The first
+    action wins. A failed command or fiber cancellation is not dismissal. Blocks for the
+    command's whole life: the caller forks it on the handoff's switch so the handoff
+    ending stops it. *)
 
 val notifier :
   caps:caps ->
