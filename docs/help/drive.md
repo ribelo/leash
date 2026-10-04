@@ -1,79 +1,60 @@
-# Drive
+# Drive: missions with the pilot
+
+## State the result and limits
+
+Use `leash drive MISSION` for an outcome, not a list of clicks. Name the answer or action wanted, its concrete values and any limits: which account, which month, which file, whether to stop before purchase. Playbooks are optional.
+
+```sh
+leash drive 'Check whether I owe anything on Tauron and tell me what is overdue' --url https://moj.tauron.pl/ --secret login=@/private/login --secret password=@/private/password > reply.json
+leash drive 'Find a cafe near the Eiffel Tower with rating over 4 and give me its name and address' --url https://www.google.com/maps > reply.json
+leash drive 'Download my latest invoice as PDF; do not pay anything' --tab TAB > reply.json
+```
+
+Supply `--url`, an existing `--tab`, or exactly one explicit http(s) URL in the mission. A populated supplied tab is not replaced by the start URL. Use `leash new URL` and retain its handle before drive when you will need independent page reads afterward: without `--tab`, drive normally closes its temporary tab at completion. A handoff keeps it open. `final` is a snapshot, not a live-tab guarantee.
+
+Wait for the mission's reply before acting or reading on its tab. Other tabs can be used meanwhile. The service, not the client shell, needs the OpenRouter key. On a provider error inspect `detail.code` and the partial trace before deciding whether a retry is safe.
+
+## Who decides
+
+The pilot reads the mission, bounded page text (6000 characters), viewport rows (250), previous actions/legs, downloads and procedure candidates. It can issue a navigation leg, quote page text, act on a current row, notify, hand off, finish or fail. A leg is one navigation goal in JEV's language; JEV's DONE/BLOCKED returns control to the pilot.
+
+Only pilot done completes the mission. It must carry `result` and `evidence`. Direct actions include click, select, fill, press and scroll; downloads are clicks. Text can describe controls below the viewport, so scrolling may be needed before acting on a row. Payment, checkout confirmation, sending and deletion require explicit authorization in the mission. Never retry an uncertain submission merely because the reply failed.
+
+## Credentials and human handoff
+
+Pass repeatable `--secret NAME=@FILE`, or `--secret NAME=-` for stdin. Files contain the value, not a NAME=value assignment. Only the names reach the pilot; dispatch resolves them when filling. `--secret NAME=VALUE` is not accepted. A credential deliberately written into the mission is accepted, but then it is model input rather than a protected secret reference.
+
+Handoff asks the human through a notification and waits for resume, normally up to 300 seconds. An unanswered handoff returns `handoff-expired`; `notify` alone is non-blocking. Read `unattended` for these events. Keep notifications enabled. Known defect: dismissing a notification is not yet distinguished from timeout (pilot-9u3q); do not describe an operator's explicit cancellation as inaction.
+
+Generated passwords are intended for `secrets_for_operator`, but the U7 gate found missing delivery and cleartext leakage into reply turns and durable traces (pilot-gn4w, pilot-pw7x). Treat such artifacts as sensitive; do not claim this path is safe or paste generated secrets into chat.
+
+## Read the outcome, then verify it
+
+Exit 0 means the service answered, not that the mission succeeded. Save the full reply privately and inspect:
+
+- `status`: done, planned (dry-run), failed, limit, deadline, handoff-expired or error.
+- `result`: the answer or action outcome, including identifiers. `evidence`: the pilot's supporting URLs, facts or download paths—not independent proof.
+- `pilot_turns`, `navigator_steps` and `model_calls`: reasoning and navigation work.
+- `model_cost`: total only when all calls are priced; otherwise null. `data.reported_cost` is the known subtotal and `data.cost_unreported` counts missing prices.
+- `planner_turns` and `procedures`: decisions, offered/chosen candidates, attempted legs and refusals. `mission_expectations` records explicit completion checks.
+- `final`, `trace_path` and `unattended`: last observation, durable record and human-facing events.
+
+Verify the requested outcome separately: reread account amounts, inspect the completed download and its contents, check the actual uploaded link, or compare every requested record with the source. A reported result with an empty requested output file is a failure.
+
+`--out FILE` appends tagged JSONL records emitted by validated procedure scripts. It does not serialize the pilot's result text. U8 currently returns collection text while leaving the file empty (pilot-sc9t); U9 lacks a pilot upload action (pilot-h506). These are known unsupported paths, not successful missions.
+
+## Limits and preview
+
+`--deadline-s` bounds the whole mission (default `pilot.deadline_s = 600`); `pilot.turns` defaults to 12, and `--max-steps` bounds each navigator leg (maximum 15). `--max-procedures` is a retained compatibility option, not the pilot-turn control. Pilot reasoning defaults to max. These are execution bounds, not output-token budgets.
+
+`--dry-run` returns the first decision and reasoning summary without executing it or writing records. It still makes billable model calls and can allocate a tab. Add repeatable `--expect SENTENCE` for explicit live-page completion checks; see `leash help expectations`.
+
+## Playbooks as memory
+
+Installed and draft procedures are candidates for the pilot, never mandatory routes. After a done mission, learning auto records successful legs/actions as a proposed procedure. A later pilot-selected, verified replay can install it. Read `leash help playbooks` for validation, review/accept and provenance; there is no compile-from-traces phase.
+
+Measure memory with the same mission, recording first/second pilot turns and cost side by side, and checking which procedure was offered, chosen and installed. A faster authenticated session is not evidence of learning. Review/accept installation is not automatic replay-gated installation. Current live measurements found a cheaper turn count but higher cost on Maps, repeated stale-procedure failures on Flights and the portal, and extra downloads during invoice replay (pilot-z1nr, pilot-exx7).
 
 ## Durable traces
 
-Every public drive outcome is saved by default. `trace_path` names its existing
-private JSON file; errors return `detail.trace_path`. This is a safe typed
-projection, not the full live reply: no page text, handles, raw state, or records;
-password text is `[password]`. Inspect offline with `leash traces list`,
-`leash traces show FILE`, and `leash traces prune --dry-run`.
-`leash help traces` describes the schema, switch, and retention defaults
-(20 newest traces per site, 30 days).
-A storage failure is logged without changing the drive outcome.
-
-`leash drive MISSION` is the one mission command. It runs on one tab toward one goal until `done`, `blocked`, a cap, a deadline, or an error, and returns the trace and a final snapshot. Only pilot done completes the mission; navigator DONE/BLOCKED always returns to the pilot. There is no `run` command, and the call is not `drive TAB GOAL`. Include the concrete result and any needed values in the mission. Do not delegate a broader action than the user authorized.
-
-```sh
-leash drive 'Open Travel and return the visible titles and prices' --url https://books.toscrape.com/ --out /tmp/travel-state.jsonl
-leash drive 'Complete this page search and open the matching result' --tab TAB --max-steps 15 --deadline-s 300
-```
-
-The connection stays open until the mission returns. A long mission can run in the background while you work on other tabs. Do not start another action or read on that tab while it is working.
-
-Models are OpenRouter. The service needs `OPENROUTER_API_KEY` in its own environment, or `models.api_key` in the configuration. The key is the operator's. Setting a variable in the client shell does not update an already running service. A missing key or a provider failure is `model-unavailable`; read `detail.code` and the partial trace before any retry.
-
-## Pilot decisions and safeguards
-
-The pilot owns the mission from its first turn. It receives the mission, at most 6000 characters of page text, 250 snapshot rows, the page kind, prior navigation legs and learning candidates. A leg is one navigation goal in JEV's language. The operator gets at most 15 steps; both DONE and BLOCKED return to the pilot rather than completing the mission.
-
-Answers are leg, read, act, handoff, notify, done and fail. Read quotes page text. Act uses one current snapshot row: click, select, fill or press; a download is a click. Payment, checkout confirmation, message sending and deletion require a mission that names the action. A refusal is recorded and the pilot continues. Notify never ends a mission. Handoff waits for the human and returns control to the pilot on resume.
-
-Only pilot done completes the mission, with a concrete result and evidence. Explicit mission expectations still run through the existing live-page checkers. A model result is not independent proof of a remote mutation. Keep input evidence; never automatically rerun an uncertain payment or submission.
-
-Use repeated `--secret NAME=@FILE` or `--secret NAME=-` to read a value from a file or stdin. Models receive only names. Fill resolves a name at dispatch; values are redacted from traces and replies. Generated values appear only in `secrets_for_operator`, never page reasoning or traces. Ordinary credentials already in the mission are accepted without a credential warning or preflight.
-
-## Options
-
-| Option | Meaning |
-| --- | --- |
-| `--url URL` | Explicit http or https start, no userinfo. Opens a drive-owned tab. Does not replace an already populated `--tab`. A bad URL is `usage` and names a correct example. |
-| `--tab TAB` | Reuse this tab and leave it open. Without it, Leash opens a temporary tab and closes it when the mission ends, including errors. A human handoff keeps it open. `final` is the last snapshot, not a promise that its tab still exists. |
-| `--max-steps N` | Navigation leg cap, at most 15 executed steps. Must be positive. |
-| `--max-procedures N` | Playbook-lane procedure cap, default 40. Not the operator action cap. |
-| `--deadline-s S` | Whole mission budget, default `pilot.deadline_s = 600` seconds. Must be positive when present. |
-| `--expect SENTENCE` | Repeatable mission expectation the DONE guard verifies, with or without a playbook. |
-| `--out FILE` | Append tagged JSONL. Use a deliberate writable path, not an existing valuable file. |
-| `--dry-run` | Observe and decide once. No navigation, input, text helper, or `--out` write. Still makes billable model calls and may allocate a blank tab. |
-
-Pass `--expect` when a concrete live-page condition must be checked. Code-checked sentences are in `leash help expectations`. Defaults are `pilot.turns = 12`, `pilot.deadline_s = 600`, with pilot reasoning set to `max`.
-
-A drive reply is large. Write it to a file and read the fields below. Do not paste the whole reply into the chat.
-
-## Prefer drive for goals
-
-Prefer drive for mission-level work and manual commands for inspection. Learning defaults to `auto`; when enabled, successful navigation legs can become drafts and verified replay can promote them. Installed and draft procedures are candidates for the pilot, not choices made by JEV. See `leash help playbooks` for learning configuration and provenance.
-
-With `--tab HANDLE`, the supplied tab stays open. Otherwise drive closes its owned tab on ordinary endings. A human handoff keeps it open. Handoff expiry returns `handoff-expired`; normal idle cleanup applies later. Notifications and handoffs are recorded under `unattended`.
-
-## Candidates and navigation
-
-Playbooks are optional. The pilot always runs, with or without installed books. It can select an offered candidate by returning its slug as the leg goal, or ask for a fresh navigation goal. Installed arguments, goals, scripts, nested uses, expectations and bounded repeats remain executable. Missing or failed candidate steps return a blocked leg to the pilot.
-
-Pass `--url`, use an existing `--tab`, or include exactly one explicit http(s) URL in the mission. The pilot does not invent a start URL or navigate a populated tab away before its first decision.
-
-## Reading a trace
-
-Exit 0 means the service answered, not that the mission succeeded. Read:
-
-- `status`: done, planned (dry-run), failed, limit, deadline, handoff-expired or error.
-- `result` and `evidence`: the pilot's final answer and supporting facts.
-- `pilot_turns` and `navigator_steps`: mission turns and executed operator steps.
-- `reasoning_summary`: the first decision's brief explanation in a dry-run.
-- `planner_turns`: the pilot decisions, direct row actions and refusals (the retained trace field name).
-- `operator_steps`: navigation actions, with their input evidence.
-- `mission_expectations`: the live-page DONE guard and verdicts.
-- `collected`: validated script records streamed to `--out`.
-- `secrets_for_operator`: generated secrets returned only to the caller; do not paste these into chat.
-- `final` and `trace_path`: last snapshot and durable safe trace projection.
-
-A dry-run returns the first decision and reasoning summary, without navigation, action, typing or output writes. It still makes a billable model call.
+`trace_path` names the private durable projection; errors use `detail.trace_path`. Inspect with `leash traces list`, `leash traces show FILE` and `leash traces prune --dry-run`. See `leash help traces` for retention. It is not the full reply or page contents. Protected input values are redacted, but the generated-password defect above means a trace is not a blanket secrecy guarantee.
