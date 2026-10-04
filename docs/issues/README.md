@@ -189,7 +189,8 @@ L53's compile-from-traces failed three honest rounds; the cause was the loop's s
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
 | L56 | **The pilot loop** (`pilot/01-pilot.md`). Planner-first drive with leg/read/act/handoff/notify/done{result,evidence}/fail; JEV runs legs; `--secret`; refusals; compile-from-traces removed; playbooks as memory via replay gate; prompt under 300 words; `--dry-run` shows intent. | pilot-ukoh, pilot-eu1c, pilot-x1f3, pilot-8csf, pilot-gt2h, pilot-s954, pilot-rdjv, pilot-02ij, pilot-e4sh, pilot-a4ua, pilot-3egp, pilot-oijk, pilot-c77y, pilot-ffqa, pilot-r94o, pilot-cnp5 | L55 | [x] |
-| L57 | **Use-case gates** (`docs/use-cases.md`). U5/U6/U8 live with independent checks; U7/U9/U10 on fixtures; U1–U4 by the operator with `--secret`; each run twice (memory measured); failures become stories; skill and help rewritten. | pilot-kkq2, pilot-7boq, pilot-sa3f, pilot-ivzx, pilot-lo8y, pilot-bkw9 | L56 | [ ] |
+| L57 | **Use-case gate campaign** (`docs/use-cases.md`). U5/U6/U8 live with independent checks; U7/U9/U10 fixtures; U1/U2 on the real Tauron account with `--secret`. Passed cases repeated with pilot memory installed; selection, turns and cost recorded, including regressions and setup limits. U3/U4 await supplied Allegro credentials. Skill and help rewritten. Execution complete, **not all cases passing**; open findings are L57F. | pilot-kkq2, pilot-7boq, pilot-sa3f, pilot-ivzx, pilot-lo8y, pilot-bkw9 | L56 | [x] |
+| L57F | **Open gate findings** (`pilot/01-pilot.md`). Generated-password delivery/redaction; collection output file; pilot upload action; explicit notification cancellation (notifications stay enabled); repeated inapplicable memory; download-leg completion. These defects were recorded, not fixed by the gate campaign. | pilot-gn4w, pilot-pw7x, pilot-sc9t, pilot-h506, pilot-9u3q, pilot-z1nr, pilot-exx7 | L57 | [ ] |
 
 ## Later milestones
 
