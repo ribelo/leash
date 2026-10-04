@@ -24,7 +24,7 @@ Leash has no released users. Until 1.0, prioritize maintainability over backward
 - **Chrome over CDP through `--remote-debugging-pipe`** (ADR-0003). No debugging port is ever opened.
 - **Control socket + `leash` CLI** (Cmdliner) are the only agent-facing surface (ADR-0002). Every command is one request.
 - **Config**: TOML at `$XDG_CONFIG_HOME/leash/config.toml`, fail fast at boot. `OPENROUTER_API_KEY` in the environment overrides the file. Config and protocol shapes are plain types with `[@@deriving yojson]`; no schema DSL (ADR-0009).
-- **Models**: JEV through OpenRouter System One; a configurable OpenRouter text helper. Model output never becomes selectors, coordinates, shell, or JavaScript.
+- **Models**: JEV through OpenRouter System One; a configurable OpenRouter text helper. Model output never becomes selectors, shell, or JavaScript. Coordinate actions are first-class (ADR-0013): row actions revalidate; coordinate actions record the hit and screenshots as evidence.
 - **Logs** to the journal through Ox observability; OTLP export optional.
 - **Capabilities.** Dangerous calls go through `Ox_caps.Cap_*` and require a capability in the signature; the Door's powerbox (`env.caps`) is narrowed by ascription for each service (ox `docs/caps.md`).
 
