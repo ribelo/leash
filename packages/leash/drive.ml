@@ -75,7 +75,14 @@ type page_label = { kind : string; source : string; url : string }
 
 let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent
-    ~scripts ~run_script ~on_step ~label =
+    ~scripts ~run_script ~on_step ~label ~stop_on_navigation =
+  (* pilot-x1f3: navigation returns a leg to the pilot, not a DOM change. *)
+  let navigated (before : observation) (after : observation) =
+    let url page = List.hd (String.split_on_char '#' page.snapshot.url) in
+    let kind page = match label with
+      | None -> Option.map (fun (kind : P.page_kind_label) -> kind.name) page.snapshot.page_kind
+      | Some label -> Some (label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text).kind in
+    stop_on_navigation && (url before <> url after || kind before <> kind after) in
   let started = now () in
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
   let cap = Option.value ~default:60 args.P.max_steps in
@@ -368,7 +375,9 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                                 J.{ action = summary; kind = Some "script"; text = None; page_changed = Some changed }
                                 :: recent
                               in
-                              if J.stalled (List.rev recent) then
+                              if navigated page next then
+                                finish ~reason:"navigated" "done" steps next
+                              else if J.stalled (List.rev recent) then
                                 finish ~reason:"the operator repeated three non-WAIT actions without changing the page" "blocked" steps next
                               else go next steps recent)))
               else if not terminal && !actions >= cap then (
@@ -496,13 +505,15 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                                    match acted.dialog, acted.popups with
                                    | Some dialog, _ -> finish ~reason:(dialog_reason dialog) "error" steps next
                                    | None, _ :: _ -> finish ~reason:(popup_reason acted.popups) "error" steps next
+                                   | None, [] when navigated page next ->
+                                       finish ~reason:"navigated" "done" steps next
                                    | None, [] when J.stalled (List.rev recent) ->
                                        finish ~reason:"the operator repeated three non-WAIT actions without changing the page" "blocked" steps next
                                    | None, [] -> go next steps recent)
       in
       go first [] (List.rev initial_recent)
 
-let run ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
+let run ?(stop_on_navigation = false) ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(telemetry = fun () -> `Assoc []) ?(observe_attempts = 10) ?(recent = [])
     ?(scripts = fun _ -> []) ?run_script ?label
     ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run () =
@@ -527,7 +538,7 @@ let run ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(cover
       text_value = (fun context -> Effect.perform (M.Text context));
       act = (fun page choice text -> Effect.perform (M.Act (page, choice, text)));
     } in
-    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~on_step ~label) ()
+    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~on_step ~label ~stop_on_navigation) ()
       { retc = Fun.id; exnc = raise;
         effc = (fun (type a) (eff : a Effect.t) -> match eff with
           | M.Observe -> Some (fun (k : (a, (P.drive_result, P.error) result) Effect.Deep.continuation) -> Effect.Deep.continue k (handler.observe ()))

@@ -30,6 +30,9 @@ type trace_procedure = {
 type inferred_page = { name : string; url_pattern : string }
 (** kind-dnye kind-s1k2: one row of the session mapping in the trace header. *)
 
+(* pilot-r94o: safe per-turn audit, without raw pilot input or capabilities. *)
+type planner_turn = { n : int; trigger : string; answer : string; reason : string option }
+
 type t = {
   unattended : Yojson.Safe.t list;
   version : int;
@@ -46,6 +49,7 @@ type t = {
   inferred_pages : inferred_page list;
       (** kind-dnye: generalized pattern to name, first-seen. Empty when every kind was
           declared. Missing on an older file decodes as [[]]. *)
+  planner_turns : planner_turn list;
   procedures : trace_procedure list;
   steps : trace_step list;
   out_requested : bool; [@json.default false]

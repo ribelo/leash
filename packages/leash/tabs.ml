@@ -1947,8 +1947,8 @@ let observation_of (snapshot : P.snapshot) (read : Snapshot_source.operator_read
 (* drive-8n2z drive-tfqh fly-iodm fly-crcc: keep the lock across observe/decide/act.
    Never call a public Tabs action here: each would reacquire this very same mutex.
    An invalid operator payload is an observation error, never a weaker legacy read. *)
-let drive_locked ?mission ?(secrets = fun () -> []) ?recent ?on_step
-    ?(observed = fun (_ : Drive.observation) -> ()) ?(meter = meter ())
+let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []) ?recent
+    ?on_step ?(observed = fun (_ : Drive.observation) -> ()) ?(meter = meter ())
     ?(decide =
       fun ~deadline:_ _ ->
         Error
@@ -2202,8 +2202,9 @@ let drive_locked ?mission ?(secrets = fun () -> []) ?recent ?on_step
   in
   (* fly-4mio: acquire already retries ten times at 20 ms. One Drive attempt,
      or the two loops would nest to a hundred observations. *)
-  Drive.run ~validate ~coverage ~usage:(usage meter) ~telemetry:(telemetry meter)
-    ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script ?label
+  Drive.run ~stop_on_navigation ~validate ~coverage ~usage:(usage meter)
+    ~telemetry:(telemetry meter) ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script
+    ?label
     ~handler:Drive.{ observe; decide; text_value; act }
     ~now:(fun () -> now t)
     ~model ~args
@@ -2357,7 +2358,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
             trace_book := book;
             Option.iter (fun (snapshot, text) -> classify snapshot text) !trace_page
           in
-          let observe () =
+          let observe_once () =
             let* snapshot =
               snap_locked t tab
                 P.{ tab = handle; match_ = None; limit = Some 250; offset = None }
@@ -2395,6 +2396,40 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                       (List.rev tab.downloads);
                   snapshot;
                 }
+          in
+          (* pilot-x1f3: async tables must settle before the pilot sees them. *)
+          let observe () =
+            let latest = ref None in
+            let read () =
+              let* page = observe_once () in
+              latest := Some page;
+              Ok page
+            in
+            let until = now t +. 3. in
+            let rec stable (previous : Run.observation) =
+              let left = until -. now t in
+              if left <= 0. then Ok previous
+              else (
+                t.sleep (min 0.3 left);
+                let* page = read () in
+                if
+                  page.text = previous.text && page.url = previous.url
+                  && Hashtbl.length tab.inflight = 0
+                  || now t >= until
+                then Ok page
+                else stable page)
+            in
+            Eio.Fiber.first
+              (fun () ->
+                let* page = read () in
+                stable page)
+              (fun () ->
+                t.sleep 3.;
+                match !latest with
+                | Some page -> Ok page
+                | None ->
+                    Error
+                      (error "timeout" "pilot observation did not arrive within 3 seconds"))
           in
           (* map-3qag: the run already holds the tab lock; use the same row
              revalidation, hit-test, input and settle path as public actions. *)
@@ -2550,7 +2585,8 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                       (Text_helper.redact !secret_values context));
                 step =
                   (fun request ->
-                    drive_locked ~mission:args.mission
+                    drive_locked ~stop_on_navigation:request.Run.stop_on_navigation
+                      ~mission:args.mission
                       ~secrets:(fun () -> !secret_values)
                       ~recent:request.Run.recent ?meter ?on_step
                       ~observed:(fun page -> traced page.Drive.snapshot page.text)

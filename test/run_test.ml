@@ -310,7 +310,8 @@ let action_refusal () =
         !dispatched;
       let turn = List.hd result.planner_turns in
       Alcotest.(check bool)
-        "refusal is visible" (not allowed) (Option.is_some turn.reason))
+        "refusal is visible" (not allowed)
+        (turn.reason <> Some "pilot decision"))
     [
       ("Pay", "Inspect account", false);
       ("Delete account", "Inspect account", false);

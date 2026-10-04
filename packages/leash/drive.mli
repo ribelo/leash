@@ -37,6 +37,7 @@ type page_label = { kind : string; source : string; url : string }
     playbook-less lane; [kind] and [source] are recorded on the operator state. *)
 
 val run :
+  ?stop_on_navigation:bool ->
   ?on_step:(Protocol.step -> unit) ->
   ?validate:(observation -> (unit, Protocol.error) result) ->
   ?coverage:(observation -> Yojson.Safe.t) ->

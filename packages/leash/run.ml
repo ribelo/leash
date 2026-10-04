@@ -60,6 +60,7 @@ type step_request = {
   hint : string option;
   recent : Jev_request.recent_action list;
   max_steps : int;
+  stop_on_navigation : bool;
   deadline_s : int;
   dry_run : bool;
   script_offers : url:string -> text:string -> Jev_request.offered_script list;
@@ -446,7 +447,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
           Error (invalid reason)
       | _ -> Ok () in
     let at = now () in
-    let request = { goal; hint; recent = []; max_steps = min 15 args.max_steps;
+    let request = { goal; hint; recent = []; max_steps = min 15 args.max_steps; stop_on_navigation = true;
       deadline_s = remaining (); dry_run = false; script_offers = (fun ~url:_ ~text:_ -> []);
       on_script = (fun ~url:_ _ -> Error (invalid "leg script unavailable")) } in
     match handler.step request with
@@ -647,7 +648,11 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
           if !expectations = [] then expectations := reply.expect;
           let n = List.length !turns + 1 in
           let recorded steps reason = turns := P.{n; trigger = "pilot"; answer = answer_name reply.answer;
-            steps; reason = Option.map scrub reason; usage = reply.usage} :: !turns in
+            steps; reason = Option.map scrub (match reply.reasoning_summary, reason with
+              | None, reason -> reason
+              | Some summary, None -> Some summary
+              | Some summary, Some reason when summary = reason -> Some summary
+              | Some summary, Some reason -> Some (summary ^ "\n" ^ reason)); usage = reply.usage} :: !turns in
           let next () = match observe () with Ok page -> turn page | Error error -> failed error in
           if args.dry_run then (planned_choice := Some (json (pilot_choice_json reply.answer)); recorded [] reply.reasoning_summary; finish page "planned" ~reason:(answer_name reply.answer) ())
           else match reply.answer with

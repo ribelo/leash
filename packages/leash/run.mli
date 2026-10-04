@@ -48,6 +48,7 @@ type step_request = {
   hint : string option;
   recent : Jev_request.recent_action list;
   max_steps : int;
+  stop_on_navigation : bool;
   deadline_s : int;
   dry_run : bool;
   script_offers : url:string -> text:string -> Jev_request.offered_script list;

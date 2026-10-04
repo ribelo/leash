@@ -40,6 +40,7 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") time : P.drive_trace =
       start_url = None;
       inferred_pages = [];
       out_requested = false;
+      planner_turns = [];
       procedures = [];
       steps = [];
       final = Some { url = "https://books.toscrape.com/"; title = "Catalog" };

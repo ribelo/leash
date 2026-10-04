@@ -556,6 +556,30 @@ let finish t ~now outcome =
           (fun (page : Page_kind.draft_page) ->
             P.Trace.{ name = page.name; url_pattern = page.url_pattern })
           (Page_kind.inferred_pages t.page_kinds);
+      planner_turns =
+        (match outcome with
+          | Ok result -> result.P.planner_turns
+          | Error error -> (
+              match error.P.detail with
+              | Some (`Assoc fields) -> (
+                  match List.assoc_opt "planner_turns" fields with
+                  | Some (`List turns) ->
+                      List.filter_map
+                        (fun turn ->
+                          match P.planner_turn_of_yojson turn with
+                          | Ok turn -> Some turn
+                          | Error _ -> None)
+                        turns
+                  | _ -> [])
+              | _ -> []))
+        |> List.map (fun (turn : P.planner_turn) ->
+            P.Trace.
+              {
+                n = turn.n;
+                trigger = turn.trigger;
+                answer = turn.answer;
+                reason = turn.reason;
+              });
       procedures;
       steps;
       out_requested = false;
