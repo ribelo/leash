@@ -87,6 +87,18 @@ let act_without_version () =
   | Ok _ -> ()
   | Error why -> Alcotest.fail why
 
+(* pilot-02ij: the pilot prompt stays under 300 words. *)
+let prompt_size () =
+  let words =
+    String.split_on_char ' '
+      (String.map (function '\n' | '\t' -> ' ' | c -> c) M.pilot_prompt)
+    |> List.filter (( <> ) "")
+  in
+  Alcotest.(check bool)
+    (Printf.sprintf "%d words" (List.length words))
+    true
+    (List.length words < 300)
+
 let generated () =
   let reply =
     ok
@@ -126,6 +138,7 @@ let () =
             ("shapes", shapes);
             ("refusals", refuses);
             ("act without wire version", act_without_version);
+            ("prompt under 300 words", prompt_size);
             ("generated secret", generated);
             ("bounded request", bounded);
             ("redaction", redact);

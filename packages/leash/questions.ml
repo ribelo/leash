@@ -65,13 +65,15 @@ let score_levels = [ "0 not satisfied"; "1 satisfied" ]
    stated none). The page is untrusted data here as it is in every other question
    (run-xfxx). *)
 let pilot =
-  {|Pilot v1. A leg is one navigation goal in JEV's language.
+  {|Pilot v2. A leg is one navigation goal in JEV's language.
 Answer with one JSON object:
 {"answer":"leg","goal":"navigation goal or offered candidate slug"}
 {"answer":"read","quote":"exact page text","note":"what it means"}
 {"answer":"act","action":{"cmd":"click|select|fill|press","args":{"tab":"offered tab","snapshot":"current snapshot","index":1}}}
 Fill adds text (a value or a provided secret NAME); select adds option; press adds key.
 A download is a click on its row.
+{"answer":"act","action":{"cmd":"scroll","args":{"tab":"offered tab","direction":"down"}}}
+The element table lists only rows in the visible viewport; the text covers the whole page. To act on something the text shows but the table lacks, scroll first.
 {"answer":"handoff","reason":"login or other reason"}
 {"answer":"notify","message":"message to the operator"}
 {"answer":"done","result":"answer or outcome with identifiers","evidence":["URLs, page facts or downloaded files"]}

@@ -4,6 +4,10 @@
     seven answer shapes. A correction call shares the original deadline and never echoes a
     raw rejected reply. *)
 
+val pilot_prompt : string
+(** pilot-02ij: the pilot's whole system prompt — answers, shapes and refusals, under 300
+    words. *)
+
 type t = {
   plan :
     ?deadline:Ox.Duration.t -> Run.plan_request -> (Run.plan_reply, Protocol.error) result;

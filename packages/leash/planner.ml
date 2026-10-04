@@ -3,6 +3,8 @@
 
 module P = Protocol
 
+let pilot_prompt = Questions.pilot
+
 type t = {
   plan : ?deadline:Ox.Duration.t -> Run.plan_request -> (Run.plan_reply, P.error) result;
 }
