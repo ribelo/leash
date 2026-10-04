@@ -118,6 +118,15 @@ let pilot_request_json (request : Run.plan_request) =
       ("url", `String request.url);
       ("title", `String request.title);
       ("text", `String (bounded 6000 request.text));
+      ( "downloads",
+        `List
+          (List.map
+             (fun (name, mime, state) ->
+               `Assoc
+                 [
+                   ("file", `String name); ("mime", `String mime); ("state", `String state);
+                 ])
+             request.downloads) );
       ( "snapshot",
         P.yojson_of_snapshot
           {

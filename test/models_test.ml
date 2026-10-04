@@ -882,6 +882,7 @@ let chat_timeout ~kind ~attempt ~expected () =
                  title = "Books";
                  url = "https://example.com";
                  text = "Books";
+                 downloads = [];
                  planner_actions = 5;
                  snapshot =
                    Leash.Protocol.

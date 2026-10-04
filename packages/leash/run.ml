@@ -126,6 +126,7 @@ type plan_request = {
   text : string;
       (* run-rq6i, the one level page text reaches: the planner gets the page summary plus
          this bounded text, while the two choice levels never see it (run-pvmc). *)
+  downloads : (string * string * string) list;
 }
 (** What one planner turn is asked from (run-rq6i, L32): the mission, the point JEV stopped
     and why, the current playbook, the run so far, the arguments known and the observed
@@ -637,7 +638,8 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
         site = Option.map scrub !current_site; playbook = None;
         recent = List.map (fun (leg : leg) -> scrub leg.goal, leg.outcome) !legs; arguments = List.map (fun (key,value) -> scrub key,scrub value) !known;
         snapshot; planner_actions; page_kind = Option.map scrub kind; title = page.title; url = page.url;
-        text = if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text } in
+        text = if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text;
+        downloads = List.map (fun (name, mime, state) -> (scrub name, mime, state)) page.downloads } in
       match handler.plan request with
       | Error error when (match error.P.detail with
           | Some (`Assoc fields) -> List.assoc_opt "code" fields = Some (`String "invalid-response")

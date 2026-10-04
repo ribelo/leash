@@ -44,6 +44,7 @@ let request =
       title = "Page";
       url = snapshot.url;
       text = "Fact 42";
+      downloads = [ ("/downloads/invoice.pdf", "application/pdf", "completed") ];
     }
 
 let shapes () =
@@ -169,7 +170,12 @@ let bounded () =
     (String.length (Yojson.Safe.Util.to_string (field "text")));
   Alcotest.(check bool)
     "secret names included" true
-    (field "secret_names" = `List [ `String "PASS" ])
+    (field "secret_names" = `List [ `String "PASS" ]);
+  (* pilot-x1f3: the pilot sees completed downloads (U2 on Tauron downloaded one PDF seven
+     times). *)
+  Alcotest.(check string)
+    "downloads included" "/downloads/invoice.pdf"
+    Yojson.Safe.Util.(field "downloads" |> index 0 |> member "file" |> to_string)
 
 let redact () =
   let wire = `Assoc [ ("secret-value", `String "secret-value longer secret-value") ] in

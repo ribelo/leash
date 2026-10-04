@@ -120,6 +120,10 @@ type plan_request = {
   title : string;
   url : string;
   text : string;
+  downloads : (string * string * string) list;
+      (** pilot-x1f3: this tab's downloads as (path or suggested name, mime, state), so
+          the pilot knows a file already arrived (U2 on Tauron downloaded one PDF seven
+          times). *)
 }
 (** What a planner turn is asked from (run-rq6i, L32): the mission, the point JEV stopped
     and why, the current playbook in its own schema — which is what a new procedure has to

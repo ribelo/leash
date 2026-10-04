@@ -2392,7 +2392,9 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                   downloads =
                     List.map
                       (fun (download : P.download_info) ->
-                        (download.P.suggested_name, download.P.mime, download.P.state))
+                        ( Option.value ~default:download.P.suggested_name download.P.path,
+                          download.P.mime,
+                          download.P.state ))
                       (List.rev tab.downloads);
                   snapshot;
                 }
