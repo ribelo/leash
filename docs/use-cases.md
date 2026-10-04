@@ -341,3 +341,11 @@ Mission, verbatim: "Is there a new message in my fixture portal inbox, and what 
 Independent check, from the fixture's state file: `portal.logins == 1`, `opened_messages == ["new"]`, the `new` message has `read == true`, and the subject and body match the state's `portal.messages` word for word. No configured username or password occurs anywhere in the state.
 
 Cost: 8 pilot turns, 0 navigator steps, 8 calls, $0.0018486.
+
+### U9 — upload a file and return its link, fixture (pilot-7boq)
+
+Mission, verbatim: "Upload /tmp/leash-u57/upload-sample.txt to the fixture upload service and tell me the resulting link" (`--url http://127.0.0.1:45623/upload`).
+
+**Fail:** `status: handoff-expired`, no result, `evidence: []`. The pilot tried `fill` with the local filename; the action was refused with "a file input takes upload, not this action". It then requested manual upload; the handoff expired after 300,001 ms. CLI exit 0 is not mission success.
+
+Independent check: [fixture state](</tmp/leash-u57/fixtures-u9.json>) has `uploads: []`. No file was uploaded and no resulting link exists. [Full reply](</tmp/leash-u57/u9-1.json>) records 2 pilot turns, 0 navigator steps, 3 model calls and $0.00107287 (`cost_unreported: 0`). The pilot action contract omits upload; typing a path cannot attach a file. Finding: `pilot-h506`.
