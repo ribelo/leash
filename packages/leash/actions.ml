@@ -313,12 +313,19 @@ let point cdp tab backend =
 (* A hit on a button icon is valid only when it belongs to that button. Font Awesome
    renders its icon in a CSS ::before pseudo-element, which Chrome reports as the hit
    node. Check both DOM children and pseudo-elements in the described subtree
-   (tab-bw4j, L34). *)
+   (tab-bw4j, L34). field-sh4d: web components (YouTube Studio's buttons and dialogs)
+   draw their ripple and feedback layers inside the control's shadow root; the hit test
+   answers with that inner node, so the walk pierces shadow roots too — the 2026-10-03/04
+   Studio uploads were refused "covered" on their own buttons. *)
 let subtree_contains cdp tab ~backend ~hit =
   match
     attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
       (E.object_
-         [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int (-1))) ])
+         [
+           ("backendNodeId", Some (E.int backend));
+           ("depth", Some (E.int (-1)));
+           ("pierce", Some (E.bool true));
+         ])
   with
   | Error _ -> false
   | Ok json -> (
@@ -339,7 +346,11 @@ let subtree_contains cdp tab ~backend ~hit =
                   let pseudo =
                     Option.value ~default:[] (E.array_member "pseudoElements" node)
                   in
-                  List.exists walk children || List.exists walk pseudo)
+                  let shadow =
+                    Option.value ~default:[] (E.array_member "shadowRoots" node)
+                  in
+                  List.exists walk children || List.exists walk pseudo
+                  || List.exists walk shadow)
           in
           walk node)
 

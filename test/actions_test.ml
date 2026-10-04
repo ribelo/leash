@@ -373,6 +373,20 @@ let script_page fake ?(loader = "loader-1") ?(suggestions = true) ?hit () =
                         ("nodeName", s (String.uppercase_ascii spot.role));
                         ("parentId", i 1);
                         ("children", children);
+                        (* field-sh4d: a web component's ripple layer lives in its shadow
+                           root, reported only when the describe pierces. *)
+                        ( "shadowRoots",
+                          if E.member "pierce" params = Some (`Bool true) then
+                            E.array
+                              [
+                                o
+                                  [
+                                    ("nodeId", i 211);
+                                    ("backendNodeId", i (spot.backend + 200));
+                                    ("nodeName", s "#document-fragment");
+                                  ];
+                              ]
+                          else E.array [] );
                       ] );
                 ])
       | None ->
@@ -649,6 +663,25 @@ let click () =
       Alcotest.(check int)
         "tab-bw4j a descendant of the row is a hit" 6
         (List.length (calls fake "Input.dispatchMouseEvent"));
+      (* field-sh4d: a node inside the row's shadow root (a Studio button's ripple layer)
+         is the row too. *)
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          o [ ("backendNodeId", i 211); ("nodeId", i 211) ]);
+      ignore
+        (result
+           (request tabs "alice"
+              (P.Click
+                 {
+                   tab = handle;
+                   snapshot = fresh;
+                   index = 1;
+                   snap = None;
+                   match_ = None;
+                   limit = None;
+                 })));
+      Alcotest.(check int)
+        "field-sh4d a node in the row's shadow root is a hit" 8
+        (List.length (calls fake "Input.dispatchMouseEvent"));
       (* A navigation between the snapshot and the click. *)
       ignore (script_page fake ~loader:"loader-2" ());
       check_code "tab-j1z2 loader moved" "stale-snapshot"
@@ -685,7 +718,7 @@ let click () =
                 limit = None;
               }));
       Alcotest.(check int)
-        "tab-1lhx a refusal dispatches nothing" 6
+        "tab-1lhx a refusal dispatches nothing" 8
         (List.length (calls fake "Input.dispatchMouseEvent")))
 
 (* tab-bw4j, L34: DOM.getNodeForLocation uses document coordinates, whereas
