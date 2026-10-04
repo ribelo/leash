@@ -385,6 +385,12 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
   let script_calls = ref [] in
   let reasoning = ref None and current_book = ref None and planned_choice = ref None in
   let remaining () = max 1 (int_of_float (deadline -. now ())) in
+  let accounting () =
+    let count = Hashtbl.fold (fun _ count total -> count + total) calls 0 in
+    let unreported = max 0 (count - !priced) in
+    let by_kind = Hashtbl.fold (fun kind count acc -> (kind, `Int count) :: acc) calls [] |> List.sort compare in
+    count, (if unreported = 0 then Some !reported_cost else None),
+    ["model_calls_by_kind", `Assoc by_kind; "reported_cost", `Float !reported_cost; "cost_unreported", `Int unreported] in
   let finish (page : observation) name ?result ?(evidence = []) ?reason () =
     Option.iter (fun memory ->
       List.iter (fun site -> Learning.after_mission memory ~site
@@ -399,9 +405,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
           ~expect:(List.map scrub (match !expectations with
             | [] -> [ "the mission is complete: " ^ args.mission ]
             | expectations -> expectations))) !current_site) learning;
-    let call_count = Hashtbl.fold (fun _ count total -> count+total) calls 0 in
-    let unreported = max 0 (call_count - !priced) in
-    let by_kind = Hashtbl.fold (fun kind count acc -> (kind, `Int count)::acc) calls [] |> List.sort compare in
+    let call_count, model_cost, usage_fields = accounting () in
     let reply = P.{ result = Option.map scrub result; evidence = List.map scrub evidence;
       pilot_turns = List.length !turns; navigator_steps = !total_steps;
       reasoning_summary = Option.map scrub !reasoning; secrets_for_operator = [];
@@ -412,16 +416,21 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
       collected = List.length !records;
       data = `Assoc (["count", `Int (List.length !records); "first", `List (List.rev !records)]
         @ (match !planned_choice with None -> [] | Some choice -> ["pilot_choice", choice])
-        @ ["model_calls_by_kind", `Assoc by_kind; "reported_cost", `Float !reported_cost; "cost_unreported", `Int unreported]);
-      model_calls = call_count; model_cost = (if unreported = 0 then Some !reported_cost else None); operator_steps = List.rev !operator_steps;
+        @ usage_fields);
+      model_calls = call_count; model_cost; operator_steps = List.rev !operator_steps;
       operator_state = !operator_state; output_kinds = (if !records=[] then [] else ["script-record"]) @ (if !operator_state=None then [] else ["operator-state"]); final = page.snapshot;
       reason = Option.map scrub reason; trace_path = None } in
     match P.run_result_of_yojson (json (P.yojson_of_run_result reply)) with
     | Ok clean -> Ok { clean with P.secrets_for_operator = !generated }
     | Error why -> Error (internal (scrub why)) in
   let failed error =
-    let detail = `Assoc ["planner_turns", `List (List.map P.yojson_of_planner_turn (List.rev !turns));
+    let count, cost, usage_fields = accounting () in
+    let original = match error.P.detail with Some (`Assoc fields) -> fields | _ -> [] in
+    let fields = usage_fields @ ["model_calls", `Int count; "model_cost", (match cost with Some cost -> `Float cost | None -> `Null);
+      "pilot_turns", `Int (List.length !turns); "navigator_steps", `Int !total_steps;
+      "planner_turns", `List (List.map P.yojson_of_planner_turn (List.rev !turns));
       "procedures", `List (List.map P.yojson_of_run_procedure (List.rev !procedures))] in
+    let detail = `Assoc (fields @ List.filter (fun (key, _) -> not (List.mem_assoc key fields)) original) in
     Error { error with P.message = scrub error.P.message; detail = Some (json detail) } in
   let infer (page : observation) =
     let book = List.find_opt (fun (book : Playbook.loaded) ->
@@ -651,6 +660,8 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
         snapshot; planner_actions; page_kind = Option.map scrub kind; title = page.title; url = page.url;
         text = if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text;
         downloads = List.map (fun (name, mime, state) -> (scrub name, mime, state)) page.downloads } in
+      let offered = List.map (fun ((proc : Playbook.procedure), source) ->
+        P.Trace.{slug = proc.slug; revision = (match source with `Installed -> None | `Draft revision -> Some revision)}) request.candidates in
       match handler.plan request with
       | Error error when (match error.P.detail with
           | Some (`Assoc fields) -> List.assoc_opt "code" fields = Some (`String "invalid-response")
@@ -659,11 +670,13 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
              the pilot sees the refusal in its history and answers again (U2 on Tauron
              ended on one refused act). Bounded by the turn cap. *)
           let n = List.length !turns + 1 in
-          turns := P.{n; trigger = "pilot"; answer = "invalid";
+          turns := P.{candidates = offered; chosen = None; n; trigger = "pilot"; answer = "invalid";
             steps = []; reason = Some (scrub error.P.message); usage = None} :: !turns;
           legs := !legs @ [ { goal = "(answer refused)"; outcome = "refused: " ^ scrub error.P.message; steps = [] } ];
           (match observe () with Ok page -> turn page | Error error -> failed error)
-      | Error error -> failed error
+      | Error error ->
+          turns := P.{candidates = offered; chosen = None; n = List.length !turns + 1; trigger = "pilot"; answer = "error"; steps = []; reason = Some (scrub error.P.message); usage = None} :: !turns;
+          failed error
       | Ok reply ->
           private_values := !private_values @ reply.secrets_for_operator;
           on_secrets !private_values;
@@ -671,7 +684,8 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
           reasoning := reply.reasoning_summary;
           if !expectations = [] then expectations := reply.expect;
           let n = List.length !turns + 1 in
-          let recorded steps reason = turns := P.{n; trigger = "pilot"; answer = answer_name reply.answer;
+          let chosen = match reply.answer with Leg goal -> List.find_opt (fun (c : P.Trace.candidate) -> c.slug = goal) offered | _ -> None in
+          let recorded steps reason = turns := P.{candidates = offered; chosen; n; trigger = "pilot"; answer = answer_name reply.answer;
             steps; reason = Option.map scrub (match reply.reasoning_summary, reason with
               | None, reason -> reason
               | Some summary, None -> Some summary

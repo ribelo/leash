@@ -66,6 +66,7 @@ let score_levels = [ "0 not satisfied"; "1 satisfied" ]
    (run-xfxx). *)
 let pilot =
   {|Pilot v2. A leg is one navigation goal in JEV's language.
+A candidate is a remembered path for this site: answering {"answer":"leg","goal":"<slug>"} runs it; use one when its description matches the mission.
 Answer with one JSON object:
 {"answer":"leg","goal":"navigation goal or offered candidate slug"}
 {"answer":"read","quote":"exact page text","note":"what it means"}

@@ -579,6 +579,8 @@ let finish t ~now outcome =
                 trigger = turn.trigger;
                 answer = turn.answer;
                 reason = turn.reason;
+                candidates = turn.candidates;
+                chosen = turn.chosen;
               });
       procedures;
       steps;

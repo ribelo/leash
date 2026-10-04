@@ -152,6 +152,39 @@ let prompt_size () =
     true
     (List.length words < 300)
 
+(* pilot-oijk: candidate descriptions retain mission parameters and goal steps
+   are directly visible beside the slug the pilot can execute. *)
+let candidate_request () =
+  let proc =
+    Leash.Playbook.
+      {
+        slug = "find-invoice";
+        description = "Find invoice {number}";
+        args = Some [ { name = "number"; source = From_mission { optional = false } } ];
+        steps = [ Goal { goal = "Open invoice {number}"; hint = None } ];
+        expect = [];
+        repeat = None;
+      }
+  in
+  let wire =
+    M.pilot_request_json
+      { request with candidates = [ (proc, `Draft "rev-42"); (proc, `Installed) ] }
+  in
+  let candidate = Yojson.Safe.Util.(wire |> member "candidates" |> index 0) in
+  let string key = Yojson.Safe.Util.(candidate |> member key |> to_string) in
+  Alcotest.(check string) "executable slug" "find-invoice" (string "slug");
+  Alcotest.(check string)
+    "parameterized mission" "Find invoice {number}" (string "description");
+  Alcotest.(check string)
+    "goal steps" "Open invoice {number}"
+    Yojson.Safe.Util.(
+      candidate |> member "steps" |> index 0 |> member "goal" |> to_string);
+  Alcotest.(check string) "draft revision" "rev-42" (string "source");
+  Alcotest.(check string)
+    "installed visible" "installed"
+    Yojson.Safe.Util.(
+      wire |> member "candidates" |> index 1 |> member "source" |> to_string)
+
 let generated () =
   let reply =
     ok
@@ -201,6 +234,7 @@ let () =
             ("act scroll", act_scroll);
             ("generated secret", generated);
             ("bounded request", bounded);
+            ("pilot-oijk candidate request", candidate_request);
             ("redaction", redact);
           ] );
     ]

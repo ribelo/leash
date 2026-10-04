@@ -1154,6 +1154,8 @@ type planner_step = {
 [@@deriving yojson]
 
 type planner_turn = {
+  candidates : Trace.candidate list;
+  chosen : Trace.candidate option;
   n : int;
   trigger : string;
   answer : string;

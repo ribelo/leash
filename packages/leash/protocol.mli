@@ -874,6 +874,8 @@ val planner_step_of_yojson : Yojson.Safe.t -> (planner_step, string) result
 val yojson_of_planner_step : planner_step -> Yojson.Safe.t
 
 type planner_turn = {
+  candidates : Trace.candidate list;
+  chosen : Trace.candidate option;
   n : int;
   trigger : string;
   answer : string;
@@ -881,12 +883,14 @@ type planner_turn = {
   reason : string option;
   usage : run_usage option; [@json.null]
 }
-(** run-xqh8 run-klp9 run-obtt: one planner turn. [trigger] is ["blocked"], ["failed"] or
-    ["arguments"] — the point JEV stopped; [answer] is ["procedure"], ["handoff"] or
-    ["fail"], and [reason] is the sentence a handoff or a failure carries. L32's planner
-    is Luna, so [usage] is what its turn cost: the tokens the endpoint reported, summed
-    when the reply had to be asked twice, with [cost] zero because the chat route Leash
-    speaks reports tokens rather than the provider's own cost (run-obtt). *)
+(** pilot-r94o: [candidates] records the offered slugs and draft revisions; [chosen] is
+    the candidate selected by a leg answer, if any. run-xqh8 run-klp9 run-obtt: one
+    planner turn. [trigger] is ["blocked"], ["failed"] or ["arguments"] — the point JEV
+    stopped; [answer] is ["procedure"], ["handoff"] or ["fail"], and [reason] is the
+    sentence a handoff or a failure carries. L32's planner is Luna, so [usage] is what its
+    turn cost: the tokens the endpoint reported, summed when the reply had to be asked
+    twice, with [cost] zero because the chat route Leash speaks reports tokens rather than
+    the provider's own cost (run-obtt). *)
 
 val planner_turn_of_yojson : Yojson.Safe.t -> (planner_turn, string) result
 val yojson_of_planner_turn : planner_turn -> Yojson.Safe.t

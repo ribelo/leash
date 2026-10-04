@@ -147,15 +147,18 @@ let pilot_request_json (request : Run.plan_request) =
       ( "candidates",
         `List
           (List.map
-             (fun (proc, source) ->
+             (fun ((proc : Playbook.procedure), source) ->
+               let fields =
+                 Yojson.Safe.Util.to_assoc (Playbook.yojson_of_procedure proc)
+               in
                `Assoc
-                 [
-                   ("procedure", Playbook.yojson_of_procedure proc);
-                   ( "source",
-                     match source with
-                     | `Installed -> `String "installed"
-                     | `Draft revision -> `String revision );
-                 ])
+                 (fields
+                 @ [
+                     ( "source",
+                       match source with
+                       | `Installed -> `String "installed"
+                       | `Draft revision -> `String revision );
+                   ]))
              request.candidates) );
     ]
 

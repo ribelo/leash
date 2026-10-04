@@ -3909,6 +3909,280 @@ let pilot_leg_scope () =
             "step-cap" );
         ])
 
+(* pilot-oijk pilot-r94o: three missions cross the control protocol, replaying
+   the actual remembered goal rather than treating its slug as a navigation goal. *)
+let with_pilot_storage f =
+  let root = Filename.temp_file "leash-pilot-memory-" "" in
+  Unix.unlink root;
+  Unix.mkdir root 0o700;
+  let old =
+    List.map
+      (fun key -> (key, Sys.getenv_opt key))
+      [ "XDG_CONFIG_HOME"; "XDG_STATE_HOME" ]
+  in
+  List.iter (fun (key, _) -> (Unix.putenv [@alert "-unsafe_multidomain"]) key root) old;
+  Fun.protect
+    ~finally:(fun () ->
+      List.iter
+        (fun (key, value) ->
+          (Unix.putenv [@alert "-unsafe_multidomain"]) key
+            (Option.value ~default:"" value))
+        old;
+      rm_rf root)
+    (fun () -> f root)
+
+let saved_pilot_trace caps body =
+  let path =
+    match get "trace_path" body with
+    | `String path -> path
+    | _ -> Alcotest.fail "missing pilot trace"
+  in
+  match Leash.Traces.read ~caps path with
+  | Ok trace -> trace
+  | Error why -> Alcotest.fail why
+
+let pilot_memory_replay () =
+  with_pilot_storage (fun root ->
+      rig (fun env sw _ tabs fake ->
+          let caps = Ox_test.powerbox () in
+          let warnings = ref [] in
+          let memory =
+            Leash.Learning.create ~sw ~caps ~config:Leash.Config.default.learning
+              ~warn:(fun why -> warnings := why :: !warnings)
+              ()
+          in
+          let traces =
+            Leash.Traces.create ~caps ~root:(Filename.concat root "traces") ()
+          in
+          let f = fake () in
+          page_script f (fixture "unlabelled-controls-chrome.json") modal_text;
+          document_at ~title:"Invoices" ~url:"https://example.com/" f;
+          let h =
+            result
+              (request tabs "alice"
+                 (P.New { url = Some "https://example.com/"; label = None }))
+            |> tab
+          in
+          Fake.on_method f "Accessibility.getPartialAXTree" (fun _ ->
+              obj
+                [
+                  ( "nodes",
+                    `List
+                      [
+                        obj
+                          [
+                            ("role", obj [ ("value", str "textbox") ]);
+                            ("name", obj [ ("value", str "Search terms") ]);
+                          ];
+                      ] );
+                ]);
+          Fake.on_method f "DOM.describeNode" (fun request ->
+              obj
+                [
+                  ("node", obj [ ("nodeId", get "backendNodeId" (get "params" request)) ]);
+                ]);
+          let slug = ref "" and revision = ref "" in
+          for run = 1 to 3 do
+            let turns = ref 0 and navigation = ref 0 in
+            let plan ~deadline:_ (request : Run.plan_request) =
+              incr turns;
+              let answer =
+                if !turns = 1 then (
+                  (match (run, request.candidates) with
+                  | 1, [] -> ()
+                  | 2, [ (proc, `Draft value) ] -> (
+                      slug := proc.slug;
+                      revision := value;
+                      Alcotest.(check string)
+                        "remembered mission" "Check invoices" proc.description;
+                      match proc.steps with
+                      | [ Leash.Playbook.Goal { goal; _ } ] ->
+                          Alcotest.(check string)
+                            "remembered goal"
+                            "Press Escape on the textbox named Search terms" goal
+                      | _ -> Alcotest.fail "missing goal steps")
+                  | 3, [ (proc, `Installed) ] ->
+                      Alcotest.(check string) "installed slug" !slug proc.slug
+                  | _ -> Alcotest.fail "unexpected memory candidates");
+                  if run = 1 then
+                    Run.Act
+                      (P.Press
+                         {
+                           tab = h;
+                           snapshot = request.snapshot.snapshot;
+                           index = Some 3;
+                           key = "Escape";
+                           snap = None;
+                           match_ = None;
+                           limit = None;
+                         })
+                  else Run.Leg !slug)
+                else (
+                  if run = 1 then
+                    Alcotest.(check string)
+                      "pilot act succeeded" "done" (List.hd request.legs).outcome;
+                  Alcotest.(check int)
+                    "replay navigation calls"
+                    (if run = 1 then 0 else 1)
+                    !navigation;
+                  Run.Done { result = "Invoices checked"; evidence = [ "invoice page" ] })
+              in
+              Ok
+                Run.
+                  {
+                    answer;
+                    expect = [ "the page shows Added!" ];
+                    usage = None;
+                    reasoning_summary = None;
+                    secrets_for_operator = [];
+                  }
+            in
+            let decide ~deadline request =
+              incr navigation;
+              Alcotest.(check bool)
+                "navigator gets goal, not slug" true
+                (contains
+                   (Yojson.Safe.to_string (Jev.body request))
+                   "Press Escape on the textbox named Search terms");
+              decide_done ~deadline request
+            in
+            let levels = { (levels_with [] (ref [])) with Run.plan } in
+            let body =
+              with_ticking_clock env sw (fun () ->
+                  Leash.Control.handle ~learning:memory ~traces ~levels ~installed:[]
+                    ~decide tabs
+                    (run_wire ~tab:h "Check invoices"))
+              |> Yojson.Safe.from_string |> P.decode_reply |> decoded
+            in
+            Alcotest.(check bool) "mission done" true (get "status" body = str "done");
+            Alcotest.(check bool)
+              "mission expectation verified" true
+              (match get "mission_expectations" body with
+              | `List [ check ] -> get "passed" check = `Bool true
+              | _ -> false);
+            let trace = saved_pilot_trace caps body in
+            let first = List.hd trace.planner_turns in
+            let expected =
+              if run = 1 then []
+              else
+                [
+                  P.Trace.
+                    {
+                      slug = !slug;
+                      revision = (if run = 2 then Some !revision else None);
+                    };
+                ]
+            in
+            Alcotest.(check bool)
+              "offered slugs and draft revisions durable" true
+              (List.for_all
+                 (fun (turn : P.Trace.planner_turn) -> turn.candidates = expected)
+                 trace.planner_turns);
+            Alcotest.(check bool)
+              "chosen candidate durable" true
+              (first.chosen
+              = match expected with [] -> None | candidate :: _ -> Some candidate);
+            Alcotest.(check bool)
+              "done chose no candidate" true
+              ((List.nth trace.planner_turns 1).chosen = None);
+            Leash.Learning.await_pending memory
+          done;
+          Alcotest.(check (list string)) "no learning warnings" [] !warnings))
+
+(* pilot-r94o: refused completions and accepted legs cost money even when the
+   next provider call fails; partial unpriced usage must remain unknown. *)
+let pilot_error_usage () =
+  List.iter
+    (fun unpriced ->
+      with_pilot_storage (fun root ->
+          rig (fun env sw _ tabs fake ->
+              let caps = Ox_test.powerbox () in
+              let traces = Leash.Traces.create ~caps ~root () in
+              let f = fake () in
+              page_script f (fixture "unlabelled-controls-chrome.json") modal_text;
+              document_at ~title:"Invoices" ~url:"https://example.com/" f;
+              let h =
+                result
+                  (request tabs "alice"
+                     (P.New { url = Some "https://example.com/"; label = None }))
+                |> tab
+              in
+              let turns = ref 0 in
+              let plan ~deadline:_ _ =
+                incr turns;
+                Leash__Model_usage.start "pilot";
+                Leash__Model_usage.report "pilot"
+                  (if unpriced && !turns = 3 then None else Some 0.25);
+                match !turns with
+                | 1 ->
+                    Error
+                      (P.make_error
+                         ~detail:(obj [ ("code", str "invalid-response") ])
+                         (match P.Error_code.of_string "internal" with
+                         | Ok code -> code
+                         | Error _ -> assert false)
+                         ~message:"refused scripted completion")
+                | 2 ->
+                    Ok
+                      Run.
+                        {
+                          answer = Leg "Open invoices";
+                          expect = [];
+                          usage = None;
+                          reasoning_summary = None;
+                          secrets_for_operator = [];
+                        }
+                | _ ->
+                    Error
+                      (P.make_error
+                         ~detail:(obj [ ("provider", str "fixture") ])
+                         (match P.Error_code.of_string "internal" with
+                         | Ok code -> code
+                         | Error _ -> assert false)
+                         ~message:"scripted provider failure")
+              in
+              let decide ~deadline request =
+                Leash__Model_usage.start "operator";
+                Leash__Model_usage.report "operator" (Some 0.125);
+                decide_done ~deadline request
+              in
+              let levels = { (levels_with [] (ref [])) with Run.plan } in
+              let reply =
+                with_ticking_clock env sw (fun () ->
+                    Leash.Control.handle ~traces ~levels ~installed:[] ~decide tabs
+                      (run_wire ~tab:h "Check invoices"))
+                |> Yojson.Safe.from_string |> P.decode_reply
+              in
+              let detail =
+                match reply with
+                | Ok (P.Failure { detail = Some detail; _ }) -> detail
+                | _ -> Alcotest.fail "expected scripted provider failure"
+              in
+              Alcotest.(check bool)
+                "all four calls retained" true
+                (get "model_calls" detail = `Int 4);
+              Alcotest.(check bool)
+                "original error detail retained" true
+                (get "provider" detail = str "fixture");
+              let expected = if unpriced then `Null else `Float 0.875 in
+              Alcotest.(check bool)
+                "error reply cost" true
+                (get "model_cost" detail = expected);
+              Alcotest.(check bool)
+                "reported subtotal" true
+                (get "reported_cost" detail = `Float (if unpriced then 0.625 else 0.875));
+              let trace = saved_pilot_trace caps detail in
+              Alcotest.(check int) "durable error model calls" 4 trace.model_calls;
+              Alcotest.(check bool)
+                "durable error cost" true
+                (trace.cost = if unpriced then None else Some 0.875);
+              Alcotest.(check (list string))
+                "all pilot turns audited" [ "invalid"; "leg"; "error" ]
+                (List.map
+                   (fun (turn : P.Trace.planner_turn) -> turn.answer)
+                   trace.planner_turns))))
+    [ false; true ]
+
 let durable_drive_traces () =
   let caps = Ox_test.powerbox () in
   let root = Filename.temp_file "leash-l51-control-" "" in
@@ -4160,6 +4434,9 @@ let () =
             collection_done_guard;
           Alcotest.test_case "pilot-x1f3 pilot-r94o navigation legs and audit" `Quick
             pilot_leg_scope;
+          Alcotest.test_case "pilot-oijk pilot-r94o memory replay and candidate audit"
+            `Quick pilot_memory_replay;
+          Alcotest.test_case "pilot-r94o error usage" `Quick pilot_error_usage;
           Alcotest.test_case "trace-qe8c trace-iqqz public durable drives" `Quick
             durable_drive_traces;
           Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;

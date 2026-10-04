@@ -31,7 +31,19 @@ type inferred_page = { name : string; url_pattern : string }
 (** kind-dnye kind-s1k2: one row of the session mapping in the trace header. *)
 
 (* pilot-r94o: safe per-turn audit, without raw pilot input or capabilities. *)
-type planner_turn = { n : int; trigger : string; answer : string; reason : string option }
+type candidate = { slug : string; revision : string option }
+
+val candidate_of_yojson : Yojson.Safe.t -> (candidate, string) result
+val yojson_of_candidate : candidate -> Yojson.Safe.t
+
+type planner_turn = {
+  n : int;
+  trigger : string;
+  answer : string;
+  reason : string option;
+  candidates : candidate list;
+  chosen : candidate option;
+}
 
 type t = {
   unattended : Yojson.Safe.t list;
