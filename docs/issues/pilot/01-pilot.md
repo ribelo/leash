@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 13
 ---
 
@@ -68,3 +68,14 @@ CAPTCHA solving beyond L55; running U1–U4 by anyone but the operator; cross-si
 ## Further Notes
 
 Credentials are the operator's business. `--secret` exists so a value can be kept out of the trace and out of the model's context when the operator wants that; a credential written plainly into a mission is also accepted and used, with no refusal and no warning — Leash does not police what the operator chooses to share. `docs/use-cases.md` is the acceptance list and is edited only by the operator or the coordinator.
+## Delivery — L56
+
+Implemented; verified offline at the protocol seam with a scripted pilot and the fake browser (`@install`, `dune test`, `@fmt`, capability gate green at e494f43 and in every commit since):
+
+- The pilot loop in `run.ml`: the planner owns the mission and answers `leg`, `read`, `act`, `handoff`, `notify`, `done{result,evidence}`, `fail`. A leg runs the operator loop with a leg-local cap and ends when the page navigates, so the pilot sees every page. `pilot.turns` 12 and `pilot.deadline_s` 600 bound the mission; the reply carries `result`, `evidence`, `pilot_turns` and `navigator_steps`.
+- `--secret NAME=@file|-`: the value lives in the CLI and the request, the pilot sees the name only, `act fill` resolves it at dispatch, and it never reaches a trace, reply or log (the redaction test covers traces, replies and logs). A credential written plainly in a mission is accepted and used, with no check, prompt or warning.
+- Refusals: `act` refuses payment, checkout confirmation, sending and deletion unless the mission names that action, matched as whole words (Polish verbs included).
+- Compile-from-traces deleted, its stories retired: learning is now "write the legs that worked as a procedure after `done`" plus the replay gate, and drafts are offered to the pilot as candidates, never forced. Each turn records the offered and chosen candidates.
+- `--dry-run` shows the pilot's first decision and reasoning summary without acting; the pilot prompt is versioned and under 300 words (tested).
+
+Live evidence, the operator's real Tauron account, 2026-10-04: **U1 and U2 pass**. U1 reported 756,88 zł overdue (544,92 zł + 211,96 zł, due 02.10.2026) and U2 downloaded invoice E/TM2/UG533989/0003/26 of 16.09.2026 as a PDF, both independently verified from the page and the PDF. The failures found on the way — a rejected pilot action shape, a missing act history, an over-eager payment refusal, a label-shaped select, a download the pilot could not see, an unstable first observation, a 30-second wheel ack — are diagnosed with their fixing commits in the ledger at the end of [use-cases.md](../../use-cases.md#results--2026-10-04).
