@@ -325,6 +325,96 @@ let empty_result () =
   let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
   Alcotest.(check string) "empty done refused" "failed" (P.Run_status.to_string r.status)
 
+(* pilot-3egp: a mission finished by the pilot's own acts is remembered — the acts as
+   goal steps in JEV's language, the final page as the expectation when the pilot gave
+   none (U2 on Tauron finished done twice and wrote nothing). *)
+let act_memory () =
+  let dir = Filename.temp_file "leash-run-memory-" "" in
+  Sys.remove dir;
+  Unix.mkdir dir 0o700;
+  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME" dir;
+  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_CONFIG_HOME" dir;
+  let row =
+    P.
+      {
+        index = 1;
+        role = "link";
+        name = "Invoices";
+        value = None;
+        state = None;
+        options = None;
+      }
+  in
+  let h, _, _ =
+    harness
+      [
+        reply
+          (R.Act
+             (P.Click
+                P.
+                  {
+                    tab;
+                    snapshot = sid;
+                    index = 1;
+                    snap = None;
+                    match_ = None;
+                    limit = None;
+                  }));
+        finish;
+      ]
+  in
+  let h =
+    {
+      h with
+      R.observe =
+        (fun () ->
+          Ok
+            {
+              (page "Invoices") with
+              R.snapshot = { snapshot with rows = [ row ]; total = 1 };
+            });
+    }
+  in
+  let clicked =
+    P.
+      {
+        tab;
+        url = snapshot.url;
+        title = snapshot.title;
+        snapshot = None;
+        dialog = None;
+        popups = [];
+        via = None;
+      }
+  in
+  Eio_main.run (fun _ ->
+      Eio.Switch.run (fun sw ->
+          let memory =
+            Leash.Learning.create ~sw ~caps:(Ox_test.powerbox ())
+              ~config:Leash.Config.default.learning ~warn:ignore ()
+          in
+          ignore
+            (ran
+               (R.loop ~handler:h
+                  ~now:(fun () -> 0.)
+                  ~installed:[] ~learning:memory
+                  ~planner_action:(fun _ -> Ok clicked)
+                  (params ())));
+          Leash.Learning.await_pending memory;
+          match Leash.Learning.candidates memory ~site:"site.example" ~kind:None with
+          | [ (proc, _) ] ->
+              Alcotest.(check bool)
+                "act remembered as a leg" true
+                (proc.steps
+                = [
+                    Leash.Playbook.Goal
+                      { goal = "Click the link named Invoices"; hint = None };
+                  ]);
+              Alcotest.(check int) "an expectation" 1 (List.length proc.expect)
+          | found ->
+              Alcotest.failf "expected one remembered procedure, got %d"
+                (List.length found)))
+
 let secret_dispatch () =
   let h, requests, _ =
     harness
@@ -508,5 +598,6 @@ let () =
             ("dangerous leg refusal", dangerous_leg);
             ("refusal words are whole words", unsafe_words);
             ("refused reply costs a turn", refused_reply_costs_a_turn);
+            ("acts are remembered", act_memory);
           ] );
     ]

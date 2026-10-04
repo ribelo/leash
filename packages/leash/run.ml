@@ -393,7 +393,12 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
         ~verified:(name = "done" && List.for_all (fun (c : P.run_expectation) -> c.passed) !checks)) !sites;
       if name = "done" then Option.iter (fun site ->
         Learning.record_legs memory ~site ~mission:(scrub args.mission)
-          ~args:(List.map (fun (key,value) -> scrub key,scrub value) !known) ~legs:!successful ~expect:(List.map scrub !expectations)) !current_site) learning;
+          ~args:(List.map (fun (key,value) -> scrub key,scrub value) !known) ~legs:!successful
+          (* pilot-3egp: without an expectation from the pilot, the remembered procedure
+             checks where the mission ended (U2 on Tauron finished done and wrote nothing). *)
+          ~expect:(List.map scrub (match !expectations with
+            | [] -> [ "the mission is complete: " ^ args.mission ]
+            | expectations -> expectations))) !current_site) learning;
     let call_count = Hashtbl.fold (fun _ count total -> count+total) calls 0 in
     let unreported = max 0 (call_count - !priced) in
     let by_kind = Hashtbl.fold (fun kind count acc -> (kind, `Int count)::acc) calls [] |> List.sort compare in
@@ -623,6 +628,12 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     legs := !legs @ [ { goal = described;
       outcome = (match step.error with None -> "done" | Some why -> "refused: " ^ why);
       steps = [] } ];
+    (* pilot-3egp: an act that worked is a leg in JEV's language and is remembered, except
+       a fill whose text is a secret name — JEV would type the name. *)
+    (match step.error, command with
+     | None, P.Fill a when List.mem_assoc a.text !private_values -> ()
+     | None, (P.Click _ | P.Select _ | P.Press _ | P.Fill _) -> successful := !successful @ [ described ]
+     | _ -> ());
     step in
   let rec turn (page : observation) =
     if now () >= deadline then finish page "deadline" ~reason:"pilot deadline reached" ()

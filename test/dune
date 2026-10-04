@@ -62,7 +62,7 @@
  (modules run_test)
  (deps
   (source_tree ../examples/playbooks))
- (libraries leash ox_caps ox_test yojson alcotest str))
+ (libraries leash ox_caps ox_test eio_main yojson alcotest str))
 
 (test
  (name playbook_test)
