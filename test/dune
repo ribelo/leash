@@ -215,7 +215,7 @@
  (deps
   ../docs/protocol.md
   ../packages/leash/protocol.ml
-  ../CONTEXT.md
+  ../GLOSSARY.md
   ../docs/adr/0005-owner-bound-tabs-and-expiry.md
   ../docs/adr/0010-handles-are-capabilities.md)
  (libraries leash alcotest))

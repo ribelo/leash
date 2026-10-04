@@ -4,7 +4,7 @@ Completed rows record their original contracts. L49 and ADR-0010 supersede earli
 tab-attribution and two-stage expiry clauses; use the current protocol and capability
 spec for tab access, discovery, handoff, and closing behavior.
 
-Each row is one worker's job. The behaviour is specified in the milestone specs (`<slug>/01-<slug>.md`); this map only slices them into deliverable pieces and fixes the order. Read `../../AGENTS.md`, `../../CONTEXT.md`, `../protocol.md`, `../adr/` and the milestone spec before starting a row. Ox (`/home/ribelo/projects/ribelo/ocaml/ox`, branch `master`, formerly ox) is the kernel: its `docs/why-ox.md`, `docs/modes.md` and the `.mli` files under `lib/` are the interfaces; the milestone-1 spec's "Shape against ox" section names which ones each module uses.
+Each row is one worker's job. The behaviour is specified in the milestone specs (`<slug>/01-<slug>.md`); this map only slices them into deliverable pieces and fixes the order. Read `../../AGENTS.md`, `../../GLOSSARY.md`, `../protocol.md`, `../adr/` and the milestone spec before starting a row. Ox (`/home/ribelo/projects/ribelo/ocaml/ox`, branch `master`, formerly ox) is the kernel: its `docs/why-ox.md`, `docs/modes.md` and the `.mli` files under `lib/` are the interfaces; the milestone-1 spec's "Shape against ox" section names which ones each module uses.
 
 ## Milestone 1 — managed Chrome (`managed-chrome/01-managed-chrome.md`)
 

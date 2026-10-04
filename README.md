@@ -25,7 +25,7 @@ window-rule {
 }
 ```
 
-- `CONTEXT.md` — vocabulary
+- `GLOSSARY.md` — vocabulary
 - `docs/adr/` — decisions
 - `docs/protocol.md` — control protocol and CLI
 - `docs/config.md` — configuration keys, defaults and environment overrides

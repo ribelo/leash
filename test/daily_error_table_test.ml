@@ -212,7 +212,7 @@ let make_error_fills_hint () =
 
 let handles_documented () =
   let read path = In_channel.with_open_bin path In_channel.input_all in
-  let context = read "../CONTEXT.md" in
+  let context = read "../GLOSSARY.md" in
   List.iter
     (fun term ->
       if find_sub context term = None then failf "hand-qy26 missing glossary term %s" term)
