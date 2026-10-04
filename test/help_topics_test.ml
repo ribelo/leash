@@ -47,7 +47,7 @@ let render ~(caps : < Ox_caps.Cap.stdout ; .. >) () =
       let col a = String.index a '6' in
       if col line <> String.index beta '6' then
         failf "table columns not aligned:\n%s\n%s" line beta);
-  (Ox_caps.Cap_stdlib.print_endline ~caps)
+  Ox_caps.Cap_stdlib.print_endline ~caps
     "renderer: headings, lists, aligned table, verbatim fence, no ANSI"
 
 let forbidden =
@@ -85,8 +85,8 @@ let portable ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) () =
   if errors <> Leash.Protocol.Error_code.topic_markdown then
     failf "embedded errors.md drifted from Protocol.Error_code";
   let skill =
-    (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
-      "../skill/SKILL.md" In_channel.input_all
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps "../skill/SKILL.md"
+      In_channel.input_all
   in
   let lines = String.split_on_char '\n' skill in
   let n = List.length lines - if List.hd (List.rev lines) = "" then 1 else 0 in
@@ -99,7 +99,7 @@ let portable ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) () =
          "agent tabs close after 30 idle minutes; human tabs are never closed unless an \
           agent takes one")
   then failf "SKILL.md lacks the tab rule";
-  (Ox_caps.Cap_stdlib.print_endline ~caps)
+  Ox_caps.Cap_stdlib.print_endline ~caps
     "topics portable, errors live, skill under 60 lines"
 
 (* hdoc-vqj7: the fresh-agent recovery/authoring answers must survive embedding. *)

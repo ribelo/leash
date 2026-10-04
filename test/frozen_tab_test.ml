@@ -155,7 +155,7 @@ let frozen_renderer
        ; Ox_caps.Cap.random
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_sessions fake;
       let frozen = new_tab tabs and other = new_tab tabs in
@@ -238,11 +238,9 @@ let frozen_renderer
       Alcotest.(check bool)
         "field-cde7 last 20 entries folded in" true
         (get "entries" detail = `List (List.filteri (fun i _ -> i < 20) entries));
-      let path =
-        (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-field-zr9n-" ".png"
-      in
+      let path = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-field-zr9n-" ".png" in
       Fun.protect
-        ~finally:(fun () -> (Ox_caps.Cap_sys.remove ~caps) path)
+        ~finally:(fun () -> Ox_caps.Cap_sys.remove ~caps path)
         (fun () ->
           let shot =
             result (request tabs (P.Shot { tab = frozen; path; full_page = None }))
@@ -275,7 +273,7 @@ let browser_timeout
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let creates () =
         List.fold_left
           (fun n r -> if get "method" r = str "Target.createTarget" then n + 1 else n)
@@ -304,7 +302,7 @@ let load_timeout_retains_handle
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_sessions fake;
       Fake.on_method fake "Target.getTargetInfo" (fun _ ->

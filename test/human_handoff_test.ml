@@ -226,7 +226,7 @@ let focus_raises_the_view
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) ~focus:[ "sh"; "{tab}"; "reason={reason}"; "literal" ]
+  rig ~caps ~focus:[ "sh"; "{tab}"; "reason={reason}"; "literal" ]
     ~notify:[ "sh"; "{reason}" ] ~scripts:[ exit_ok; blocked ]
     (fun ~env:_ ~sw ~tabs ~fake ~process ~log:_ ->
       let h = handle_new tabs in
@@ -278,7 +278,7 @@ let notification_done_resumes
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps)
+  rig ~caps
     ~scripts:[ exit_ok; output [ out ~after:(Ox.Duration.seconds 2) "done\n" ] blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
@@ -322,7 +322,7 @@ let notifier_stopped_before_printing
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps)
+  rig ~caps
     ~scripts:[ exit_ok; output [ out ~after:(Ox.Duration.seconds 30) "done\n" ] blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log ->
       let h = handle_new tabs in
@@ -363,7 +363,7 @@ let focus_failure_is_a_warning
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps)
+  rig ~caps
     ~scripts:[ Ox_test.Process.Exit (`Exited 2); blocked ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log:_ ->
       let h = handle_new tabs in
@@ -397,7 +397,7 @@ let notify_failure_is_a_warning
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps)
+  rig ~caps
     ~scripts:[ exit_ok; Ox_test.Process.Exit (`Exited 1) ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log ->
       let h = handle_new tabs in
@@ -429,7 +429,7 @@ let focus_timeout_is_a_warning
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) ~scripts:[ blocked; blocked ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
+  rig ~caps ~scripts:[ blocked; blocked ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -458,8 +458,7 @@ let activate_failure_is_a_warning
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) ~scripts:[ exit_ok; blocked ]
-    (fun ~env:_ ~sw ~tabs ~fake ~process:_ ~log:_ ->
+  rig ~caps ~scripts:[ exit_ok; blocked ] (fun ~env:_ ~sw ~tabs ~fake ~process:_ ~log:_ ->
       Fake.on_failure fake "Target.activateTarget" (fun _ ->
           Some (-32601, "Method not found"));
       let h = handle_new tabs in
@@ -488,7 +487,7 @@ let missing_binary_is_a_warning
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) ~real:true ~focus:[ "leash-focus-command-that-is-not-installed"; "{tab}" ]
+  rig ~caps ~real:true ~focus:[ "leash-focus-command-that-is-not-installed"; "{tab}" ]
     ~notify:[] (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
@@ -517,7 +516,7 @@ let timeout_carries_the_warnings
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps)
+  rig ~caps
     ~scripts:[ Ox_test.Process.Exit (`Exited 1); blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
@@ -553,7 +552,7 @@ let the_notifier_is_stopped
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) ~scripts:[ exit_ok; blocked; exit_ok; blocked ]
+  rig ~caps ~scripts:[ exit_ok; blocked; exit_ok; blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
@@ -601,7 +600,7 @@ let focus_finds_the_chrome_window
   in
   (* hand-04rb: the listing is niri's own `msg --json windows` output, a chunk the child
      prints before it exits zero; the focus command that follows gets the window id. *)
-  (rig ~caps)
+  rig ~caps
     ~scripts:[ output [ out (listing ^ "\n") ] exit_ok; exit_ok; blocked ]
     ~focus:[ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process ~log:_ ->
@@ -628,7 +627,7 @@ let focus_finds_the_chrome_window
         "hand-rg9h finding the window is not a warning" []
         (warnings (result (reply !cell))));
   let without_chrome = "[{\"id\":2,\"app_id\":\"google-chrome\"}]" in
-  (rig ~caps)
+  rig ~caps
     ~scripts:[ output [ out (without_chrome ^ "\n") ] exit_ok; blocked ]
     ~focus:[ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process ~log:_ ->
@@ -697,7 +696,7 @@ let notification_cancel_ends
     if dismissed then output [ out ~after:(Ox.Duration.seconds 2) "" ] exit_ok
     else output [ out ~after:(Ox.Duration.seconds 2) "cancel\n" ] blocked
   in
-  (rig ~caps) ~scripts:[ exit_ok; event ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
+  rig ~caps ~scripts:[ exit_ok; event ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -728,7 +727,7 @@ let notification_first_action_wins
        ; .. >) () =
   List.iter
     (fun (actions, canceled) ->
-      (rig ~caps)
+      rig ~caps
         ~scripts:[ exit_ok; output [ out actions ] exit_ok ]
         (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log:_ ->
           let h = handle_new tabs in
@@ -764,9 +763,9 @@ let () =
       ( "notification",
         [
           test "hand-phof" (notification_done_resumes ~caps);
-          test "pilot-9u3q dismissed" ((notification_cancel_ends ~caps) ~dismissed:true);
+          test "pilot-9u3q dismissed" (notification_cancel_ends ~caps ~dismissed:true);
           test "pilot-9u3q cancel action"
-            ((notification_cancel_ends ~caps) ~dismissed:false);
+            (notification_cancel_ends ~caps ~dismissed:false);
           test "pilot-9u3q first action wins" (notification_first_action_wins ~caps);
           test "hand-phof hand-04rb" (notifier_stopped_before_printing ~caps);
         ] );

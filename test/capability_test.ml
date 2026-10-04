@@ -231,7 +231,7 @@ let capabilities
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake:_ ~logs:_ ->
+  rig ~caps (fun ~env:_ ~sw:_ ~tabs ~fake:_ ~logs:_ ->
       let first = create tabs ~label:"Research" () in
       let h = tab first in
       let raw = P.Handle.to_string h in
@@ -300,7 +300,7 @@ let selectors
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ~logs ->
+  rig ~caps (fun ~env:_ ~sw:_ ~tabs ~fake ~logs ->
       announce fake ~id:"human-1" ~url:"https://Example.com/Inbox" ~title:"Personal Inbox"
         ();
       announce fake ~id:"human-2" ~url:"https://example.com/Other" ~title:"Other Inbox" ();
@@ -366,7 +366,7 @@ let matrix
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
+  rig ~caps (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
       loads fake;
       let bad = enum P.Handle.of_string "t_unknown" in
       let commands h =

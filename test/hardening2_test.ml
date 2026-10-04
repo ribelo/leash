@@ -488,7 +488,7 @@ let net_ring
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       many_tabs fake;
       let a = new_tab tabs "alice" and b = new_tab tabs "alice" in
@@ -612,7 +612,7 @@ let net_body
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let a = new_tab tabs "alice" in
       started fake ~session:"session-1" "json" "http://127.0.0.1:8080/api/items";
@@ -681,7 +681,7 @@ let net_request
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let a = new_tab tabs "alice" in
       started fake ~session:"session-1" "post" ~method_:"POST"
@@ -825,7 +825,7 @@ let long_wait
   Alcotest.(check int)
     "hard-sr9v longer than an hour is bounded" 3_601_000
     (budget (wait_args ~timeout_ms:9_000_000 handle));
-  (rig ~caps) (fun env sw tabs fake ->
+  rig ~caps (fun env sw tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -892,7 +892,7 @@ let changed_since
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake ->
+  rig ~caps (fun env sw tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -979,8 +979,8 @@ let changed_since
 let temp_file
     ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >)
     ?(size = 5) () =
-  let path = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-upload-" ".bin" in
-  let fd = (Ox_caps.Cap_unix.openfile ~caps) path [ Unix.O_WRONLY ] 0o600 in
+  let path = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-upload-" ".bin" in
+  let fd = Ox_caps.Cap_unix.openfile ~caps path [ Unix.O_WRONLY ] 0o600 in
   Unix.ftruncate fd size;
   Unix.close fd;
   path
@@ -1000,7 +1000,7 @@ let upload
        ; Ox_caps.Cap.random
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -1016,7 +1016,7 @@ let upload
       let upload ?(index = 3) ?(who = "alice") paths =
         request tabs who (P.Upload { tab = a; snapshot = s; index; paths })
       in
-      let one = (temp_file ~caps) () and two = (temp_file ~caps) () in
+      let one = temp_file ~caps () and two = temp_file ~caps () in
       let reply = result (upload [ one; two ]) in
       Alcotest.(check string)
         "hard-o3za the reply is an action result" "Page" (text "title" reply);
@@ -1036,9 +1036,9 @@ let upload
       check_code "hard-o3za no files" "invalid-request" (upload []);
       check_code "hard-o3za at most ten files" "invalid-request"
         (upload (List.init 11 (fun _ -> one)));
-      let big = (temp_file ~caps) ~size:(6 * 1024 * 1024 * 1024) () in
+      let big = temp_file ~caps ~size:(6 * 1024 * 1024 * 1024) () in
       check_code "hard-qimz at most 10 GiB" "too-large" (upload [ big; big ]);
-      (Ox_caps.Cap_sys.remove ~caps) big;
+      Ox_caps.Cap_sys.remove ~caps big;
       check_code "hand-scaz upload needs the handle" "unknown-tab"
         (request tabs "second"
            (P.Upload { tab = unknown_handle; snapshot = s; index = 3; paths = [ one ] }));
@@ -1106,8 +1106,8 @@ let upload
             ]);
       check_code "hard-o3za the node is no longer a file input" "stale-snapshot"
         (upload [ one ]);
-      (Ox_caps.Cap_sys.remove ~caps) one;
-      (Ox_caps.Cap_sys.remove ~caps) two)
+      Ox_caps.Cap_sys.remove ~caps one;
+      Ox_caps.Cap_sys.remove ~caps two)
 
 (* ---------- hard-v1gs: hover ---------- *)
 
@@ -1120,7 +1120,7 @@ let hover
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -1180,7 +1180,7 @@ let eval_index
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -1256,7 +1256,7 @@ let cookies_and_storage
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ sw tabs fake ->
+  rig ~caps (fun _ sw tabs fake ->
       ignore sw;
       let fake = fake () in
       let page = fresh_page () in
@@ -1401,7 +1401,7 @@ let tab_lock
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake ->
+  rig ~caps (fun env sw tabs fake ->
       ignore env;
       let fake = fake () in
       let page = fresh_page () in
@@ -1458,20 +1458,20 @@ let tab_lock
       ignore (result (request tabs "alice" (P.Cookies { tab = a }))))
 
 let with_runtime ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
-  let runtime = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-h2-" "" in
-  (Ox_caps.Cap_unix.unlink ~caps) runtime;
-  (Ox_caps.Cap_unix.mkdir ~caps) runtime 0o700;
+  let runtime = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-h2-" "" in
+  Ox_caps.Cap_unix.unlink ~caps runtime;
+  Ox_caps.Cap_unix.mkdir ~caps runtime 0o700;
   Fun.protect
     ~finally:(fun () ->
       let dir = Filename.concat runtime "leash" in
       let unlink ~(caps : < Ox_caps.Cap.fs_write ; .. >) path =
-        if Sys.file_exists path then (Ox_caps.Cap_unix.unlink ~caps) path
+        if Sys.file_exists path then Ox_caps.Cap_unix.unlink ~caps path
       in
-      (unlink ~caps) (Filename.concat dir "control.sock");
-      (unlink ~caps) (Filename.concat dir "control.sock.lock");
-      if Sys.file_exists dir then (Ox_caps.Cap_unix.rmdir ~caps) dir;
-      (Ox_caps.Cap_unix.chmod ~caps) runtime 0o700;
-      (Ox_caps.Cap_unix.rmdir ~caps) runtime)
+      unlink ~caps (Filename.concat dir "control.sock");
+      unlink ~caps (Filename.concat dir "control.sock.lock");
+      if Sys.file_exists dir then Ox_caps.Cap_unix.rmdir ~caps dir;
+      Ox_caps.Cap_unix.chmod ~caps runtime 0o700;
+      Ox_caps.Cap_unix.rmdir ~caps runtime)
     (fun () -> f runtime)
 
 let listen ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >)
@@ -1532,13 +1532,13 @@ let ten_clients
        ; Ox_caps.Cap.random
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_runtime ~caps) (fun runtime ->
-      (rig ~caps) (fun env sw tabs fake ->
+  with_runtime ~caps (fun runtime ->
+      rig ~caps (fun env sw tabs fake ->
           let fake = fake () in
           many_tabs fake;
           let page = fresh_page () in
           script fake page;
-          let path = (listen ~caps) ~runtime env sw tabs in
+          let path = listen ~caps ~runtime env sw tabs in
           let handles = List.init 10 (fun _ -> new_tab tabs "alice") in
           let waiters = List.filteri (fun i _ -> i < 5) handles in
           let actors = List.filteri (fun i _ -> i >= 5) handles in
@@ -1645,8 +1645,8 @@ let many_waiters
        ; Ox_caps.Cap.random
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_runtime ~caps) (fun runtime ->
-      (rig ~caps) (fun env sw tabs fake ->
+  with_runtime ~caps (fun runtime ->
+      rig ~caps (fun env sw tabs fake ->
           let fake = fake () in
           let page = fresh_page () in
           script fake page;
@@ -1658,7 +1658,7 @@ let many_waiters
                   = Some (Ox_observability.Logger.String "disconnected")
                 then incr disconnected)
           in
-          let path = (listen ~caps) ~reporter ~runtime env sw tabs in
+          let path = listen ~caps ~reporter ~runtime env sw tabs in
           let a = new_tab tabs "alice" in
           let until =
             Some
@@ -1717,8 +1717,8 @@ let many_waiters
 
 let documented ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   let doc =
-    (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
-      "../docs/protocol.md" In_channel.input_all
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps "../docs/protocol.md"
+      In_channel.input_all
   in
   List.iter
     (fun name ->
@@ -1744,8 +1744,8 @@ let documented ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
     (List.for_all
        (fun meth ->
          contains
-           ((Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
-              "support/fake_browser.ml" In_channel.input_all)
+           (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps "support/fake_browser.ml"
+              In_channel.input_all)
            meth)
        [
          "Network.getResponseBody";

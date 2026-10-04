@@ -155,7 +155,7 @@ let boundary
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env ~tabs ~expiry ~fake:_ ->
+  rig ~caps (fun ~env ~tabs ~expiry ~fake:_ ->
       let h = fresh tabs in
       advance env 29;
       ignore (Expiry.sweep expiry);
@@ -185,7 +185,7 @@ let human_safety
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env ~tabs ~expiry ~fake ->
+  rig ~caps (fun ~env ~tabs ~expiry ~fake ->
       Fake.emit fake ~method_:"Target.targetCreated"
         ~params:
           (obj
@@ -226,7 +226,7 @@ let idle_pause
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env ~tabs ~expiry ~fake:_ ->
+  rig ~caps (fun ~env ~tabs ~expiry ~fake:_ ->
       let h = fresh tabs in
       ignore (Tabs.hand_over tabs ~reason:"captcha" h);
       advance env 3600;

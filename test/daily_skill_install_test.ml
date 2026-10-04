@@ -2,28 +2,28 @@ let rec remove_path ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >
   match Unix.lstat path with
   | exception Unix.Unix_error (Unix.ENOENT, _, _) -> ()
   | stats when stats.Unix.st_kind = Unix.S_DIR ->
-      (Ox_caps.Cap_sys.readdir ~caps) path
-      |> Array.iter (fun name -> (remove_path ~caps) (Filename.concat path name));
-      (Ox_caps.Cap_unix.rmdir ~caps) path
-  | _ -> (Ox_caps.Cap_unix.unlink ~caps) path
+      Ox_caps.Cap_sys.readdir ~caps path
+      |> Array.iter (fun name -> remove_path ~caps (Filename.concat path name));
+      Ox_caps.Cap_unix.rmdir ~caps path
+  | _ -> Ox_caps.Cap_unix.unlink ~caps path
 
 let with_temp_dir
     ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
-  let path = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-skill-install-" "" in
-  (Ox_caps.Cap_sys.remove ~caps) path;
-  (Ox_caps.Cap_unix.mkdir ~caps) path 0o755;
-  Fun.protect ~finally:(fun () -> (remove_path ~caps) path) (fun () -> f path)
+  let path = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-skill-install-" "" in
+  Ox_caps.Cap_sys.remove ~caps path;
+  Ox_caps.Cap_unix.mkdir ~caps path 0o755;
+  Fun.protect ~finally:(fun () -> remove_path ~caps path) (fun () -> f path)
 
 let with_cwd ~(caps : < Ox_caps.Cap.chdir ; .. >) path f =
   let previous = Sys.getcwd () in
   Fun.protect
-    ~finally:(fun () -> (Ox_caps.Cap_sys.chdir ~caps) previous)
+    ~finally:(fun () -> Ox_caps.Cap_sys.chdir ~caps previous)
     (fun () ->
-      (Ox_caps.Cap_sys.chdir ~caps) path;
+      Ox_caps.Cap_sys.chdir ~caps path;
       f ())
 
 let read ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
-  (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps) path In_channel.input_all
+  Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all
 
 module Skill_install = Leash_cli_support.Skill_install
 
@@ -65,20 +65,20 @@ let test_explicit_root_installs_complete_skill
         (Sys.file_exists (Filename.concat skill "SKILL.md"));
       Alcotest.(check string)
         "stamped entrypoint" Skill_install.show
-        ((read ~caps) (Filename.concat skill "SKILL.md"));
+        (read ~caps (Filename.concat skill "SKILL.md"));
       Alcotest.(check bool)
         "references directory" true
         (Sys.is_directory (Filename.concat skill "references"));
       Alcotest.(check bool)
         "entrypoint contents" true
         (String.starts_with ~prefix:"---\nname: leash\n"
-           ((read ~caps) (Filename.concat skill "SKILL.md")))
+           (read ~caps (Filename.concat skill "SKILL.md")))
 
 let rec mkdir_p ~(caps : < Ox_caps.Cap.fs_write ; .. >) path =
   if path = "" || Sys.file_exists path then ()
   else (
-    (mkdir_p ~caps) (Filename.dirname path);
-    (Ox_caps.Cap_unix.mkdir ~caps) path 0o755)
+    mkdir_p ~caps (Filename.dirname path);
+    Ox_caps.Cap_unix.mkdir ~caps path 0o755)
 
 (* daily-yd8s: the same installer contract as Nema. *)
 let test_discovery_deduplicates_linked_roots
@@ -87,11 +87,11 @@ let test_discovery_deduplicates_linked_roots
   let shared = Filename.concat home "shared-skills" in
   let codex = Filename.concat home ".codex" in
   let pi_agent = Filename.concat home ".pi/agent" in
-  (mkdir_p ~caps) shared;
-  (mkdir_p ~caps) codex;
-  (mkdir_p ~caps) pi_agent;
-  (Ox_caps.Cap_unix.symlink ~caps) shared (Filename.concat codex "skills");
-  (Ox_caps.Cap_unix.symlink ~caps) shared (Filename.concat pi_agent "skills");
+  mkdir_p ~caps shared;
+  mkdir_p ~caps codex;
+  mkdir_p ~caps pi_agent;
+  Ox_caps.Cap_unix.symlink ~caps shared (Filename.concat codex "skills");
+  Ox_caps.Cap_unix.symlink ~caps shared (Filename.concat pi_agent "skills");
   let prompts = ref [] in
   match
     Skill_install.run ~roots:[] ~caps ~home ~path:None ~force:false ~no_input:false
@@ -116,10 +116,10 @@ let test_identical_explicit_target_is_current
       ~no_input:false ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "identical target must not prompt")
   in
-  (match (run ~caps) () with
+  (match run ~caps () with
   | Error error -> Alcotest.fail (error_message error)
   | Ok _ -> ());
-  match (run ~caps) () with
+  match run ~caps () with
   | Error error -> Alcotest.fail (error_message error)
   | Ok [ { disposition = Skill_install.Current; _ } ] -> ()
   | Ok _ -> Alcotest.fail "expected one current outcome"
@@ -133,7 +133,7 @@ let test_empty_explicit_path_is_rejected
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   with_temp_dir ~caps @@ fun root ->
-  (with_cwd ~caps) root @@ fun () ->
+  with_cwd ~caps root @@ fun () ->
   match
     Skill_install.run ~roots:[] ~caps ~home:"" ~path:(Some "") ~force:true ~no_input:false
       ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ -> true)
@@ -154,24 +154,24 @@ let test_unexpected_nodes_require_and_allow_replacement
       ~dry_run ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "force and dry-run must not prompt")
   in
-  (match (run ~caps) ~force:false ~dry_run:false with
+  (match run ~caps ~force:false ~dry_run:false with
   | Ok _ -> ()
   | Error error -> Alcotest.fail (error_message error));
   let destination = Filename.concat root "leash" in
   let empty = Filename.concat destination "extra-empty" in
-  (Ox_caps.Cap_unix.mkdir ~caps) empty 0o755;
-  (match (run ~caps) ~force:false ~dry_run:true with
+  Ox_caps.Cap_unix.mkdir ~caps empty 0o755;
+  (match run ~caps ~force:false ~dry_run:true with
   | Ok [ { disposition = Skill_install.Planned_replace; _ } ] -> ()
   | Error error -> Alcotest.fail (error_message error)
   | Ok _ -> Alcotest.fail "empty directory must require replacement");
-  (Ox_caps.Cap_unix.rmdir ~caps) empty;
+  Ox_caps.Cap_unix.rmdir ~caps empty;
   let linked = Filename.concat destination "extra-link" in
-  (Ox_caps.Cap_unix.symlink ~caps) "/missing/leash-skill-target" linked;
-  (match (run ~caps) ~force:false ~dry_run:true with
+  Ox_caps.Cap_unix.symlink ~caps "/missing/leash-skill-target" linked;
+  (match run ~caps ~force:false ~dry_run:true with
   | Ok [ { disposition = Skill_install.Planned_replace; _ } ] -> ()
   | Error error -> Alcotest.fail (error_message error)
   | Ok _ -> Alcotest.fail "symlink must require replacement");
-  (match (run ~caps) ~force:true ~dry_run:false with
+  (match run ~caps ~force:true ~dry_run:false with
   | Ok [ { disposition = Skill_install.Replaced; _ } ] -> ()
   | Error error -> Alcotest.fail (error_message error)
   | Ok _ -> Alcotest.fail "force must replace unexpected nodes");
@@ -187,28 +187,28 @@ let test_cleanup_failure_reports_completed_replacement
     Skill_install.run ~roots:[] ~caps ~home:root ~path:(Some root) ~force ~no_input:false
       ~dry_run:false ~stdin_is_tty:true ~confirm
   in
-  (match (install ~caps) false (fun _ _ -> true) with
+  (match install ~caps false (fun _ _ -> true) with
   | Ok _ -> ()
   | Error error -> Alcotest.fail (error_message error));
-  (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps)
+  Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps
     (Filename.concat destination "SKILL.md") (fun channel ->
       output_string channel "stale");
   let protected = Filename.concat destination "references" in
   let result =
-    (install ~caps) false (fun _ _ ->
-        (Ox_caps.Cap_unix.chmod ~caps) protected 0o000;
+    install ~caps false (fun _ _ ->
+        Ox_caps.Cap_unix.chmod ~caps protected 0o000;
         true)
   in
   let backup =
-    (Ox_caps.Cap_sys.readdir ~caps) root
+    Ox_caps.Cap_sys.readdir ~caps root
     |> Array.to_list
     |> List.find (String.starts_with ~prefix:"leash.old-")
     |> Filename.concat root
   in
   Fun.protect
     ~finally:(fun () ->
-      (Ox_caps.Cap_unix.chmod ~caps) (Filename.concat backup "references") 0o755;
-      (remove_path ~caps) backup)
+      Ox_caps.Cap_unix.chmod ~caps (Filename.concat backup "references") 0o755;
+      remove_path ~caps backup)
     (fun () ->
       match result with
       | Ok _ -> Alcotest.fail "expected backup cleanup failure"
@@ -219,7 +219,7 @@ let test_cleanup_failure_reports_completed_replacement
           Alcotest.(check bool)
             "new tree installed" true
             (String.starts_with ~prefix:"---\nname: leash\n"
-               ((read ~caps) (Filename.concat destination "SKILL.md")));
+               (read ~caps (Filename.concat destination "SKILL.md")));
           Alcotest.(check int) "cleanup failure reported" 1 (List.length error.failures);
           Alcotest.(check bool)
             "cleanup permission class" true
@@ -234,18 +234,18 @@ let test_inspection_failure_is_permission_and_non_mutating
       ~dry_run ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "inspection failure must not prompt")
   in
-  (match (run ~caps) ~force:false ~dry_run:false with
+  (match run ~caps ~force:false ~dry_run:false with
   | Ok _ -> ()
   | Error error -> Alcotest.fail (error_message error));
   let skill_md = Filename.concat root "leash/SKILL.md" in
-  let original = (read ~caps) skill_md in
-  (Ox_caps.Cap_unix.chmod ~caps) skill_md 0o000;
+  let original = read ~caps skill_md in
+  Ox_caps.Cap_unix.chmod ~caps skill_md 0o000;
   Fun.protect
-    ~finally:(fun () -> (Ox_caps.Cap_unix.chmod ~caps) skill_md 0o644)
+    ~finally:(fun () -> Ox_caps.Cap_unix.chmod ~caps skill_md 0o644)
     (fun () ->
       [ (false, true); (true, false) ]
       |> List.iter (fun (force, dry_run) ->
-          match (run ~caps) ~force ~dry_run with
+          match run ~caps ~force ~dry_run with
           | Ok _ -> Alcotest.fail "expected inspection failure"
           | Error error ->
               Alcotest.(check int)
@@ -254,18 +254,18 @@ let test_inspection_failure_is_permission_and_non_mutating
               Alcotest.(check bool)
                 "permission failure" true
                 ((List.hd error.failures).Skill_install.kind = Skill_install.Permission)));
-  Alcotest.(check string) "target unchanged" original ((read ~caps) skill_md)
+  Alcotest.(check string) "target unchanged" original (read ~caps skill_md)
 
 (* daily-yd8s: the same installer contract as Nema. *)
 let test_replacement_requires_consent_and_replaces_tree
     ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   with_temp_dir ~caps @@ fun root ->
   let destination = Filename.concat root "leash" in
-  (mkdir_p ~caps) destination;
-  (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps)
+  mkdir_p ~caps destination;
+  Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps
     (Filename.concat destination "SKILL.md") (fun channel ->
       output_string channel "stale");
-  (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps)
+  Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps
     (Filename.concat destination "extra.txt") (fun channel ->
       output_string channel "remove me");
   let prompts = ref 0 in
@@ -281,14 +281,14 @@ let test_replacement_requires_consent_and_replaces_tree
         Alcotest.(check string) "prompt path" destination path;
         answer)
   in
-  (match (run ~caps) false with
+  (match run ~caps false with
   | Ok [ { disposition = Skill_install.Declined; _ } ] -> ()
   | Error error -> Alcotest.fail (error_message error)
   | Ok _ -> Alcotest.fail "expected declined outcome");
   Alcotest.(check string)
     "decline preserves stale file" "stale"
-    ((read ~caps) (Filename.concat destination "SKILL.md"));
-  (match (run ~caps) true with
+    (read ~caps (Filename.concat destination "SKILL.md"));
+  (match run ~caps true with
   | Ok [ { disposition = Skill_install.Replaced; _ } ] -> ()
   | Error error -> Alcotest.fail (error_message error)
   | Ok _ -> Alcotest.fail "expected replaced outcome");
@@ -302,8 +302,8 @@ let test_non_tty_replacement_requires_force
     ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   with_temp_dir ~caps @@ fun root ->
   let destination = Filename.concat root "leash" in
-  (mkdir_p ~caps) destination;
-  (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps)
+  mkdir_p ~caps destination;
+  Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps
     (Filename.concat destination "SKILL.md") (fun channel ->
       output_string channel "stale");
   let run ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) force =
@@ -311,7 +311,7 @@ let test_non_tty_replacement_requires_force
       ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
         Alcotest.fail "non-TTY operation must not prompt")
   in
-  (match (run ~caps) false with
+  (match run ~caps false with
   | Error error ->
       let message = error_message error in
       Alcotest.(check bool)
@@ -320,8 +320,8 @@ let test_non_tty_replacement_requires_force
   | Ok _ -> Alcotest.fail "expected missing-consent failure");
   Alcotest.(check string)
     "failure preserves target" "stale"
-    ((read ~caps) (Filename.concat destination "SKILL.md"));
-  match (run ~caps) true with
+    (read ~caps (Filename.concat destination "SKILL.md"));
+  match run ~caps true with
   | Ok [ { disposition = Skill_install.Replaced; _ } ] -> ()
   | Error error -> Alcotest.fail (error_message error)
   | Ok _ -> Alcotest.fail "expected forced replacement"
@@ -331,7 +331,7 @@ let test_no_input_discovery_requires_force
     ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   with_temp_dir ~caps @@ fun home ->
   let agents = Filename.concat home ".agents" in
-  (mkdir_p ~caps) agents;
+  mkdir_p ~caps agents;
   match
     Skill_install.run ~roots:[] ~caps ~home ~path:None ~force:false ~no_input:true
       ~dry_run:false ~stdin_is_tty:true ~confirm:(fun _ _ ->
@@ -353,9 +353,9 @@ let test_dry_run_reports_without_prompting_or_writing
   with_temp_dir ~caps @@ fun home ->
   let claude = Filename.concat home ".claude" in
   let agents_skill = Filename.concat home ".agents/skills/leash" in
-  (mkdir_p ~caps) claude;
-  (mkdir_p ~caps) agents_skill;
-  (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps)
+  mkdir_p ~caps claude;
+  mkdir_p ~caps agents_skill;
+  Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps
     (Filename.concat agents_skill "SKILL.md") (fun channel ->
       output_string channel "stale");
   match
@@ -384,7 +384,7 @@ let test_dry_run_reports_without_prompting_or_writing
         (Sys.file_exists (Filename.concat claude "skills/leash"));
       Alcotest.(check string)
         "existing target unchanged" "stale"
-        ((read ~caps) (Filename.concat agents_skill "SKILL.md"))
+        (read ~caps (Filename.concat agents_skill "SKILL.md"))
 
 (* daily-yd8s: the same installer contract as Nema. *)
 let test_missing_discovery_reports_checked_locations
@@ -427,10 +427,10 @@ let test_forced_discovery_reports_failure_and_continues
   let claude = Filename.concat home ".claude" in
   let codex = Filename.concat home ".codex" in
   let agents = Filename.concat home ".agents" in
-  (mkdir_p ~caps) claude;
-  (mkdir_p ~caps) codex;
-  (mkdir_p ~caps) agents;
-  (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps) (Filename.concat codex "skills")
+  mkdir_p ~caps claude;
+  mkdir_p ~caps codex;
+  mkdir_p ~caps agents;
+  Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps (Filename.concat codex "skills")
     (fun channel -> output_string channel "not a directory");
   match
     Skill_install.run ~roots:[] ~caps ~home ~path:None ~force:true ~no_input:false
@@ -459,9 +459,9 @@ let test_invalid_discovery_root_does_not_block_later_root
   with_temp_dir ~caps @@ fun home ->
   let claude = Filename.concat home ".claude" in
   let agents = Filename.concat home ".agents" in
-  (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps) claude (fun channel ->
+  Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps claude (fun channel ->
       output_string channel "bad");
-  (mkdir_p ~caps) agents;
+  mkdir_p ~caps agents;
   match
     Skill_install.run ~roots:[] ~caps ~home ~path:None ~force:true ~no_input:false
       ~dry_run:false ~stdin_is_tty:false ~confirm:(fun _ _ ->
@@ -483,8 +483,8 @@ let test_declined_discovery_continues
   with_temp_dir ~caps @@ fun home ->
   let claude = Filename.concat home ".claude" in
   let agents = Filename.concat home ".agents" in
-  (mkdir_p ~caps) claude;
-  (mkdir_p ~caps) agents;
+  mkdir_p ~caps claude;
+  mkdir_p ~caps agents;
   let answers = ref [ false; true ] in
   let confirm _ _ =
     match !answers with

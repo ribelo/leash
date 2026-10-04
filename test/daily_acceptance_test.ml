@@ -239,7 +239,7 @@ let press_keys
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake _ _ ->
+  rig ~caps (fun _ _ _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let id, _ = snapshot tabs h in
@@ -292,7 +292,7 @@ let native_identity
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake _ _ ->
+  rig ~caps (fun _ _ _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let id, json = snapshot tabs h in
@@ -355,7 +355,7 @@ let recovery_details
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake _ _ ->
+  rig ~caps (fun _ _ _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let old =
@@ -454,7 +454,7 @@ let popup_url
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake _ _ ->
+  rig ~caps (fun env sw _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       let fake = fake () in
       script_row fake "InputTime";
@@ -536,8 +536,7 @@ let download_bytes
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) ~download_dir:"/tmp/leash-c-acceptance-downloads"
-    (fun _ _ _ tabs fake _ _ ->
+  rig ~caps ~download_dir:"/tmp/leash-c-acceptance-downloads" (fun _ _ _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       let fake = fake () in
       Fake.emit ~session:"session-1" fake ~method_:"Page.frameNavigated"
@@ -608,7 +607,7 @@ let chrome_identity
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw chrome _ _ child memory ->
+  rig ~caps (fun env sw chrome _ _ child memory ->
       Alcotest.(check (option int))
         "daily-c4cl actual managed child pid"
         (Some (Ox_process.Child.pid (child ())))
@@ -690,8 +689,8 @@ let config_roots () =
 
 let skill_catalog ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   let text =
-    (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
-      "../skill/references/errors.md" In_channel.input_all
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps "../skill/references/errors.md"
+      In_channel.input_all
   in
   List.iter
     (fun code ->

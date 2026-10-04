@@ -265,7 +265,7 @@ let dialog_and_shot ~(caps : < Ox_caps.Cap.fs_write ; .. >) () =
       ("leash-reading-" ^ string_of_int (Unix.getpid ()) ^ ".png")
   in
   Fun.protect
-    ~finally:(fun () -> if Sys.file_exists path then (Ox_caps.Cap_sys.remove ~caps) path)
+    ~finally:(fun () -> if Sys.file_exists path then Ox_caps.Cap_sys.remove ~caps path)
     (fun () ->
       let shot = ok (R.shot ~caps b P.{ tab = handle; path; full_page = Some true }) in
       Alcotest.(check int) "bytes" 8 shot.P.bytes;
@@ -378,7 +378,7 @@ let protocol_smoke
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ->
+  rig ~caps (fun ~env:_ ~sw:_ ~tabs ~fake ->
       Fake.on_method fake "Runtime.evaluate" (fun request ->
           let params = get "params" request in
           let value =
@@ -428,7 +428,7 @@ let protocol_smoke
       in
       Fun.protect
         ~finally:(fun () ->
-          if Sys.file_exists path then (Ox_caps.Cap_sys.remove ~caps) path)
+          if Sys.file_exists path then Ox_caps.Cap_sys.remove ~caps path)
         (fun () ->
           let screenshot = result (send (P.Shot { tab; path; full_page = Some true })) in
           Alcotest.(check int)
@@ -494,7 +494,7 @@ let eval_diagnostics
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ->
+  rig ~caps (fun ~env:_ ~sw:_ ~tabs ~fake ->
       Fake.on_method fake "Runtime.evaluate" (fun _ ->
           obj [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]);
       let send command =
@@ -562,7 +562,7 @@ let eval_settlement
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw ~tabs ~fake ->
+  rig ~caps (fun ~env:_ ~sw ~tabs ~fake ->
       Fake.on_method fake "Runtime.evaluate" (fun _ ->
           obj [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]);
       Fake.withhold fake "Runtime.callFunctionOn" (fun _ -> true);
@@ -691,7 +691,7 @@ let modal_reads
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw ~tabs ~fake ->
+  rig ~caps (fun ~env:_ ~sw ~tabs ~fake ->
       let send command =
         let wire = P.encode_request { command } |> Yojson.Safe.to_string in
         match
@@ -807,7 +807,7 @@ let screencast_shot
        ; Ox_caps.Cap.random
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (rig ~caps) (fun ~env ~sw:_ ~tabs ~fake ->
+  rig ~caps (fun ~env ~sw:_ ~tabs ~fake ->
       let send command =
         match
           P.decode_reply
@@ -823,13 +823,11 @@ let screencast_shot
         | P.Failure e -> Alcotest.fail e.message
       in
       let tab = tab_of (success (send (P.New { url = None; label = None }))) in
-      let path =
-        (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-screencast-" ".png"
-      in
-      (Ox_caps.Cap_sys.remove ~caps) path;
+      let path = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-screencast-" ".png" in
+      Ox_caps.Cap_sys.remove ~caps path;
       Fun.protect
         ~finally:(fun () ->
-          if Sys.file_exists path then (Ox_caps.Cap_sys.remove ~caps) path)
+          if Sys.file_exists path then Ox_caps.Cap_sys.remove ~caps path)
         (fun () ->
           let shot full_page = send (P.Shot { tab; path; full_page = Some full_page }) in
           let methods before =
@@ -884,7 +882,7 @@ let screencast_shot
           Alcotest.(check bool)
             "ack first frame from correct page only" true
             (field "sessionId" (get "params" ack) = Some (`Int 42));
-          (Ox_caps.Cap_sys.remove ~caps) path;
+          Ox_caps.Cap_sys.remove ~caps path;
           let before = List.length (Fake.received fake) in
           ignore (success (shot true));
           Alcotest.(check (list string))
@@ -895,7 +893,7 @@ let screencast_shot
               "Emulation.setFocusEmulationEnabled";
             ]
             (relevant (methods before));
-          (Ox_caps.Cap_sys.remove ~caps) path;
+          Ox_caps.Cap_sys.remove ~caps path;
           Fake.on_method fake "Page.startScreencast" (fun _ ->
               Fake.emit ~session:"session-1" fake ~method_:"Page.screencastFrame"
                 ~params:(obj []);

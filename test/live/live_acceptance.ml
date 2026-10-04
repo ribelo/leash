@@ -14,12 +14,12 @@ let fail fmt = Printf.ksprintf (fun message -> raise (Failed message)) fmt
 
 let ok ~(caps : < Ox_caps.Cap.stdout ; .. >) fmt =
   Printf.ksprintf
-    (fun message -> (Ox_caps.Cap_stdlib.print_endline ~caps) ("  ok    " ^ message))
+    (fun message -> Ox_caps.Cap_stdlib.print_endline ~caps ("  ok    " ^ message))
     fmt
 
 let warn ~(caps : < Ox_caps.Cap.stdout ; .. >) fmt =
   Printf.ksprintf
-    (fun message -> (Ox_caps.Cap_stdlib.print_endline ~caps) ("  warn  " ^ message))
+    (fun message -> Ox_caps.Cap_stdlib.print_endline ~caps ("  warn  " ^ message))
     fmt
 
 let note ~(caps : < Ox_caps.Cap.stdout ; .. >) fmt =
@@ -46,11 +46,11 @@ let show_event = function
   | Chrome.Stopped -> "Stopped"
 
 let read_file ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
-  try (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps) path In_channel.input_all
+  try Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all
   with Sys_error _ -> ""
 
 let argv_of ~(caps : < Ox_caps.Cap.fs_read ; .. >) pid =
-  (read_file ~caps) (Printf.sprintf "/proc/%d/cmdline" pid)
+  read_file ~caps (Printf.sprintf "/proc/%d/cmdline" pid)
   |> String.split_on_char '\000'
   |> List.filter (fun arg -> arg <> "")
 
@@ -61,7 +61,7 @@ let realpath path = try Unix.realpath path with Unix.Unix_error _ -> path
 
 let pids ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   try
-    (Ox_caps.Cap_sys.readdir ~caps) "/proc"
+    Ox_caps.Cap_sys.readdir ~caps "/proc"
     |> Array.to_list
     |> List.filter_map int_of_string_opt
   with Sys_error _ -> []
@@ -78,9 +78,7 @@ let is_browser ~profile pid args =
   && not (contains cmdline "--type=")
 
 let scan_browser ~(caps : < Ox_caps.Cap.fs_read ; .. >) ~profile =
-  List.find_opt
-    (fun pid -> is_browser ~profile pid ((argv_of ~caps) pid))
-    ((pids ~caps) ())
+  List.find_opt (fun pid -> is_browser ~profile pid (argv_of ~caps pid)) (pids ~caps ())
 
 (* Chrome reports the browser process's own pid over the same pipe; the /proc scan is the
    fallback when the domain is missing. *)
@@ -100,12 +98,12 @@ let browser_pid ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) ~cal
         | _ -> None)
     | _ -> None
   in
-  match (reported (), (scan_browser ~caps) ~profile) with
+  match (reported (), scan_browser ~caps ~profile) with
   | Some pid, _ ->
-      (note ~caps) "  SystemInfo.getProcessInfo reports browser pid %d" pid;
+      note ~caps "  SystemInfo.getProcessInfo reports browser pid %d" pid;
       pid
   | None, Some pid ->
-      (warn ~caps) "SystemInfo.getProcessInfo did not answer; using /proc pid %d" pid;
+      warn ~caps "SystemInfo.getProcessInfo did not answer; using /proc pid %d" pid;
       pid
   | None, None ->
       fail "neither SystemInfo.getProcessInfo nor /proc found the browser process"
@@ -113,7 +111,7 @@ let browser_pid ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) ~cal
 let socket_inodes ~(caps : < Ox_caps.Cap.fs_read ; .. >) pid =
   let dir = Printf.sprintf "/proc/%d/fd" pid in
   try
-    (Ox_caps.Cap_sys.readdir ~caps) dir
+    Ox_caps.Cap_sys.readdir ~caps dir
     |> Array.to_list
     |> List.filter_map (fun name ->
         match Unix.readlink (Filename.concat dir name) with
@@ -125,7 +123,7 @@ let socket_inodes ~(caps : < Ox_caps.Cap.fs_read ; .. >) pid =
 (* A listening socket of the browser: /proc/net/tcp sees the whole network namespace, so
    its rows are matched against the socket inodes this process holds. *)
 let listeners ~(caps : < Ox_caps.Cap.fs_read ; .. >) ~inodes path =
-  match String.split_on_char '\n' ((read_file ~caps) path) with
+  match String.split_on_char '\n' (read_file ~caps path) with
   | [] | [ _ ] -> []
   | _ :: rows ->
       List.filter_map
@@ -173,10 +171,10 @@ let run
       ~grace:(Ox.Duration.seconds 10) ~headless:true ()
   in
   let grace = Ox.Duration.to_seconds_float config.Chrome.grace in
-  (note ~caps) "L2 live acceptance: real Chrome over a private CDP pipe";
-  (note ~caps) "  binary  %s" binary;
-  (note ~caps) "  profile %s" profile;
-  (note ~caps) "  argv    %s" (String.concat " " (Chrome.argv config));
+  note ~caps "L2 live acceptance: real Chrome over a private CDP pipe";
+  note ~caps "  binary  %s" binary;
+  note ~caps "  profile %s" profile;
+  note ~caps "  argv    %s" (String.concat " " (Chrome.argv config));
   Eio.Switch.run (fun sw ->
       let chrome =
         Chrome.create ~sw config
@@ -188,7 +186,7 @@ let run
           }
       in
       let generation = await_started ~clock chrome in
-      (ok ~caps) "started, generation %d" generation;
+      ok ~caps "started, generation %d" generation;
       let connection =
         match Chrome.connection chrome with
         | Ok connection -> connection
@@ -206,53 +204,51 @@ let run
       in
       (* The pipe carries a call before anything about the process is checked. *)
       let targets = call "Target.getTargets" (`Assoc []) in
-      (note ~caps) "  Target.getTargets -> %s" (Yojson.Safe.to_string targets);
-      (ok ~caps) "Target.getTargets answered over the pipe";
-      let pid = (browser_pid ~caps) ~call ~profile in
+      note ~caps "  Target.getTargets -> %s" (Yojson.Safe.to_string targets);
+      ok ~caps "Target.getTargets answered over the pipe";
+      let pid = browser_pid ~caps ~call ~profile in
       (* Chrome rewrites its own command line, so flags are read as text, not as a list
          of arguments. *)
-      let cmdline = String.concat " " ((argv_of ~caps) pid) in
-      (ok ~caps) "browser process %d runs %s" pid (exe_of pid);
-      if contains cmdline "--class=leash" then (ok ~caps) "--class=leash"
+      let cmdline = String.concat " " (argv_of ~caps pid) in
+      ok ~caps "browser process %d runs %s" pid (exe_of pid);
+      if contains cmdline "--class=leash" then ok ~caps "--class=leash"
       else fail "no --class=leash in %s" cmdline;
       if
         contains cmdline "--no-first-run"
         && contains cmdline "--no-default-browser-check"
         && contains cmdline "--hide-crash-restore-bubble"
       then
-        (ok ~caps)
-          "--no-first-run, --no-default-browser-check, --hide-crash-restore-bubble"
+        ok ~caps "--no-first-run, --no-default-browser-check, --hide-crash-restore-bubble"
       else fail "missing first-run or restore flags in %s" cmdline;
-      if contains cmdline "--headless=new" then (ok ~caps) "--headless=new"
+      if contains cmdline "--headless=new" then ok ~caps "--headless=new"
       else fail "missing --headless=new in %s" cmdline;
-      let inodes = (socket_inodes ~caps) pid in
+      let inodes = socket_inodes ~caps pid in
       let listening =
-        (listeners ~caps) ~inodes "/proc/net/tcp"
-        @ (listeners ~caps) ~inodes "/proc/net/tcp6"
+        listeners ~caps ~inodes "/proc/net/tcp" @ listeners ~caps ~inodes "/proc/net/tcp6"
       in
       if listening <> [] then
         fail "the browser listens on %s" (String.concat ", " listening)
       else
-        (ok ~caps) "no listening socket among the browser's %d descriptors"
+        ok ~caps "no listening socket among the browser's %d descriptors"
           (List.length inodes);
       let marker = Filename.concat profile "DevToolsActivePort" in
       if Sys.file_exists marker then
         fail "DevToolsActivePort exists: Chrome opened a debugging port"
-      else (ok ~caps) "no DevToolsActivePort file";
+      else ok ~caps "no DevToolsActivePort file";
       let created =
         call "Target.createTarget" (`Assoc [ ("url", `String "about:blank") ])
       in
-      (note ~caps) "  Target.createTarget -> %s" (Yojson.Safe.to_string created);
-      (ok ~caps) "Target.createTarget answered over the pipe";
+      note ~caps "  Target.createTarget -> %s" (Yojson.Safe.to_string created);
+      ok ~caps "Target.createTarget answered over the pipe";
       let after = call "Target.getTargets" (`Assoc []) in
-      (note ~caps) "  Target.getTargets -> %s" (Yojson.Safe.to_string after);
-      let stop_started = (Ox_caps.Cap_unix.gettimeofday ~caps) () in
+      note ~caps "  Target.getTargets -> %s" (Yojson.Safe.to_string after);
+      let stop_started = Ox_caps.Cap_unix.gettimeofday ~caps () in
       Chrome.stop chrome;
-      let elapsed = (Ox_caps.Cap_unix.gettimeofday ~caps) () -. stop_started in
+      let elapsed = Ox_caps.Cap_unix.gettimeofday ~caps () -. stop_started in
       if elapsed < grace then
-        (ok ~caps) "stopped in %.2fs, inside the %.0fs grace (SIGTERM)" elapsed grace
+        ok ~caps "stopped in %.2fs, inside the %.0fs grace (SIGTERM)" elapsed grace
       else
-        (warn ~caps)
+        warn ~caps
           "the stop took %.2fs of the %.0fs grace: check that Chrome takes SIGTERM"
           elapsed grace;
       let rec gone attempts =
@@ -263,13 +259,13 @@ let run
           gone (attempts - 1)
         end
       in
-      if gone 50 then (ok ~caps) "browser process %d is gone" pid
+      if gone 50 then ok ~caps "browser process %d is gone" pid
       else fail "browser process %d outlived the stop" pid)
 
 let resolve ~(caps : < Ox_caps.Cap.env ; .. >) name =
   if String.contains name '/' then if Sys.file_exists name then Some name else None
   else
-    (Ox_caps.Cap_sys.getenv_opt ~caps) "PATH"
+    Ox_caps.Cap_sys.getenv_opt ~caps "PATH"
     |> Option.value ~default:"" |> String.split_on_char ':'
     |> List.find_map (fun dir ->
         let path = Filename.concat dir name in
@@ -305,10 +301,10 @@ let main
   in
   (try parse (List.tl (Array.to_list Sys.argv))
    with Failed message ->
-     (Ox_caps.Cap_stdlib.prerr_endline ~caps) ("LIVE FAIL: " ^ message);
-     (Ox_caps.Cap_stdlib.exit ~caps) 2);
+     Ox_caps.Cap_stdlib.prerr_endline ~caps ("LIVE FAIL: " ^ message);
+     Ox_caps.Cap_stdlib.exit ~caps 2);
   let binary =
-    match (resolve ~caps) !binary with
+    match resolve ~caps !binary with
     | Some path -> path
     | None -> fail "no %s on PATH" !binary
   in
@@ -319,23 +315,24 @@ let main
         (Filename.get_temp_dir_name ())
         (Printf.sprintf "leash-live-%d" (Unix.getpid ()))
   in
-  (try (Ox_caps.Cap_unix.mkdir ~caps) profile 0o700
+  (try Ox_caps.Cap_unix.mkdir ~caps profile 0o700
    with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
   let status =
     try
-      Eio_main.run (fun env -> (run ~caps) env ~binary ~profile);
-      (Ox_caps.Cap_stdlib.print_endline ~caps)
+      Eio_main.run (fun env -> run ~caps env ~binary ~profile);
+      Ox_caps.Cap_stdlib.print_endline ~caps
         "LIVE OK: managed Chrome over the debugging pipe";
       0
     with
     | Failed message ->
-        (Ox_caps.Cap_stdlib.prerr_endline ~caps) ("LIVE FAIL: " ^ message);
+        Ox_caps.Cap_stdlib.prerr_endline ~caps ("LIVE FAIL: " ^ message);
         1
     | ex ->
-        (Ox_caps.Cap_stdlib.prerr_endline ~caps) ("LIVE FAIL: " ^ Printexc.to_string ex);
+        Ox_caps.Cap_stdlib.prerr_endline ~caps ("LIVE FAIL: " ^ Printexc.to_string ex);
         1
   in
-  if not !keep then ignore (Unix.system ("rm -rf " ^ Filename.quote profile));
-  (Ox_caps.Cap_stdlib.exit ~caps) status
+  if not !keep then
+    ignore (Ox_caps.Cap_unix.system ~caps ("rm -rf " ^ Filename.quote profile));
+  Ox_caps.Cap_stdlib.exit ~caps status
 
 let () = main ~caps:(Ox_test.powerbox ()) ()

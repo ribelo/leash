@@ -499,7 +499,7 @@ let click
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       (* tab-bw4j: real Chrome returns fractional quad centres but rejects them as
@@ -750,7 +750,7 @@ let scrolled_click
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.on_method fake "Page.getLayoutMetrics" (fun _ ->
@@ -790,7 +790,7 @@ let never_retried
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.on_failure fake "Input.dispatchMouseEvent" (fun request ->
@@ -836,7 +836,7 @@ let fill
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ~suggestions:false ();
       let handle = new_tab tabs in
@@ -955,7 +955,7 @@ let temporal_fill
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let time_ax =
@@ -1070,7 +1070,7 @@ let press
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1143,7 +1143,7 @@ let select
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1212,7 +1212,7 @@ let scroll
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1450,7 +1450,7 @@ let popups
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let fixture = chrome_fixture () in
@@ -1510,7 +1510,7 @@ let popups_exact
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let fixture = chrome_fixture () in
@@ -1587,7 +1587,7 @@ let dialog_during_dispatch
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1633,7 +1633,7 @@ let dialog
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1733,7 +1733,7 @@ let serialization
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ sw _ tabs fake ->
+  rig ~caps (fun _ sw _ tabs fake ->
       let fake = fake () in
       script_page fake ~suggestions:false ();
       let sessions = ref [ "session-1"; "session-2" ] in
@@ -1871,7 +1871,7 @@ let focus_emulation
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1997,7 +1997,7 @@ let popup_acknowledged
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ sw _ tabs fake ->
+  rig ~caps (fun _ sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let fixture = chrome_fixture () in
@@ -2056,7 +2056,7 @@ let slow_reply_settles
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
@@ -2107,7 +2107,7 @@ let silent_page_unavailable
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2170,7 +2170,7 @@ let self_closing_click_reports_tab_gone
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ sw _ tabs fake ->
+  rig ~caps (fun _ sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.withhold fake "Input.dispatchMouseEvent" (fun request ->
@@ -2215,7 +2215,7 @@ let self_closing_click_probe
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.withhold fake "Input.dispatchMouseEvent" (fun request ->
@@ -2273,7 +2273,7 @@ let navigation_title_refresh
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let loaded = ref false in
@@ -2338,7 +2338,7 @@ let popup_readiness
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) url dialog expected () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let fixture = chrome_fixture () in
@@ -2435,7 +2435,7 @@ let label_click
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2508,7 +2508,7 @@ let unrelated_cover
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2564,7 +2564,7 @@ let check_flips
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       script_checked fake [ false; true ];
@@ -2587,7 +2587,7 @@ let check_unchanged
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       script_checked fake [ true; true ];
@@ -2609,7 +2609,7 @@ let snap_on_click
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2647,7 +2647,7 @@ let password_fill_not_echoed
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2716,7 +2716,7 @@ let transparent_cover
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       opacity_probe fake true;
@@ -2778,7 +2778,7 @@ let spa_navigation
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2827,7 +2827,7 @@ let quiet_click
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw _ tabs fake ->
+  rig ~caps (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2880,13 +2880,13 @@ let () =
           Alcotest.test_case "tab-8dop" `Quick (scroll ~caps);
           Alcotest.test_case "tab-tm6c" `Quick (popups ~caps);
           Alcotest.test_case "field-drpx opening interrupted" `Quick
-            ((popup_readiness ~caps) "" true "opening");
+            (popup_readiness ~caps "" true "opening");
           Alcotest.test_case "field-drpx still blank" `Quick
-            ((popup_readiness ~caps) "" false "blank");
+            (popup_readiness ~caps "" false "blank");
           Alcotest.test_case "field-drpx about:blank" `Quick
-            ((popup_readiness ~caps) "about:blank" false "blank");
+            (popup_readiness ~caps "about:blank" false "blank");
           Alcotest.test_case "field-drpx committed" `Quick
-            ((popup_readiness ~caps) "https://example.com/popup" false "ready");
+            (popup_readiness ~caps "https://example.com/popup" false "ready");
           Alcotest.test_case "tab-8k2g" `Quick (popups_exact ~caps);
           Alcotest.test_case "tab-60kn" `Quick (dialog ~caps);
           Alcotest.test_case "hard-dljv dispatch modal" `Quick

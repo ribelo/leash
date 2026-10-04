@@ -314,7 +314,7 @@ let notify_then_done
        ; Ox_caps.Cap.random
        ; .. >) ?(signal = "blocked") () =
   let messages = ref [] and jev = ref 0 and plans = ref 0 in
-  (rig ~caps)
+  rig ~caps
     ~notify:(fun s ->
       messages := s :: !messages;
       Error "phone command failed")
@@ -351,7 +351,7 @@ let expiry
        ; Ox_caps.Cap.random
        ; .. >) () =
   let messages = ref [] in
-  (rig ~caps)
+  rig ~caps
     ~notify:(fun s ->
       messages := s :: !messages;
       Ok ())
@@ -461,7 +461,7 @@ let challenge_case
        ; Ox_caps.Cap.random
        ; .. >) ?(broken = false) ~attempt ~clears ~actions () =
   let plans = ref [] and clicked = ref 0 and jev = ref 0 in
-  (rig ~caps) ~attempt (fun _ _ tabs fake ->
+  rig ~caps ~attempt (fun _ _ tabs fake ->
       set_ax fake "CAPTCHA checkbox";
       if broken then
         Fake.on_method fake "Accessibility.getPartialAXTree" (fun _ ->
@@ -511,7 +511,7 @@ let forbidden_challenge_actions
        ; .. >) () =
   List.iter
     (fun case ->
-      (rig ~caps) (fun _ _ tabs fake ->
+      rig ~caps (fun _ _ tabs fake ->
           set_ax fake "CAPTCHA checkbox";
           let planned = ref 0 in
           let wire =
@@ -588,7 +588,7 @@ let disabled
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (challenge_case ~caps) ~attempt:false ~clears:false ~actions:false ()
+  challenge_case ~caps ~attempt:false ~clears:false ~actions:false ()
 
 let bounded
     ~(caps :
@@ -599,7 +599,7 @@ let bounded
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (challenge_case ~caps) ~attempt:true ~clears:false ~actions:false ()
+  challenge_case ~caps ~attempt:true ~clears:false ~actions:false ()
 
 let cleared
     ~(caps :
@@ -610,7 +610,7 @@ let cleared
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (challenge_case ~caps) ~attempt:true ~clears:true ~actions:true ()
+  challenge_case ~caps ~attempt:true ~clears:true ~actions:true ()
 
 let config () =
   let c = Leash.Config.default in
@@ -649,7 +649,7 @@ let resumed
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ sw tabs _ ->
+  rig ~caps (fun _ sw tabs _ ->
       let owned = succeeded (Tabs.new_tab tabs ~url:None) in
       Eio.Fiber.fork ~sw (fun () ->
           let rec wait () =
@@ -702,7 +702,7 @@ let canceled_notification
        ; Ox_caps.Cap.random
        ; .. >) () =
   let calls = ref 0 and messages = ref [] in
-  (rig ~caps)
+  rig ~caps
     ~notification:(Ox_test.Process.Exit (`Exited 0))
     ~notify:(fun message ->
       messages := message :: !messages;
@@ -745,7 +745,7 @@ let debug_challenge
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) ~attempt:false (fun _ _ tabs fake ->
+  rig ~caps ~attempt:false (fun _ _ tabs fake ->
       let tab = succeeded (Tabs.new_tab tabs ~url:(Some "https://example.com/")) in
       Fake.emit ~session:"session-1" fake ~method_:"Network.requestWillBeSent"
         ~params:
@@ -786,7 +786,7 @@ let debug_signal_lifecycle
   List.iter
     (fun navigates ->
       let count = ref 0 and plans = ref 0 and jev = ref 0 in
-      (rig ~caps) ~guard_count:count (fun _ _ tabs fake ->
+      rig ~caps ~guard_count:count (fun _ _ tabs fake ->
           let tab = succeeded (Tabs.new_tab tabs ~url:(Some "https://example.com/")) in
           set_ax fake "Continue";
           Fake.emit ~session:"session-1" fake ~method_:"Network.requestWillBeSent"
@@ -854,7 +854,7 @@ let semantic_challenge
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) ~attempt:false ~text:"Verify you are human" (fun _ _ tabs _ ->
+  rig ~caps ~attempt:false ~text:"Verify you are human" (fun _ _ tabs _ ->
       let result =
         run tabs
           ~plan:(fun _ -> reply (R.Handoff "captcha"))
@@ -919,7 +919,7 @@ let () =
       ( "protocol seam",
         [
           Alcotest.test_case "notif-7o8j notif-m37y notif-7pha notify survives failure"
-            `Quick (fun () -> (notify_then_done ~caps) ());
+            `Quick (fun () -> notify_then_done ~caps ());
           Alcotest.test_case "notif-oslv bounded handoff retains tab" `Quick
             (expiry ~caps);
           Alcotest.test_case "notif-himb notif-tdtz ordinary challenge action clears"
@@ -945,7 +945,7 @@ let () =
             `Quick (canceled_notification ~caps);
           Alcotest.test_case
             "notif-p4yk failed row actions reach bounded captcha fallback" `Quick
-            ((challenge_case ~caps) ~broken:true ~attempt:true ~clears:false ~actions:true);
+            (challenge_case ~caps ~broken:true ~attempt:true ~clears:false ~actions:true);
           Alcotest.test_case "notif-tdtz debug-only challenge is normalized" `Quick
             (debug_challenge ~caps);
           Alcotest.test_case

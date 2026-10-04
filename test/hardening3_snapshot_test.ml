@@ -224,7 +224,7 @@ let live_value
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       let h = fresh tabs in
       evaluate fake 1;
@@ -318,7 +318,7 @@ let readiness
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       let h = fresh tabs in
       evaluate fake 0;
@@ -386,7 +386,7 @@ let fallback
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       let h = fresh tabs in
       (* Unknown count is not proof of an empty page. *)
@@ -545,7 +545,7 @@ let challenge
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ _ tabs fake ->
+  rig ~caps (fun _ _ _ tabs fake ->
       let fake = fake () in
       let h = fresh tabs in
       List.iter

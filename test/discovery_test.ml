@@ -209,7 +209,7 @@ let human_and_popup
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
+  rig ~caps (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
       subscribed fake;
       let parent =
         result (request tabs "a" (P.New { url = None; label = None })) |> handle
@@ -262,7 +262,7 @@ let creation_race
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
+  rig ~caps (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
       Fake.on_method fake "Target.createTarget" (fun _ ->
           announce fake ~id:"created-target" ~url:"about:blank" ();
           obj [ ("targetId", str "created-target") ]);

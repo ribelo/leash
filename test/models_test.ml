@@ -410,7 +410,7 @@ let drive_to_done
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger memory ->
+  rig ~caps (fun env sw tabs fake logger memory ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
@@ -551,7 +551,7 @@ let invalid_response_retry
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let calls = ref 0 in
       let valid = scripted ~model:jev_model [ Answer "DONE" ] in
@@ -576,7 +576,7 @@ let usage_is_logged
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger memory ->
+  rig ~caps (fun env sw tabs fake logger memory ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw (scripted ~model:jev_model [ Answer "DONE" ])
@@ -623,7 +623,7 @@ let model_error
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
@@ -661,7 +661,7 @@ let model_mismatch
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
@@ -696,7 +696,7 @@ let missing_key
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw (scripted ~model:jev_model [ Answer "DONE" ])
@@ -814,7 +814,7 @@ jev_model = "jev-latest"
     "drive-yqxg the chat base URL is configurable" "https://api.typesafe.ai/v1"
     (Config.Text.to_string typesafe.models.chat_base_url);
   (* The models service reports exactly what the file said, and the key stays a Redact. *)
-  (rig ~caps) (fun env sw _ _ logger _ ->
+  rig ~caps (fun env sw _ _ logger _ ->
       let config =
         { typesafe.models with api_key = Some (Ox_observability.Redact.make key) }
       in
@@ -848,7 +848,7 @@ let provider_timeout
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) ~attempt ~deadline ~succeeds () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw (fun request ->
@@ -915,7 +915,7 @@ let chat_timeout
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) ~kind ~attempt ~expected () =
-  (rig ~caps) (fun env sw _ _ logger _ ->
+  rig ~caps (fun env sw _ _ logger _ ->
       let server =
         Server.serve ~net:env#net ~sw (fun _ ->
             Eio.Time.sleep env#clock 1.3;
@@ -1008,7 +1008,7 @@ let text_correction_budget
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) ~deadline ~succeeds () =
-  (rig ~caps) (fun env sw _ _ logger _ ->
+  rig ~caps (fun env sw _ _ logger _ ->
       let calls = ref 0 in
       let server =
         Server.serve ~net:env#net ~sw (fun _ ->
@@ -1129,31 +1129,29 @@ let () =
           Alcotest.test_case "drive-yqxg endpoints" `Quick (endpoints ~caps);
           Alcotest.test_case "drive-7tvn usage is logged" `Quick (usage_is_logged ~caps);
           Alcotest.test_case "daily-9ggi configured provider timeout retries" `Quick
-            ((provider_timeout ~caps) ~attempt:1 ~deadline:(Ox.Duration.seconds 5)
+            (provider_timeout ~caps ~attempt:1 ~deadline:(Ox.Duration.seconds 5)
                ~succeeds:false);
           Alcotest.test_case "daily-9ggi slow provider succeeds with raised timeout"
             `Quick
-            ((provider_timeout ~caps) ~attempt:3 ~deadline:(Ox.Duration.seconds 5)
+            (provider_timeout ~caps ~attempt:3 ~deadline:(Ox.Duration.seconds 5)
                ~succeeds:true);
           Alcotest.test_case "daily-9ggi caller budget bounds retries" `Quick
-            ((provider_timeout ~caps) ~attempt:3 ~deadline:(Ox.Duration.ms 100)
+            (provider_timeout ~caps ~attempt:3 ~deadline:(Ox.Duration.ms 100)
                ~succeeds:false);
           Alcotest.test_case "map-op07 malformed JEV then valid" `Quick
             (invalid_response_retry ~caps);
           Alcotest.test_case "daily-9ggi model timeout config" `Quick timeout_config;
           Alcotest.test_case "daily-9ggi text correction shares deadline" `Quick
-            ((text_correction_budget ~caps)
-               ~deadline:(Ox.Duration.ms 400) ~succeeds:false);
+            (text_correction_budget ~caps ~deadline:(Ox.Duration.ms 400) ~succeeds:false);
           Alcotest.test_case "daily-9ggi text correction within budget succeeds" `Quick
-            ((text_correction_budget ~caps)
-               ~deadline:(Ox.Duration.seconds 2) ~succeeds:true);
+            (text_correction_budget ~caps ~deadline:(Ox.Duration.seconds 2) ~succeeds:true);
           Alcotest.test_case "daily-9ggi text attempt timeout" `Quick
-            ((chat_timeout ~caps) ~kind:"text" ~attempt:1 ~expected:"timeout");
+            (chat_timeout ~caps ~kind:"text" ~attempt:1 ~expected:"timeout");
           Alcotest.test_case "daily-9ggi text uses own budget" `Quick
-            ((chat_timeout ~caps) ~kind:"text" ~attempt:3 ~expected:"authentication");
+            (chat_timeout ~caps ~kind:"text" ~attempt:3 ~expected:"authentication");
           Alcotest.test_case "daily-9ggi planner attempt timeout" `Quick
-            ((chat_timeout ~caps) ~kind:"planner" ~attempt:1 ~expected:"timeout");
+            (chat_timeout ~caps ~kind:"planner" ~attempt:1 ~expected:"timeout");
           Alcotest.test_case "daily-9ggi planner uses own budget" `Quick
-            ((chat_timeout ~caps) ~kind:"planner" ~attempt:3 ~expected:"authentication");
+            (chat_timeout ~caps ~kind:"planner" ~attempt:3 ~expected:"authentication");
         ] );
     ]

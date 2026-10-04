@@ -253,17 +253,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1791144104,
-        "narHash": "sha256-1G8/81MG4ZxOiBxnv5kl9f7rq3L/usekTj92sK0O51c=",
+        "lastModified": 1791145071,
+        "narHash": "sha256-FVa4uSYxhXks2yEzDTGPpUP4N+988u3aBMIgh9YWb8I=",
         "ref": "master",
-        "rev": "c8d3e64ac287a8142c5c65ba32b219fcbeba6a39",
-        "revCount": 163,
+        "rev": "f9a6bb9dfa4b0a29329abb8083ef214c24cfd1a0",
+        "revCount": 165,
         "type": "git",
         "url": "file:///home/ribelo/projects/ribelo/ocaml/ox"
       },
       "original": {
         "ref": "master",
-        "rev": "c8d3e64ac287a8142c5c65ba32b219fcbeba6a39",
+        "rev": "f9a6bb9dfa4b0a29329abb8083ef214c24cfd1a0",
         "type": "git",
         "url": "file:///home/ribelo/projects/ribelo/ocaml/ox"
       }

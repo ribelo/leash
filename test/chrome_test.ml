@@ -158,7 +158,7 @@ let restart ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_writ
         }
       in
       let chrome =
-        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+        Chrome.create ~sw ~launch:(launch ~caps rig) (config ()) (deps ~caps env)
       in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       (match Chrome.connection chrome with
@@ -189,7 +189,7 @@ let transport_loss
         }
       in
       let chrome =
-        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+        Chrome.create ~sw ~launch:(launch ~caps rig) (config ()) (deps ~caps env)
       in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       let cdp =
@@ -221,7 +221,7 @@ let unavailable_during_restart
         }
       in
       let chrome =
-        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+        Chrome.create ~sw ~launch:(launch ~caps rig) (config ()) (deps ~caps env)
       in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       (match Chrome.connection chrome with
@@ -244,7 +244,7 @@ let gave_up ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_writ
       let scripts = List.init 12 (fun _ -> Ox_test.Process.Exit (`Exited 1)) in
       let rig = { mgr = Ox_test.Process.make scripts; browsers = [] } in
       let chrome =
-        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+        Chrome.create ~sw ~launch:(launch ~caps rig) (config ()) (deps ~caps env)
       in
       let rec drain remaining gave_up =
         if remaining = 0 then Alcotest.fail "the supervisor never gave up"
@@ -279,7 +279,7 @@ let launch_failure_is_not_retried
           incr calls;
           launch ~sw ~clock ~mgr config
         in
-        let chrome = Chrome.create ~sw ~launch (config ()) ((deps ~caps) env) in
+        let chrome = Chrome.create ~sw ~launch (config ()) (deps ~caps env) in
         let rec until_stopped seen budget =
           if budget = 0 then Alcotest.fail "the service never stopped"
           else
@@ -292,13 +292,13 @@ let launch_failure_is_not_retried
         check events;
         Alcotest.(check bool) "terminal" true ((Chrome.status chrome).phase = `Stopped))
   in
-  (run_with ~caps)
+  run_with ~caps
     (fun ~sw:_ ~clock:_ ~mgr:_ _ -> Error (`Invalid_fd 3))
     (function
       | [ Chrome.Gave_up (Ox.Cause.Fail (`Spawn (`Invalid_fd 3))) ] -> ()
       | _ -> Alcotest.fail "expected Gave_up with the spawn error, then Stopped");
   let boom = Failure "launch defect" in
-  (run_with ~caps)
+  run_with ~caps
     (fun ~sw:_ ~clock:_ ~mgr:_ _ -> raise boom)
     (function
       | [ Chrome.Gave_up (Ox.Cause.Die (ex, _)) ] ->
@@ -311,7 +311,7 @@ let orderly_stop
   Ox_test.run (fun env sw ->
       let rig = { mgr = Ox_test.Process.make [ Block_until_signal ]; browsers = [] } in
       let chrome =
-        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+        Chrome.create ~sw ~launch:(launch ~caps rig) (config ()) (deps ~caps env)
       in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       Chrome.stop chrome;
@@ -355,10 +355,8 @@ let stderr_tail
       in
       let rig = { mgr; browsers = [] } in
       let chrome =
-        Chrome.create ~sw
-          ~launch:((launch ~caps) rig)
-          (config ())
-          { ((deps ~caps) env) with logger }
+        Chrome.create ~sw ~launch:(launch ~caps rig) (config ())
+          { (deps ~caps env) with logger }
       in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       expect_event "Lost 1" env chrome (Chrome.Lost 1);

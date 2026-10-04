@@ -3,18 +3,18 @@
 module P = Leash.Protocol
 
 let read_file ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
-  (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps) path In_channel.input_all
+  Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all
 
 let serve ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) path code ready =
-  let socket = (Ox_caps.Cap_unix.socket ~caps) Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+  let socket = Ox_caps.Cap_unix.socket ~caps Unix.PF_UNIX Unix.SOCK_STREAM 0 in
   Fun.protect
     ~finally:(fun () ->
       Unix.close socket;
-      (Ox_caps.Cap_unix.unlink ~caps) path)
+      Ox_caps.Cap_unix.unlink ~caps path)
     (fun () ->
       Unix.bind socket (Unix.ADDR_UNIX path);
       Unix.listen socket 1;
-      (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps) ready (fun out ->
+      Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps ready (fun out ->
           output_string out "ready");
       let client, _ = Unix.accept socket in
       let input = Unix.in_channel_of_descr client in
@@ -39,8 +39,8 @@ let serve ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) path cod
 let inspect ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) expected status
     stdout stderr =
   let fail message = failwith (expected ^ ": " ^ message) in
-  if (read_file ~caps) stdout <> "" then fail "failure wrote to stdout";
-  let raw = (read_file ~caps) stderr in
+  if read_file ~caps stdout <> "" then fail "failure wrote to stdout";
+  let raw = read_file ~caps stderr in
   if raw = "" || raw.[String.length raw - 1] <> '\n' then fail "missing JSON line";
   let line = String.sub raw 0 (String.length raw - 1) in
   if String.contains line '\n' then fail "more than one stderr record";
@@ -53,8 +53,8 @@ let inspect ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) expected
   if P.Error_code.exit_code error.code <> int_of_string status then
     fail "wrong exit class";
   if error.hint = "" || String.contains error.hint '\n' then fail "hint is not one line";
-  (Ox_caps.Cap_stdlib.printf ~caps)
-    "%s: exit %s, JSON-only stderr, hint, empty stdout\n" expected status
+  Ox_caps.Cap_stdlib.printf ~caps "%s: exit %s, JSON-only stderr, hint, empty stdout\n"
+    expected status
 
 let contains text fragment =
   let n = String.length fragment in
@@ -65,16 +65,16 @@ let contains text fragment =
 
 let config_details ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path stderr
     =
-  let raw = (read_file ~caps) stderr in
+  let raw = read_file ~caps stderr in
   List.iter
     (fun fragment ->
       if not (contains raw fragment) then
         failwith ("missing config diagnostic " ^ fragment))
     [ path; "/chrome/headless"; "/expiry/idle_s"; "/control/socket"; "/tabs/cap" ];
-  (Ox_caps.Cap_stdlib.print_endline ~caps) "config path and all four problems are present"
+  Ox_caps.Cap_stdlib.print_endline ~caps "config path and all four problems are present"
 
 let check_help ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
-  let text = (read_file ~caps) path in
+  let text = read_file ~caps path in
   List.iter
     (fun heading ->
       if not (contains text heading) then failwith ("missing help heading " ^ heading))
@@ -82,7 +82,7 @@ let check_help ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
   if not (contains text "leash ") then failwith "help has no concrete example"
 
 let top_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
-  let text = (read_file ~caps) path in
+  let text = read_file ~caps path in
   List.iter
     (fun heading ->
       if not (contains text heading) then failwith ("missing command group " ^ heading))
@@ -98,12 +98,12 @@ let top_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
       "take";
       "human tabs are never closed unless an agent takes one";
     ];
-  (Ox_caps.Cap_stdlib.print_endline ~caps)
+  Ox_caps.Cap_stdlib.print_endline ~caps
     "top-level help groups tabs, observe, act, network/debug, missions, playbooks, \
      service and skill"
 
 let error_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
-  let actual = (read_file ~caps) path in
+  let actual = read_file ~caps path in
   if contains actual "\x1b" then failwith "help errors contains ANSI";
   List.iter
     (fun code ->
@@ -116,12 +116,12 @@ let error_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path 
       if not (contains actual (P.Error_code.hint code)) then
         failwith (name ^ " hint missing from help errors"))
     P.Error_code.all;
-  (Ox_caps.Cap_stdlib.printf ~caps)
+  Ox_caps.Cap_stdlib.printf ~caps
     "all %d error codes, exit classes, meanings and hints are discoverable\n"
     (List.length P.Error_code.all)
 
 let help_topics ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
-  let text = (read_file ~caps) path in
+  let text = read_file ~caps path in
   List.iter
     (fun topic ->
       if not (contains text topic) then failwith ("help list missing " ^ topic))
@@ -142,13 +142,13 @@ let help_topics ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path
       match String.split_on_char '\t' line with
       | [ _topic; description ] when String.length description > 20 -> ()
       | _ -> failwith ("hdoc-vqj7 topic lacks a description: " ^ line));
-  (Ox_caps.Cap_stdlib.print_endline ~caps)
+  Ox_caps.Cap_stdlib.print_endline ~caps
     "help lists handles, playbooks, authoring, expectations, drive, scripts, errors, \
      traces"
 
 let run_leash ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; .. >) args =
   let cmd = Filename.quote_command "leash" args in
-  let channel = (Ox_caps.Cap_unix.open_process_in ~caps) cmd in
+  let channel = Ox_caps.Cap_unix.open_process_in ~caps cmd in
   let text = In_channel.input_all channel in
   match Unix.close_process_in channel with
   | Unix.WEXITED 0 -> text
@@ -197,7 +197,7 @@ let option_docs text =
   go 0 false []
 
 let rec walk_command ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; .. >) prefix =
-  let text = (run_leash ~caps) (prefix @ [ "--help=plain" ]) in
+  let text = run_leash ~caps (prefix @ [ "--help=plain" ]) in
   List.iter
     (fun (name, doc) ->
       if doc = "" then
@@ -238,60 +238,60 @@ let rec walk_command ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; .. >) pref
     in
     go 0 []
   in
-  List.iter (fun name -> (walk_command ~caps) (prefix @ [ name ])) commands
+  List.iter (fun name -> walk_command ~caps (prefix @ [ name ])) commands
 
 let option_docs_file ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
-  let text = (read_file ~caps) path in
+  let text = read_file ~caps path in
   List.iter
     (fun (name, doc) -> if doc = "" then failwith ("empty option doc: " ^ name))
     (option_docs text)
 
 let walk_options
     ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.stdout ; .. >) () =
-  (walk_command ~caps) [];
-  (Ox_caps.Cap_stdlib.print_endline ~caps)
+  walk_command ~caps [];
+  Ox_caps.Cap_stdlib.print_endline ~caps
     "every option on every command has a one-line doc"
 
 let inspect_init ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path stdout
     stderr =
-  if (read_file ~caps) stdout <> path ^ "\n" then
+  if read_file ~caps stdout <> path ^ "\n" then
     failwith "config init changed its successful stdout";
-  if (read_file ~caps) stderr <> "" then failwith "config init wrote to stderr";
-  if (read_file ~caps) path <> Leash.Config.default_toml then
+  if read_file ~caps stderr <> "" then failwith "config init wrote to stderr";
+  if read_file ~caps path <> Leash.Config.default_toml then
     failwith "config init changed the default file";
-  (Ox_caps.Cap_stdlib.print_endline ~caps) "config init writes its path and empty stderr"
+  Ox_caps.Cap_stdlib.print_endline ~caps "config init writes its path and empty stderr"
 
 (* daily-yd8s daily-ulmi: inspect whole streams, not just a selected output line. *)
 let skill_outcome ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) action path
     stdout stderr =
-  let raw = (read_file ~caps) stdout in
+  let raw = read_file ~caps stdout in
   let expected = `Assoc [ ("action", `String action); ("path", `String path) ] in
   if Yojson.Safe.from_string raw <> expected then failwith "wrong skill outcome";
-  if (read_file ~caps) stderr <> "" then failwith "skill success wrote to stderr";
-  (Ox_caps.Cap_stdlib.printf ~caps) "%s: one JSON outcome, empty stderr\n" action
+  if read_file ~caps stderr <> "" then failwith "skill success wrote to stderr";
+  Ox_caps.Cap_stdlib.printf ~caps "%s: one JSON outcome, empty stderr\n" action
 
 let skill_show ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) stdout stderr =
-  let contents = (read_file ~caps) stdout in
+  let contents = read_file ~caps stdout in
   if contents <> Leash_cli_support.Skill_install.show then
     failwith "show is not the exact stamped entrypoint";
   List.iter
     (fun marker -> if not (contains contents marker) then failwith ("missing " ^ marker))
     [ "---\nname: leash\n"; "metadata:\n  leash-version:"; "\n  leash-commit:" ];
-  if (read_file ~caps) stderr <> "" then failwith "show wrote to stderr";
-  (Ox_caps.Cap_stdlib.print_endline ~caps)
+  if read_file ~caps stderr <> "" then failwith "show wrote to stderr";
+  Ox_caps.Cap_stdlib.print_endline ~caps
     "show: exact bundled entrypoint, YAML version and commit stamp, empty stderr"
 
 let serve_result ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) path result
     ready =
-  let socket = (Ox_caps.Cap_unix.socket ~caps) Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+  let socket = Ox_caps.Cap_unix.socket ~caps Unix.PF_UNIX Unix.SOCK_STREAM 0 in
   Fun.protect
     ~finally:(fun () ->
       Unix.close socket;
-      (Ox_caps.Cap_unix.unlink ~caps) path)
+      Ox_caps.Cap_unix.unlink ~caps path)
     (fun () ->
       Unix.bind socket (Unix.ADDR_UNIX path);
       Unix.listen socket 1;
-      (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps) ready (fun out ->
+      Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps ready (fun out ->
           output_string out "ready");
       let client, _ = Unix.accept socket in
       let input = Unix.in_channel_of_descr client in
@@ -309,8 +309,8 @@ let field key json =
 
 let status_down ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) code stdout
     stderr =
-  let raw = (read_file ~caps) stderr in
-  if (read_file ~caps) stdout <> "" then failwith "status failure wrote stdout";
+  let raw = read_file ~caps stderr in
+  if read_file ~caps stdout <> "" then failwith "status failure wrote stdout";
   let error =
     match P.error_of_yojson (Yojson.Safe.from_string (String.trim raw)) with
     | Ok error -> error
@@ -330,14 +330,14 @@ let status_down ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) code
   in
   let unit = show "unit" in
   let binary = show "binary" in
-  if contains raw "sk-leash" || contains ((read_file ~caps) stdout) "sk-leash" then
+  if contains raw "sk-leash" || contains (read_file ~caps stdout) "sk-leash" then
     failwith "status printed a key";
-  (Ox_caps.Cap_stdlib.printf ~caps) "%s: %s %s hint=%s\n" code unit binary error.hint
+  Ox_caps.Cap_stdlib.printf ~caps "%s: %s %s hint=%s\n" code unit binary error.hint
 
 let status_restart ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) stdout
     stderr =
-  let raw = (read_file ~caps) stderr in
-  if (read_file ~caps) stdout <> "" then failwith "restarting status wrote stdout";
+  let raw = read_file ~caps stderr in
+  if read_file ~caps stdout <> "" then failwith "restarting status wrote stdout";
   let error =
     match P.error_of_yojson (Yojson.Safe.from_string (String.trim raw)) with
     | Ok error -> error
@@ -355,13 +355,13 @@ let status_restart ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) s
   if field "key_present" detail <> `Bool false then failwith "key flag lost";
   if field "skill" detail = `Null then failwith "skill missing from restart detail";
   if contains raw "sk-leash" then failwith "restart detail printed a key";
-  (Ox_caps.Cap_stdlib.printf ~caps)
-    "service-restarting: chrome generation relaunch, %s\n" error.hint
+  Ox_caps.Cap_stdlib.printf ~caps "service-restarting: chrome generation relaunch, %s\n"
+    error.hint
 
 let status_healthy ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) stdout
     stderr =
-  let raw = (read_file ~caps) stdout in
-  if (read_file ~caps) stderr <> "" then failwith "healthy status wrote stderr";
+  let raw = read_file ~caps stdout in
+  if read_file ~caps stderr <> "" then failwith "healthy status wrote stderr";
   let result = Yojson.Safe.from_string raw in
   if field "version" result <> `String Leash.version then failwith "wrong version";
   if field "commit" result <> `String Leash_cli_support.Leash_build_commit.commit then
@@ -377,14 +377,14 @@ let status_healthy ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) s
   if field "state" skill <> `String "missing" then failwith "skill state lost";
   if contains raw "sk-leash" || contains raw "OPENROUTER" then
     failwith "status printed a key";
-  (Ox_caps.Cap_stdlib.printf ~caps)
+  Ox_caps.Cap_stdlib.printf ~caps
     "healthy: version %s chrome running generation 7 pid 4242 headed key_present skill %s\n"
     Leash.version
     (match field "state" skill with `String state -> state | _ -> "?")
 
 let status_skill ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) state stdout
     stderr =
-  let result = Yojson.Safe.from_string ((read_file ~caps) stdout) in
+  let result = Yojson.Safe.from_string (read_file ~caps stdout) in
   let field key = function
     | `Assoc fields -> List.assoc key fields
     | _ -> failwith "expected an object"
@@ -395,27 +395,27 @@ let status_skill ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) sta
   if field "commit" skill <> `String Leash_cli_support.Leash_build_commit.commit then
     failwith "wrong running commit";
   if field "fixture" result <> `Bool true then failwith "lost successful service fields";
-  if (read_file ~caps) stderr <> "" then failwith "status wrote to stderr";
-  (Ox_caps.Cap_stdlib.printf ~caps)
+  if read_file ~caps stderr <> "" then failwith "status wrote to stderr";
+  Ox_caps.Cap_stdlib.printf ~caps
     "status: skill %s, running version and commit, service fields retained\n" state
 
 let capture ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) path
     request_file ready =
-  let socket = (Ox_caps.Cap_unix.socket ~caps) Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+  let socket = Ox_caps.Cap_unix.socket ~caps Unix.PF_UNIX Unix.SOCK_STREAM 0 in
   Fun.protect
     ~finally:(fun () ->
       Unix.close socket;
-      (Ox_caps.Cap_unix.unlink ~caps) path)
+      Ox_caps.Cap_unix.unlink ~caps path)
     (fun () ->
       Unix.bind socket (Unix.ADDR_UNIX path);
       Unix.listen socket 1;
-      (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps) ready (fun out ->
+      Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps ready (fun out ->
           output_string out "ready");
       let client, _ = Unix.accept socket in
       let input = Unix.in_channel_of_descr client in
       let output = Unix.out_channel_of_descr client in
       let request = input_line input in
-      (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps) request_file (fun out ->
+      Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps request_file (fun out ->
           output_string out request;
           output_char out '\n');
       let response =
@@ -427,7 +427,7 @@ let capture ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) path
       Unix.close client)
 
 let drive_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
-  let text = (read_file ~caps) path in
+  let text = read_file ~caps path in
   List.iter
     (fun fragment ->
       if not (contains text fragment) then failwith ("drive help missing " ^ fragment))
@@ -446,11 +446,11 @@ let drive_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path 
       "none-matching";
       "EXAMPLES";
     ];
-  (Ox_caps.Cap_stdlib.print_endline ~caps)
+  Ox_caps.Cap_stdlib.print_endline ~caps
     "drive help: both routes, four playbook cases, operator-state example"
 
 let drive_request ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
-  let json = Yojson.Safe.from_string (String.trim ((read_file ~caps) path)) in
+  let json = Yojson.Safe.from_string (String.trim (read_file ~caps path)) in
   if field "cmd" json <> `String "drive" then failwith "not a drive request";
   let args = field "args" json in
   let fields = match args with `Assoc fields -> fields | _ -> failwith "args" in
@@ -472,9 +472,8 @@ let drive_request ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) pa
         "present"
     | Some _ -> "unexpected"
   in
-  (Ox_caps.Cap_stdlib.printf ~caps)
-    "mission=%s start_url=%s max_steps=%s tab=%s out=%s\n" (show "mission")
-    (show "start_url") (show "max_steps") (show "tab") out
+  Ox_caps.Cap_stdlib.printf ~caps "mission=%s start_url=%s max_steps=%s tab=%s out=%s\n"
+    (show "mission") (show "start_url") (show "max_steps") (show "tab") out
 
 let main
     ~(caps :
@@ -484,16 +483,16 @@ let main
        ; Ox_caps.Cap.stdout
        ; .. >) () =
   match Array.to_list Sys.argv with
-  | [ _; "serve"; path; code; ready ] -> (serve ~caps) path code ready
+  | [ _; "serve"; path; code; ready ] -> serve ~caps path code ready
   | [ _; "inspect"; code; status; stdout; stderr ] ->
-      (inspect ~caps) code status stdout stderr
-  | [ _; "config-details"; path; stderr ] -> (config_details ~caps) path stderr
-  | [ _; "check-help"; path ] -> (check_help ~caps) path
-  | [ _; "top-help"; path ] -> (top_help ~caps) path
+      inspect ~caps code status stdout stderr
+  | [ _; "config-details"; path; stderr ] -> config_details ~caps path stderr
+  | [ _; "check-help"; path ] -> check_help ~caps path
+  | [ _; "top-help"; path ] -> top_help ~caps path
   | [ _; "list-help"; path ] ->
       let text =
-        (read_file ~caps) path
-        |> String.split_on_char '\n' |> List.map String.trim |> String.concat " "
+        read_file ~caps path |> String.split_on_char '\n' |> List.map String.trim
+        |> String.concat " "
       in
       let rule =
         "agent tabs close after 30 idle minutes; human tabs are never closed unless an \
@@ -501,41 +500,40 @@ let main
       in
       if not (contains text rule) then failwith "hand-3v5u list help omits the tab rule";
       if contains text "--all" then failwith "list help still documents --all";
-      (Ox_caps.Cap_stdlib.print_endline ~caps)
+      Ox_caps.Cap_stdlib.print_endline ~caps
         "hand-3v5u list help states the tab rule and never shows handles"
-  | [ _; "error-help"; path ] -> (error_help ~caps) path
-  | [ _; "help-topics"; path ] -> (help_topics ~caps) path
-  | [ _; "option-docs"; path ] -> (option_docs_file ~caps) path
-  | [ _; "drive-help"; path ] -> (drive_help ~caps) path
-  | [ _; "capture"; path; request_file; ready ] -> (capture ~caps) path request_file ready
+  | [ _; "error-help"; path ] -> error_help ~caps path
+  | [ _; "help-topics"; path ] -> help_topics ~caps path
+  | [ _; "option-docs"; path ] -> option_docs_file ~caps path
+  | [ _; "drive-help"; path ] -> drive_help ~caps path
+  | [ _; "capture"; path; request_file; ready ] -> capture ~caps path request_file ready
   | [ _; "anonymous-request"; path ] ->
-      let json = (read_file ~caps) path |> Yojson.Safe.from_string in
+      let json = read_file ~caps path |> Yojson.Safe.from_string in
       let keys =
         match json with `Assoc f -> List.map fst f |> List.sort String.compare | _ -> []
       in
       if keys <> [ "args"; "cmd"; "v" ] then failwith "hand-scaz extra request fields";
-      (Ox_caps.Cap_stdlib.print_endline ~caps)
+      Ox_caps.Cap_stdlib.print_endline ~caps
         "hand-scaz only v, cmd and args, even in a harness environment"
-  | [ _; "drive-request"; path ] -> (drive_request ~caps) path
+  | [ _; "drive-request"; path ] -> drive_request ~caps path
   | [ _; "drive-relative-out"; path ] ->
-      let json = (read_file ~caps) path |> String.trim |> Yojson.Safe.from_string in
+      let json = read_file ~caps path |> String.trim |> Yojson.Safe.from_string in
       if
         field "out" (field "args" json)
         <> `String (Filename.concat (Sys.getcwd ()) "out.jsonl")
       then failwith "trace-qe8c output was not resolved against caller cwd";
-      (Ox_caps.Cap_stdlib.print_endline ~caps)
+      Ox_caps.Cap_stdlib.print_endline ~caps
         "trace-qe8c relative out resolved against caller cwd"
-  | [ _; "inspect-init"; path; stdout; stderr ] -> (inspect_init ~caps) path stdout stderr
+  | [ _; "inspect-init"; path; stdout; stderr ] -> inspect_init ~caps path stdout stderr
   | [ _; "skill-outcome"; action; path; stdout; stderr ] ->
-      (skill_outcome ~caps) action path stdout stderr
-  | [ _; "skill-show"; stdout; stderr ] -> (skill_show ~caps) stdout stderr
-  | [ _; "status-skill"; state; stdout; stderr ] ->
-      (status_skill ~caps) state stdout stderr
+      skill_outcome ~caps action path stdout stderr
+  | [ _; "skill-show"; stdout; stderr ] -> skill_show ~caps stdout stderr
+  | [ _; "status-skill"; state; stdout; stderr ] -> status_skill ~caps state stdout stderr
   | [ _; "serve-result"; path; file; ready ] ->
-      (serve_result ~caps) path (Yojson.Safe.from_string ((read_file ~caps) file)) ready
-  | [ _; "status-down"; code; stdout; stderr ] -> (status_down ~caps) code stdout stderr
-  | [ _; "status-restart"; stdout; stderr ] -> (status_restart ~caps) stdout stderr
-  | [ _; "status-healthy"; stdout; stderr ] -> (status_healthy ~caps) stdout stderr
+      serve_result ~caps path (Yojson.Safe.from_string (read_file ~caps file)) ready
+  | [ _; "status-down"; code; stdout; stderr ] -> status_down ~caps code stdout stderr
+  | [ _; "status-restart"; stdout; stderr ] -> status_restart ~caps stdout stderr
+  | [ _; "status-healthy"; stdout; stderr ] -> status_healthy ~caps stdout stderr
   | _ -> failwith "invalid fixture invocation"
 
 let () = main ~caps:(Ox_test.powerbox ()) ()

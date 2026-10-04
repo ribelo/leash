@@ -146,7 +146,7 @@ let resumed
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw ~tabs ~expiry:_ ~fake:_ ->
+  rig ~caps (fun ~env:_ ~sw ~tabs ~expiry:_ ~fake:_ ->
       let h = fresh tabs in
       let answer = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -172,7 +172,7 @@ let timeout
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env ~sw ~tabs ~expiry:_ ~fake:_ ->
+  rig ~caps (fun ~env ~sw ~tabs ~expiry:_ ~fake:_ ->
       let h = fresh tabs in
       let answer = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -197,7 +197,7 @@ let cancelled
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~expiry:_ ~fake:_ ->
+  rig ~caps (fun ~env:_ ~sw:_ ~tabs ~expiry:_ ~fake:_ ->
       let h = fresh tabs in
       Eio.Fiber.first
         (fun () ->
@@ -218,7 +218,7 @@ let browser_loss
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun ~env:_ ~sw ~tabs ~expiry:_ ~fake ->
+  rig ~caps (fun ~env:_ ~sw ~tabs ~expiry:_ ~fake ->
       let h = fresh tabs in
       let answer = ref None in
       Eio.Fiber.fork ~sw (fun () ->

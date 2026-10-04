@@ -13,17 +13,17 @@ let rec remove ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) pat
   | exception Unix.Unix_error (Unix.ENOENT, _, _) -> ()
   | s when s.Unix.st_kind = Unix.S_DIR ->
       Array.iter
-        (fun name -> (remove ~caps) (Filename.concat path name))
-        ((Ox_caps.Cap_sys.readdir ~caps) path);
-      (Ox_caps.Cap_unix.rmdir ~caps) path
-  | _ -> (Ox_caps.Cap_unix.unlink ~caps) path
+        (fun name -> remove ~caps (Filename.concat path name))
+        (Ox_caps.Cap_sys.readdir ~caps path);
+      Ox_caps.Cap_unix.rmdir ~caps path
+  | _ -> Ox_caps.Cap_unix.unlink ~caps path
 
 let temp ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f
     =
-  let path = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-l51-" "" in
-  (Ox_caps.Cap_unix.unlink ~caps) path;
-  (Ox_caps.Cap_unix.mkdir ~caps) path 0o700;
-  Fun.protect ~finally:(fun () -> (remove ~caps) path) (fun () -> f path)
+  let path = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-l51-" "" in
+  Ox_caps.Cap_unix.unlink ~caps path;
+  Ox_caps.Cap_unix.mkdir ~caps path 0o700;
+  Fun.protect ~finally:(fun () -> remove ~caps path) (fun () -> f path)
 
 let trace ?(site = "toscrape.com") ?(outcome = "done") time : P.drive_trace =
   P.Trace.
@@ -58,7 +58,7 @@ let filesystem
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (temp ~caps) (fun root ->
+  temp ~caps (fun root ->
       let store = T.create ~caps ~root () in
       let saved = trace 1000. in
       let path = ok (T.write store saved) in
@@ -74,12 +74,12 @@ let filesystem
       bool "trace-qe8c unsafe path refused"
         (Result.is_error (T.write store { saved with site = "../escape" }));
       let link = Filename.concat root "symlink.json" in
-      (Ox_caps.Cap_unix.symlink ~caps) path link;
+      Ox_caps.Cap_unix.symlink ~caps path link;
       bool "trace-uovo symlink read refused" (Result.is_error (T.read ~caps link));
       bool "trace-uovo oversized writer refuses unreadable evidence"
         (Result.is_error (T.write store { saved with mission = String.make 8388608 'x' }));
       let forged = Filename.concat (Filename.dirname path) "forged.json" in
-      (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps) forged (fun ch ->
+      Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps forged (fun ch ->
           output_string ch
             (P.yojson_of_drive_trace { saved with site = "other.example" }
             |> Yojson.Safe.to_string));
@@ -87,9 +87,8 @@ let filesystem
         (Result.is_error (T.list store ())
         && Result.is_error (T.prune store ~dry_run:false ~now:1000. ()));
       bool "trace-dqr2 refused prune leaves evidence intact" (Sys.file_exists path);
-      (Ox_caps.Cap_unix.unlink ~caps) forged;
-      (Ox_caps.Cap_unix.symlink ~caps)
-        (Filename.dirname path)
+      Ox_caps.Cap_unix.unlink ~caps forged;
+      Ox_caps.Cap_unix.symlink ~caps (Filename.dirname path)
         (Filename.concat root "linked-site");
       bool "trace-uovo symlink site directory refused" (Result.is_error (T.list store ())))
 
@@ -120,7 +119,7 @@ let retention
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (temp ~caps) (fun root ->
+  temp ~caps (fun root ->
       let retention = ok (T.Retention.of_values ~count:2 ~days:1) in
       let store = T.create ~caps ~root ~retention () in
       let write ?site ?outcome time = ok (T.write store (trace ?site ?outcome time)) in
@@ -351,7 +350,7 @@ let scripted_steps
     (List.hd password.steps).text;
   Alcotest.(check (list (pair string string)))
     "map-op01 password and unrelated arguments do not leak" [] password.arguments;
-  (temp ~caps) (fun root ->
+  temp ~caps (fun root ->
       let store = T.create ~caps ~root () in
       let path = ok (T.write store saved) in
       bool "trace-lg58 safe captured roundtrip" (ok (T.read ~caps path) = saved))
@@ -498,7 +497,7 @@ let unattended_capture
   let saved = T.finish (T.capture ~mission:"unattended" ~now:0.) ~now:1. (Error error) in
   bool "notif-udh3 audit kinds survive safe projection"
     (saved.unattended = [ notify; challenge ]);
-  (temp ~caps) (fun root ->
+  temp ~caps (fun root ->
       let path = ok (T.write (T.create ~caps ~root ()) saved) in
       bool "notif-udh3 audit survives durable store"
         ((ok (T.read ~caps path)).unattended = saved.unattended));

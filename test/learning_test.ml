@@ -10,10 +10,10 @@ let rec remove ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) pat
   | exception Unix.Unix_error (Unix.ENOENT, _, _) -> ()
   | st when st.Unix.st_kind = Unix.S_DIR ->
       Array.iter
-        (fun name -> (remove ~caps) (Filename.concat path name))
-        ((Ox_caps.Cap_sys.readdir ~caps) path);
-      (Ox_caps.Cap_unix.rmdir ~caps) path
-  | _ -> (Ox_caps.Cap_unix.unlink ~caps) path
+        (fun name -> remove ~caps (Filename.concat path name))
+        (Ox_caps.Cap_sys.readdir ~caps path);
+      Ox_caps.Cap_unix.rmdir ~caps path
+  | _ -> Ox_caps.Cap_unix.unlink ~caps path
 
 let temp
     ~(caps :
@@ -22,18 +22,18 @@ let temp
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.tmp
        ; .. >) f =
-  let dir = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-map-" "" in
-  (Ox_caps.Cap_unix.unlink ~caps) dir;
-  (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
+  let dir = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-map-" "" in
+  Ox_caps.Cap_unix.unlink ~caps dir;
+  Ox_caps.Cap_unix.mkdir ~caps dir 0o700;
   let keys = [ "XDG_CONFIG_HOME"; "XDG_STATE_HOME" ] in
-  let old = List.map (fun k -> (k, (Ox_caps.Cap_sys.getenv_opt ~caps) k)) keys in
-  List.iter (fun key -> (Ox_caps.Cap_unix.putenv ~caps) key dir) keys;
+  let old = List.map (fun k -> (k, Ox_caps.Cap_sys.getenv_opt ~caps k)) keys in
+  List.iter (fun key -> Ox_caps.Cap_unix.putenv ~caps key dir) keys;
   Fun.protect
     ~finally:(fun () ->
       List.iter
-        (fun (k, v) -> (Ox_caps.Cap_unix.putenv ~caps) k (Option.value ~default:"" v))
+        (fun (k, v) -> Ox_caps.Cap_unix.putenv ~caps k (Option.value ~default:"" v))
         old;
-      (remove ~caps) dir)
+      remove ~caps dir)
     (fun () -> f dir)
 
 let with_memory
@@ -44,7 +44,7 @@ let with_memory
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) ?(config = C.default.learning) f =
-  (temp ~caps) (fun _ ->
+  temp ~caps (fun _ ->
       Eio_main.run (fun _ ->
           Eio.Switch.run (fun sw ->
               let warnings = ref [] in
@@ -73,7 +73,7 @@ let recording
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_memory ~caps) (fun t ->
+  with_memory ~caps (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -99,7 +99,7 @@ let replay
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_memory ~caps) (fun t ->
+  with_memory ~caps (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -123,7 +123,7 @@ let failed
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_memory ~caps) ~config:{ C.default.learning with max_tries = 2 } (fun t ->
+  with_memory ~caps ~config:{ C.default.learning with max_tries = 2 } (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -148,7 +148,7 @@ let stale
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_memory ~caps) (fun t ->
+  with_memory ~caps (fun t ->
       record t;
       L.await_pending t;
       let p, _ = pick t in
@@ -168,7 +168,7 @@ let single_leg
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_memory ~caps) (fun t ->
+  with_memory ~caps (fun t ->
       L.record_legs t ~site:"example.com" ~mission:"Find Ada"
         ~args:[ ("name", "Ada"); ("short", "a") ]
         ~legs:[ "Open Ada" ] ~expect:[ "Ada visible" ];
@@ -194,7 +194,7 @@ let installed_retirement
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_memory ~caps) ~config:{ C.default.learning with retire_after = 2 } (fun t ->
+  with_memory ~caps ~config:{ C.default.learning with retire_after = 2 } (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -220,7 +220,7 @@ let repair
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_memory ~caps) (fun t ->
+  with_memory ~caps (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -263,7 +263,7 @@ let off
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  (with_memory ~caps) ~config:{ C.default.learning with mode = C.Learning_mode.Off }
+  with_memory ~caps ~config:{ C.default.learning with mode = C.Learning_mode.Off }
     (fun t ->
       record t;
       L.await_pending t;

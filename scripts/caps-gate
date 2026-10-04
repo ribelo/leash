@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gencaps-rh1m: every generator passes the compiler-backed capability gate.
+# gencaps-rh1m: every source, including generators and tests, passes the gate.
 set -euo pipefail
 cd "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 
@@ -23,5 +23,5 @@ fi
 # @check also produces executable modules' fresh typed evidence.
 dune build @install @check
 
-# No exemptions: generators receive narrow authority from their process entry.
+# Default repository scope includes tests; no path restriction or exemptions.
 exec "$engine" --caps-gate --require-typed "$@"

@@ -257,7 +257,7 @@ let bounded_page
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated scrolled);
       match drive tabs [ decision "done" ] with
@@ -300,7 +300,7 @@ let inconsistent_read_retries
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let reads = ref 0 in
       script fake (fun () ->
@@ -327,7 +327,7 @@ let stale_click_is_not_dispatched
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let reads = ref 0 in
       script fake (fun () ->
@@ -360,7 +360,7 @@ let scroll_and_wait
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env _ tabs fake ->
+  rig ~caps (fun env _ tabs fake ->
       let fake = fake () in
       let y = ref 0 in
       script fake (fun () ->
@@ -419,7 +419,7 @@ let unacked_wheel
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env _ tabs fake ->
+  rig ~caps (fun env _ tabs fake ->
       let fake = fake () in
       script fake (fun () ->
           evaluated
@@ -446,7 +446,7 @@ let retry_exhaustion
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env _ tabs fake ->
+  rig ~caps (fun env _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated `Null);
       let started = Eio.Time.now env#clock in
@@ -480,7 +480,7 @@ let invalid_observation
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated guard_value);
       (match drive tabs [] with
@@ -502,7 +502,7 @@ let unsettled_snapshot
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let count = ref 0 in
       Fake.on_method fake "Runtime.evaluate" (fun request ->
@@ -533,7 +533,7 @@ let form_guard_changed
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let reads = ref 0 in
       script fake (fun () ->
@@ -566,7 +566,7 @@ let settle_timeout_retains_input
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       let mutated = ref false in
       script fake (fun () -> evaluated (if !mutated then `Null else scrolled));
@@ -594,7 +594,7 @@ let covered_edit
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun _ _ tabs fake ->
+  rig ~caps (fun _ _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated stable);
       let ax =

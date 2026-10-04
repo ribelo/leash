@@ -44,7 +44,7 @@ let row_code line =
 
 let protocol_doc ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   let path = "../docs/protocol.md" in
-  try (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps) path In_channel.input_all
+  try Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all
   with Sys_error message ->
     failf
       "daily-u1k2 cannot read %s (%s); the dune stanza needs (deps ../docs/protocol.md)"
@@ -55,8 +55,8 @@ let protocol_doc ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
    declared wire constructors, whose explicit names are part of the protocol. *)
 let constructor_names ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   let source =
-    (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
-      "../packages/leash/protocol.ml" In_channel.input_all
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps "../packages/leash/protocol.ml"
+      In_channel.input_all
   in
   let start = Option.get (find_sub source "type error_code =") in
   let rest = String.sub source start (String.length source - start) in
@@ -80,12 +80,12 @@ let wire code =
   | Error message -> failf "%s" message
 
 let four_way ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
-  let declared = List.sort String.compare ((constructor_names ~caps) ()) in
+  let declared = List.sort String.compare (constructor_names ~caps ()) in
   let enumerated =
     List.map P.Error_code.to_string P.Error_code.all |> List.sort String.compare
   in
   Alcotest.(check (list string)) "every declared code is enumerated" declared enumerated;
-  let doc = error_section ((protocol_doc ~caps) ()) in
+  let doc = error_section (protocol_doc ~caps ()) in
   let doc_lines = lines doc in
   let doc_codes = List.filter_map row_code doc_lines |> List.sort_uniq String.compare in
   let help_lines =
@@ -213,17 +213,17 @@ let make_error_fills_hint () =
 
 let handles_documented ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   let read ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
-    (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps) path In_channel.input_all
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps path In_channel.input_all
   in
-  let context = (read ~caps) "../GLOSSARY.md" in
+  let context = read ~caps "../GLOSSARY.md" in
   List.iter
     (fun term ->
       if find_sub context term = None then failf "hand-qy26 missing glossary term %s" term)
     [ "**Handle**:"; "capability"; "**Label**:"; "**With human**:" ];
-  let adr = (read ~caps) "../docs/adr/0005-owner-bound-tabs-and-expiry.md" in
+  let adr = read ~caps "../docs/adr/0005-owner-bound-tabs-and-expiry.md" in
   if find_sub adr "**Superseded by ADR-0010.**" = None then
     failf "hand-qy26 earlier ADR is not explicitly historical";
-  let current = (read ~caps) "../docs/adr/0010-handles-are-capabilities.md" in
+  let current = read ~caps "../docs/adr/0010-handles-are-capabilities.md" in
   if find_sub current "128 bits from the system's randomness" = None then
     failf "hand-qy26 current ADR does not state the capability entropy";
   List.iter

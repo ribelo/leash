@@ -562,7 +562,7 @@ let fills
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger memory ->
+  rig ~caps (fun env sw tabs fake logger memory ->
       script_page fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -677,7 +677,7 @@ let null_is_blocked
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -739,7 +739,7 @@ let bound
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -801,7 +801,7 @@ let reuse
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page ~stale_row:true fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -849,7 +849,7 @@ let chat_failure
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) () =
-  (rig ~caps) (fun env sw tabs fake logger _ ->
+  rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let systemone =
         scripted ~sw ~net:env#net

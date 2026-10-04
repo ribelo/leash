@@ -336,11 +336,11 @@ let act_memory
        ; Ox_caps.Cap.time
        ; Ox_caps.Cap.tmp
        ; .. >) () =
-  let dir = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-run-memory-" "" in
-  (Ox_caps.Cap_sys.remove ~caps) dir;
-  (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
-  (Ox_caps.Cap_unix.putenv ~caps) "XDG_STATE_HOME" dir;
-  (Ox_caps.Cap_unix.putenv ~caps) "XDG_CONFIG_HOME" dir;
+  let dir = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-run-memory-" "" in
+  Ox_caps.Cap_sys.remove ~caps dir;
+  Ox_caps.Cap_unix.mkdir ~caps dir 0o700;
+  Ox_caps.Cap_unix.putenv ~caps "XDG_STATE_HOME" dir;
+  Ox_caps.Cap_unix.putenv ~caps "XDG_CONFIG_HOME" dir;
   let row =
     P.
       {
