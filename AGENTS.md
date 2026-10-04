@@ -58,3 +58,17 @@ nix develop -c scripts/caps-gate   # delegates to the gate installed with ox_cap
 - Actions are never retried automatically; only pre-dispatch observation may retry.
 - Human-origin tabs are never auto-closed.
 - The control socket is mode 0600 in a verified private runtime directory.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as committed markdown files under `docs/issues/`; wayfinder maps under `docs/wayfinder/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles, with label strings equal to their names. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` at the repo root. See `docs/agents/domain.md`.
