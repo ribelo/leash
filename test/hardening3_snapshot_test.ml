@@ -39,17 +39,26 @@ let contains text sub =
   in
   search 0
 
-let rig ?reporter ?download_dir f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?reporter ?download_dir f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -63,14 +72,14 @@ let rig ?reporter ?download_dir f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -80,7 +89,7 @@ let rig ?reporter ?download_dir f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -206,8 +215,16 @@ let identity fake =
               ] );
         ])
 
-let live_value () =
-  rig (fun _ _ _ tabs fake ->
+let live_value
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       let h = fresh tabs in
       evaluate fake 1;
@@ -292,8 +309,16 @@ let live_value_unavailable () =
     "field-cct4 named empty live value does not resurrect AX or attribute" None
     (row_value ax base)
 
-let readiness () =
-  rig (fun _ _ _ tabs fake ->
+let readiness
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       let h = fresh tabs in
       evaluate fake 0;
@@ -352,8 +377,16 @@ let readiness () =
         (get "settled" offscreen = `Bool true && field "reason" offscreen = None);
       Alcotest.(check int) "field-lp65 populated raw AX needs no DOM count" 0 !count_reads)
 
-let fallback () =
-  rig (fun _ _ _ tabs fake ->
+let fallback
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       let h = fresh tabs in
       (* Unknown count is not proof of an empty page. *)
@@ -503,8 +536,16 @@ let iframe () =
        (Leash__Snapshot_source.frame_rows ~url:"https://app.test/" ~dom ~width:800.
           ~height:600. ~scroll_x:0. ~scroll_y:100.))
 
-let challenge () =
-  rig (fun _ _ _ tabs fake ->
+let challenge
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       let h = fresh tabs in
       List.iter
@@ -555,19 +596,21 @@ let challenge () =
         [ "reCAPTCHA"; "hCaptcha"; "Turnstile" ])
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "hardening3-snapshot"
     [
       ( "snapshot",
         [
           Alcotest.test_case "field-cct4 live controlled-input value after fill" `Quick
-            live_value;
+            (live_value ~caps);
           Alcotest.test_case "field-cct4 unavailable live values retain AX and attributes"
             `Quick live_value_unavailable;
           Alcotest.test_case "field-lp65 AX readiness vs genuinely blank page" `Quick
-            readiness;
+            (readiness ~caps);
           Alcotest.test_case "field-jkx6 bounded DOM fallback and action identity" `Quick
-            fallback;
+            (fallback ~caps);
           Alcotest.test_case "field-vji1 cross-origin iframe rows" `Quick iframe;
-          Alcotest.test_case "field-vji1 known challenge debug warnings" `Quick challenge;
+          Alcotest.test_case "field-vji1 known challenge debug warnings" `Quick
+            (challenge ~caps);
         ] );
     ]

@@ -38,19 +38,28 @@ let contains text sub =
   in
   search 0
 
-let rig ?reporter ?download_dir f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?reporter ?download_dir f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
       let current_child = ref None in
       let memory = Ox_observability.Logger.Memory.create () in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child ->
@@ -66,7 +75,7 @@ let rig ?reporter ?download_dir f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true
              ~backoff:{ Chrome.default_backoff with attempts = 0 }
@@ -75,7 +84,7 @@ let rig ?reporter ?download_dir f =
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -85,7 +94,7 @@ let rig ?reporter ?download_dir f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -221,8 +230,16 @@ let snapshot tabs h =
   in
   (id, json)
 
-let press_keys () =
-  rig (fun _ _ _ tabs fake _ _ ->
+let press_keys
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let id, _ = snapshot tabs h in
@@ -266,8 +283,16 @@ let press_keys () =
             "machine-readable accepted set" true
             (Option.is_some (Option.bind error.detail (field "accepted_keys"))))
 
-let native_identity () =
-  rig (fun _ _ _ tabs fake _ _ ->
+let native_identity
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let id, json = snapshot tabs h in
@@ -321,8 +346,16 @@ let native_identity () =
 
 (* daily-9ggi hand-scaz: stale branches share one recovery object; a second
    connection that holds the handle can still read the tab. *)
-let recovery_details () =
-  rig (fun _ _ _ tabs fake _ _ ->
+let recovery_details
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       script_row (fake ()) "InputTime";
       let old =
@@ -412,8 +445,16 @@ let recovery_details () =
       ignore
         (result (request tabs "bob" (P.Text { tab = h; index = None; max_chars = None }))))
 
-let popup_url () =
-  rig (fun env sw _ tabs fake _ _ ->
+let popup_url
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       let fake = fake () in
       script_row fake "InputTime";
@@ -486,8 +527,17 @@ let popup_url () =
         (Yojson.Safe.Util.to_string (get "url" popup));
       Alcotest.(check int) "bounded refresh observed delayed target metadata" 2 !refreshes)
 
-let download_bytes () =
-  rig ~download_dir:"/tmp/leash-c-acceptance-downloads" (fun _ _ _ tabs fake _ _ ->
+let download_bytes
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~download_dir:"/tmp/leash-c-acceptance-downloads"
+    (fun _ _ _ tabs fake _ _ ->
       let h = tab (result (request tabs "alice" (P.New { url = None; label = None }))) in
       let fake = fake () in
       Fake.emit ~session:"session-1" fake ~method_:"Page.frameNavigated"
@@ -549,8 +599,16 @@ let download_bytes () =
         "completed bytes retained" 105
         (Yojson.Safe.Util.to_int (get "received_bytes" (Option.get (read ())))))
 
-let chrome_identity () =
-  rig (fun env sw chrome _ _ child memory ->
+let chrome_identity
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw chrome _ _ child memory ->
       Alcotest.(check (option int))
         "daily-c4cl actual managed child pid"
         (Some (Ox_process.Child.pid (child ())))
@@ -630,9 +688,10 @@ let config_roots () =
         [ "/skill/roots/1"; "/skill/roots/0" ]
         (List.map (fun issue -> issue.Ox_app.Config.pointer) issues)
 
-let skill_catalog () =
+let skill_catalog ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   let text =
-    In_channel.with_open_bin "../skill/references/errors.md" In_channel.input_all
+    (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
+      "../skill/references/errors.md" In_channel.input_all
   in
   List.iter
     (fun code ->
@@ -647,17 +706,20 @@ let skill_catalog () =
     P.Error_code.all
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "daily-c4cl acceptance"
     [
       ( "daily-9ggi",
         [
-          Alcotest.test_case "press vocabulary" `Quick press_keys;
-          Alcotest.test_case "native time identity and stale row" `Quick native_identity;
-          Alcotest.test_case "daily-9ggi recovery detail" `Quick recovery_details;
-          Alcotest.test_case "delayed popup URL" `Quick popup_url;
-          Alcotest.test_case "download progress bytes" `Quick download_bytes;
-          Alcotest.test_case "managed PID and signal numbers" `Quick chrome_identity;
+          Alcotest.test_case "press vocabulary" `Quick (press_keys ~caps);
+          Alcotest.test_case "native time identity and stale row" `Quick
+            (native_identity ~caps);
+          Alcotest.test_case "daily-9ggi recovery detail" `Quick (recovery_details ~caps);
+          Alcotest.test_case "delayed popup URL" `Quick (popup_url ~caps);
+          Alcotest.test_case "download progress bytes" `Quick (download_bytes ~caps);
+          Alcotest.test_case "managed PID and signal numbers" `Quick
+            (chrome_identity ~caps);
           Alcotest.test_case "configured nested roots" `Quick config_roots;
-          Alcotest.test_case "skill catalog is canonical" `Quick skill_catalog;
+          Alcotest.test_case "skill catalog is canonical" `Quick (skill_catalog ~caps);
         ] );
     ]

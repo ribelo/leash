@@ -25,7 +25,7 @@ type context = { tab : Protocol.Handle.t; reason : string; url : string; title :
 
 type t
 
-type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
+type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write >
 (** The two commands are programs the desktop steps start (^ncaps-4tjy). *)
 
 val create :

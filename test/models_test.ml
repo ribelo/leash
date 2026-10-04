@@ -185,18 +185,28 @@ let script_page fake =
 
 (* ---------- The rig: a real clock, the fake browser, the fake models ---------- *)
 
-let rig f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) f =
   Eio_main.run (fun env ->
       Eio.Switch.run (fun sw ->
           let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
           let current = ref None in
-          let launch ~sw ~clock ~mgr:_ config =
+          let launch
+              ~(caps :
+                 < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) ~sw
+              ~clock ~mgr:_ config =
             let fake, client = Fake.create ~sw () in
             current := Some fake;
             match
-              Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-                ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-                ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+              Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+                ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
             with
             | Error error -> Error error
             | Ok child ->
@@ -210,14 +220,14 @@ let rig f =
               ()
           in
           let chrome =
-            Chrome.create ~sw ~launch
+            Chrome.create ~sw ~launch:(launch ~caps)
               (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-models-profile"
                  ~workspace:"test" ~headless:true ())
               {
                 Chrome.clock = env#clock;
                 mgr = env#process_mgr;
                 logger;
-                caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+                caps :> Leash.Chrome.caps;
               }
           in
           let tabs =
@@ -227,7 +237,7 @@ let rig f =
                 clock = env#clock;
                 logger;
                 desktop = Leash.Desktop.disabled;
-                caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+                caps :> Leash.Tabs.caps;
               }
           in
           let rec ready remaining =
@@ -391,8 +401,16 @@ let drive models tabs handle goal =
 
 (* A whole drive over the fake browser with the real client: observe, one System One call
    per step, the first step acted on, the second DONE, and the trace the reply carries. *)
-let drive_to_done () =
-  rig (fun env sw tabs fake logger memory ->
+let drive_to_done
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger memory ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
@@ -524,8 +542,16 @@ let drive_to_done () =
 
 (* One answered decision writes one info line with the model, the token counts and the
    cost the provider reported — the operator's view of what the drive cost. *)
-let invalid_response_retry () =
-  rig (fun env sw tabs fake logger _ ->
+let invalid_response_retry
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page fake;
       let calls = ref 0 in
       let valid = scripted ~model:jev_model [ Answer "DONE" ] in
@@ -541,8 +567,16 @@ let invalid_response_retry () =
         "map-op07 invalid JEV reply recovers" "done" (text "status" reply);
       Alcotest.(check int) "map-op07 exactly one JEV retry" 2 !calls)
 
-let usage_is_logged () =
-  rig (fun env sw tabs fake logger memory ->
+let usage_is_logged
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger memory ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw (scripted ~model:jev_model [ Answer "DONE" ])
@@ -580,8 +614,16 @@ let usage_is_logged () =
 
 (* ---------- drive-kh2u: a provider failure, with the completed steps ---------- *)
 
-let model_error () =
-  rig (fun env sw tabs fake logger _ ->
+let model_error
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
@@ -610,8 +652,16 @@ let model_error () =
 
 (* ---------- drive-e7oi: a provider substitution is caught ---------- *)
 
-let model_mismatch () =
-  rig (fun env sw tabs fake logger _ ->
+let model_mismatch
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
@@ -637,8 +687,16 @@ let model_mismatch () =
 
 (* ---------- drive-kh2u: a missing key fails fast, and status says so ---------- *)
 
-let missing_key () =
-  rig (fun env sw tabs fake logger _ ->
+let missing_key
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw (scripted ~model:jev_model [ Answer "DONE" ])
@@ -673,7 +731,15 @@ let missing_key () =
 
 (* ---------- drive-yqxg: the endpoints are configurable and default to OpenRouter ---- *)
 
-let endpoints () =
+let endpoints
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   let decode text =
     match Ox_app.Config.decode ~spec:Config.spec ~getenv:(fun _ -> None) text with
     | Ok config -> config
@@ -748,7 +814,7 @@ jev_model = "jev-latest"
     "drive-yqxg the chat base URL is configurable" "https://api.typesafe.ai/v1"
     (Config.Text.to_string typesafe.models.chat_base_url);
   (* The models service reports exactly what the file said, and the key stays a Redact. *)
-  rig (fun env sw _ _ logger _ ->
+  (rig ~caps) (fun env sw _ _ logger _ ->
       let config =
         { typesafe.models with api_key = Some (Ox_observability.Redact.make key) }
       in
@@ -773,8 +839,16 @@ jev_model = "jev-latest"
 let seconds n =
   match Config.Seconds.of_int n with Ok n -> n | Error why -> Alcotest.fail why
 
-let provider_timeout ~attempt ~deadline ~succeeds () =
-  rig (fun env sw tabs fake logger _ ->
+let provider_timeout
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ~attempt ~deadline ~succeeds () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw (fun request ->
@@ -832,8 +906,16 @@ let provider_timeout ~attempt ~deadline ~succeeds () =
           (Server.connections server)
       end)
 
-let chat_timeout ~kind ~attempt ~expected () =
-  rig (fun env sw _ _ logger _ ->
+let chat_timeout
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ~kind ~attempt ~expected () =
+  (rig ~caps) (fun env sw _ _ logger _ ->
       let server =
         Server.serve ~net:env#net ~sw (fun _ ->
             Eio.Time.sleep env#clock 1.3;
@@ -917,8 +999,16 @@ let chat_timeout ~kind ~attempt ~expected () =
         (Server.connections server))
 
 (* daily-9ggi: a formatting correction shares the original total budget. *)
-let text_correction_budget ~deadline ~succeeds () =
-  rig (fun env sw _ _ logger _ ->
+let text_correction_budget
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ~deadline ~succeeds () =
+  (rig ~caps) (fun env sw _ _ logger _ ->
       let calls = ref 0 in
       let server =
         Server.serve ~net:env#net ~sw (fun _ ->
@@ -1026,38 +1116,44 @@ let timeout_config () =
     (Config.Seconds.to_int decoded.models.planner_timeout)
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L19 models"
     [
       ( "models",
         [
           Alcotest.test_case "drive-y7v8 xjh6 4zlp y37b zml5 e7oi yqxg full drive" `Quick
-            drive_to_done;
-          Alcotest.test_case "drive-kh2u model error" `Quick model_error;
-          Alcotest.test_case "drive-e7oi model mismatch" `Quick model_mismatch;
-          Alcotest.test_case "drive-kh2u missing key" `Quick missing_key;
-          Alcotest.test_case "drive-yqxg endpoints" `Quick endpoints;
-          Alcotest.test_case "drive-7tvn usage is logged" `Quick usage_is_logged;
+            (drive_to_done ~caps);
+          Alcotest.test_case "drive-kh2u model error" `Quick (model_error ~caps);
+          Alcotest.test_case "drive-e7oi model mismatch" `Quick (model_mismatch ~caps);
+          Alcotest.test_case "drive-kh2u missing key" `Quick (missing_key ~caps);
+          Alcotest.test_case "drive-yqxg endpoints" `Quick (endpoints ~caps);
+          Alcotest.test_case "drive-7tvn usage is logged" `Quick (usage_is_logged ~caps);
           Alcotest.test_case "daily-9ggi configured provider timeout retries" `Quick
-            (provider_timeout ~attempt:1 ~deadline:(Ox.Duration.seconds 5) ~succeeds:false);
+            ((provider_timeout ~caps) ~attempt:1 ~deadline:(Ox.Duration.seconds 5)
+               ~succeeds:false);
           Alcotest.test_case "daily-9ggi slow provider succeeds with raised timeout"
             `Quick
-            (provider_timeout ~attempt:3 ~deadline:(Ox.Duration.seconds 5) ~succeeds:true);
+            ((provider_timeout ~caps) ~attempt:3 ~deadline:(Ox.Duration.seconds 5)
+               ~succeeds:true);
           Alcotest.test_case "daily-9ggi caller budget bounds retries" `Quick
-            (provider_timeout ~attempt:3 ~deadline:(Ox.Duration.ms 100) ~succeeds:false);
+            ((provider_timeout ~caps) ~attempt:3 ~deadline:(Ox.Duration.ms 100)
+               ~succeeds:false);
           Alcotest.test_case "map-op07 malformed JEV then valid" `Quick
-            invalid_response_retry;
+            (invalid_response_retry ~caps);
           Alcotest.test_case "daily-9ggi model timeout config" `Quick timeout_config;
           Alcotest.test_case "daily-9ggi text correction shares deadline" `Quick
-            (text_correction_budget ~deadline:(Ox.Duration.ms 400) ~succeeds:false);
+            ((text_correction_budget ~caps)
+               ~deadline:(Ox.Duration.ms 400) ~succeeds:false);
           Alcotest.test_case "daily-9ggi text correction within budget succeeds" `Quick
-            (text_correction_budget ~deadline:(Ox.Duration.seconds 2) ~succeeds:true);
+            ((text_correction_budget ~caps)
+               ~deadline:(Ox.Duration.seconds 2) ~succeeds:true);
           Alcotest.test_case "daily-9ggi text attempt timeout" `Quick
-            (chat_timeout ~kind:"text" ~attempt:1 ~expected:"timeout");
+            ((chat_timeout ~caps) ~kind:"text" ~attempt:1 ~expected:"timeout");
           Alcotest.test_case "daily-9ggi text uses own budget" `Quick
-            (chat_timeout ~kind:"text" ~attempt:3 ~expected:"authentication");
+            ((chat_timeout ~caps) ~kind:"text" ~attempt:3 ~expected:"authentication");
           Alcotest.test_case "daily-9ggi planner attempt timeout" `Quick
-            (chat_timeout ~kind:"planner" ~attempt:1 ~expected:"timeout");
+            ((chat_timeout ~caps) ~kind:"planner" ~attempt:1 ~expected:"timeout");
           Alcotest.test_case "daily-9ggi planner uses own budget" `Quick
-            (chat_timeout ~kind:"planner" ~attempt:3 ~expected:"authentication");
+            ((chat_timeout ~caps) ~kind:"planner" ~attempt:3 ~expected:"authentication");
         ] );
     ]

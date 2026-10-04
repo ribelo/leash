@@ -328,12 +328,19 @@ let empty_result () =
 (* pilot-3egp: a mission finished by the pilot's own acts is remembered — the acts as
    goal steps in JEV's language, the final page as the expectation when the pilot gave
    none (U2 on Tauron finished done twice and wrote nothing). *)
-let act_memory () =
-  let dir = Filename.temp_file "leash-run-memory-" "" in
-  Sys.remove dir;
-  Unix.mkdir dir 0o700;
-  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME" dir;
-  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_CONFIG_HOME" dir;
+let act_memory
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  let dir = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-run-memory-" "" in
+  (Ox_caps.Cap_sys.remove ~caps) dir;
+  (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
+  (Ox_caps.Cap_unix.putenv ~caps) "XDG_STATE_HOME" dir;
+  (Ox_caps.Cap_unix.putenv ~caps) "XDG_CONFIG_HOME" dir;
   let row =
     P.
       {
@@ -390,8 +397,8 @@ let act_memory () =
   Eio_main.run (fun _ ->
       Eio.Switch.run (fun sw ->
           let memory =
-            Leash.Learning.create ~sw ~caps:(Ox_test.powerbox ())
-              ~config:Leash.Config.default.learning ~warn:ignore ()
+            Leash.Learning.create ~sw ~caps ~config:Leash.Config.default.learning
+              ~warn:ignore ()
           in
           ignore
             (ran
@@ -578,6 +585,7 @@ let schema_redaction () =
           (params ())))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "mission pilot"
     [
       ( "pilot",
@@ -598,6 +606,6 @@ let () =
             ("dangerous leg refusal", dangerous_leg);
             ("refusal words are whole words", unsafe_words);
             ("refused reply costs a turn", refused_reply_costs_a_turn);
-            ("acts are remembered", act_memory);
+            ("acts are remembered", act_memory ~caps);
           ] );
     ]

@@ -839,24 +839,28 @@ let handoff_commands () =
     "hand-rg9h the handoff section is part of the printed config" true
     (contains "notify_command" (Yojson.Safe.to_string (C.yojson_of_t value)))
 
-let with_temp f =
-  let path = Filename.temp_file "leash-l1-" "" in
-  Unix.unlink path;
-  Unix.mkdir path 0o700;
+let with_temp ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
+  let path = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-l1-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) path;
+  (Ox_caps.Cap_unix.mkdir ~caps) path 0o700;
   Fun.protect
     ~finally:(fun () ->
-      (try Unix.unlink (Filename.concat (Filename.concat path "leash") "control.sock")
+      (try
+         (Ox_caps.Cap_unix.unlink ~caps)
+           (Filename.concat (Filename.concat path "leash") "control.sock")
        with _ -> ());
-      (try Unix.rmdir (Filename.concat path "leash") with _ -> ());
+      (try (Ox_caps.Cap_unix.rmdir ~caps) (Filename.concat path "leash") with _ -> ());
       List.iter
-        (fun name -> try Unix.unlink (Filename.concat path name) with _ -> ())
+        (fun name ->
+          try (Ox_caps.Cap_unix.unlink ~caps) (Filename.concat path name) with _ -> ())
         [ "binary"; "config.toml"; "stdout"; "stderr" ];
-      (try Unix.rmdir (Filename.concat path "profile") with _ -> ());
-      Unix.rmdir path)
+      (try (Ox_caps.Cap_unix.rmdir ~caps) (Filename.concat path "profile") with _ -> ());
+      (Ox_caps.Cap_unix.rmdir ~caps) path)
     (fun () -> f path)
 
-let path_validation () =
-  with_temp (fun dir ->
+let path_validation
+    ~(caps : < Ox_caps.Cap.env ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
+  (with_temp ~caps) (fun dir ->
       let binary = Filename.concat dir "binary" in
       let profile = Filename.concat dir "profile" in
       let config =
@@ -865,83 +869,118 @@ let path_validation () =
         | Error (`Config message) -> Alcotest.fail message
       in
       Eio_main.run (fun env ->
-          let check () = C.validate_paths ~getenv:Sys.getenv_opt ~fs:env#fs config in
-          Alcotest.(check bool) "missing binary" true (Result.is_error (check ()));
-          let out = open_out binary in
+          let check ~(caps : < Ox_caps.Cap.env ; .. >) () =
+            C.validate_paths ~getenv:(Ox_caps.Cap_sys.getenv_opt ~caps) ~fs:env#fs config
+          in
+          Alcotest.(check bool) "missing binary" true (Result.is_error ((check ~caps) ()));
+          let out = (Ox_caps.Cap_stdlib.open_out ~caps) binary in
           close_out out;
-          Unix.chmod binary 0o700;
-          Alcotest.(check bool) "creatable profile" true (Result.is_ok (check ()));
-          Unix.mkdir profile 0o700;
-          Alcotest.(check bool) "readable profile" true (Result.is_ok (check ()));
-          Unix.chmod profile 0o000;
-          Alcotest.(check bool) "unreadable profile" true (Result.is_error (check ()));
-          Unix.chmod profile 0o700))
+          (Ox_caps.Cap_unix.chmod ~caps) binary 0o700;
+          Alcotest.(check bool) "creatable profile" true (Result.is_ok ((check ~caps) ()));
+          (Ox_caps.Cap_unix.mkdir ~caps) profile 0o700;
+          Alcotest.(check bool) "readable profile" true (Result.is_ok ((check ~caps) ()));
+          (Ox_caps.Cap_unix.chmod ~caps) profile 0o000;
+          Alcotest.(check bool)
+            "unreadable profile" true
+            (Result.is_error ((check ~caps) ()));
+          (Ox_caps.Cap_unix.chmod ~caps) profile 0o700))
 
-let config_check_cli () =
-  with_temp (fun dir ->
+let config_check_cli
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_temp ~caps) (fun dir ->
       let binary = Filename.concat dir "binary" in
       let config_file = Filename.concat dir "config.toml" in
-      let write text =
-        let out = open_out config_file in
+      let write ~(caps : < Ox_caps.Cap.fs_write ; .. >) text =
+        let out = (Ox_caps.Cap_stdlib.open_out ~caps) config_file in
         output_string out text;
         close_out out
       in
-      write (config_text binary (Filename.concat dir "profile"));
+      (write ~caps) (config_text binary (Filename.concat dir "profile"));
       let executable =
         Filename.concat
           (Filename.dirname Sys.executable_name)
           "../packages/leash/bin/main.exe"
       in
-      let check () =
+      let check
+          ~(caps :
+             < Ox_caps.Cap.env
+             ; Ox_caps.Cap.exec
+             ; Ox_caps.Cap.fork
+             ; Ox_caps.Cap.fs_read
+             ; Ox_caps.Cap.fs_write
+             ; .. >) () =
         let output = Filename.concat dir "stdout" in
         let error = Filename.concat dir "stderr" in
         let stdout =
-          Unix.openfile output [ Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY ] 0o600
+          (Ox_caps.Cap_unix.openfile ~caps)
+            output
+            [ Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY ]
+            0o600
         in
         let stderr =
-          Unix.openfile error [ Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY ] 0o600
+          (Ox_caps.Cap_unix.openfile ~caps)
+            error
+            [ Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY ]
+            0o600
         in
         let pid =
-          Unix.create_process_env executable
+          (Ox_caps.Cap_unix.create_process_env ~caps)
+            executable
             [| executable; "config"; "check"; "--config"; config_file |]
-            (Unix.environment ()) Unix.stdin stdout stderr
+            ((Ox_caps.Cap_unix.environment ~caps) ())
+            Unix.stdin stdout stderr
         in
         Unix.close stdout;
         Unix.close stderr;
         let _, status = Unix.waitpid [] pid in
-        let contents file =
-          let channel = open_in file in
+        let contents ~(caps : < Ox_caps.Cap.fs_read ; .. >) file =
+          let channel = (Ox_caps.Cap_stdlib.open_in ~caps) file in
           Fun.protect
             ~finally:(fun () -> close_in channel)
             (fun () -> really_input_string channel (in_channel_length channel))
         in
-        (status, contents output, contents error)
+        (status, (contents ~caps) output, (contents ~caps) error)
       in
-      let status, _, error = check () in
+      let status, _, error = (check ~caps) () in
       Alcotest.(check bool)
         "missing executable rejected with config-data exit" true (status = Unix.WEXITED 65);
       Alcotest.(check bool)
         "JSON pointer in diagnostic" true
         (List.mem "chrome" (String.split_on_char '/' error));
-      close_out (open_out binary);
-      Unix.chmod binary 0o700;
-      let status, output, _ = check () in
+      close_out ((Ox_caps.Cap_stdlib.open_out ~caps) binary);
+      (Ox_caps.Cap_unix.chmod ~caps) binary 0o700;
+      let status, output, _ = (check ~caps) () in
       Alcotest.(check bool) "valid filesystem accepted" true (status = Unix.WEXITED 0);
       Alcotest.(check bool) "redacted config printed" true (String.length output > 0);
       Alcotest.(check bool) "secret absent" false (contains "file-secret" output);
-      write (config_text binary (Filename.concat dir "profile") ^ "oops = true\n");
-      let status, _, error = check () in
+      (write ~caps) (config_text binary (Filename.concat dir "profile") ^ "oops = true\n");
+      let status, _, error = (check ~caps) () in
       Alcotest.(check bool)
         "unknown key exits config-data class" true (status = Unix.WEXITED 65);
       Alcotest.(check bool) "unknown key named" true (contains "oops" error))
 
-let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_status
+let socket_cli_case
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.tmp
+       ; .. >) ?(expected_lines = []) ?on_command argv reply expected_status
     expected_command =
-  with_temp (fun runtime ->
+  (with_temp ~caps) (fun runtime ->
       let dir = Filename.concat runtime "leash" in
-      Unix.mkdir dir 0o700;
+      (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
       let path = Filename.concat dir "control.sock" in
-      let listener = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+      let listener = (Ox_caps.Cap_unix.socket ~caps) Unix.PF_UNIX Unix.SOCK_STREAM 0 in
       Fun.protect
         ~finally:(fun () -> Unix.close listener)
         (fun () ->
@@ -957,7 +996,7 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
           (* svc-o4wt: a fresh XDG_CONFIG_HOME, so the CLI reads no configuration and
              falls back to the runtime directory these cases write in. *)
           let env =
-            Array.to_list (Unix.environment ())
+            Array.to_list ((Ox_caps.Cap_unix.environment ~caps) ())
             |> List.filter (fun item ->
                 not
                   (String.starts_with ~prefix:"XDG_RUNTIME_DIR=" item
@@ -970,7 +1009,8 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
               :: env)
           in
           let pid =
-            Unix.create_process_env binary
+            (Ox_caps.Cap_unix.create_process_env ~caps)
+              binary
               (Array.of_list (binary :: argv))
               env Unix.stdin out_write err_write
           in
@@ -1011,29 +1051,37 @@ let socket_cli_case ?(expected_lines = []) ?on_command argv reply expected_statu
           close_in stream;
           Unix.close (if expected_status = 0 then err_read else out_read)))
 
-let socket_cli () =
-  socket_cli_case [ "status" ] "{\"ok\":true,\"result\":{}}" 0 "status";
-  socket_cli_case
+let socket_cli
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (socket_cli_case ~caps) [ "status" ] "{\"ok\":true,\"result\":{}}" 0 "status";
+  (socket_cli_case ~caps)
     ~on_command:(function
       | P.New { label = Some "Research"; _ } -> () | _ -> Alcotest.fail "label")
     [ "new"; "--label"; "Research" ]
     (Yojson.Safe.to_string (P.encode_reply (P.Success tab_json)))
     0 "new";
-  socket_cli_case
+  (socket_cli_case ~caps)
     ~on_command:(function
       | P.Take { title = Some "Inbox"; _ } -> () | _ -> Alcotest.fail "selector")
     [ "take"; "--title"; "Inbox" ]
     (Yojson.Safe.to_string (P.encode_reply (P.Success tab_json)))
     0 "take";
-  socket_cli_case [ "close"; "t_9xk" ] "{\"ok\":true,\"result\":{\"closed\":true}}" 0
-    "close";
-  socket_cli_case
+  (socket_cli_case ~caps) [ "close"; "t_9xk" ]
+    "{\"ok\":true,\"result\":{\"closed\":true}}" 0 "close";
+  (socket_cli_case ~caps)
     ~expected_lines:
       [
         "LABEL\tURL\tTITLE\tPAGE_KIND\tKIND_SOURCE\tORIGIN\tAGE_S\tIDLE_S\tCLOSES_IN_S\tWITH_HUMAN";
       ]
     [ "list"; "--table" ] "{\"ok\":true,\"result\":{\"tabs\":[]}}" 0 "list";
-  socket_cli_case
+  (socket_cli_case ~caps)
     ~expected_lines:
       [
         "PAGE_KIND\t-\tKIND_SOURCE\t-";
@@ -1044,20 +1092,29 @@ let socket_cli () =
     (Yojson.Safe.to_string (P.encode_reply (P.Success snapshot_json)))
     0 "snap"
 
-let cli_usage () =
+let cli_usage
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; .. >) () =
   let binary =
     Filename.concat
       (Filename.dirname Sys.executable_name)
       "../packages/leash/bin/main.exe"
   in
-  let null = Unix.openfile "/dev/null" [ Unix.O_WRONLY ] 0o600 in
+  let null = (Ox_caps.Cap_unix.openfile ~caps) "/dev/null" [ Unix.O_WRONLY ] 0o600 in
   Fun.protect
     ~finally:(fun () -> Unix.close null)
     (fun () ->
       let pid =
-        Unix.create_process_env binary
+        (Ox_caps.Cap_unix.create_process_env ~caps)
+          binary
           [| binary; "status"; "unexpected" |]
-          (Unix.environment ()) Unix.stdin null null
+          ((Ox_caps.Cap_unix.environment ~caps) ())
+          Unix.stdin null null
       in
       let _, status = Unix.waitpid [] pid in
       Alcotest.(check bool)
@@ -1139,44 +1196,62 @@ let otlp_config () =
 let binary_path () =
   Filename.concat (Filename.dirname Sys.executable_name) "../packages/leash/bin/main.exe"
 
-let file_contents path =
-  let channel = open_in path in
+let file_contents ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
+  let channel = (Ox_caps.Cap_stdlib.open_in ~caps) path in
   Fun.protect
     ~finally:(fun () -> close_in channel)
     (fun () -> really_input_string channel (in_channel_length channel))
 
 (* A temporary tree this test owns end to end: every file and directory it made goes away
    with it, sockets and nested configuration directories included. *)
-let with_tree f =
-  let root = Filename.temp_file "leash-cli-" "" in
-  Unix.unlink root;
-  Unix.mkdir root 0o700;
-  let rec remove path =
+let with_tree
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
+  let root = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-cli-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) root;
+  (Ox_caps.Cap_unix.mkdir ~caps) root 0o700;
+  let rec remove ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) path =
     match (Unix.lstat path).Unix.st_kind with
     | Unix.S_DIR ->
-        Array.iter (fun name -> remove (Filename.concat path name)) (Sys.readdir path);
-        Unix.rmdir path
-    | _ -> Unix.unlink path
+        Array.iter
+          (fun name -> (remove ~caps) (Filename.concat path name))
+          ((Ox_caps.Cap_sys.readdir ~caps) path);
+        (Ox_caps.Cap_unix.rmdir ~caps) path
+    | _ -> (Ox_caps.Cap_unix.unlink ~caps) path
   in
-  Fun.protect ~finally:(fun () -> try remove root with _ -> ()) (fun () -> f root)
+  Fun.protect
+    ~finally:(fun () -> try (remove ~caps) root with _ -> ())
+    (fun () -> f root)
 
 (* The CLI with [env] replacing the inherited values of those names, answering its status,
    stdout and stderr. *)
-let run_cli ?(env = []) argv =
+let run_cli
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) ?(env = []) argv =
   let binary = binary_path () in
-  with_tree (fun root ->
+  (with_tree ~caps) (fun root ->
       let stdout = Filename.concat root "stdout"
       and stderr = Filename.concat root "stderr" in
-      let out = Unix.openfile stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
-      let err = Unix.openfile stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
+      let out =
+        (Ox_caps.Cap_unix.openfile ~caps) stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
+      in
+      let err =
+        (Ox_caps.Cap_unix.openfile ~caps) stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
+      in
       let keys = List.map (fun (key, _) -> key ^ "=") env in
       let inherited =
-        Array.to_list (Unix.environment ())
+        Array.to_list ((Ox_caps.Cap_unix.environment ~caps) ())
         |> List.filter (fun item ->
             not (List.exists (fun key -> String.starts_with ~prefix:key item) keys))
       in
       let pid =
-        Unix.create_process_env binary
+        (Ox_caps.Cap_unix.create_process_env ~caps)
+          binary
           (Array.of_list (binary :: argv))
           (Array.of_list
              (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
@@ -1185,24 +1260,37 @@ let run_cli ?(env = []) argv =
       Unix.close out;
       Unix.close err;
       let _, status = Unix.waitpid [] pid in
-      (status, file_contents stdout, file_contents stderr))
+      (status, (file_contents ~caps) stdout, (file_contents ~caps) stderr))
 
 (* The CLI answered once on [listener]; how a test drives it where a service would be. *)
-let run_cli_at listener ~env argv reply =
+let run_cli_at
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) listener ~env argv reply =
   let binary = binary_path () in
-  with_tree (fun root ->
+  (with_tree ~caps) (fun root ->
       let stdout = Filename.concat root "stdout"
       and stderr = Filename.concat root "stderr" in
-      let out = Unix.openfile stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
-      let err = Unix.openfile stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
+      let out =
+        (Ox_caps.Cap_unix.openfile ~caps) stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
+      in
+      let err =
+        (Ox_caps.Cap_unix.openfile ~caps) stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
+      in
       let keys = List.map (fun (key, _) -> key ^ "=") env in
       let inherited =
-        Array.to_list (Unix.environment ())
+        Array.to_list ((Ox_caps.Cap_unix.environment ~caps) ())
         |> List.filter (fun item ->
             not (List.exists (fun key -> String.starts_with ~prefix:key item) keys))
       in
       let pid =
-        Unix.create_process_env binary
+        (Ox_caps.Cap_unix.create_process_env ~caps)
+          binary
           (Array.of_list (binary :: argv))
           (Array.of_list
              (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
@@ -1221,19 +1309,20 @@ let run_cli_at listener ~env argv reply =
       close_out output;
       close_in input;
       let _, status = Unix.waitpid [] pid in
-      (status, file_contents stdout, file_contents stderr))
+      (status, (file_contents ~caps) stdout, (file_contents ~caps) stderr))
 
 (* svc-x8rp: the default binary is a bare name, so validation looks it up on PATH and
    names the field when nothing provides it. *)
-let binary_on_path () =
-  with_tree (fun root ->
+let binary_on_path
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
+  (with_tree ~caps) (fun root ->
       let bin = Filename.concat root "bin" in
       let empty = Filename.concat root "empty" in
-      Unix.mkdir bin 0o700;
-      Unix.mkdir empty 0o700;
+      (Ox_caps.Cap_unix.mkdir ~caps) bin 0o700;
+      (Ox_caps.Cap_unix.mkdir ~caps) empty 0o700;
       let stub = Filename.concat bin "google-chrome-stable" in
-      close_out (open_out stub);
-      Unix.chmod stub 0o700;
+      close_out ((Ox_caps.Cap_stdlib.open_out ~caps) stub);
+      (Ox_caps.Cap_unix.chmod ~caps) stub 0o700;
       let environment path key =
         match key with
         | "PATH" -> Some path
@@ -1268,18 +1357,24 @@ let binary_on_path () =
 (* svc-o4wt svc-x8rp: a variable that is unset leaves its placeholder in the path, and
    validation names that field instead of letting the service write a directory called
    $XDG_DATA_HOME or a socket called $XDG_RUNTIME_DIR. *)
-let unset_xdg_paths () =
-  with_tree (fun root ->
+let unset_xdg_paths
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_tree ~caps) (fun root ->
       let stub = Filename.concat root "chrome" in
-      close_out (open_out stub);
-      Unix.chmod stub 0o700;
+      close_out ((Ox_caps.Cap_stdlib.open_out ~caps) stub);
+      (Ox_caps.Cap_unix.chmod ~caps) stub 0o700;
       let decode text =
         match Ox_app.Config.decode ~spec:C.spec ~getenv:(fun _ -> None) text with
         | Ok value -> value
         | Error (`Config message) -> Alcotest.fail message
       in
-      let pointer ~fs label config =
-        match C.validate_paths ~getenv:Sys.getenv_opt ~fs config with
+      let pointer ~(caps : < Ox_caps.Cap.env ; .. >) ~fs label config =
+        match C.validate_paths ~getenv:(Ox_caps.Cap_sys.getenv_opt ~caps) ~fs config with
         | Ok () -> Alcotest.fail (label ^ ": expected a refusal")
         | Error issues -> (List.hd issues).Ox_app.Config.pointer
       in
@@ -1288,11 +1383,11 @@ let unset_xdg_paths () =
           Alcotest.(check string)
             "svc-o4wt an unset XDG_RUNTIME_DIR is refused at control.socket"
             "/control/socket"
-            (pointer ~fs:env#fs "socket" (decode chrome));
+            ((pointer ~caps) ~fs:env#fs "socket" (decode chrome));
           Alcotest.(check string)
             "svc-x8rp an unset XDG_DATA_HOME is refused at chrome.profile_dir"
             "/chrome/profile_dir"
-            (pointer ~fs:env#fs "profile"
+            ((pointer ~caps) ~fs:env#fs "profile"
                (decode (chrome ^ "[control]\nsocket = \"/tmp/leash-unset.sock\"\n")))))
 
 (* svc-x8rp svc-o4wt: a file that says nothing — or names one setting — is a
@@ -1358,56 +1453,68 @@ let config_defaults () =
 
 (* svc-x8rp: init writes the commented defaults, refuses to overwrite, and --force is the
    operator's yes. Both go through the file mode the config's API key deserves. *)
-let config_init () =
-  with_tree (fun root ->
+let config_init
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
+  (with_tree ~caps) (fun root ->
       let dir = Filename.concat root "leash" in
       let path = Filename.concat dir "config.toml" in
-      (match C.init ~caps:(Ox_test.powerbox ()) ~path () with
+      (match C.init ~caps ~path () with
       | Ok written ->
           Alcotest.(check string) "svc-x8rp init answers the path it wrote" path written
       | Error _ -> Alcotest.fail "svc-x8rp init refused a fresh path");
       Alcotest.(check string)
-        "svc-x8rp init writes the commented defaults" C.default_toml (file_contents path);
+        "svc-x8rp init writes the commented defaults" C.default_toml
+        ((file_contents ~caps) path);
       Alcotest.(check int)
         "svc-x8rp the file is private" 0o600 (Unix.stat path).Unix.st_perm;
       Alcotest.(check int)
         "svc-x8rp its directory is private too" 0o700 (Unix.stat dir).Unix.st_perm;
-      (match C.init ~caps:(Ox_test.powerbox ()) ~path () with
+      (match C.init ~caps ~path () with
       | Ok _ -> Alcotest.fail "svc-x8rp init overwrote a file without --force"
       | Error (`Exists refused) ->
           Alcotest.(check string) "svc-x8rp it names what it refused" path refused
       | Error (`Write error) -> Alcotest.fail ("svc-x8rp init failed: " ^ error.message));
       Alcotest.(check string)
-        "svc-x8rp the refused file is untouched" C.default_toml (file_contents path);
-      let out = open_out path in
+        "svc-x8rp the refused file is untouched" C.default_toml
+        ((file_contents ~caps) path);
+      let out = (Ox_caps.Cap_stdlib.open_out ~caps) path in
       output_string out "oops = true\n";
       close_out out;
-      (match C.init ~caps:(Ox_test.powerbox ()) ~force:true ~path () with
+      (match C.init ~caps ~force:true ~path () with
       | Ok _ -> ()
       | Error _ -> Alcotest.fail "svc-x8rp init --force did not overwrite");
       Alcotest.(check string)
-        "svc-x8rp --force restores the defaults" C.default_toml (file_contents path))
+        "svc-x8rp --force restores the defaults" C.default_toml
+        ((file_contents ~caps) path))
 
 (* svc-x8rp: the same through the Door, which is where the operator meets it. *)
-let config_init_cli () =
-  with_tree (fun root ->
+let config_init_cli
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_tree ~caps) (fun root ->
       let home = Filename.concat root "config" in
       let file = Filename.concat (Filename.concat home "leash") "config.toml" in
       let env = [ ("XDG_CONFIG_HOME", home) ] in
-      let status, output, error = run_cli ~env [ "config"; "init" ] in
+      let status, output, error = (run_cli ~caps) ~env [ "config"; "init" ] in
       Alcotest.(check bool)
         "svc-x8rp config init exits zero" true (status = Unix.WEXITED 0);
       Alcotest.(check string) "svc-x8rp it names the file" (file ^ "\n") output;
       Alcotest.(check string) "svc-x8rp it writes no diagnostic" "" error;
       Alcotest.(check string)
         "svc-x8rp the CLI writes the commented defaults" C.default_toml
-        (file_contents file);
-      let status, _, error = run_cli ~env [ "config"; "init" ] in
+        ((file_contents ~caps) file);
+      let status, _, error = (run_cli ~caps) ~env [ "config"; "init" ] in
       Alcotest.(check bool)
         "svc-x8rp a second init exits usage class" true (status = Unix.WEXITED 64);
       Alcotest.(check bool)
         "svc-x8rp and says how to overwrite" true (contains "--force" error);
-      let status, _, _ = run_cli ~env [ "config"; "init"; "--force" ] in
+      let status, _, _ = (run_cli ~caps) ~env [ "config"; "init"; "--force" ] in
       Alcotest.(check bool) "svc-x8rp --force overwrites" true (status = Unix.WEXITED 0))
 
 (* svc-x8rp: a first run has no file at $XDG_CONFIG_HOME/leash/config.toml. The Door
@@ -1415,12 +1522,15 @@ let config_init_cli () =
    starting, before Chrome is anywhere in the picture — while a --config path that is not
    there stays an error naming it (napp-9x0s). The program here is a stub: what the service
    does once it is entered belongs to the other stories, and unit tests launch no browser. *)
-let service_starts_without_config () =
-  with_tree (fun root ->
+let service_starts_without_config
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
+  (with_tree ~caps) (fun root ->
       let config_home = Filename.concat root "config" in
       let runtime = Filename.concat root "runtime" in
       let data = Filename.concat root "data" in
-      List.iter (fun path -> Unix.mkdir path 0o700) [ config_home; runtime; data ];
+      List.iter
+        (fun path -> (Ox_caps.Cap_unix.mkdir ~caps) path 0o700)
+        [ config_home; runtime; data ];
       let getenv key =
         match key with
         | "XDG_CONFIG_HOME" -> Some config_home
@@ -1482,16 +1592,26 @@ let service_starts_without_config () =
 
 (* svc-x8rp: the same through the real binary, where the Door's own filesystem read
    supplies [`Missing] and the CLI is the operator's first call. *)
-let config_check_without_file () =
-  with_tree (fun root ->
+let config_check_without_file
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_tree ~caps) (fun root ->
       let config_home = Filename.concat root "config" in
       let runtime = Filename.concat root "runtime" in
       let data = Filename.concat root "data" in
       let bin = Filename.concat root "bin" in
-      List.iter (fun path -> Unix.mkdir path 0o700) [ config_home; runtime; data; bin ];
+      List.iter
+        (fun path -> (Ox_caps.Cap_unix.mkdir ~caps) path 0o700)
+        [ config_home; runtime; data; bin ];
       let stub = Filename.concat bin "google-chrome-stable" in
-      close_out (open_out stub);
-      Unix.chmod stub 0o700;
+      close_out ((Ox_caps.Cap_stdlib.open_out ~caps) stub);
+      (Ox_caps.Cap_unix.chmod ~caps) stub 0o700;
       let env =
         [
           ("XDG_CONFIG_HOME", config_home);
@@ -1500,7 +1620,7 @@ let config_check_without_file () =
           ("PATH", bin);
         ]
       in
-      let status, output, error = run_cli ~env [ "config"; "check" ] in
+      let status, output, error = (run_cli ~caps) ~env [ "config"; "check" ] in
       Alcotest.(check bool)
         "svc-x8rp config check with no file exits zero" true (status = Unix.WEXITED 0);
       Alcotest.(check string) "svc-x8rp it writes no diagnostic" "" error;
@@ -1510,7 +1630,9 @@ let config_check_without_file () =
            (Filename.concat (Filename.concat runtime "leash") "control.sock")
            output);
       let missing = Filename.concat root "nowhere.toml" in
-      let status, _, error = run_cli ~env [ "config"; "check"; "--config"; missing ] in
+      let status, _, error =
+        (run_cli ~caps) ~env [ "config"; "check"; "--config"; missing ]
+      in
       Alcotest.(check bool)
         "svc-x8rp an absent --config exits config-data class" true
         (status = Unix.WEXITED 65);
@@ -1518,27 +1640,36 @@ let config_check_without_file () =
 
 (* svc-o4wt: the CLI connects where control.socket says — not where XDG_RUNTIME_DIR would
    put a socket — and --socket overrides the file for one call. *)
-let socket_config_cli () =
-  with_tree (fun root ->
+let socket_config_cli
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_tree ~caps) (fun root ->
       let config_home = Filename.concat root "config" in
       let dir = Filename.concat config_home "leash" in
       let runtime = Filename.concat root "runtime" in
-      Unix.mkdir config_home 0o700;
-      Unix.mkdir dir 0o700;
-      Unix.mkdir runtime 0o700;
+      (Ox_caps.Cap_unix.mkdir ~caps) config_home 0o700;
+      (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
+      (Ox_caps.Cap_unix.mkdir ~caps) runtime 0o700;
       let configured = Filename.concat root "configured.sock" in
       let override = Filename.concat root "override.sock" in
-      let out = open_out (Filename.concat dir "config.toml") in
+      let out = (Ox_caps.Cap_stdlib.open_out ~caps) (Filename.concat dir "config.toml") in
       output_string out (Printf.sprintf "[control]\nsocket = %S\n" configured);
       close_out out;
-      let listen path =
-        let listener = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+      let listen ~(caps : < Ox_caps.Cap.network ; .. >) path =
+        let listener = (Ox_caps.Cap_unix.socket ~caps) Unix.PF_UNIX Unix.SOCK_STREAM 0 in
         Unix.bind listener (Unix.ADDR_UNIX path);
         Unix.listen listener 1;
         listener
       in
-      let configured_listener = listen configured in
-      let override_listener = listen override in
+      let configured_listener = (listen ~caps) configured in
+      let override_listener = (listen ~caps) override in
       Fun.protect
         ~finally:(fun () ->
           Unix.close configured_listener;
@@ -1546,14 +1677,16 @@ let socket_config_cli () =
         (fun () ->
           let env = [ ("XDG_CONFIG_HOME", config_home); ("XDG_RUNTIME_DIR", runtime) ] in
           let reply = "{\"ok\":true,\"result\":{\"tabs\":[]}}" in
-          let status, output, _ = run_cli_at configured_listener ~env [ "list" ] reply in
+          let status, output, _ =
+            (run_cli_at ~caps) configured_listener ~env [ "list" ] reply
+          in
           Alcotest.(check bool)
             "svc-o4wt the configured socket answers the CLI" true (status = Unix.WEXITED 0);
           Alcotest.(check bool)
             "svc-o4wt it prints the reply" true (contains "tabs" output);
           (* a relative or unset socket is refused before anything connects *)
           let status, _, error =
-            run_cli ~env [ "list"; "--socket"; "$XDG_RUNTIME_DIR/nope.sock" ]
+            (run_cli ~caps) ~env [ "list"; "--socket"; "$XDG_RUNTIME_DIR/nope.sock" ]
           in
           Alcotest.(check bool)
             "svc-o4wt an unresolved --socket is an error, not a silent default" false
@@ -1562,7 +1695,9 @@ let socket_config_cli () =
             "svc-o4wt and it says so" true
             (contains "XDG_RUNTIME_DIR" error || contains "No such file" error);
           let status, _, _ =
-            run_cli_at override_listener ~env [ "list"; "--socket"; override ] reply
+            (run_cli_at ~caps) override_listener ~env
+              [ "list"; "--socket"; override ]
+              reply
           in
           Alcotest.(check bool)
             "svc-o4wt --socket overrides control.socket" true (status = Unix.WEXITED 0)))
@@ -1599,11 +1734,19 @@ let client_help =
     ([ "storage" ], [ "TAB"; "local|session" ]);
   ]
 
-let help_matrix () =
+let help_matrix
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
   List.iter
     (fun (argv, docvs) ->
       let name = "leash " ^ String.concat " " argv in
-      let status, output, error = run_cli (argv @ [ "--help" ]) in
+      let status, output, error = (run_cli ~caps) (argv @ [ "--help" ]) in
       Alcotest.(check bool) (name ^ " --help exits zero") true (status = Unix.WEXITED 0);
       Alcotest.(check string) (name ^ " --help leaves stderr empty") "" error;
       Alcotest.(check bool)
@@ -1621,7 +1764,7 @@ let help_matrix () =
   List.iter
     (fun argv ->
       let name = "leash " ^ String.concat " " argv in
-      let status, output, error = run_cli (argv @ [ "--help" ]) in
+      let status, output, error = (run_cli ~caps) (argv @ [ "--help" ]) in
       Alcotest.(check bool) (name ^ " --help exits zero") true (status = Unix.WEXITED 0);
       Alcotest.(check string) (name ^ " --help leaves stderr empty") "" error;
       Alcotest.(check bool)
@@ -1632,31 +1775,49 @@ let help_matrix () =
 
 (* svc-hi4f: a command accepts only the options it uses, so the first call is the right
    call rather than one corrected after an ignored flag. *)
-let help_scope () =
-  let help argv =
-    let _, output, _ = run_cli (argv @ [ "--help" ]) in
+let help_scope
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  let help
+      ~(caps :
+         < Ox_caps.Cap.env
+         ; Ox_caps.Cap.exec
+         ; Ox_caps.Cap.fork
+         ; Ox_caps.Cap.fs_read
+         ; Ox_caps.Cap.fs_write
+         ; Ox_caps.Cap.tmp
+         ; .. >) argv =
+    let _, output, _ = (run_cli ~caps) (argv @ [ "--help" ]) in
     output
   in
   Alcotest.(check bool)
     "svc-hi4f only list and snap render a table" true
-    (contains "--table" (help [ "list" ])
-    && contains "--table" (help [ "snap" ])
-    && (not (contains "--table" (help [ "new" ])))
-    && not (contains "--table" (help [ "text" ])));
+    (contains "--table" ((help ~caps) [ "list" ])
+    && contains "--table" ((help ~caps) [ "snap" ])
+    && (not (contains "--table" ((help ~caps) [ "new" ])))
+    && not (contains "--table" ((help ~caps) [ "text" ])));
 
   Alcotest.(check bool)
     "svc-hi4f press names its row option and click has none" true
-    (contains "--index" (help [ "press" ]) && not (contains "--index" (help [ "click" ])));
-  let status, _, _ = run_cli [ "new"; "--table" ] in
+    (contains "--index" ((help ~caps) [ "press" ])
+    && not (contains "--index" ((help ~caps) [ "click" ])));
+  let status, _, _ = (run_cli ~caps) [ "new"; "--table" ] in
   Alcotest.(check bool)
     "svc-hi4f an option a command does not use is refused" true (status = Unix.WEXITED 124);
-  let status, _, _ = run_cli [ "press"; "t_9xk"; "s_3"; "Enter"; "--force" ] in
+  let status, _, _ = (run_cli ~caps) [ "press"; "t_9xk"; "s_3"; "Enter"; "--force" ] in
   Alcotest.(check bool)
     "svc-hi4f --force is refused where it means nothing" true (status = Unix.WEXITED 124)
 
 let test name case = Alcotest.test_case name `Quick case
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L1 config, Door and protocol"
     [
       ( "chrome-38a4",
@@ -1671,40 +1832,41 @@ let () =
       ( "chrome-fuao",
         [
           test "status result shape" status_result;
-          test "status socket client" socket_cli;
-          test "usage exit" cli_usage;
+          test "status socket client" (socket_cli ~caps);
+          test "usage exit" (cli_usage ~caps);
         ] );
       ("svc-kzt6", [ test "environment override/redaction" config_values ]);
       ("svc-f4op", [ test "OTLP disabled, enabled, redacted headers" otlp_config ]);
       ( "svc-ljl3",
         [
-          test "boot path validation" path_validation;
-          test "config check fails fast" config_check_cli;
+          test "boot path validation" (path_validation ~caps);
+          test "config check fails fast" (config_check_cli ~caps);
         ] );
       ( "svc-tkor",
         [
           test "config decode and defaults" config_values;
           test "hand-04rb hand-phof hand-rg9h" handoff_commands;
-          test "config check prints the redacted config" config_check_cli;
+          test "config check prints the redacted config" (config_check_cli ~caps);
         ] );
       ( "svc-x8rp",
         [
           test "defaults for every non-secret field" config_defaults;
-          test "the default binary is found on PATH" binary_on_path;
-          test "the service starts with no config file" service_starts_without_config;
-          test "config check with no config file" config_check_without_file;
-          test "config init writes, refuses and --force" config_init;
-          test "config init through the CLI" config_init_cli;
+          test "the default binary is found on PATH" (binary_on_path ~caps);
+          test "the service starts with no config file"
+            (service_starts_without_config ~caps);
+          test "config check with no config file" (config_check_without_file ~caps);
+          test "config init writes, refuses and --force" (config_init ~caps);
+          test "config init through the CLI" (config_init_cli ~caps);
         ] );
       ( "svc-o4wt",
         [
           test "the socket default and the configured path" config_defaults;
-          test "an unset XDG variable is refused by pointer" unset_xdg_paths;
-          test "the CLI connects where the config says" socket_config_cli;
+          test "an unset XDG variable is refused by pointer" (unset_xdg_paths ~caps);
+          test "the CLI connects where the config says" (socket_config_cli ~caps);
         ] );
       ( "svc-hi4f",
         [
-          test "every command's help names its positionals" help_matrix;
-          test "each command accepts only its own options" help_scope;
+          test "every command's help names its positionals" (help_matrix ~caps);
+          test "each command accepts only its own options" (help_scope ~caps);
         ] );
     ]

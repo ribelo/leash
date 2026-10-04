@@ -3,35 +3,48 @@ module L = Leash.Learning
 module B = Leash.Playbook
 module C = Leash.Config
 
-let caps = Ox_test.powerbox ()
 let ok = function Ok x -> x | Error why -> Alcotest.fail why
 
-let rec remove path =
+let rec remove ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) path =
   match Unix.lstat path with
   | exception Unix.Unix_error (Unix.ENOENT, _, _) -> ()
   | st when st.Unix.st_kind = Unix.S_DIR ->
-      Array.iter (fun name -> remove (Filename.concat path name)) (Sys.readdir path);
-      Unix.rmdir path
-  | _ -> Unix.unlink path
+      Array.iter
+        (fun name -> (remove ~caps) (Filename.concat path name))
+        ((Ox_caps.Cap_sys.readdir ~caps) path);
+      (Ox_caps.Cap_unix.rmdir ~caps) path
+  | _ -> (Ox_caps.Cap_unix.unlink ~caps) path
 
-let temp f =
-  let dir = Filename.temp_file "leash-map-" "" in
-  Unix.unlink dir;
-  Unix.mkdir dir 0o700;
+let temp
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) f =
+  let dir = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-map-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) dir;
+  (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
   let keys = [ "XDG_CONFIG_HOME"; "XDG_STATE_HOME" ] in
-  let old = List.map (fun k -> (k, Sys.getenv_opt k)) keys in
-  List.iter (fun key -> (Unix.putenv [@alert "-unsafe_multidomain"]) key dir) keys;
+  let old = List.map (fun k -> (k, (Ox_caps.Cap_sys.getenv_opt ~caps) k)) keys in
+  List.iter (fun key -> (Ox_caps.Cap_unix.putenv ~caps) key dir) keys;
   Fun.protect
     ~finally:(fun () ->
       List.iter
-        (fun (k, v) ->
-          (Unix.putenv [@alert "-unsafe_multidomain"]) k (Option.value ~default:"" v))
+        (fun (k, v) -> (Ox_caps.Cap_unix.putenv ~caps) k (Option.value ~default:"" v))
         old;
-      remove dir)
+      (remove ~caps) dir)
     (fun () -> f dir)
 
-let with_memory ?(config = C.default.learning) f =
-  temp (fun _ ->
+let with_memory
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) ?(config = C.default.learning) f =
+  (temp ~caps) (fun _ ->
       Eio_main.run (fun _ ->
           Eio.Switch.run (fun sw ->
               let warnings = ref [] in
@@ -52,8 +65,15 @@ let pick t =
   | [ (p, origin) ] -> (p, origin)
   | _ -> Alcotest.fail "expected one memory candidate"
 
-let recording () =
-  with_memory (fun t ->
+let recording
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_memory ~caps) (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -71,8 +91,15 @@ let recording () =
         "site isolation" 0
         (List.length (L.candidates t ~site:"other.com" ~kind:None)))
 
-let replay () =
-  with_memory (fun t ->
+let replay
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_memory ~caps) (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -88,8 +115,15 @@ let replay () =
       L.await_pending t;
       ignore (pick t))
 
-let failed () =
-  with_memory ~config:{ C.default.learning with max_tries = 2 } (fun t ->
+let failed
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_memory ~caps) ~config:{ C.default.learning with max_tries = 2 } (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -106,8 +140,15 @@ let failed () =
         "retired after bound" 0
         (List.length (L.candidates t ~site:"example.com" ~kind:None)))
 
-let stale () =
-  with_memory (fun t ->
+let stale
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_memory ~caps) (fun t ->
       record t;
       L.await_pending t;
       let p, _ = pick t in
@@ -119,8 +160,15 @@ let stale () =
       | `Draft _ -> ()
       | _ -> Alcotest.fail "stale revision installed")
 
-let single_leg () =
-  with_memory (fun t ->
+let single_leg
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_memory ~caps) (fun t ->
       L.record_legs t ~site:"example.com" ~mission:"Find Ada"
         ~args:[ ("name", "Ada"); ("short", "a") ]
         ~legs:[ "Open Ada" ] ~expect:[ "Ada visible" ];
@@ -138,8 +186,15 @@ let single_leg () =
       | `Installed -> ()
       | _ -> Alcotest.fail "single leg installs")
 
-let installed_retirement () =
-  with_memory ~config:{ C.default.learning with retire_after = 2 } (fun t ->
+let installed_retirement
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_memory ~caps) ~config:{ C.default.learning with retire_after = 2 } (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -157,8 +212,15 @@ let installed_retirement () =
         "installed retired" 0
         (List.length (L.candidates t ~site:"example.com" ~kind:None)))
 
-let repair () =
-  with_memory (fun t ->
+let repair
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_memory ~caps) (fun t ->
       record t;
       L.await_pending t;
       let p, origin = pick t in
@@ -193,8 +255,16 @@ let repair () =
            (fun (_, origin) -> origin = `Installed)
            (L.candidates t ~site:"example.com" ~kind:None)))
 
-let off () =
-  with_memory ~config:{ C.default.learning with mode = C.Learning_mode.Off } (fun t ->
+let off
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_memory ~caps) ~config:{ C.default.learning with mode = C.Learning_mode.Off }
+    (fun t ->
       record t;
       L.await_pending t;
       Alcotest.(check int)
@@ -227,20 +297,21 @@ let config () =
   | Ok _ -> Alcotest.fail "withdrawn draft mode accepted"
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "pilot memory"
     [
       ( "seam",
         List.map
           (fun (name, f) -> Alcotest.test_case name `Quick f)
           [
-            ("record and deduplicate", recording);
-            ("verified replay", replay);
-            ("failure bound", failed);
-            ("stale revision", stale);
-            ("single leg and overlaps", single_leg);
-            ("installed retirement", installed_retirement);
-            ("repair resets failures", repair);
-            ("off", off);
+            ("record and deduplicate", recording ~caps);
+            ("verified replay", replay ~caps);
+            ("failure bound", failed ~caps);
+            ("stale revision", stale ~caps);
+            ("single leg and overlaps", single_leg ~caps);
+            ("installed retirement", installed_retirement ~caps);
+            ("repair resets failures", repair ~caps);
+            ("off", off ~caps);
             ("config", config);
           ] );
     ]

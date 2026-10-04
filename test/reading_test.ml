@@ -214,7 +214,7 @@ let indexed_text_and_disappearance () =
         String.starts_with ~prefix:"Boolean(document.body" expression
     | _ -> false)
 
-let dialog_and_shot () =
+let dialog_and_shot ~(caps : < Ox_caps.Cap.fs_write ; .. >) () =
   let sent = ref [] in
   let b =
     browser
@@ -258,22 +258,16 @@ let dialog_and_shot () =
        !sent);
   Alcotest.(check string)
     "absolute path" "invalid-request"
-    (code
-       (R.shot ~caps:(Ox_test.powerbox ()) b
-          P.{ tab = handle; path = "relative.png"; full_page = None }));
+    (code (R.shot ~caps b P.{ tab = handle; path = "relative.png"; full_page = None }));
   let path =
     Filename.concat
       (Filename.get_temp_dir_name ())
       ("leash-reading-" ^ string_of_int (Unix.getpid ()) ^ ".png")
   in
   Fun.protect
-    ~finally:(fun () -> if Sys.file_exists path then Sys.remove path)
+    ~finally:(fun () -> if Sys.file_exists path then (Ox_caps.Cap_sys.remove ~caps) path)
     (fun () ->
-      let shot =
-        ok
-          (R.shot ~caps:(Ox_test.powerbox ()) b
-             P.{ tab = handle; path; full_page = Some true })
-      in
+      let shot = ok (R.shot ~caps b P.{ tab = handle; path; full_page = Some true }) in
       Alcotest.(check int) "bytes" 8 shot.P.bytes;
       Alcotest.(check bool) "written" true (Sys.file_exists path))
 
@@ -312,17 +306,26 @@ let debug_ring () =
 
 (* The control seam: the service in-process, the fake browser under it, and the commands
    the CLI would send. [fake] is the scripted Chrome, driven directly by the tests below. *)
-let rig f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -334,14 +337,14 @@ let rig f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-reading-test-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -351,7 +354,7 @@ let rig f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -366,8 +369,16 @@ let rig f =
       in
       f ~env ~sw ~tabs ~fake)
 
-let protocol_smoke () =
-  rig (fun ~env:_ ~sw:_ ~tabs ~fake ->
+let protocol_smoke
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ->
       Fake.on_method fake "Runtime.evaluate" (fun request ->
           let params = get "params" request in
           let value =
@@ -416,7 +427,8 @@ let protocol_smoke () =
           ("leash-reading-protocol-" ^ string_of_int (Unix.getpid ()) ^ ".png")
       in
       Fun.protect
-        ~finally:(fun () -> if Sys.file_exists path then Sys.remove path)
+        ~finally:(fun () ->
+          if Sys.file_exists path then (Ox_caps.Cap_sys.remove ~caps) path)
         (fun () ->
           let screenshot = result (send (P.Shot { tab; path; full_page = Some true })) in
           Alcotest.(check int)
@@ -473,8 +485,16 @@ let tab_of json =
 
 (* hdoc-vqj7: caller syntax/runtime errors retain their engine message; promises
    are awaited. Exercise the real CDP reply boundary, not just a reading stub. *)
-let eval_diagnostics () =
-  rig (fun ~env:_ ~sw:_ ~tabs ~fake ->
+let eval_diagnostics
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ->
       Fake.on_method fake "Runtime.evaluate" (fun _ ->
           obj [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]);
       let send command =
@@ -533,8 +553,16 @@ let eval_diagnostics () =
    this tab's own death ends it with [tab-gone] (own-teh1). The fake withholds both
    [Runtime.callFunctionOn] replies, so nothing but those two events can settle the calls,
    and the test never moves its clock. *)
-let eval_settlement () =
-  rig (fun ~env:_ ~sw ~tabs ~fake ->
+let eval_settlement
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw ~tabs ~fake ->
       Fake.on_method fake "Runtime.evaluate" (fun _ ->
           obj [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]);
       Fake.withhold fake "Runtime.callFunctionOn" (fun _ -> true);
@@ -654,8 +682,16 @@ let eval_settlement () =
 
 (* daily-9ggi: a modal opening after a read starts must beat the deadline; a read
    already behind that modal must send no page request. Answering it remains possible. *)
-let modal_reads () =
-  rig (fun ~env:_ ~sw ~tabs ~fake ->
+let modal_reads
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw ~tabs ~fake ->
       let send command =
         let wire = P.encode_request { command } |> Yojson.Safe.to_string in
         match
@@ -761,8 +797,17 @@ let modal_reads () =
         "daily-9ggi blocked shot creates no file" false (Sys.file_exists path))
 
 (* tab-qmei: a background tab gets one frame without activating any tab or window. *)
-let screencast_shot () =
-  rig (fun ~env ~sw:_ ~tabs ~fake ->
+let screencast_shot
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (rig ~caps) (fun ~env ~sw:_ ~tabs ~fake ->
       let send command =
         match
           P.decode_reply
@@ -778,10 +823,13 @@ let screencast_shot () =
         | P.Failure e -> Alcotest.fail e.message
       in
       let tab = tab_of (success (send (P.New { url = None; label = None }))) in
-      let path = Filename.temp_file "leash-screencast-" ".png" in
-      Sys.remove path;
+      let path =
+        (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-screencast-" ".png"
+      in
+      (Ox_caps.Cap_sys.remove ~caps) path;
       Fun.protect
-        ~finally:(fun () -> if Sys.file_exists path then Sys.remove path)
+        ~finally:(fun () ->
+          if Sys.file_exists path then (Ox_caps.Cap_sys.remove ~caps) path)
         (fun () ->
           let shot full_page = send (P.Shot { tab; path; full_page = Some full_page }) in
           let methods before =
@@ -836,7 +884,7 @@ let screencast_shot () =
           Alcotest.(check bool)
             "ack first frame from correct page only" true
             (field "sessionId" (get "params" ack) = Some (`Int 42));
-          Sys.remove path;
+          (Ox_caps.Cap_sys.remove ~caps) path;
           let before = List.length (Fake.received fake) in
           ignore (success (shot true));
           Alcotest.(check (list string))
@@ -847,7 +895,7 @@ let screencast_shot () =
               "Emulation.setFocusEmulationEnabled";
             ]
             (relevant (methods before));
-          Sys.remove path;
+          (Ox_caps.Cap_sys.remove ~caps) path;
           Fake.on_method fake "Page.startScreencast" (fun _ ->
               Fake.emit ~session:"session-1" fake ~method_:"Page.screencastFrame"
                 ~params:(obj []);
@@ -932,23 +980,24 @@ let screencast_shot () =
             (relevant (methods before))))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "reading"
     [
       ( "operations",
         [
           Alcotest.test_case "eval limits" `Quick eval_bounds;
           Alcotest.test_case "hdoc-vqj7 eval diagnostics and promise" `Quick
-            eval_diagnostics;
+            (eval_diagnostics ~caps);
           Alcotest.test_case "text and AND wait" `Quick (fun () ->
               Ox_test.run (fun _ _ -> text_and_wait ()));
           Alcotest.test_case "indexed text and disappearance" `Quick (fun () ->
               Ox_test.run (fun _ _ -> indexed_text_and_disappearance ()));
-          Alcotest.test_case "dialog and PNG" `Quick dialog_and_shot;
+          Alcotest.test_case "dialog and PNG" `Quick (dialog_and_shot ~caps);
           Alcotest.test_case "debug ring" `Quick debug_ring;
-          Alcotest.test_case "control seam" `Quick protocol_smoke;
-          Alcotest.test_case "tab-gjo0 eval settlement" `Quick eval_settlement;
-          Alcotest.test_case "daily-9ggi modal reads" `Quick modal_reads;
+          Alcotest.test_case "control seam" `Quick (protocol_smoke ~caps);
+          Alcotest.test_case "tab-gjo0 eval settlement" `Quick (eval_settlement ~caps);
+          Alcotest.test_case "daily-9ggi modal reads" `Quick (modal_reads ~caps);
           Alcotest.test_case "tab-qmei no-focus screencast lifecycle" `Quick
-            screencast_shot;
+            (screencast_shot ~caps);
         ] );
     ]

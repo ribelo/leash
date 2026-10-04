@@ -9,7 +9,7 @@ let contains hay needle =
   let rec loop i = i + n <= h && (String.sub hay i n = needle || loop (i + 1)) in
   loop 0
 
-let render () =
+let render ~(caps : < Ox_caps.Cap.stdout ; .. >) () =
   let sample =
     "# Title\n\n\
      Intro.\n\n\
@@ -47,12 +47,13 @@ let render () =
       let col a = String.index a '6' in
       if col line <> String.index beta '6' then
         failf "table columns not aligned:\n%s\n%s" line beta);
-  print_endline "renderer: headings, lists, aligned table, verbatim fence, no ANSI"
+  (Ox_caps.Cap_stdlib.print_endline ~caps)
+    "renderer: headings, lists, aligned table, verbatim fence, no ANSI"
 
 let forbidden =
   [ "DSH_SESSION_ID"; "DSH"; "niri"; "/home/ribelo"; "~/.dotfiles"; "nixos-config" ]
 
-let portable () =
+let portable ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) () =
   List.iter
     (fun (path, contents) ->
       List.iter
@@ -83,7 +84,10 @@ let portable () =
   let errors = List.assoc "errors.md" Leash_cli_support.Leash_help_data.topics in
   if errors <> Leash.Protocol.Error_code.topic_markdown then
     failf "embedded errors.md drifted from Protocol.Error_code";
-  let skill = In_channel.with_open_bin "../skill/SKILL.md" In_channel.input_all in
+  let skill =
+    (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
+      "../skill/SKILL.md" In_channel.input_all
+  in
   let lines = String.split_on_char '\n' skill in
   let n = List.length lines - if List.hd (List.rev lines) = "" then 1 else 0 in
   if n >= 60 then failf "SKILL.md is %d lines" n;
@@ -95,7 +99,8 @@ let portable () =
          "agent tabs close after 30 idle minutes; human tabs are never closed unless an \
           agent takes one")
   then failf "SKILL.md lacks the tab rule";
-  print_endline "topics portable, errors live, skill under 60 lines"
+  (Ox_caps.Cap_stdlib.print_endline ~caps)
+    "topics portable, errors live, skill under 60 lines"
 
 (* hdoc-vqj7: the fresh-agent recovery/authoring answers must survive embedding. *)
 let fresh_agent_guidance () =
@@ -170,12 +175,13 @@ let fresh_agent_guidance () =
     Leash_cli_support.Leash_help_data.topics
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "help topics"
     [
       ( "hdoc",
         [
-          Alcotest.test_case "render" `Quick render;
-          Alcotest.test_case "portable" `Quick portable;
+          Alcotest.test_case "render" `Quick (render ~caps);
+          Alcotest.test_case "portable" `Quick (portable ~caps);
           Alcotest.test_case "hdoc-vqj7 fresh agent answers" `Quick fresh_agent_guidance;
         ] );
     ]

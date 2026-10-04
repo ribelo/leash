@@ -16,16 +16,15 @@
   unix
   cmdliner))
 
-; daily-fiwd: this executable runs only inside Dune, before the Door exists.
-
 (executable
  (name gen_skill_data)
- (modules gen_skill_data))
+ (modules gen_skill_data)
+ (libraries ox_caps ox_caps.door))
 
 (executable
  (name gen_error_topic)
  (modules gen_error_topic)
- (libraries leash))
+ (libraries leash ox_caps ox_caps.door))
 
 ; hdoc-8c12 hdoc-jh7u hdoc-ztwo: one action builds the embedded skill tree and the
 ; help topics. errors.md comes from Protocol.Error_code. Flat targets are what

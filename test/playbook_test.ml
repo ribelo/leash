@@ -9,47 +9,56 @@ let base =
 
 (* extr-plaz: a playbook is a directory. [rm_rf] removes one without following a symlink
    out of it. *)
-let rec rm_rf path =
+let rec rm_rf ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) path =
   match (Unix.lstat path).Unix.st_kind with
   | Unix.S_DIR ->
-      Array.iter (fun entry -> rm_rf (Filename.concat path entry)) (Sys.readdir path);
-      Unix.rmdir path
-  | _ -> Sys.remove path
+      Array.iter
+        (fun entry -> (rm_rf ~caps) (Filename.concat path entry))
+        ((Ox_caps.Cap_sys.readdir ~caps) path);
+      (Ox_caps.Cap_unix.rmdir ~caps) path
+  | _ -> (Ox_caps.Cap_sys.remove ~caps) path
   | exception Unix.Unix_error _ -> ()
 
-let temp_dir () =
-  let dir = Filename.temp_file "leash-playbook-" "" in
-  Sys.remove dir;
-  Unix.mkdir dir 0o700;
+let temp_dir ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
+  let dir = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-playbook-" "" in
+  (Ox_caps.Cap_sys.remove ~caps) dir;
+  (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
   dir
 
-let write path content =
-  let rec parents p =
+let write ~(caps : < Ox_caps.Cap.fs_write ; .. >) path content =
+  let rec parents ~(caps : < Ox_caps.Cap.fs_write ; .. >) p =
     if not (Sys.file_exists p) then (
-      parents (Filename.dirname p);
-      Unix.mkdir p 0o700)
+      (parents ~caps) (Filename.dirname p);
+      (Ox_caps.Cap_unix.mkdir ~caps) p 0o700)
   in
-  parents (Filename.dirname path);
-  let output = open_out_bin path in
+  (parents ~caps) (Filename.dirname path);
+  let output = (Ox_caps.Cap_stdlib.open_out_bin ~caps) path in
   output_string output content;
   close_out output
 
-let with_playbook ?(name = "playbook.json") ?(files = []) content f =
-  let root = temp_dir () in
+let with_playbook
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >)
+    ?(name = "playbook.json") ?(files = []) content f =
+  let root = (temp_dir ~caps) () in
   Fun.protect
-    ~finally:(fun () -> rm_rf root)
+    ~finally:(fun () -> (rm_rf ~caps) root)
     (fun () ->
       let dir = Filename.concat root "shop" in
-      Unix.mkdir dir 0o700;
-      write (Filename.concat dir name) content;
-      List.iter (fun (path, body) -> write (Filename.concat dir path) body) files;
+      (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
+      (write ~caps) (Filename.concat dir name) content;
+      List.iter (fun (path, body) -> (write ~caps) (Filename.concat dir path) body) files;
       f dir (Filename.concat dir name))
 
-let with_file _suffix content f = with_playbook content (fun _ file -> f file)
+let with_file
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >)
+    _suffix content f =
+  (with_playbook ~caps) content (fun _ file -> f file)
 
-let expect_error needle data =
-  with_playbook data (fun dir path ->
-      match B.load ~caps:(Ox_test.powerbox ()) dir with
+let expect_error
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) needle
+    data =
+  (with_playbook ~caps) data (fun dir path ->
+      match B.load ~caps dir with
       | Ok _ -> Alcotest.fail ("run-dbji accepted " ^ needle)
       | Error message ->
           Alcotest.(check bool)
@@ -82,28 +91,29 @@ let procedure ?(slug = "open") ?(expect = `List [ `String "the page is offer" ])
       ("expect", expect);
     ]
 
-let refusal () =
+let refusal
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   (* run-tcuz extr-plaz: JSON-only, including explicit YAML refusal, and a directory. *)
-  with_playbook ~name:"playbook.yaml" base (fun dir _ ->
-      match B.load ~caps:(Ox_test.powerbox ()) dir with
+  (with_playbook ~caps) ~name:"playbook.yaml" base (fun dir _ ->
+      match B.load ~caps dir with
       | Error e ->
           Alcotest.(check bool) "JSON format suggested" true (String.contains e 'J')
       | Ok _ -> Alcotest.fail "accepted YAML");
-  with_playbook base (fun _ file ->
-      match B.load ~caps:(Ox_test.powerbox ()) file with
+  (with_playbook ~caps) base (fun _ file ->
+      match B.load ~caps file with
       | Error e ->
           Alcotest.(check bool)
             "extr-plaz a single file is not a playbook" true
             (String.starts_with ~prefix:file e)
       | Ok _ -> Alcotest.fail "accepted a bare playbook.json file");
-  expect_error "non-empty list"
+  (expect_error ~caps) "non-empty list"
     (mutate "procedures"
        (`List [ procedure ~expect:(`List []) [ `Assoc [ ("goal", `String "Open") ] ] ]));
-  expect_error "unknown slug"
+  (expect_error ~caps) "unknown slug"
     (mutate "procedures" (`List [ procedure [ `Assoc [ ("use", `String "absent") ] ] ]));
-  expect_error "cycle"
+  (expect_error ~caps) "cycle"
     (mutate "procedures" (`List [ procedure [ `Assoc [ ("use", `String "open") ] ] ]));
-  expect_error "unknown page kind"
+  (expect_error ~caps) "unknown page kind"
     (mutate "procedures"
        (`List
           [
@@ -111,7 +121,7 @@ let refusal () =
               ~expect:(`List [ `String "the page is missing" ])
               [ `Assoc [ ("goal", `String "Open") ] ];
           ]));
-  expect_error "more than 200"
+  (expect_error ~caps) "more than 200"
     (mutate "procedures"
        (`List
           (List.init 201 (fun i ->
@@ -328,11 +338,11 @@ let retry () =
   Alcotest.(check bool) "second failure returned" false failed;
   Alcotest.(check int) "never a third run" 2 !executions
 
-let examples () =
+let examples ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   (* run-seqo run-fk99 *)
   List.iter
     (fun path ->
-      match B.load ~caps:(Ox_test.powerbox ()) path with
+      match B.load ~caps path with
       | Ok book -> Alcotest.(check bool) "resolved checkers" true (book.checks <> [])
       | Error error -> Alcotest.fail error)
     [
@@ -341,12 +351,10 @@ let examples () =
       "../examples/playbooks/automationexercise.com";
     ]
 
-let offscreen_offer () =
+let offscreen_offer ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   (* run-xqh8, L34: a tiny viewport hides the product detail link; a desktop
      viewport exposes it, so scroll only when View Product is not observed. *)
-  match
-    B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/automationexercise.com"
-  with
+  match B.load ~caps "../examples/playbooks/automationexercise.com" with
   | Error error -> Alcotest.fail error
   | Ok book -> (
       match
@@ -363,12 +371,10 @@ let offscreen_offer () =
              List.mem "absent" words && List.mem "scroll" words)
       | _ -> Alcotest.fail "open-offer must target the observed detail link")
 
-let cart_after_add () =
+let cart_after_add ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   (* run-xqh8, L34: after View Cart, the prior Added! marker can linger in
      rendered text. The confirmed /view_cart URL must outrank post-add. *)
-  match
-    B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/automationexercise.com"
-  with
+  match B.load ~caps "../examples/playbooks/automationexercise.com" with
   | Error error -> Alcotest.fail error
   | Ok book ->
       Alcotest.(check (option string))
@@ -398,9 +404,11 @@ let list_js = ("scripts/list.js", "return [{title: 'A', price: 1}];")
 let contains needle haystack =
   Str.string_match (Str.regexp (".*" ^ Str.quote needle)) haystack 0
 
-let expect_load_error ?(files = [ list_js ]) ~story needle json =
-  with_playbook ~files json (fun dir file ->
-      match B.load ~caps:(Ox_test.powerbox ()) dir with
+let expect_load_error
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >)
+    ?(files = [ list_js ]) ~story needle json =
+  (with_playbook ~caps) ~files json (fun dir file ->
+      match B.load ~caps dir with
       | Ok _ -> Alcotest.fail (story ^ " accepted: " ^ needle)
       | Error message ->
           Alcotest.(check bool)
@@ -411,7 +419,8 @@ let expect_load_error ?(files = [ list_js ]) ~story needle json =
             (story ^ " says why (" ^ needle ^ "): " ^ message)
             true (contains needle message))
 
-let directory_and_scripts () =
+let directory_and_scripts
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   (* extr-plaz: a script is a file relative to the playbook directory, or short inline
      source; both are read at load. *)
   let json =
@@ -421,8 +430,8 @@ let directory_and_scripts () =
            "count":{"source":"return {n: 1}","description":"Count the page.","returns":"count"}}|}
       ()
   in
-  with_playbook ~files:[ list_js ] json (fun dir file ->
-      match B.load ~caps:(Ox_test.powerbox ()) dir with
+  (with_playbook ~caps) ~files:[ list_js ] json (fun dir file ->
+      match B.load ~caps dir with
       | Error why -> Alcotest.fail ("extr-plaz " ^ why)
       | Ok book -> (
           Alcotest.(check string) "extr-plaz playbook.json is the file" file book.file;
@@ -443,7 +452,8 @@ let directory_and_scripts () =
                 "map-fmt01 inline script has no per-script bound" true (script.code <> "")
           | None -> Alcotest.fail "extr-plaz inline script missing"))
 
-let script_refusals () =
+let script_refusals
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   let story = "extr-plaz" in
   let json file =
     books
@@ -451,85 +461,88 @@ let script_refusals () =
         (Printf.sprintf {|{"list":{"file":%S,"returns":[{"title":"string"}]}}|} file)
       ()
   in
-  expect_load_error ~story "must not contain .." (json "../outside.js");
-  expect_load_error ~story "must not contain .." (json "scripts/../../outside.js");
-  expect_load_error ~story "must be relative" (json "/etc/hostname");
-  expect_load_error ~story "must be a .js file" (json "scripts/list.txt");
-  expect_load_error ~story "No such file" (json "scripts/absent.js");
-  expect_load_error ~story "not a regular file"
+  (expect_load_error ~caps) ~story "must not contain .." (json "../outside.js");
+  (expect_load_error ~caps) ~story "must not contain .." (json "scripts/../../outside.js");
+  (expect_load_error ~caps) ~story "must be relative" (json "/etc/hostname");
+  (expect_load_error ~caps) ~story "must be a .js file" (json "scripts/list.txt");
+  (expect_load_error ~caps) ~story "No such file" (json "scripts/absent.js");
+  (expect_load_error ~caps) ~story "not a regular file"
     ~files:[ list_js; ("scripts/sub.js/x", "") ]
     (json "scripts/sub.js");
-  expect_load_error ~story "exactly one of file or source"
+  (expect_load_error ~caps) ~story "exactly one of file or source"
     (books ~scripts:{|{"list":{"returns":[{"title":"string"}]}}|} ());
-  expect_load_error ~story "exactly one of file or source"
+  (expect_load_error ~caps) ~story "exactly one of file or source"
     (books
        ~scripts:
          {|{"list":{"file":"scripts/list.js","source":"return []","returns":[{"title":"string"}]}}|}
        ());
-  expect_load_error ~story "inline source is over"
+  (expect_load_error ~caps) ~story "inline source is over"
     (books
        ~scripts:
          (Printf.sprintf {|{"list":{"source":%S,"returns":[{"title":"string"}]}}|}
             (String.make 5000 'x'))
        ());
-  expect_load_error ~story "the script is empty"
+  (expect_load_error ~caps) ~story "the script is empty"
     (books ~scripts:{|{"list":{"source":"  ","returns":[{"title":"string"}]}}|} ());
-  expect_load_error ~story "name must be a lowercase slug"
+  (expect_load_error ~caps) ~story "name must be a lowercase slug"
     (books ~steps:{|{"goal":"x"}|}
        ~scripts:{|{"List":{"source":"return []","returns":[{"title":"string"}]}}|} ());
-  expect_load_error ~story "removed field max_bytes"
+  (expect_load_error ~caps) ~story "removed field max_bytes"
     (books
        ~scripts:
          {|{"list":{"source":"return []","returns":[{"title":"string"}],"max_bytes":0}}|}
        ());
   (* extr-zdst: a malformed shape refuses the playbook. *)
-  expect_load_error ~story:"extr-zdst" "unknown type"
+  (expect_load_error ~caps) ~story:"extr-zdst" "unknown type"
     (books
        ~scripts:
          {|{"list":{"source":"/** returns: [{\"title\":\"text\"}] */\nreturn []","description":"List the page."}}|}
        ());
-  expect_load_error ~story:"extr-zdst" "record or a list of records"
+  (expect_load_error ~caps) ~story:"extr-zdst" "record or a list of records"
     (books
        ~scripts:
          {|{"list":{"source":"/** returns: [\"string\"] */\nreturn []","description":"List the page."}}|}
        ());
-  expect_load_error ~story:"extr-zdst" "record or a list of records"
+  (expect_load_error ~caps) ~story:"extr-zdst" "record or a list of records"
     (books
        ~scripts:
          {|{"list":{"source":"/** returns: [\"string\"] */\nreturn []","description":"List the page."}}|}
        ());
   (* A step naming a script the playbook does not have. *)
-  expect_load_error ~story:"extr-8o1h" "unknown script"
+  (expect_load_error ~caps) ~story:"extr-8o1h" "unknown script"
     (books ~steps:{|{"script":"absent"}|} ());
-  expect_load_error ~story:"extr-8o1h" "args must be an object of strings"
+  (expect_load_error ~caps) ~story:"extr-8o1h" "args must be an object of strings"
     (books ~steps:{|{"script":"list","args":{"page":1}}|} ());
   (* hdoc-vqj7: the exclusivity refusal must name the navigate variant too. *)
-  expect_load_error ~story:"extr-8o1h" "exactly one of goal, use or script"
+  (expect_load_error ~caps) ~story:"extr-8o1h" "exactly one of goal, use or script"
     (books ~steps:{|{"script":"list","goal":"x"}|} ())
 
-let symlinks () =
+let symlinks
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   (* extr-plaz: a symlink is resolved, and refused when it leaves the playbook directory;
      one that stays inside it is fine. *)
-  let root = temp_dir () in
+  let root = (temp_dir ~caps) () in
   Fun.protect
-    ~finally:(fun () -> rm_rf root)
+    ~finally:(fun () -> (rm_rf ~caps) root)
     (fun () ->
       let dir = Filename.concat root "shop" in
-      write (Filename.concat root "outside.js") "return [];";
-      write
+      (write ~caps) (Filename.concat root "outside.js") "return [];";
+      (write ~caps)
         (Filename.concat dir "playbook.json")
         (books
            ~scripts:
              {|{"list":{"file":"scripts/link.js","description":"List the page.","returns":"item"}}|}
            ());
-      write (Filename.concat dir "scripts/list.js") "return [];";
-      Unix.symlink "list.js" (Filename.concat dir "scripts/link.js");
-      (match B.load ~caps:(Ox_test.powerbox ()) dir with
+      (write ~caps) (Filename.concat dir "scripts/list.js") "return [];";
+      (Ox_caps.Cap_unix.symlink ~caps) "list.js" (Filename.concat dir "scripts/link.js");
+      (match B.load ~caps dir with
       | Ok _ -> ()
       | Error why -> Alcotest.fail ("extr-plaz a link inside the directory: " ^ why));
-      Sys.remove (Filename.concat dir "scripts/link.js");
-      Unix.symlink "../../outside.js" (Filename.concat dir "scripts/link.js");
-      (match B.load ~caps:(Ox_test.powerbox ()) dir with
+      (Ox_caps.Cap_sys.remove ~caps) (Filename.concat dir "scripts/link.js");
+      (Ox_caps.Cap_unix.symlink ~caps)
+        "../../outside.js"
+        (Filename.concat dir "scripts/link.js");
+      (match B.load ~caps dir with
       | Ok _ -> Alcotest.fail "extr-plaz a symlink out of the directory was loaded"
       | Error why ->
           Alcotest.(check bool)
@@ -537,11 +550,11 @@ let symlinks () =
             true
             (contains "outside the playbook directory" why));
       (* A directory link too: scripts -> an outside directory. *)
-      Sys.remove (Filename.concat dir "scripts/link.js");
-      rm_rf (Filename.concat dir "scripts");
-      write (Filename.concat root "elsewhere/link.js") "return [];";
-      Unix.symlink "../elsewhere" (Filename.concat dir "scripts");
-      match B.load ~caps:(Ox_test.powerbox ()) dir with
+      (Ox_caps.Cap_sys.remove ~caps) (Filename.concat dir "scripts/link.js");
+      (rm_rf ~caps) (Filename.concat dir "scripts");
+      (write ~caps) (Filename.concat root "elsewhere/link.js") "return [];";
+      (Ox_caps.Cap_unix.symlink ~caps) "../elsewhere" (Filename.concat dir "scripts");
+      match B.load ~caps dir with
       | Ok _ ->
           Alcotest.fail "extr-plaz a linked directory out of the directory was loaded"
       | Error why ->
@@ -561,29 +574,36 @@ let no_directory_no_file_script () =
         ("extr-plaz refused: " ^ why) true
         (contains "needs a playbook directory" why)
 
-let layout () =
+let layout
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
   (* extr-plaz: <XDG>/leash/playbooks/<name>/playbook.json; the old flat file is refused
      rather than silently ignored. *)
-  let root = temp_dir () in
-  let previous = Sys.getenv_opt "XDG_CONFIG_HOME" in
-  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_CONFIG_HOME" root;
+  let root = (temp_dir ~caps) () in
+  let previous = (Ox_caps.Cap_sys.getenv_opt ~caps) "XDG_CONFIG_HOME" in
+  (Ox_caps.Cap_unix.putenv ~caps) "XDG_CONFIG_HOME" root;
   Fun.protect
     ~finally:(fun () ->
-      (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_CONFIG_HOME"
+      (Ox_caps.Cap_unix.putenv ~caps)
+        "XDG_CONFIG_HOME"
         (Option.value ~default:"" previous);
-      rm_rf root)
+      (rm_rf ~caps) root)
     (fun () ->
       let playbooks = Filename.concat root "leash/playbooks" in
-      write (Filename.concat playbooks "shop/playbook.json") (books ());
-      write (Filename.concat playbooks "shop/scripts/list.js") "return [];";
-      write (Filename.concat playbooks "shop/notes.txt") "not a playbook";
-      (match B.list ~caps:(Ox_test.powerbox ()) () with
+      (write ~caps) (Filename.concat playbooks "shop/playbook.json") (books ());
+      (write ~caps) (Filename.concat playbooks "shop/scripts/list.js") "return [];";
+      (write ~caps) (Filename.concat playbooks "shop/notes.txt") "not a playbook";
+      (match B.list ~caps () with
       | Ok [ book ] ->
           Alcotest.(check string)
             "extr-plaz listed by directory" "books.example" book.playbook.site
       | Ok _ -> Alcotest.fail "extr-plaz the directory listed a wrong count"
       | Error why -> Alcotest.fail why);
-      (match B.show ~caps:(Ox_test.powerbox ()) "shop" with
+      (match B.show ~caps "shop" with
       | Ok book ->
           Alcotest.(check int)
             "extr-lslp show carries the scripts" 1 (List.length book.scripts);
@@ -597,11 +617,11 @@ let layout () =
             "extr-lslp both name the declared shape" true
             (contains "price" (Yojson.Safe.to_string (B.inspect book)))
       | Error why -> Alcotest.fail why);
-      (match B.show ~caps:(Ox_test.powerbox ()) "../shop" with
+      (match B.show ~caps "../shop" with
       | Ok _ -> Alcotest.fail "extr-plaz show accepted a path"
       | Error _ -> ());
-      write (Filename.concat playbooks "old.json") (books ());
-      match B.list ~caps:(Ox_test.powerbox ()) () with
+      (write ~caps) (Filename.concat playbooks "old.json") (books ());
+      match B.list ~caps () with
       | Ok _ -> Alcotest.fail "extr-plaz a flat playbook file was ignored"
       | Error why ->
           Alcotest.(check bool)
@@ -609,19 +629,25 @@ let layout () =
             true
             (contains "playbooks are directories" why))
 
-let proposals_carry_no_scripts () =
+let proposals_carry_no_scripts
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
   (* map-op08 amends extr-k40c: compiler scripts cannot bypass successful replay. *)
-  let root = temp_dir () in
+  let root = (temp_dir ~caps) () in
   Fun.protect
-    ~finally:(fun () -> rm_rf root)
+    ~finally:(fun () -> (rm_rf ~caps) root)
     (fun () ->
       let path = Filename.concat root "proposal.json" in
-      write path
+      (write ~caps) path
         (books
            ~scripts:
              {|{"list":{"source":"return []","description":"List the page.","returns":"item"}}|}
            ());
-      match B.accept ~caps:(Ox_test.powerbox ()) path with
+      match B.accept ~caps path with
       | Ok _ -> Alcotest.fail "extr-k40c a proposal with scripts was merged"
       | Error why ->
           Alcotest.(check bool)
@@ -730,7 +756,7 @@ let script_examples () =
 
 (* pbk-abr3 extr-uhnc: the shipped example is a goal, a pinned collector and a next-page
    goal, not a fetch crawl. The pager check still terminates the repeat. *)
-let books_toscrape_example () =
+let books_toscrape_example ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
   let dir = "../examples/playbooks/books.toscrape.com" in
   Alcotest.(check bool)
     "pbk-8n2l repeat.json is gone" false
@@ -738,7 +764,7 @@ let books_toscrape_example () =
   Alcotest.(check bool)
     "pbk-abr3 the fetch crawl is gone" false
     (Sys.file_exists (Filename.concat dir "scripts/crawl-category.js"));
-  match B.load ~caps:(Ox_test.powerbox ()) "../examples/playbooks/books.toscrape.com" with
+  match B.load ~caps "../examples/playbooks/books.toscrape.com" with
   | Error why -> Alcotest.fail ("extr-tkco " ^ why)
   | Ok book ->
       let procedure slug =
@@ -805,12 +831,11 @@ let books_toscrape_example () =
 (* extr-k40c: a procedure from outside a file — a planner's answer — can name a script the
    playbook already has, and cannot bring one: no step carries source or a file, and a
    script that is not in the playbook is refused before anything runs. *)
-let planner_procedures () =
-  with_playbook ~files:[ list_js ] (books ()) (fun dir _ ->
+let planner_procedures
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
+  (with_playbook ~caps) ~files:[ list_js ] (books ()) (fun dir _ ->
       let book =
-        match B.load ~caps:(Ox_test.powerbox ()) dir with
-        | Ok b -> b
-        | Error why -> Alcotest.fail why
+        match B.load ~caps dir with Ok b -> b | Error why -> Alcotest.fail why
       in
       let procedure json =
         match B.procedure_of_yojson (Yojson.Safe.from_string json) with
@@ -849,7 +874,8 @@ let planner_procedures () =
         ])
 
 (* hdoc-vqj7: pinned script/navigate steps do not fill declaration sources. *)
-let pinned_script_arguments () =
+let pinned_script_arguments
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   let ok = function Ok loaded -> loaded | Error why -> Alcotest.fail why in
   let data declaration step =
     Printf.sprintf
@@ -864,20 +890,21 @@ let pinned_script_arguments () =
   in
   List.iter
     (fun step ->
-      expect_error "must pass declared argument product in step args"
+      (expect_error ~caps) "must pass declared argument product in step args"
         (data {|{"from":"mission"}|} step);
-      expect_error "must pass declared argument product in step args"
+      (expect_error ~caps) "must pass declared argument product in step args"
         (data {|{"const":"https://example.com/cart"}|} step);
       ignore
         (ok
            (B.of_json ~file:"hdoc-vqj7.json"
               (Yojson.Safe.from_string (data {|{"from":"mission","optional":true}|} step)))))
     [ {|{"script":"product_url"}|} ];
-  expect_error "removed field navigate"
+  (expect_error ~caps) "removed field navigate"
     (data {|{"from":"mission"}|} {|{"navigate":{"script":"product_url"}}|})
 
 (* extr-uhnc: control scripts are typed steps/checks, not collected records. *)
-let control_scripts () =
+let control_scripts
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   let data =
     {|{"site":"example.com","entry":"https://example.com/","description":"Catalogue",
     "pages":[],"scripts":{"next":{"source":"/** returns: {\"url\":\"url\"} */\nreturn {url: location.href};","description":"The next page URL."},
@@ -887,8 +914,8 @@ let control_scripts () =
     {"slug":"next-page","description":"Next page","steps":[{"script":"next"}],"expect":["no dialog is open"]},
     {"slug":"open","description":"Open the catalogue.","steps":[{"goal":"Open the catalogue."},{"use":"collect"}],"expect":["no dialog is open"]}]}|}
   in
-  with_playbook data (fun dir _ ->
-      match B.load ~caps:(Ox_test.powerbox ()) dir with
+  (with_playbook ~caps) data (fun dir _ ->
+      match B.load ~caps dir with
       | Error reason -> Alcotest.fail reason
       | Ok book ->
           let proc = List.hd book.playbook.procedures in
@@ -903,55 +930,56 @@ let control_scripts () =
             | Some { until = B.Script_check "last"; _ } -> true
             | _ -> false));
   let replace old next = Str.global_replace (Str.regexp_string old) next data in
-  expect_error "repeat until script must be declared"
+  (expect_error ~caps) "repeat until script must be declared"
     (replace {|"script":"last"|} {|"script":"missing"|});
-  expect_error "removed field navigate"
+  (expect_error ~caps) "removed field navigate"
     (replace {|{"script":"next"}|} {|{"navigate":{"script":"next"}}|})
 
-let format_refusals () =
+let format_refusals
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   let goal = {|{"goal":"Open the list."}|} in
   let described =
     {|{"list":{"source":"return []","description":"List the page.","returns":"item"}}|}
   in
-  expect_load_error ~story:"pbk-85m1" B.script_only_message
+  (expect_load_error ~caps) ~story:"pbk-85m1" B.script_only_message
     (books ~steps:{|{"script":"list"}|} ());
-  expect_load_error ~story:"pbk-i0zl" "not an inline shape on the declaration"
+  (expect_load_error ~caps) ~story:"pbk-i0zl" "not an inline shape on the declaration"
     (books ~steps:goal
        ~scripts:
          {|{"list":{"source":"return []","description":"List the page.","returns":[{"title":"string"}]}}|}
        ());
-  expect_load_error ~story:"pbk-lww9" "args.secret is read but not declared"
+  (expect_load_error ~caps) ~story:"pbk-lww9" "args.secret is read but not declared"
     (books ~steps:goal
        ~scripts:
          {|{"list":{"source":"return args.secret","description":"List the page.","returns":"item"}}|}
        ());
-  with_playbook
+  (with_playbook ~caps)
     {|{"site":"books.example","entry":"https://books.example/","description":"Books",
  "pages":[{"name":"list","url_pattern":"https://books.example/*"}],
  "procedures":[{"slug":"collect","description":"Collect","args":["page"],"steps":[{"goal":"Open."}],"expect":["the page is list"]}]}|}
     (fun _ file ->
-      match B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname file) with
+      match B.load ~caps (Filename.dirname file) with
       | Ok _ -> Alcotest.fail "pbk-i0zl accepted a list of argument names"
       | Error message ->
           Alcotest.(check bool)
             "pbk-i0zl names the new arg form" true
             (contains "not a list of names" message));
-  with_playbook
+  (with_playbook ~caps)
     ~files:[ ("repeat.json", "{}"); list_js ]
     (books ~steps:goal ~scripts:described ())
     (fun dir _ ->
-      match B.load ~caps:(Ox_test.powerbox ()) dir with
+      match B.load ~caps dir with
       | Ok _ -> Alcotest.fail "pbk-8n2l accepted stray JSON"
       | Error message ->
           Alcotest.(check bool)
             "pbk-8n2l names the stray file" true
             (contains "repeat.json" message && contains "stray JSON" message));
-  with_playbook
+  (with_playbook ~caps)
     {|{"site":"books.example","entry":"https://books.example/","description":"Books","returns":{"n":"number"},
  "pages":[{"name":"list","url_pattern":"https://books.example/*"}],
  "procedures":[{"slug":"collect","description":"Collect","steps":[{"goal":"Open."}],"expect":["the page is list"]}]}|}
     (fun _ file ->
-      match B.load ~caps:(Ox_test.powerbox ()) (Filename.dirname file) with
+      match B.load ~caps (Filename.dirname file) with
       | Ok _ -> Alcotest.fail "pbk-i0zl accepted top-level returns"
       | Error message ->
           Alcotest.(check bool)
@@ -959,7 +987,8 @@ let format_refusals () =
             (contains "not at the playbook top level" message))
 
 (* map-fmt01: old files are refused by the field they still carry. *)
-let removed_fields () =
+let removed_fields
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   let base = books () in
   let swap old next = Str.global_replace (Str.regexp_string old) next base in
   let cases =
@@ -999,7 +1028,7 @@ let removed_fields () =
   in
   List.iter
     (fun (field, needle, json) ->
-      expect_load_error ~story:("map-fmt01 " ^ field) needle json)
+      (expect_load_error ~caps) ~story:("map-fmt01 " ^ field) needle json)
     cases
 
 let page text =
@@ -1059,8 +1088,9 @@ let judgment_loading () =
 let learned_timeout () =
   Alcotest.(check int) "map-fmt01 one expect wait" 5 B.expect_timeout_s
 
-let provenance_sidecar () =
-  with_playbook ~files:[ list_js ] (books ()) (fun dir file ->
+let provenance_sidecar
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
+  (with_playbook ~caps) ~files:[ list_js ] (books ()) (fun dir file ->
       let prov =
         B.
           {
@@ -1082,16 +1112,18 @@ let provenance_sidecar () =
             model_cost = None;
           }
       in
-      (match B.write_provenance ~caps:(Ox_test.powerbox ()) ~dir ~slug:"collect" prov with
+      (match B.write_provenance ~caps ~dir ~slug:"collect" prov with
       | Ok () -> ()
       | Error why -> Alcotest.fail why);
-      (match B.load ~caps:(Ox_test.powerbox ()) dir with
+      (match B.load ~caps dir with
       | Error why -> Alcotest.fail why
       | Ok book ->
           Alcotest.(check string)
             "map-fmt02 runner loads the book" "collect"
             (List.hd book.playbook.procedures).slug);
-      let body = In_channel.with_open_text file In_channel.input_all in
+      let body =
+        (Ox_caps.Cap_stdlib.In_channel.with_open_text ~caps) file In_channel.input_all
+      in
       Alcotest.(check bool)
         "map-fmt02 provenance is not a playbook field" false
         (try
@@ -1099,8 +1131,7 @@ let provenance_sidecar () =
            true
          with Not_found -> false);
       match
-        B.read_provenance ~caps:(Ox_test.powerbox ())
-          (Filename.concat dir (B.provenance_filename "collect"))
+        B.read_provenance ~caps (Filename.concat dir (B.provenance_filename "collect"))
       with
       | Ok (Some read) ->
           Alcotest.(check string) "map-fmt02 sidecar gate" "replay" read.gate
@@ -1108,46 +1139,51 @@ let provenance_sidecar () =
       | Error why -> Alcotest.fail why)
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "playbooks"
     [
       ( "L29",
         [
-          Alcotest.test_case "run-tcuz run-dbji refusals" `Quick refusal;
+          Alcotest.test_case "run-tcuz run-dbji refusals" `Quick (refusal ~caps);
           Alcotest.test_case "run-r1e9 run-tny5 grammar" `Quick grammar;
           Alcotest.test_case "run-xqh8 consent cleared" `Quick consent_cleared;
           Alcotest.test_case "run-l06s wait" `Quick await;
           Alcotest.test_case "map-bjon judgment waits out loading" `Quick judgment_loading;
           Alcotest.test_case "map-bjon learned expect timeout" `Quick learned_timeout;
           Alcotest.test_case "run-k8bx retry once" `Quick retry;
-          Alcotest.test_case "run-seqo examples" `Quick examples;
-          Alcotest.test_case "run-xqh8 offscreen offer" `Quick offscreen_offer;
-          Alcotest.test_case "run-xqh8 cart outranks add" `Quick cart_after_add;
+          Alcotest.test_case "run-seqo examples" `Quick (examples ~caps);
+          Alcotest.test_case "run-xqh8 offscreen offer" `Quick (offscreen_offer ~caps);
+          Alcotest.test_case "run-xqh8 cart outranks add" `Quick (cart_after_add ~caps);
           Alcotest.test_case "ncaps-mygj Example title is not body text" `Quick
             example_title_is_not_body;
         ] );
       ( "L37",
         [
           Alcotest.test_case "extr-plaz extr-8o1h directory and scripts" `Quick
-            directory_and_scripts;
+            (directory_and_scripts ~caps);
           Alcotest.test_case "extr-plaz extr-zdst extr-8o1h refusals" `Quick
-            script_refusals;
-          Alcotest.test_case "extr-plaz symlinks" `Quick symlinks;
+            (script_refusals ~caps);
+          Alcotest.test_case "extr-plaz symlinks" `Quick (symlinks ~caps);
           Alcotest.test_case "extr-plaz extr-k40c no file without a directory" `Quick
             no_directory_no_file_script;
-          Alcotest.test_case "extr-plaz extr-lslp layout, show and check" `Quick layout;
+          Alcotest.test_case "extr-plaz extr-lslp layout, show and check" `Quick
+            (layout ~caps);
           Alcotest.test_case "extr-k40c proposals carry no scripts" `Quick
-            proposals_carry_no_scripts;
-          Alcotest.test_case "extr-k40c planner procedures" `Quick planner_procedures;
+            (proposals_carry_no_scripts ~caps);
+          Alcotest.test_case "extr-k40c planner procedures" `Quick
+            (planner_procedures ~caps);
           Alcotest.test_case "extr-zdst extr-8o1h shapes" `Quick shapes;
           Alcotest.test_case "extr-8o1h many records" `Quick script_examples;
           Alcotest.test_case "hdoc-vqj7 explicit pinned arguments" `Quick
-            pinned_script_arguments;
-          Alcotest.test_case "extr-uhnc typed control scripts" `Quick control_scripts;
+            (pinned_script_arguments ~caps);
+          Alcotest.test_case "extr-uhnc typed control scripts" `Quick
+            (control_scripts ~caps);
           Alcotest.test_case "extr-tkco books.toscrape.com example" `Quick
-            books_toscrape_example;
+            (books_toscrape_example ~caps);
           Alcotest.test_case "pbk-85m1 pbk-lww9 pbk-8n2l pbk-i0zl format refusals" `Quick
-            format_refusals;
-          Alcotest.test_case "map-fmt01 removed fields" `Quick removed_fields;
-          Alcotest.test_case "map-fmt02 provenance sidecar" `Quick provenance_sidecar;
+            (format_refusals ~caps);
+          Alcotest.test_case "map-fmt01 removed fields" `Quick (removed_fields ~caps);
+          Alcotest.test_case "map-fmt02 provenance sidecar" `Quick
+            (provenance_sidecar ~caps);
         ] );
     ]

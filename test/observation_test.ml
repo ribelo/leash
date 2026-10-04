@@ -93,7 +93,15 @@ let scrolled =
   payload ~text:"Visible title 12" ~truncated:true ~omitted:3 ~y:0 ~height:2000
     ~viewport:400
 
-let rig f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) f =
   Eio_main.run (fun env ->
       Eio.Time.with_timeout_exn env#clock 5. (fun () ->
           Eio.Switch.run (fun sw ->
@@ -102,13 +110,15 @@ let rig f =
                   [ Block_until_signal; Block_until_signal; Block_until_signal ]
               in
               let current = ref None in
-              let launch ~sw ~clock ~mgr:_ config =
+              let launch
+                  ~(caps :
+                     < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+                  ~sw ~clock ~mgr:_ config =
                 let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
                 current := Some fake;
                 match
-                  Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-                    ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Leash.Chrome.argv config)
-                    ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+                  Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+                    ~argv:(Leash.Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
                 with
                 | Error e -> Error e
                 | Ok child ->
@@ -121,7 +131,7 @@ let rig f =
                   ()
               in
               let chrome =
-                Leash.Chrome.create ~sw ~launch
+                Leash.Chrome.create ~sw ~launch:(launch ~caps)
                   (Leash.Chrome.make ~binary:"/bin/sh"
                      ~profile_dir:"/tmp/leash-observation-profile" ~workspace:"test"
                      ~headless:true ())
@@ -129,7 +139,7 @@ let rig f =
                     Leash.Chrome.clock = env#clock;
                     mgr = env#process_mgr;
                     logger;
-                    caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+                    caps :> Leash.Chrome.caps;
                   }
               in
               let tabs =
@@ -139,7 +149,7 @@ let rig f =
                     clock = env#clock;
                     logger;
                     desktop = Leash.Desktop.disabled;
-                    caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+                    caps :> Leash.Tabs.caps;
                   }
               in
               let rec ready n =
@@ -238,8 +248,16 @@ let vocabulary () =
         "fly-4lmg a scroll change moves the marker" true (a.marker <> b.marker)
   | _ -> Alcotest.fail "payloads did not parse"
 
-let bounded_page () =
-  rig (fun _ _ tabs fake ->
+let bounded_page
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated scrolled);
       match drive tabs [ decision "done" ] with
@@ -273,8 +291,16 @@ let bounded_page () =
             "fly-9363 coverage vocabulary" "viewport+truncated+omitted+below"
             (string_field "coverage" bounds))
 
-let inconsistent_read_retries () =
-  rig (fun _ _ tabs fake ->
+let inconsistent_read_retries
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let reads = ref 0 in
       script fake (fun () ->
@@ -292,8 +318,16 @@ let inconsistent_read_retries () =
             "fly-4mio not more than ten acquisitions" true
             (List.length (operator_reads fake) <= 20))
 
-let stale_click_is_not_dispatched () =
-  rig (fun _ _ tabs fake ->
+let stale_click_is_not_dispatched
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let reads = ref 0 in
       script fake (fun () ->
@@ -317,8 +351,16 @@ let stale_click_is_not_dispatched () =
 (* Ox_test.run supplies a manual clock: without advancing it, WAIT and the
    observation retry sleep never finish. This CDP rig uses the backend clock and
    a five-second enclosing deadline, so a missing reply fails rather than hangs. *)
-let scroll_and_wait () =
-  rig (fun env _ tabs fake ->
+let scroll_and_wait
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env _ tabs fake ->
       let fake = fake () in
       let y = ref 0 in
       script fake (fun () ->
@@ -368,8 +410,16 @@ let scroll_and_wait () =
 
 (* pilot-x1f3: a wheel the renderer never acks (a headed window short of frames) does not
    hold the scroll for the 30 s call deadline (Tauron U2, builds H, I and K). *)
-let unacked_wheel () =
-  rig (fun env _ tabs fake ->
+let unacked_wheel
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env _ tabs fake ->
       let fake = fake () in
       script fake (fun () ->
           evaluated
@@ -387,8 +437,16 @@ let unacked_wheel () =
             "pilot-x1f3 bounded well under the call deadline" true
             (Eio.Time.now env#clock -. started < 5.))
 
-let retry_exhaustion () =
-  rig (fun env _ tabs fake ->
+let retry_exhaustion
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated `Null);
       let started = Eio.Time.now env#clock in
@@ -413,8 +471,16 @@ let unicode_bounds () =
       Alcotest.(check bool) "fly-crcc cut is explicit" true page.coverage.text_truncated
   | _ -> Alcotest.fail "invalid Unicode observation"
 
-let invalid_observation () =
-  rig (fun _ _ tabs fake ->
+let invalid_observation
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated guard_value);
       (match drive tabs [] with
@@ -427,8 +493,16 @@ let invalid_observation () =
         "fly-crcc invalid observation read once" 1
         (List.length (operator_reads fake)))
 
-let unsettled_snapshot () =
-  rig (fun _ _ tabs fake ->
+let unsettled_snapshot
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let count = ref 0 in
       Fake.on_method fake "Runtime.evaluate" (fun request ->
@@ -450,8 +524,16 @@ let unsettled_snapshot () =
            |> List.filter (fun request ->
                assoc "method" request = Some (`String "Accessibility.getFullAXTree")))))
 
-let form_guard_changed () =
-  rig (fun _ _ tabs fake ->
+let form_guard_changed
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let reads = ref 0 in
       script fake (fun () ->
@@ -475,8 +557,16 @@ let form_guard_changed () =
           Alcotest.(check int)
             "fly-4lmg refused click is not executed" 1 (List.length result.steps))
 
-let settle_timeout_retains_input () =
-  rig (fun _ _ tabs fake ->
+let settle_timeout_retains_input
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let mutated = ref false in
       script fake (fun () -> evaluated (if !mutated then `Null else scrolled));
@@ -495,8 +585,16 @@ let settle_timeout_retains_input () =
             "fly-4mio acknowledged input survives failed observation" 1
             (List.length result.steps))
 
-let covered_edit () =
-  rig (fun _ _ tabs fake ->
+let covered_edit
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated stable);
       let ax =
@@ -570,26 +668,33 @@ let unsupported_flags () =
   | _ -> Alcotest.fail "invalid unsupported-state observation"
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "observation"
     [
       ( "vocabulary",
         [ Alcotest.test_case "fly-9363 fly-2pn7 coverage words" `Quick vocabulary ] );
       ( "cdp",
         [
-          Alcotest.test_case "fly-iodm fly-crcc fly-9363 bounded page" `Quick bounded_page;
+          Alcotest.test_case "fly-iodm fly-crcc fly-9363 bounded page" `Quick
+            (bounded_page ~caps);
           Alcotest.test_case "fly-crcc fly-4mio inconsistent read" `Quick
-            inconsistent_read_retries;
-          Alcotest.test_case "fly-4lmg stale click" `Quick stale_click_is_not_dispatched;
-          Alcotest.test_case "fly-2pn7 scroll and wait" `Quick scroll_and_wait;
-          Alcotest.test_case "pilot-x1f3 unacked wheel" `Quick unacked_wheel;
-          Alcotest.test_case "fly-4mio bounded retry exhaustion" `Quick retry_exhaustion;
+            (inconsistent_read_retries ~caps);
+          Alcotest.test_case "fly-4lmg stale click" `Quick
+            (stale_click_is_not_dispatched ~caps);
+          Alcotest.test_case "fly-2pn7 scroll and wait" `Quick (scroll_and_wait ~caps);
+          Alcotest.test_case "pilot-x1f3 unacked wheel" `Quick (unacked_wheel ~caps);
+          Alcotest.test_case "fly-4mio bounded retry exhaustion" `Quick
+            (retry_exhaustion ~caps);
           Alcotest.test_case "fly-iodm Unicode bounds" `Quick unicode_bounds;
           Alcotest.test_case "fly-8fgl unsupported flags" `Quick unsupported_flags;
-          Alcotest.test_case "fly-4lmg covered edit" `Quick covered_edit;
-          Alcotest.test_case "fly-crcc invalid observation" `Quick invalid_observation;
-          Alcotest.test_case "fly-crcc unsettled snapshot" `Quick unsettled_snapshot;
-          Alcotest.test_case "fly-4lmg offscreen form guard" `Quick form_guard_changed;
+          Alcotest.test_case "fly-4lmg covered edit" `Quick (covered_edit ~caps);
+          Alcotest.test_case "fly-crcc invalid observation" `Quick
+            (invalid_observation ~caps);
+          Alcotest.test_case "fly-crcc unsettled snapshot" `Quick
+            (unsettled_snapshot ~caps);
+          Alcotest.test_case "fly-4lmg offscreen form guard" `Quick
+            (form_guard_changed ~caps);
           Alcotest.test_case "fly-4mio settle timeout retains input" `Quick
-            settle_timeout_retains_input;
+            (settle_timeout_retains_input ~caps);
         ] );
     ]

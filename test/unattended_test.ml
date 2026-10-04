@@ -38,7 +38,15 @@ let decision name =
       targets = [];
     }
 
-let rig ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
     ?(notify = fun _ -> Ok ()) ?notification f =
   Eio_main.run (fun env ->
       Eio.Time.with_timeout_exn env#clock 10. (fun () ->
@@ -48,11 +56,14 @@ let rig ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
                   (Ox_test.Process.Block_until_signal :: Option.to_list notification)
               in
               let current = ref None in
-              let launch ~sw ~clock ~mgr:_ config =
+              let launch
+                  ~(caps :
+                     < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+                  ~sw ~clock ~mgr:_ config =
                 let fake, client = Fake.create ~sw () in
                 current := Some fake;
                 match
-                  Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
+                  Ox_process.Child.spawn ~caps ~sw ~clock
                     ~mgr:(Ox_test.Process.mgr process) ~argv:(Chrome.argv config)
                     ~grace:(Ox.Duration.ms 50) ~fds:[] ()
                 with
@@ -67,7 +78,7 @@ let rig ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
                   ()
               in
               let chrome =
-                Chrome.create ~sw ~launch
+                Chrome.create ~sw ~launch:(launch ~caps)
                   (Chrome.make ~binary:"/bin/sh"
                      ~profile_dir:"/tmp/leash-unattended-unused" ~workspace:"test"
                      ~headless:true ())
@@ -75,7 +86,7 @@ let rig ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
                     Chrome.clock = env#clock;
                     mgr = env#process_mgr;
                     logger;
-                    caps = (Ox_test.powerbox () :> Chrome.caps);
+                    caps :> Chrome.caps;
                   }
               in
               let tabs =
@@ -90,10 +101,10 @@ let rig ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
                       | None -> Desktop.disabled
                       | Some _ ->
                           Desktop.create
-                            ~caps:(Ox_test.powerbox () :> Desktop.caps)
+                            ~caps:(caps :> Desktop.caps)
                             ~clock:env#clock ~mgr:(Ox_test.Process.mgr process)
                             { Desktop.focus_command = []; notify_command = [ "sh" ] });
-                    caps = (Ox_test.powerbox () :> Tabs.caps);
+                    caps :> Tabs.caps;
                   }
               in
               let rec ready n =
@@ -293,9 +304,17 @@ let tab_open tabs result =
        (Tabs.snap tabs
           P.{ tab = result.P.final.tab; match_ = None; limit = None; offset = None }))
 
-let notify_then_done ?(signal = "blocked") () =
+let notify_then_done
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?(signal = "blocked") () =
   let messages = ref [] and jev = ref 0 and plans = ref 0 in
-  rig
+  (rig ~caps)
     ~notify:(fun s ->
       messages := s :: !messages;
       Error "phone command failed")
@@ -322,9 +341,17 @@ let notify_then_done ?(signal = "blocked") () =
         (Yojson.Safe.Util.to_string (member "outcome" event));
       boolean "no handoff on notify" (events result "handoff" = []))
 
-let expiry () =
+let expiry
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   let messages = ref [] in
-  rig
+  (rig ~caps)
     ~notify:(fun s ->
       messages := s :: !messages;
       Ok ())
@@ -424,9 +451,17 @@ let click request =
            limit = None;
          })
 
-let challenge_case ?(broken = false) ~attempt ~clears ~actions () =
+let challenge_case
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?(broken = false) ~attempt ~clears ~actions () =
   let plans = ref [] and clicked = ref 0 and jev = ref 0 in
-  rig ~attempt (fun _ _ tabs fake ->
+  (rig ~caps) ~attempt (fun _ _ tabs fake ->
       set_ax fake "CAPTCHA checkbox";
       if broken then
         Fake.on_method fake "Accessibility.getPartialAXTree" (fun _ ->
@@ -465,10 +500,18 @@ let challenge_case ?(broken = false) ~attempt ~clears ~actions () =
       boolean "pilot decisions recorded" (result.pilot_turns > 0);
       if not attempt then Alcotest.(check int) "disabled never reaches JEV" 0 !jev)
 
-let forbidden_challenge_actions () =
+let forbidden_challenge_actions
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   List.iter
     (fun case ->
-      rig (fun _ _ tabs fake ->
+      (rig ~caps) (fun _ _ tabs fake ->
           set_ax fake "CAPTCHA checkbox";
           let planned = ref 0 in
           let wire =
@@ -536,9 +579,38 @@ let forbidden_challenge_actions () =
                   (Fake.received fake)))))
     [ "javascript"; "navigation"; "invented-row" ]
 
-let disabled () = challenge_case ~attempt:false ~clears:false ~actions:false ()
-let bounded () = challenge_case ~attempt:true ~clears:false ~actions:false ()
-let cleared () = challenge_case ~attempt:true ~clears:true ~actions:true ()
+let disabled
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (challenge_case ~caps) ~attempt:false ~clears:false ~actions:false ()
+
+let bounded
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (challenge_case ~caps) ~attempt:true ~clears:false ~actions:false ()
+
+let cleared
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (challenge_case ~caps) ~attempt:true ~clears:true ~actions:true ()
 
 let config () =
   let c = Leash.Config.default in
@@ -550,25 +622,34 @@ let config () =
     [ "notify-send"; "--urgency=normal"; "Leash"; "{message}" ]
     c.notify.command
 
-let command_failure () =
+let command_failure
+    ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) () =
   Ox_test.run (fun env _ ->
       let process = Ox_test.Process.make [] in
       let notify =
         Desktop.notifier
-          ~caps:(Ox_test.powerbox () :> Desktop.caps)
+          ~caps:(caps :> Desktop.caps)
           ~clock:env#clock ~mgr:(Ox_test.Process.mgr process)
           ~command:[ "/no/such/leash-notification-command"; "{message}" ]
       in
       boolean "missing executable returns failure" (Result.is_error (notify "test"));
       let disabled =
         Desktop.notifier
-          ~caps:(Ox_test.powerbox () :> Desktop.caps)
+          ~caps:(caps :> Desktop.caps)
           ~clock:env#clock ~mgr:(Ox_test.Process.mgr process) ~command:[]
       in
       boolean "disabled notification succeeds" (disabled "test" = Ok ()))
 
-let resumed () =
-  rig (fun _ sw tabs _ ->
+let resumed
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ sw tabs _ ->
       let owned = succeeded (Tabs.new_tab tabs ~url:None) in
       Eio.Fiber.fork ~sw (fun () ->
           let rec wait () =
@@ -611,9 +692,17 @@ let resumed () =
            (member "outcome" (List.hd (events result "handoff"))));
       tab_open tabs result)
 
-let canceled_notification () =
+let canceled_notification
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   let calls = ref 0 and messages = ref [] in
-  rig
+  (rig ~caps)
     ~notification:(Ox_test.Process.Exit (`Exited 0))
     ~notify:(fun message ->
       messages := message :: !messages;
@@ -647,8 +736,16 @@ let canceled_notification () =
            (Tabs.list tabs).tabs);
       tab_open tabs result)
 
-let debug_challenge () =
-  rig ~attempt:false (fun _ _ tabs fake ->
+let debug_challenge
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~attempt:false (fun _ _ tabs fake ->
       let tab = succeeded (Tabs.new_tab tabs ~url:(Some "https://example.com/")) in
       Fake.emit ~session:"session-1" fake ~method_:"Network.requestWillBeSent"
         ~params:
@@ -677,11 +774,19 @@ let debug_challenge () =
       boolean "pilot handoff recorded" (events result "handoff" <> []);
       tab_open tabs result)
 
-let debug_signal_lifecycle () =
+let debug_signal_lifecycle
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   List.iter
     (fun navigates ->
       let count = ref 0 and plans = ref 0 and jev = ref 0 in
-      rig ~guard_count:count (fun _ _ tabs fake ->
+      (rig ~caps) ~guard_count:count (fun _ _ tabs fake ->
           let tab = succeeded (Tabs.new_tab tabs ~url:(Some "https://example.com/")) in
           set_ax fake "Continue";
           Fake.emit ~session:"session-1" fake ~method_:"Network.requestWillBeSent"
@@ -740,8 +845,16 @@ let debug_signal_lifecycle () =
           Alcotest.(check int) "unresolved challenge never reaches JEV" 0 !jev))
     [ false; true ]
 
-let semantic_challenge () =
-  rig ~attempt:false ~text:"Verify you are human" (fun _ _ tabs _ ->
+let semantic_challenge
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~attempt:false ~text:"Verify you are human" (fun _ _ tabs _ ->
       let result =
         run tabs
           ~plan:(fun _ -> reply (R.Handoff "captcha"))
@@ -750,12 +863,13 @@ let semantic_challenge () =
       status "handoff-expired" result;
       boolean "pilot sees semantic page and hands off" (events result "handoff" <> []))
 
-let notifier_bound () =
+let notifier_bound
+    ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) () =
   Ox_test.run (fun env sw ->
       let process = Ox_test.Process.make ~clock:env#clock [ Block_until_signal ] in
       let notify =
         Desktop.notifier
-          ~caps:(Ox_test.powerbox () :> Desktop.caps)
+          ~caps:(caps :> Desktop.caps)
           ~clock:env#clock ~mgr:(Ox_test.Process.mgr process)
           ~command:[ "/bin/sh"; "{message}" ]
       in
@@ -799,21 +913,25 @@ let config_invalid () =
     ]
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L55 unattended"
     [
       ( "protocol seam",
         [
           Alcotest.test_case "notif-7o8j notif-m37y notif-7pha notify survives failure"
-            `Quick (fun () -> notify_then_done ());
-          Alcotest.test_case "notif-oslv bounded handoff retains tab" `Quick expiry;
+            `Quick (fun () -> (notify_then_done ~caps) ());
+          Alcotest.test_case "notif-oslv bounded handoff retains tab" `Quick
+            (expiry ~caps);
           Alcotest.test_case "notif-himb notif-tdtz ordinary challenge action clears"
-            `Quick cleared;
-          Alcotest.test_case "notif-p4yk two turns then captcha expiry" `Quick bounded;
-          Alcotest.test_case "notif-udh3 disabled attempts and audit" `Quick disabled;
+            `Quick (cleared ~caps);
+          Alcotest.test_case "notif-p4yk two turns then captcha expiry" `Quick
+            (bounded ~caps);
+          Alcotest.test_case "notif-udh3 disabled attempts and audit" `Quick
+            (disabled ~caps);
           Alcotest.test_case "notif-oslv notif-7pha notif-udh3 config defaults" `Quick
             config;
           Alcotest.test_case "notif-7pha command failure and disable" `Quick
-            command_failure;
+            (command_failure ~caps);
           Alcotest.test_case "notif-m37y JEV cannot encode direct interruptions" `Quick
             (fun () ->
               List.iter
@@ -821,24 +939,27 @@ let () =
                   boolean "planner-only operation"
                     (Result.is_error (P.Operation.of_string name)))
                 [ "handoff"; "notify" ]);
-          Alcotest.test_case "notif-oslv normal resume cancels expiry" `Quick resumed;
+          Alcotest.test_case "notif-oslv normal resume cancels expiry" `Quick
+            (resumed ~caps);
           Alcotest.test_case "pilot-9u3q canceled notification stops pilot and trace"
-            `Quick canceled_notification;
+            `Quick (canceled_notification ~caps);
           Alcotest.test_case
             "notif-p4yk failed row actions reach bounded captcha fallback" `Quick
-            (challenge_case ~broken:true ~attempt:true ~clears:false ~actions:true);
+            ((challenge_case ~caps) ~broken:true ~attempt:true ~clears:false ~actions:true);
           Alcotest.test_case "notif-tdtz debug-only challenge is normalized" `Quick
-            debug_challenge;
+            (debug_challenge ~caps);
           Alcotest.test_case
             "notif-tdtz debug challenge follows document, not DOM mutations or old log \
              entries"
-            `Quick debug_signal_lifecycle;
+            `Quick
+            (debug_signal_lifecycle ~caps);
           Alcotest.test_case "notif-tdtz inferred semantic challenge" `Quick
-            semantic_challenge;
+            (semantic_challenge ~caps);
           Alcotest.test_case "notif-7pha argv and five-second timeout" `Quick
-            notifier_bound;
+            (notifier_bound ~caps);
           Alcotest.test_case "notif-udh3 invalid unattended bounds" `Quick config_invalid;
           Alcotest.test_case "notif-himb notif-p4yk no JS, guessed rows or navigation"
-            `Quick forbidden_challenge_actions;
+            `Quick
+            (forbidden_challenge_actions ~caps);
         ] );
     ]

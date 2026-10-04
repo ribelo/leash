@@ -23,17 +23,26 @@ let request tabs command =
   let wire = Yojson.Safe.to_string (P.encode_request { command }) in
   ok (P.decode_reply (Yojson.Safe.from_string (Leash.Control.handle tabs wire)))
 
-let rig f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -45,14 +54,14 @@ let rig f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -62,7 +71,7 @@ let rig f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -136,8 +145,17 @@ let seen fake session method_ =
 (* field-cde7 / field-zr9n: one renderer is frozen, not the CDP transport.
    The other tab answers before the failing tab's clock reaches its deadline;
    a screenshot still works after the diagnosis, and debug is not cleared. *)
-let frozen_renderer () =
-  rig (fun env sw _ tabs fake ->
+let frozen_renderer
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_sessions fake;
       let frozen = new_tab tabs and other = new_tab tabs in
@@ -220,9 +238,11 @@ let frozen_renderer () =
       Alcotest.(check bool)
         "field-cde7 last 20 entries folded in" true
         (get "entries" detail = `List (List.filteri (fun i _ -> i < 20) entries));
-      let path = Filename.temp_file "leash-field-zr9n-" ".png" in
+      let path =
+        (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-field-zr9n-" ".png"
+      in
       Fun.protect
-        ~finally:(fun () -> Sys.remove path)
+        ~finally:(fun () -> (Ox_caps.Cap_sys.remove ~caps) path)
         (fun () ->
           let shot =
             result (request tabs (P.Shot { tab = frozen; path; full_page = None }))
@@ -246,8 +266,16 @@ let frozen_renderer () =
         (P.Error_code.to_string e.code))
 
 (* field-cde7: a browser-level call has no page renderer to diagnose. *)
-let browser_timeout () =
-  rig (fun env sw _ tabs fake ->
+let browser_timeout
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let creates () =
         List.fold_left
           (fun n r -> if get "method" r = str "Target.createTarget" then n + 1 else n)
@@ -267,8 +295,16 @@ let browser_timeout () =
 
 (* field-m5jw: the in-flight new target is visible in the ledger before the
    load waiter finishes, and the successful timeout reply refreshes metadata. *)
-let load_timeout_retains_handle () =
-  rig (fun env sw _ tabs fake ->
+let load_timeout_retains_handle
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_sessions fake;
       Fake.on_method fake "Target.getTargetInfo" (fun _ ->
@@ -319,13 +355,15 @@ let load_timeout_retains_handle () =
         (get "closed" (result (request tabs (P.Close { tab = handle }))) = `Bool true))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "frozen-tab"
     [
       ( "field hardening",
         [
-          Alcotest.test_case "field-cde7 field-zr9n session freeze" `Quick frozen_renderer;
-          Alcotest.test_case "field-cde7 browser timeout" `Quick browser_timeout;
+          Alcotest.test_case "field-cde7 field-zr9n session freeze" `Quick
+            (frozen_renderer ~caps);
+          Alcotest.test_case "field-cde7 browser timeout" `Quick (browser_timeout ~caps);
           Alcotest.test_case "field-m5jw registered load timeout" `Quick
-            load_timeout_retains_handle;
+            (load_timeout_retains_handle ~caps);
         ] );
     ]

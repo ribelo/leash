@@ -51,8 +51,9 @@ Its source tier is mandatory and needs no build artefacts; its typed tier needs
 fresh `.cmt` evidence from Leash, with matching CMI fingerprints. Run it after a
 build, never as a substitute for one. `scripts/caps-gate` builds `@install @check`
 first; `@check` produces the executables' typed evidence. The gate requires the
-typed tier, so undecided modules fail. Keep the build-only generator allowances
-and their reasons in that script.
+typed tier, so undecided modules fail. The allow-list is empty: each generator
+declares `ox_caps.door` on its executable, mints once at entry, and passes narrow
+capabilities to its helpers.
 
 ```sh
 nix develop -c dune build @install @check

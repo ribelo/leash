@@ -372,18 +372,28 @@ let models_config ~systemone_endpoint ~chat_base_url : Config.models =
 
 (* The whole service over the fakes: the managed Chrome process manager, the registry, the
    scripted CDP peer and the models service. *)
-let rig f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) f =
   Eio_main.run (fun env ->
       Eio.Switch.run (fun sw ->
           let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
           let current = ref None in
-          let launch ~sw ~clock ~mgr:_ config =
+          let launch
+              ~(caps :
+                 < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) ~sw
+              ~clock ~mgr:_ config =
             let fake, client = Fake.create ~sw () in
             current := Some fake;
             match
-              Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-                ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-                ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+              Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+                ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
             with
             | Error error -> Error error
             | Ok child ->
@@ -397,14 +407,14 @@ let rig f =
               ()
           in
           let chrome =
-            Chrome.create ~sw ~launch
+            Chrome.create ~sw ~launch:(launch ~caps)
               (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-text-helper-profile"
                  ~workspace:"test" ~headless:true ())
               {
                 Chrome.clock = env#clock;
                 mgr = env#process_mgr;
                 logger;
-                caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+                caps :> Leash.Chrome.caps;
               }
           in
           let tabs =
@@ -414,7 +424,7 @@ let rig f =
                 clock = env#clock;
                 logger;
                 desktop = Leash.Desktop.disabled;
-                caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+                caps :> Leash.Tabs.caps;
               }
           in
           let rec ready remaining =
@@ -543,8 +553,16 @@ let drive ?levels models tabs handle goal =
 
 let goal = "Type the phrase \"Gödel, Escher, Bach\" into the search field"
 
-let fills () =
-  rig (fun env sw tabs fake logger memory ->
+let fills
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger memory ->
       script_page fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -650,8 +668,16 @@ let fills () =
 
 (* drive-ls3c: null means the value is missing: the drive ends blocked with the field
    named, and nothing reaches the browser. *)
-let null_is_blocked () =
-  rig (fun env sw tabs fake logger _ ->
+let null_is_blocked
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -704,8 +730,16 @@ let null_is_blocked () =
 
 (* drive-ls3c: the text is bounded at 2000 characters — 2000 bytes are typed, 2001 are refused and
    nothing is typed. *)
-let bound () =
-  rig (fun env sw tabs fake logger _ ->
+let bound
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -758,8 +792,16 @@ let bound () =
 
 (* drive-ls3c: an identical context is answered from the helper's memo — a stale row
    re-asks the helper, and the helper makes one chat call. *)
-let reuse () =
-  rig (fun env sw tabs fake logger _ ->
+let reuse
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page ~stale_row:true fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -798,8 +840,16 @@ let reuse () =
 
 (* drive-kh2u drive-ls3c: a chat failure ends the drive with model-unavailable and the
    steps that completed. *)
-let chat_failure () =
-  rig (fun env sw tabs fake logger _ ->
+let chat_failure
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake logger _ ->
       script_page fake;
       let systemone =
         scripted ~sw ~net:env#net
@@ -1124,18 +1174,20 @@ let unicode_and_usage () =
         (get "retries" usage = `Null))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L22 text helper"
     [
       ( "text helper",
         [
           Alcotest.test_case "fly-gysl fly-qr70 fly-9e0f Unicode and usage" `Quick
             unicode_and_usage;
-          Alcotest.test_case "drive-ls3c type_text fills the value" `Quick fills;
+          Alcotest.test_case "drive-ls3c type_text fills the value" `Quick (fills ~caps);
           Alcotest.test_case "drive-ls3c null blocks naming the field" `Quick
-            null_is_blocked;
-          Alcotest.test_case "drive-ls3c the 2000 characters bound" `Quick bound;
-          Alcotest.test_case "drive-ls3c reuse on unchanged input" `Quick reuse;
-          Alcotest.test_case "drive-kh2u chat failure with steps" `Quick chat_failure;
+            (null_is_blocked ~caps);
+          Alcotest.test_case "drive-ls3c the 2000 characters bound" `Quick (bound ~caps);
+          Alcotest.test_case "drive-ls3c reuse on unchanged input" `Quick (reuse ~caps);
+          Alcotest.test_case "drive-kh2u chat failure with steps" `Quick
+            (chat_failure ~caps);
           Alcotest.test_case "drive-ls3c jev's field_context" `Quick field_context;
           Alcotest.test_case "map-op07 null content and empty response retry" `Quick
             empty_response_retry;

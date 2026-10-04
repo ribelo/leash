@@ -67,17 +67,26 @@ let held tabs =
   | `List xs -> List.exists (fun x -> field "with_human" x = Some (`Bool true)) xs
   | _ -> assert false
 
-let rig ?(idle = 30) f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?(idle = 30) f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -89,14 +98,14 @@ let rig ?(idle = 30) f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let idle = Ox.Duration.seconds idle in
@@ -107,7 +116,7 @@ let rig ?(idle = 30) f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -128,8 +137,16 @@ let rig ?(idle = 30) f =
       in
       f ~env ~sw ~tabs ~expiry ~fake)
 
-let resumed () =
-  rig (fun ~env:_ ~sw ~tabs ~expiry:_ ~fake:_ ->
+let resumed
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw ~tabs ~expiry:_ ~fake:_ ->
       let h = fresh tabs in
       let answer = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -146,8 +163,16 @@ let resumed () =
       ignore (result (Option.get !answer));
       Alcotest.(check bool) "resume restores capability use" false (held tabs))
 
-let timeout () =
-  rig (fun ~env ~sw ~tabs ~expiry:_ ~fake:_ ->
+let timeout
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env ~sw ~tabs ~expiry:_ ~fake:_ ->
       let h = fresh tabs in
       let answer = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -163,8 +188,16 @@ let timeout () =
       ignore
         (result (request tabs "b" (P.Text { tab = h; index = None; max_chars = None }))))
 
-let cancelled () =
-  rig (fun ~env:_ ~sw:_ ~tabs ~expiry:_ ~fake:_ ->
+let cancelled
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~expiry:_ ~fake:_ ->
       let h = fresh tabs in
       Eio.Fiber.first
         (fun () ->
@@ -176,8 +209,16 @@ let cancelled () =
       check_code "nothing left to resume" "no-handoff"
         (request tabs "b" (P.Resume { tab = h })))
 
-let browser_loss () =
-  rig (fun ~env:_ ~sw ~tabs ~expiry:_ ~fake ->
+let browser_loss
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw ~tabs ~expiry:_ ~fake ->
       let h = fresh tabs in
       let answer = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -191,15 +232,16 @@ let browser_loss () =
       check_code "browser loss ends wait" "tab-gone" (Option.get !answer))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L49 capability handoff"
     [
       ( "handoff",
         List.map
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
-            ("hand-lz3p resume by shared capability", resumed);
-            ("hand-lmd5 timeout restores", timeout);
-            ("hand-szz7 disconnect restores", cancelled);
-            ("hand-yytf browser loss ends", browser_loss);
+            ("hand-lz3p resume by shared capability", resumed ~caps);
+            ("hand-lmd5 timeout restores", timeout ~caps);
+            ("hand-szz7 disconnect restores", cancelled ~caps);
+            ("hand-yytf browser loss ends", browser_loss ~caps);
           ] );
     ]

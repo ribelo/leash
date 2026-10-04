@@ -1,31 +1,27 @@
 #!/usr/bin/env bash
-# Leash's capability gate (ox ^ncaps-w6n2, ^ncaps-4tjy): the fourth gate beside build,
-# test and fmt.
-#   nix develop -c scripts/caps-gate
-# Builds first so the compiler-backed ox-lint has fresh Leash .cmt evidence,
-# then runs the launcher installed with ox_caps (share/ox_caps beside the findlib
-# package) over packages/. Runtime dangerous calls go through Ox_caps with the
-# capability in their signatures; the entry exit is allowed by the rules. Build-only
-# generator exceptions are explained below.
+# gencaps-rh1m: every generator passes the compiler-backed capability gate.
 set -euo pipefail
 cd "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 
-if ! lib_dir="$(ocamlfind query ox_caps 2>/dev/null)"; then
-  echo "caps-gate: ox_caps is not installed (ocamlfind query ox_caps failed)" >&2
-  exit 2
+# Prefer the explicit Nix output, then the findlib prefix, then PATH.
+installed=""
+if lib_dir="$(ocamlfind query ox_lint 2>/dev/null)"; then
+  installed="$lib_dir/../../bin/ox-lint"
 fi
-gate="$lib_dir/../../share/ox_caps/caps-gate"
-if [ ! -f "$gate" ]; then
-  echo "caps-gate: no gate script at $gate" >&2
+engine=""
+for candidate in "${OX_LINT:-}" "$installed" "$(command -v ox-lint 2>/dev/null || true)"; do
+  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+    engine="$candidate"
+    break
+  fi
+done
+if [ -z "$engine" ]; then
+  echo "caps-gate: ox-lint not found; install ox_lint or set OX_LINT to its executable" >&2
   exit 2
 fi
 
-# capslint-i4ed: @check produces typed evidence for executable modules.
+# @check also produces executable modules' fresh typed evidence.
 dune build @install @check
 
-# gen_skill_data is a Dune generator, not a Door program. It runs before the
-# application exists, cannot receive Ox_app.Env.caps, and only reads the source
-# skill tree and emits OCaml to stdout; it is not linked into the CLI.
-# gen_error_topic is also build-only: it emits the pure protocol error table
-# for generated documentation, without runtime service access.
-exec bash "$gate" --require-typed --allow packages/leash/bin/gen_skill_data.ml --allow packages/leash/bin/gen_error_topic.ml "$@" packages
+# No exemptions: generators receive narrow authority from their process entry.
+exec "$engine" --caps-gate --require-typed "$@"

@@ -99,17 +99,26 @@ let check_disposition label expected reply =
       | None -> Alcotest.failf "%s: tab-gone with no disposition" label)
   | P.Success _ -> Alcotest.failf "%s: expected tab-gone" label
 
-let rig f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -122,14 +131,14 @@ let rig f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -139,7 +148,7 @@ let rig f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -191,8 +200,16 @@ let received_in fake meth session =
   received fake meth
   |> List.filter (fun json -> field "sessionId" json = Some (str session))
 
-let human_and_popup () =
-  rig (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
+let human_and_popup
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
       subscribed fake;
       let parent =
         result (request tabs "a" (P.New { url = None; label = None })) |> handle
@@ -236,8 +253,16 @@ let human_and_popup () =
       check_disposition "external close tombstone" "closed_externally"
         (request tabs "b" (P.Text { tab = parent; index = None; max_chars = None })))
 
-let creation_race () =
-  rig (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
+let creation_race
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
       Fake.on_method fake "Target.createTarget" (fun _ ->
           announce fake ~id:"created-target" ~url:"about:blank" ();
           obj [ ("targetId", str "created-target") ]);
@@ -252,12 +277,14 @@ let creation_race () =
         (result (request tabs "b" (P.Text { tab = h; index = None; max_chars = None }))))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L49 discovery"
     [
       ( "discovery",
         [
           Alcotest.test_case "hand-x3hi ADR-0010 human UI and popup" `Quick
-            human_and_popup;
-          Alcotest.test_case "hand-ehqa own create discovery race" `Quick creation_race;
+            (human_and_popup ~caps);
+          Alcotest.test_case "hand-ehqa own create discovery race" `Quick
+            (creation_race ~caps);
         ] );
     ]

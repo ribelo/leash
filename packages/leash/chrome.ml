@@ -73,7 +73,7 @@ let argv config =
   if config.headless then [ "--headless=new"; "--window-size=" ^ config.window_size ]
   else []
 
-type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
+type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write >
 
 type 'clock deps = {
   clock : 'clock Eio.Time.clock;

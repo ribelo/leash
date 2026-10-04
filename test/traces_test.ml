@@ -5,23 +5,25 @@ module P = Leash.Protocol
 module D = Leash__Drive
 module J = Leash__Jev_request
 
-let caps = Ox_test.powerbox ()
 let ok = function Ok x -> x | Error why -> Alcotest.fail why
 let bool name value = Alcotest.(check bool) name true value
 
-let rec remove path =
+let rec remove ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) path =
   match Unix.lstat path with
   | exception Unix.Unix_error (Unix.ENOENT, _, _) -> ()
   | s when s.Unix.st_kind = Unix.S_DIR ->
-      Array.iter (fun name -> remove (Filename.concat path name)) (Sys.readdir path);
-      Unix.rmdir path
-  | _ -> Unix.unlink path
+      Array.iter
+        (fun name -> (remove ~caps) (Filename.concat path name))
+        ((Ox_caps.Cap_sys.readdir ~caps) path);
+      (Ox_caps.Cap_unix.rmdir ~caps) path
+  | _ -> (Ox_caps.Cap_unix.unlink ~caps) path
 
-let temp f =
-  let path = Filename.temp_file "leash-l51-" "" in
-  Unix.unlink path;
-  Unix.mkdir path 0o700;
-  Fun.protect ~finally:(fun () -> remove path) (fun () -> f path)
+let temp ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f
+    =
+  let path = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-l51-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) path;
+  (Ox_caps.Cap_unix.mkdir ~caps) path 0o700;
+  Fun.protect ~finally:(fun () -> (remove ~caps) path) (fun () -> f path)
 
 let trace ?(site = "toscrape.com") ?(outcome = "done") time : P.drive_trace =
   P.Trace.
@@ -48,8 +50,15 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") time : P.drive_trace =
     }
 
 (* map-op09: optional safe skeleton survives durable roundtrip; legacy traces work. *)
-let filesystem () =
-  temp (fun root ->
+let filesystem
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (temp ~caps) (fun root ->
       let store = T.create ~caps ~root () in
       let saved = trace 1000. in
       let path = ok (T.write store saved) in
@@ -65,12 +74,12 @@ let filesystem () =
       bool "trace-qe8c unsafe path refused"
         (Result.is_error (T.write store { saved with site = "../escape" }));
       let link = Filename.concat root "symlink.json" in
-      Unix.symlink path link;
+      (Ox_caps.Cap_unix.symlink ~caps) path link;
       bool "trace-uovo symlink read refused" (Result.is_error (T.read ~caps link));
       bool "trace-uovo oversized writer refuses unreadable evidence"
         (Result.is_error (T.write store { saved with mission = String.make 8388608 'x' }));
       let forged = Filename.concat (Filename.dirname path) "forged.json" in
-      Out_channel.with_open_bin forged (fun ch ->
+      (Ox_caps.Cap_stdlib.Out_channel.with_open_bin ~caps) forged (fun ch ->
           output_string ch
             (P.yojson_of_drive_trace { saved with site = "other.example" }
             |> Yojson.Safe.to_string));
@@ -78,8 +87,10 @@ let filesystem () =
         (Result.is_error (T.list store ())
         && Result.is_error (T.prune store ~dry_run:false ~now:1000. ()));
       bool "trace-dqr2 refused prune leaves evidence intact" (Sys.file_exists path);
-      Unix.unlink forged;
-      Unix.symlink (Filename.dirname path) (Filename.concat root "linked-site");
+      (Ox_caps.Cap_unix.unlink ~caps) forged;
+      (Ox_caps.Cap_unix.symlink ~caps)
+        (Filename.dirname path)
+        (Filename.concat root "linked-site");
       bool "trace-uovo symlink site directory refused" (Result.is_error (T.list store ())))
 
 let domains () =
@@ -101,8 +112,15 @@ let domains () =
       ("http://[::1]:80/", Some "::1");
     ]
 
-let retention () =
-  temp (fun root ->
+let retention
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (temp ~caps) (fun root ->
       let retention = ok (T.Retention.of_values ~count:2 ~days:1) in
       let store = T.create ~caps ~root ~retention () in
       let write ?site ?outcome time = ok (T.write store (trace ?site ?outcome time)) in
@@ -181,7 +199,14 @@ let capture () =
   Alcotest.(check (list string))
     "trace-iqqz no invented on-the-fly kinds" [] fly.page_kind_path
 
-let scripted_steps () =
+let scripted_steps
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
   let c = T.capture ~mission:"fill search" ~now:0. in
   T.arguments c
     [ ("search", "alice"); ("token", "unused secret"); ("password", "[password]") ];
@@ -326,7 +351,7 @@ let scripted_steps () =
     (List.hd password.steps).text;
   Alcotest.(check (list (pair string string)))
     "map-op01 password and unrelated arguments do not leak" [] password.arguments;
-  temp (fun root ->
+  (temp ~caps) (fun root ->
       let store = T.create ~caps ~root () in
       let path = ok (T.write store saved) in
       bool "trace-lg58 safe captured roundtrip" (ok (T.read ~caps path) = saved))
@@ -421,7 +446,14 @@ let planner_steps () =
   Alcotest.(check int)
     "durable wire retains planner steps" 3 (List.length roundtrip.steps)
 
-let unattended_capture () =
+let unattended_capture
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
   let notify =
     `Assoc
       [
@@ -466,7 +498,7 @@ let unattended_capture () =
   let saved = T.finish (T.capture ~mission:"unattended" ~now:0.) ~now:1. (Error error) in
   bool "notif-udh3 audit kinds survive safe projection"
     (saved.unattended = [ notify; challenge ]);
-  temp (fun root ->
+  (temp ~caps) (fun root ->
       let path = ok (T.write (T.create ~caps ~root ()) saved) in
       bool "notif-udh3 audit survives durable store"
         ((ok (T.read ~caps path)).unattended = saved.unattended));
@@ -479,20 +511,22 @@ let unattended_capture () =
     ((ok (P.drive_trace_of_yojson legacy)).unattended = [])
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L51 traces"
     [
       ( "offline",
         List.map
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
-            ("trace-qe8c trace-lg58 private store", filesystem);
+            ("trace-qe8c trace-lg58 private store", filesystem ~caps);
             ("trace-qe8c public suffix", domains);
-            ("trace-dqr2 retention", retention);
+            ("trace-dqr2 retention", retention ~caps);
             ("trace-szpg config", config);
             ("trace-iqqz failure projection", capture);
             ("trace-iqqz kind-s1k2 inferred header canonicalization", inferred_capture);
-            ("trace-zbb9 trace-uovo acknowledged target", scripted_steps);
+            ("trace-zbb9 trace-uovo acknowledged target", scripted_steps ~caps);
             ("map-3qag mixed planner trace and partial failure", planner_steps);
-            ("notif-udh3 safe durable unattended audit and old codecs", unattended_capture);
+            ( "notif-udh3 safe durable unattended audit and old codecs",
+              unattended_capture ~caps );
           ] );
     ]

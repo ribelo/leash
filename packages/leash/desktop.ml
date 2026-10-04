@@ -6,7 +6,7 @@
    and the retirement grace of every child it starts. *)
 let step_timeout = Ox.Duration.seconds 5
 
-type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
+type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write >
 
 let retirement_grace = Ox.Duration.seconds 5
 

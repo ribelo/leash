@@ -86,7 +86,7 @@ val argv : config -> string list
     [navigator.webdriver] on every page), [--class=leash], and [--headless=new] and
     [--window-size=1366,900] only when [headless] is true. *)
 
-type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec >
+type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write >
 (** What Chrome may touch beyond its Eio values: it starts the browser, so it forks and
     execs (^ncaps-4tjy). Nothing else — no environment, no file outside the Eio values it
     is given. *)
@@ -107,7 +107,9 @@ type 'clock launch =
 (** How one generation's process and transport are created, on the child switch that the
     supervisor releases when the generation ends. *)
 
-val launch_pipe : caps:< Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; .. > -> 'clock launch
+val launch_pipe :
+  caps:< Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write ; .. > ->
+  'clock launch
 (** The real one, given the capabilities spawning needs; {!create} passes [deps.caps]. two
     pipes, the child ends on descriptors 3 and 4, the parent ends as the transport. The
     parent closes its copies of the child ends right after the spawn, so the browser's

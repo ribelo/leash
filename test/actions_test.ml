@@ -66,20 +66,29 @@ let request tabs _client command =
 
 let check_code label expected reply = Alcotest.(check string) label expected (code reply)
 
-let rig f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) f =
   Ox_test.run (fun env sw ->
       let mgr =
         Ox_test.Process.make
           [ Block_until_signal; Block_until_signal; Block_until_signal ]
       in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -91,14 +100,14 @@ let rig f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-actions-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -108,7 +117,7 @@ let rig f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -481,8 +490,16 @@ let kinds json_list =
     json_list
 
 (* tab-bw4j tab-j1z2 tab-tm6c tab-1lhx *)
-let click () =
-  rig (fun _ _ _ tabs fake ->
+let click
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       (* tab-bw4j: real Chrome returns fractional quad centres but rejects them as
@@ -724,8 +741,16 @@ let click () =
 (* tab-bw4j, L34: DOM.getNodeForLocation uses document coordinates, whereas
    Input.dispatchMouseEvent uses viewport coordinates. A scrolled Blue Top product
    link failed with Chrome -32000 at viewport y=203; pageY=550 reached it. *)
-let scrolled_click () =
-  rig (fun _ _ _ tabs fake ->
+let scrolled_click
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.on_method fake "Page.getLayoutMetrics" (fun _ ->
@@ -756,8 +781,16 @@ let scrolled_click () =
 
 (* tab-1lhx: a dispatch that fails after the press makes the action fail, and the press
    is never issued again. *)
-let never_retried () =
-  rig (fun _ _ _ tabs fake ->
+let never_retried
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.on_failure fake "Input.dispatchMouseEvent" (fun request ->
@@ -794,8 +827,16 @@ let never_retried () =
               events)))
 
 (* tab-p3x1 tab-0lax *)
-let fill () =
-  rig (fun _ _ _ tabs fake ->
+let fill
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ~suggestions:false ();
       let handle = new_tab tabs in
@@ -905,8 +946,16 @@ let fill () =
               })))
 
 (* daily-9ggi: native temporal inputs need their value setter, not insertText. *)
-let temporal_fill () =
-  rig (fun _ _ _ tabs fake ->
+let temporal_fill
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let time_ax =
@@ -1012,8 +1061,16 @@ let temporal_fill () =
         (fill "12:30"))
 
 (* tab-luo5 *)
-let press () =
-  rig (fun _ _ _ tabs fake ->
+let press
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1077,8 +1134,16 @@ let press () =
               })))
 
 (* tab-5deq *)
-let select () =
-  rig (fun _ _ _ tabs fake ->
+let select
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1138,8 +1203,16 @@ let select () =
               })))
 
 (* tab-8dop *)
-let scroll () =
-  rig (fun _ _ _ tabs fake ->
+let scroll
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1368,8 +1441,16 @@ let popup_params fixture ~session ~target_id ~opener_id ~url ~title =
 let popup_announcement fixture ~target_id ~opener_id ~url ~title =
   o [ ("targetInfo", popup_target_info fixture ~target_id ~opener_id ~url ~title) ]
 
-let popups () =
-  rig (fun _ _ _ tabs fake ->
+let popups
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let fixture = chrome_fixture () in
@@ -1420,8 +1501,16 @@ let popups () =
 
 (* tab-8k2g: a tab another agent's tab opened while this action was in flight is not this
    caller's popup, even though it appeared in the same moment. *)
-let popups_exact () =
-  rig (fun _ _ _ tabs fake ->
+let popups_exact
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let fixture = chrome_fixture () in
@@ -1489,8 +1578,16 @@ let popups_exact () =
         (list_of "alice"))
 
 (* hard-dljv hard-owci: the opening event during dispatch beats CDP settlement. *)
-let dialog_during_dispatch () =
-  rig (fun _ _ _ tabs fake ->
+let dialog_during_dispatch
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1527,8 +1624,16 @@ let dialog_during_dispatch () =
         | _ -> "missing"))
 
 (* tab-60kn: a dialog blocks the page, so every action refuses until it is answered. *)
-let dialog () =
-  rig (fun _ _ _ tabs fake ->
+let dialog
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1619,8 +1724,16 @@ let dialog () =
 
 (* tab-hxld: one tab's actions run one at a time in arrival order; another tab's do not
    wait for them. *)
-let serialization () =
-  rig (fun _ sw _ tabs fake ->
+let serialization
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ sw _ tabs fake ->
       let fake = fake () in
       script_page fake ~suggestions:false ();
       let sessions = ref [ "session-1"; "session-2" ] in
@@ -1749,8 +1862,16 @@ let serialization () =
 (* tab-8la3 chrome-9ex7: focus emulation is page-visible (document.hasFocus()), so it is
    on only while an agent operation runs on the tab, and off again once it has its
    result; opening a tab leaves it off. *)
-let focus_emulation () =
-  rig (fun _ _ _ tabs fake ->
+let focus_emulation
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -1867,8 +1988,16 @@ let check_disposition label expected reply =
       | None -> Alcotest.failf "%s: tab-gone with no disposition" label)
   | P.Success _ -> Alcotest.failf "%s: expected tab-gone" label
 
-let popup_acknowledged () =
-  rig (fun _ sw _ tabs fake ->
+let popup_acknowledged
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let fixture = chrome_fixture () in
@@ -1918,8 +2047,16 @@ let popup_acknowledged () =
    mock clock before answering the press; the click must succeed when that answer arrives,
    not turn into browser-unavailable at some bound of its own, and the input is sent exactly
    once. Nothing but the release reached the browser while the reply was outstanding. *)
-let slow_reply_settles () =
-  rig (fun env sw _ tabs fake ->
+let slow_reply_settles
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.on_method fake "Input.dispatchMouseEvent" (fun request ->
@@ -1961,8 +2098,16 @@ let slow_reply_settles () =
    target the browser still knows, is renderer-unresponsive. The clock runs out the
    call's own 30 seconds and the two probes after it. A target the browser no longer
    knows stays tab-gone. *)
-let silent_page_unavailable () =
-  rig (fun env sw _ tabs fake ->
+let silent_page_unavailable
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2016,8 +2161,16 @@ let silent_page_unavailable () =
    tab's own death settles it, and the click reports tab-gone with closed_externally -- the
    same answer the handle gives afterwards. Nothing is replayed: the release of a click
    whose press failed is never sent. *)
-let self_closing_click_reports_tab_gone () =
-  rig (fun _ sw _ tabs fake ->
+let self_closing_click_reports_tab_gone
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.withhold fake "Input.dispatchMouseEvent" (fun request ->
@@ -2053,8 +2206,16 @@ let self_closing_click_reports_tab_gone () =
    when the death report does not arrive first. The press is never answered, the page does
    not answer Page.getFrameTree any more, and the browser no longer knows the target: the
    click reports tab-gone with closed_externally rather than browser-unavailable. *)
-let self_closing_click_probe () =
-  rig (fun env sw _ tabs fake ->
+let self_closing_click_probe
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       Fake.withhold fake "Input.dispatchMouseEvent" (fun request ->
@@ -2103,8 +2264,16 @@ let self_closing_click_probe () =
    leaves the tab strip's title (the formatted url Chrome pushes while the document
    loads) in the registry until the document finishes; the reply reads the target back
    after that load, so the trace and [list] carry the document title. *)
-let navigation_title_refresh () =
-  rig (fun _ _ _ tabs fake ->
+let navigation_title_refresh
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let loaded = ref false in
@@ -2160,8 +2329,16 @@ let navigation_title_refresh () =
 (* field-drpx: a newly opened empty popup is actionable evidence, not a
    failure. A dialog interrupts URL settlement; without one, the bounded
    settle window distinguishes a still-blank popup from a committed page. *)
-let popup_readiness url dialog expected () =
-  rig (fun env sw _ tabs fake ->
+let popup_readiness
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) url dialog expected () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let fixture = chrome_fixture () in
@@ -2249,8 +2426,16 @@ let row_args ~tab ~snapshot ~index ?(snap = None) ?(match_ = None) ?(limit = Non
   { snap; match_; limit; tab; snapshot; index }
 
 (* field-uls3: a covering label whose control is the target is the click. *)
-let label_click () =
-  rig (fun _ _ _ tabs fake ->
+let label_click
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2314,8 +2499,16 @@ let label_click () =
         "field-uls3 the mouse was dispatched" true
         (List.length (calls fake "Input.dispatchMouseEvent") >= 2))
 
-let unrelated_cover () =
-  rig (fun _ _ _ tabs fake ->
+let unrelated_cover
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2362,8 +2555,16 @@ let script_checked fake answers =
         o [ ("result", o [ ("type", s "boolean"); ("value", b value) ]) ])
       else o [ ("result", o [ ("type", s "string"); ("value", s "c") ]) ])
 
-let check_flips () =
-  rig (fun _ _ _ tabs fake ->
+let check_flips
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       script_checked fake [ false; true ];
@@ -2377,8 +2578,16 @@ let check_flips () =
         "field-guda a flip is a success" true
         (Yojson.Safe.Util.member "tab" reply <> `Null))
 
-let check_unchanged () =
-  rig (fun _ _ _ tabs fake ->
+let check_unchanged
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       script_checked fake [ true; true ];
@@ -2391,8 +2600,16 @@ let check_unchanged () =
         "field-guda the failed flip still clicked" true
         (List.length (calls fake "Input.dispatchMouseEvent") > before))
 
-let snap_on_click () =
-  rig (fun _ _ _ tabs fake ->
+let snap_on_click
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2421,8 +2638,16 @@ let snap_on_click () =
         "field-swvb the matched name" "Send"
         (text "name" (List.hd rows)))
 
-let password_fill_not_echoed () =
-  rig (fun _ _ _ tabs fake ->
+let password_fill_not_echoed
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2482,8 +2707,16 @@ let click_index tabs handle =
          limit = None;
        })
 
-let transparent_cover () =
-  rig (fun env sw _ tabs fake ->
+let transparent_cover
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       opacity_probe fake true;
@@ -2536,8 +2769,16 @@ let mouse_release request =
   | Some "mouseReleased" -> true
   | _ -> false
 
-let spa_navigation () =
-  rig (fun env sw _ tabs fake ->
+let spa_navigation
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2577,8 +2818,16 @@ let spa_navigation () =
         "pushState 300 ms after the click is in the next observation" !url
         (text "url" observed))
 
-let quiet_click () =
-  rig (fun env sw _ tabs fake ->
+let quiet_click
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       script_page fake ();
       let handle = new_tab tabs in
@@ -2608,54 +2857,60 @@ let quiet_click () =
         (Yojson.Safe.Util.member "tab" reply <> `Null))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L7 actions"
     [
       ( "actions",
         [
-          Alcotest.test_case "tab-bw4j tm6c j1z2 1lhx" `Quick click;
-          Alcotest.test_case "spa pushState after click" `Quick spa_navigation;
-          Alcotest.test_case "quiet click returns early" `Quick quiet_click;
-          Alcotest.test_case "tab-bw4j transparent cover" `Quick transparent_cover;
-          Alcotest.test_case "tab-bw4j scrolled document hit" `Quick scrolled_click;
-          Alcotest.test_case "tab-1lhx" `Quick never_retried;
-          Alcotest.test_case "tab-p3x1 0lax" `Quick fill;
-          Alcotest.test_case "daily-9ggi native temporal fill" `Quick temporal_fill;
-          Alcotest.test_case "tab-luo5" `Quick press;
-          Alcotest.test_case "tab-5deq" `Quick select;
+          Alcotest.test_case "tab-bw4j tm6c j1z2 1lhx" `Quick (click ~caps);
+          Alcotest.test_case "spa pushState after click" `Quick (spa_navigation ~caps);
+          Alcotest.test_case "quiet click returns early" `Quick (quiet_click ~caps);
+          Alcotest.test_case "tab-bw4j transparent cover" `Quick (transparent_cover ~caps);
+          Alcotest.test_case "tab-bw4j scrolled document hit" `Quick
+            (scrolled_click ~caps);
+          Alcotest.test_case "tab-1lhx" `Quick (never_retried ~caps);
+          Alcotest.test_case "tab-p3x1 0lax" `Quick (fill ~caps);
+          Alcotest.test_case "daily-9ggi native temporal fill" `Quick
+            (temporal_fill ~caps);
+          Alcotest.test_case "tab-luo5" `Quick (press ~caps);
+          Alcotest.test_case "tab-5deq" `Quick (select ~caps);
           Alcotest.test_case "tab-5deq tab-zc36 the observed options" `Quick
             select_options;
           Alcotest.test_case "drive-zml5 unsafe inputs" `Quick unsafe_inputs;
-          Alcotest.test_case "tab-8dop" `Quick scroll;
-          Alcotest.test_case "tab-tm6c" `Quick popups;
+          Alcotest.test_case "tab-8dop" `Quick (scroll ~caps);
+          Alcotest.test_case "tab-tm6c" `Quick (popups ~caps);
           Alcotest.test_case "field-drpx opening interrupted" `Quick
-            (popup_readiness "" true "opening");
+            ((popup_readiness ~caps) "" true "opening");
           Alcotest.test_case "field-drpx still blank" `Quick
-            (popup_readiness "" false "blank");
+            ((popup_readiness ~caps) "" false "blank");
           Alcotest.test_case "field-drpx about:blank" `Quick
-            (popup_readiness "about:blank" false "blank");
+            ((popup_readiness ~caps) "about:blank" false "blank");
           Alcotest.test_case "field-drpx committed" `Quick
-            (popup_readiness "https://example.com/popup" false "ready");
-          Alcotest.test_case "tab-8k2g" `Quick popups_exact;
-          Alcotest.test_case "tab-60kn" `Quick dialog;
-          Alcotest.test_case "hard-dljv dispatch modal" `Quick dialog_during_dispatch;
-          Alcotest.test_case "tab-hxld" `Quick serialization;
-          Alcotest.test_case "tab-8la3 bw4j" `Quick focus_emulation;
-          Alcotest.test_case "tab-0ohq popup acknowledged" `Quick popup_acknowledged;
-          Alcotest.test_case "tab-1lhx tab-0ohq slow reply" `Quick slow_reply_settles;
+            ((popup_readiness ~caps) "https://example.com/popup" false "ready");
+          Alcotest.test_case "tab-8k2g" `Quick (popups_exact ~caps);
+          Alcotest.test_case "tab-60kn" `Quick (dialog ~caps);
+          Alcotest.test_case "hard-dljv dispatch modal" `Quick
+            (dialog_during_dispatch ~caps);
+          Alcotest.test_case "tab-hxld" `Quick (serialization ~caps);
+          Alcotest.test_case "tab-8la3 bw4j" `Quick (focus_emulation ~caps);
+          Alcotest.test_case "tab-0ohq popup acknowledged" `Quick
+            (popup_acknowledged ~caps);
+          Alcotest.test_case "tab-1lhx tab-0ohq slow reply" `Quick
+            (slow_reply_settles ~caps);
           Alcotest.test_case "tab-0ohq silent page unavailable" `Quick
-            silent_page_unavailable;
+            (silent_page_unavailable ~caps);
           Alcotest.test_case "tab-0ohq own-teh1 self-closing click" `Quick
-            self_closing_click_reports_tab_gone;
+            (self_closing_click_reports_tab_gone ~caps);
           Alcotest.test_case "own-teh1 tab-0ohq self-closing probe" `Quick
-            self_closing_click_probe;
+            (self_closing_click_probe ~caps);
           Alcotest.test_case "svc-hi4f title after a navigating action" `Quick
-            navigation_title_refresh;
-          Alcotest.test_case "field-uls3 label click" `Quick label_click;
-          Alcotest.test_case "field-uls3 unrelated cover" `Quick unrelated_cover;
-          Alcotest.test_case "field-guda check flips" `Quick check_flips;
-          Alcotest.test_case "field-guda state unchanged" `Quick check_unchanged;
-          Alcotest.test_case "field-swvb snap on click" `Quick snap_on_click;
+            (navigation_title_refresh ~caps);
+          Alcotest.test_case "field-uls3 label click" `Quick (label_click ~caps);
+          Alcotest.test_case "field-uls3 unrelated cover" `Quick (unrelated_cover ~caps);
+          Alcotest.test_case "field-guda check flips" `Quick (check_flips ~caps);
+          Alcotest.test_case "field-guda state unchanged" `Quick (check_unchanged ~caps);
+          Alcotest.test_case "field-swvb snap on click" `Quick (snap_on_click ~caps);
           Alcotest.test_case "field-5sdo password fill is not echoed" `Quick
-            password_fill_not_echoed;
+            (password_fill_not_echoed ~caps);
         ] );
     ]

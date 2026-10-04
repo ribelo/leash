@@ -58,17 +58,26 @@ let contains haystack needle =
   let rec scan at = at + n <= h && (String.sub haystack at n = needle || scan (at + 1)) in
   n = 0 || scan 0
 
-let rig ?(cap = 14) f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?(cap = 14) f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -80,14 +89,14 @@ let rig ?(cap = 14) f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-hardening-2-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -97,7 +106,7 @@ let rig ?(cap = 14) f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -470,8 +479,16 @@ let net_list ?match_ ?limit ?type_ tabs who handle =
 let requests reply = list "requests" (result reply)
 let ids reply = List.map (text "id") (requests reply)
 
-let net_ring () =
-  rig (fun _ _ tabs fake ->
+let net_ring
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       many_tabs fake;
       let a = new_tab tabs "alice" and b = new_tab tabs "alice" in
@@ -586,8 +603,16 @@ let net_ring () =
       Alcotest.(check int) "hard-xg6y the ring holds 500" 500 (List.length all);
       Alcotest.(check string) "hard-xg6y the oldest went first" "bulk-5" (List.hd all))
 
-let net_body () =
-  rig (fun _ _ tabs fake ->
+let net_body
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let a = new_tab tabs "alice" in
       started fake ~session:"session-1" "json" "http://127.0.0.1:8080/api/items";
@@ -647,8 +672,16 @@ let net_body () =
       check_code "hand-scaz net body needs the handle" "unknown-tab"
         (request tabs "second" (P.Net_body { tab = unknown_handle; id = "json" })))
 
-let net_request () =
-  rig (fun _ _ tabs fake ->
+let net_request
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let a = new_tab tabs "alice" in
       started fake ~session:"session-1" "post" ~method_:"POST"
@@ -750,7 +783,15 @@ let wait_args ?(until = None) ?(timeout_ms = 60_000) handle =
   in
   P.Wait { tab = handle; until; timeout_ms = Some timeout_ms }
 
-let long_wait () =
+let long_wait
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   (* hard-sr9v: an hour is the bound, and the listener's budget follows it. *)
   let budget command =
     match Leash.Control.budget (Ok P.{ command }) with
@@ -784,7 +825,7 @@ let long_wait () =
   Alcotest.(check int)
     "hard-sr9v longer than an hour is bounded" 3_601_000
     (budget (wait_args ~timeout_ms:9_000_000 handle));
-  rig (fun env sw tabs fake ->
+  (rig ~caps) (fun env sw tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -842,8 +883,16 @@ let long_wait () =
       page.ready <- true;
       ignore (result (pump env hour)))
 
-let changed_since () =
-  rig (fun env sw tabs fake ->
+let changed_since
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -927,9 +976,11 @@ let changed_since () =
 
 (* ---------- hard-2gnf hard-o3za: file inputs and upload ---------- *)
 
-let temp_file ?(size = 5) () =
-  let path = Filename.temp_file "leash-upload-" ".bin" in
-  let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
+let temp_file
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >)
+    ?(size = 5) () =
+  let path = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-upload-" ".bin" in
+  let fd = (Ox_caps.Cap_unix.openfile ~caps) path [ Unix.O_WRONLY ] 0o600 in
   Unix.ftruncate fd size;
   Unix.close fd;
   path
@@ -939,8 +990,17 @@ let row_named rows role =
   | Some row -> row
   | None -> Alcotest.failf "no %s row" role
 
-let upload () =
-  rig (fun _ _ tabs fake ->
+let upload
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -956,7 +1016,7 @@ let upload () =
       let upload ?(index = 3) ?(who = "alice") paths =
         request tabs who (P.Upload { tab = a; snapshot = s; index; paths })
       in
-      let one = temp_file () and two = temp_file () in
+      let one = (temp_file ~caps) () and two = (temp_file ~caps) () in
       let reply = result (upload [ one; two ]) in
       Alcotest.(check string)
         "hard-o3za the reply is an action result" "Page" (text "title" reply);
@@ -976,9 +1036,9 @@ let upload () =
       check_code "hard-o3za no files" "invalid-request" (upload []);
       check_code "hard-o3za at most ten files" "invalid-request"
         (upload (List.init 11 (fun _ -> one)));
-      let big = temp_file ~size:(6 * 1024 * 1024 * 1024) () in
+      let big = (temp_file ~caps) ~size:(6 * 1024 * 1024 * 1024) () in
       check_code "hard-qimz at most 10 GiB" "too-large" (upload [ big; big ]);
-      Sys.remove big;
+      (Ox_caps.Cap_sys.remove ~caps) big;
       check_code "hand-scaz upload needs the handle" "unknown-tab"
         (request tabs "second"
            (P.Upload { tab = unknown_handle; snapshot = s; index = 3; paths = [ one ] }));
@@ -1046,13 +1106,21 @@ let upload () =
             ]);
       check_code "hard-o3za the node is no longer a file input" "stale-snapshot"
         (upload [ one ]);
-      Sys.remove one;
-      Sys.remove two)
+      (Ox_caps.Cap_sys.remove ~caps) one;
+      (Ox_caps.Cap_sys.remove ~caps) two)
 
 (* ---------- hard-v1gs: hover ---------- *)
 
-let hover () =
-  rig (fun _ _ tabs fake ->
+let hover
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -1103,8 +1171,16 @@ let hover () =
 
 (* ---------- hard-b20d: eval --index ---------- *)
 
-let eval_index () =
-  rig (fun _ _ tabs fake ->
+let eval_index
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ tabs fake ->
       let fake = fake () in
       let page = fresh_page () in
       script fake page;
@@ -1171,8 +1247,16 @@ let eval_index () =
 
 (* ---------- hard-ufb7: cookies and storage ---------- *)
 
-let cookies_and_storage () =
-  rig (fun _ sw tabs fake ->
+let cookies_and_storage
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ sw tabs fake ->
       ignore sw;
       let fake = fake () in
       let page = fresh_page () in
@@ -1308,8 +1392,16 @@ let cookies_and_storage () =
 
 (* ---------- hard-b1na: ten agents at once ---------- *)
 
-let tab_lock () =
-  rig (fun env sw tabs fake ->
+let tab_lock
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw tabs fake ->
       ignore env;
       let fake = fake () in
       let page = fresh_page () in
@@ -1365,23 +1457,25 @@ let tab_lock () =
               (P.Net { tab = a; match_ = None; limit = None; type_ = None })));
       ignore (result (request tabs "alice" (P.Cookies { tab = a }))))
 
-let with_runtime f =
-  let runtime = Filename.temp_file "leash-h2-" "" in
-  Unix.unlink runtime;
-  Unix.mkdir runtime 0o700;
+let with_runtime ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
+  let runtime = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-h2-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) runtime;
+  (Ox_caps.Cap_unix.mkdir ~caps) runtime 0o700;
   Fun.protect
     ~finally:(fun () ->
       let dir = Filename.concat runtime "leash" in
-      let unlink path = if Sys.file_exists path then Unix.unlink path in
-      unlink (Filename.concat dir "control.sock");
-      unlink (Filename.concat dir "control.sock.lock");
-      if Sys.file_exists dir then Unix.rmdir dir;
-      Unix.chmod runtime 0o700;
-      Unix.rmdir runtime)
+      let unlink ~(caps : < Ox_caps.Cap.fs_write ; .. >) path =
+        if Sys.file_exists path then (Ox_caps.Cap_unix.unlink ~caps) path
+      in
+      (unlink ~caps) (Filename.concat dir "control.sock");
+      (unlink ~caps) (Filename.concat dir "control.sock.lock");
+      if Sys.file_exists dir then (Ox_caps.Cap_unix.rmdir ~caps) dir;
+      (Ox_caps.Cap_unix.chmod ~caps) runtime 0o700;
+      (Ox_caps.Cap_unix.rmdir ~caps) runtime)
     (fun () -> f runtime)
 
-let listen ?(reporter = Ox_observability.Logger.Reporter.writer ignore) ~runtime env sw
-    tabs =
+let listen ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >)
+    ?(reporter = Ox_observability.Logger.Reporter.writer ignore) ~runtime env sw tabs =
   match
     Leash.Control.create ~sw
       ~path:(Filename.concat (Filename.concat runtime "leash") "control.sock")
@@ -1404,7 +1498,7 @@ let listen ?(reporter = Ox_observability.Logger.Reporter.writer ignore) ~runtime
         logger =
           Ox_observability.Logger.create ~level:Debug ~service:"h2-socket"
             ~clock:env#clock ~mono_clock:env#mono_clock ~reporter ();
-        caps = (Ox_test.powerbox () :> Leash.Control.caps);
+        caps :> Leash.Control.caps;
       }
   with
   | Ok _ -> Filename.concat (Filename.concat runtime "leash") "control.sock"
@@ -1427,14 +1521,24 @@ let policy_peers () =
     "hard-b1na sixty-four concurrent requests" 64
     Leash.Control.policy.Ox_ipc.Listener.peers
 
-let ten_clients () =
-  with_runtime (fun runtime ->
-      rig (fun env sw tabs fake ->
+let ten_clients
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_runtime ~caps) (fun runtime ->
+      (rig ~caps) (fun env sw tabs fake ->
           let fake = fake () in
           many_tabs fake;
           let page = fresh_page () in
           script fake page;
-          let path = listen ~runtime env sw tabs in
+          let path = (listen ~caps) ~runtime env sw tabs in
           let handles = List.init 10 (fun _ -> new_tab tabs "alice") in
           let waiters = List.filteri (fun i _ -> i < 5) handles in
           let actors = List.filteri (fun i _ -> i >= 5) handles in
@@ -1530,9 +1634,19 @@ let ten_clients () =
           page.ready <- true;
           List.iter (fun cell -> ignore (result (pump env cell))) waits))
 
-let many_waiters () =
-  with_runtime (fun runtime ->
-      rig (fun env sw tabs fake ->
+let many_waiters
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_runtime ~caps) (fun runtime ->
+      (rig ~caps) (fun env sw tabs fake ->
           let fake = fake () in
           let page = fresh_page () in
           script fake page;
@@ -1544,7 +1658,7 @@ let many_waiters () =
                   = Some (Ox_observability.Logger.String "disconnected")
                 then incr disconnected)
           in
-          let path = listen ~reporter ~runtime env sw tabs in
+          let path = (listen ~caps) ~reporter ~runtime env sw tabs in
           let a = new_tab tabs "alice" in
           let until =
             Some
@@ -1601,8 +1715,11 @@ let many_waiters () =
 
 (* ---------- hard-wk6q: the surface is pinned in docs/protocol.md ---------- *)
 
-let documented () =
-  let doc = In_channel.with_open_bin "../docs/protocol.md" In_channel.input_all in
+let documented ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
+  let doc =
+    (Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
+      "../docs/protocol.md" In_channel.input_all
+  in
   List.iter
     (fun name ->
       Alcotest.(check bool)
@@ -1627,7 +1744,8 @@ let documented () =
     (List.for_all
        (fun meth ->
          contains
-           (In_channel.with_open_bin "support/fake_browser.ml" In_channel.input_all)
+           ((Ox_caps.Cap_stdlib.In_channel.with_open_bin ~caps)
+              "support/fake_browser.ml" In_channel.input_all)
            meth)
        [
          "Network.getResponseBody";
@@ -1640,32 +1758,34 @@ let documented () =
 let test name speed case = Alcotest.test_case name speed case
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L36 hardening 2"
     [
       ( "net",
         [
-          test "hard-xg6y per-tab ring" `Quick net_ring;
-          test "hard-ovbx bodies" `Quick net_body;
-          test "hard-vq5s request data" `Quick net_request;
+          test "hard-xg6y per-tab ring" `Quick (net_ring ~caps);
+          test "hard-ovbx bodies" `Quick (net_body ~caps);
+          test "hard-vq5s request data" `Quick (net_request ~caps);
         ] );
       ( "wait",
         [
-          test "hard-sr9v an hour" `Quick long_wait;
-          test "hard-sckn changed since" `Quick changed_since;
+          test "hard-sr9v an hour" `Quick (long_wait ~caps);
+          test "hard-sckn changed since" `Quick (changed_since ~caps);
         ] );
       ( "actions",
         [
-          test "hard-2gnf hard-o3za file inputs and upload" `Quick upload;
-          test "hard-v1gs hover" `Quick hover;
-          test "hard-b20d eval --index" `Quick eval_index;
+          test "hard-2gnf hard-o3za file inputs and upload" `Quick (upload ~caps);
+          test "hard-v1gs hover" `Quick (hover ~caps);
+          test "hard-b20d eval --index" `Quick (eval_index ~caps);
         ] );
-      ("state", [ test "hard-ufb7 cookies and storage" `Quick cookies_and_storage ]);
+      ( "state",
+        [ test "hard-ufb7 cookies and storage" `Quick (cookies_and_storage ~caps) ] );
       ( "concurrency",
         [
-          test "hard-b1na the action lock" `Quick tab_lock;
+          test "hard-b1na the action lock" `Quick (tab_lock ~caps);
           test "hard-b1na sixty-four peers" `Quick policy_peers;
-          test "hard-b1na ten clients over the socket" `Quick ten_clients;
-          test "hard-b1na hard-sr9v twenty waiters, then gone" `Quick many_waiters;
+          test "hard-b1na ten clients over the socket" `Quick (ten_clients ~caps);
+          test "hard-b1na hard-sr9v twenty waiters, then gone" `Quick (many_waiters ~caps);
         ] );
-      ("docs", [ test "hard-wk6q the surface is pinned" `Quick documented ]);
+      ("docs", [ test "hard-wk6q the surface is pinned" `Quick (documented ~caps) ]);
     ]

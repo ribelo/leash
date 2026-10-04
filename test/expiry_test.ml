@@ -55,17 +55,26 @@ let settle () =
     Eio.Fiber.yield ()
   done
 
-let rig ?(idle = 30) ?(interval = Expiry.interval) f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?(idle = 30) ?(interval = Expiry.interval) f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -78,14 +87,14 @@ let rig ?(idle = 30) ?(interval = Expiry.interval) f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let idle = Ox.Duration.seconds idle in
@@ -96,7 +105,7 @@ let rig ?(idle = 30) ?(interval = Expiry.interval) f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -137,8 +146,16 @@ let policy () =
       ("agent", false, 30., true);
     ]
 
-let boundary () =
-  rig (fun ~env ~tabs ~expiry ~fake:_ ->
+let boundary
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env ~tabs ~expiry ~fake:_ ->
       let h = fresh tabs in
       advance env 29;
       ignore (Expiry.sweep expiry);
@@ -159,8 +176,16 @@ let boundary () =
             "hand-s4cq late use recovery" "open a new tab with `leash new`" hint
       | _ -> Alcotest.fail "idle detail")
 
-let human_safety () =
-  rig (fun ~env ~tabs ~expiry ~fake ->
+let human_safety
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env ~tabs ~expiry ~fake ->
       Fake.emit fake ~method_:"Target.targetCreated"
         ~params:
           (obj
@@ -192,8 +217,16 @@ let human_safety () =
         "hand-ihcg taken page is now agent and closes" "tab-gone"
         (code (use tabs h)))
 
-let idle_pause () =
-  rig (fun ~env ~tabs ~expiry ~fake:_ ->
+let idle_pause
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env ~tabs ~expiry ~fake:_ ->
       let h = fresh tabs in
       ignore (Tabs.hand_over tabs ~reason:"captcha" h);
       advance env 3600;
@@ -208,6 +241,7 @@ let idle_pause () =
       Alcotest.(check string) "close after resumed idle" "tab-gone" (code (use tabs h)))
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L49 idle close"
     [
       ( "idle",
@@ -215,8 +249,8 @@ let () =
           (fun (n, f) -> Alcotest.test_case n `Quick f)
           [
             ("hand-0ibq ihcg pure policy", policy);
-            ("hand-0ibq exact boundary and late-use hint", boundary);
-            ("hand-ihcg human and permanently taken", human_safety);
-            ("handoff pause", idle_pause);
+            ("hand-0ibq exact boundary and late-use hint", boundary ~caps);
+            ("hand-ihcg human and permanently taken", human_safety ~caps);
+            ("handoff pause", idle_pause ~caps);
           ] );
     ]

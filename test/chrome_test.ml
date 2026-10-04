@@ -9,13 +9,13 @@ module Cdp = Leash.Cdp
 
 type rig = { mgr : Ox_test.Process.t; mutable browsers : (Fake.t * Fake.client) list }
 
-let launch rig ~sw ~clock ~mgr:_ config =
+let launch ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+    rig ~sw ~clock ~mgr:_ config =
   let fake, client = Fake.create ~sw () in
   rig.browsers <- (fake, client) :: rig.browsers;
   match
-    Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-      ~mgr:(Ox_test.Process.mgr rig.mgr) ~argv:(Chrome.argv config)
-      ~grace:(Ox.Duration.ms 50) ~stderr:Pipe ~fds:[] ()
+    Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr rig.mgr)
+      ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~stderr:Pipe ~fds:[] ()
   with
   | Error error -> Error error
   | Ok child ->
@@ -27,7 +27,8 @@ let config ?(headless = false) ?window_size () =
   Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-profile" ~workspace:"dev"
     ~headless ?window_size ()
 
-let deps env : _ Chrome.deps =
+let deps ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) env
+    : _ Chrome.deps =
   {
     clock = env#clock;
     mgr = env#process_mgr;
@@ -36,7 +37,7 @@ let deps env : _ Chrome.deps =
         ~mono_clock:env#mono_clock
         ~reporter:(Ox_observability.Logger.Reporter.writer ignore)
         ();
-    caps = (Ox_test.powerbox () :> Chrome.caps);
+    caps :> Chrome.caps;
   }
 
 (* The mock clock only moves when the test moves it, so every wait steps it until the
@@ -126,13 +127,14 @@ let argv_flags () =
     "debugging pipe stays" true
     (has_headless "--remote-debugging-pipe")
 
-let pipe_launch () =
+let pipe_launch
+    ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) () =
   (* launch_pipe maps the pipe pair onto the child's descriptors 3 and 4 *)
   Ox_test.run (fun env sw ->
       let fake = Ox_test.Process.make [ Block_until_signal ] in
       match
-        Chrome.launch_pipe ~caps:(Ox_test.powerbox ()) ~sw ~clock:env#clock
-          ~mgr:(Ox_test.Process.mgr fake) (config ())
+        Chrome.launch_pipe ~caps ~sw ~clock:env#clock ~mgr:(Ox_test.Process.mgr fake)
+          (config ())
       with
       | Error _ -> Alcotest.fail "the pipe launch failed"
       | Ok (_child, transport) ->
@@ -144,7 +146,8 @@ let pipe_launch () =
           ignore transport;
           Alcotest.(check (list int)) "child descriptors" [ 0; 1; 2; 3; 4 ] targets)
 
-let restart () =
+let restart ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+    () =
   (* chrome-qo4q *)
   Ox_test.run (fun env sw ->
       let rig =
@@ -154,7 +157,9 @@ let restart () =
           browsers = [];
         }
       in
-      let chrome = Chrome.create ~sw ~launch:(launch rig) (config ()) (deps env) in
+      let chrome =
+        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+      in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       (match Chrome.connection chrome with
       | Ok _ -> ()
@@ -173,7 +178,8 @@ let restart () =
         (Chrome.argv (config ()))
         (List.hd spawns).argv)
 
-let transport_loss () =
+let transport_loss
+    ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) () =
   (* chrome-2z2z *)
   Ox_test.run (fun env sw ->
       let rig =
@@ -182,7 +188,9 @@ let transport_loss () =
           browsers = [];
         }
       in
-      let chrome = Chrome.create ~sw ~launch:(launch rig) (config ()) (deps env) in
+      let chrome =
+        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+      in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       let cdp =
         match Chrome.connection chrome with
@@ -202,7 +210,8 @@ let transport_loss () =
       | Error _ -> Alcotest.fail "expected a transport-closed error"
       | Ok _ -> Alcotest.fail "the lost transport must not answer")
 
-let unavailable_during_restart () =
+let unavailable_during_restart
+    ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) () =
   (* chrome-6lfk *)
   Ox_test.run (fun env sw ->
       let rig =
@@ -211,7 +220,9 @@ let unavailable_during_restart () =
           browsers = [];
         }
       in
-      let chrome = Chrome.create ~sw ~launch:(launch rig) (config ()) (deps env) in
+      let chrome =
+        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+      in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       (match Chrome.connection chrome with
       | Ok _ -> ()
@@ -227,11 +238,14 @@ let unavailable_during_restart () =
       | Ok _ -> ()
       | Error `Browser_unavailable -> Alcotest.fail "the retry must succeed")
 
-let gave_up () =
+let gave_up ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+    () =
   Ox_test.run (fun env sw ->
       let scripts = List.init 12 (fun _ -> Ox_test.Process.Exit (`Exited 1)) in
       let rig = { mgr = Ox_test.Process.make scripts; browsers = [] } in
-      let chrome = Chrome.create ~sw ~launch:(launch rig) (config ()) (deps env) in
+      let chrome =
+        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+      in
       let rec drain remaining gave_up =
         if remaining = 0 then Alcotest.fail "the supervisor never gave up"
         else
@@ -254,15 +268,18 @@ let gave_up () =
 (* nactor-d120: a launch that fails — a typed spawn error or a defect — is not a generation
    that exited, so the relaunch loop does not retry it: the service gives up with that
    cause at once. *)
-let launch_failure_is_not_retried () =
-  let run_with launch check =
+let launch_failure_is_not_retried
+    ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) () =
+  let run_with
+      ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) launch
+      check =
     Ox_test.run (fun env sw ->
         let calls = ref 0 in
         let launch ~sw ~clock ~mgr config =
           incr calls;
           launch ~sw ~clock ~mgr config
         in
-        let chrome = Chrome.create ~sw ~launch (config ()) (deps env) in
+        let chrome = Chrome.create ~sw ~launch (config ()) ((deps ~caps) env) in
         let rec until_stopped seen budget =
           if budget = 0 then Alcotest.fail "the service never stopped"
           else
@@ -275,24 +292,27 @@ let launch_failure_is_not_retried () =
         check events;
         Alcotest.(check bool) "terminal" true ((Chrome.status chrome).phase = `Stopped))
   in
-  run_with
+  (run_with ~caps)
     (fun ~sw:_ ~clock:_ ~mgr:_ _ -> Error (`Invalid_fd 3))
     (function
       | [ Chrome.Gave_up (Ox.Cause.Fail (`Spawn (`Invalid_fd 3))) ] -> ()
       | _ -> Alcotest.fail "expected Gave_up with the spawn error, then Stopped");
   let boom = Failure "launch defect" in
-  run_with
+  (run_with ~caps)
     (fun ~sw:_ ~clock:_ ~mgr:_ _ -> raise boom)
     (function
       | [ Chrome.Gave_up (Ox.Cause.Die (ex, _)) ] ->
           Alcotest.(check bool) "the original exception" true (ex == boom)
       | _ -> Alcotest.fail "expected Gave_up with the defect, then Stopped")
 
-let orderly_stop () =
+let orderly_stop
+    ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) () =
   (* chrome-b288 *)
   Ox_test.run (fun env sw ->
       let rig = { mgr = Ox_test.Process.make [ Block_until_signal ]; browsers = [] } in
-      let chrome = Chrome.create ~sw ~launch:(launch rig) (config ()) (deps env) in
+      let chrome =
+        Chrome.create ~sw ~launch:((launch ~caps) rig) (config ()) ((deps ~caps) env)
+      in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       Chrome.stop chrome;
       expect_event "Stopped" env chrome Chrome.Stopped;
@@ -305,7 +325,8 @@ let orderly_stop () =
       | Error `Browser_unavailable -> ()
       | Ok _ -> Alcotest.fail "a stopped service has no browser to reach")
 
-let stderr_tail () =
+let stderr_tail
+    ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >) () =
   (* svc-qrmc: an actual Child stderr pipe, not a synthetic ring insertion. *)
   Ox_test.run (fun env sw ->
       let memory = Ox_observability.Logger.Memory.create () in
@@ -334,7 +355,10 @@ let stderr_tail () =
       in
       let rig = { mgr; browsers = [] } in
       let chrome =
-        Chrome.create ~sw ~launch:(launch rig) (config ()) { (deps env) with logger }
+        Chrome.create ~sw
+          ~launch:((launch ~caps) rig)
+          (config ())
+          { ((deps ~caps) env) with logger }
       in
       expect_event "Started 1" env chrome (Chrome.Started 1);
       expect_event "Lost 1" env chrome (Chrome.Lost 1);
@@ -362,23 +386,25 @@ let stderr_tail () =
         stderr)
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L2 managed Chrome"
     [
       ( "launch",
         [
           Alcotest.test_case "flags" `Quick argv_flags;
-          Alcotest.test_case "pipe descriptors 3 and 4" `Quick pipe_launch;
+          Alcotest.test_case "pipe descriptors 3 and 4" `Quick (pipe_launch ~caps);
         ] );
       ( "lifecycle",
         [
-          Alcotest.test_case "stderr tail per generation" `Quick stderr_tail;
-          Alcotest.test_case "restart under backoff" `Quick restart;
-          Alcotest.test_case "transport loss loses the generation" `Quick transport_loss;
+          Alcotest.test_case "stderr tail per generation" `Quick (stderr_tail ~caps);
+          Alcotest.test_case "restart under backoff" `Quick (restart ~caps);
+          Alcotest.test_case "transport loss loses the generation" `Quick
+            (transport_loss ~caps);
           Alcotest.test_case "unavailable while restarting" `Quick
-            unavailable_during_restart;
-          Alcotest.test_case "give up after the schedule" `Quick gave_up;
+            (unavailable_during_restart ~caps);
+          Alcotest.test_case "give up after the schedule" `Quick (gave_up ~caps);
           Alcotest.test_case "nactor-d120 a failed launch is not retried" `Quick
-            launch_failure_is_not_retried;
-          Alcotest.test_case "orderly stop" `Quick orderly_stop;
+            (launch_failure_is_not_retried ~caps);
+          Alcotest.test_case "orderly stop" `Quick (orderly_stop ~caps);
         ] );
     ]

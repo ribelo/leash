@@ -42,17 +42,26 @@ let text key json = match get key json with `String s -> s | _ -> ""
 let enum of_string value =
   match of_string value with Ok v -> v | Error e -> Alcotest.fail e
 
-let rig f =
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) f =
   Ox_test.run (fun env sw ->
       let mgr = Ox_test.Process.make [ Block_until_signal; Block_until_signal ] in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr mgr) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -65,14 +74,14 @@ let rig f =
           ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let tabs =
@@ -82,7 +91,7 @@ let rig f =
             clock = env#clock;
             logger;
             desktop = Leash.Desktop.disabled;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
+            caps :> Leash.Tabs.caps;
           }
       in
       let rec ready n =
@@ -213,8 +222,16 @@ let announce fake ?opener ~id ~url ~title () =
 let take tabs ?url ?title ?label () =
   request tabs "separate connection" (P.Take { url; title; label })
 
-let capabilities () =
-  rig (fun ~env:_ ~sw:_ ~tabs ~fake:_ ~logs:_ ->
+let capabilities
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake:_ ~logs:_ ->
       let first = create tabs ~label:"Research" () in
       let h = tab first in
       let raw = P.Handle.to_string h in
@@ -274,8 +291,16 @@ let capabilities () =
         "hand-scaz anonymous envelope" true
         (match encoded with `Assoc f -> List.length f = 3 | _ -> false))
 
-let selectors () =
-  rig (fun ~env:_ ~sw:_ ~tabs ~fake ~logs ->
+let selectors
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ~logs ->
       announce fake ~id:"human-1" ~url:"https://Example.com/Inbox" ~title:"Personal Inbox"
         ();
       announce fake ~id:"human-2" ~url:"https://example.com/Other" ~title:"Other Inbox" ();
@@ -332,8 +357,16 @@ let selectors () =
 (* Every handle command, against the five capability conditions, including separate
    decoded raw-wire requests for each cell. Live actions may fail for page-specific reasons,
    but never at authorization. *)
-let matrix () =
-  rig (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
+let matrix
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) (fun ~env:_ ~sw:_ ~tabs ~fake ~logs:_ ->
       loads fake;
       let bad = enum P.Handle.of_string "t_unknown" in
       let commands h =
@@ -397,12 +430,13 @@ let matrix () =
         [ `Missing; `Bad; `Live; `Human; `Closed ])
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L49 capabilities"
     [
       ( "handles",
         [
-          Alcotest.test_case "hand-scaz mb9s x3hi ryxz" `Quick capabilities;
-          Alcotest.test_case "hand-okk8 gjqy k1ag" `Quick selectors;
-          Alcotest.test_case "hand-oyzl command x capability matrix" `Quick matrix;
+          Alcotest.test_case "hand-scaz mb9s x3hi ryxz" `Quick (capabilities ~caps);
+          Alcotest.test_case "hand-okk8 gjqy k1ag" `Quick (selectors ~caps);
+          Alcotest.test_case "hand-oyzl command x capability matrix" `Quick (matrix ~caps);
         ] );
     ]

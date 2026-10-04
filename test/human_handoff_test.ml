@@ -149,18 +149,27 @@ let default_notify = [ "sh"; "{reason}" ]
    it points at a binary that is not installed, so Eio fails before a child exists. [log]
    keeps what the service logged, which is how a notification that answered after its
    handoff had already ended would be caught. *)
-let rig ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
+let rig
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
     ?(real = false) f =
   Ox_test.run (fun env sw ->
       let process = Ox_test.Process.make ~clock:env#clock (blocked :: scripts) in
       let current = ref None in
-      let launch ~sw ~clock ~mgr:_ config =
+      let launch
+          ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
+          ~sw ~clock ~mgr:_ config =
         let fake, client = Fake.create ~sw () in
         current := Some fake;
         match
-          Ox_process.Child.spawn ~caps:(Ox_test.powerbox ()) ~sw ~clock
-            ~mgr:(Ox_test.Process.mgr process) ~argv:(Chrome.argv config)
-            ~grace:(Ox.Duration.ms 50) ~fds:[] ()
+          Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr process)
+            ~argv:(Chrome.argv config) ~grace:(Ox.Duration.ms 50) ~fds:[] ()
         with
         | Error e -> Error e
         | Ok child -> Ok (child, { Leash.Cdp.read = client.read; write = client.write })
@@ -171,32 +180,26 @@ let rig ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
           ~mono_clock:env#mono_clock ~reporter:(Logger.Memory.reporter log) ()
       in
       let chrome =
-        Chrome.create ~sw ~launch
+        Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-human-profile"
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
             logger;
-            caps = (Ox_test.powerbox () :> Leash.Chrome.caps);
+            caps :> Leash.Chrome.caps;
           }
       in
       let desktop =
         Desktop.create
-          ~caps:(Ox_test.powerbox () :> Desktop.caps)
+          ~caps:(caps :> Desktop.caps)
           ~clock:env#clock
           ~mgr:(if real then env#process_mgr else Ox_test.Process.mgr process)
           { Desktop.focus_command = focus; notify_command = notify }
       in
       let tabs =
         Tabs.create ~sw ~cap:128 ~tombstone_s:3600
-          {
-            Tabs.chrome;
-            clock = env#clock;
-            logger;
-            desktop;
-            caps = (Ox_test.powerbox () :> Leash.Tabs.caps);
-          }
+          { Tabs.chrome; clock = env#clock; logger; desktop; caps :> Leash.Tabs.caps }
       in
       let rec ready n =
         if n = 0 then Alcotest.fail "no Chrome"
@@ -214,8 +217,16 @@ let rig ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
    then the configured desktop command, with the reason and the tab substituted into one
    argv element each, never through a shell. hand-rg9h: a handoff whose steps all worked
    carries no warnings at all. *)
-let focus_raises_the_view () =
-  rig ~focus:[ "sh"; "{tab}"; "reason={reason}"; "literal" ]
+let focus_raises_the_view
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~focus:[ "sh"; "{tab}"; "reason={reason}"; "literal" ]
     ~notify:[ "sh"; "{reason}" ] ~scripts:[ exit_ok; blocked ]
     (fun ~env:_ ~sw ~tabs ~fake ~process ~log:_ ->
       let h = handle_new tabs in
@@ -258,8 +269,16 @@ let focus_raises_the_view () =
    The line is a chunk due two seconds after the spawn, so it arrives while the handoff
    waits, and the notifier is the human's resume (hand-0sja): the tab accepts agent actions
    again. The test below this one is the same chunk with nobody clicking. *)
-let notification_done_resumes () =
-  rig
+let notification_done_resumes
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps)
     ~scripts:[ exit_ok; output [ out ~after:(Ox.Duration.seconds 2) "done\n" ] blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
@@ -294,8 +313,16 @@ let notification_done_resumes () =
    delay: the same chunk resumed the tab in the test above, so nothing happening here is
    the stopping, not a missing line. The log is the evidence the line was never read, since
    a Done action arriving after its handoff ended is reported. *)
-let notifier_stopped_before_printing () =
-  rig
+let notifier_stopped_before_printing
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps)
     ~scripts:[ exit_ok; output [ out ~after:(Ox.Duration.seconds 30) "done\n" ] blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log ->
       let h = handle_new tabs in
@@ -327,8 +354,16 @@ let notifier_stopped_before_printing () =
 (* hand-rg9h: a human-facing step that fails is a warning and a log line, never a handoff
    failure — the tab still goes to the human and still comes back. *)
 
-let focus_failure_is_a_warning () =
-  rig
+let focus_failure_is_a_warning
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps)
     ~scripts:[ Ox_test.Process.Exit (`Exited 2); blocked ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log:_ ->
       let h = handle_new tabs in
@@ -353,8 +388,16 @@ let focus_failure_is_a_warning () =
    binary is {!missing_binary_is_a_warning} — is a warning and a log line, never a handoff
    failure. The warning is waited for on the log, because the notification is a daemon of
    the handoff and its failure lands after the tab is already the human's. *)
-let notify_failure_is_a_warning () =
-  rig
+let notify_failure_is_a_warning
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps)
     ~scripts:[ exit_ok; Ox_test.Process.Exit (`Exited 1) ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log ->
       let h = handle_new tabs in
@@ -377,8 +420,16 @@ let notify_failure_is_a_warning () =
         "hand-rg9h and the reply says the human was never told" [ "notify: exited 1" ]
         (warnings (result (reply !cell))))
 
-let focus_timeout_is_a_warning () =
-  rig ~scripts:[ blocked; blocked ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
+let focus_timeout_is_a_warning
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~scripts:[ blocked; blocked ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -398,8 +449,17 @@ let focus_timeout_is_a_warning () =
         [ "focus: the command did not finish within five seconds" ]
         (warnings (result (reply !cell))))
 
-let activate_failure_is_a_warning () =
-  rig ~scripts:[ exit_ok; blocked ] (fun ~env:_ ~sw ~tabs ~fake ~process:_ ~log:_ ->
+let activate_failure_is_a_warning
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~scripts:[ exit_ok; blocked ]
+    (fun ~env:_ ~sw ~tabs ~fake ~process:_ ~log:_ ->
       Fake.on_failure fake "Target.activateTarget" (fun _ ->
           Some (-32601, "Method not found"));
       let h = handle_new tabs in
@@ -419,8 +479,16 @@ let activate_failure_is_a_warning () =
 
 (* The real process manager, one command that is not installed: Eio resolves the executable
    before anything is spawned, and the warning names the binary the config asked for. *)
-let missing_binary_is_a_warning () =
-  rig ~real:true ~focus:[ "leash-focus-command-that-is-not-installed"; "{tab}" ]
+let missing_binary_is_a_warning
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~real:true ~focus:[ "leash-focus-command-that-is-not-installed"; "{tab}" ]
     ~notify:[] (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
@@ -440,8 +508,16 @@ let missing_binary_is_a_warning () =
 
 (* hand-rg9h: an unanswered handoff is exactly when a broken notification matters, so the
    [timeout] error carries the same warnings in its detail. *)
-let timeout_carries_the_warnings () =
-  rig
+let timeout_carries_the_warnings
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps)
     ~scripts:[ Ox_test.Process.Exit (`Exited 1); blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
@@ -468,8 +544,16 @@ let timeout_carries_the_warnings () =
 (* hand-04rb hand-phof: the notification child is stopped when the handoff ends, however
    it ends — here a resume and then the deadline — so a handoff leaves no notifier behind
    for the rest of the service's life. *)
-let the_notifier_is_stopped () =
-  rig ~scripts:[ exit_ok; blocked; exit_ok; blocked ]
+let the_notifier_is_stopped
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  (rig ~caps) ~scripts:[ exit_ok; blocked; exit_ok; blocked ]
     (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
@@ -502,14 +586,22 @@ let the_notifier_is_stopped () =
 
 (* hand-04rb: the focus command's [{window_id}] is the managed Chrome's niri window, by
    app id; a listing without one skips the command rather than running it on nothing. *)
-let focus_finds_the_chrome_window () =
+let focus_finds_the_chrome_window
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   let listing =
     "[{\"id\":2,\"title\":\"Mail - Google Chrome\",\"app_id\":\"google-chrome\"},"
     ^ "{\"id\":7,\"title\":\"Sign in - Chrome\",\"app_id\":\"leash\"}]"
   in
   (* hand-04rb: the listing is niri's own `msg --json windows` output, a chunk the child
      prints before it exits zero; the focus command that follows gets the window id. *)
-  rig
+  (rig ~caps)
     ~scripts:[ output [ out (listing ^ "\n") ] exit_ok; exit_ok; blocked ]
     ~focus:[ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process ~log:_ ->
@@ -536,7 +628,7 @@ let focus_finds_the_chrome_window () =
         "hand-rg9h finding the window is not a warning" []
         (warnings (result (reply !cell))));
   let without_chrome = "[{\"id\":2,\"app_id\":\"google-chrome\"}]" in
-  rig
+  (rig ~caps)
     ~scripts:[ output [ out (without_chrome ^ "\n") ] exit_ok; blocked ]
     ~focus:[ "niri"; "msg"; "action"; "focus-window"; "--id"; "{window_id}" ]
     (fun ~env:_ ~sw ~tabs ~fake:_ ~process ~log:_ ->
@@ -592,12 +684,20 @@ let reply_shapes () =
 
 (* pilot-9u3q: notify-send exits successfully without an action on dismissal.
    Both that close and the explicit Cancel action must settle before the deadline. *)
-let notification_cancel_ends ~dismissed () =
+let notification_cancel_ends
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) ~dismissed () =
   let event =
     if dismissed then output [ out ~after:(Ox.Duration.seconds 2) "" ] exit_ok
     else output [ out ~after:(Ox.Duration.seconds 2) "cancel\n" ] blocked
   in
-  rig ~scripts:[ exit_ok; event ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
+  (rig ~caps) ~scripts:[ exit_ok; event ] (fun ~env ~sw ~tabs ~fake:_ ~process ~log:_ ->
       let h = handle_new tabs in
       let cell = ref None in
       Eio.Fiber.fork ~sw (fun () ->
@@ -617,10 +717,18 @@ let notification_cancel_ends ~dismissed () =
       check_code "pilot-9u3q no waiting handoff remains" "no-handoff"
         (request tabs "human" (P.Resume { tab = h })))
 
-let notification_first_action_wins () =
+let notification_first_action_wins
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
   List.iter
     (fun (actions, canceled) ->
-      rig
+      (rig ~caps)
         ~scripts:[ exit_ok; output [ out actions ] exit_ok ]
         (fun ~env:_ ~sw ~tabs ~fake:_ ~process:_ ~log:_ ->
           let h = handle_new tabs in
@@ -645,30 +753,32 @@ let notification_first_action_wins () =
 let test name case = Alcotest.test_case name `Quick case
 
 let () =
+  let caps = Ox_test.powerbox () in
   Alcotest.run "L17 human-facing handoff"
     [
       ( "focus",
         [
-          test "hand-04rb hand-rg9h" focus_raises_the_view;
-          test "hand-04rb hand-rg9h" focus_finds_the_chrome_window;
+          test "hand-04rb hand-rg9h" (focus_raises_the_view ~caps);
+          test "hand-04rb hand-rg9h" (focus_finds_the_chrome_window ~caps);
         ] );
       ( "notification",
         [
-          test "hand-phof" notification_done_resumes;
-          test "pilot-9u3q dismissed" (notification_cancel_ends ~dismissed:true);
-          test "pilot-9u3q cancel action" (notification_cancel_ends ~dismissed:false);
-          test "pilot-9u3q first action wins" notification_first_action_wins;
-          test "hand-phof hand-04rb" notifier_stopped_before_printing;
+          test "hand-phof" (notification_done_resumes ~caps);
+          test "pilot-9u3q dismissed" ((notification_cancel_ends ~caps) ~dismissed:true);
+          test "pilot-9u3q cancel action"
+            ((notification_cancel_ends ~caps) ~dismissed:false);
+          test "pilot-9u3q first action wins" (notification_first_action_wins ~caps);
+          test "hand-phof hand-04rb" (notifier_stopped_before_printing ~caps);
         ] );
       ( "warnings",
         [
-          test "hand-rg9h" focus_failure_is_a_warning;
-          test "hand-rg9h" notify_failure_is_a_warning;
-          test "hand-rg9h" focus_timeout_is_a_warning;
-          test "hand-rg9h" activate_failure_is_a_warning;
-          test "hand-rg9h" missing_binary_is_a_warning;
-          test "hand-rg9h hand-lmd5" timeout_carries_the_warnings;
+          test "hand-rg9h" (focus_failure_is_a_warning ~caps);
+          test "hand-rg9h" (notify_failure_is_a_warning ~caps);
+          test "hand-rg9h" (focus_timeout_is_a_warning ~caps);
+          test "hand-rg9h" (activate_failure_is_a_warning ~caps);
+          test "hand-rg9h" (missing_binary_is_a_warning ~caps);
+          test "hand-rg9h hand-lmd5" (timeout_carries_the_warnings ~caps);
           test "hand-rg9h" reply_shapes;
         ] );
-      ("cleanup", [ test "hand-04rb hand-phof hand-lmd5" the_notifier_is_stopped ]);
+      ("cleanup", [ test "hand-04rb hand-phof hand-lmd5" (the_notifier_is_stopped ~caps) ]);
     ]

@@ -1899,28 +1899,27 @@ let () =
     | result -> result
   in
   let diagnostic ~kind ~message = diagnostic ~config_path:!config_path ~kind ~message in
-  exit
-    (Ox_app.run_with_args ~name:"leash" ~service_command:"serve" ~config:Leash.Config.spec
-       ~service_args:(Term.const ())
-       ~bare:(`Command (fun env -> Term.const (orientation env)))
-       ~doc:"A local managed Chrome for agents." ~man:Cli_help.top_man
-       ~exits:Cli_help.all_exits ~usage_exit:124 ~validation_exit:65 ~defect_exit:70
-       ~exit_code:(fun _ -> 70)
-       ~diagnostic ~read_file ~decode_with_env:decode_config
-       ~journal_level:Ox_observability.Logger.Warn
-       ~commands_with_env_code:(fun env _run_owned run_owned_code ->
-         let caps = env.Ox_app.Env.caps in
-         let base = env.Ox_app.Env.base in
-         let send path request = send ~base path request in
-         commands ~caps ~send ~base ~run_owned:run_owned_code
-         @ [ skill_command ~caps ~run_owned:run_owned_code; help_command ~caps ])
-       ~telemetry
-       ~config_commands_with_env:(fun env -> [ init_command ~caps:env.Ox_app.Env.caps ])
-       ~validate:Leash.Config.validate
-       ~pp_err:(fun fmt (`Service _) ->
-         Format.pp_print_string fmt
-           (Yojson.Safe.to_string
-              (P.yojson_of_error
-                 (make_error "internal"
-                    "the Leash service failed to start or stopped unexpectedly"))))
-       (fun env _source config () sw -> program env config sw))
+  Ox_app.run_and_exit_with_args ~name:"leash" ~service_command:"serve"
+    ~config:Leash.Config.spec ~service_args:(Term.const ())
+    ~bare:(`Command (fun env -> Term.const (orientation env)))
+    ~doc:"A local managed Chrome for agents." ~man:Cli_help.top_man
+    ~exits:Cli_help.all_exits ~usage_exit:124 ~validation_exit:65 ~defect_exit:70
+    ~exit_code:(fun _ -> 70)
+    ~diagnostic ~read_file ~decode_with_env:decode_config
+    ~journal_level:Ox_observability.Logger.Warn
+    ~commands_with_env_code:(fun env _run_owned run_owned_code ->
+      let caps = env.Ox_app.Env.caps in
+      let base = env.Ox_app.Env.base in
+      let send path request = send ~base path request in
+      commands ~caps ~send ~base ~run_owned:run_owned_code
+      @ [ skill_command ~caps ~run_owned:run_owned_code; help_command ~caps ])
+    ~telemetry
+    ~config_commands_with_env:(fun env -> [ init_command ~caps:env.Ox_app.Env.caps ])
+    ~validate:Leash.Config.validate
+    ~pp_err:(fun fmt (`Service _) ->
+      Format.pp_print_string fmt
+        (Yojson.Safe.to_string
+           (P.yojson_of_error
+              (make_error "internal"
+                 "the Leash service failed to start or stopped unexpectedly"))))
+    (fun env _source config () sw -> program env config sw)
