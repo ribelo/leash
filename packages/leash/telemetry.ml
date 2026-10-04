@@ -4,7 +4,7 @@ let create ~caps ~sw ~net ~clock ~endpoint ~headers : Ox_app.telemetry =
   let http = Ox_http.Client.create ~sw ~net ~clock ~tls:(Ox_http.Client.tls ()) () in
   match
     Ox_otel.create ~caps ~sw ~clock ~http_client:http ~endpoint ~service_name:"leash"
-      ~headers ()
+      ~ending_budget:(Ox.Duration.seconds 5) ~headers ()
   with
   | Error error ->
       invalid_arg (Format.asprintf "OTLP configuration: %a" Ox_otel.pp_error error)

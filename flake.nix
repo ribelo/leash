@@ -3,7 +3,7 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.ox = {
-    url = "git+file:///home/ribelo/projects/ribelo/ocaml/ox?ref=master&rev=f9a6bb9dfa4b0a29329abb8083ef214c24cfd1a0";
+    url = "git+file:///home/ribelo/projects/ribelo/ocaml/ox?ref=master&rev=9bf973e19741c496b1c9459a5f6f7aa8313e0fd5";
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.opam-nix.follows = "opam-nix";
     inputs.opam-repository.follows = "opam-repository";

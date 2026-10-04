@@ -892,6 +892,7 @@ let config_check_cli
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   with_temp ~caps (fun dir ->
@@ -915,6 +916,7 @@ let config_check_cli
              ; Ox_caps.Cap.fork
              ; Ox_caps.Cap.fs_read
              ; Ox_caps.Cap.fs_write
+             ; Ox_caps.Cap.stdin
              ; .. >) () =
         let output = Filename.concat dir "stdout" in
         let error = Filename.concat dir "stderr" in
@@ -932,7 +934,8 @@ let config_check_cli
           Ox_caps.Cap_unix.create_process_env ~caps executable
             [| executable; "config"; "check"; "--config"; config_file |]
             (Ox_caps.Cap_unix.environment ~caps ())
-            Unix.stdin stdout stderr
+            (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
+            stdout stderr
         in
         Unix.close stdout;
         Unix.close stderr;
@@ -970,6 +973,7 @@ let socket_cli_case
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) ?(expected_lines = []) ?on_command argv reply expected_status
     expected_command =
@@ -1008,7 +1012,9 @@ let socket_cli_case
           let pid =
             Ox_caps.Cap_unix.create_process_env ~caps binary
               (Array.of_list (binary :: argv))
-              env Unix.stdin out_write err_write
+              env
+              (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
+              out_write err_write
           in
           Unix.close out_write;
           Unix.close err_write;
@@ -1054,6 +1060,7 @@ let socket_cli
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   socket_cli_case ~caps [ "status" ] "{\"ok\":true,\"result\":{}}" 0 "status";
@@ -1095,6 +1102,7 @@ let cli_usage
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.stdin
        ; .. >) () =
   let binary =
     Filename.concat
@@ -1109,7 +1117,8 @@ let cli_usage
         Ox_caps.Cap_unix.create_process_env ~caps binary
           [| binary; "status"; "unexpected" |]
           (Ox_caps.Cap_unix.environment ~caps ())
-          Unix.stdin null null
+          (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
+          null null
       in
       let _, status = Unix.waitpid [] pid in
       Alcotest.(check bool)
@@ -1224,6 +1233,7 @@ let run_cli
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) ?(env = []) argv =
   let binary = binary_path () in
@@ -1247,7 +1257,8 @@ let run_cli
           (Array.of_list (binary :: argv))
           (Array.of_list
              (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
-          Unix.stdin out err
+          (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
+          out err
       in
       Unix.close out;
       Unix.close err;
@@ -1262,6 +1273,7 @@ let run_cli_at
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) listener ~env argv reply =
   let binary = binary_path () in
@@ -1285,7 +1297,8 @@ let run_cli_at
           (Array.of_list (binary :: argv))
           (Array.of_list
              (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
-          Unix.stdin out err
+          (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
+          out err
       in
       Unix.close out;
       Unix.close err;
@@ -1484,6 +1497,7 @@ let config_init_cli
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   with_tree ~caps (fun root ->
@@ -1588,6 +1602,7 @@ let config_check_without_file
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   with_tree ~caps (fun root ->
@@ -1637,6 +1652,7 @@ let socket_config_cli
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.network
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   with_tree ~caps (fun root ->
@@ -1728,6 +1744,7 @@ let help_matrix
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   List.iter
@@ -1769,6 +1786,7 @@ let help_scope
        ; Ox_caps.Cap.fork
        ; Ox_caps.Cap.fs_read
        ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.stdin
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   let help
@@ -1778,6 +1796,7 @@ let help_scope
          ; Ox_caps.Cap.fork
          ; Ox_caps.Cap.fs_read
          ; Ox_caps.Cap.fs_write
+         ; Ox_caps.Cap.stdin
          ; Ox_caps.Cap.tmp
          ; .. >) argv =
     let _, output, _ = run_cli ~caps (argv @ [ "--help" ]) in
