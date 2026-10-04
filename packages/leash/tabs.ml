@@ -2407,8 +2407,9 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
               latest := Some page;
               Ok page
             in
-            let until = now t +. 3. in
+            let until = ref 0. in
             let rec stable (previous : Run.observation) =
+              let until = !until in
               let left = until -. now t in
               if left <= 0. then Ok previous
               else (
@@ -2421,17 +2422,16 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                 then Ok page
                 else stable page)
             in
+            (* The first observation always completes (its own operation bounds apply); only
+               the wait for stability is bounded, and on the bound the latest page is used.
+               U2 on Tauron (build J) ended because a first read took longer than 3 s. *)
+            let* first = read () in
+            until := now t +. 3.;
             Eio.Fiber.first
-              (fun () ->
-                let* page = read () in
-                stable page)
+              (fun () -> stable first)
               (fun () ->
                 t.sleep 3.;
-                match !latest with
-                | Some page -> Ok page
-                | None ->
-                    Error
-                      (error "timeout" "pilot observation did not arrive within 3 seconds"))
+                Ok (Option.value ~default:first !latest))
           in
           (* map-3qag: the run already holds the tab lock; use the same row
              revalidation, hit-test, input and settle path as public actions. *)
