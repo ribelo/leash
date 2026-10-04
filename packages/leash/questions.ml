@@ -70,7 +70,7 @@ Answer with one JSON object:
 {"answer":"leg","goal":"navigation goal or offered candidate slug"}
 {"answer":"read","quote":"exact page text","note":"what it means"}
 {"answer":"act","action":{"cmd":"click|select|fill|press","args":{"tab":"offered tab","snapshot":"current snapshot","index":1}}}
-Fill adds text (a value or a provided secret NAME); select adds option; press adds key.
+Fill adds text (a value or a provided secret NAME); select adds option (its index or label); press adds key.
 A download is a click on its row.
 {"answer":"act","action":{"cmd":"scroll","args":{"tab":"offered tab","direction":"down"}}}
 The element table lists only rows in the visible viewport; the text covers the whole page. To act on something the text shows but the table lacks, scroll first.

@@ -87,6 +87,48 @@ let act_without_version () =
   | Ok _ -> ()
   | Error why -> Alcotest.fail why
 
+(* pilot-x1f3: a select option given by label resolves to its index (U2, Tauron). *)
+let select_label () =
+  let row =
+    P.
+      {
+        index = 3;
+        role = "combobox";
+        name = "Typ dokumentu";
+        value = None;
+        state = None;
+        options =
+          Some
+            [
+              {
+                index = 0;
+                label = "Wszystkie";
+                value = "all";
+                selected = true;
+                disabled = false;
+              };
+              {
+                index = 1;
+                label = "Faktury";
+                value = "inv";
+                selected = false;
+                disabled = false;
+              };
+            ];
+      }
+  in
+  let request =
+    { request with R.snapshot = { snapshot with rows = [ row ]; total = 1 } }
+  in
+  match
+    M.decode_pilot request
+      {|{"answer":"act","action":{"cmd":"select","args":{"tab":"t_test","snapshot":"s_test","index":3,"option":"Faktury"}}}|}
+  with
+  | Ok { answer = R.Act (P.Select a); _ } ->
+      Alcotest.(check int) "option index" 1 a.option
+  | Ok _ -> Alcotest.fail "not a select"
+  | Error why -> Alcotest.fail why
+
 (* pilot-02ij: the pilot prompt stays under 300 words. *)
 let prompt_size () =
   let words =
@@ -139,6 +181,7 @@ let () =
             ("refusals", refuses);
             ("act without wire version", act_without_version);
             ("prompt under 300 words", prompt_size);
+            ("select option by label", select_label);
             ("generated secret", generated);
             ("bounded request", bounded);
             ("redaction", redact);

@@ -5,6 +5,43 @@ module P = Protocol
 
 let pilot_prompt = Questions.pilot
 
+(* pilot-x1f3: the pilot names a select option by its label or value as often as by its
+   index (U2 on Tauron, 2026-10-04: "option: expected int, got \"Faktury\""); resolve it
+   against the offered row's options, case-insensitively. *)
+let select_by_label (snapshot : P.snapshot) json =
+  let norm s = String.lowercase_ascii (String.trim s) in
+  match json with
+  | `Assoc fields -> (
+      match (List.assoc_opt "cmd" fields, List.assoc_opt "args" fields) with
+      | Some (`String "select"), Some (`Assoc args) -> (
+          match (List.assoc_opt "option" args, List.assoc_opt "index" args) with
+          | Some (`String wanted), Some (`Int index) -> (
+              let options =
+                List.find_opt (fun (row : P.row) -> row.index = index) snapshot.rows
+                |> Fun.flip Option.bind (fun (row : P.row) -> row.options)
+                |> Option.value ~default:[]
+              in
+              match
+                List.find_opt
+                  (fun (o : P.row_option) ->
+                    norm o.label = norm wanted || norm o.value = norm wanted)
+                  options
+              with
+              | Some o ->
+                  let args =
+                    List.map
+                      (fun (k, v) -> if k = "option" then (k, `Int o.index) else (k, v))
+                      args
+                  in
+                  `Assoc
+                    (List.map
+                       (fun (k, v) -> if k = "args" then (k, `Assoc args) else (k, v))
+                       fields)
+              | None -> json)
+          | _ -> json)
+      | _ -> json)
+  | json -> json
+
 type t = {
   plan : ?deadline:Ox.Duration.t -> Run.plan_request -> (Run.plan_reply, P.error) result;
 }
@@ -168,6 +205,7 @@ let decode_pilot (request : Run.plan_request) content =
             match List.assoc_opt "action" fields with
             | None -> Error "act requires action"
             | Some json ->
+                let json = select_by_label request.snapshot json in
                 let* action = P.planner_action_of_yojson json in
                 let* () = P.check_planner_action request.snapshot action in
                 Ok (Run.Act action))
