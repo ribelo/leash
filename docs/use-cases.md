@@ -280,3 +280,32 @@ All cost_unreported counts are **0**. The first invoice mission reached `done` o
 Some local acceptance projections initially used the wrong locale/duration field, counted navigator `done` as a physical scroll, required an unasked future balance in U1, or assumed omitted optional revision/pilot-status fields existed. These evidence-parser mistakes were corrected from retained artifacts, **without rerunning browser missions**, and require no product commit. The early J U1 cost estimate was corrected to the exact $0.000732675 before final acceptance. No unknown error-path bill was reported as zero.
 
 **Final safety/hygiene.** Every replacement used a private profile and positively verified build; no installed configuration/service was edited and no payment was made. L’s exact private service was verified before SIGTERM; its managed job exited **0**. [Final process verification](</tmp/leash-u12l-20261004-ziz93ryx/evidence/shutdown-verification.json>) finds **zero** L Chrome processes, and the [final credential scan](</tmp/leash-u12l-20261004-ziz93ryx/evidence/post-shutdown-secret-scan.json>) reports login/password **0 / 0**. Evidence/PDF/customer data stay private under the linked temporary roots; the repository contains only this Results documentation. No further run, forced candidate trial or third U2 attempt was made. The acceptance outcome is **U1 correct, U2 correct twice, scroll regression no longer reproduced, new drafts proven, replay/installation not demonstrated**.
+## Results — 2026-10-04, the pilot gates (L57)
+
+A private headless service built from master `f4183c0` (its own XDG config, state, runtime and Chrome profile; no playbooks installed; `[learning] mode = "auto"`), missions run with `leash drive`. Every `result` below is checked against an independent read by the harness — the month view, the place, the category page fetched again — never against the reply.
+
+### U5 — the cheapest flight next month, live (Google Flights)
+
+Mission, verbatim: "Find the cheapest flight from Warsaw to Lisbon next month and tell me its price and dates" (`--url https://www.google.com/travel/flights`).
+
+`result`: "The cheapest fare shown is PLN 349 round trip for Nov 28–30, 2026. It's a nonstop Ryanair flight operated by Ryanair Sun, departing Warsaw Modlin for Lisbon on Nov 28. The fare does not include overhead-bin access."
+
+Independent check, three reads:
+
+- The pilot's final search URL, opened fresh by the harness, shows `Cheapest from PLN 349`, `Ryanair` / `Operated by Ryanair Sun` and `Nonstop`.
+- Eight date pairs sampled across November by the harness through the ordinary search (Nov 7→10, 14→17, 21→24, 28→30, 2→30, 10→Dec 1, 17→24, 24→27) returned `Cheapest from` PLAIN 721, 719, 678, **349**, 490, 708, 668, 957. The minimum is the pair the pilot named.
+- The November search page's own date grid marks `PLN 490, cheapest price, Nov 2 to Nov 30` as the cheapest cell of its window (departures Oct 29–Nov 4, returns Nov 27–Dec 3), which the pilot's pair beats.
+
+The pilot chose the pair from the departure calendar, whose per-date buttons carry prices — its steps include `Click the button named Saturday, November 28, 2026 , 341 Polish zlotys, Cheapest price` and `... Monday, November 30, 2026 , 349 Polish zlotys, Cheapest price` — so the answer came from a price-annotated month view, not from one arbitrary date.
+
+Cost: 12 pilot turns, 0 navigator steps, 13 model calls, $0.0086824. Memory: after the run the pilot wrote draft `legs-f51320787656` (10 goals, the route and the date pair it picked).
+
+### U6 — a cafe near the Eiffel Tower, live (Google Maps)
+
+Mission, verbatim: "Find a cafe near the Eiffel Tower with rating over 4 and give me its name and address" (`--url https://www.google.com/maps`).
+
+`result`: "Sunflower Café — 41 Av. de Suffren, Paris. Rated 4.7/5."
+
+Independent check: the harness opened the same search (`cafes near Eiffel Tower`) in a fresh tab and read the results list itself: `Sunflower Café` / `4,7` / `Kawiarnia · 41 Av. de Suffren` — name, rating above 4 and address all agree, and the site's own category is "café" (Kawiarnia).
+
+Cost: 3 pilot turns, 0 navigator steps, 3 calls, $0.00091. Memory: draft `legs-489f96955548` (2 goals).
