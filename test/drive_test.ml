@@ -99,6 +99,8 @@ let run ?(clock_step = 0.) ?(max_steps = 30) ?(deadline_s = 120) ?(dry_run = fal
           snapshot = None;
           dialog = None;
           popups = [];
+          hits = None;
+          shots = None;
           via = None;
         }
   in
@@ -202,6 +204,8 @@ let with_text ?(rows = []) ?(refuse = fun _ -> false) operations answers =
             snapshot = None;
             dialog = None;
             popups = [];
+            hits = None;
+            shots = None;
             via = None;
           }
     end
@@ -354,6 +358,8 @@ let model_error ?(code = "model-unavailable") () =
                   snapshot = None;
                   dialog = None;
                   popups = [];
+                  hits = None;
+                  shots = None;
                   via = None;
                 });
       }
@@ -405,6 +411,8 @@ let step_failure () =
                         snapshot = None;
                         dialog = None;
                         popups = [];
+                        hits = None;
+                        shots = None;
                         via = None;
                       });
           }
@@ -488,6 +496,8 @@ let dialog_popup_error () =
                       snapshot = None;
                       dialog;
                       popups;
+                      hits = None;
+                      shots = None;
                       via = None;
                     });
           }
@@ -545,6 +555,8 @@ let performed () =
       snapshot = None;
       dialog = None;
       popups = [];
+      hits = None;
+      shots = None;
       via = None;
     }
 
@@ -871,6 +883,8 @@ let bounded_pre_action_risk () =
                   snapshot = None;
                   dialog = None;
                   popups = [];
+                  hits = None;
+                  shots = None;
                   via = None;
                 });
       }
@@ -1037,6 +1051,8 @@ let consent_dispatch () =
               snapshot = None;
               dialog = None;
               popups = [];
+              hits = None;
+              shots = None;
               via = None;
             }
   in
@@ -1164,6 +1180,8 @@ let unchanged_action_mask () =
           snapshot = None;
           dialog = None;
           popups = [];
+          hits = None;
+          shots = None;
           via = None;
         }
   in
@@ -1246,6 +1264,8 @@ let oscillating_action_mask ?(meaningful_change = false) () =
           snapshot = None;
           dialog = None;
           popups = [];
+          hits = None;
+          shots = None;
           via = None;
         }
   in

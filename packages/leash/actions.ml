@@ -570,7 +570,7 @@ let aim cdp tab (target : target) =
       | Ok (`Wait | `Blocked) ->
           fail "row-not-actionable" "the row is covered at its click point")
 
-let mouse cdp tab ~type_ ~x ~y ~buttons =
+let mouse ?(click_count = 1) cdp tab ~type_ ~x ~y ~buttons =
   dispatch cdp tab "Input.dispatchMouseEvent"
     (E.object_
        [
@@ -579,7 +579,7 @@ let mouse cdp tab ~type_ ~x ~y ~buttons =
          ("y", E.float y);
          ("button", Some (E.string "left"));
          ("buttons", Some (E.int buttons));
-         ("clickCount", Some (E.int 1));
+         ("clickCount", Some (E.int click_count));
        ])
 
 let frames_expression =
@@ -874,6 +874,8 @@ let result tab before =
       dialog = tab.dialog ();
       popups;
       via = None;
+      hits = None;
+      shots = None;
     }
 
 let with_result tab dispatch =
@@ -911,6 +913,179 @@ let click ?(settle_after = true) ~cdp tab (args : P.click_args) =
             if settle_after then settle cdp tab ~combobox:false else Ok ()))
   in
   Ok { result with P.via = !via }
+
+(* pic-egvj pic-f2hy pic-33hm: picture input never requires or resolves a row. *)
+let finite_point (at : P.point) = Float.is_finite at.x && Float.is_finite at.y
+
+let hit_at ~cdp tab (at : P.point) =
+  if
+    (not (finite_point at))
+    || abs_float at.x >= float_of_int max_int
+    || abs_float at.y >= float_of_int max_int
+  then fail "invalid-request" "coordinates must be finite CSS-pixel points"
+  else
+    let pixel = P.{ x = Float.floor at.x; y = Float.floor at.y } in
+    let empty =
+      P.
+        {
+          at;
+          sampled_at = pixel;
+          element = "no element";
+          hit_role = None;
+          hit_label = None;
+        }
+    in
+    match
+      attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.getNodeForLocation"
+        (E.object_
+           [
+             ("x", Some (E.int (int_of_float pixel.x)));
+             ("y", Some (E.int (int_of_float pixel.y)));
+             ("includeUserAgentShadowDOM", Some (E.bool true));
+           ])
+    with
+    | Error (Refused (_, "No node found at given location")) -> Ok empty
+    | Error Timed_out -> unresponsive ()
+    | Error (Refused (_, why)) ->
+        fail "internal" ("browser refused point hit-test: " ^ why)
+    | Error (Transport why) -> fail "browser-unavailable" why
+    | Ok reply -> (
+        match E.Of_json.(field "backendNodeId" int) reply with
+        | Error _ -> fail "internal" "browser omitted point hit-test identity"
+        | Ok backend -> (
+            let* node =
+              call cdp ~session:tab.session "DOM.describeNode"
+                (E.object_
+                   [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
+            in
+            match E.Of_json.(at [ "node"; "nodeName" ] string) node with
+            | Error _ -> fail "internal" "browser omitted the hit element"
+            | Ok element ->
+                let nonempty text = if text = "" then None else Some text in
+                let role, label =
+                  match accessed cdp tab backend with
+                  | Some (role, label) -> (nonempty role, nonempty label)
+                  | None -> (None, None)
+                in
+                Ok
+                  P.
+                    {
+                      at;
+                      sampled_at = pixel;
+                      element = String.lowercase_ascii element;
+                      hit_role = role;
+                      hit_label = label;
+                    }))
+
+let click_point ~count ~cdp tab (args : P.point_action_args) =
+  guarded tab (fun () ->
+      tab.engage ();
+      let* hit = hit_at ~cdp tab args.at in
+      let* result =
+        with_result tab (fun () ->
+            let rec clicks n =
+              if n > count then Ok ()
+              else
+                let* () =
+                  mouse ~click_count:n cdp tab ~type_:"mousePressed" ~x:args.at.x
+                    ~y:args.at.y ~buttons:1
+                in
+                let* () =
+                  mouse ~click_count:n cdp tab ~type_:"mouseReleased" ~x:args.at.x
+                    ~y:args.at.y ~buttons:0
+                in
+                clicks (n + 1)
+            in
+            let* () = clicks 1 in
+            settle cdp tab ~combobox:false)
+      in
+      Ok { result with P.hits = Some [ hit ] })
+
+let click_at ~cdp tab args = click_point ~count:1 ~cdp tab args
+let dblclick ~cdp tab args = click_point ~count:2 ~cdp tab args
+
+let scroll_at ~cdp tab (args : P.point_scroll_args) =
+  if not (Float.is_finite args.dy) then fail "invalid-request" "--dy must be finite"
+  else
+    guarded tab (fun () ->
+        tab.engage ();
+        let* hit = hit_at ~cdp tab args.at in
+        let* result =
+          with_result tab (fun () ->
+              let* () =
+                dispatch cdp tab "Input.dispatchMouseEvent"
+                  (E.object_
+                     [
+                       ("type", Some (E.string "mouseWheel"));
+                       ("x", E.float args.at.x);
+                       ("y", E.float args.at.y);
+                       ("deltaX", E.float 0.);
+                       ("deltaY", E.float args.dy);
+                     ])
+              in
+              settle cdp tab ~combobox:false)
+        in
+        Ok { result with P.hits = Some [ hit ] })
+
+let drag ~cdp tab (args : P.drag_args) =
+  guarded tab (fun () ->
+      tab.engage ();
+      let* source = hit_at ~cdp tab args.from_ in
+      let* destination = hit_at ~cdp tab args.to_ in
+      let* result =
+        with_result tab (fun () ->
+            let held = ref false and current = ref args.from_ in
+            let release () =
+              held := false;
+              mouse cdp tab ~type_:"mouseReleased" ~x:!current.x ~y:!current.y ~buttons:0
+            in
+            let* () =
+              mouse cdp tab ~type_:"mouseMoved" ~x:args.from_.x ~y:args.from_.y ~buttons:0
+            in
+            let* () =
+              mouse cdp tab ~type_:"mousePressed" ~x:args.from_.x ~y:args.from_.y
+                ~buttons:1
+            in
+            held := true;
+            let* () =
+              Fun.protect
+                ~finally:(fun () ->
+                  if !held then Eio.Cancel.protect (fun () -> ignore (release ())))
+                (fun () ->
+                  let rec move step =
+                    if step > 12 then release ()
+                    else
+                      let fraction = float_of_int step /. 12. in
+                      let point =
+                        P.
+                          {
+                            x = args.from_.x +. (fraction *. (args.to_.x -. args.from_.x));
+                            y = args.from_.y +. (fraction *. (args.to_.y -. args.from_.y));
+                          }
+                      in
+                      let* () =
+                        mouse cdp tab ~type_:"mouseMoved" ~x:point.x ~y:point.y ~buttons:1
+                      in
+                      current := point;
+                      move (step + 1)
+                  in
+                  move 1)
+            in
+            settle cdp tab ~combobox:false)
+      in
+      Ok { result with P.hits = Some [ source; destination ] })
+
+let type_text ~cdp tab (args : P.type_args) =
+  if String.length args.text > 65_536 then fail "too-large" "type text exceeds 64 KiB"
+  else
+    guarded tab (fun () ->
+        tab.engage ();
+        with_result tab (fun () ->
+            let* () =
+              dispatch cdp tab "Input.insertText"
+                (E.object_ [ ("text", Some (E.string args.text)) ])
+            in
+            settle cdp tab ~combobox:false))
 
 (* field-guda: click the control (following a covering label, field-uls3), then read
    checked. Already in the requested state is state-unchanged without a click, so a

@@ -300,6 +300,8 @@ let action_refusal () =
                      snapshot = None;
                      dialog = None;
                      popups = [];
+                     hits = None;
+                     shots = None;
                      via = None;
                    })
              (params ~mission ()))
@@ -391,6 +393,8 @@ let act_memory
         snapshot = None;
         dialog = None;
         popups = [];
+        hits = None;
+        shots = None;
         via = None;
       }
   in
@@ -485,6 +489,8 @@ let secret_dispatch () =
                   snapshot = None;
                   dialog = None;
                   popups = [];
+                  hits = None;
+                  shots = None;
                   via = None;
                 })
           (params ())));

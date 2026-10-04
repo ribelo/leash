@@ -53,6 +53,11 @@
     own-ehqa). The default event shape is the fixture page [target-1]; [emit] papers over
     the rest. *)
 
+val png : string
+(** Base64 of a complete 800x600 PNG for viewport capture fixtures. *)
+
+val png_bytes : int
+
 type t
 
 type client = {

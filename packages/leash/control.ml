@@ -97,6 +97,11 @@ let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
   | P.Uncheck args -> lift P.yojson_of_action_result (Tabs.uncheck tabs args)
   | P.Dialog args -> lift P.yojson_of_action_result (Tabs.dialog tabs args)
   | P.Click args -> lift P.yojson_of_action_result (Tabs.click tabs args)
+  | P.Click_at args -> lift P.yojson_of_action_result (Tabs.click_at tabs args)
+  | P.Dblclick args -> lift P.yojson_of_action_result (Tabs.dblclick tabs args)
+  | P.Scroll_at args -> lift P.yojson_of_action_result (Tabs.scroll_at tabs args)
+  | P.Drag args -> lift P.yojson_of_action_result (Tabs.drag tabs args)
+  | P.Type args -> lift P.yojson_of_action_result (Tabs.type_text tabs args)
   | P.Fill args -> lift P.yojson_of_action_result (Tabs.fill tabs args)
   | P.Press args -> lift P.yojson_of_action_result (Tabs.press tabs args)
   | P.Select args -> lift P.yojson_of_action_result (Tabs.select tabs args)
@@ -308,9 +313,10 @@ let budget ?(pilot = Config.default.pilot) ?(handoff_timeout_s = 300)
   | Ok
       {
         command =
-          ( P.Click _ | P.Fill _ | P.Press _ | P.Select _ | P.Scroll _ | P.Upload _
-          | P.Hover _ | P.Check _ | P.Uncheck _ | P.Net_body _ | P.Net_request _
-          | P.Cookies _ | P.Storage _ );
+          ( P.Click _ | P.Click_at _ | P.Dblclick _ | P.Scroll_at _ | P.Drag _ | P.Type _
+          | P.Fill _ | P.Press _ | P.Select _ | P.Scroll _ | P.Upload _ | P.Hover _
+          | P.Check _ | P.Uncheck _ | P.Net_body _ | P.Net_request _ | P.Cookies _
+          | P.Storage _ );
         _;
       } ->
       Some cdp_budget

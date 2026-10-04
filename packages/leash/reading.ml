@@ -372,6 +372,8 @@ let action_result browser tab =
       snapshot = None;
       dialog = browser.dialog ();
       popups = [];
+      hits = None;
+      shots = None;
       via = None;
     }
 
@@ -509,28 +511,72 @@ let decode_png encoded =
     in
     decode 0 0
 
+(* pic-ncu1: use actual PNG dimensions and CSS layout metrics, not an assumed DPR. *)
+let png_size png =
+  if
+    Bytes.length png < 24
+    || Bytes.sub_string png 0 8 <> "\137PNG\r\n\026\n"
+    || Bytes.sub_string png 12 4 <> "IHDR"
+  then Error (internal "browser returned a PNG without image dimensions")
+  else
+    let dimension offset =
+      let n = ref 0 in
+      for i = offset to offset + 3 do
+        n := (!n lsl 8) lor Char.code (Bytes.get png i)
+      done;
+      !n
+    in
+    let width = dimension 16 and height = dimension 20 in
+    if width <= 0 || height <= 0 then
+      Error (internal "browser returned empty PNG dimensions")
+    else Ok (width, height)
+
 let shot ~caps browser (args : P.shot_args) =
   if Filename.is_relative args.path then
     Error (invalid "screenshot path must be absolute")
   else
     let* () = check_dialog browser in
-    let* reply =
-      browser.capture ~full_page:(Option.value ~default:false args.full_page)
+    let full_page = Option.value ~default:false args.full_page in
+    let* metrics = browser.call "Page.getLayoutMetrics" (obj []) in
+    let* viewport =
+      match
+        ( nested [ "cssLayoutViewport"; "clientWidth" ] D.float metrics,
+          nested [ "cssLayoutViewport"; "clientHeight" ] D.float metrics )
+      with
+      | Some width, Some height when width > 0. && height > 0. ->
+          Ok (P.{ width; height } : P.viewport)
+      | _ -> Error (internal "browser omitted CSS viewport dimensions")
     in
+    let* capture_width =
+      if not full_page then Ok viewport.width
+      else
+        match nested [ "cssContentSize"; "width" ] D.float metrics with
+        | Some width when width > 0. -> Ok width
+        | _ -> Error (internal "browser omitted CSS full-page dimensions")
+    in
+    let* reply = browser.capture ~full_page in
     match field "data" D.string reply with
     | None -> Error (internal "browser omitted screenshot")
     | Some encoded -> (
         let* png = decode_png encoded in
-        if Bytes.length png < 8 || Bytes.sub_string png 0 8 <> "\137PNG\r\n\026\n" then
-          Error (internal "browser returned non-PNG screenshot")
-        else
-          try
-            let output = Ox_caps.Cap_stdlib.open_out_bin ~caps args.path in
-            Fun.protect
-              ~finally:(fun () -> close_out output)
-              (fun () -> output_bytes output png);
-            Ok P.{ path = args.path; bytes = Bytes.length png }
-          with Sys_error _ -> Error (invalid "screenshot path is not writable"))
+        let* width, height = png_size png in
+        try
+          let output = Ox_caps.Cap_stdlib.open_out_bin ~caps args.path in
+          Fun.protect
+            ~finally:(fun () -> close_out output)
+            (fun () -> output_bytes output png);
+          Ok
+            P.
+              {
+                path = args.path;
+                bytes = Bytes.length png;
+                width;
+                height;
+                viewport;
+                scale = float_of_int width /. capture_width;
+                full_page;
+              }
+        with Sys_error _ -> Error (invalid "screenshot path is not writable"))
 
 type t = {
   entries : P.debug_entry option array;

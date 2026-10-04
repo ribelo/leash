@@ -282,6 +282,8 @@ let scripted_steps
           snapshot = None;
           dialog = None;
           popups = [];
+          hits = None;
+          shots = None;
           via = None;
         }
   in

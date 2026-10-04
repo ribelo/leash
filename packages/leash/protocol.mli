@@ -331,6 +331,36 @@ type snapshot = {
 val snapshot_of_yojson : Yojson.Safe.t -> (snapshot, string) result
 val yojson_of_snapshot : snapshot -> Yojson.Safe.t
 
+type point = { x : float; y : float }
+(** Viewport CSS coordinates, never desktop or image pixels. *)
+
+val point_of_yojson : Yojson.Safe.t -> (point, string) result
+val yojson_of_point : point -> Yojson.Safe.t
+
+type viewport = { width : float; height : float }
+
+type shot_result = {
+  path : string;
+  bytes : int;
+  width : int;
+  height : int;
+  viewport : viewport;
+  scale : float;
+  full_page : bool;
+}
+(** Actual PNG pixels and pixels per CSS pixel. Full-page scale uses captured content
+    width, not viewport height. *)
+
+type point_hit = {
+  at : point;
+  sampled_at : point;
+  element : string;
+  hit_role : string option;
+  hit_label : string option;
+}
+(** [at] is the dispatch point; [sampled_at] is the containing integer CSS pixel probed by
+    CDP; canvas/stream hosts are not identification of a drawn control. *)
+
 type action_result = {
   tab : Handle.t;
   url : string;
@@ -338,6 +368,8 @@ type action_result = {
   snapshot : snapshot option;
   dialog : dialog option;
   popups : popup_info list;
+  hits : point_hit list option;
+  shots : shot_result list option;
   via : string option;
 }
 (** [snapshot] and [dialog] are [T|null]. [snapshot] is null, or a fresh {!snapshot} taken
@@ -436,6 +468,15 @@ type click_args = {
 (** [snap], [match_] and [limit] are [key?]. [snap] asks for a fresh snapshot in the reply
     after settlement; [match_] and [limit] are the same filters as [snap] (field-swvb).
     [check] and [uncheck] use this record (field-guda). *)
+
+type point_action_args = { tab : Handle.t; at : point; shot : bool option }
+type point_scroll_args = { tab : Handle.t; at : point; dy : float; shot : bool option }
+type drag_args = { tab : Handle.t; from_ : point; to_ : point; shot : bool option }
+
+type type_args = { tab : Handle.t; text : string; shot : bool option }
+(** Picture actions require no snapshot or row. [shots] starts with the before image for
+    pointer acts; [shot] appends the settled after image. Focused type returns only the
+    requested after image. *)
 
 type fill_args = {
   tab : Handle.t;
@@ -631,7 +672,6 @@ val yojson_of_resumed_result : resumed_result -> Yojson.Safe.t
 val text_result_of_yojson : Yojson.Safe.t -> (text_result, string) result
 val yojson_of_text_result : text_result -> Yojson.Safe.t
 
-type shot_result = { path : string; bytes : int }
 type debug_result = { entries : debug_entry list }
 type eval_result = { value : Yojson.Safe.t }
 
@@ -998,6 +1038,11 @@ type command =
   | Eval of eval_args
   | Nav of nav_args
   | Click of click_args
+  | Click_at of point_action_args
+  | Dblclick of point_action_args
+  | Scroll_at of point_scroll_args
+  | Drag of drag_args
+  | Type of type_args
   | Fill of fill_args
   | Press of press_args
   | Select of select_args

@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: in-progress
 milestone: 13
 ---
 
@@ -69,4 +69,6 @@ One verified pushed commit per step. Only afterward resume L57F: U5, U10, U9, U7
 
 ## Open stories
 
-All eleven stories above remain open until their implementation/test or live evidence is recorded. No live success is inferred from the presence of this spec.
+The coordinate slice implements `pic-egvj`, `pic-f2hy`, `pic-33hm` and `pic-ncu1`. Control/CDP tests cover every new command, fractional CSS dispatch versus native integer hit samples, canvas-host/empty-hit evidence, HiDPI and full-page scale, private before/after PNGs and refused-drag button release. CLI tests cover the picture forms, mixed/nonfinite input and protected text sources.
+
+`pic-cqcf` is complete for those native commands only; its image-snapshot and image-pilot tests remain open with the remaining seven stories. No live success is inferred from these fake-browser results.

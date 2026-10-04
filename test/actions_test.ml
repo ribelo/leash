@@ -2856,10 +2856,230 @@ let quiet_click
         "a quiet click still answers" true
         (Yojson.Safe.Util.member "tab" reply <> `Null))
 
+(* pic-egvj pic-f2hy pic-33hm pic-ncu1 pic-cqcf: picture input crosses the
+   control/CDP seams without building or consulting a row snapshot. *)
+let picture_host fake =
+  Fake.on_method fake "DOM.getNodeForLocation" (fun _ -> o [ ("backendNodeId", i 700) ]);
+  Fake.on_method fake "DOM.describeNode" (fun _ ->
+      o [ ("node", o [ ("nodeName", s "CANVAS"); ("backendNodeId", i 700) ]) ]);
+  Fake.on_method fake "Accessibility.getPartialAXTree" (fun _ ->
+      o
+        [
+          ( "nodes",
+            `List
+              [
+                o
+                  [
+                    ("role", o [ ("value", s "application") ]);
+                    ("name", o [ ("value", s "Stream host") ]);
+                  ];
+              ] );
+        ]);
+  Fake.on_method fake "Page.getLayoutMetrics" (fun _ ->
+      o
+        [
+          ("cssLayoutViewport", o [ ("clientWidth", i 400); ("clientHeight", i 300) ]);
+          ("cssContentSize", o [ ("width", i 800); ("height", i 600) ]);
+        ])
+
+let picture_images count reply =
+  let images = list (member "shots" reply) in
+  Alcotest.(check int) "retained private images" count (List.length images);
+  List.iter
+    (fun image ->
+      Alcotest.(check int) "PNG pixel width" 800 (integer "width" image);
+      Alcotest.(check int) "PNG pixel height" 600 (integer "height" image);
+      Alcotest.(check bool) "measured HiDPI scale" true (member "scale" image = num 2.);
+      Alcotest.(check bool)
+        "CSS viewport width" true
+        (member "width" (member "viewport" image) = num 400.);
+      let stat = Unix.stat (text "path" image) in
+      Alcotest.(check int) "private evidence permissions" 0o600 stat.Unix.st_perm)
+    images;
+  if count = 2 then
+    Alcotest.(check bool)
+      "before and after are distinct captures" true
+      (text "path" (List.nth images 0) <> text "path" (List.nth images 1))
+
+let picture_click ~caps ~double () =
+  rig ~caps (fun _env _sw _chrome tabs fake ->
+      let fake = fake () in
+      picture_host fake;
+      let tab = new_tab tabs in
+      let args : P.point_action_args =
+        { tab; at = P.{ x = 240.75; y = 17.5 }; shot = Some true }
+      in
+      let reply =
+        result
+          (request tabs "alice" (if double then P.Dblclick args else P.Click_at args))
+      in
+      picture_images 2 reply;
+      let hits = list (member "hits" reply) in
+      Alcotest.(check int) "one hit probe" 1 (List.length hits);
+      let hit = List.hd hits in
+      Alcotest.(check string)
+        "host, not a made-up drawn control" "canvas" (text "element" hit);
+      Alcotest.(check string) "available role" "application" (text "role" hit);
+      Alcotest.(check string) "available host label" "Stream host" (text "label" hit);
+      Alcotest.(check bool)
+        "fractional dispatch point retained" true
+        (member "x" (member "at" hit) = num 240.75);
+      Alcotest.(check bool)
+        "integer probe separately reported" true
+        (member "x" (member "sampled_at" hit) = num 240.);
+      let probe = params (List.hd (calls fake "DOM.getNodeForLocation")) in
+      Alcotest.(check int) "native integer hit-test" 240 (integer "x" probe);
+      let inputs = calls fake "Input.dispatchMouseEvent" in
+      Alcotest.(check int)
+        "native clicks, never retries"
+        (if double then 4 else 2)
+        (List.length inputs);
+      List.iter
+        (fun event ->
+          Alcotest.(check bool)
+            "native fractional input" true
+            (member "x" (params event) = num 240.75))
+        inputs;
+      if double then
+        Alcotest.(check int)
+          "second click count" 2
+          (integer "clickCount" (params (List.nth inputs 2)));
+      Alcotest.(check int)
+        "no row box lookup" 0
+        (List.length (calls fake "DOM.getContentQuads"));
+      let stream =
+        methods fake
+        |> List.filter (fun m ->
+            m = "Page.startScreencast" || m = "Input.dispatchMouseEvent")
+      in
+      Alcotest.(check string)
+        "before image precedes input" "Page.startScreencast" (List.hd stream);
+      Alcotest.(check string)
+        "after image follows input" "Page.startScreencast"
+        (List.hd (List.rev stream)))
+
+let picture_scroll ~caps () =
+  rig ~caps (fun _env _sw _chrome tabs fake ->
+      let fake = fake () in
+      picture_host fake;
+      let tab = new_tab tabs in
+      let reply =
+        result
+          (request tabs "alice"
+             (P.Scroll_at { tab; at = P.{ x = 10.25; y = 20.5 }; dy = -123.; shot = None }))
+      in
+      picture_images 1 reply;
+      let inputs = calls fake "Input.dispatchMouseEvent" in
+      Alcotest.(check int) "one wheel input" 1 (List.length inputs);
+      let wheel = params (List.hd inputs) in
+      Alcotest.(check string) "native wheel" "mouseWheel" (text "type" wheel);
+      Alcotest.(check bool) "signed delta" true (member "deltaY" wheel = num (-123.));
+      Alcotest.(check bool) "wheel CSS point" true (member "x" wheel = num 10.25))
+
+let picture_drag ~caps ~refused () =
+  rig ~caps (fun _env _sw _chrome tabs fake ->
+      let fake = fake () in
+      picture_host fake;
+      if refused then
+        Fake.on_failure fake "Input.dispatchMouseEvent" (fun request ->
+            let args = params request in
+            if
+              E.string_member "type" args = Some "mouseMoved"
+              && E.int_member "buttons" args = Some 1
+            then Some (-32000, "scripted move refusal")
+            else None);
+      let tab = new_tab tabs in
+      let reply =
+        request tabs "alice"
+          (P.Drag
+             {
+               tab;
+               from_ = P.{ x = 10.5; y = 20.5 };
+               to_ = P.{ x = 110.5; y = 220.5 };
+               shot = None;
+             })
+      in
+      (if refused then
+         match reply with
+         | P.Failure _ -> ()
+         | _ -> Alcotest.fail "refused move succeeded"
+       else
+         let reply = result reply in
+         picture_images 1 reply;
+         Alcotest.(check int)
+           "both endpoint hits" 2
+           (List.length (list (member "hits" reply))));
+      let kinds = kinds (calls fake "Input.dispatchMouseEvent") in
+      let count name = List.length (List.filter (( = ) name) kinds) in
+      Alcotest.(check int) "one press" 1 (count "mousePressed");
+      Alcotest.(check int)
+        "one release, including refused move cleanup" 1 (count "mouseReleased");
+      Alcotest.(check int)
+        "bounded moves, no failed move retry"
+        (if refused then 2 else 13)
+        (count "mouseMoved"))
+
+let picture_type ~caps () =
+  rig ~caps (fun _env _sw _chrome tabs fake ->
+      let fake = fake () in
+      picture_host fake;
+      let tab = new_tab tabs in
+      let reply =
+        result
+          (request tabs "alice"
+             (P.Type { tab; text = "canvas text ω"; shot = Some true }))
+      in
+      picture_images 1 reply;
+      let inputs = calls fake "Input.insertText" in
+      Alcotest.(check int) "one focused native insert" 1 (List.length inputs);
+      Alcotest.(check string)
+        "exact UTF-8 text" "canvas text ω"
+        (text "text" (params (List.hd inputs)));
+      Alcotest.(check bool)
+        "text absent from result" false
+        (contains (Yojson.Safe.to_string reply) "canvas text");
+      Alcotest.(check int)
+        "no point-to-row prerequisite" 0
+        (List.length (calls fake "DOM.getNodeForLocation"));
+      Alcotest.(check int)
+        "no fill key replacement" 0
+        (List.length (calls fake "Input.dispatchKeyEvent")))
+
+let picture_no_element ~caps () =
+  rig ~caps (fun _env _sw _chrome tabs fake ->
+      let fake = fake () in
+      picture_host fake;
+      Fake.on_failure fake "DOM.getNodeForLocation" (fun _ ->
+          Some (-32000, "No node found at given location"));
+      let tab = new_tab tabs in
+      let reply =
+        result
+          (request tabs "alice"
+             (P.Click_at { tab; at = P.{ x = 900.; y = 900. }; shot = None }))
+      in
+      let hit = List.hd (list (member "hits" reply)) in
+      Alcotest.(check string) "truthful empty hit" "no element" (text "element" hit);
+      Alcotest.(check bool) "no invented role" true (E.member "role" hit = None);
+      Alcotest.(check int)
+        "dispatch even without a row or element" 2
+        (List.length (calls fake "Input.dispatchMouseEvent")))
+
 let () =
   let caps = Ox_test.powerbox () in
   Alcotest.run "L7 actions"
     [
+      ( "picture",
+        [
+          Alcotest.test_case "pic-egvj click" `Quick (picture_click ~caps ~double:false);
+          Alcotest.test_case "pic-egvj double click" `Quick
+            (picture_click ~caps ~double:true);
+          Alcotest.test_case "pic-f2hy scroll" `Quick (picture_scroll ~caps);
+          Alcotest.test_case "pic-f2hy drag" `Quick (picture_drag ~caps ~refused:false);
+          Alcotest.test_case "pic-f2hy refused drag cleanup" `Quick
+            (picture_drag ~caps ~refused:true);
+          Alcotest.test_case "pic-33hm focused type" `Quick (picture_type ~caps);
+          Alcotest.test_case "pic-ncu1 no element" `Quick (picture_no_element ~caps);
+        ] );
       ( "actions",
         [
           Alcotest.test_case "tab-bw4j tm6c j1z2 1lhx" `Quick (click ~caps);

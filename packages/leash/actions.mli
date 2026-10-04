@@ -92,6 +92,43 @@ val click :
 (** [settle_after] defaults to true. The operator path settles with {!operator_settle}
     instead, so autocomplete and ordinary input keep the reference bounds (fly-2pn7). *)
 
+val hit_at :
+  cdp:Cdp.t -> tab -> Protocol.point -> (Protocol.point_hit, Protocol.error) result
+(** CDP's hit-test samples the containing integer CSS pixel; dispatch retains the point.
+*)
+
+val click_at :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.point_action_args ->
+  (Protocol.action_result, Protocol.error) result
+
+val dblclick :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.point_action_args ->
+  (Protocol.action_result, Protocol.error) result
+
+val scroll_at :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.point_scroll_args ->
+  (Protocol.action_result, Protocol.error) result
+
+val drag :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.drag_args ->
+  (Protocol.action_result, Protocol.error) result
+
+val type_text :
+  cdp:Cdp.t ->
+  tab ->
+  Protocol.type_args ->
+  (Protocol.action_result, Protocol.error) result
+(** First-class picture acts. They share dialog, dispatch and settlement bounds with row
+    actions, without row revalidation. *)
+
 val fill :
   ?settle_after:bool ->
   ?check_hit:bool ->

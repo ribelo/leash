@@ -1,7 +1,11 @@
 module P = Protocol
 
 type caps =
-  < Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.random >
+  < Ox_caps.Cap.env
+  ; Ox_caps.Cap.fs_read
+  ; Ox_caps.Cap.fs_write
+  ; Ox_caps.Cap.random
+  ; Ox_caps.Cap.tmp >
 
 type 'clock deps = {
   chrome : Chrome.t;
@@ -1874,6 +1878,57 @@ let click t (args : P.click_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
     t args.tab (fun cdp view -> Actions.click ~cdp view args)
 
+(* pic-ncu1: retain a private before image; --shot adds the settled after image.
+   The existing action owner holds the tab lock through capture, input and evidence. *)
+let with_picture_action ?(before = true) t handle ~shot action =
+  with_action t handle (fun cdp view ->
+      let* tab = locate t ~access:Act handle in
+      view.Actions.engage ();
+      let browser = reading_browser t ~session:view.session tab cdp in
+      let capture () =
+        try
+          let path =
+            Ox_caps.Cap_stdlib.Filename.temp_file ~caps:t.caps "leash-picture-" ".png"
+          in
+          Reading.shot ~caps:t.caps browser
+            P.{ tab = handle; path; full_page = Some false }
+        with Sys_error _ ->
+          Error
+            (P.make_error
+               (enum P.Error_code.of_string "internal")
+               ~message:"could not create private picture evidence")
+      in
+      let* images =
+        if before then Result.map (fun image -> [ image ]) (capture ()) else Ok []
+      in
+      let* result = action cdp view in
+      let* images =
+        match shot with
+        | Some true -> Result.map (fun image -> images @ [ image ]) (capture ())
+        | _ -> Ok images
+      in
+      Ok { result with P.shots = (if images = [] then None else Some images) })
+
+let click_at t (args : P.point_action_args) =
+  with_picture_action t args.tab ~shot:args.shot (fun cdp view ->
+      Actions.click_at ~cdp view args)
+
+let dblclick t (args : P.point_action_args) =
+  with_picture_action t args.tab ~shot:args.shot (fun cdp view ->
+      Actions.dblclick ~cdp view args)
+
+let scroll_at t (args : P.point_scroll_args) =
+  with_picture_action t args.tab ~shot:args.shot (fun cdp view ->
+      Actions.scroll_at ~cdp view args)
+
+let drag t (args : P.drag_args) =
+  with_picture_action t args.tab ~shot:args.shot (fun cdp view ->
+      Actions.drag ~cdp view args)
+
+let type_text t (args : P.type_args) =
+  with_picture_action ~before:false t args.tab ~shot:args.shot (fun cdp view ->
+      Actions.type_text ~cdp view args)
+
 let fill t (args : P.fill_args) =
   with_action ~after:(attach_snap t ~snap:args.snap ~match_:args.match_ ~limit:args.limit)
     t args.tab (fun cdp view -> Actions.fill ~cdp view args)
@@ -2143,6 +2198,8 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
         snapshot = None;
         dialog = tab.dialog;
         popups = [];
+        hits = None;
+        shots = None;
         via = None;
       }
   in
@@ -2503,6 +2560,8 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                       snapshot = None;
                       dialog = tab.dialog;
                       popups = [];
+                      hits = None;
+                      shots = None;
                       via = None;
                     }
             | _ -> Error (error "invalid-request" "unsupported planner action")

@@ -474,15 +474,49 @@ let rec perform ~caps ~send ~base command fields positionals options =
                       (fun (key, value) -> `List [ `String key; `String value ])
                       pairs) )
             :: options))
-  | "fill", _ -> (
+  | (("click" | "scroll") as picture), _ ->
+      let has name =
+        List.exists (function Some (key, _) -> key = name | None -> false) options
+      in
+      let point = has "at" in
+      let expected = if point then 1 else if picture = "click" then 3 else 2 in
+      if
+        (not point) && picture = "click"
+        && (List.length positionals < 2 || List.nth positionals 1 = "")
+      then
+        usage ~caps
+          "click: SNAPSHOT is missing; usage: click TAB SNAPSHOT INDEX or click TAB --at \
+           X,Y"
+      else if List.length positionals <> expected then
+        usage ~caps
+          (if picture = "click" then "click: give TAB SNAPSHOT INDEX or TAB --at X,Y"
+           else "scroll: give TAB UP|DOWN or TAB --at X,Y --dy N")
+      else if point && List.exists has [ "snapshot"; "index"; "snap"; "match"; "limit" ]
+      then usage ~caps "picture input cannot be mixed with row/snapshot options"
+      else if (not point) && List.exists has [ "dy"; "shot" ] then
+        usage ~caps "--dy and --shot require --at; use --snap for row click evidence"
+      else if point && picture = "scroll" && not (has "dy") then
+        usage ~caps "scroll: --at requires --dy N"
+      else perform_wire ~caps ~send ~base command fields positionals options
+  | (("dblclick" | "drag") as picture), _ ->
+      let has name =
+        List.exists (function Some (key, _) -> key = name | None -> false) options
+      in
+      let required = if picture = "drag" then [ "from"; "to" ] else [ "at" ] in
+      if List.for_all has required then
+        perform_wire ~caps ~send ~base command fields positionals options
+      else
+        usage ~caps
+          (if picture = "drag" then "drag: give TAB --from X,Y --to X,Y"
+           else "dblclick: give TAB --at X,Y")
+  | ("fill" | "type"), _ -> (
       let present key =
         List.find_map
           (function Some (name, value) when name = key -> Some value | _ -> None)
           options
       in
-      let positional =
-        if List.length positionals >= 4 then List.nth positionals 3 else ""
-      in
+      let text_index = if command = "type" then 1 else 3 in
+      let positional = Option.value ~default:"" (List.nth_opt positionals text_index) in
       let file =
         match present "argument_file" with Some (`String path) -> Some path | _ -> None
       in
@@ -496,9 +530,13 @@ let rec perform ~caps ~send ~base command fields positionals options =
         + if from_stdin then 1 else 0
       in
       if sources = 0 then
-        usage ~caps "fill: TEXT is missing; usage: fill TAB SNAPSHOT INDEX TEXT"
+        usage ~caps
+          (if command = "type" then
+             "type: TEXT is missing; give TAB TEXT, --argument-file or --stdin"
+           else "fill: TEXT is missing; usage: fill TAB SNAPSHOT INDEX TEXT")
       else if sources > 1 then
-        usage ~caps "fill: give TEXT, --argument-file or --stdin, not more than one"
+        usage ~caps
+          (command ^ ": give TEXT, --argument-file or --stdin, not more than one")
       else
         let read =
           if from_stdin then read_bounded (Cap_stdlib.stdin ~caps)
@@ -506,16 +544,20 @@ let rec perform ~caps ~send ~base command fields positionals options =
           else read_fill_file ~caps (Option.get file)
         in
         match read with
-        | Error `Too_large -> report ~caps "too-large" "fill text is over 64 KiB"
+        | Error `Too_large -> report ~caps "too-large" (command ^ " text is over 64 KiB")
         | Error `Denied ->
-            report ~caps "permission-denied" "permission denied while reading fill text"
+            report ~caps "permission-denied"
+              ("permission denied while reading " ^ command ^ " text")
         | Error (`Missing path) ->
             usage ~caps
-              ("fill: cannot read " ^ path ^ "; pass an existing file to --argument-file")
+              (command ^ ": cannot read " ^ path
+             ^ "; pass an existing file to --argument-file")
         | Ok text ->
             let positionals =
-              if List.length positionals >= 4 then
-                List.mapi (fun i value -> if i = 3 then text else value) positionals
+              if List.length positionals > text_index then
+                List.mapi
+                  (fun i value -> if i = text_index then text else value)
+                  positionals
               else positionals @ [ text ]
             in
             let fields =
@@ -653,7 +695,16 @@ and perform_wire ~caps ~send ~base command fields positionals options =
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
    `leash <command> --help` shows the whole call. The four shared options go on every
    command; --table only on the two that render one. *)
-type option_kind = Str | Int | Float | Bool | Json | Strings | Pairs
+type option_kind =
+  | Str
+  | Int
+  | Float
+  | Finite_float
+  | Bool
+  | Json
+  | Strings
+  | Pairs
+  | Point
 
 (* [Strings] is the repeated mission-expectation option [leash run] will carry
    (run-4j1v), declared here so the command lands as one table entry once the Door's name
@@ -685,6 +736,25 @@ let config_opt =
 let socket_opt = opt "socket" Str "PATH" "Control socket path; overrides control.socket."
 let shared_options = [ pretty_opt; config_opt; socket_opt ]
 
+let finite_float =
+  Arg.conv
+    ( (fun text ->
+        match float_of_string_opt text with
+        | Some value when Float.is_finite value -> Ok value
+        | _ -> Error (`Msg "expected a finite number")),
+      Format.pp_print_float )
+
+let css_point =
+  Arg.conv
+    ( (fun text ->
+        match String.split_on_char ',' text with
+        | [ x; y ] -> (
+            match (float_of_string_opt x, float_of_string_opt y) with
+            | Some x, Some y when Float.is_finite x && Float.is_finite y -> Ok P.{ x; y }
+            | _ -> Error (`Msg "expected finite viewport CSS coordinates X,Y"))
+        | _ -> Error (`Msg "expected viewport CSS coordinates X,Y")),
+      fun fmt (point : P.point) -> Format.fprintf fmt "%g,%g" point.x point.y )
+
 let option_term { name; kind; docv; doc } =
   let long = String.map (fun c -> if c = '_' then '-' else c) name in
   let arg_info = Arg.info ?docv:(if docv = "" then None else Some docv) ~doc [ long ] in
@@ -697,10 +767,11 @@ let option_term { name; kind; docv; doc } =
       Term.(
         const (Option.map (fun number -> (name, `Int number)))
         $ Arg.(value & opt (some int) None & arg_info))
-  | Float ->
+  | Float | Finite_float ->
+      let converter = if kind = Finite_float then finite_float else Arg.float in
       Term.(
         const (Option.map (fun number -> (name, `Float number)))
-        $ Arg.(value & opt (some float) None & arg_info))
+        $ Arg.(value & opt (some converter) None & arg_info))
   | Str ->
       Term.(
         const (Option.map (fun value -> (name, str value)))
@@ -709,6 +780,10 @@ let option_term { name; kind; docv; doc } =
       Term.(
         const (Option.map (fun value -> (name, str value)))
         $ Arg.(value & opt (some string) None & arg_info))
+  | Point ->
+      Term.(
+        const (Option.map (fun point -> (name, P.yojson_of_point point)))
+        $ Arg.(value & opt (some css_point) None & arg_info))
   | Pairs ->
       (* extr-mp5z: --arg K=V, repeated, is the wire's `args` object of strings. *)
       Term.(
@@ -1200,11 +1275,46 @@ let commands ~caps ~send ~base ~run_owned =
         [],
         [ "leash nav t_9xk https://example.com" ] );
       ( "click",
-        "Click the row at INDEX of SNAPSHOT. A covering label of that control is clicked \
-         and reported as via label.",
-        [ pos "tab" "TAB"; pos "snapshot" "SNAPSHOT"; pos "index" "INDEX" ],
-        snap_opts,
-        [ "leash click t_9xk s_3 7"; "leash click t_9xk s_3 7 --snap --limit 20" ] );
+        "Click a revalidated row, or --at a viewport CSS point. Picture replies record \
+         the hit and a before image; --shot adds the settled after image.",
+        [ pos "tab" "TAB"; pos_opt "snapshot" "SNAPSHOT"; pos_opt "index" "INDEX" ],
+        [
+          opt "at" Point "X,Y" "Click this viewport CSS point without resolving a row.";
+          opt "shot" Bool "" "For --at, append the post-action screenshot to shots.";
+        ]
+        @ snap_opts,
+        [ "leash click t_9xk s_3 7 --snap"; "leash click t_9xk --at 240,160 --shot" ] );
+      ( "dblclick",
+        "Double-click a viewport CSS point and record its hit.",
+        [ pos "tab" "TAB" ],
+        [
+          opt "at" Point "X,Y" "Double-click this viewport CSS point.";
+          opt "shot" Bool "" "Append the post-action screenshot to shots.";
+        ],
+        [ "leash dblclick t_9xk --at 240,160 --shot" ] );
+      ( "drag",
+        "Drag between viewport CSS points with one bounded native pointer sequence.",
+        [ pos "tab" "TAB" ],
+        [
+          opt "from" Point "X,Y" "Start the drag at this viewport CSS point.";
+          opt "to" Point "X,Y" "Release at this viewport CSS point.";
+          opt "shot" Bool "" "Append the post-action screenshot to shots.";
+        ],
+        [ "leash drag t_9xk --from 240,160 --to 360,220 --shot" ] );
+      ( "type",
+        "Insert TEXT into the focused element, without naming or revalidating a row.",
+        [ pos "tab" "TAB"; pos_opt "text" "TEXT" ],
+        [
+          opt "argument_file" Str "PATH"
+            "Read TEXT from PATH, not from an argument (at most 64 KiB).";
+          opt "stdin" Bool ""
+            "Read TEXT from stdin (at most 64 KiB; use this or a file for secrets).";
+          opt "shot" Bool "" "Return a post-action screenshot in shots.";
+        ],
+        [
+          "leash type t_9xk 'Hello' --shot";
+          "leash type t_9xk --argument-file /private/login";
+        ] );
       ( "fill",
         "Fill the row at INDEX of SNAPSHOT with TEXT, or with --argument-file or --stdin.",
         [
@@ -1244,10 +1354,18 @@ let commands ~caps ~send ~base ~run_owned =
         snap_opts,
         [ "leash select t_9xk s_3 2 0 --snap" ] );
       ( "scroll",
-        "Scroll the page, or the row --index names, one viewport.",
-        [ pos "tab" "TAB"; pos "direction" "UP|DOWN" ],
-        [ opt "index" Int "N" "Scroll the row at index N into view." ],
-        [ "leash scroll t_9xk down" ] );
+        "Scroll the page/row one viewport, or dispatch a wheel delta at --at CSS \
+         coordinates.",
+        [ pos "tab" "TAB"; pos_opt "direction" "UP|DOWN" ],
+        [
+          opt "index" Int "N" "Scroll the row at index N into view.";
+          opt "at" Point "X,Y" "Dispatch the wheel at this viewport CSS point.";
+          opt "dy" Finite_float "N"
+            "Vertical wheel delta in CSS pixels (positive scrolls down).";
+          opt "shot" Bool "" "For --at, append the post-action screenshot to shots.";
+        ],
+        [ "leash scroll t_9xk down"; "leash scroll t_9xk --at 240,160 --dy 420 --shot" ]
+      );
       ( "wait",
         "Wait for the ANDed page conditions.",
         [ pos "tab" "TAB" ],

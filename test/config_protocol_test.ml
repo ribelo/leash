@@ -424,6 +424,8 @@ let result_shapes () =
       snapshot = None;
       dialog = None;
       popups = [];
+      hits = None;
+      shots = None;
       via = None;
     }
   in

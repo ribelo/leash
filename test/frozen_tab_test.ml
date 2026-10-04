@@ -247,9 +247,10 @@ let frozen_renderer
           in
           Alcotest.(check bool)
             "field-zr9n working screenshot" true
-            (get "bytes" shot = `Int 8);
+            (get "bytes" shot = `Int Fake.png_bytes);
           Alcotest.(check int)
-            "field-zr9n screenshot file written" 8 (Unix.stat path).Unix.st_size);
+            "field-zr9n screenshot file written" Fake.png_bytes
+            (Unix.stat path).Unix.st_size);
       Fake.withhold fake "Page.navigate" (fun request ->
           get "sessionId" request = str "field-session-1");
       let cell = ref None in

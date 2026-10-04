@@ -41,6 +41,30 @@ removed caller flag below must be rejected rather than silently ignored.
   $ check cli-parse leash definitely-not-a-command
   cli-parse: exit 124, JSON-only stderr, hint, empty stdout
 
+pic-egvj pic-f2hy pic-33hm: picture syntax reaches the socket without row arguments;
+malformed or mixed syntax and oversized protected text fail locally.
+
+  $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash click t_9xk --at 10.25,20.5 --socket "$tmp/missing.sock"
+  service-unreachable: exit 69, JSON-only stderr, hint, empty stdout
+  $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash dblclick t_9xk --at 10,20 --shot --socket "$tmp/missing.sock"
+  service-unreachable: exit 69, JSON-only stderr, hint, empty stdout
+  $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash scroll t_9xk --at 10,20 --dy=-120 --socket "$tmp/missing.sock"
+  service-unreachable: exit 69, JSON-only stderr, hint, empty stdout
+  $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash drag t_9xk --from 10,20 --to 40,50 --socket "$tmp/missing.sock"
+  service-unreachable: exit 69, JSON-only stderr, hint, empty stdout
+  $ check cli-parse leash click t_9xk --at NaN,20 --socket "$tmp/missing.sock"
+  cli-parse: exit 124, JSON-only stderr, hint, empty stdout
+  $ check cli-parse leash scroll t_9xk --at 10,20 --dy inf --socket "$tmp/missing.sock"
+  cli-parse: exit 124, JSON-only stderr, hint, empty stdout
+  $ check usage leash click t_9xk s_1 1 --at 10,20 --socket "$tmp/missing.sock"
+  usage: exit 64, JSON-only stderr, hint, empty stdout
+  $ check usage leash scroll t_9xk --at 10,20 --socket "$tmp/missing.sock"
+  usage: exit 64, JSON-only stderr, hint, empty stdout
+  $ check too-large leash type t_9xk --argument-file "$tmp/big-fill" --socket "$tmp/missing.sock"
+  too-large: exit 65, JSON-only stderr, hint, empty stdout
+  $ printf 's3cret-pic-33hm' | leash type t_9xk --stdin --socket "$tmp/missing.sock" >out 2>err; test $? -ne 0
+  $ grep -q 's3cret-pic-33hm' out err && exit 1 || true
+
 Configuration writes preserve successful output and classify local permissions.
 
   $ leash config init --config "$tmp/default.toml" >out 2>err

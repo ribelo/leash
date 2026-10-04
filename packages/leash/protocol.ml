@@ -151,6 +151,9 @@ end
 
 type operation =
   | Click [@json.name "click"]
+  | Dblclick [@json.name "dblclick"]
+  | Drag [@json.name "drag"]
+  | Type [@json.name "type"]
   | Type_text [@json.name "type_text"]
   | Select [@json.name "select"]
   | Scroll_up [@json.name "scroll_up"]
@@ -680,6 +683,29 @@ type snapshot = {
 }
 [@@deriving yojson]
 
+type point = { x : float; y : float } [@@deriving yojson]
+type viewport = { width : float; height : float } [@@deriving yojson]
+
+type shot_result = {
+  path : string;
+  bytes : int;
+  width : int;
+  height : int;
+  viewport : viewport;
+  scale : float;
+  full_page : bool;
+}
+[@@deriving yojson]
+
+type point_hit = {
+  at : point;
+  sampled_at : point;
+  element : string;
+  hit_role : string option; [@json.key "role"]
+  hit_label : string option; [@json.key "label"]
+}
+[@@deriving yojson]
+
 type action_result = {
   tab : Handle.t;
   url : string;
@@ -689,6 +715,8 @@ type action_result = {
           asked for one. The object is a {!snapshot}, not an id. *)
   dialog : dialog option; [@json.null]
   popups : popup_info list;
+  hits : point_hit list option;
+  shots : shot_result list option;
   via : string option;
       (** field-uls3: [key?]. ["label"] when a click dispatched on the covering label of
           the target; absent otherwise. *)
@@ -777,6 +805,22 @@ type click_args = {
   limit : int option;
 }
 [@@deriving yojson]
+
+type point_action_args = { tab : Handle.t; at : point; shot : bool option }
+[@@deriving yojson]
+
+type point_scroll_args = { tab : Handle.t; at : point; dy : float; shot : bool option }
+[@@deriving yojson]
+
+type drag_args = {
+  tab : Handle.t;
+  from_ : point; [@json.key "from"]
+  to_ : point; [@json.key "to"]
+  shot : bool option;
+}
+[@@deriving yojson]
+
+type type_args = { tab : Handle.t; text : string; shot : bool option } [@@deriving yojson]
 
 type fill_args = {
   tab : Handle.t;
@@ -953,7 +997,6 @@ type resumed_result = { resumed : bool } [@@deriving yojson]
 type text_result = { url : string; title : string; text : string; truncated : bool }
 [@@deriving yojson]
 
-type shot_result = { path : string; bytes : int } [@@deriving yojson]
 type debug_result = { entries : debug_entry list } [@@deriving yojson]
 type eval_result = { value : Yojson.Safe.t } [@@deriving yojson]
 
@@ -1315,6 +1358,11 @@ type command =
   | Eval of eval_args
   | Nav of nav_args
   | Click of click_args
+  | Click_at of point_action_args
+  | Dblclick of point_action_args
+  | Scroll_at of point_scroll_args
+  | Drag of drag_args
+  | Type of type_args
   | Fill of fill_args
   | Press of press_args
   | Select of select_args
@@ -1349,11 +1397,14 @@ let command_name = function
   | Debug _ -> "debug"
   | Eval _ -> "eval"
   | Nav _ -> "nav"
-  | Click _ -> "click"
+  | Click _ | Click_at _ -> "click"
+  | Dblclick _ -> "dblclick"
+  | Drag _ -> "drag"
+  | Type _ -> "type"
   | Fill _ -> "fill"
   | Press _ -> "press"
   | Select _ -> "select"
-  | Scroll _ -> "scroll"
+  | Scroll _ | Scroll_at _ -> "scroll"
   | Wait _ -> "wait"
   | Dialog _ -> "dialog"
   | Handoff _ -> "handoff"
@@ -1385,6 +1436,10 @@ let args_to_json = function
   | Eval args -> yojson_of_eval_args args
   | Nav args -> yojson_of_nav_args args
   | Click args -> yojson_of_click_args args
+  | Click_at args | Dblclick args -> yojson_of_point_action_args args
+  | Scroll_at args -> yojson_of_point_scroll_args args
+  | Drag args -> yojson_of_drag_args args
+  | Type args -> yojson_of_type_args args
   | Fill args -> yojson_of_fill_args args
   | Press args -> yojson_of_press_args args
   | Select args -> yojson_of_select_args args
@@ -1428,11 +1483,22 @@ let command_of_args ~cmd args =
   | "debug" -> with_args debug_args_of_yojson (fun args -> Debug args)
   | "eval" -> with_args eval_args_of_yojson (fun args -> Eval args)
   | "nav" -> with_args nav_args_of_yojson (fun args -> Nav args)
-  | "click" -> with_args click_args_of_yojson (fun args -> Click args)
+  | "click" -> (
+      match args with
+      | `Assoc fields when List.mem_assoc "at" fields ->
+          with_args point_action_args_of_yojson (fun args -> Click_at args)
+      | _ -> with_args click_args_of_yojson (fun args -> Click args))
+  | "dblclick" -> with_args point_action_args_of_yojson (fun args -> Dblclick args)
+  | "drag" -> with_args drag_args_of_yojson (fun args -> Drag args)
+  | "type" -> with_args type_args_of_yojson (fun args -> Type args)
   | "fill" -> with_args fill_args_of_yojson (fun args -> Fill args)
   | "press" -> with_args press_args_of_yojson (fun args -> Press args)
   | "select" -> with_args select_args_of_yojson (fun args -> Select args)
-  | "scroll" -> with_args scroll_args_of_yojson (fun args -> Scroll args)
+  | "scroll" -> (
+      match args with
+      | `Assoc fields when List.mem_assoc "at" fields ->
+          with_args point_scroll_args_of_yojson (fun args -> Scroll_at args)
+      | _ -> with_args scroll_args_of_yojson (fun args -> Scroll args))
   | "wait" -> with_args wait_args_of_yojson (fun args -> Wait args)
   | "dialog" -> with_args dialog_args_of_yojson (fun args -> Dialog args)
   | "handoff" -> with_args handoff_args_of_yojson (fun args -> Handoff args)

@@ -54,7 +54,14 @@ let stub name _ =
       obj [ ("result", obj [ ("type", str "object"); ("objectId", str "window") ]) ]
   | "Runtime.callFunctionOn" ->
       obj [ ("result", obj [ ("type", str "string"); ("value", str "ok") ]) ]
-  | "Page.captureScreenshot" -> obj [ ("data", str "iVBORw0KGgo=") ]
+  | "Page.getLayoutMetrics" ->
+      obj
+        [
+          ( "cssLayoutViewport",
+            obj [ ("clientWidth", `Int 800); ("clientHeight", `Int 600) ] );
+          ("cssContentSize", obj [ ("width", `Int 800); ("height", `Int 600) ]);
+        ]
+  | "Page.captureScreenshot" -> obj [ ("data", str Fake.png) ]
   | _ -> obj []
 
 (* tab-a33o tab-gjo0: [eval] races its call against the tab's acknowledgement, so it
@@ -268,7 +275,7 @@ let dialog_and_shot ~(caps : < Ox_caps.Cap.fs_write ; .. >) () =
     ~finally:(fun () -> if Sys.file_exists path then Ox_caps.Cap_sys.remove ~caps path)
     (fun () ->
       let shot = ok (R.shot ~caps b P.{ tab = handle; path; full_page = Some true }) in
-      Alcotest.(check int) "bytes" 8 shot.P.bytes;
+      Alcotest.(check int) "bytes" Fake.png_bytes shot.P.bytes;
       Alcotest.(check bool) "written" true (Sys.file_exists path))
 
 let debug_ring () =
@@ -388,7 +395,7 @@ let protocol_smoke
           in
           obj [ ("result", obj [ ("value", value) ]) ]);
       Fake.on_method fake "Page.captureScreenshot" (fun _ ->
-          obj [ ("data", str "iVBORw0KGgo=") ]);
+          obj [ ("data", str Fake.png) ]);
       let send command =
         let wire = P.encode_request { command } |> Yojson.Safe.to_string in
         let decoded =
@@ -432,7 +439,7 @@ let protocol_smoke
         (fun () ->
           let screenshot = result (send (P.Shot { tab; path; full_page = Some true })) in
           Alcotest.(check int)
-            "shot bytes over protocol" 8
+            "shot bytes over protocol" Fake.png_bytes
             (match get "bytes" screenshot with `Int n -> n | _ -> -1));
       let absent =
         send
@@ -858,12 +865,28 @@ let screencast_shot
                   ~params:(obj [ ("sessionId", `Int id); ("data", str data) ])
               in
               emit "another-session" 99 "bad";
-              emit "session-1" 42 "iVBORw0KGgo=";
+              emit "session-1" 42 Fake.png;
               emit "session-1" 43 "bad";
               obj []);
+          (* pic-ncu1: image pixels, viewport CSS and full-page content are distinct. *)
+          Fake.on_method fake "Page.getLayoutMetrics" (fun _ ->
+              obj
+                [
+                  ( "cssLayoutViewport",
+                    obj [ ("clientWidth", `Int 400); ("clientHeight", `Int 300) ] );
+                  ("cssContentSize", obj [ ("width", `Int 800); ("height", `Int 600) ]);
+                ]);
           let before = List.length (Fake.received fake) in
           let png = success (shot false) in
-          Alcotest.(check bool) "one PNG written" true (field "bytes" png = Some (`Int 8));
+          Alcotest.(check bool)
+            "measured viewport HiDPI scale" true
+            (field "scale" png = Some (`Float 2.));
+          Alcotest.(check bool)
+            "actual image width" true
+            (field "width" png = Some (`Int 800));
+          Alcotest.(check bool)
+            "one PNG written" true
+            (field "bytes" png = Some (`Int Fake.png_bytes));
           Alcotest.(check (list string))
             "focus, first frame, ack, stop, release; no activation"
             [
@@ -884,7 +907,13 @@ let screencast_shot
             (field "sessionId" (get "params" ack) = Some (`Int 42));
           Ox_caps.Cap_sys.remove ~caps path;
           let before = List.length (Fake.received fake) in
-          ignore (success (shot true));
+          let full = success (shot true) in
+          Alcotest.(check bool)
+            "full-page scale uses content width" true
+            (field "scale" full = Some (`Float 1.));
+          Alcotest.(check bool)
+            "full-page evidence is explicit" true
+            (field "full_page" full = Some (`Bool true));
           Alcotest.(check (list string))
             "full page retains screenshot path"
             [

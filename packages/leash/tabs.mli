@@ -9,11 +9,15 @@ type access = Act | Dialog | Close | Resume
 val authorize : access -> with_human:bool -> (unit, Protocol.error) result
 
 type caps =
-  < Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.random >
+  < Ox_caps.Cap.env
+  ; Ox_caps.Cap.fs_read
+  ; Ox_caps.Cap.fs_write
+  ; Ox_caps.Cap.random
+  ; Ox_caps.Cap.tmp >
 (** What the registry may touch beyond its Eio values (^ncaps-4tjy): [random] for tab and
     snapshot handles, [fs_write] for screenshots, [run --out] and playbook proposals,
-    [fs_read] for uploads and installed playbooks, [env] for the XDG directories those
-    live in. *)
+    [tmp] for private picture evidence, [fs_read] for uploads and installed playbooks,
+    [env] for the XDG directories those live in. *)
 
 type 'clock deps = {
   chrome : Chrome.t;
@@ -198,6 +202,18 @@ val dialog : t -> Protocol.dialog_args -> (Protocol.action_result, Protocol.erro
 val click : t -> Protocol.click_args -> (Protocol.action_result, Protocol.error) result
 (** tab-bw4j tab-j1z2 tab-hxld tab-60kn tab-1lhx tab-tm6c: the row is revalidated at
     action time, the click point hit-tested, and the action dispatched once. *)
+
+val click_at :
+  t -> Protocol.point_action_args -> (Protocol.action_result, Protocol.error) result
+
+val dblclick :
+  t -> Protocol.point_action_args -> (Protocol.action_result, Protocol.error) result
+
+val scroll_at :
+  t -> Protocol.point_scroll_args -> (Protocol.action_result, Protocol.error) result
+
+val drag : t -> Protocol.drag_args -> (Protocol.action_result, Protocol.error) result
+val type_text : t -> Protocol.type_args -> (Protocol.action_result, Protocol.error) result
 
 val fill : t -> Protocol.fill_args -> (Protocol.action_result, Protocol.error) result
 (** tab-p3x1 tab-0lax: focus, select, [Input.insertText], blur, then a bounded settle;
