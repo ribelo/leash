@@ -366,6 +366,27 @@ let scroll_and_wait () =
             "fly-2pn7 fresh observations after actions" true
             (List.length (operator_reads fake) >= 8))
 
+(* pilot-x1f3: a wheel the renderer never acks (a headed window short of frames) does not
+   hold the scroll for the 30 s call deadline (Tauron U2, builds H, I and K). *)
+let unacked_wheel () =
+  rig (fun env _ tabs fake ->
+      let fake = fake () in
+      script fake (fun () ->
+          evaluated
+            (payload ~text:"Visible page" ~truncated:false ~omitted:0 ~y:0 ~height:2000
+               ~viewport:400));
+      Fake.withhold fake "Input.dispatchMouseEvent" (fun _ -> true);
+      let started = Eio.Time.now env#clock in
+      match drive tabs [ decision "scroll_down"; decision "done" ] with
+      | Error e -> Alcotest.fail e.P.message
+      | Ok result ->
+          Alcotest.(check string)
+            "pilot-x1f3 scroll completes without the ack" "done"
+            (P.Drive_status.to_string result.status);
+          Alcotest.(check bool)
+            "pilot-x1f3 bounded well under the call deadline" true
+            (Eio.Time.now env#clock -. started < 5.))
+
 let retry_exhaustion () =
   rig (fun env _ tabs fake ->
       let fake = fake () in
@@ -560,6 +581,7 @@ let () =
             inconsistent_read_retries;
           Alcotest.test_case "fly-4lmg stale click" `Quick stale_click_is_not_dispatched;
           Alcotest.test_case "fly-2pn7 scroll and wait" `Quick scroll_and_wait;
+          Alcotest.test_case "pilot-x1f3 unacked wheel" `Quick unacked_wheel;
           Alcotest.test_case "fly-4mio bounded retry exhaustion" `Quick retry_exhaustion;
           Alcotest.test_case "fly-iodm Unicode bounds" `Quick unicode_bounds;
           Alcotest.test_case "fly-8fgl unsupported flags" `Quick unsupported_flags;

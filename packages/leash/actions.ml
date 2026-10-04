@@ -1234,17 +1234,32 @@ let operator_scroll ~cdp tab ~down =
                 | _ -> None)
             | Error _ -> None
           in
-          let* _ =
-            call cdp ~session:tab.session "Input.dispatchMouseEvent"
-              (E.object_
-                 [
-                   ("type", Some (E.string "mouseWheel"));
-                   ("x", E.float x);
-                   ("y", E.float y);
-                   ("deltaX", Some (E.int 0));
-                   ("deltaY", Some (E.int delta));
-                   ("pointerType", Some (E.string "mouse"));
-                 ])
+          (* pilot-x1f3: a renderer short of frames (a headed window behind others) acks a
+             wheel late or never; the dispatch waited the full 30 s call deadline on Tauron
+             (U2, builds H, I and K). Bound it to a second; the landing check below puts
+             the document where the wheel was taking it if it has not moved. *)
+          let* () =
+            match
+              attempt ~deadline:(Ox.Duration.seconds 1) cdp ~session:tab.session
+                "Input.dispatchMouseEvent"
+                (E.object_
+                   [
+                     ("type", Some (E.string "mouseWheel"));
+                     ("x", E.float x);
+                     ("y", E.float y);
+                     ("deltaX", Some (E.int 0));
+                     ("deltaY", Some (E.int delta));
+                     ("pointerType", Some (E.string "mouse"));
+                   ])
+            with
+            | Ok _ | Error Timed_out -> Ok ()
+            | Error (Refused (number, message)) ->
+                fail "internal"
+                  (Printf.sprintf "the browser refused Input.dispatchMouseEvent (%d %s)"
+                     number message)
+            | Error (Transport why) ->
+                fail "browser-unavailable"
+                  ("Chrome did not answer; try again shortly: " ^ why)
           in
           (match before with
           | None -> ()
