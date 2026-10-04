@@ -28,6 +28,11 @@ let browser ?(reply = fun _ _ -> obj []) ?(row = fun _ -> None) ?(dialog = fun (
     ?(clock = ref 0.) () : R.browser =
   {
     call = (fun name args -> Ok (reply name args));
+    capture =
+      (fun ~full_page ->
+        Ok
+          (reply "Page.captureScreenshot"
+             (obj [ ("format", str "png"); ("captureBeyondViewport", `Bool full_page) ])));
     now = (fun () -> !clock);
     sleep = (fun s -> clock := !clock +. s);
     current = (fun () -> ("about:blank", "Untitled"));
@@ -682,7 +687,7 @@ let modal_reads () =
                 index = None;
                 snapshot = None;
               } );
-          ("shot", "Page.captureScreenshot", P.Shot { tab; path; full_page = None });
+          ("shot", "Page.startScreencast", P.Shot { tab; path; full_page = None });
         ]
       in
       let spin label condition =
@@ -755,6 +760,177 @@ let modal_reads () =
       Alcotest.(check bool)
         "daily-9ggi blocked shot creates no file" false (Sys.file_exists path))
 
+(* tab-qmei: a background tab gets one frame without activating any tab or window. *)
+let screencast_shot () =
+  rig (fun ~env ~sw:_ ~tabs ~fake ->
+      let send command =
+        match
+          P.decode_reply
+            (Yojson.Safe.from_string
+               (Leash.Control.handle tabs
+                  (Yojson.Safe.to_string (P.encode_request { command }))))
+        with
+        | Ok reply -> reply
+        | Error why -> Alcotest.fail why
+      in
+      let success = function
+        | P.Success json -> json
+        | P.Failure e -> Alcotest.fail e.message
+      in
+      let tab = tab_of (success (send (P.New { url = None; label = None }))) in
+      let path = Filename.temp_file "leash-screencast-" ".png" in
+      Sys.remove path;
+      Fun.protect
+        ~finally:(fun () -> if Sys.file_exists path then Sys.remove path)
+        (fun () ->
+          let shot full_page = send (P.Shot { tab; path; full_page = Some full_page }) in
+          let methods before =
+            Fake.received fake
+            |> List.filteri (fun i _ -> i >= before)
+            |> List.filter_map (fun r ->
+                match field "method" r with Some (`String s) -> Some s | _ -> None)
+          in
+          let relevant =
+            List.filter (fun s ->
+                List.mem s
+                  [
+                    "Emulation.setFocusEmulationEnabled";
+                    "Page.startScreencast";
+                    "Page.screencastFrameAck";
+                    "Page.stopScreencast";
+                    "Page.captureScreenshot";
+                    "Page.bringToFront";
+                    "Target.activateTarget";
+                  ])
+          in
+          Fake.on_method fake "Page.startScreencast" (fun request ->
+              Alcotest.(check bool)
+                "PNG frame requested" true
+                (field "format" (get "params" request) = Some (str "png"));
+              let emit session id data =
+                Fake.emit ~session fake ~method_:"Page.screencastFrame"
+                  ~params:(obj [ ("sessionId", `Int id); ("data", str data) ])
+              in
+              emit "another-session" 99 "bad";
+              emit "session-1" 42 "iVBORw0KGgo=";
+              emit "session-1" 43 "bad";
+              obj []);
+          let before = List.length (Fake.received fake) in
+          let png = success (shot false) in
+          Alcotest.(check bool) "one PNG written" true (field "bytes" png = Some (`Int 8));
+          Alcotest.(check (list string))
+            "focus, first frame, ack, stop, release; no activation"
+            [
+              "Emulation.setFocusEmulationEnabled";
+              "Page.startScreencast";
+              "Page.screencastFrameAck";
+              "Page.stopScreencast";
+              "Emulation.setFocusEmulationEnabled";
+            ]
+            (relevant (methods before));
+          let ack =
+            Fake.received fake
+            |> List.find (fun r ->
+                field "method" r = Some (str "Page.screencastFrameAck"))
+          in
+          Alcotest.(check bool)
+            "ack first frame from correct page only" true
+            (field "sessionId" (get "params" ack) = Some (`Int 42));
+          Sys.remove path;
+          let before = List.length (Fake.received fake) in
+          ignore (success (shot true));
+          Alcotest.(check (list string))
+            "full page retains screenshot path"
+            [
+              "Emulation.setFocusEmulationEnabled";
+              "Page.captureScreenshot";
+              "Emulation.setFocusEmulationEnabled";
+            ]
+            (relevant (methods before));
+          Sys.remove path;
+          Fake.on_method fake "Page.startScreencast" (fun _ ->
+              Fake.emit ~session:"session-1" fake ~method_:"Page.screencastFrame"
+                ~params:(obj []);
+              obj []);
+          let before = List.length (Fake.received fake) in
+          (match shot false with
+          | P.Success _ -> Alcotest.fail "malformed frame succeeded"
+          | P.Failure e ->
+              Alcotest.(check string)
+                "malformed frame" "internal"
+                (P.Error_code.to_string e.code));
+          Alcotest.(check bool)
+            "malformed frame stops stream" true
+            (List.mem "Page.stopScreencast" (methods before));
+          Alcotest.(check bool)
+            "malformed frame creates no file" false (Sys.file_exists path);
+          Fake.on_method fake "Page.startScreencast" (fun _ -> obj []);
+          let check_timeout full_page =
+            let before = List.length (Fake.received fake) in
+            let start = Eio.Time.now env#clock in
+            let reply, () =
+              Eio.Fiber.pair
+                (fun () -> shot full_page)
+                (fun () ->
+                  let meth =
+                    if full_page then "Page.captureScreenshot" else "Page.startScreencast"
+                  in
+                  let rec wait n =
+                    if List.mem meth (methods before) then ()
+                    else if n = 0 then Alcotest.fail "capture never started"
+                    else (
+                      Eio.Fiber.yield ();
+                      wait (n - 1))
+                  in
+                  wait 1000;
+                  Ox_test.advance env#clock (Ox.Duration.seconds 5))
+            in
+            (match reply with
+            | P.Success _ -> Alcotest.fail "missing frame succeeded"
+            | P.Failure e ->
+                Alcotest.(check string)
+                  "capture timeout is not a hung renderer" "timeout"
+                  (P.Error_code.to_string e.code);
+                Alcotest.(check string)
+                  "hidden Wayland cause explained"
+                  "screenshot produced no frame within 5s; headed Chrome on a hidden \
+                   Wayland workspace may have no compositor frame even when the page is \
+                   responsive"
+                  e.message);
+            let elapsed = Eio.Time.now env#clock -. start in
+            Alcotest.(check bool)
+              "five-second capture budget" true
+              (elapsed >= 5. && elapsed < 8.);
+            Alcotest.(check bool) "timeout creates no file" false (Sys.file_exists path);
+            if not full_page then
+              Alcotest.(check bool)
+                "timeout stops stream" true
+                (List.mem "Page.stopScreencast" (methods before))
+          in
+          check_timeout false;
+          Fake.withhold fake "Page.captureScreenshot" (fun _ -> true);
+          check_timeout true;
+          let started = ref false in
+          Fake.on_method fake "Page.startScreencast" (fun _ ->
+              started := true;
+              obj []);
+          let before = List.length (Fake.received fake) in
+          Eio.Fiber.first
+            (fun () -> ignore (shot false))
+            (fun () ->
+              while not !started do
+                Eio.Fiber.yield ()
+              done);
+          Alcotest.(check (list string))
+            "cancellation stops stream and releases focus"
+            [
+              "Emulation.setFocusEmulationEnabled";
+              "Page.startScreencast";
+              "Page.stopScreencast";
+              "Emulation.setFocusEmulationEnabled";
+            ]
+            (relevant (methods before))))
+
 let () =
   Alcotest.run "reading"
     [
@@ -772,5 +948,7 @@ let () =
           Alcotest.test_case "control seam" `Quick protocol_smoke;
           Alcotest.test_case "tab-gjo0 eval settlement" `Quick eval_settlement;
           Alcotest.test_case "daily-9ggi modal reads" `Quick modal_reads;
+          Alcotest.test_case "tab-qmei no-focus screencast lifecycle" `Quick
+            screencast_shot;
         ] );
     ]

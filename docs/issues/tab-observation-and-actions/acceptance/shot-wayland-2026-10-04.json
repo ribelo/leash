@@ -1,0 +1,5994 @@
+{
+  "date": "2026-10-04",
+  "historical_helper": "dotfiles 3ce3c4b^ scripts/cdp.mjs shotStr",
+  "matrix": [
+    {
+      "variant": "152-plain",
+      "step": "launch",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47597,
+          "nanos": 297378313
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47597,
+          "nanos": 297378313
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47597,
+          "nanos": 297378313
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47597,
+          "nanos": 297378313
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47597,
+          "nanos": 297378313
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "place",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "window": 69,
+      "workspace": 10
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "com",
+      "seconds": 0.06,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "org",
+      "seconds": 0.068,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "net",
+      "seconds": 0.069,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 0,
+      "tab": "com",
+      "seconds": 30,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 0,
+      "tab": "org",
+      "seconds": 30.004,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 0,
+      "tab": "net",
+      "seconds": 0.744,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "com",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47748,
+          "nanos": 966163551
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "org",
+      "seconds": 30,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "net",
+      "seconds": 30.007,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 1,
+      "tab": "com",
+      "seconds": 0.114,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 1,
+      "tab": "org",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 1,
+      "tab": "net",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "com",
+      "seconds": 4.487,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "org",
+      "seconds": 2.121,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "net",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 2,
+      "tab": "com",
+      "seconds": 30.002,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 2,
+      "tab": "org",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "shot",
+      "shape": "plain",
+      "round": 2,
+      "tab": "net",
+      "seconds": 30.006,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "private_window": {
+        "id": 69,
+        "app_id": "google-chrome",
+        "workspace_id": 10,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 47746,
+          "nanos": 500230379
+        }
+      }
+    },
+    {
+      "variant": "152-plain",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "152-leash",
+      "step": "launch",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "new",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "new",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47827,
+          "nanos": 857353008
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "new",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "place",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "window": 71,
+      "workspace": 11
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "com",
+      "seconds": 0.058,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "org",
+      "seconds": 0.069,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "net",
+      "seconds": 0.068,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 0,
+      "tab": "com",
+      "seconds": 30,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 0,
+      "tab": "org",
+      "seconds": 30.004,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 0,
+      "tab": "net",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "com",
+      "seconds": 30.006,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "org",
+      "seconds": 2.551,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "net",
+      "seconds": 3.725,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47354,
+          "nanos": 68114732
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 1,
+      "tab": "com",
+      "seconds": 30.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 47354,
+          "nanos": 68114732
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48254,
+          "nanos": 194152769
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 1,
+      "tab": "org",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48254,
+          "nanos": 194152769
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48254,
+          "nanos": 194152769
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 1,
+      "tab": "net",
+      "seconds": 2.346,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48254,
+          "nanos": 194152769
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48254,
+          "nanos": 194152769
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "com",
+      "seconds": 28.669,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48254,
+          "nanos": 194152769
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "org",
+      "seconds": 30.006,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48102,
+          "nanos": 590296308
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48324,
+          "nanos": 162172584
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "net",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48324,
+          "nanos": 162172584
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48369,
+          "nanos": 884204227
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 2,
+      "tab": "com",
+      "seconds": 30,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48369,
+          "nanos": 884204227
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48369,
+          "nanos": 884204227
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 2,
+      "tab": "org",
+      "seconds": 30.006,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48369,
+          "nanos": 884204227
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48369,
+          "nanos": 884204227
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "shot",
+      "shape": "plain",
+      "round": 2,
+      "tab": "net",
+      "seconds": 9.078,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48369,
+          "nanos": 884204227
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48254,
+          "nanos": 194152769
+        }
+      },
+      "private_window": {
+        "id": 71,
+        "app_id": "google-chrome",
+        "workspace_id": 11,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48098,
+          "nanos": 260963839
+        }
+      }
+    },
+    {
+      "variant": "152-leash",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "150-plain",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48453,
+          "nanos": 196128918
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48453,
+          "nanos": 196128918
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/150.0.7871.181",
+        "revision": "@24b04c927b23c39cf9c5227cc8dc6f64a744c8e9",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+        "jsVersion": "15.0.245.21"
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48453,
+          "nanos": 196128918
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48453,
+          "nanos": 196128918
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "place",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "window": 72,
+      "workspace": 7
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "com",
+      "seconds": 2.763,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "org",
+      "seconds": 0.051,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "net",
+      "seconds": 0.069,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "com",
+      "seconds": 30.002,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "org",
+      "seconds": 0.08,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "net",
+      "seconds": 19.067,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48461,
+          "nanos": 272146875
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48369,
+          "nanos": 884204227
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "com",
+      "seconds": 30.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48369,
+          "nanos": 884204227
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48519,
+          "nanos": 695134786
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "org",
+      "seconds": 0.068,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48519,
+          "nanos": 695134786
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48519,
+          "nanos": 695134786
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "net",
+      "seconds": 30.001,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48519,
+          "nanos": 695134786
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48519,
+          "nanos": 695134786
+        }
+      },
+      "private_window": {
+        "id": 72,
+        "app_id": "google-chrome",
+        "workspace_id": 7,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48459,
+          "nanos": 300896954
+        }
+      }
+    },
+    {
+      "variant": "150-plain",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "149-plain",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48584,
+          "nanos": 21207376
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48584,
+          "nanos": 21207376
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/149.0.7827.114",
+        "revision": "@5be7af702aa73ed64f47858cecc86290e42f2a20",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+        "jsVersion": "14.9.207.27"
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48584,
+          "nanos": 21207376
+        }
+      },
+      "focus_after": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "place",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "window": 73,
+      "workspace": 2
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "com",
+      "seconds": 0.086,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "org",
+      "seconds": 0.068,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "net",
+      "seconds": 0.102,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "com",
+      "seconds": 0.051,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "org",
+      "seconds": 0.069,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 1,
+      "tab": "net",
+      "seconds": 0.068,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "com",
+      "seconds": 0.052,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "org",
+      "seconds": 0.085,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "shot",
+      "shape": "old",
+      "round": 2,
+      "tab": "net",
+      "seconds": 0.053,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "private_window": {
+        "id": 73,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48594,
+          "nanos": 166333189
+        }
+      }
+    },
+    {
+      "variant": "149-plain",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "152-oldonly",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-oldonly",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      }
+    },
+    {
+      "variant": "152-oldonly",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48596,
+          "nanos": 172113409
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      }
+    },
+    {
+      "variant": "152-oldonly",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      }
+    },
+    {
+      "variant": "152-oldonly",
+      "step": "place",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "window": 74,
+      "workspace": 2
+    },
+    {
+      "variant": "152-oldonly",
+      "step": "shot",
+      "shape": "old",
+      "round": 0,
+      "tab": "com",
+      "seconds": 2.809,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "private_window": {
+        "id": 74,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48608,
+          "nanos": 842020300
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48610,
+          "nanos": 526135175
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "place",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "window": 75,
+      "workspace": 2
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 0,
+      "tab": "com",
+      "seconds": 30.007,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 0,
+      "tab": "org",
+      "seconds": 30.004,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 0,
+      "tab": "net",
+      "seconds": 30.002,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 1,
+      "tab": "com",
+      "seconds": 30.007,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 1,
+      "tab": "org",
+      "seconds": 30.005,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 1,
+      "tab": "net",
+      "seconds": 30.002,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 2,
+      "tab": "com",
+      "seconds": 30.008,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 2,
+      "tab": "org",
+      "seconds": 30.005,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48671,
+          "nanos": 345155277
+        }
+      },
+      "focus_after": {
+        "id": 8,
+        "app_id": "discord",
+        "workspace_id": 5,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48915,
+          "nanos": 312135416
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "shot",
+      "shape": "cast",
+      "round": 2,
+      "tab": "net",
+      "seconds": 30.004,
+      "error": "Timeout waiting for event: Page.screencastFrame",
+      "focus_before": {
+        "id": 8,
+        "app_id": "discord",
+        "workspace_id": 5,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48915,
+          "nanos": 312135416
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "private_window": {
+        "id": 75,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48669,
+          "nanos": 497696925
+        }
+      }
+    },
+    {
+      "variant": "152-leash-cast",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "152-leash-target",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-leash-target",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      }
+    },
+    {
+      "variant": "152-leash-target",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "focus_after": {
+        "id": 76,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48953,
+          "nanos": 461891403
+        }
+      }
+    },
+    {
+      "variant": "152-leash-target",
+      "step": "new",
+      "focus_before": {
+        "id": 76,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48953,
+          "nanos": 461891403
+        }
+      },
+      "focus_after": {
+        "id": 76,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48953,
+          "nanos": 461891403
+        }
+      }
+    },
+    {
+      "variant": "152-leash-target",
+      "step": "place",
+      "focus_before": {
+        "id": 76,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48953,
+          "nanos": 461891403
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "window": 76,
+      "workspace": 2
+    },
+    {
+      "variant": "152-leash-target",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48923,
+          "nanos": 378145556
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "new",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "place",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      },
+      "window": 77,
+      "workspace": 2
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 0,
+      "tab": "com",
+      "seconds": 0.076,
+      "error": null,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 0,
+      "tab": "org",
+      "seconds": 5.004,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 0,
+      "tab": "net",
+      "seconds": 5.005,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 873207665
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 1,
+      "tab": "com",
+      "seconds": 5.007,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 1,
+      "tab": "org",
+      "seconds": 0.179,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 1,
+      "tab": "net",
+      "seconds": 5.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 2,
+      "tab": "com",
+      "seconds": 0.18,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 2,
+      "tab": "org",
+      "seconds": 5.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "shot",
+      "shape": "activate",
+      "round": 2,
+      "tab": "net",
+      "seconds": 0.181,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "private_window": {
+        "id": 77,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48959,
+          "nanos": 354082297
+        }
+      }
+    },
+    {
+      "variant": "152-leash-activate",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 48976,
+          "nanos": 681089553
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "place",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "window": 78,
+      "workspace": 2
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 0,
+      "tab": "com",
+      "seconds": 5.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 0,
+      "tab": "org",
+      "seconds": 5.004,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 0,
+      "tab": "net",
+      "seconds": 5.005,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 1,
+      "tab": "com",
+      "seconds": 5.004,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 1,
+      "tab": "org",
+      "seconds": 5.002,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 1,
+      "tab": "net",
+      "seconds": 5.004,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 2,
+      "tab": "com",
+      "seconds": 5.004,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 2,
+      "tab": "org",
+      "seconds": 1.385,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "shot",
+      "shape": "focus",
+      "round": 2,
+      "tab": "net",
+      "seconds": 5.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "private_window": {
+        "id": 78,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 48998,
+          "nanos": 844563665
+        }
+      }
+    },
+    {
+      "variant": "152-leash-focus",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49000,
+          "nanos": 47100092
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "place",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "window": 79,
+      "workspace": 2
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 0,
+      "tab": "com",
+      "seconds": 0.073,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 0,
+      "tab": "org",
+      "seconds": 0.028,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 0,
+      "tab": "net",
+      "seconds": 0.018,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 1,
+      "tab": "com",
+      "seconds": 0.018,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 1,
+      "tab": "org",
+      "seconds": 0.019,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 1,
+      "tab": "net",
+      "seconds": 0.019,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 2,
+      "tab": "com",
+      "seconds": 0.016,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 2,
+      "tab": "org",
+      "seconds": 0.02,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "shot",
+      "shape": "castfocus",
+      "round": 2,
+      "tab": "net",
+      "seconds": 0.018,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "private_window": {
+        "id": 79,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49064,
+          "nanos": 782185510
+        }
+      }
+    },
+    {
+      "variant": "152-leash-castfocus",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "launch",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "version": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/152.0.7977.64",
+        "revision": "@506c834ecceaa943c5f41e6cfe7f68acb5c45346",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "jsVersion": "15.2.124.18"
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49066,
+          "nanos": 41136094
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "new",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "place",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "window": 80,
+      "workspace": 2
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 0,
+      "tab": "com",
+      "seconds": 0.08,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 0,
+      "tab": "org",
+      "seconds": 0.085,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 0,
+      "tab": "net",
+      "seconds": 5.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 1,
+      "tab": "com",
+      "seconds": 5.004,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 1,
+      "tab": "org",
+      "seconds": 5.008,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 1,
+      "tab": "net",
+      "seconds": 0.179,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 2,
+      "tab": "com",
+      "seconds": 5.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 2,
+      "tab": "org",
+      "seconds": 0.181,
+      "error": null,
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "shot",
+      "shape": "target",
+      "round": 2,
+      "tab": "net",
+      "seconds": 5.003,
+      "error": "Timeout: Page.captureScreenshot",
+      "focus_before": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "focus_after": {
+        "id": 4,
+        "app_id": "google-chrome",
+        "workspace_id": 1,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49095,
+          "nanos": 425137152
+        }
+      },
+      "private_window": {
+        "id": 80,
+        "app_id": "google-chrome",
+        "workspace_id": 2,
+        "is_focused": false,
+        "focus_timestamp": {
+          "secs": 49093,
+          "nanos": 696965251
+        }
+      }
+    },
+    {
+      "variant": "152-leash-rerun-target",
+      "step": "closed",
+      "focus_before": null,
+      "focus_after": null,
+      "exit": 0,
+      "signal": null
+    }
+  ],
+  "live": [
+    {
+      "image": "verify10.png",
+      "seconds": 0.042,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "verify11.png",
+      "seconds": 0.044,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "verify12.png",
+      "seconds": 0.042,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "verify20.png",
+      "seconds": 0.042,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "verify21.png",
+      "seconds": 0.045,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "verify22.png",
+      "seconds": 0.046,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "verify30.png",
+      "seconds": 0.045,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "verify31.png",
+      "seconds": 0.045,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "verify32.png",
+      "seconds": 0.045,
+      "exit": 0,
+      "bytes": 256417,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49533,
+          "nanos": 603189945
+        }
+      }
+    },
+    {
+      "image": "afterfull0.png",
+      "seconds": 0.04,
+      "exit": 0,
+      "bytes": 269058,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "image": "afterfull1.png",
+      "seconds": 0.046,
+      "exit": 0,
+      "bytes": 269992,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "image": "afterfull2.png",
+      "seconds": 0.063,
+      "exit": 0,
+      "bytes": 271771,
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    }
+  ],
+  "extra": [
+    {
+      "step": "eval",
+      "seconds": 0.312,
+      "exit": 0,
+      "reply": {
+        "value": {
+          "frames": 19,
+          "ms": 304.099999998507,
+          "visibility": "visible"
+        }
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "step": "shot",
+      "seconds": 0.032,
+      "exit": 0,
+      "reply": {
+        "image": "labelled0.png",
+        "bytes": 269559
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "step": "shot",
+      "seconds": 5.004,
+      "exit": 75,
+      "reply": {
+        "code": "timeout",
+        "message": "screenshot produced no frame within 5s; headed Chrome on a hidden Wayland workspace may have no compositor frame even when the page is responsive",
+        "hint": "keep the window visible or retry later; Leash will not activate or move it"
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "step": "eval",
+      "seconds": 0.318,
+      "exit": 0,
+      "reply": {
+        "value": {
+          "frames": 19,
+          "ms": 312.19999999552965,
+          "visibility": "visible"
+        }
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "step": "shot",
+      "seconds": 0.034,
+      "exit": 0,
+      "reply": {
+        "image": "labelled1.png",
+        "bytes": 270493
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "step": "shot",
+      "seconds": 5.004,
+      "exit": 75,
+      "reply": {
+        "code": "timeout",
+        "message": "screenshot produced no frame within 5s; headed Chrome on a hidden Wayland workspace may have no compositor frame even when the page is responsive",
+        "hint": "keep the window visible or retry later; Leash will not activate or move it"
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "step": "eval",
+      "seconds": 0.318,
+      "exit": 0,
+      "reply": {
+        "value": {
+          "frames": 19,
+          "ms": 312.8999999970256,
+          "visibility": "visible"
+        }
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "step": "shot",
+      "seconds": 0.032,
+      "exit": 0,
+      "reply": {
+        "image": "labelled2.png",
+        "bytes": 270939
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    },
+    {
+      "step": "shot",
+      "seconds": 5.023,
+      "exit": 75,
+      "reply": {
+        "code": "timeout",
+        "message": "screenshot produced no frame within 5s; headed Chrome on a hidden Wayland workspace may have no compositor frame even when the page is responsive",
+        "hint": "keep the window visible or retry later; Leash will not activate or move it"
+      },
+      "focus_before": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      },
+      "focus_after": {
+        "id": 3,
+        "app_id": "google-chrome",
+        "workspace_id": 3,
+        "is_focused": true,
+        "focus_timestamp": {
+          "secs": 49603,
+          "nanos": 791138135
+        }
+      }
+    }
+  ]
+}

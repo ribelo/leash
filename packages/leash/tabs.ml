@@ -172,6 +172,7 @@ type tab = {
           popup, so the registry wakes them when the popup's target appears or when this
           tab's target dies. Empty between dispatches. *)
   reading : Reading.t;
+  screenshot : Screenshot.t;
 }
 
 let baselines_kept = 8
@@ -253,6 +254,8 @@ type t = {
           proposals written, uploads and playbooks read, the XDG directories looked up. *)
   now : unit -> float;
   sleep : float -> unit;
+  capture_timeout :
+    (unit -> (Yojson.Safe.t, P.error) result) -> (Yojson.Safe.t, P.error) result;
   await_load : unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   await_handoff : Ox.Duration.t -> unit Eio.Promise.t -> (unit, [ `Timeout ]) result;
   desktop : Desktop.t;
@@ -386,6 +389,7 @@ let new_record ~fresh ~generation ~at ~id ~session ~origin ~label ~url ~title ~o
     close_on_resume = false;
     settlements = [];
     reading = Reading.create ();
+    screenshot = Screenshot.create ();
   }
 
 let adopt ~fresh ~tombstone_s ~generation ~at ledger ~id ~session
@@ -1609,6 +1613,23 @@ let reading_browser t ~session tab cdp : Reading.browser =
   in
   {
     call;
+    capture =
+      (fun ~full_page ->
+        match
+          Dialog_race.first (dialog_race tab) (fun () ->
+              Screenshot.capture tab.screenshot ~call ~within:t.capture_timeout ~full_page
+                ~stop:(fun () ->
+                  ignore
+                    (cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
+                       "Page.stopScreencast" (obj []))))
+        with
+        | `Value result -> result
+        | `Dialog dialog ->
+            Error
+              (P.make_error
+                 (enum P.Error_code.of_string "dialog-open")
+                 ~message:"a dialog blocks page reads; answer it first"
+                 ~detail:(P.yojson_of_dialog dialog)));
     now = (fun () -> now t);
     sleep = t.sleep;
     current = (fun () -> (tab.url, tab.title));
@@ -1644,6 +1665,10 @@ let with_reading t ~access handle f =
           f tab
             {
               browser with
+              capture =
+                (fun ~full_page ->
+                  engage ();
+                  browser.capture ~full_page);
               call =
                 (fun meth params ->
                   if meth <> "Page.handleJavaScriptDialog" then engage ();
@@ -2971,7 +2996,9 @@ let inspect t json =
   | None -> ()
   | Some session ->
       iter_tabs t (fun (tab : tab) ->
-          if tab.session = Some session then Reading.observe tab.reading ~at:(now t) json));
+          if tab.session = Some session then (
+            Screenshot.observe tab.screenshot json;
+            Reading.observe tab.reading ~at:(now t) json)));
   (match (text "method" json, member "params" json) with
   | Some method_, Some params -> download_event t json method_ params
   | _ -> ());
@@ -3117,6 +3144,14 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
       caps = deps.caps;
       now = (fun () -> Eio.Time.now deps.clock);
       sleep = (fun seconds -> Eio.Time.sleep deps.clock seconds);
+      capture_timeout =
+        (fun f ->
+          match
+            Ox.Timeout.timeout ~clock:deps.clock (Ox.Duration.seconds 5) (fun () ->
+                Ok (f ()))
+          with
+          | Ok result -> result
+          | Error `Timeout -> Error (Screenshot.timeout_error ()));
       await_load =
         (fun promise ->
           Ox.Timeout.timeout ~clock:deps.clock (Ox.Duration.seconds 30) (fun () ->

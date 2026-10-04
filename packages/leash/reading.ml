@@ -5,6 +5,7 @@ type page_state = { loader : string; guard : (string * int) option }
 
 type browser = {
   call : string -> Yojson.Safe.t -> (Yojson.Safe.t, Protocol.error) result;
+  capture : full_page:bool -> (Yojson.Safe.t, Protocol.error) result;
   now : unit -> float;
   sleep : float -> unit;
   current : unit -> string * string;
@@ -512,13 +513,9 @@ let shot ~caps browser (args : P.shot_args) =
   if Filename.is_relative args.path then
     Error (invalid "screenshot path must be absolute")
   else
+    let* () = check_dialog browser in
     let* reply =
-      page_call browser "Page.captureScreenshot"
-        (obj
-           [
-             ("format", str "png");
-             ("captureBeyondViewport", `Bool (Option.value ~default:false args.full_page));
-           ])
+      browser.capture ~full_page:(Option.value ~default:false args.full_page)
     in
     match field "data" D.string reply with
     | None -> Error (internal "browser omitted screenshot")

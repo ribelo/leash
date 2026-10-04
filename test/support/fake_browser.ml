@@ -181,6 +181,8 @@ let defaults replies =
       ( "DOMSnapshot.captureSnapshot",
         obj [ ("documents", `List []); ("strings", `List []) ] );
       ("Page.captureScreenshot", obj [ ("data", str "iVBORw0KGgo=") ]);
+      ("Page.screencastFrameAck", obj []);
+      ("Page.stopScreencast", obj []);
       ("Page.navigate", obj [ ("frameId", str "frame-1"); ("loaderId", str "loader-1") ]);
       ("Runtime.evaluate", obj [ ("result", obj [ ("type", str "undefined") ]) ]);
     ];
@@ -300,6 +302,20 @@ let create ~sw ?sleep () =
       writes = Eio.Mutex.create ();
     }
   in
+  Hashtbl.replace replies "Page.startScreencast" (fun request ->
+      let session =
+        match request with
+        | `Assoc fields -> List.assoc "sessionId" fields
+        | _ -> assert false
+      in
+      send t
+        (obj
+           [
+             ("method", str "Page.screencastFrame");
+             ("sessionId", session);
+             ("params", obj [ ("data", str "iVBORw0KGgo="); ("sessionId", `Int 1) ]);
+           ]);
+      obj []);
   Eio.Fiber.fork_daemon ~sw (fun () ->
       let reader = Eio.Buf_read.of_flow ~max_size:1_048_576 peer_read in
       let rec loop () =

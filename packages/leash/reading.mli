@@ -14,6 +14,7 @@ type page_state = { loader : string; guard : (string * int) option }
 
 type browser = {
   call : string -> Yojson.Safe.t -> (Yojson.Safe.t, Protocol.error) result;
+  capture : full_page:bool -> (Yojson.Safe.t, Protocol.error) result;
   now : unit -> float;
   sleep : float -> unit;
   current : unit -> string * string;
