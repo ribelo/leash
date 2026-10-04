@@ -49,6 +49,14 @@ ADR-0012: the planner holds the mission and the page; JEV drives legs. `drive` b
 21. As a maintainer, I want the pilot prompt versioned in `planner.ml`, under 300 words, stating only: the answers and their shapes, the safety refusals, and 'a leg is one navigation goal in JEV's language', so that the prompt is not a rulebook. ^pilot-r94o
 22. As the operator, I want `leash drive --dry-run` to show the pilot's first decision and its reasoning summary without acting, so that I can see what it intends on a new site. ^pilot-cnp5
 
+
+### Gate findings (2026-10-04)
+
+The L57 gates below found four defects. Each is diagnosed to a cause and filed here, not fixed by rewording a mission (pilot-lo8y). The fixes follow as their own slices.
+
+23. As the operator, I want a password the pilot generates for a mission to be handed to me in the reply's `secrets_for_operator` (and through the notification when one is configured), so that I can actually use the account it just created. U7 on the fixture: the pilot invented `N0rthstar!H7qL_29vR`, typed it into both fields, and returned `secrets_for_operator: []`; the account exists and nobody knows its password. ^pilot-gn4w
+24. As the operator, I want a value typed into a password field never to appear in the reply or the durable trace, whoever chose it. The same U7 run wrote the generated password in cleartext into the reply's pilot turns and twice into the trace, although the trace's own rule is that password fills are recorded as `[password]`: redaction covers `--secret` values and `secrets_for_operator`, and nothing marked a value the pilot invented. ^pilot-pw7x
+25. As the operator, I want a collection mission that asks for a file (`--out FILE`) to end with that file holding the records, so that "collect every title and price in category Travel to a JSONL file" is a mission and not a paraphrase. U8 returned all eleven Travel title/price pairs in cleartext — verified 11/11 against the category page — and left the `--out` file empty with `output_kinds: []`: only a validated playbook script record can write it, and the pilot's answers (leg, read, act, handoff, notify, done, fail) contain no script answer. ^pilot-sc9t
 ## Implementation Decisions
 
 - The pilot loop is `run.ml`'s mission level with the planner as the chooser; the operator loop is reused unchanged for legs with a leg-local cap. `Done {result; evidence}` and `Continue_actions` already exist as planner answers; `leg` and `read` are added; `Procedure` stays for writing memory.
