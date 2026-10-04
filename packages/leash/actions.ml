@@ -1190,17 +1190,29 @@ let scroll ~cdp tab (args : P.scroll_args) =
           in
           let delta = if down then height else -.height in
           let () = tab.engage () in
-          let* _ =
-            call cdp ~session:tab.session "Input.dispatchMouseEvent"
-              (E.object_
-                 [
-                   ("type", Some (E.string "mouseWheel"));
-                   ("x", E.float x);
-                   ("y", E.float y);
-                   ("deltaX", Some (E.int 0));
-                   ("deltaY", Some (E.int (int_of_float delta)));
-                   ("pointerType", Some (E.string "mouse"));
-                 ])
+          (* pilot-x1f3: the wheel ack is bounded to a second, as in {!operator_scroll}. *)
+          let* () =
+            match
+              attempt ~deadline:(Ox.Duration.seconds 1) cdp ~session:tab.session
+                "Input.dispatchMouseEvent"
+                (E.object_
+                   [
+                     ("type", Some (E.string "mouseWheel"));
+                     ("x", E.float x);
+                     ("y", E.float y);
+                     ("deltaX", Some (E.int 0));
+                     ("deltaY", Some (E.int (int_of_float delta)));
+                     ("pointerType", Some (E.string "mouse"));
+                   ])
+            with
+            | Ok _ | Error Timed_out -> Ok ()
+            | Error (Refused (number, message)) ->
+                fail "internal"
+                  (Printf.sprintf "the browser refused Input.dispatchMouseEvent (%d %s)"
+                     number message)
+            | Error (Transport why) ->
+                fail "browser-unavailable"
+                  ("Chrome did not answer; try again shortly: " ^ why)
           in
           settle cdp tab ~combobox:false))
 

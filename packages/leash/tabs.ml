@@ -2443,9 +2443,10 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
             | P.Press args -> Actions.press ~cdp view args
             | P.Select args -> Actions.select ~cdp view args
             | P.Scroll ({ index = None; _ } as args) ->
-                (* pilot-x1f3: a page scroll takes the navigator's proven path (bounded wait
-                   for scrollY to move). The public one-viewport wheel timed out after 30 s
-                   twice on Tauron (U2, builds H and I, 2026-10-04). *)
+                (* pilot-x1f3: a page scroll takes the navigator's path, which checks where
+                   the wheel landed. The pilot's act scroll timed out after 30 s on Tauron
+                   (U2, builds H, I and K) waiting for the wheel ack; both wheels now bound
+                   that wait (Actions). *)
                 Actions.operator_scroll ~cdp view
                   ~down:(P.Direction.to_string args.direction = "down")
             | P.Scroll args -> Actions.scroll ~cdp view args
