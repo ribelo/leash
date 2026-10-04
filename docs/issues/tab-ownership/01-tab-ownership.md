@@ -1,5 +1,5 @@
 ---
-status: completed
+status: superseded
 milestone: 3
 ---
 
@@ -8,6 +8,10 @@ milestone: 3
 **Historical; superseded by L49 / ADR-0010.** This records milestone 3 as delivered.
 Do not implement its tab-access or two-stage expiry model; the current contract is
 `../handles/01-handles.md` and `../../adr/0010-handles-are-capabilities.md`.
+
+## Status — 2026-10-04
+
+Superseded by [L49: handles are capabilities](<../handles/01-handles.md>), under [ADR-0010](<../../adr/0010-handles-are-capabilities.md>). The current protocol has no owner, claim or release, and agent tabs use one idle expiry. The original milestone-3 delivery below is historical, not the current contract.
 
 ## Problem Statement
 

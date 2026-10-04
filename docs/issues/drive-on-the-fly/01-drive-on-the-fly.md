@@ -1,9 +1,13 @@
 ---
-status: completed
+status: superseded
 milestone: 11
 ---
 
 # Drive on the fly: JEV operates without a playbook
+
+## Status — 2026-10-04
+
+Superseded by [L56: the pilot loop](<../pilot/01-pilot.md>), under [ADR-0012](<../../adr/0012-the-pilot-drives.md>). The reference-like JEV action loop and its target/freshness guards remain as the navigator for bounded legs; JEV-first mission ownership and DONE as mission completion do not. The recorded L45 acceptance is historical.
 
 ## Problem Statement
 

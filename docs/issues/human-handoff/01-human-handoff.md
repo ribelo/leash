@@ -1,9 +1,13 @@
 ---
-status: completed-pending-headed
+status: completed
 milestone: 4
 ---
 
 # Hand a tab to the human and get it back
+
+## Status — 2026-10-04
+
+Completed. L18's headed check was closed by [the operator's desktop acceptance on 2026-10-01](<../daily-use/01-daily-use.md#operator-desktop-check-daily-n7on-closes-l18l28--2026-10-01>): notifications stayed until answered and Done resumed twice. Focus is now opt-in, following that acceptance. Current handoff/resume, action exclusion, idle hold, expiry, browser loss and command-failure behavior are covered by the protocol tests. No open stories in this spec. Ownership clauses are superseded by [L49 / ADR-0010](<../handles/01-handles.md>); mission-level expiry and cancellation are delivered by [L56/L57C](<../pilot/01-pilot.md>).
 
 ## Problem Statement
 
@@ -59,7 +63,7 @@ A streamed viewer; handoff inside `drive`; a GUI.
   stand-in focus got the substituted tab/reason/url/title, failing stand-ins
   warned without failing the handoff; SIGTERM exited 0, Chrome gone. No
   defects found, so no code changed.
-- Headed run prepared, pending the operator: `scripts/live-acceptance-m6-headed`
+- Historical headed-run preparation (closed by L44 on 2026-10-01): `scripts/live-acceptance-m6-headed`
   (L28) carries this row's headed half — one real handoff on the installed unit, with
   niri focus and the notify-send Done action — and writes this spec's own result file
   `/tmp/leash-m4-headed-result.txt` (`tab_resumed`, `handoff_reply`,
@@ -67,5 +71,5 @@ A streamed viewer; handoff inside `drive`; a GUI.
   after). `scripts/live-acceptance-m4-headed` stays for a separate throwaway-profile
   run if one is ever wanted. Both are manual, headed, and never run by an agent; the M6
   script was validated with `bash -n` and `--dry-run` on 2026-09-28, which touches no
-  systemd, no Chrome and no network. When the result is pasted back, flip this status to
-  `completed` and tick L18.
+  systemd, no Chrome and no network. L44's recorded operator desktop check later
+  closed L18; the headed acceptance is no longer pending.

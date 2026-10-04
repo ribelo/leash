@@ -1,9 +1,13 @@
 ---
-status: ready-for-agent
+status: superseded
 milestone: 12
 ---
 
 # The map draws itself: compile, try, install, repair
+
+## Status — 2026-10-04
+
+Superseded by [L56: the pilot loop](<../pilot/01-pilot.md>), under [ADR-0012](<../../adr/0012-the-pilot-drives.md>) (`pilot-c77y`, `pilot-a4ua`, `pilot-3egp`). L53's compile-from-traces and hard-site learning campaign were withdrawn, not completed. Trace storage, page kinds, the replay install gate and prepared playbook execution remain in the current code; the pilot writes memory directly. The 2026-10-02 checkpoint below is historical and is not a current work queue. No compiler stories remain ready for implementation under this spec.
 
 ## Problem Statement
 

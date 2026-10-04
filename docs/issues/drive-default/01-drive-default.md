@@ -1,9 +1,13 @@
 ---
-status: ready-for-agent
+status: superseded
 milestone: 12
 ---
 
 # Drive is the default: hard-site acceptance
+
+## Status — 2026-10-04
+
+Superseded by [L56/L57 and the L57F findings](<../pilot/01-pilot.md>), under [ADR-0012](<../../adr/0012-the-pilot-drives.md>). L54's JEV-first, compiled-playbook acceptance was withdrawn, not passed. [The ten use cases](<../../use-cases.md>) are the successor acceptance: U1/U2/U6 pass; failures and memory regressions remain recorded there. U3/U4 still require the operator's Allegro credentials. No L54 stories remain ready for implementation under the withdrawn loop.
 
 ## Problem Statement
 

@@ -1,9 +1,21 @@
 ---
-status: completed
+status: ready-for-agent
 milestone: 13
 ---
 
 # The pilot drives
+
+## Status — 2026-10-04
+
+Ready for agent on L57F only. L56, the L57 gate campaign and L57C notification cancellation are delivered; the campaign is not a claim that all ten cases pass. Open stories:
+
+- `pilot-z1nr` — repeated inapplicable memory (U5, then U10).
+- `pilot-h506` — validated pilot upload path (U9).
+- `pilot-gn4w`, `pilot-pw7x` — generated-password delivery and redaction (U7).
+- `pilot-sc9t` — collected records reach the requested output file (U8).
+- `pilot-exx7` — a replayed download leg stops when its requested file arrives.
+
+U3/U4 acceptance is pending the operator's Allegro credentials (`pilot-sa3f`, `pilot-ivzx`), not an implemented pass. U1/U2/U6 pass; U5/U9/U10 fail and U7/U8 have findings, as recorded in [the use-case evidence](<../../use-cases.md>). The next L57F work is U5, U10, U9, U7, U8 in that order; no new scope is added here.
 
 ## Problem Statement
 

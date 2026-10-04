@@ -1,9 +1,13 @@
 ---
-status: completed
+status: superseded
 milestone: 7
 ---
 
 # Run: missions over playbooks, three JEV levels, Luna on demand
+
+## Status — 2026-10-04
+
+Superseded by [L56: the pilot loop](<../pilot/01-pilot.md>), under [ADR-0012](<../../adr/0012-the-pilot-drives.md>). Prepared playbooks, scripts, page kinds and verification remain reusable memory, but the pilot owns the mission and the former three-level JEV chooser is gone. L33 discovery was removed by L53 (`map-gkww`). The recorded milestone-7 acceptance is historical.
 
 ## Problem Statement
 

@@ -1,9 +1,13 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 8
 ---
 
 # Hardening 1: dialogs end waits
+
+## Status — 2026-10-04
+
+Completed. The current dialog race, tab/action handlers and listener timeout reply implement L21–L23; the protocol/action regressions cite `hard-6eei`, `hard-dljv`, `hard-s719`, `hard-t6cq`, `hard-tsva`, `hard-yi0a`, `hard-92ik` and `hard-owci`. The real-Chrome checks are shipped in [scripts/live-acceptance-m8](<../../../scripts/live-acceptance-m8>) (`hard-wo78`); the bundled skill covers dialog replies (`hard-fir4`). No open stories in this spec.
 
 ## Problem Statement
 

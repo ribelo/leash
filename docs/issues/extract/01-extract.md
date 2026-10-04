@@ -1,9 +1,13 @@
 ---
-status: completed-with-followups
+status: completed
 milestone: 9
 ---
 
 # Collect: prepared scripts in playbooks, driven by missions
+
+## Status — 2026-10-04
+
+Completed for L37–L40. The current playbook loader validates file/inline scripts and return shapes; the runner executes prepared scripts, validates and deduplicates records, handles repeat termination, and sends records to the CLI's JSONL writer. The recorded L40 cause/fix/repeat acceptance closes `extr-uhnc`; it is not an outstanding follow-up. No open stories in this spec. [ADR-0012 / L56](<../pilot/01-pilot.md>) supersedes the JEV-first mission chooser and trace compiler, not prepared scripts or file output. Pilot-only collection without a prepared script is separately open as L57F `pilot-sc9t` (U8).
 
 ## Problem Statement
 
@@ -134,4 +138,4 @@ The native-repeat run performed eight `list-page` calls producing 152 records, e
 
 Sanitized raw traces: `/tmp/leash-l40-final-primary/{Travel,Fiction,Default}.json`, `/tmp/leash-l40-final-blank/{Travel,Fiction,Default}.json`, `/tmp/leash-l40-final-repeat/Default.json`. CLI/log secret checks covered respectively 16/16/8 captured outputs and 4992/5872/2038 service-log bytes. Each service exited 0 on SIGTERM and its isolated Chrome was gone. No API key was printed or persisted in evidence.
 
-Final foreground gates all passed with `timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l40`: `dune build @install`, `dune test`, `dune build @fmt`. The formatting gate initially reported layout differences in four changed files; `dune promote` applied only those formatter outputs and the gate then passed. Regression coverage includes native navigation, exact-cap terminal success, rejected/unsafe control results, nonempty and empty one-shot completion, interrupted steps, unfinished-repeat DONE guard, nonterminal cap failure, helper exclusion, typed control codecs, shipped examples, and bounded choice review. The isolated build directory was removed after verification; no commit was made for this slice.
+Final foreground gates all passed with `timeout 900 nix develop -c env DUNE_BUILD_DIR=_build_l40`: `dune build @install`, `dune test`, `dune build @fmt`. The formatting gate initially reported layout differences in four changed files; `dune promote` applied only those formatter outputs and the gate then passed. Regression coverage includes native navigation, exact-cap terminal success, rejected/unsafe control results, nonempty and empty one-shot completion, interrupted steps, unfinished-repeat DONE guard, nonterminal cap failure, helper exclusion, typed control codecs, shipped examples, and bounded choice review. The isolated build directory was removed after verification. L40 is delivered in the current tree; this historical gate record does not denote unfinished work.

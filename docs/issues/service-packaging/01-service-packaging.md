@@ -1,9 +1,13 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 6
 ---
 
 # Run Leash as a service and retire the chrome-cdp script
+
+## Status — 2026-10-04
+
+Completed. Config validation/defaults, environment key override, socket relocation, redacted journal fields, optional OTLP, Chrome stderr diagnostics, flake packaging and the shared user unit are present in the current tree. Installation and cut-over landed through L43/L44; [the operator's desktop acceptance](<../daily-use/01-daily-use.md#operator-desktop-check-daily-n7on-closes-l18l28--2026-10-01>) closes L28. No open stories in this spec. The installed service is currently at `ad5d8e2` with a stale skill: upgrading it to the reconciled HEAD and rerunning U1/U2 is the next delivery step, not an unimplemented packaging feature. Owner-based journal language is superseded by [L49 / ADR-0010](<../handles/01-handles.md>).
 
 ## Problem Statement
 
@@ -63,7 +67,7 @@ Packaging for anyone but this machine, CI, an HTTP adapter.
   `ExecStart` is `…/bin/leash serve`, and `docs/install.md`, `packaging/leash-unit.nix`
   and `scripts/unit-acceptance` were moved with it. A bare `leash` still starts the
   same program.
-- L28 headed acceptance is prepared as `scripts/live-acceptance-m6-headed`, the one
+- Historical L28 preparation (closed by L44 on 2026-10-01): `scripts/live-acceptance-m6-headed`, the one
   desktop pass the operator runs by hand: it prints the install steps from
   `docs/install.md`, checks the unit and `leash status`, records niri's placement of
   the `leash` window (rule present? which workspace? focused before/after a handoff),
@@ -73,5 +77,5 @@ Packaging for anyone but this machine, CI, an HTTP adapter.
   then restarts and stops the unit and checks the exit status, the socket, Chrome, the
   profile and the journal into `/tmp/leash-m6-headed-result.txt`. `bash -n` and
   `--dry-run` are green (the dry run prints every step and touches nothing), and the
-  headed run is pending the operator; when the result is pasted back, tick L28 and set
-  this status to `completed`.
+  headed run was pending at that checkpoint. L44's recorded operator desktop check
+  subsequently closed L28; it is not pending now.

@@ -5,6 +5,19 @@ milestone: 12
 
 # Unattended: notifications that do not block, handoffs that end, CAPTCHAs the agent tries first
 
+## Status — 2026-10-04
+
+Ready for agent only on the undelivered legacy challenge stories listed below. L55 as a separate loop slice is superseded by [L56](<../pilot/01-pilot.md>): non-blocking notify (`notif-7o8j`, `notif-m37y`, `notif-7pha`), bounded handoff expiry (`notif-oslv`) and ordinary validated pilot actions (`notif-tdtz`) are in the pilot loop. Notification cancellation is additionally delivered by L57C.
+
+Not all original L55 claims can be ticked: `Run.loop` currently ignores `challenge`, `challenge_attempt` and `challenge_turns`; the scripted challenge tests choose their own attempt count and handoff. They prove the pilot action path, not a service-enforced challenge policy. Open existing stories:
+
+- `notif-himb` — detected challenges trigger the configured attempt policy.
+- `notif-p4yk` — the configured turn bound enforces CAPTCHA handoff and challenge outcome.
+- `notif-udh3` — `challenges.attempt`/turns actually govern attempts and their audit.
+- `notif-646o` — recorded live reCAPTCHA demo measurement.
+
+These findings are recorded, not repaired in the current L57F case sequence.
+
 ## Problem Statement
 
 Leash is meant to run while the operator is away from the computer — he dictates everything, uses the computer with difficulty, and wants the browser automated for that reason. Today the only way the system reaches him is `handoff`, which stops the mission and waits (fifteen minutes by default); there is no way to *tell* him something and continue; and every CAPTCHA is sent to him, although current planner models pass most of them, and a bot acting for its user and doing nothing harmful should not be blocked (the operator's view, and OpenAI's).
