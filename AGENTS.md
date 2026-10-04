@@ -44,11 +44,21 @@ Specs live at `docs/issues/<slug>/01-<slug>.md` with `status:` frontmatter. Ever
 
 ## Gates (run before any commit)
 
+The capability gate uses the compiler-backed `ox-lint` installed with `ox_caps`.
+The launcher finds `bin/ox-lint` in the same opam prefix; `share/ox_lint` holds
+the rule pages and fixtures.
+Its source tier is mandatory and needs no build artefacts; its typed tier needs
+fresh `.cmt` evidence from Leash, with matching CMI fingerprints. Run it after a
+build, never as a substitute for one. `scripts/caps-gate` builds `@install @check`
+first; `@check` produces the executables' typed evidence. The gate requires the
+typed tier, so undecided modules fail. Keep the build-only generator allowances
+and their reasons in that script.
+
 ```sh
-nix develop -c dune build @install
+nix develop -c dune build @install @check
 nix develop -c dune test
 nix develop -c dune build @fmt
-nix develop -c scripts/caps-gate   # delegates to the gate installed with ox_caps (share/ox_caps/caps-gate)
+nix develop -c scripts/caps-gate   # builds first, then runs share/ox_caps/caps-gate with fresh typed evidence
 ```
 
 ## Safety defaults that are not up for local negotiation
