@@ -293,7 +293,7 @@ Mission, verbatim: "Find the cheapest flight from Warsaw to Lisbon next month an
 Independent check, three reads:
 
 - The pilot's final search URL, opened fresh by the harness, shows `Cheapest from PLN 349`, `Ryanair` / `Operated by Ryanair Sun` and `Nonstop`.
-- Eight date pairs sampled across November by the harness through the ordinary search (Nov 7→10, 14→17, 21→24, 28→30, 2→30, 10→Dec 1, 17→24, 24→27) returned `Cheapest from` PLAIN 721, 719, 678, **349**, 490, 708, 668, 957. The minimum is the pair the pilot named.
+- Eight date pairs sampled across November by the harness through the ordinary search (Nov 7→10, 14→17, 21→24, 28→30, 2→30, 10→Dec 1, 17→24, 24→27) returned `Cheapest from` PLN 721, 719, 678, **349**, 490, 708, 668, 957. The minimum is the pair the pilot named.
 - The November search page's own date grid marks `PLN 490, cheapest price, Nov 2 to Nov 30` as the cheapest cell of its window (departures Oct 29–Nov 4, returns Nov 27–Dec 3), which the pilot's pair beats.
 
 The pilot chose the pair from the departure calendar, whose per-date buttons carry prices — its steps include `Click the button named Saturday, November 28, 2026 , 341 Polish zlotys, Cheapest price` and `... Monday, November 30, 2026 , 349 Polish zlotys, Cheapest price` — so the answer came from a price-annotated month view, not from one arbitrary date.
