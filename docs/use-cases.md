@@ -309,3 +309,26 @@ Mission, verbatim: "Find a cafe near the Eiffel Tower with rating over 4 and giv
 Independent check: the harness opened the same search (`cafes near Eiffel Tower`) in a fresh tab and read the results list itself: `Sunflower Café` / `4,7` / `Kawiarnia · 41 Av. de Suffren` — name, rating above 4 and address all agree, and the site's own category is "café" (Kawiarnia).
 
 Cost: 3 pilot turns, 0 navigator steps, 3 calls, $0.00091. Memory: draft `legs-489f96955548` (2 goals).
+### U7 — register and confirm from the mailbox, fixture (pilot-sa3f)
+
+Mission, verbatim: "Register an account on the fixture site with the email operator@example.test and confirm it from the mailbox" (`--url http://127.0.0.1:37075/register`, `scripts/use-cases/fixtures.py`).
+
+`result`: "Account registered and email confirmed for operator@example.test."
+
+Independent check, from the fixture's own state file: `registrations == 1`; exactly one account, `email` the supplied address, `confirmed == true`, carrying only `email`, `confirmed` and a PBKDF2 `password_hash`; one mailbox message with subject "Confirm your Northstar account" and its confirmation link; the supplied password does not occur anywhere in the state.
+
+Cost: 8 pilot turns, 0 navigator steps, 9 calls, $0.0018949.
+
+**Fail on the password clause.** The pilot invented its own password (`N0rthstar!H7qL_29vR`), typed it into both fields, and then (a) returned `secrets_for_operator: []`, so the operator can never learn the password of the account that was just created, and (b) left the value in cleartext in its own planner turns in the reply and twice in the durable trace. The use case says a generated password is handed to the operator and never written into the trace. Two stories filed: `pilot-gn4w` (a generated password is handed over) and `pilot-pw7x` (a typed password never reaches the reply or the trace).
+
+### U8 — collect a category to a JSONL file, live (pilot-ivzx)
+
+Mission, verbatim: "Collect every title and price in category Travel to a JSONL file" (`--url https://books.toscrape.com/ --out /tmp/leash-u57/u8-1.jsonl`).
+
+`result`: "Collected all 11 Travel titles and prices." with the eleven `{"title":…,"price":…}` records inline.
+
+Independent check: the harness fetched `https://books.toscrape.com/catalogue/category/books/travel_2/index.html` itself and compared every record with the page's `article.product_pod` titles and `.price_color` prices: **11/11, no missing record, no extra record, no price difference**.
+
+Cost: 5 pilot turns, 0 navigator steps, 6 calls, $0.00511723.
+
+**Fail: the file was not written.** `--out` produced a 0-byte file and the reply's `output_kinds` is empty. A collection file can only be written by a validated playbook script record, and the pilot's answers are `leg`, `read`, `act`, `handoff`, `notify`, `done`, `fail` — there is no script answer and no writer for `--out`, so the mission's records can only be returned as text. Story `pilot-sc9t`.
