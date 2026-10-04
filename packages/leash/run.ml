@@ -246,19 +246,42 @@ let lower = String.lowercase_ascii
 
 (* run-tt9z: fail closed on action intent, including synonyms rather than only exact labels.
    The operator also applies this to the chosen row immediately before dispatch. *)
+(* pilot-gt2h: whole words, not substrings — "Open the section showing invoices, payments"
+   is navigation, "Pay now" and "Confirm payment" are payment (U1 on Tauron, 2026-10-04,
+   refused a leg for containing "payments"). Polish verbs cover the operator's sites. *)
 let unsafe_action text =
-  let words = String.lowercase_ascii text in
-  let has word =
-    let n = String.length word in
-    let rec loop i =
-      i + n <= String.length words
-      && (String.sub words i n = word || loop (i + 1))
-    in
-    loop 0
+  let words =
+    let lower = String.lowercase_ascii text in
+    let buf = Buffer.create 16 and out = ref [] in
+    let flush () = if Buffer.length buf > 0 then (out := Buffer.contents buf :: !out; Buffer.clear buf) in
+    String.iter (fun c -> match c with
+      | 'a' .. 'z' | '0' .. '9' -> Buffer.add_char buf c
+      | c when Char.code c >= 128 -> Buffer.add_char buf c
+      | _ -> flush ()) lower;
+    flush ();
+    List.rev !out
   in
-  if List.exists has [ "payment"; "pay"; "checkout"; "place order"; "purchase"; "buy"; "card number" ] then Some "payment"
-  else if List.exists has [ "delete"; "remove account"; "close account"; "erase account"; "permanently remove" ] then Some "deletion"
-  else if List.exists has [ "send"; "reply"; "message"; "post comment"; "publish comment"; "submit comment" ] then Some "messaging"
+  let word w = List.mem w words in
+  let phrase ws =
+    let n = List.length ws in
+    let rec at = function
+      | [] -> false
+      | _ :: rest as l -> (List.length l >= n && List.filteri (fun i _ -> i < n) l = ws) || at rest
+    in
+    at words
+  in
+  let any = List.exists word and phrases = List.exists phrase in
+  if any [ "pay"; "buy"; "purchase"; "checkout"; "zapłać"; "zaplac"; "kup"; "kupuję"; "kupuje" ]
+     || phrases [ [ "place"; "order" ]; [ "check"; "out" ]; [ "card"; "number" ] ]
+     || (any [ "confirm"; "complete"; "potwierdź"; "potwierdz" ]
+         && any [ "payment"; "order"; "purchase"; "płatność"; "zamówienie" ])
+  then Some "payment"
+  else if any [ "delete"; "erase"; "usuń"; "usun" ]
+     || phrases [ [ "remove"; "account" ]; [ "close"; "account" ]; [ "permanently"; "remove" ] ]
+  then Some "deletion"
+  else if any [ "send"; "reply"; "publish"; "wyślij"; "wyslij"; "odpowiedz" ]
+     || phrases [ [ "post"; "comment" ]; [ "submit"; "comment" ]; [ "post"; "message" ] ]
+  then Some "messaging"
   else None
 
 let authorises mission intent =

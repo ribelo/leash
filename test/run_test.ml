@@ -431,6 +431,25 @@ let dangerous_leg () =
   Alcotest.(check string)
     "unsafe leg is audited" "refused" (List.hd (List.hd !requests).R.legs).outcome
 
+(* pilot-gt2h: whole words; navigation that names a section is not an action (U1, Tauron). *)
+let unsafe_words () =
+  List.iter
+    (fun (text, expected) ->
+      Alcotest.(check (option string)) text expected (R.unsafe_action text))
+    [
+      ("Open the section showing invoices, payments, or outstanding balances", None);
+      ("Open Messages", None);
+      ("Show deleted items", None);
+      ("Confirm payment", Some "payment");
+      ("Click the button named Pay now", Some "payment");
+      ("Kupuję i płacę", Some "payment");
+      ("Place order", Some "payment");
+      ("Delete this address", Some "deletion");
+      ("Usuń konto", Some "deletion");
+      ("Send message", Some "messaging");
+      ("Wyślij", Some "messaging");
+    ]
+
 let schema_redaction () =
   let h, _, _ = harness [ finish ] in
   Alcotest.(check bool)
@@ -461,5 +480,6 @@ let () =
             ("failed leg context", leg_failure_visible);
             ("redaction fails closed", schema_redaction);
             ("dangerous leg refusal", dangerous_leg);
+            ("refusal words are whole words", unsafe_words);
           ] );
     ]
