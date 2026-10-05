@@ -1,5 +1,7 @@
 # JEV runs the loop; a bigger model is optional and never owns the mission
 
+**Amended 2026-10-05 by the operator (takeover):** the larger model does not only advise. When JEV answers BLOCKED, stalls or reaches its step cap, it takes the page over: it acts (typing, passwords, uploads, downloads, any action), reads, runs playbook procedures and scripts, and hands control back to JEV with a goal string, or finishes the mission. Only the deadline bounds it. JEV sees password fields (the rule field-8bzc is dropped).
+
 ADR-0012 is withdrawn. It was written by the coordinating agent, not decided by the operator, and it inverted his design: it made the planner (Luna) own every mission and reduced JEV to a sub-step. The corpus of 2026-10-05 showed the consequence — JEV was consulted in 12% of cells; the model comparison could not move the results because the model under comparison was barely running.
 
 The operator's design, from the start and restated on 2026-10-05: **`drive` is JEV's loop**, as in jev-ultrafast — one decision-model call per step picks the operation and the target; the text helper writes field values; playbooks give it procedures and scripts to choose from. **A larger model is optional**: it is consulted when JEV says BLOCKED, when an expectation fails, and — if the mission asks for an answer — once at the end, to read the result from the final page and to judge done. It never owns the mission, never chooses steps, and is off when not configured. Luna is only the name of the model currently configured for that role; any model may fill it.

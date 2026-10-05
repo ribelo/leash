@@ -1073,6 +1073,9 @@ let chat_timeout
                  title = "Books";
                  url = "https://example.com";
                  text = "Books";
+                 image_input = None;
+                 downloads = [];
+                 offered = [];
                  snapshot =
                    Leash.Protocol.
                      {

@@ -1574,6 +1574,31 @@ let decode_request json =
   let* command = command_of_args ~cmd args in
   Ok { command }
 
+(* map-7xrq map-3qag: reuse the public action protocol, never a JS escape hatch. *)
+type planner_action = command
+
+(* pilot-x1f3: the pilot writes an action as {cmd, args}; the wire version belongs to
+   the control socket, not to the model, so it is supplied here when absent (U1 live run
+   2026-10-04 failed on "missing field v" before its first turn). *)
+let planner_action_of_yojson json =
+  let json =
+    match json with
+    | `Assoc fields when not (List.mem_assoc "v" fields) ->
+        `Assoc (("v", `Int version) :: fields)
+    | json -> json
+  in
+  Result.bind (decode_request json) (fun request ->
+      match request.command with
+      | Click _ | Click_at _ | Type _ | Drag _ | Fill _ | Select _ | Press _ | Scroll _
+      | Nav _ | Upload _ ->
+          Ok request.command
+      | _ ->
+          Error
+            "act accepts only click, type, drag, fill, select, press, scroll, nav and \
+             upload")
+
+let yojson_of_planner_action command = encode_request { command }
+
 (* pic-7ozf: known geometry informs existing policies, never converts an act to a row. *)
 let rows_at_point (page : snapshot) (point : point) =
   List.filter
@@ -1640,6 +1665,60 @@ let check_consent_click (page : snapshot) ~index =
                target.name alternative.name)
       | None -> Ok ())
   | _ -> Ok ()
+
+let check_planner_action (page : snapshot) action =
+  let named index = List.exists (fun (row : row) -> row.index = index) page.rows in
+  let row snapshot index =
+    if snapshot <> page.snapshot then Error "continue action names a different snapshot"
+    else if not (named index) then Error "continue action names no offered row"
+    else Ok ()
+  in
+  let same_tab tab check =
+    if tab <> page.tab then Error "continue action names a different tab" else check ()
+  in
+  let point (p : point) =
+    if Float.is_finite p.x && Float.is_finite p.y && p.x >= 0. && p.y >= 0. then Ok ()
+    else Error "pilot point must be finite non-negative viewport CSS"
+  in
+  let consent points =
+    List.fold_left
+      (fun checked at ->
+        Result.bind checked (fun () ->
+            Result.bind (point at) (fun () ->
+                List.fold_left
+                  (fun checked (r : row) ->
+                    Result.bind checked (fun () ->
+                        check_consent_click page ~index:r.index))
+                  (Ok ()) (rows_at_point page at))))
+      (Ok ()) points
+  in
+  match action with
+  | Click args ->
+      same_tab args.tab (fun () ->
+          Result.bind (row args.snapshot args.index) (fun () ->
+              check_consent_click page ~index:args.index))
+  | Click_at args -> same_tab args.tab (fun () -> consent [ args.at ])
+  | Type args -> same_tab args.tab (fun () -> Ok ())
+  | Drag args -> same_tab args.tab (fun () -> consent [ args.from_; args.to_ ])
+  | Fill args -> same_tab args.tab (fun () -> row args.snapshot args.index)
+  | Select args -> same_tab args.tab (fun () -> row args.snapshot args.index)
+  | Upload args -> same_tab args.tab (fun () -> row args.snapshot args.index)
+  | Press args ->
+      same_tab args.tab (fun () ->
+          match args.index with
+          | Some index -> row args.snapshot index
+          | None -> Error "continue press must name an offered row")
+  | Scroll args ->
+      (* pilot-x1f3: the element table is viewport-only, so the pilot scrolls to reach a
+         row the text shows (U2 on Tauron, 2026-10-04, was refused). *)
+      same_tab args.tab (fun () ->
+          match args.index with
+          | Some index when not (named index) ->
+              Error "continue scroll names no offered row"
+          | _ -> Ok ())
+  | _ ->
+      Error
+        "pilot act accepts only click, type, drag, select, fill, press, scroll and upload"
 
 (* pilot-02ij: redact values before any model, trace or diagnostic boundary. *)
 let redact_string secrets text =

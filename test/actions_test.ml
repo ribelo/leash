@@ -1406,9 +1406,9 @@ let unsafe_inputs () =
                    [ "textbox"; "searchbox"; "button"; "link"; "checkbox" ])
             agent
         in
+        ignore (secret : P.row list);
         Alcotest.(check (list int))
-          "field-sazr the tables differ exactly on the password rows"
-          (List.map (fun (row : P.row) -> row.index) secret)
+          "takeover JEV is offered password rows too (field-8bzc dropped)" []
           (List.filter
              (fun index -> not (List.mem index offered))
              (List.map (fun (row : P.row) -> row.index) actionable)))

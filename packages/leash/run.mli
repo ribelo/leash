@@ -1,8 +1,10 @@
-(** revert-eft1 (ADR-0015): [drive MISSION] is JEV's loop. The decision model decides
-    every step over the element table ({!Drive}); the site playbook's procedures and
-    scripts are offered to it as operations. The planner is optional and only consulted:
-    when JEV answers BLOCKED or its loop stops, when an expectation fails, and once at the
-    end of a mission that asks for an answer. All effects use handlers, so tests and
+(** takeover (confirmed by the operator 2026-10-05): [drive MISSION] is JEV's loop. JEV
+    decides every step over the element table ({!Drive}); the site playbook's procedures
+    and scripts are offered to it as operations. When JEV answers BLOCKED, stalls or
+    reaches its step cap, the page passes to Luna (the planner) with the mission and what
+    JEV did. Luna may act on the page, read, run playbook procedures and scripts, notify,
+    hand off on a headed browser, finish or fail, and hands control back to JEV with a
+    goal string. Only the deadline bounds it. All effects use handlers, so tests and
     dry-run need no browser or model service. *)
 
 type observation = {
@@ -18,6 +20,8 @@ type observation = {
       (** Suggested name, MIME and state of each download of the tab, for the download
           checker (run-ykq4). *)
   snapshot : Protocol.snapshot;
+  image_input : bytes option;
+      (** takeover: private PNG bytes for Luna's image input; never a text field. *)
 }
 (** What one observation of the page gives the loop: the same facts the checkers, the text
     helper and the last snapshot of a result need. *)
@@ -75,20 +79,30 @@ type plan_trigger =
   | Blocked
   | Expectation
   | Final
-      (** revert-24kr: JEV answered BLOCKED or its loop stopped; a procedure's or the
-          mission's expectation failed; or the mission asks for an answer at its end. *)
+  | Holding
+      (** takeover: why Luna is asked. JEV answered BLOCKED, stalled or reached its step
+          cap; an expectation failed; JEV reported DONE on a mission that asks for an
+          answer; or Luna holds the page and its last action came back. *)
 
 type candidate = Playbook.procedure
-(** A procedure of the site's hand-written playbook, offered to JEV as an operation. *)
 
 type plan_answer =
-  | Hint of string
-  | Handoff of string
+  | Jev of string
+  | Act of Protocol.planner_action
+  | Read of { quote : string; note : string }
+  | Observe_image
+  | Run of string
   | Notify of string
+  | Handoff of string
+  | Done of {
+      result : string;
+      evidence : string list;
+      records : (string * string) list list;
+    }
   | Fail of string
-  | Answer of { result : string; evidence : string list; done_ : bool }
-      (** revert-apgf revert-bqrq: a hint becomes JEV's goal for its next steps; the
-          planner never acts. [Answer] is the end-of-mission judgment. *)
+      (** takeover: what Luna does while it holds the page. [Jev goal] hands control back
+          to JEV with [goal] as its goal; [Run] runs a playbook procedure or script by
+          name. *)
 
 type plan_reply = { answer : plan_answer; usage : Protocol.run_usage option }
 
@@ -102,14 +116,16 @@ type plan_request = {
   site : string option;
   notes : string option;
   history : (string * string) list;
-      (** JEV's drives so far: the goal it was given and how it ended, oldest first. *)
+      (* What happened so far, oldest first: each JEV stint and each of Luna's actions. *)
   url : string;
   title : string;
   text : string;
   snapshot : Protocol.snapshot;
+  image_input : bytes option;
+  downloads : (string * string * string) list;
+  offered : (string * string) list;
+      (* The site playbook's procedures and scripts Luna may [Run], name and description. *)
 }
-(** What the planner is asked from: why it is asked, the mission, JEV's history, and the
-    current page (bounded text and element table). *)
 
 val trigger_name : plan_trigger -> string
 (** run-xqh8: the trigger as the trace and the planner's request name it — ["blocked"],
@@ -130,7 +146,7 @@ type levels = {
     {!Models.levels}; a scripted test passes its own record. *)
 
 type handler = {
-  observe : unit -> (observation, Protocol.error) result;
+  observe : image:bool -> unit -> (observation, Protocol.error) result;
   navigate : string -> (unit, Protocol.error) result;
       (** run-xh5d: the entry navigation of a playbook switch, through the same registry
           path the [nav] command uses. *)
@@ -154,6 +170,8 @@ type handler = {
       (** run-w7ke run-rq6i: the planner turn, asked only at the three triggers and only
           while the turn cap allows it. Production is Luna through {!Models.levels}; a
           scripted test answers with a record of its own. *)
+  act : Protocol.planner_action -> (Protocol.action_result, Protocol.error) result;
+      (** takeover: Luna's own action on the page, through the public action path. *)
   hand_off : reason:string -> (Protocol.tab_info, Protocol.error) result;
       (** run-klp9: a planner's handoff, which leaves the tab [with_human]. *)
   script :

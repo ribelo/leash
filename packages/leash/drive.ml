@@ -257,24 +257,9 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     | `Assoc fields :: rest -> prediction_log := `Assoc (("outcome", string outcome) :: List.remove_assoc "outcome" fields) :: rest
     | _ -> ()
   in
-  (* field-5sdo: a password row's value is never a trace field, even if a step
-     typed one. The operator does not type passwords; this is the backstop. *)
-  let redact_password (page : observation) index text =
-    match (index, text) with
-    | Some index, Some _ -> (
-        match List.find_opt (fun (row : P.row) -> row.index = index) page.snapshot.rows with
-        | Some row -> (
-            match row.state with
-            | Some states
-              when List.exists (fun state -> P.Row_state.to_string state = "password") states
-              ->
-                Some "[password]"
-            | _ -> text)
-        | None -> text)
-    | _ -> text
-  in
   let record_step (page : observation) (next : observation) choice text steps =
-    let text = redact_password page choice.J.index text in
+    (* takeover: a typed password stays in the history, so a confirmation field gets the
+       same value (field-5sdo dropped by the operator). *)
     let recorded = P.{
         non_repeatable = Playbook.non_repeatable_action
           ~context:(Playbook.action_risk_context ~snapshot:page.snapshot ~text:page.text ~index:choice.J.index)
@@ -446,9 +431,9 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                          else
                             let reason = match member "unsupported_states" (coverage next) with
                               | Some (`List states) when List.mem (`String "password-field") states ->
-                                  (* daily-9ggi fly-eoqg: the operator never types a password; the
-                                     agent does, with leash fill on the row snap marks password. *)
-                                  "the page needs a password, which the operator never types: fill it with `leash fill` (snap marks the row password), then drive the rest"
+                                  (* takeover: JEV may type a password; when it found no action the
+                                     planner takes the page over. *)
+                                  "the page has a password field JEV found no action for"
                               | Some (`List (_ :: _ as states)) ->
                                   "the operator found no available action; unsupported visible UI: " ^
                                   String.concat ", " (List.filter_map (function `String name -> Some name | _ -> None) states)

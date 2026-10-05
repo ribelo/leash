@@ -60,11 +60,11 @@ let levels_with ?plan answers _questions =
                 (reply
                    (match request.trigger with
                    | Run.Final ->
-                       Answer
+                       Done
                          {
                            result = "Navigation completed";
                            evidence = [ "Navigator reported DONE" ];
-                           done_ = true;
+                           records = [];
                          }
                    | _ -> Fail "navigation did not complete")));
     }

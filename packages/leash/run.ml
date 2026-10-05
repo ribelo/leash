@@ -26,6 +26,8 @@ type observation = {
   rows : (string * string) list;
   downloads : (string * string * string) list;
   snapshot : P.snapshot;
+  image_input : bytes option;
+      (* takeover: private PNG bytes for Luna's image input, when it asked to see the page. *)
 }
 
 type choice = {
@@ -76,20 +78,25 @@ type script_outcome =
     [Rejected] is a script that threw, whose result did not fit or was too large — the
     procedure's step failed, and the reason is in the trace. *)
 
-type plan_trigger = Blocked | Expectation | Final
-(** revert-24kr: the three points the planner is asked at: JEV answered BLOCKED or its loop
-    stopped, an expectation failed, or the mission asks for an answer at its end. *)
+type plan_trigger = Blocked | Expectation | Final | Holding
+(** takeover: why Luna is asked. JEV answered BLOCKED, stalled or reached its step cap;
+    an expectation failed; JEV reported DONE on a mission that asks for an answer; or
+    Luna holds the page and its last action came back. *)
 
 type candidate = Playbook.procedure
 
 type plan_answer =
-  | Hint of string
-  | Handoff of string
+  | Jev of string
+  | Act of Protocol.planner_action
+  | Read of { quote : string; note : string }
+  | Observe_image
+  | Run of string
   | Notify of string
+  | Handoff of string
+  | Done of { result : string; evidence : string list; records : (string * string) list list }
   | Fail of string
-  | Answer of { result : string; evidence : string list; done_ : bool }
-(** revert-apgf: what the planner may say. A hint becomes JEV's goal for the next steps;
-    it never acts. [Answer] is the end-of-mission judgment (revert-bqrq). *)
+(** takeover: what Luna does while it holds the page. [Jev goal] hands control back to
+    JEV with [goal] as its goal; [Run] runs a playbook procedure or script by name. *)
 
 type plan_reply = { answer : plan_answer; usage : P.run_usage option }
 
@@ -103,11 +110,15 @@ type plan_request = {
   site : string option;
   notes : string option;
   history : (string * string) list;
-      (* JEV's drives so far: the goal it was given and how it ended, oldest first. *)
+      (* What happened so far, oldest first: each JEV stint and each of Luna's actions. *)
   url : string;
   title : string;
   text : string;
   snapshot : Protocol.snapshot;
+  image_input : bytes option;
+  downloads : (string * string * string) list;
+  offered : (string * string) list;
+      (* The site playbook's procedures and scripts Luna may [Run], name and description. *)
 }
 
 type levels = {
@@ -124,7 +135,7 @@ type levels = {
     judgment checkers ask, and the planner turn. *)
 
 type handler = {
-  observe : unit -> (observation, P.error) result;
+  observe : image:bool -> unit -> (observation, P.error) result;
   navigate : string -> (unit, P.error) result;
       (** run-xh5d: the entry navigation of a playbook switch. *)
   choose : question -> (choice, P.error) result;
@@ -143,6 +154,8 @@ type handler = {
           returns is the one it judged. *)
   plan : plan_request -> (plan_reply, P.error) result;
       (** revert-24kr: the optional planner, asked only at {!plan_trigger}'s three points. *)
+  act : P.planner_action -> (P.action_result, P.error) result;
+      (** takeover: Luna's own action on the page, through the public action path. *)
   hand_off : reason:string -> (P.tab_info, P.error) result;
       (** run-klp9: the planner's handoff, which leaves the tab with the human. *)
   script :
@@ -167,7 +180,7 @@ type args = {
 let of_args (args : P.run_args) : args =
   {
     mission = args.P.mission;
-    max_steps = Option.value ~default:60 args.P.max_steps;
+    max_steps = Option.value ~default:256 args.P.max_steps;
     start_url = args.P.start_url;
     max_procedures = Option.value ~default:40 args.P.max_procedures;
     deadline_s = Option.value ~default:600 args.P.deadline_s;
@@ -291,14 +304,19 @@ let installed_playbooks books =
    compares it by name rather than by constructor. *)
 let drive_is name (status : P.Drive_status.t) = P.Drive_status.to_string status = name
 
-let trigger_name = function Blocked -> "blocked" | Expectation -> "expectation" | Final -> "answer"
+let trigger_name = function
+  | Blocked -> "blocked" | Expectation -> "expectation" | Final -> "answer" | Holding -> "holding"
 
 let answer_name = function
-  | Hint _ -> "hint"
-  | Handoff _ -> "handoff"
+  | Jev _ -> "jev"
+  | Act _ -> "act"
+  | Read _ -> "read"
+  | Observe_image -> "observe"
+  | Run _ -> "run"
   | Notify _ -> "notify"
+  | Handoff _ -> "handoff"
+  | Done _ -> "done"
   | Fail _ -> "fail"
-  | Answer _ -> "answer"
 
 (* revert-24kr: a mission asks for an answer when it is a question, names a result, or
    asks to be told, found, listed, checked or collected. *)
@@ -336,13 +354,13 @@ let loop ~handler ~now ~installed
   let deadline = now () +. float_of_int args.deadline_s in
   let scrub text = P.redact_string secrets text in
   let json value = P.redact_json secrets value in
-  let observe () =
-    let* (page : observation) = handler.observe () in
+  let observe ?(image = false) () =
+    let* (page : observation) = handler.observe ~image () in
     let* snapshot = match P.snapshot_of_yojson (json (P.yojson_of_snapshot page.snapshot)) with
       | Ok snapshot -> Ok snapshot
       | Error _ -> Error (internal (scrub "secret redaction invalidated page schema")) in
     Ok { url = scrub page.url; title = scrub page.title; text = scrub page.text;
-      snapshot; dialog=snapshot.dialog;
+      snapshot; dialog=snapshot.dialog; image_input = page.image_input;
       rows = List.map (fun (role, name) -> (scrub role, scrub name)) page.rows;
       downloads = List.map (fun (name, mime, state) -> (scrub name, scrub mime, scrub state)) page.downloads } in
   let turns = ref [] and procedures = ref [] and history = ref [] in
@@ -351,7 +369,7 @@ let loop ~handler ~now ~installed
   let spent = ref [] in
   let total_steps = ref 0 and operator_steps = ref [] and operator_state = ref None in
   let checks = ref [] and unattended = ref [] in
-  let records = ref [] and current_site = ref None in
+  let records = ref [] and current_site = ref None and read_evidence = ref [] in
   (* dmod-l44q: over every drive, the screenshots sent to the decision model and each of
      its calls' input tokens. *)
   let image_parts = ref 0 and decision_tokens = ref [] in
@@ -610,25 +628,81 @@ let loop ~handler ~now ~installed
       | Some script ->
           let* n = run_script book script None in
           Ok (Jev_request.Script_continue { summary = Printf.sprintf "%s collected %d records" name n }) in
-  (* revert-24kr: the planner is asked; it never acts. *)
-  let consult trigger reason (page : observation) =
-    let n = List.length !turns + 1 in
-    let request = { trigger; reason = scrub reason; mission = scrub args.mission;
-      secret_names = List.map fst secrets; headless; site = Option.map scrub !current_site;
-      notes = Option.bind !current_book (fun (b : Playbook.loaded) -> b.playbook.notes);
-      history = !history; url = page.url; title = page.title;
-      text = (if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text);
-      snapshot = { page.snapshot with P.rows = List.filteri (fun i _ -> i < 250) page.snapshot.rows } } in
-    let reply = handler.plan request in
-    let answer, usage = match reply with Ok r -> Some r.answer, r.usage | Error _ -> None, None in
-    turns := P.{ candidates = []; chosen = None; n; trigger = trigger_name trigger;
-      answer = Option.fold ~none:"error" ~some:answer_name answer; steps = [];
-      reason = Some (scrub (match answer with
-        | Some (Hint h) -> h | Some (Handoff r) | Some (Notify r) | Some (Fail r) -> r
-        | Some (Answer { result; _ }) -> result
-        | None -> (match reply with Error e -> e.P.message | Ok _ -> "")));
-      usage } :: !turns;
-    reply in
+  (* takeover: Luna's own action on the page, under the guards every action has: an
+     offered row of the current snapshot, consent, unsafe intent, and only files the
+     mission names. A secret name is typed as its value. *)
+  let command_row = function
+    | P.Click a -> Some a.index | P.Fill a -> Some a.index | P.Select a -> Some a.index
+    | P.Press a -> a.index | P.Upload a -> Some a.index | _ -> None in
+  let act (page : observation) command =
+    let refusal = match P.check_planner_action page.snapshot command with
+      | Error why -> Some why
+      | Ok () ->
+          let rows = match command with
+            | P.Click_at a -> P.rows_at_point page.snapshot a.at
+            | P.Drag a -> P.rows_at_point page.snapshot a.from_ @ P.rows_at_point page.snapshot a.to_
+            | _ -> Option.to_list (Option.bind (command_row command) (fun index ->
+                List.find_opt (fun (r : P.row) -> r.index = index) page.snapshot.rows)) in
+          let intent = List.find_opt (fun intent -> not (authorises args.mission intent))
+            (List.filter_map (fun (row : P.row) -> unsafe_action row.name) rows) in
+          let unnamed = match command with
+            | P.Upload a -> List.find_opt (fun path -> not (contains ~needle:path args.mission)) a.paths
+            | _ -> None in
+          match unnamed with
+          | Some path -> Some ("refused upload: the mission does not name " ^ path)
+          | None -> Option.map (fun intent -> "refused " ^ intent ^ ": mission does not name that action") intent in
+    let value text = Option.value ~default:text (List.assoc_opt text secrets) in
+    let command = match command with
+      | P.Fill a -> P.Fill { a with text = value a.text }
+      | P.Type a -> P.Type { a with text = value a.text }
+      | c -> c in
+    let at = now () in
+    let outcome = match refusal with Some why -> Error (invalid why) | None -> handler.act command in
+    let target = Option.bind (command_row command) (fun index ->
+      List.find_opt (fun (r : P.row) -> r.index = index) page.snapshot.rows) in
+    let named = match target with
+      | Some r -> Printf.sprintf "the %s named %s" r.role (scrub r.name) | None -> "the page" in
+    let described = match command with
+      | P.Click _ -> "Click " ^ named
+      | P.Click_at a -> Printf.sprintf "Click at CSS (%g, %g)" a.at.x a.at.y
+      | P.Drag a -> Printf.sprintf "Drag from CSS (%g, %g) to (%g, %g)" a.from_.x a.from_.y a.to_.x a.to_.y
+      | P.Type a -> Printf.sprintf "Type %s into the current focus" (scrub a.text)
+      | P.Fill a -> Printf.sprintf "Type %s into %s" (scrub a.text) named
+      | P.Select _ -> "Choose an option in " ^ named
+      | P.Press a -> Printf.sprintf "Press %s on %s" a.key named
+      | P.Upload a -> Printf.sprintf "Attach %s to %s" (String.concat ", " a.paths) named
+      | c -> P.command_name c in
+    let result = match outcome with Ok _ -> "done" | Error e -> "refused: " ^ scrub e.P.message in
+    history := !history @ [ ("Luna: " ^ described, result) ];
+    let step = P.{ non_repeatable = false; n = 1; command = P.command_name command; target = None;
+      text = (match command with P.Fill a -> Some (scrub a.text) | P.Type a -> Some (scrub a.text) | _ -> None);
+      after = (match outcome with Ok (r : P.action_result) -> { url = scrub r.P.url; title = scrub r.P.title }
+        | Error _ -> { url = page.url; title = page.title });
+      elapsed_ms = ms (now () -. at);
+      error = (match outcome with Ok _ -> None | Error e -> Some (scrub e.P.message));
+      hits = (match outcome with Ok r -> r.P.hits | Error _ -> (None [@ox.allow "ox-discarded-result: a refused act has no hit evidence"]));
+      shots = (match outcome with Ok r -> r.P.shots | Error _ -> (None [@ox.allow "ox-discarded-result: a refused act has no screenshots"])) } in
+    (described ^ ": " ^ result, step) in
+  let offered () =
+    match !current_book with
+    | None -> []
+    | Some (book : Playbook.loaded) ->
+        List.map (fun (p : Playbook.procedure) -> (p.slug, p.description)) book.playbook.procedures
+        @ List.map (fun (s : Playbook.script) -> (s.name, s.description)) book.scripts in
+  (* Luna runs a playbook procedure or script by name. *)
+  let run_named name =
+    let book = !current_book in
+    match Option.bind book (fun b -> List.find_opt (fun (p : Playbook.procedure) -> p.slug = name) b.playbook.procedures) with
+    | Some proc -> (match execute_candidate 0 proc with Ok () -> "procedure " ^ name ^ " done" | Error e -> "procedure " ^ name ^ " failed: " ^ scrub e.P.message)
+    | None -> (
+        match Option.bind book (fun b -> Playbook.script_named b name) with
+        | Some script -> (match run_script book script None with Ok n -> Printf.sprintf "script %s returned %d records" name n | Error e -> "script " ^ name ^ " failed: " ^ scrub e.P.message)
+        | None -> "no procedure or script named " ^ name) in
+  let write_records rows =
+    List.fold_left (fun acc record -> let* () = acc in
+      let record = `Assoc (List.map (fun (k, v) -> (k, `String v)) record) in
+      let* () = on_record (`Assoc [ "kind", `String "planner-record"; "source", `String "planner"; "record", record ]) in
+      records := record :: !records; Ok ()) (Ok ()) rows in
   let rec mission goal page =
     if now () >= deadline then finish page "deadline" ~reason:"mission deadline reached" () else
     let _ = locate page in
@@ -642,54 +716,92 @@ let loop ~handler ~now ~installed
         let why = Option.value ~default:status drive.reason in
         if args.dry_run then finish page "planned" ~reason:why ()
         else match status, !failed_procedure with
-        | _, Some (slug, message) -> stopped Expectation (Printf.sprintf "procedure %s failed: %s" slug message) page
+        | _, Some (slug, message) -> luna Expectation (Printf.sprintf "procedure %s failed: %s" slug message) page
         | "done", _ -> judged page
         | "deadline", _ -> finish page "deadline" ~reason:why ()
-        | ("blocked" | "step-cap" | "failed"), _ -> stopped Blocked why page
+        | ("blocked" | "step-cap" | "failed"), _ -> luna Blocked why page
         | _, _ -> finish page "error" ~reason:why ()
-  and stopped trigger reason page =
-    if not planner then finish page "blocked" ~reason ()
-    else if List.length !turns >= args.max_plans then finish page "limit" ~reason:("planner consultation cap reached: " ^ reason) ()
-    else match consult trigger reason page with
-      | Error error -> failed error
-      | Ok { answer = Hint hint; _ } ->
-          mission (args.mission ^ "\nNext: " ^ hint) page
-      | Ok { answer = Notify message; _ } ->
-          let outcome = notify (scrub message) in
-          unattended := `Assoc ["kind",`String "notify";"message",`String (scrub message);"outcome",`String (if Result.is_ok outcome then "sent" else "failed")] :: !unattended;
-          finish page "blocked" ~reason ()
-      | Ok { answer = Fail reason; _ } -> finish page "failed" ~reason ()
-      | Ok { answer = Answer _; _ } -> finish page "blocked" ~reason ()
-      | Ok { answer = Handoff why; _ } ->
-          let started = now () in
-          let outcome = handler.hand_off ~reason:(scrub why) in
-          let code = match outcome with Error error -> P.Error_code.to_string error.P.code | Ok _ -> "" in
-          let expired = code = "timeout" and canceled = code = "canceled-by-operator" in
-          unattended := `Assoc ["kind",`String "handoff";"reason",`String (scrub why);"elapsed_ms",`Int (ms (now () -. started));"outcome",`String (if canceled then "canceled-by-operator" else if expired then "expired" else if Result.is_ok outcome then "resumed" else "failed")] :: !unattended;
-          (match outcome with
-           | Error _ when canceled -> finish page "canceled-by-operator" ~reason:"the operator canceled the handoff" ()
-           | Error _ when expired ->
-               let _expiry_notification = notify "the agent gave up waiting; the tab is still open" [@@ox.allow "ox-discarded-result: best effort: expiry notification"] in
-               finish page "handoff-expired" ~reason:(scrub why) ()
-           | Error error -> failed error
-           | Ok _ -> let* page = observe () in mission args.mission page)
+  (* takeover: Luna holds the page until it hands it back to JEV or ends the mission;
+     only the deadline bounds it. *)
+  and luna ?(image = false) trigger reason (page : observation) =
+    if not planner then
+      (match trigger with Final -> finish page "done" () | _ -> finish page "blocked" ~reason ())
+    else if now () >= deadline then finish page "deadline" ~reason:"mission deadline reached" ()
+    else
+    let* page = if image then observe ~image:true () else Ok page in
+    let n = List.length !turns + 1 in
+    let request = { trigger; reason = scrub reason; mission = scrub args.mission;
+      secret_names = List.map fst secrets; headless; site = Option.map scrub !current_site;
+      notes = Option.bind !current_book (fun (b : Playbook.loaded) -> b.playbook.notes);
+      history = !history; url = page.url; title = page.title;
+      text = (if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text);
+      snapshot = { page.snapshot with P.rows = List.filteri (fun i _ -> i < 250) page.snapshot.rows };
+      image_input = page.image_input; downloads = page.downloads; offered = offered () } in
+    let reply = handler.plan request in
+    let record ?(steps = []) answer note usage =
+      turns := P.{ candidates = []; chosen = None; n; trigger = trigger_name trigger;
+        answer; steps; reason = Some (scrub note); usage } :: !turns in
+    match reply with
+    | Error error -> record "error" error.P.message None; failed error
+    | Ok { answer; usage } ->
+        let name = answer_name answer in
+        match answer with
+        | Jev goal ->
+            record name goal usage;
+            history := !history @ [ ("Luna handed back to JEV", goal) ];
+            mission goal page
+        | Act command ->
+            let outcome, step = act page command in
+            record ~steps:[ step ] name outcome usage;
+            let* page = observe () in luna Holding outcome page
+        | Read { quote; note } ->
+            let found = quote <> "" && contains ~needle:quote page.text in
+            let outcome = if found then "read: " ^ quote else "the quote is not on the page" in
+            if found then read_evidence := !read_evidence @ [ quote ];
+            history := !history @ [ ("Luna read: " ^ note, outcome) ];
+            record name outcome usage;
+            luna Holding outcome page
+        | Observe_image ->
+            record name "screenshot" usage;
+            luna ~image:true Holding "the screenshot of the current page is attached" page
+        | Run what ->
+            let outcome = run_named what in
+            history := !history @ [ ("Luna ran " ^ what, outcome) ];
+            record name outcome usage;
+            let* page = observe () in luna Holding outcome page
+        | Notify message ->
+            let outcome = notify (scrub message) in
+            unattended := `Assoc ["kind",`String "notify";"message",`String (scrub message);"outcome",`String (if Result.is_ok outcome then "sent" else "failed")] :: !unattended;
+            record name message usage;
+            luna Holding (if Result.is_ok outcome then "the notification was sent" else "the notification failed") page
+        | Fail why -> record name why usage; finish page "failed" ~reason:why ()
+        | Done { result; evidence; records } ->
+            record name result usage;
+            let* () = write_records records in
+            finish page "done" ~result ~evidence:(evidence @ !read_evidence) ()
+        | Handoff why ->
+            record name why usage;
+            let started = now () in
+            let outcome = handler.hand_off ~reason:(scrub why) in
+            let code = match outcome with Error error -> P.Error_code.to_string error.P.code | Ok _ -> "" in
+            let expired = code = "timeout" and canceled = code = "canceled-by-operator" in
+            unattended := `Assoc ["kind",`String "handoff";"reason",`String (scrub why);"elapsed_ms",`Int (ms (now () -. started));"outcome",`String (if canceled then "canceled-by-operator" else if expired then "expired" else if Result.is_ok outcome then "resumed" else "failed")] :: !unattended;
+            (match outcome with
+             | Error _ when canceled -> finish page "canceled-by-operator" ~reason:"the operator canceled the handoff" ()
+             | Error _ when expired ->
+                 let _expiry_notification = notify "the agent gave up waiting; the tab is still open" [@@ox.allow "ox-discarded-result: best effort: expiry notification"] in
+                 finish page "handoff-expired" ~reason:(scrub why) ()
+             | Error error -> failed error
+             | Ok _ -> let* page = observe () in luna Holding "the human handed the tab back" page)
   and judged page =
-    (* The mission's own expectations, then (revert-bqrq) the planner's answer when the
-       mission asks for one. *)
     let pages = Option.fold ~none:[] ~some:(fun (b : Playbook.loaded) -> b.Playbook.playbook.pages) !current_book in
     let resolved = List.map (fun sentence -> sentence, (match Playbook.resolve pages sentence with Ok checker -> checker | Error _ -> Playbook.Judgment sentence)) args.expect in
     let* verdicts, page = if resolved = [] then Ok ([], page) else handler.verify ~pages ~checks:resolved ~timeout_s:(min 5 (remaining ())) in
     checks := verdicts;
     if not (List.for_all (fun (v : P.run_expectation) -> v.passed) verdicts) then
-      stopped Expectation ("mission expectations failed: " ^ failures verdicts) page
+      luna Expectation ("mission expectations failed: " ^ failures verdicts) page
     else if planner && asks_answer args.mission then
-      match consult Final "the decision model reported DONE" page with
-      | Error error -> failed error
-      | Ok { answer = Answer { result; evidence; done_ = true }; _ } -> finish page "done" ~result ~evidence ()
-      | Ok { answer = Answer { result; evidence; done_ = false }; _ } ->
-          finish page "failed" ~result ~evidence ~reason:"the planner judged the mission not done on the final page" ()
-      | Ok { answer = Fail reason; _ } -> finish page "failed" ~reason ()
-      | Ok _ -> finish page "done" ()
+      luna Final "JEV reported DONE; give the answer from this page, or take over if it is not here" page
     else finish page "done" () in
   on_arguments !known;
   if args.max_steps <= 0 || args.deadline_s <= 0 then Error (invalid "drive limits must be positive")

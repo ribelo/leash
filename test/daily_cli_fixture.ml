@@ -434,7 +434,7 @@ let drive_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path 
     [
       "--url";
       "--max-steps";
-      "(default 60)";
+      "(default 256)";
       "operator-state";
       "script-record";
       "https://books.toscrape.com/";

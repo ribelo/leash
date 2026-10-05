@@ -40,16 +40,9 @@ val score_levels : string list
 (** The score question's two levels, in order: the answer's position is the [0, 1] score
     {!Playbook.await} compares against its threshold. *)
 
-val planner_hint : string
-(** revert-apgf: the planner's text when JEV stopped or an expectation failed: a hint,
-    handoff, notify or fail; never actions. *)
-
-val planner_hint_headless : string
-(** revert-r9ka: the stop text on a headless browser: hint, notify or fail; no handoff. *)
-
-val planner_answer : string
-(** revert-bqrq: the planner's text at the end of a mission that asks for an answer:
-    result, evidence and done, or fail. *)
+val takeover : headless:bool -> string
+(** takeover: the planner's instruction text when it holds the page. On a headless browser
+    handoff is not offered (revert-r9ka). *)
 
 val planner_retry : string -> string
 (** [planner_retry why] is the follow-up user message of a turn whose first reply was

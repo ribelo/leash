@@ -120,13 +120,9 @@ let select_targets index (row : P.row) =
             dom = option_.index;
           })
 
-(* fly-eoqg field-sazr: the operator's table. The agent's snapshot lists password rows
-   (field-8bzc); JEV is never offered one, nor a file input. *)
-let operator_row (row : P.row) =
-  not
-    (List.exists
-       (fun state -> P.Row_state.to_string state = "password")
-       (Option.value ~default:[] row.state))
+(* takeover: the operator's table holds every row, password fields included: the
+   operator (2026-10-05) dropped the rule that JEV never sees them (field-8bzc). *)
+let operator_row (_ : P.row) = true
 
 let elements (snapshot : P.snapshot) =
   snapshot.rows

@@ -1093,6 +1093,12 @@ val decode_request : Yojson.Safe.t -> (request, string) result
     ["args"] must decode into that command's record. There is no caller field. An unknown
     envelope field or argument is refused by name. hand-scaz hand-w85z. *)
 
+type planner_action = command
+(** map-7xrq map-3qag: the existing protocol envelope, restricted to planner actions. *)
+
+val planner_action_of_yojson : Yojson.Safe.t -> (planner_action, string) result
+val yojson_of_planner_action : planner_action -> Yojson.Safe.t
+
 val rows_at_point : snapshot -> point -> row list
 (** pic-7ozf: offered CSS boxes containing a point, for policy facts only, never row
     conversion or authority. Suspension: none. Cancellation: no cancellation point.
@@ -1101,5 +1107,6 @@ val rows_at_point : snapshot -> point -> row list
 val check_consent_click : snapshot -> index:int -> (unit, string) result
 (** map-op11: refuse all-consent buttons when a decline alternative is offered. *)
 
+val check_planner_action : snapshot -> planner_action -> (unit, string) result
 val redact_string : (string * string) list -> string -> string
 val redact_json : (string * string) list -> Yojson.Safe.t -> Yojson.Safe.t

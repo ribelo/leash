@@ -57,12 +57,13 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
         downloads = [];
         dialog = None;
         snapshot;
+        image_input = None;
       }
   in
   let handler =
     R.
       {
-        observe = (fun () -> Ok (observe ()));
+        observe = (fun ~image:_ () -> Ok (observe ()));
         navigate =
           (fun target ->
             navigations := target :: !navigations;
@@ -108,11 +109,11 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
                 answer =
                   (match request.R.trigger with
                   | R.Final when not (malformed_done || rejected) ->
-                      Answer
-                        { result = "Collected catalogue"; evidence = []; done_ = true }
+                      Done { result = "Collected catalogue"; evidence = []; records = [] }
                   | _ -> Fail "collection failed");
                 usage = None;
               });
+        act = (fun _ -> assert false);
         hand_off = (fun ~reason:_ -> assert false);
         script =
           (fun script ~args:_ ->
@@ -279,12 +280,13 @@ let rerun_unchanged () =
         downloads = [];
         dialog = None;
         snapshot;
+        image_input = None;
       }
   in
   let handler =
     R.
       {
-        observe = (fun () -> Ok page);
+        observe = (fun ~image:_ () -> Ok page);
         navigate = (fun _ -> Ok ());
         choose = (fun _ -> assert false);
         text_value = (fun _ -> assert false);
@@ -310,6 +312,7 @@ let rerun_unchanged () =
                 });
         verify = (fun ~pages:_ ~checks:_ ~timeout_s:_ -> Ok ([], page));
         plan = (fun _ -> assert false);
+        act = (fun _ -> assert false);
         hand_off = (fun ~reason:_ -> assert false);
         script =
           (fun _ ~args:_ ->

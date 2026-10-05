@@ -68,40 +68,123 @@ let log_usage logger (completion : Ox_ai_chat.Codecs.completion) =
       ]
     "planner usage"
 
+(* pilot-x1f3: the pilot names a select option by its label or value as often as by its
+   index (U2 on Tauron, 2026-10-04: "option: expected int, got \"Faktury\""); resolve it
+   against the offered row's options, case-insensitively. *)
+let select_by_label (snapshot : P.snapshot) json =
+  let norm s = String.lowercase_ascii (String.trim s) in
+  match json with
+  | `Assoc fields -> (
+      match (List.assoc_opt "cmd" fields, List.assoc_opt "args" fields) with
+      | Some (`String "select"), Some (`Assoc args) -> (
+          match (List.assoc_opt "option" args, List.assoc_opt "index" args) with
+          | Some (`String wanted), Some (`Int index) -> (
+              let options =
+                List.find_opt (fun (row : P.row) -> row.index = index) snapshot.rows
+                |> Fun.flip Option.bind (fun (row : P.row) -> row.options)
+                |> Option.value ~default:[]
+              in
+              match
+                List.find_opt
+                  (fun (o : P.row_option) ->
+                    norm o.label = norm wanted || norm o.value = norm wanted)
+                  options
+              with
+              | Some o ->
+                  let args =
+                    List.map
+                      (fun (k, v) -> if k = "option" then (k, `Int o.index) else (k, v))
+                      args
+                  in
+                  `Assoc
+                    (List.map
+                       (fun (k, v) -> if k = "args" then (k, `Assoc args) else (k, v))
+                       fields)
+              | None -> json)
+          | _ -> json)
+      | _ -> json)
+  | json -> json
+
 let trigger_text = function
-  | Run.Blocked -> "JEV stopped (BLOCKED, a step cap or a stall)"
-  | Run.Expectation -> "an expectation failed"
-  | Run.Final -> "JEV reported DONE; give the mission's answer"
+  | Run.Blocked -> "JEV stopped here (BLOCKED, a stall or its step cap); take over"
+  | Run.Expectation -> "an expectation failed; take over"
+  | Run.Final ->
+      "JEV reported DONE; give the mission's answer from this page, or take over"
+  | Run.Holding -> "you hold the page; your last action came back"
 
 let request_json (request : Run.plan_request) =
   let snapshot =
-    P.yojson_of_snapshot
-      {
-        request.snapshot with
-        P.rows = List.filteri (fun i _ -> i < 250) request.snapshot.rows;
-      }
+    match
+      P.yojson_of_snapshot
+        {
+          request.snapshot with
+          P.rows = List.filteri (fun i _ -> i < 250) request.snapshot.rows;
+        }
+    with
+    | `Assoc fields ->
+        `Assoc
+          (List.map
+             (function
+               | "image", `Assoc image ->
+                   ("image", `Assoc (List.filter (fun (key, _) -> key <> "path") image))
+               | field -> field)
+             fields)
+    | json -> json
+  in
+  let picture =
+    match (request.image_input, request.snapshot.image) with
+    | Some _, Some image ->
+        [
+          ( "picture_coordinates",
+            `String
+              (Printf.sprintf
+                 "The attached PNG is %dx%d pixels of a %gx%g CSS viewport: x_css = \
+                  x_png / %g, y_css = y_png / %g."
+                 image.width image.height image.viewport.width image.viewport.height
+                 image.scale image.scale) );
+        ]
+    | _ -> []
   in
   `Assoc
-    [
-      ("asked_because", `String (trigger_text request.trigger));
-      ("reason", `String request.reason);
-      ("mission", `String request.mission);
-      ("secret_names", `List (List.map (fun name -> `String name) request.secret_names));
-      ("site", match request.site with Some s -> `String s | None -> `Null);
-      ("site_notes", match request.notes with Some n -> `String n | None -> `Null);
-      ( "jev_history",
-        `List
-          (List.map
-             (fun (goal, outcome) ->
-               `Assoc [ ("goal", `String goal); ("outcome", `String outcome) ])
-             request.history) );
-      ("url", `String request.url);
-      ("title", `String request.title);
-      ("text", `String (bounded page_bytes request.text));
-      ("snapshot", snapshot);
-    ]
+    ([
+       ("asked_because", `String (trigger_text request.trigger));
+       ("reason", `String request.reason);
+       ("mission", `String request.mission);
+       ("secret_names", `List (List.map (fun name -> `String name) request.secret_names));
+       ("site", match request.site with Some s -> `String s | None -> `Null);
+       ("site_notes", match request.notes with Some n -> `String n | None -> `Null);
+       ( "history",
+         `List
+           (List.map
+              (fun (what, outcome) ->
+                `Assoc [ ("what", `String what); ("outcome", `String outcome) ])
+              request.history) );
+       ( "offered",
+         `List
+           (List.map
+              (fun (name, description) ->
+                `Assoc [ ("name", `String name); ("description", `String description) ])
+              request.offered) );
+       ( "downloads",
+         `List
+           (List.map
+              (fun (name, mime, state) ->
+                `Assoc
+                  [
+                    ("file", `String name);
+                    ("mime", `String mime);
+                    ("state", `String state);
+                  ])
+              request.downloads) );
+       ("url", `String request.url);
+       ("title", `String request.title);
+       ("text", `String (bounded page_bytes request.text));
+       ("snapshot", snapshot);
+     ]
+    @ picture)
 
 let decode (request : Run.plan_request) content =
+  let ( let* ) = Result.bind in
   match Yojson.Safe.from_string content with
   | exception Yojson.Json_error why -> Error ("reply is not JSON: " ^ why)
   | `Assoc fields -> (
@@ -110,45 +193,77 @@ let decode (request : Run.plan_request) content =
         | Some (`String s) when trim s <> "" -> Ok s
         | _ -> Error (key ^ " must be a non-empty string")
       in
-      let ( let* ) = Result.bind in
+      let strings key =
+        match List.assoc_opt key fields with
+        | None | Some `Null -> Ok []
+        | Some (`List values) ->
+            Ok (List.filter_map (function `String s -> Some s | _ -> None) values)
+        | _ -> Error (key ^ " must be a list of strings")
+      in
       let* name = string "answer" in
-      match (request.trigger, name) with
-      | Run.Final, "done" ->
-          let* result = string "result" in
-          let* evidence =
-            match List.assoc_opt "evidence" fields with
-            | Some (`List items) ->
-                Ok (List.filter_map (function `String s -> Some s | _ -> None) items)
-            | None -> Ok []
-            | Some _ -> Error "evidence must be a list of strings"
-          in
-          let* done_ =
-            match List.assoc_opt "done" fields with
-            | Some (`Bool b) -> Ok b
-            | _ -> Error "done must be true or false"
-          in
-          Ok Run.{ answer = Answer { result; evidence; done_ }; usage = None }
-      | Run.Final, "fail" ->
-          let* reason = string "reason" in
-          Ok Run.{ answer = Fail reason; usage = None }
-      | Run.Final, _ -> Error "answer must be done or fail"
-      | _, "hint" ->
+      match name with
+      | "jev" ->
           let* goal = string "goal" in
-          Ok Run.{ answer = Hint goal; usage = None }
-      | _, "handoff" when request.headless ->
-          Error
-            "handoff is not available: the browser is headless; answer hint, notify or \
-             fail"
-      | _, "handoff" ->
-          let* reason = string "reason" in
-          Ok Run.{ answer = Handoff reason; usage = None }
-      | _, "notify" ->
+          Ok Run.{ answer = Jev goal; usage = None }
+      | "act" -> (
+          match List.assoc_opt "action" fields with
+          | None -> Error "act requires action"
+          | Some json ->
+              let json = select_by_label request.snapshot json in
+              let* action = P.planner_action_of_yojson json in
+              let* () = P.check_planner_action request.snapshot action in
+              Ok Run.{ answer = Act action; usage = None })
+      | "read" ->
+          let* quote = string "quote" in
+          let note =
+            match string "note" with
+            | Ok n -> n
+            | Error _ -> ("" [@ox.allow "ox-discarded-result: the note is optional"])
+          in
+          Ok Run.{ answer = Read { quote; note }; usage = None }
+      | "observe" -> Ok Run.{ answer = Observe_image; usage = None }
+      | "run" ->
+          let* what = string "name" in
+          Ok Run.{ answer = Run what; usage = None }
+      | "notify" ->
           let* message = string "message" in
           Ok Run.{ answer = Notify message; usage = None }
-      | _, "fail" ->
+      | "handoff" when request.headless ->
+          Error "handoff is not available: the browser is headless"
+      | "handoff" ->
+          let* reason = string "reason" in
+          Ok Run.{ answer = Handoff reason; usage = None }
+      | "fail" ->
           let* reason = string "reason" in
           Ok Run.{ answer = Fail reason; usage = None }
-      | _, _ -> Error "answer must be hint, handoff, notify or fail")
+      | "done" ->
+          let* result = string "result" in
+          let* evidence = strings "evidence" in
+          let* records =
+            match List.assoc_opt "records" fields with
+            | None | Some `Null -> Ok []
+            | Some (`List values) ->
+                Ok
+                  (List.filter_map
+                     (function
+                       | `Assoc pairs ->
+                           Some
+                             (List.filter_map
+                                (fun (k, v) ->
+                                  match v with
+                                  | `String s -> Some (k, s)
+                                  | `Int i -> Some (k, string_of_int i)
+                                  | `Float f -> Some (k, Printf.sprintf "%g" f)
+                                  | _ -> None)
+                                pairs)
+                       | _ -> None)
+                     values)
+            | Some _ -> Error "records must be a list of objects"
+          in
+          Ok Run.{ answer = Done { result; evidence; records }; usage = None }
+      | _ ->
+          Error
+            "answer must be jev, act, read, observe, run, notify, handoff, done or fail")
   | _ -> Error "reply must be an object"
 
 let create ~now ~client ~model ~reasoning ~logger () =
@@ -177,17 +292,14 @@ let create ~now ~client ~model ~reasoning ~logger () =
         (Ox.Duration.of_seconds (max 0. (expires -. now ())))
     in
     let open Ox_ai_chat.Types in
-    let prompt =
-      match request.Run.trigger with
-      | Run.Final -> Questions.planner_answer
-      | _ when request.Run.headless -> Questions.planner_hint_headless
-      | _ -> Questions.planner_hint
+    let prompt = Questions.takeover ~headless:request.Run.headless in
+    (* takeover: a requested screenshot is a real image part of the chat request. *)
+    let observation =
+      Text (Yojson.Safe.to_string (request_json request))
+      :: Option.to_list (Option.map image_png request.Run.image_input)
     in
     let messages =
-      [
-        text_message System prompt;
-        text_message User (Yojson.Safe.to_string (request_json request));
-      ]
+      [ text_message System prompt; { role = User; content = observation } ]
     in
     match ask ~deadline messages with
     | Error error -> Error error

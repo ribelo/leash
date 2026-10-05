@@ -463,11 +463,9 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
       (* tab-zc36: an empty-name control keeps its row, with the value it holds now or,
          when it holds none, the placeholder that is the only other thing telling an agent
          what it is. *)
-      (* field-8bzc field-sazr: the agent's table lists a password input — the agent is
-         the party that types it, by index — as a textbox marked [password] that never
-         carries a value. File inputs are added below as file-input rows; hidden inputs are
-         never rows. The operator's table (what JEV is offered) drops password rows again
-         in {!Jev_request.elements} (fly-eoqg): two readers, two rules. *)
+      (* takeover: a password input is a textbox marked [password], offered to JEV and the
+         planner alike. File inputs are added below as file-input rows; hidden inputs are
+         never rows. *)
       let input_type =
         if Hashtbl.find_opt names backend = Some "INPUT" then
           Some
@@ -490,7 +488,12 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
                   P.index = 0;
                   role = "textbox";
                   name = label;
-                  value = None;
+                  (* takeover: a filled password field shows its value, so the planner sees
+                     its typing took (the operator dropped password protection). *)
+                  value =
+                    (match Hashtbl.find_opt input_values backend with
+                    | Some "" | None -> None
+                    | Some s -> Some s);
                   state =
                     Some
                       (Option.value ~default:[] (states n)

@@ -267,8 +267,8 @@ let live_value
       set_reply fake ~method_:"DOMSnapshot.captureSnapshot"
         (dom ~live:"secret" ~tag:"INPUT" ~attrs:[ 4; 5 ]);
       Alcotest.(check bool)
-        "password value stays absent" true
-        (field "value" (List.hd (rows (snap tabs h))) = None))
+        "takeover a filled password shows its value" true
+        (field "value" (List.hd (rows (snap tabs h))) = Some (str "secret")))
 
 let live_value_unavailable () =
   let replace key value = function

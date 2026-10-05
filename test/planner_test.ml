@@ -1,20 +1,33 @@
-(* revert-apgf revert-bqrq: the planner's strict consultation shapes. *)
+(* takeover: the planner's strict answer shapes while it holds the page. *)
 module M = Leash.Planner
 module R = Leash.Run
 module P = Leash.Protocol
 
 let ok = function Ok x -> x | Error why -> Alcotest.fail why
+let sid = ok (P.Snapshot_id.of_string "s_test")
+let tab = ok (P.Handle.of_string "t_test")
 
 let snapshot =
   P.
     {
-      snapshot = ok (Snapshot_id.of_string "s_test");
-      tab = ok (Handle.of_string "t_test");
+      snapshot = sid;
+      tab;
       url = "https://site.example/";
       title = "Page";
       page_kind = None;
-      rows = [];
-      total = 0;
+      rows =
+        [
+          {
+            index = 1;
+            role = "textbox";
+            name = "Password";
+            value = None;
+            state = None;
+            options = None;
+            box = None;
+          };
+        ];
+      total = 1;
       offset = 0;
       truncated = false;
       settled = true;
@@ -24,14 +37,14 @@ let snapshot =
       dialog = None;
     }
 
-let request trigger =
+let request ?(headless = false) trigger =
   R.
     {
       trigger;
       reason = "no control";
       mission = "Find the report";
       secret_names = [ "portal_password" ];
-      headless = false;
+      headless;
       site = Some "site.example";
       notes = Some "Reports are under Archive.";
       history = [ ("Find the report", "blocked: no control") ];
@@ -39,68 +52,74 @@ let request trigger =
       title = snapshot.title;
       text = "Archive";
       snapshot;
+      image_input = None;
+      downloads = [];
+      offered = [ ("open-reports", "Open the reports page") ];
     }
 
-let answer trigger json =
-  match M.decode (request trigger) json with
+let answer ?headless trigger json =
+  match M.decode (request ?headless trigger) json with
   | Ok r -> Some r.R.answer
   | Error _ ->
       None [@ox.allow "ox-discarded-result: a refused reply is the expected outcome"]
 
-(* revert-apgf: on a stop the planner may only hint, hand off, notify or fail. *)
-let stop_shapes () =
-  (match answer R.Blocked {|{"answer":"hint","goal":"Click the link named Archive"}|} with
-  | Some (R.Hint g) ->
-      Alcotest.(check string) "revert-apgf hint" "Click the link named Archive" g
-  | _ -> Alcotest.fail "hint refused");
-  Alcotest.(check bool)
-    "handoff" true
-    (match answer R.Blocked {|{"answer":"handoff","reason":"captcha"}|} with
-    | Some (R.Handoff _) -> true
-    | _ -> false);
-  Alcotest.(check bool)
-    "notify" true
-    (match answer R.Expectation {|{"answer":"notify","message":"look"}|} with
-    | Some (R.Notify _) -> true
-    | _ -> false);
-  Alcotest.(check bool)
-    "fail" true
-    (match answer R.Blocked {|{"answer":"fail","reason":"gone"}|} with
-    | Some (R.Fail _) -> true
-    | _ -> false);
+let shapes () =
+  let is f json =
+    Alcotest.(check bool)
+      json true
+      (match answer R.Blocked json with Some a -> f a | None -> false)
+  in
+  is
+    (function R.Jev "Click Archive" -> true | _ -> false)
+    {|{"answer":"jev","goal":"Click Archive"}|};
+  is
+    (function R.Act (P.Fill a) -> a.text = "portal_password" | _ -> false)
+    {|{"answer":"act","action":{"cmd":"fill","args":{"tab":"t_test","snapshot":"s_test","index":1,"text":"portal_password"}}}|};
+  is
+    (function R.Read _ -> true | _ -> false)
+    {|{"answer":"read","quote":"Archive","note":"the menu"}|};
+  is
+    (function R.Observe_image -> true | _ -> false)
+    {|{"answer":"observe","image":true}|};
+  is
+    (function R.Run "open-reports" -> true | _ -> false)
+    {|{"answer":"run","name":"open-reports"}|};
+  is
+    (function R.Handoff _ -> true | _ -> false)
+    {|{"answer":"handoff","reason":"captcha"}|};
+  is
+    (function R.Done { records = [ [ ("title", "A") ] ]; _ } -> true | _ -> false)
+    {|{"answer":"done","result":"one","evidence":[],"records":[{"title":"A"}]}|};
+  is (function R.Fail _ -> true | _ -> false) {|{"answer":"fail","reason":"gone"}|};
   List.iter
     (fun json ->
-      Alcotest.(check bool)
-        ("revert-apgf refused: " ^ json)
-        true
-        (answer R.Blocked json = None))
+      Alcotest.(check bool) ("refused: " ^ json) true (answer R.Blocked json = None))
     [
-      {|{"answer":"act","action":{"cmd":"click","args":{"index":1}}}|};
+      {|{"answer":"act","action":{"cmd":"click","args":{"tab":"t_test","snapshot":"s_test","index":9}}}|};
+      {|{"answer":"jev","goal":""}|};
       {|{"answer":"leg","goal":"x"}|};
-      {|{"answer":"done","result":"x","evidence":[],"done":true}|};
-      {|{"answer":"hint","goal":""}|};
       {|not json|};
     ]
 
-(* revert-bqrq: at the end the planner gives result, evidence and done, or fail. *)
-let final_shapes () =
-  (match
-     answer R.Final
-       {|{"answer":"done","result":"19","evidence":["19 results"],"done":true}|}
-   with
-  | Some (R.Answer { result; evidence; done_ }) ->
-      Alcotest.(check string) "result" "19" result;
-      Alcotest.(check (list string)) "evidence" [ "19 results" ] evidence;
-      Alcotest.(check bool) "done" true done_
-  | _ -> Alcotest.fail "answer refused");
+(* revert-r9ka: on a headless browser handoff is neither offered nor accepted. *)
+let headless () =
   Alcotest.(check bool)
-    "done must be a boolean" true
-    (answer R.Final {|{"answer":"done","result":"19","evidence":[]}|} = None);
+    "handoff refused" true
+    (answer ~headless:true R.Blocked {|{"answer":"handoff","reason":"captcha"}|} = None);
+  let has needle p =
+    let n = String.length needle in
+    let rec go i =
+      i + n <= String.length p && (String.sub p i n = needle || go (i + 1))
+    in
+    go 0
+  in
   Alcotest.(check bool)
-    "no hint at the end" true
-    (answer R.Final {|{"answer":"hint","goal":"x"}|} = None)
+    "headless prompt offers no handoff" false
+    (has {|"handoff"|} (Leash__Questions.takeover ~headless:true));
+  Alcotest.(check bool)
+    "headed prompt offers it" true
+    (has {|"handoff"|} (Leash__Questions.takeover ~headless:false))
 
-(* What the planner is shown: why, the mission, JEV's history, notes, secret names. *)
 let shown () =
   let json = M.request_json (request R.Blocked) in
   let field key = Yojson.Safe.Util.member key json in
@@ -112,36 +131,18 @@ let shown () =
     (Yojson.Safe.Util.to_string (field "site_notes"));
   Alcotest.(check int)
     "history" 1
-    (List.length (Yojson.Safe.Util.to_list (field "jev_history")));
-  Alcotest.(check string)
-    "secret names only" "[\"portal_password\"]"
-    (Yojson.Safe.to_string (field "secret_names"))
-
-(* revert-r9ka: on a headless browser handoff is neither offered nor accepted. *)
-let headless () =
-  let request = { (request R.Blocked) with R.headless = true } in
-  Alcotest.(check bool)
-    "revert-r9ka handoff refused" true
-    (Result.is_error (M.decode request {|{"answer":"handoff","reason":"captcha"}|}));
-  Alcotest.(check bool)
-    "revert-r9ka hint accepted" true
-    (Result.is_ok (M.decode request {|{"answer":"hint","goal":"Click Search"}|}));
-  Alcotest.(check bool)
-    "revert-r9ka the headless prompt offers no handoff" false
-    (let p = Leash__Questions.planner_hint_headless in
-     let rec has i =
-       i + 9 <= String.length p && (String.sub p i 9 = {|"handoff"|} || has (i + 1))
-     in
-     has 0)
+    (List.length (Yojson.Safe.Util.to_list (field "history")));
+  Alcotest.(check int)
+    "offered" 1
+    (List.length (Yojson.Safe.Util.to_list (field "offered")))
 
 let () =
-  Alcotest.run "planner consultations"
+  Alcotest.run "planner takeover"
     [
       ( "shapes",
         [
-          Alcotest.test_case "revert-apgf stop answers" `Quick stop_shapes;
-          Alcotest.test_case "revert-bqrq final answer" `Quick final_shapes;
-          Alcotest.test_case "what the planner is shown" `Quick shown;
+          Alcotest.test_case "answer shapes" `Quick shapes;
           Alcotest.test_case "revert-r9ka headless" `Quick headless;
+          Alcotest.test_case "what the planner is shown" `Quick shown;
         ] );
     ]

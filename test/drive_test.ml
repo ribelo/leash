@@ -972,9 +972,9 @@ let fly_unsupported () =
       ()
   in
   Alcotest.(check bool)
-    "daily-9ggi a password page names leash fill" true
+    "takeover a password page JEV cannot act on is named" true
     (match result.reason with
-    | Some reason -> contains reason "leash fill" && contains reason "never types"
+    | Some reason -> contains reason "password field"
     | None -> false)
 
 let semantic_request_real_reply () =

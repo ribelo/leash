@@ -16,9 +16,9 @@ Wait for the mission's reply before acting or reading on its tab. Other tabs can
 
 ## Who decides
 
-JEV runs the mission (ADR-0015): one decision-model call per step picks the operation and its target over the page's element table; the text helper writes field values; the site playbook's procedures and scripts are offered to it as operations. The stall rule, the step cap (`--max-steps`, default 60) and the deadline bound it.
+JEV runs the mission (ADR-0015): one decision-model call per step picks the operation and its target over the page's element table; the text helper writes field values; the site playbook's procedures and scripts are offered to it as operations. The stall rule (three identical actions without a page change) and the step cap (`--max-steps`, default 256 per stint) end a stint. JEV sees every row, password fields included, and types a `--secret` by its name.
 
-The planner is optional: `[models] planner_model`; absent means it is never called. It is only consulted, never acts: when JEV answers BLOCKED or its loop stops (it answers a short hint JEV is given as its next goal, or handoff, notify or fail; on a headless browser handoff is neither offered nor accepted); when a procedure's or the mission's expectation fails; and once at the end of a mission that asks for an answer, to read `result` and `evidence` from the final page and judge whether the mission is done. The playbook's `notes` are shown to the planner.
+The planner (`[models] planner_model`, optional; absent means a stop ends the mission `blocked`) takes the page over from JEV when JEV answers BLOCKED, stalls or reaches its step cap, and when an expectation fails. It sees the mission, what JEV and it did so far, the page, and a screenshot when it asks for one. It may act on the page (click, fill, select, press, scroll, upload a file the mission names, type, click at a point), read text, run a playbook procedure or script by name, notify, hand off (only on a headed browser), finish with `result`, `evidence` and records for `--out`, or fail. It hands the page back to JEV with a goal string; JEV then drives toward that goal. When JEV reports DONE on a mission that asks for an answer, the planner gives the answer from the final page or takes over. The playbook's `notes`, procedures and scripts are shown to the planner.
 
 The decision model is `[models] decision_model`: any Decisions-API model id (default `typesafe/jev-1.13-20260917`; `cloudflare/clef` and `cloudflare/clef-flash` speak the same contract). When the model's OpenRouter listing says it accepts images, `[decision]` controls what it is shown. The screenshot goes into the state when the page offers fewer than `image_when_rows_below` actionable elements (default 3; 0 never). The model may choose LOOK when `look = true` (default false), at most once per two steps, and the next state carries the screenshot. With a screenshot in the state it may choose CLICK_AT, whose point is two score answers over `point_levels` bands per axis (default and maximum 10, Clef's limit); a point gets the same safety and consent checks as the rows under it. `leash status` shows `models.decision_modalities` and `decision_tail_read`. Drive metrics name the `decision_model` and count `image_parts`.
 
@@ -48,7 +48,7 @@ Verify the requested outcome separately: reread account amounts, inspect the com
 
 ## Limits and preview
 
-`--deadline-s` bounds the whole mission (default 600); `--max-steps` bounds JEV's steps (default 60); the planner is consulted at most 6 times. These are execution bounds, not output-token budgets.
+`--deadline-s` bounds the whole mission (default 600) and is the only bound on the planner; `--max-steps` bounds each JEV stint (default 256). These are execution bounds, not output-token budgets.
 
 `--dry-run` returns JEV's first decision without executing it or writing records. It still makes billable model calls and can allocate a tab. Add repeatable `--expect SENTENCE` for explicit live-page completion checks; see `leash help expectations`.
 

@@ -1458,9 +1458,9 @@ let commands ~caps ~send ~base ~run_owned =
                table, the text helper for field values, the site playbook's procedures \
                and scripts offered as operations.";
             `P
-              "The optional planner ([models] planner_model) is only consulted: when JEV \
-               answers BLOCKED, when an expectation fails, and once at the end of a \
-               mission that asks for an answer, to fill result and evidence.";
+              "When JEV is blocked, stalls or reaches its step cap, the planner \
+               ([models] planner_model) takes the page over, acts on it, and hands it \
+               back to JEV with a goal or finishes the mission.";
             `P
               "--out JSONL is tagged. script-record, source playbook, is a validated \
                script record. operator-state, source operator, is one terminal bounded \
@@ -1479,7 +1479,7 @@ let commands ~caps ~send ~base ~run_owned =
            opt "url" Str "URL"
              "Explicit http(s) start (start_url). Not a model navigation target.";
            opt "max_steps" Int "N"
-             "JEV's step cap for the mission (default 60). Must be positive.";
+             "JEV's step cap per stint (default 256). Must be positive.";
            opt "max_procedures" Int "N" "Procedure cap (default 40).";
            opt "out" Str "FILE"
              "Append tagged JSONL: script-record from a playbook, operator-state from \

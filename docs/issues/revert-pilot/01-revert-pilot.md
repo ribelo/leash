@@ -36,6 +36,13 @@ Filed from the corpus run of 2026-10-05 on the reverted loop (docs/corpus/2026-1
 15. As the operator, I want a download JEV already completed in a mission not started again, so that one invoice arrives once. U2 goal/notes downloaded the latest invoice twice. ^revert-3scf
 16. As the operator, I want a decision or text-helper call refused for load (HTTP 529, a timeout) told apart from a mission failure in the reply, so that a corpus run under load can be read. 70 cells ended `model-timeout` and many `error` cells were text-helper timeouts or Clef HTTP 529 under about 60 parallel drives. ^revert-8eqf
 
+## Takeover (operator, 2026-10-05)
+
+17. As the operator, I want the page handed to the planner, with the mission and what JEV did, when JEV answers BLOCKED, stalls or reaches its step cap (256 per stint), so that what clicking cannot do still gets done. ^revert-n5wc
+18. As the operator, I want the planner able to do everything on the page while it holds it (row actions, typing secrets and passwords, uploads, downloads, coordinate clicks, reading, records for --out, the playbook's procedures and scripts, notify, handoff on a headed browser, done, fail), bounded only by the deadline. ^revert-s3t1
+19. As the operator, I want the planner to hand control back to JEV with a goal string, so that JEV clicks again as soon as it can. ^revert-orij
+20. As the operator, I want JEV to see password fields and type a --secret into them, so that a login does not stall (the rule field-8bzc is dropped). ^revert-5prc
+
 ## Out of Scope
 
 Anything new.
