@@ -1417,7 +1417,11 @@ let archive_procedure ?reason ~caps ~site (proc : procedure) =
         [ Open_creat; Open_trunc; Open_wronly; Open_binary ]
         0o600 path
     in
-    Fun.protect ~finally:(fun () -> close_out ch) (fun () -> output_string ch json);
+    Fun.protect
+      ~finally:(fun () -> close_out_noerr ch)
+      (fun () ->
+        output_string ch json;
+        close_out ch);
     Ok ()
   with Sys_error why -> Error why
 

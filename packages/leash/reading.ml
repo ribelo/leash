@@ -575,8 +575,10 @@ let shot ~caps browser (args : P.shot_args) =
           in
           let output = Ox_caps.Cap_stdlib.open_out_bin ~caps args.path in
           Fun.protect
-            ~finally:(fun _ -> close_out output)
-            (fun () -> output_bytes output png);
+            ~finally:(fun () -> close_out_noerr output)
+            (fun () ->
+              output_bytes output png;
+              close_out output);
           Ok result
         with Sys_error _ -> Error (invalid "screenshot path is not writable"))
 
