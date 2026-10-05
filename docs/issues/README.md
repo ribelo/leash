@@ -209,6 +209,12 @@ ADR-0012 was the coordinator's inversion of the operator's design, not his decis
 | --- | --- | --- | --- | --- |
 | L62 | **JEV runs the loop again** (`revert-pilot/01-revert-pilot.md`). Pilot loop removed; drive.ml is drive; planner only on BLOCKED, failed expectation, and end judgment; result/evidence kept; corpus re-run; U1/U2 re-run. | revert-eft1, revert-o3fh, revert-24kr, revert-bqrq, revert-apgf, revert-k63o, revert-wrcc, revert-3zp1, revert-kmr3, revert-tjwo | L61 | [x] |
 
+## Milestone 16 — no playbooks (ADR-0016)
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L63 | **No playbooks** (`no-playbooks/01-no-playbooks.md`). Playbooks, procedures, scripts, notes, page kinds, upper decision levels, help topics removed; traces and corpus kept; skill says goal+result and drive first; corpus re-run; U1/U2. | bare-b71j, bare-u8ot, bare-um71, bare-vepy, bare-so5y, bare-f978, bare-xjiw, bare-oxij | L62 | [ ] |
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
