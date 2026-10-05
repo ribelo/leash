@@ -29,7 +29,7 @@ ADR-0012 made the planner own the mission. The operator never decided that; the 
 12. As the operator, I want CLICK_AT asked over at most 10 bands per axis, so that a Clef model given a screenshot is not refused. Clef's Decisions API takes at most 10 score criteria (HTTP 422); the default was 20, which ended 22 of the canvas cells. ^revert-ook4
 
 
-Filed from the corpus run of 2026-10-05 on the reverted loop (docs/corpus/2026-10-05), not yet done:
+Filed from the corpus run of 2026-10-05 on the reverted loop (docs/corpus/2026-10-05). 13 (53d92af), 14 (9edeb04) and 15 (6ed9b19, verified on U2 2026-10-06) are done; 16 is open:
 
 13. As the operator, I want the planner told when the browser is headless, and never offered a handoff there, so that a stop on a headless browser ends in a hint or a failure, not in error `headless`. The planner chose handoff in 223 of 1,260 public cells and in 13 of the 18 Tauron cells. ^revert-r9ka
 14. As the operator, I want JEV's loop able to attach a file the mission names to a file input, so that an upload mission can be driven. JEV has no upload operation; u9 passed 0 of 63. ^revert-31w3

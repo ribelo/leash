@@ -121,8 +121,14 @@ class Service:
 MODELS_IMAGE = {model_id: image for model_id, image in MODELS.values()}
 
 
-def run_cell(svc, mission, style, deadline, work):
-    """One mission in one style: fixture up, drive, independent check, fixture down."""
+SPENT = [0.0]
+
+
+def run_cell(svc, mission, style, deadline, work, budget=None):
+    """One mission in one style: fixture up, drive, independent check, fixture down.
+    None when the run's budget is already spent (the cell is not started)."""
+    if budget is not None and SPENT[0] >= budget:
+        return None
     ctx = checks.Context(work, svc)
     try:
         fixture = checks.start_fixture(mission, ctx)
@@ -150,6 +156,8 @@ def run_cell(svc, mission, style, deadline, work):
                 continue
         reply = reply or {}
         (work / "reply.json").write_text(json.dumps(reply, indent=1))
+        src = reply if "navigator_steps" in reply else (reply.get("detail") or {})
+        SPENT[0] += src.get("model_cost") or (src.get("data") or {}).get("reported_cost") or src.get("reported_cost") or 0.0
         ok, note = checks.check(mission, reply, ctx)
         return reply, ok, note, wall
     finally:
@@ -230,6 +238,8 @@ def main():
     r.add_argument("--tags", default="")
     r.add_argument("--parallel", type=int, default=4)
     r.add_argument("--deadline", type=int, default=300)
+    r.add_argument("--budget", type=float, default=0.50,
+                   help="stop starting cells once the run has cost this many dollars")
     r.add_argument("--out", default=str(REPO / "docs/corpus" / datetime.date.today().isoformat()))
     r.add_argument("--leash", default=str(REPO / "_build/default/packages/leash/bin/main.exe"))
     args = ap.parse_args()
@@ -272,11 +282,14 @@ def main():
                         for i, (m, s) in enumerate(cells):
                             work = root / "cells" / f"{m['id']}-{s}"
                             work.mkdir(parents=True, exist_ok=True)
-                            futures[pool.submit(run_cell, svc, m, s, args.deadline, work)] = (m, s)
+                            futures[pool.submit(run_cell, svc, m, s, args.deadline, work, args.budget)] = (m, s)
                         for f in concurrent.futures.as_completed(futures):
                             m, s = futures[f]
                             try:
-                                reply, ok, note, wall = f.result()
+                                done_cell = f.result()
+                                if done_cell is None:
+                                    continue
+                                reply, ok, note, wall = done_cell
                             except Exception as e:  # a harness failure is a failed cell, recorded
                                 reply, ok, note, wall = {}, False, f"harness: {e}", 0.0
                             r = row(m, s, knowledge, model, image, reply, ok, note, wall)
