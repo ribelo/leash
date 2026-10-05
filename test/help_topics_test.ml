@@ -146,7 +146,7 @@ let fresh_agent_guidance () =
       ( "drive",
         [
           "Only pilot done completes the mission";
-          "Installed and draft procedures are candidates for the pilot";
+          "installed playbook are candidates for the pilot";
         ] );
       ("errors", [ "leash help playbooks"; "engine error" ]);
     ];

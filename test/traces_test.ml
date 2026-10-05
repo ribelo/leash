@@ -40,7 +40,6 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") time : P.drive_trace =
       model_calls = 2;
       page_kind_path = [ "catalog" ];
       start_url = None;
-      inferred_pages = [];
       out_requested = false;
       planner_turns = [];
       procedures = [];
@@ -165,11 +164,11 @@ let config () =
 
 let capture () =
   let c = T.capture ~mission:"mission" ~now:10. in
-  T.page c ~url:"about:blank" ~kind:None ~pattern:None;
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog") ~pattern:None;
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog") ~pattern:None;
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "detail") ~pattern:None;
-  T.page c ~url:"https://other.example/" ~kind:(Some "checkout") ~pattern:None;
+  T.page c ~url:"about:blank" ~kind:None;
+  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
+  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
+  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "detail");
+  T.page c ~url:"https://other.example/" ~kind:(Some "checkout");
   let error =
     P.make_error
       ~detail:
@@ -289,7 +288,7 @@ let scripted_steps
           via = None;
         }
   in
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog") ~pattern:None;
+  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
   let result =
     match
       D.run ~on_step:(T.step c)
@@ -359,30 +358,6 @@ let scripted_steps
       let path = ok (T.write store saved) in
       bool "trace-lg58 safe captured roundtrip" (ok (T.read ~caps path) = saved))
 
-let inferred_capture () =
-  let c = T.capture ~mission:"tags" ~now:0. in
-  List.iter
-    (fun url -> T.page c ~url ~kind:(Some "home") ~pattern:(Some url))
-    [ "about:blank"; "chrome://newtab/"; "data:text/html,Hello"; "file:///tmp/page" ];
-  T.page c ~url:"https://quotes.toscrape.com/tag/love/" ~kind:(Some "love")
-    ~pattern:(Some "https://quotes.toscrape.com/tag/love");
-  T.page c ~url:"https://quotes.toscrape.com/tag/humor/" ~kind:(Some "tag-<slug>")
-    ~pattern:(Some "https://quotes.toscrape.com/tag/<slug>");
-  let trace =
-    T.finish c ~now:1.
-      (Error (P.make_error (ok (P.Error_code.of_string "internal")) ~message:"fixture"))
-  in
-  Alcotest.(check (list string))
-    "trace-iqqz merged header excludes non-web kinds" [ "tag-<slug>" ]
-    trace.page_kind_path;
-  Alcotest.(check (list (pair string string)))
-    "kind-s1k2 earlier draft entry merged"
-    [ ("tag-<slug>", "https://quotes.toscrape.com/tag/<slug>") ]
-    (List.map
-       (fun (p : P.Trace.inferred_page) -> (p.name, p.url_pattern))
-       trace.inferred_pages)
-
-(* L53 map-3qag: a failed planner detour shares the durable chronological trace. *)
 let planner_steps () =
   let c = T.capture ~mission:"inspect catalogue" ~now:0. in
   let after = P.{ url = "https://books.toscrape.com/"; title = "Catalogue" } in
@@ -530,7 +505,6 @@ let () =
             ("trace-dqr2 retention", retention ~caps);
             ("trace-szpg config", config);
             ("trace-iqqz failure projection", capture);
-            ("trace-iqqz kind-s1k2 inferred header canonicalization", inferred_capture);
             ("trace-zbb9 trace-uovo acknowledged target", scripted_steps ~caps);
             ("map-3qag mixed planner trace and partial failure", planner_steps);
             ( "notif-udh3 safe durable unattended audit and old codecs",

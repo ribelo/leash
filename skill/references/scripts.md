@@ -2,7 +2,7 @@
 
 A script is prepared JavaScript that belongs to a playbook. It is a `.js` file beside `playbook.json`, or a short inline `source`. A `script:` step runs it in the tab's page. Its result is validated against a declared `returns` shape. Only scripts from a loaded playbook directory are handed to the page's JavaScript engine by a run.
 
-`eval` is a different thing: the agent's own one-off function body. JEV may choose a declared script or an argument value; the argument travels as JSON, never inside the function text. The learning compiler may write an inline collection script for a repeatable draft (map-op08). It needs observed final-page structure and declared `returns`. The loader refuses navigation, submission, input/event, network, storage and dynamic-code references; this conservative source check is not a JavaScript sandbox. Compiled scripts are never allowed in non-repeatable agreement-gate procedures. They install only after JEV selected that exact draft revision, each script actually succeeded, and non-empty expectations passed. Manual `playbook accept` cannot bypass that replay proof.
+`eval` is a different thing: the agent's own one-off function body. JEV may choose a declared script or an argument value; the argument travels as JSON, never inside the function text.
 
 A script is the body of an async function of `args`, an object of strings. It may `await fetch` the site's own endpoints with the page's cookies. Collection scripts should read, not click, scroll, or change the page. Navigation is a goal, not a script step. Throw when the page is the wrong one; an empty list is a valid result (an empty cart).
 

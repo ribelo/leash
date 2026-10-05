@@ -200,8 +200,10 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
       "text_helper_ms", integer !helper_ms; "input_ms", metric "input_ms" !input_ms;
       "settle_ms", metric "settle_ms" 0; "elapsed_ms", integer (ms (now () -. started)) ] in
     let shown =
-      if Page_kind.is_page ~url:page.snapshot.url then
-        Option.map (fun label -> label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text) label
+      if Web_url.is_page ~url:page.snapshot.url then
+        Option.bind label (fun label ->
+          let shown = label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text in
+          if shown.kind = "" then None else Some shown)
       else None in
     let state = `Assoc [
       "status", string name; "reason", optional_string reason;

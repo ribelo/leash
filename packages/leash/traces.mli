@@ -61,7 +61,7 @@ val capture : mission:string -> now:float -> capture
 (* kind-4qke kind-dnye: [kind] is the page kind for the path. [pattern] is the
    generalized URL when the kind was inferred; a declared kind passes [None] and is
    not added to the header mapping. *)
-val page : capture -> url:string -> kind:string option -> pattern:string option -> unit
+val page : capture -> url:string -> kind:string option -> unit
 
 val arguments : capture -> (string * string) list -> unit
 (** map-op01: resolved mission arguments; finish retains only non-redacted typed values.

@@ -337,7 +337,7 @@ powerbox. A single entry mint supplies each capability-using executable.
 The subsections here preserve the paused state. The resumed-verification
 section below supersedes their pending statuses and old pin.
 
-This extends ^gencaps-rh1m to the widened repository gate: every registered rule is
+This wave (^gencaps-5tyt) extends gencaps-rh1m to the widened repository gate: every registered rule is
 selected, with an empty allow-list and no behavior changes except the deferred
 close-flush corrections below. **This wave is not yet verified.**
 

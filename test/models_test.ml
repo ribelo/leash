@@ -460,8 +460,8 @@ let drive_to_done
       let state = get "state" body in
       let page = get "page" state in
       Alcotest.(check string)
-        "kind-ir9l playbook-less operator state shows the kind in place of the raw URL"
-        "home" (text "url" page);
+        "cut-0oal playbook-less operator state shows the raw URL" "https://example.com/"
+        (text "url" page);
       Alcotest.(check string) "drive-y37b the page title" "Example" (text "title" page);
       Alcotest.(check string)
         "drive-y37b the page text" "Example content" (text "text" page);
@@ -1010,6 +1010,7 @@ let pilot_image_wire
                     recent = [];
                     arguments = [];
                     page_kind = None;
+                    notes = None;
                     title = snapshot.title;
                     url = snapshot.url;
                     text = "";
@@ -1108,6 +1109,7 @@ let chat_timeout
                  recent = [];
                  arguments = [];
                  page_kind = None;
+                 notes = None;
                  title = "Books";
                  url = "https://example.com";
                  text = "Books";

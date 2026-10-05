@@ -45,30 +45,6 @@ type arg_decl = { name : string; source : arg_source }
     [{"from":"mission"}], [{"from":"mission","optional":true}] or [{"const":<value>}]. A
     list of names is the old form and is refused. *)
 
-type provenance = {
-  traces : string list;
-  model : string;
-  time : string;
-  tries : int;
-  last_failure : string option;
-  path : string list;
-  entry_kind : string;
-  exit_kind : string;
-  signature : (string * Trace.trace_target option) list;
-  kind_mapping : (string * string) list;
-  secrets : string list;
-      (** pilot-z1nr: secret names the mission filled before these steps; the procedure is
-          offered only once the current mission has filled them all. *)
-  repeatable : bool;
-  reason : string;
-  gate : string;
-  repair : bool;
-  model_calls : int;
-      (** Planner calls spent compiling or repairing this procedure. Absent JSON is 0. *)
-  model_cost : float option;
-      (** Reported cost of those calls. [None] is unknown, including an unpriced call. *)
-}
-
 type procedure = {
   slug : string;
   description : string;
@@ -79,7 +55,7 @@ type procedure = {
 }
 (** map-fmt01: a procedure is a slug, a description JEV chooses on, args, steps, expect,
     and optional repeat. [provenance], [expect_timeout_s], [max_steps] and [deadline_s]
-    are removed fields. Provenance lives in a sidecar the runner does not read. *)
+    are removed fields. *)
 
 type script_decl = {
   file : string option;
@@ -115,7 +91,13 @@ type t = {
   procedures : procedure list;
   shapes : shapes option;
   scripts : scripts option;
+  notes : string option;
+      (** cut-yk93: optional free text about the site for the pilot (where things are, how
+          login works), shown on every pilot turn on that site; at most {!max_notes}
+          bytes. *)
 }
+
+val max_notes : int
 
 type checker =
   | Page_kind of string
@@ -139,15 +121,6 @@ type script = private {
     function that hands script text to the browser, takes one. Model output can therefore
     never become a script. *)
 
-type draft = {
-  procedure : procedure;
-  pages : page list;
-  scripts : script list;
-  revision : string;
-}
-(** L53 map-b3kk: procedure and executable page vocabulary from the same immutable
-    full-book revision, captured together before the selection question. *)
-
 type loaded = {
   file : string;  (** The path of [playbook.json]. *)
   dir : string option;
@@ -157,14 +130,6 @@ type loaded = {
   checks : (string * checker list) list;
   scripts : script list;
 }
-
-type proposal = { site : string; procedure : procedure }
-(** run-m0r8: one planner-written procedure as it is proposed to the operator — the site
-    it belongs to and the procedure in the playbook's own schema. *)
-
-type accepted = { site : string; slug : string; playbook : string; replaced : bool }
-(** run-m0r8: what an accepted proposal did: the site, the procedure slug, the playbook
-    file written, and whether the slug replaced a procedure that was already there. *)
 
 val t_of_yojson : Yojson.Safe.t -> (t, string) result
 val yojson_of_t : t -> Yojson.Safe.t
@@ -186,33 +151,6 @@ val action_risk_context :
 (** map-yzqp: target-scoped evidence; ambiguous actions retain all page warnings. *)
 
 val non_repeatable_action : context:string -> string -> bool
-val procedure_repeatable : t -> context:string -> procedure -> bool
-
-val draft_revision : t -> string
-(** Content identity of the entire immutable proposal, including its page definitions. *)
-
-val atomic_write_json :
-  caps:< Ox_caps.Cap.fs_write ; .. > ->
-  mode:int ->
-  string ->
-  Yojson.Safe.t ->
-  (unit, string) result
-(** Atomically publishes JSON at the requested path and mode through a private temporary
-    file.
-
-    Suspension: never suspends; behavior of the delegated helpers depends on the
-    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
-    filesystem writes are synchronous. Cancellation: not a cancellation point; behavior of
-    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
-    helpers and local parsing callbacks in the write. Finalizers: close the owned channel
-    and remove its temporary file on exit. Locking: exclusive temporary-file creation and
-    atomic rename, not the installation mutex. Cancellation safety: safe to re-run with
-    the same arguments; no cancellation point occurs between creating the temporary file
-    and publishing it. *)
-
-val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
-val yojson_of_proposal : proposal -> Yojson.Safe.t
-val yojson_of_accepted : accepted -> Yojson.Safe.t
 
 val of_json :
   ?dir:Ox_caps.Cap.fs_read * string ->
@@ -223,20 +161,6 @@ val of_json :
     [..], and after symlinks are resolved still inside it (extr-plaz); without [dir] a
     file script is refused. A directory comes with the capability to read it
     (^ncaps-4tjy): a playbook decoded from a message, with no directory, touches nothing.
-
-    Suspension: never suspends; behavior of the delegated helpers depends on the
-    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
-    filesystem reads are synchronous. Cancellation: not a cancellation point; behavior of
-    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
-    helpers and local parsing callbacks. Finalizers: owned input channels are closed on
-    exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
-    to re-run; reads leave files unchanged. [Assert_failure] can escape if an internal
-    validated-playbook invariant fails. *)
-
-val revalidate :
-  caps:< Ox_caps.Cap.fs_read ; .. > -> loaded -> t -> (loaded, string) result
-(** [revalidate book playbook] validates another playbook value in [book]'s directory — a
-    planner's procedure added, a proposal merged.
 
     Suspension: never suspends; behavior of the delegated helpers depends on the
     synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
@@ -260,9 +184,6 @@ val load : caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) resul
     exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
     to re-run; reads leave files unchanged. [Assert_failure] can escape if an internal
     validated-playbook invariant fails. *)
-
-val check_proposed_script : string -> (unit, string) result
-(** map-op08: conservative source-reference refusal for compiled read-only scripts. *)
 
 val script_named : loaded -> string -> script option
 
@@ -312,188 +233,11 @@ val show :
     to re-run; reads leave files unchanged. [Assert_failure] can escape if an internal
     validated-playbook invariant fails. *)
 
-val check_goal_count :
-  minimum:int -> ?file:string -> t -> procedure -> (unit, string) result
-(** map-op06: the shared top-level goal-count rule; a use: sub-procedure is exempt. *)
-
-val check_draft : procedure -> (unit, string) result
-(** map-fmt03: the draft bar — a non-empty description, well-formed args, at least one
-    goal step, and at least one expect sentence. Page names and the two-goal install rule
-    are not this bar. *)
-
-val check_procedure : ?file:string -> t -> procedure -> (unit, string) result
-(** run-rq6i run-m0r8: the loader's own rules for one procedure, applied to a procedure
-    that did not come from a validated file — a planner's answer, before the loop executes
-    it, and a proposal, before it is merged. [file] only names the origin in the message.
-    Beyond the file rules it refuses a procedure that calls itself and an expectation that
-    names a page kind this playbook does not declare, which are the two ways a procedure
-    from outside a file can fail to be runnable. *)
-
-val proposed_directory : caps:< Ox_caps.Cap.env ; .. > -> unit -> string
-(** run-m0r8: [$XDG_STATE_HOME/leash/proposed] ([$HOME/.local/state] when the variable is
-    unset), where a run writes the procedures the planner wrote and verified. The playbook
-    directory is never written by a run.
-
-    Suspension: never suspends; behavior of the delegated helpers depends on the
-    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks; this
-    only reads the environment. Cancellation: not a cancellation point; behavior of the
-    delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson helpers
-    and local parsing callbacks. Finalizers: none. Locking: none. Cancellation safety:
-    safe to re-run; no resource or file is changed. *)
-
-val provenance_of_yojson : Yojson.Safe.t -> (provenance, string) result
-val yojson_of_provenance : provenance -> Yojson.Safe.t
-
-val provenance_filename : string -> string
-(** map-fmt02: [<slug>.provenance.json], the only sidecar a playbook directory may hold
-    beside [playbook.json]. *)
-
-val write_provenance :
-  caps:< Ox_caps.Cap.fs_write ; .. > ->
-  dir:string ->
-  slug:string ->
-  provenance ->
-  (unit, string) result
-(** Suspension: never suspends; behavior of the delegated helpers depends on the
-    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
-    filesystem writes are synchronous. Cancellation: not a cancellation point; behavior of
-    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
-    helpers and local parsing callbacks in the write. Finalizers: close the owned channel
-    and remove its temporary file on exit. Locking: exclusive temporary-file creation and
-    atomic rename, not the installation mutex. Cancellation safety: safe to re-run with
-    the same arguments; no cancellation point occurs between creating the temporary file
-    and publishing it. *)
-
-val read_provenance :
-  caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (provenance option, string) result
-(** [read_provenance path] is [Ok None] when the sidecar is absent.
-
-    Suspension: never suspends; behavior of the delegated helpers depends on the
-    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
-    filesystem reads are synchronous. Cancellation: not a cancellation point; behavior of
-    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
-    helpers and local parsing callbacks. Finalizers: owned input channels are closed on
-    exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
-    to re-run; reads leave files unchanged. *)
-
-val propose :
-  ?book:t ->
-  ?revision:string ->
-  ?provenance:provenance ->
-  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
-  site:string ->
-  procedure ->
-  (string, string) result
-(** run-m0r8 map-fmt02: write one proposed procedure to
-    [<proposed_directory>/<site>-<slug>.json], 0600, and answer the path written.
-    Provenance, when given, is written beside it as [<slug>.provenance.json], never inside
-    the proposal.
-
-    Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous, with JSON read-callback invocation delegated to
-    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel.
-    Cancellation: propagates while acquiring the mutex before writes; the locked
-    transaction is cancellation-protected; JSON read-callback invocation is delegated to
-    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. Finalizers:
-    release the mutex and file locks and close owned descriptors and channels. Locking:
-    the shared installation mutex and non-blocking filesystem installation/proposal locks
-    serialize transactions. Cancellation safety: safe to re-run after cancellation while
-    acquiring the mutex; no transaction has begun. [Assert_failure] can escape if an
-    internal validated-playbook invariant fails. *)
-
-val retire :
-  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
-  site:string ->
-  slug:string ->
-  (unit, string) result
-(** Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous, with script and sidecar read-callback invocation delegated
-    to Ox_caps.Cap_stdlib.In_channel.with_open_bin with In_channel.input_all.
-    Cancellation: propagates while acquiring the mutex before writes; the locked
-    transaction is cancellation-protected; script and sidecar read-callback invocation is
-    delegated to Ox_caps.Cap_stdlib.In_channel.with_open_bin with In_channel.input_all.
-    Finalizers: release the mutex and file locks and close owned descriptors and channels.
-    Locking: the shared installation mutex and non-blocking filesystem
-    installation/proposal locks serialize transactions. Cancellation safety: safe to
-    re-run after cancellation while acquiring the mutex; no transaction has begun.
-    [Assert_failure] can escape if an internal validated-playbook invariant fails. *)
-
-val retire_draft :
-  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
-  file:string ->
-  revision:string ->
-  site:string ->
-  slug:string ->
-  (unit, string) result
-(** map-b3kk: pin failed-trial retirement to the inspected draft revision, under the same
-    transaction as its installation.
-
-    Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous, with JSON read-callback invocation delegated to
-    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel.
-    Cancellation: propagates while acquiring the mutex before writes; the locked
-    transaction is cancellation-protected; JSON read-callback invocation is delegated to
-    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. Finalizers:
-    release the mutex and file locks and close owned descriptors and channels. Locking:
-    the shared installation mutex and non-blocking filesystem installation/proposal locks
-    serialize transactions. Cancellation safety: safe to re-run after cancellation while
-    acquiring the mutex; no transaction has begun. [Assert_failure] can escape if an
-    internal validated-playbook invariant fails. *)
-
-val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
-
-val archive_proposal :
-  revision:string ->
-  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
-  string ->
-  (unit, string) result
-(** map-b3kk: archive only the inspected draft revision, under the install lock.
-
-    Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous, with JSON read-callback invocation delegated to
-    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel.
-    Cancellation: propagates while acquiring the mutex before writes; the locked
-    transaction is cancellation-protected; JSON read-callback invocation is delegated to
-    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. Finalizers:
-    release the mutex and file locks and close owned descriptors and channels. Locking:
-    the shared installation mutex and non-blocking filesystem installation/proposal locks
-    serialize transactions. Cancellation safety: safe to re-run after cancellation while
-    acquiring the mutex; no transaction has begun. [Assert_failure] can escape if an
-    internal validated-playbook invariant fails. *)
-
-val accept :
-  ?revision:string ->
-  ?consume:bool ->
-  ?replayed_scripts:string list ->
-  caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
-  string ->
-  (accepted, string) result
-(** run-m0r8: merge a proposal file into the site's installed playbook — by slug,
-    replacing the same one and appending otherwise — and write that playbook back. The
-    merged playbook must validate first, and a site served by no playbook, by more than
-    one, or by an invalid merge is refused with nothing written. This is the operator's
-    command and the learning auto gate share this validated merge path.
-
-    Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous, with JSON read-callback invocation delegated to
-    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel.
-    Cancellation: propagates while acquiring the mutex before writes; the locked
-    transaction is cancellation-protected; JSON read-callback invocation is delegated to
-    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. Finalizers:
-    release the mutex and file locks and close owned descriptors and channels. Locking:
-    the shared installation mutex and non-blocking filesystem installation/proposal locks
-    serialize transactions. Cancellation safety: safe to re-run after cancellation while
-    acquiring the mutex; no transaction has begun. [Assert_failure] can escape if an
-    internal validated-playbook invariant fails. *)
-
-(* run-k8bx: restart every step from the beginning after the first failed check. *)
 val retry_once : execute:(unit -> unit) -> verify:(unit -> bool) -> bool
 
-val inspect :
-  ?code:bool -> ?provenances:(string * provenance) list -> loaded -> Yojson.Safe.t
+val inspect : ?code:bool -> loaded -> Yojson.Safe.t
 (** The playbook, its scripts (size, [returns], and with [code] their text — extr-lslp)
-    and its resolved checkers. [provenances] is display-only, read from sidecars by
-    [show]; the runner does not pass it. *)
+    and its resolved checkers. *)
 
 type observation = {
   kind : string option;
@@ -541,7 +285,7 @@ val await_results :
   ?timeout_s:int ->
   (string * checker) list ->
   checked list
-(** run-l06s run-vbys: {!await} with the verdicts kept. The result is the last
+(** run-xflk run-vbys: {!await} with the verdicts kept. The result is the last
     observation's: the one that passed everything, or the one the deadline found. A failed
     judgment is not final before that deadline. A pass scored while the page text is still
     changing is not accepted while time remains (map-bjon). *)

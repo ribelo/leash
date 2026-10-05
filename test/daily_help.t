@@ -20,7 +20,7 @@ Help is offline and short first contact is not the full manual.
   $ ./daily_cli_fixture.exe top-help help; test ! -s err
   top-level help groups tabs, observe, act, network/debug, missions, playbooks, service and skill
   $ for cmd in new downloads list take close status snap text shot debug eval nav click fill press select scroll wait upload hover check uncheck net cookies storage dialog handoff resume drive playbook traces serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
-  $ for cmd in list show check test accept; do leash playbook "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
+  $ for cmd in list show check test; do leash playbook "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in list show prune; do leash traces "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in install show; do leash skill "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in init check; do leash config "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
@@ -51,7 +51,7 @@ hdoc-vqj7: required press snapshot, playbook groups, and actionable help.
   $ leash press --help=plain >press-help 2>err; test ! -s err
   $ grep -q 'leash press.*TAB SNAPSHOT KEY' press-help
   $ leash playbook --help=plain >playbook-help 2>err; test ! -s err
-  $ for section in "INSTALLED PLAYBOOKS" "VALIDATION" "AUTHORING"; do grep -q "$section" playbook-help || exit 1; done
+  $ for section in "INSTALLED PLAYBOOKS" "VALIDATION"; do grep -q "$section" playbook-help || exit 1; done
   $ test "$(grep -c '^ACT$' playbook-help)" -eq 0
   $ leash eval --help=plain >eval-help 2>err; test ! -s err
   $ grep -q 'returned promise is awaited' eval-help

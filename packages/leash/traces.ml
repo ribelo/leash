@@ -311,8 +311,7 @@ type capture = {
   started : float;
   mutable first : string option;
   mutable start_url : string option;
-  mutable kinds : (string * string * bool) list;
-  page_kinds : Page_kind.session;
+  mutable kinds : (string * string) list;
   mutable last_page : (string * string option) option;
   mutable steps : captured_step list;
 }
@@ -325,7 +324,6 @@ let capture ~mission ~now =
     first = None;
     start_url = None;
     kinds = [];
-    page_kinds = Page_kind.session ();
     last_page = None;
     steps = [];
   }
@@ -337,17 +335,13 @@ let arguments t values =
         (name, value) :: List.filter (fun pair -> pair <> (name, value)) t.arguments)
     values
 
-let page t ~url ~kind ~pattern =
+let page t ~url ~kind =
   if t.first = None then t.first <- site url;
   if t.start_url = None && site url <> None then t.start_url <- Some url;
-  (* kind-a7uy kind-dnye: capture owns the same inference history as the drive;
-     replay at finish canonicalizes earlier kinds after a sibling merge. *)
-  if Page_kind.is_page ~url then (
-    let inferred = Option.is_some pattern in
-    if inferred then ignore (Page_kind.observe t.page_kinds ~url ~title:"");
-    if t.last_page <> Some (url, kind) then (
-      Option.iter (fun k -> t.kinds <- (url, k, inferred) :: t.kinds) kind;
-      t.last_page <- Some (url, kind)))
+  (* cut-tsk4: the path records the kinds the playbook declares; nothing is inferred. *)
+  if Web_url.is_page ~url && t.last_page <> Some (url, kind) then (
+    Option.iter (fun k -> t.kinds <- (url, k) :: t.kinds) kind;
+    t.last_page <- Some (url, kind))
 
 (* trace-zbb9: Drive publishes acknowledged execution before observing, then
    refines that same step with its after-page. Do not count the refinement twice. *)
@@ -540,10 +534,7 @@ let finish t ~now outcome =
       model_calls;
       start_url = t.start_url;
       page_kind_path =
-        List.rev t.kinds
-        |> List.map (fun (url, kind, inferred) ->
-            if inferred then (Page_kind.observe t.page_kinds ~url ~title:"").name
-            else kind)
+        List.rev t.kinds |> List.map snd
         |> List.fold_left
              (fun path kind ->
                match path with
@@ -551,11 +542,6 @@ let finish t ~now outcome =
                | _ -> kind :: path)
              []
         |> List.rev;
-      inferred_pages =
-        List.map
-          (fun (page : Page_kind.draft_page) ->
-            P.Trace.{ name = page.name; url_pattern = page.url_pattern })
-          (Page_kind.inferred_pages t.page_kinds);
       planner_turns =
         (match outcome with
           | Ok result -> result.P.planner_turns

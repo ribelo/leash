@@ -197,7 +197,7 @@ L53's compile-from-traces failed three honest rounds; the cause was the loop's s
 
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
-| L59 | **Cut learning** (`cut-learning/01-cut-learning.md`). Leg memory, gates, repair, proposals, `[learning]`, inferred kinds removed; `notes` added; procedures and scripts unchanged; docs and tests follow. | cut-6mvl, cut-0oal, cut-tsk4, cut-yk93, cut-sqlp, cut-ncyj, cut-kifp, cut-xd4h | — | [ ] |
+| L59 | **Cut learning** (`cut-learning/01-cut-learning.md`). Leg memory, gates, repair, proposals, `[learning]`, inferred kinds removed; `notes` added; procedures and scripts unchanged; docs and tests follow. | cut-6mvl, cut-0oal, cut-tsk4, cut-yk93, cut-sqlp, cut-ncyj, cut-kifp, cut-xd4h | — | [x] |
 | L60 | **Decision model** (`decision-model/01-decision-model.md`). Configured model id (JEV, Clef, Clef Flash); modalities from OpenRouter; screenshot when rows are useless (B) and LOOK as an operation (C); point targets for multimodal; truncation probe; fake server; cost names the model. | dmod-27vx, dmod-m3q5, dmod-7w26, dmod-mcgn, dmod-4ky5, dmod-pjmy, dmod-as71, dmod-f4lf, dmod-l44q, dmod-ibfy | L59 | [ ] |
 | L61 | **Corpus** (`corpus/01-corpus.md`). Twenty public missions × three styles × {none, notes, procedures} × {jev, clef, clef-flash} × {image off, B, C}; one command, one table under docs/corpus; U2 first; defaults and skill set by the table; 'drive first' in the skill. | corp-667a, corp-v36x, corp-o5zb, corp-c596, corp-5p13, corp-zeh2, corp-337k, corp-fplj, corp-ex9w, corp-a7md, corp-duu0, corp-nzkf | L60 | [ ] |
 

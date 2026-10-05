@@ -1,4 +1,4 @@
-(* run-tcuz run-r1e9 run-2lei run-84ds run-zmz8: playbooks are author-owned
+(* run-tcuz run-mjnw run-2lei run-84ds run-zmz8: playbooks are author-owned
    JSON data, never model-addressable browser targets. *)
 module Cap = Ox_caps.Cap
 module Cap_stdlib = Ox_caps.Cap_stdlib
@@ -206,27 +206,6 @@ let arg_decls_of_yojson = function
 
 let yojson_of_arg_decls decls =
   `Assoc (List.map (fun decl -> (decl.name, yojson_of_arg_source decl.source)) decls)
-
-type provenance = {
-  traces : string list;
-  model : string;
-  time : string;
-  tries : int;
-  last_failure : string option;
-  path : string list;
-  entry_kind : string; [@json.default ""]
-  exit_kind : string; [@json.default ""]
-  signature : (string * Trace.trace_target option) list; [@json.default []]
-  kind_mapping : (string * string) list; [@json.default []]
-  secrets : string list; [@json.default []]
-  repeatable : bool;
-  reason : string;
-  gate : string;
-  repair : bool;
-  model_calls : int; [@json.default 0]
-  model_cost : float option; [@json.null]
-}
-[@@deriving yojson]
 
 type procedure = {
   slug : string;
@@ -436,8 +415,12 @@ type t = {
   procedures : procedure list;
   shapes : shapes option;
   scripts : scripts option;
+  notes : string option; [@json.default None]
+      (* cut-yk93: free text about the site for the pilot, at most 2,000 characters. *)
 }
 [@@deriving yojson]
+
+let max_notes = 2000
 
 type checker =
   | Page_kind of string
@@ -463,13 +446,6 @@ type script = {
 
 let script_max_bytes = 8 * 1024 * 1024
 
-type draft = {
-  procedure : procedure;
-  pages : page list;
-  scripts : script list;
-  revision : string;
-}
-
 type loaded = {
   file : string;
   dir : string option;
@@ -477,17 +453,6 @@ type loaded = {
   checks : (string * checker list) list;
   scripts : script list;
 }
-
-(* run-m0r8: a planner-written procedure is proposed to the operator, never merged by the
-   run: the proposal file names the site it belongs to and carries the procedure in the
-   playbook's own schema, so the [playbook accept] command can merge it under the
-   operator's hand. *)
-type proposal = { site : string; procedure : procedure } [@@deriving yojson]
-
-(* run-m0r8: what [playbook accept] did — which site, which slug, the playbook file it
-   wrote and whether the slug replaced one that was already there. *)
-type accepted = { site : string; slug : string; playbook : string; replaced : bool }
-[@@deriving yojson]
 
 let lower = String.lowercase_ascii
 let trim = String.trim
@@ -1019,66 +984,6 @@ let resolve_scripts ~file ~dir (book : t) =
   in
   go [] [] decls
 
-(* map-op08: proposed scripts have a narrower contract than authored scripts.
-   Scan source conservatively, including comments and quoted property names; reject
-   escaped identifiers rather than accepting spelling tricks around the denylist. *)
-let check_proposed_script code =
-  let lower = String.lowercase_ascii code in
-  let forbidden =
-    [
-      "location";
-      "history";
-      "submit";
-      "requestsubmit";
-      "click";
-      "dispatchevent";
-      "focus";
-      "fetch";
-      "xmlhttprequest";
-      "websocket";
-      "sendbeacon";
-      "navigator";
-      "localstorage";
-      "sessionstorage";
-      "cookie";
-      "indexeddb";
-      "eval";
-      "constructor";
-    ]
-  in
-  let token name = Str.regexp ("\\b" ^ name ^ "\\b") in
-  let references re =
-    try
-      ignore (Str.search_forward re lower 0);
-      true
-    with Not_found -> false
-  in
-  let compact = Str.global_replace (Str.regexp "[ \t\r\n]+") "" lower in
-  let unsafe =
-    List.exists (fun name -> references (token name)) forbidden
-    || (try
-          ignore (Str.search_forward (token "Function") code 0);
-          true
-        with Not_found -> false)
-    || references (Str.regexp "\\bimport[ \t\r\n]*(")
-    || references (Str.regexp "\\bwindow[ \t\r\n]*\\.[ \t\r\n]*open\\b")
-    || String.contains code '\\'
-    || (try
-          ignore (Str.search_forward (Str.regexp "\\bvalue['\"]?\\]?[=+*/-]") compact 0);
-          true
-        with Not_found -> false)
-    ||
-      try
-        ignore (Str.search_forward (Str.regexp "window\\[['\"]open['\"]\\]") compact 0);
-        true
-      with Not_found -> false
-  in
-  if unsafe then
-    Error
-      "compiled script must be read-only: forbidden navigation, input, network, storage \
-       or dynamic code reference"
-  else Ok ()
-
 let validate ~file ~dir (book : t) =
   let ( let* ) = Result.bind in
   let refuse ?(procedure = "<playbook>") reason =
@@ -1108,6 +1013,13 @@ let validate ~file ~dir (book : t) =
       "entry URL must not contain credentials"
   in
   let* () = require (trim book.description <> "") "description must not be empty" in
+  let* () =
+    require
+      (match book.notes with
+      | None -> true
+      | Some notes -> String.length notes <= max_notes)
+      (Printf.sprintf "notes must be at most %d characters" max_notes)
+  in
   let names = List.map (fun (p : page) -> p.name) book.pages in
   let* () =
     require
@@ -1228,23 +1140,6 @@ let of_json ?dir ~file json =
    came from. *)
 let reads caps = (caps : < Cap.fs_read ; .. > :> Cap.fs_read)
 
-let revalidate ~caps (book : loaded) playbook =
-  validate ~file:book.file
-    ~dir:(Option.map (fun dir -> (reads caps, dir)) book.dir)
-    playbook
-
-let provenance_filename slug = slug ^ ".provenance.json"
-
-let is_provenance_sidecar name =
-  let suffix = ".provenance.json" in
-  String.ends_with ~suffix name
-  &&
-  let stem = String.sub name 0 (String.length name - String.length suffix) in
-  valid_slug stem
-
-(* extr-plaz: a playbook is a directory, [<name>/playbook.json] and whatever files sit
-   beside it. Errors name the playbook.json path — or the path given when it is not a
-   directory at all. Provenance sidecars are the only other JSON allowed (map-fmt02). *)
 let load ~caps dir =
   let file = Filename.concat dir "playbook.json" in
   if Sys.file_exists dir && not (Sys.is_directory dir) then
@@ -1262,15 +1157,14 @@ let load ~caps dir =
       |> List.filter (fun name ->
           (not (String.starts_with ~prefix:"." name))
           && String.ends_with ~suffix:".json" name
-          && name <> "playbook.json"
-          && not (is_provenance_sidecar name))
+          && name <> "playbook.json")
       |> List.sort String.compare
     in
     if extra <> [] then
       Error
         (Printf.sprintf
-           "%s: stray JSON beside playbook.json (%s); a playbook directory holds \
-            one             playbook.json"
+           "%s: stray JSON beside playbook.json (%s); a playbook directory holds one \
+            playbook.json"
            dir (String.concat ", " extra))
     else
       try
@@ -1343,88 +1237,6 @@ let show ~caps name =
     || String.contains name '*' || String.contains name '?'
   then Error (name ^ ": invalid playbook name")
   else load ~caps (Filename.concat (directory ~caps ()) name)
-
-(* run-m0r8: the XDG state directory proposals live in, resolved the way the config
-   directory is: [$XDG_STATE_HOME/leash/proposed], [$HOME/.local/state] when the variable
-   is unset. The run writes here and nowhere else — the playbook an operator authored is
-   never touched automatically (story 32). *)
-let proposed_directory ~caps () =
-  let home =
-    match Cap_sys.getenv_opt ~caps "XDG_STATE_HOME" with
-    | Some s when s <> "" -> s
-    | _ ->
-        Filename.concat
-          (Option.value ~default:"." (Cap_sys.getenv_opt ~caps "HOME"))
-          ".local/state"
-  in
-  Filename.concat (Filename.concat home "leash") "proposed"
-
-(* run-m0r8: write one proposed procedure to
-   [<state>/leash/proposed/<site>-<slug>.json], 0600 in a private directory. A run calls
-   this once a planner-written procedure has run and passed its expectations; it never
-   writes to the playbook directory. *)
-let read_proposal ~caps path =
-  try
-    let channel = Cap_stdlib.open_in_bin ~caps path in
-    Fun.protect
-      ~finally:(fun () -> close_in channel)
-      (fun () ->
-        match proposal_of_yojson (Yojson.Safe.from_channel channel) with
-        | Ok proposal -> Ok proposal
-        | Error reason -> Error (path ^ ": " ^ reason))
-  with
-  | Sys_error reason -> Error (path ^ ": " ^ reason)
-  | Yojson.Json_error reason -> Error (path ^ ": invalid JSON: " ^ reason)
-
-(* run-m0r8: the installed playbook a proposal's site names. A site served by two files is
-   refused rather than guessed: the operator resolves which file is the site's before the
-   merge. *)
-let installed_for_site ~caps site =
-  match list ~caps () with
-  | Error _ as error -> error
-  | Ok books -> (
-      match List.filter (fun (book : loaded) -> book.playbook.site = site) books with
-      | [] -> Error (Printf.sprintf "no installed playbook for site %s" site)
-      | [ book ] -> Ok book
-      | books ->
-          Error
-            (Printf.sprintf "site %s is served by %d playbooks: %s" site
-               (List.length books)
-               (String.concat ", " (List.map (fun (book : loaded) -> book.file) books))))
-
-(* run-m0r8: what the [playbook accept] command does — read the proposal, merge its
-   procedure into the site's playbook by slug (replacing the same slug, appending
-   otherwise), refuse the merge unless the merged playbook validates, and only then write
-   it back. The proposal file is left where it is. *)
-(* map-lnwr map-h5ym: preserve the old map before replacement or retirement. *)
-let archive_procedure ?reason ~caps ~site (proc : procedure) =
-  let directory = Filename.concat (proposed_directory ~caps ()) "retired" in
-  let json = yojson_of_proposal { site; procedure = proc } in
-  let json =
-    match (reason, json) with
-    | Some reason, `Assoc fields ->
-        `Assoc (("retirement_reason", `String reason) :: fields)
-    | _ -> json
-  in
-  let json = Yojson.Safe.pretty_to_string json ^ "\n" in
-  let path =
-    Filename.concat directory
-      (site ^ "-" ^ proc.slug ^ "-" ^ Digest.to_hex (Digest.string json) ^ ".json")
-  in
-  let* () = Config.ensure_dir ~caps directory in
-  try
-    let ch =
-      Cap_stdlib.open_out_gen ~caps
-        [ Open_creat; Open_trunc; Open_wronly; Open_binary ]
-        0o600 path
-    in
-    Fun.protect
-      ~finally:(fun () -> close_out_noerr ch)
-      (fun () ->
-        output_string ch json;
-        close_out ch);
-    Ok ()
-  with Sys_error why -> Error why
 
 let non_repeatable_context text =
   let text = String.lowercase_ascii text in
@@ -1511,129 +1323,6 @@ let non_repeatable_action ~context operation =
        (String.lowercase_ascii operation)
        [ "submit"; "press"; "click"; "upload"; "select"; "type_text"; "fill" ]
 
-let procedure_repeatable (book : t) ~context (proc : procedure) =
-  (* map-fmt02: the runner does not read provenance. Page pins and the procedure's own
-     words decide replay. Learning reads the sidecar when it chooses a gate. *)
-  List.for_all (fun (page : page) -> page.repeatable) book.pages
-  && not
-       (non_repeatable_context
-          (String.concat " "
-             (context :: proc.description
-             :: List.filter_map (function Goal g -> Some g.goal | _ -> None) proc.steps)))
-
-let draft_revision (book : t) =
-  Digest.to_hex (Digest.string (Yojson.Safe.to_string (yojson_of_t book)))
-
-let temporary_counter = Atomic.make 0
-
-let atomic_write_json ~caps ~mode file json =
-  try
-    let rec create () =
-      let temporary =
-        Printf.sprintf "%s.%d.%d.tmp" file (Unix.getpid ())
-          (Atomic.fetch_and_add temporary_counter 1)
-      in
-      try
-        let fd =
-          Cap_unix.openfile_write ~caps temporary
-            [ Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY; Unix.O_CLOEXEC ]
-            0o600
-        in
-        (temporary, Unix.out_channel_of_descr fd)
-      with Unix.Unix_error (Unix.EEXIST, _, _) -> create ()
-    in
-    let temporary, ch = create () in
-    Fun.protect
-      ~finally:(fun () ->
-        close_out_noerr ch;
-        try Cap_sys.remove ~caps temporary with Sys_error _ -> ())
-      (fun () ->
-        output_string ch (Yojson.Safe.pretty_to_string json ^ "\n");
-        flush ch;
-        close_out ch;
-        Cap_unix.chmod ~caps temporary mode;
-        Cap_sys.rename ~caps temporary file;
-        Ok ())
-  with
-  | Sys_error why -> Error (file ^ ": " ^ why)
-  | Unix.Unix_error (code, fn, path) ->
-      Error (fn ^ " " ^ path ^ ": " ^ Unix.error_message code)
-
-let installation_mutex = Eio.Mutex.create ()
-let installation_key = Eio.Fiber.create_key ()
-
-let with_installation_lock ?(create = true) ?proposal ~caps fn =
-  let lock_file root name fn =
-    let* () = Config.ensure_dir ~caps root in
-    try
-      let descriptor =
-        Cap_unix.openfile_write ~caps (Filename.concat root name)
-          [ Unix.O_CREAT; Unix.O_WRONLY; Unix.O_CLOEXEC ]
-          0o600
-      in
-      Fun.protect
-        ~finally:(fun () -> Unix.close descriptor)
-        (fun () ->
-          Unix.lockf descriptor Unix.F_TLOCK 0;
-          Fun.protect ~finally:(fun () -> Unix.lockf descriptor Unix.F_ULOCK 0) fn)
-    with
-    | Unix.Unix_error ((Unix.EACCES | Unix.EAGAIN), _, _) ->
-        Error "playbook installation is busy; retry after the other installer finishes"
-    | Unix.Unix_error (code, op, path) ->
-        Error (op ^ " " ^ path ^ ": " ^ Unix.error_message code)
-  in
-  let locked () =
-    let root = directory ~caps () in
-    let with_proposal () =
-      match proposal with
-      | None -> fn ()
-      | Some root -> lock_file root ".proposal.lock" fn
-    in
-    (* Proposing never creates an authored map directory. The source lock also
-       covers a writer already publishing while first installation creates it. *)
-    if create || Sys.file_exists root then lock_file root ".install.lock" with_proposal
-    else with_proposal ()
-  in
-  let in_fiber =
-    try
-      ignore (Eio.Fiber.get installation_key);
-      true
-    with Effect.Unhandled _ -> false
-  in
-  if in_fiber then Eio.Mutex.use_rw ~protect:true installation_mutex locked else locked ()
-
-let atomic_book ~caps file book =
-  let mode = try (Unix.stat file).Unix.st_perm with Unix.Unix_error _ -> 0o600 in
-  atomic_write_json ~caps ~mode file (yojson_of_t book)
-
-let retire_unlocked ~caps ~site ~slug =
-  let* book = installed_for_site ~caps site in
-  match
-    List.find_opt (fun (proc : procedure) -> proc.slug = slug) book.playbook.procedures
-  with
-  | None -> Error ("no installed procedure " ^ slug)
-  | Some old ->
-      let merged =
-        {
-          book.playbook with
-          procedures =
-            List.filter
-              (fun (proc : procedure) -> proc.slug <> slug)
-              book.playbook.procedures;
-        }
-      in
-      let* () =
-        if merged.procedures = [] then Ok ()
-        else Result.map (fun _ -> ()) (revalidate ~caps book merged)
-      in
-      let* () =
-        archive_procedure ~reason:"consecutive failed missions without successful repair"
-          ~caps ~site old
-      in
-      atomic_book ~caps book.file merged
-
-(* L31 run-xqh8: the checker's kind as the run's trace names it, which is also what
-   [playbook check] reports a sentence resolved to. *)
 let checker_name = function
   | Page_kind _ -> "page_kind"
   | Not_page_kind _ -> "not_page_kind"
@@ -1670,7 +1359,7 @@ let retry_once ~execute ~verify =
     execute ();
     verify ())
 
-let inspect ?(code = false) ?(provenances = []) book =
+let inspect ?(code = false) book =
   let scripts =
     List.map
       (fun (script : script) ->
@@ -1699,13 +1388,6 @@ let inspect ?(code = false) ?(provenances = []) book =
       ("playbook", yojson_of_t book.playbook);
       ("scripts", `List scripts);
       ("resolved", `List checks);
-      ( "provenances",
-        `List
-          (List.map
-             (fun (slug, prov) ->
-               `Assoc
-                 [ ("slug", `String slug); ("provenance", yojson_of_provenance prov) ])
-             provenances) );
     ]
 
 type observation = {
@@ -1766,7 +1448,7 @@ type checked = {
   score : float option;
 }
 
-(* run-l06s run-vbys run-xqh8: one checker against one observation. Judgment is never
+(* run-xflk run-vbys run-xqh8: one checker against one observation. Judgment is never
    decided here — the score question is the runner's — so only the deterministic checkers
    are evaluated in code. *)
 let passes checker (snapshot : observation) =
@@ -1795,7 +1477,7 @@ let passes checker (snapshot : observation) =
    is still loading. *)
 let expect_timeout_s = 5
 
-(* run-l06s run-vbys: the bounded wait, keeping what each expectation came to, so the run's
+(* run-xflk run-vbys: the bounded wait, keeping what each expectation came to, so the run's
    trace can say which checker decided it and — for a judgment — the score it carried. The
    result is the last observation's verdicts: the one that passed everything, or the one
    the deadline found. No sleeping after the deadline; each observation is fresh.
@@ -1848,311 +1530,3 @@ let await ~now ~sleep ~observe ~score ?threshold ?timeout_s checks =
     (fun (result : checked) -> result.passed)
     (await_results ~now ~sleep ~observe ~score ?threshold ?timeout_s
        (List.map (fun checker -> ("", checker)) checks))
-
-let check_draft (proc : procedure) =
-  let require condition message = if condition then Ok () else Error message in
-  let ( let* ) = Result.bind in
-  let* () = require (trim proc.description <> "") "description must not be empty" in
-  let* () =
-    require
-      (proc.expect <> [] && List.for_all (fun s -> trim s <> "") proc.expect)
-      "expect must be a non-empty list of sentences"
-  in
-  let goals =
-    List.length (List.filter (function Goal _ -> true | _ -> false) proc.steps)
-  in
-  require (goals >= 1) "a draft needs at least one goal step"
-
-let write_provenance ~caps ~dir ~slug prov =
-  atomic_write_json ~caps ~mode:0o600
-    (Filename.concat dir (provenance_filename slug))
-    (yojson_of_provenance prov)
-
-let read_provenance ~caps path =
-  if not (Sys.file_exists path) then Ok None
-  else
-    try
-      let json =
-        Cap_stdlib.In_channel.with_open_bin ~caps path Yojson.Safe.from_channel
-      in
-      match provenance_of_yojson json with
-      | Ok prov -> Ok (Some prov)
-      | Error why -> Error (path ^ ": " ^ why)
-    with
-    | Sys_error why -> Error (path ^ ": " ^ why)
-    | Yojson.Json_error why -> Error (path ^ ": invalid JSON: " ^ why)
-
-let learned_install ~caps ~from_dir ~to_dir ~file (book : t) (proc : procedure) =
-  let src = Filename.concat from_dir (provenance_filename proc.slug) in
-  let* prov = read_provenance ~caps src in
-  match prov with
-  | None -> Ok ()
-  | Some prov ->
-      let* () = check_goal_count ~minimum:1 ~file book proc in
-      let* () =
-        if
-          List.exists (function Script _ -> true | _ -> false) proc.steps
-          && ((not prov.repeatable) || prov.gate <> "replay")
-        then
-          Error
-            (file ^ ": procedure " ^ proc.slug
-           ^ ": proposed scripts require a repeatable replay-gate procedure")
-        else Ok ()
-      in
-      let* () =
-        List.fold_left
-          (fun result step ->
-            let* () = result in
-            match step with
-            | Script step -> (
-                match
-                  List.assoc_opt step.script (Option.value ~default:[] book.scripts)
-                with
-                | None -> Ok ()
-                | Some decl -> (
-                    match decl.source with
-                    | None -> Ok ()
-                    | Some source -> check_proposed_script source))
-            | _ -> Ok ())
-          (Ok ()) proc.steps
-      in
-      write_provenance ~caps ~dir:to_dir ~slug:proc.slug prov
-
-let accept_unlocked ?revision ?(replayed_scripts = []) ~caps path =
-  let ( let* ) = Result.bind in
-  let* json =
-    try Ok (Cap_stdlib.In_channel.with_open_bin ~caps path Yojson.Safe.from_channel) with
-    | Sys_error why -> Error (path ^ ": " ^ why)
-    | Yojson.Json_error why -> Error (path ^ ": invalid JSON: " ^ why)
-  in
-  if match json with `Assoc fields -> List.mem_assoc "entry" fields | _ -> false then
-    let* discovered = of_json ~file:path json in
-    let draft = discovered.playbook in
-    let* () =
-      match revision with
-      | Some expected when draft_revision draft <> expected ->
-          Error "stale draft revision; nothing was installed"
-      | _ -> Ok ()
-    in
-    (* map-op08: manual acceptance cannot bypass successful script replay. *)
-    let* () =
-      let required = List.map (fun (s : script) -> s.name) discovered.scripts in
-      if List.for_all (fun name -> List.mem name replayed_scripts) required then Ok ()
-      else
-        Error
-          (path
-         ^ ": proposed scripts must run successfully through the replay gate before \
-            installation")
-    in
-    let* existing =
-      match installed_for_site ~caps draft.site with
-      | Ok book -> Ok (Some book)
-      | Error why when String.starts_with ~prefix:"no installed playbook" why -> Ok None
-      | Error why -> Error why
-    in
-    let merged, destination, dir, replaced =
-      match existing with
-      | None ->
-          let dir = Filename.concat (directory ~caps ()) draft.site in
-          (draft, Filename.concat dir "playbook.json", Some dir, false)
-      | Some book ->
-          let pages =
-            book.playbook.pages
-            @ List.filter
-                (fun (page : page) ->
-                  not
-                    (List.exists
-                       (fun (old : page) -> old.name = page.name)
-                       book.playbook.pages))
-                draft.pages
-          in
-          let procedures =
-            List.fold_left
-              (fun current (proc : procedure) ->
-                if List.exists (fun (old : procedure) -> old.slug = proc.slug) current
-                then
-                  List.map
-                    (fun (old : procedure) -> if old.slug = proc.slug then proc else old)
-                    current
-                else current @ [ proc ])
-              book.playbook.procedures draft.procedures
-          in
-          let existing_scripts = Option.value ~default:[] book.playbook.scripts in
-          let scripts =
-            existing_scripts
-            @ List.filter
-                (fun (name, _) -> not (List.mem_assoc name existing_scripts))
-                (Option.value ~default:[] draft.scripts)
-          in
-          ( {
-              book.playbook with
-              pages;
-              procedures;
-              scripts = (if scripts = [] then None else Some scripts);
-            },
-            book.file,
-            book.dir,
-            true )
-    in
-    let* _ =
-      validate ~file:destination
-        ~dir:(Option.map (fun dir -> (reads caps, dir)) dir)
-        merged
-    in
-    let* () =
-      match existing with
-      | None -> Ok ()
-      | Some old ->
-          List.fold_left
-            (fun result (proc : procedure) ->
-              let* () = result in
-              if
-                List.exists
-                  (fun (replacement : procedure) -> replacement.slug = proc.slug)
-                  draft.procedures
-              then archive_procedure ~caps ~site:draft.site proc
-              else Ok ())
-            (Ok ()) old.playbook.procedures
-    in
-    let* () = Config.ensure_dir ~caps (Filename.dirname destination) in
-    let* () =
-      List.fold_left
-        (fun result (proc : procedure) ->
-          let* () = result in
-          learned_install ~caps ~from_dir:(Filename.dirname path)
-            ~to_dir:(Filename.dirname destination)
-            ~file:destination merged proc)
-        (Ok ()) draft.procedures
-    in
-    let* () = atomic_book ~caps destination merged in
-    Ok { site = draft.site; slug = "*"; playbook = destination; replaced }
-  else
-    let* proposal = read_proposal ~caps path in
-    let* (book : loaded) = installed_for_site ~caps proposal.site in
-    let* () =
-      match revision with
-      | Some expected
-        when draft_revision { book.playbook with procedures = [ proposal.procedure ] }
-             <> expected ->
-          Error "stale draft revision; nothing was installed"
-      | _ -> Ok ()
-    in
-    let replaced =
-      List.exists
-        (fun (proc : procedure) -> proc.slug = proposal.procedure.slug)
-        book.playbook.procedures
-    in
-    let procedures =
-      if replaced then
-        List.map
-          (fun (proc : procedure) ->
-            if proc.slug = proposal.procedure.slug then proposal.procedure else proc)
-          book.playbook.procedures
-      else book.playbook.procedures @ [ proposal.procedure ]
-    in
-    let merged = { book.playbook with procedures } in
-    let* (_ : loaded) = revalidate ~caps book merged in
-    let* () =
-      if replaced then
-        archive_procedure ~caps ~site:proposal.site
-          (List.find
-             (fun (proc : procedure) -> proc.slug = proposal.procedure.slug)
-             book.playbook.procedures)
-      else Ok ()
-    in
-    let* () =
-      learned_install ~caps ~from_dir:(Filename.dirname path)
-        ~to_dir:(Filename.dirname book.file) ~file:book.file merged proposal.procedure
-    in
-    let* () = atomic_book ~caps book.file merged in
-    Ok
-      {
-        site = proposal.site;
-        slug = proposal.procedure.slug;
-        playbook = book.file;
-        replaced;
-      }
-
-let accept ?revision ?(consume = false) ?(replayed_scripts = []) ~caps path =
-  (* Reject model-authored scripts before creating any installed-map state. Read
-     again under the lock so a replacement cannot evade the validated merge. *)
-  let* () =
-    try
-      match Cap_stdlib.In_channel.with_open_bin ~caps path Yojson.Safe.from_channel with
-      | `Assoc fields when List.mem_assoc "procedures" fields -> (
-          match List.assoc_opt "scripts" fields with
-          | None | Some `Null -> Ok ()
-          | Some _ when replayed_scripts <> [] -> Ok ()
-          | Some _ ->
-              Error
-                "proposed scripts must run successfully through the replay gate before \
-                 installation")
-      | _ -> Ok ()
-    with
-    | Sys_error why -> Error (path ^ ": " ^ why)
-    | Yojson.Json_error why -> Error (path ^ ": invalid JSON: " ^ why)
-  in
-  let proposal =
-    if consume || Option.is_some revision then Some (Filename.dirname path) else None
-  in
-  with_installation_lock ?proposal ~caps (fun () ->
-      let* accepted = accept_unlocked ?revision ~replayed_scripts ~caps path in
-      (if consume && path <> accepted.playbook then
-         try Cap_sys.remove ~caps path with Sys_error _ -> ());
-      Ok accepted)
-
-let check_draft_revision ~caps path = function
-  | None -> Ok ()
-  | Some expected ->
-      let* current =
-        try
-          let json =
-            Cap_stdlib.In_channel.with_open_bin ~caps path Yojson.Safe.from_channel
-          in
-          of_json ~file:path json
-        with Sys_error why | Yojson.Json_error why -> Error why
-      in
-      if draft_revision current.playbook = expected then Ok ()
-      else Error "stale draft revision; replacement proposal was left unchanged"
-
-let retire ~caps ~site ~slug =
-  with_installation_lock ~caps (fun () -> retire_unlocked ~caps ~site ~slug)
-
-let retire_draft ~caps ~file ~revision ~site ~slug =
-  with_installation_lock ~proposal:(Filename.dirname file) ~caps (fun () ->
-      let* () = check_draft_revision ~caps file (Some revision) in
-      retire_unlocked ~caps ~site ~slug)
-
-(* map-b3kk map-2l5q: writers and consumers share the install lock. A trial failure
-   may replace only the revision it inspected; successful acceptance consumes that
-   precise revision before another compiler can replace its pathname. *)
-
-let propose ?book ?revision ?provenance ~caps ~site (proc : procedure) =
-  let directory = proposed_directory ~caps () in
-  let path = Filename.concat directory (site ^ "-" ^ proc.slug ^ ".json") in
-  let* () = Config.ensure_dir ~caps directory in
-  with_installation_lock ~create:false ~proposal:directory ~caps (fun () ->
-      let* () = check_draft_revision ~caps path revision in
-      let json =
-        match book with
-        | None -> yojson_of_proposal { site; procedure = proc }
-        | Some book -> yojson_of_t { book with procedures = [ proc ] }
-      in
-      let* () = atomic_write_json ~caps ~mode:0o600 path json in
-      let* () =
-        match provenance with
-        | None -> Ok ()
-        | Some prov -> write_provenance ~caps ~dir:directory ~slug:proc.slug prov
-      in
-      Ok path)
-
-let archive_proposal ~revision ~caps path =
-  with_installation_lock ~create:false ~proposal:(Filename.dirname path) ~caps (fun () ->
-      let* () = check_draft_revision ~caps path (Some revision) in
-      let destination = Filename.concat (proposed_directory ~caps ()) "retired" in
-      let* () = Config.ensure_dir ~caps destination in
-      try
-        Cap_sys.rename ~caps path
-          (Filename.concat destination (Filename.basename path ^ "." ^ revision));
-        Ok ()
-      with Sys_error why -> Error why)

@@ -588,25 +588,20 @@ let call t request =
 let call_protected t request = Eio.Cancel.protect (fun () -> call t request)
 let transition t request = Result.map entry_of_answer (call t request)
 
-(* kind-tdrv kind-4qke: list and snap name the page. An installed playbook's kind
-   wins; otherwise the URL and title are inferred. Text markers need page text, which
-   list and snap do not read, so a marker-only kind stays inferred here. *)
+(* kind-tdrv kind-4qke cut-0oal: list and snap name the page by an installed playbook's
+   declared kind, or not at all. Text markers need page text, which list and snap do not
+   read, so a marker-only kind is not shown here. *)
 let installed_books t =
   match Playbook.list ~caps:t.caps () with Ok books -> books | Error _ -> []
 
-let page_label ~books ~url ~title =
-  if not (Page_kind.is_page ~url) then None
+let page_label ~books ~url ~title:_ =
+  if not (Web_url.is_page ~url) then None
   else
-    match
-      List.find_map
-        (fun (book : Playbook.loaded) ->
-          Playbook.page_kind book.playbook.pages ~url ~text:"")
-        books
-    with
-    | Some name -> Some P.{ name; source = Declared }
-    | None ->
-        let inferred = Page_kind.infer ~url ~title in
-        Some P.{ name = inferred.name; source = Inferred }
+    List.find_map
+      (fun (book : Playbook.loaded) ->
+        Playbook.page_kind book.playbook.pages ~url ~text:"")
+      books
+    |> Option.map (fun name -> P.{ name; source = Declared })
 
 let listing_of t ?(books = installed_books t) (entry : entry) : P.tab_listing =
   {
@@ -2498,15 +2493,15 @@ let no_levels : Run.levels =
                "no model client is configured for the run's planner"));
     }
 
-let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
-    ?(on_planner_step = fun _ -> ()) ?(on_arguments = fun _ -> ()) ?(planner_actions = 5)
-    ?pilot ?(levels = no_levels) ?(model = "unconfigured")
+let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _ -> ())
+    ?(on_arguments = fun _ -> ()) ?(planner_actions = 5) ?pilot ?(levels = no_levels)
+    ?(model = "unconfigured")
     ?(decide =
       fun ~deadline:_ _ ->
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable) ?learning ?meter t ~tab ?installed
+    ?(text_helper = fun () -> Text_helper.unavailable) ?meter t ~tab ?installed
     (args : P.run_args) =
   let handle = tab in
   let* tab = peek t ~access:Act handle in
@@ -2558,47 +2553,22 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
           (* run-pvmc: the page text stays on this side of the loop; the upper levels are
              asked over the small state Run builds. *)
           (* trace-iqqz: only the selected authored book supplies declared kinds.
-             Merely having a matching installed book does not classify the on-the-fly
-             lane. kind-a7uy kind-dnye: a page with no declared kind is inferred, and the
-             session keeps that name stable for the drive. *)
-          let kinds = Page_kind.session () in
+             cut-0oal: a page with no declared kind has none. *)
           let trace_book = ref None and trace_page = ref None in
           let declared_kind ~url ~text =
             Option.bind !trace_book (fun (book : Playbook.loaded) ->
                 Playbook.page_kind book.playbook.pages ~url ~text)
           in
           let classify (snapshot : P.snapshot) text =
-            let declared = declared_kind ~url:snapshot.url ~text in
-            let inferred, source =
-              Page_kind.classify kinds ~declared ~url:snapshot.url ~title:snapshot.title
-            in
-            let pattern =
-              match source with
-              | Page_kind.Inferred -> Some inferred.url_pattern
-              | Page_kind.Declared -> None
-            in
             on_page ~url:(clean snapshot.url)
-              ~kind:
-                (if Page_kind.is_page ~url:snapshot.url then Some (clean inferred.name)
-                 else None)
-              ~pattern:
-                (if Page_kind.is_page ~url:snapshot.url then Option.map clean pattern
-                 else None)
+              ~kind:(Option.map clean (declared_kind ~url:snapshot.url ~text))
           in
-          let label ~url ~title ~text =
-            let inferred, source =
-              Page_kind.classify kinds ~declared:(declared_kind ~url ~text) ~url ~title
-            in
+          let label ~url ~title:_ ~text =
             Drive.
               {
-                kind = inferred.name;
-                source =
-                  (match source with
-                  | Page_kind.Declared -> "declared"
-                  | Page_kind.Inferred -> "inferred");
-                url =
-                  (if !trace_book = None && Page_kind.is_page ~url then inferred.name
-                   else url);
+                kind = Option.value ~default:"" (declared_kind ~url ~text);
+                source = "declared";
+                url;
               }
           in
           let traced (snapshot : P.snapshot) text =
@@ -2772,7 +2742,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                     }
             | _ -> Error (error "invalid-request" "unsupported planner action")
           in
-          (* run-l06s run-vbys run-xqh8: the checkers first and the JEV score only where no
+          (* run-xflk run-vbys run-xqh8: the checkers first and the JEV score only where no
              checker applies. The score is one model call per unchanged page — the bounded
              wait would otherwise ask it every 100 ms — so the answer is memoized on the
              sentence and the text it was asked over. *)
@@ -2925,11 +2895,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                 (* run-m0r8: a planner-written procedure that ran and passed its
                    expectations is written to XDG state here; the playbook the operator
                    authored is never written by a run, only by [playbook accept]. *)
-                propose =
-                  (fun ~site proc ->
-                    match Playbook.propose ~caps:t.caps ~site proc with
-                    | Ok path -> Ok path
-                    | Error why -> Error (error "internal" why));
                 hand_off =
                   (fun ~reason ->
                     (* notif-oslv: resume must acquire the lock while the run waits. *)
@@ -2995,23 +2960,11 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
           with
           | Error why -> Error (error "invalid-request" why)
           | Ok books ->
-              let books =
-                Option.fold ~none:books
-                  ~some:(fun learning -> Learning.books learning books)
-                  learning
-              in
-              let drafts =
-                Option.fold
-                  ~none:(fun ~site:_ ~kind:_ -> [])
-                  ~some:(fun learning -> Learning.drafts learning)
-                  learning
-              in
               let challenge (_observation : Run.observation) =
                 Reading.challenge_signal tab.reading
               in
               let execute on_record =
-                Run.loop ~handler ~on_book ~on_record ~drafts ?learning
-                  ~secrets:args.secrets
+                Run.loop ~handler ~on_book ~on_record ~secrets:args.secrets
                   ~on_secrets:(fun values -> secret_values := values)
                   ~planner_action ~on_planner_step ~on_arguments ~planner_actions
                   ~notify:(fun message ->
@@ -3021,7 +2974,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                   ~challenge_turns:t.challenge_turns
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)
-                  ~page_kinds:kinds ~installed:books run_args
+                  ~installed:books run_args
               in
               let* result =
                 match args.P.out with
@@ -3176,7 +3129,6 @@ let report t : P.status_result =
     pid = None;
     headed = chrome.headed;
     key_present = false;
-    learning = None;
   }
 
 let status t =

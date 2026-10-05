@@ -1,6 +1,6 @@
 # Milestones
 
-The spine of the plan. Each milestone is one spec under `docs/issues/`; each spec lists the Ox tickets it depends on. We are at milestone 0.
+The spine of the plan. Each milestone is one spec under `docs/issues/`; each spec lists the Ox tickets it depends on. We are at milestone 14: playbooks are written, not learned, and every open question is decided by a corpus run (ADR-0014; rows L59–L61 in `docs/issues/README.md`). Milestones 7–13 are recorded in that file.
 
 **Ox branch (ADR-0008):** Leash builds on `ox`, not v1. The Ox ticket names below refer to v1 tickets that are superseded for Leash; the same capabilities are pulled into ox from Leash's story IDs when milestone 1 starts. `docs/ox-delivery-map.md` carries the details.
 
@@ -13,6 +13,7 @@ The spine of the plan. Each milestone is one spec under `docs/issues/`; each spe
 | 4 | Human handoff: `handoff resume`, niri focus, notification with action | `docs/issues/human-handoff/` | — |
 | 5 | Drive: JEV loop, text helper, trace | `docs/issues/drive/` | `etaso`, `etaor` |
 | 6 | Service packaging: systemd user unit, config, live-acceptance gate, replacing the chrome-cdp script | `docs/issues/service-packaging/` | `etadoor` (else an `etagap` workaround) |
+| 14 | Playbooks written, measured on a corpus: cut learning, configured decision model, corpus runner | `docs/issues/cut-learning/`, `docs/issues/decision-model/`, `docs/issues/corpus/` | — |
 
 Order is by dependency, not by value: 3 before 4 because handoff needs a tab; 5 last because it is a client of everything else.
 

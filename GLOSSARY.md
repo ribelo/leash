@@ -123,11 +123,11 @@ The small OpenRouter language model that writes the text for a `type_text` step.
 The language model above JEV that `run` asks only where JEV stops — a `BLOCKED` answer, a procedure that failed its expectations twice, an argument the text helper cannot fill — at most three turns per run. Luna by default; it answers with a procedure to run now, a handoff for the human, or a failure with its reason.
 _Avoid_: the planner for the outer agent; that is the caller of `leash`
 
-**Proposal**:
-A procedure the planner wrote that ran and passed its expectations, written to `$XDG_STATE_HOME/leash/proposed/` and reported in the run's result. It joins no playbook until the operator merges it with `leash playbook accept`.
+**Notes**:
+A playbook's optional top-level free text about its site — where things are, how login works — at most 2,000 characters, shown to the pilot on every turn on that site (ADR-0014).
 
 **Playbook**:
-A directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/playbook.json` plus the files beside it, that describes one site: its page kinds and its procedures, each a list of human-language steps and expectations, and its scripts. Written by the operator or the coordinating agent, never by a model.
+A directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/playbook.json` plus the files beside it, that describes one site: its page kinds and its procedures, each a list of human-language steps and expectations, and its scripts. Written by the operator or the coordinating agent, never by a model or a run (ADR-0014).
 
 **Script**:
 Prepared JavaScript in a playbook — a `.js` file beside `playbook.json` or a short inline source — that a `script:` step runs in the tab's page, with a declared `returns` shape its result is validated against. Only scripts from loaded playbook directories are ever handed to the page's JavaScript engine by a run; `eval` is the agent's own, one-off expression and is a different thing.

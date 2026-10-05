@@ -9,6 +9,10 @@ milestone: 12
 
 Superseded by [L56: the pilot loop](<../pilot/01-pilot.md>), under [ADR-0012](<../../adr/0012-the-pilot-drives.md>) (`pilot-c77y`, `pilot-a4ua`, `pilot-3egp`). L53's compile-from-traces and hard-site learning campaign were withdrawn, not completed. Trace storage, page kinds, the replay install gate and prepared playbook execution remain in the current code; the pilot writes memory directly. The 2026-10-02 checkpoint below is historical and is not a current work queue. No compiler stories remain ready for implementation under this spec.
 
+## Retired by ADR-0014 (L59, 2026-10-05)
+
+Every story of this spec that is not already retired is retired: the map no longer draws itself. Leg memory, drafts, provenance sidecars, the replay and agreement gates, repair and retire, `[learning]` and `status.learning` are removed (cut-6mvl).
+
 ## Problem Statement
 
 Every mission on a new site pays full JEV price forever, and the only playbooks that exist are hand-written. The operator wants playbooks created and maintained automatically — he will not review them — and sites change, so installed procedures must repair themselves. ADR-0011 sets the rule: compile from successful traces, verify on the live site, install what worked, repair what failed. Three configured states: `off`, `draft`, `auto`.

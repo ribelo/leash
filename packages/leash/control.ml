@@ -35,7 +35,7 @@ let unsupported = err "invalid-request" "this command is not available yet"
 (* L19: the status reply is the registry's plus the models section, which only the
    listener's models service knows. A dispatch that was given no models service reports
    [null] there rather than inventing a configuration. *)
-let report ?learning ?models_status ?chrome_pid tabs =
+let report ?models_status ?chrome_pid tabs =
   let report = Tabs.report tabs in
   let models = Option.map (fun models -> models ()) models_status in
   let running =
@@ -45,14 +45,13 @@ let report ?learning ?models_status ?chrome_pid tabs =
   {
     report with
     P.models;
-    learning = Option.map Learning.status learning;
     pid;
     key_present = (match models with Some models -> models.configured | None -> false);
   }
 
-let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
-    ?(model = "unconfigured") ?models ?levels ?decide ?text_helper ?installed
-    ?models_status ?chrome_pid tabs (request : P.request) =
+let dispatch ?pilot ?(planner_actions = 5) ?traces ?logger ?(model = "unconfigured")
+    ?models ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs
+    (request : P.request) =
   let meter = Tabs.meter () in
   let decide, text_helper =
     match models with
@@ -118,8 +117,7 @@ let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
   | P.Resume args -> lift P.yojson_of_resumed_result (Tabs.resume tabs args.tab)
   | P.List_tabs -> success (P.yojson_of_list_result (Tabs.list tabs))
   | P.Status ->
-      success
-        (P.yojson_of_status_result (report ?learning ?models_status ?chrome_pid tabs))
+      success (P.yojson_of_status_result (report ?models_status ?chrome_pid tabs))
   | P.Drive args ->
       (* trace-qe8c trace-uovo: persist a projection before reply encoding, including
          errors during tab acquisition. No trace I/O is performed without a store. *)
@@ -131,9 +129,7 @@ let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
               ~now:(Traces.now store))
           traces
       in
-      let on_page ~url ~kind ~pattern =
-        Option.iter (fun c -> Traces.page c ~url ~kind ~pattern) capture
-      in
+      let on_page ~url ~kind = Option.iter (fun c -> Traces.page c ~url ~kind) capture in
       let on_arguments values =
         Option.iter (fun c -> Traces.arguments c values) capture
       in
@@ -204,9 +200,9 @@ let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
               in
               let outcome =
                 try
-                  Tabs.run ?learning ?pilot ~planner_actions ~on_page ~on_step
-                    ~on_planner_step ~on_arguments ~meter ?levels ~model ?decide
-                    ?text_helper ?installed tabs ~tab args
+                  Tabs.run ?pilot ~planner_actions ~on_page ~on_step ~on_planner_step
+                    ~on_arguments ~meter ?levels ~model ?decide ?text_helper ?installed
+                    tabs ~tab args
                 with exn ->
                   cleanup ();
                   raise exn
@@ -243,17 +239,15 @@ let with_command ?logger (request : P.request) f =
         logger;
       f ())
 
-let handle ?learning ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured")
-    ?models ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid ?logger
-    tabs line =
+let handle ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?models ?levels
+    ?decide ?text_helper ?installed ?models_status ?chrome_pid ?logger tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
-            dispatch ?learning ?pilot ~planner_actions ?traces ?logger ~model ?models
-              ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs
-              request)
+            dispatch ?pilot ~planner_actions ?traces ?logger ~model ?models ?levels
+              ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -392,8 +386,8 @@ let on_peer_error logger error =
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
-let create ?learning ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured")
-    ?models ?levels ?decide ?text_helper ?installed ?chrome_pid ~sw ~path deps =
+let create ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?models ?levels
+    ?decide ?text_helper ?installed ?chrome_pid ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -402,9 +396,9 @@ let create ?learning ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigur
       match request with
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
-              dispatch ?learning ?pilot ~planner_actions ?traces ~logger:deps.logger
-                ~model ?models ?levels ?decide ?text_helper ?installed
-                ~models_status:deps.models_status ?chrome_pid deps.tabs request)
+              dispatch ?pilot ~planner_actions ?traces ~logger:deps.logger ~model ?models
+                ?levels ?decide ?text_helper ?installed ~models_status:deps.models_status
+                ?chrome_pid deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply

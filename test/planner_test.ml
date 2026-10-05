@@ -43,6 +43,7 @@ let request =
       image_input = None;
       planner_actions = 5;
       page_kind = None;
+      notes = None;
       title = "Page";
       url = snapshot.url;
       text = "Fact 42";
@@ -157,6 +158,18 @@ let prompt_size () =
 
 (* pilot-oijk: candidate descriptions retain mission parameters and goal steps
    are directly visible beside the slug the pilot can execute. *)
+(* cut-yk93: the site playbook's notes reach the pilot's request. *)
+let site_notes () =
+  let wire =
+    M.pilot_request_json { request with notes = Some "Login is under Moje konto." }
+  in
+  Alcotest.(check string)
+    "cut-yk93 notes in the request" "Login is under Moje konto."
+    Yojson.Safe.Util.(wire |> member "site_notes" |> to_string);
+  Alcotest.(check bool)
+    "cut-yk93 no notes is null" true
+    (Yojson.Safe.Util.member "site_notes" (M.pilot_request_json request) = `Null)
+
 let candidate_request () =
   let proc =
     Leash.Playbook.
@@ -169,10 +182,7 @@ let candidate_request () =
         repeat = None;
       }
   in
-  let wire =
-    M.pilot_request_json
-      { request with candidates = [ (proc, `Draft "rev-42"); (proc, `Installed) ] }
-  in
+  let wire = M.pilot_request_json { request with candidates = [ proc ] } in
   let candidate = Yojson.Safe.Util.(wire |> member "candidates" |> index 0) in
   let string key = Yojson.Safe.Util.(candidate |> member key |> to_string) in
   Alcotest.(check string) "executable slug" "find-invoice" (string "slug");
@@ -181,12 +191,7 @@ let candidate_request () =
   Alcotest.(check string)
     "goal steps" "Open invoice {number}"
     Yojson.Safe.Util.(
-      candidate |> member "steps" |> index 0 |> member "goal" |> to_string);
-  Alcotest.(check string) "draft revision" "rev-42" (string "source");
-  Alcotest.(check string)
-    "installed visible" "installed"
-    Yojson.Safe.Util.(
-      wire |> member "candidates" |> index 1 |> member "source" |> to_string)
+      candidate |> member "steps" |> index 0 |> member "goal" |> to_string)
 
 (* pic-7ozf pic-k4ij pic-cqcf: native targets require no offered row. *)
 let picture_shapes () =
@@ -331,6 +336,7 @@ let () =
             ("generated secret", generated);
             ("bounded request", bounded);
             ("pilot-oijk candidate request", candidate_request);
+            ("cut-yk93 site notes", site_notes);
             ("redaction", redact);
           ] );
     ]

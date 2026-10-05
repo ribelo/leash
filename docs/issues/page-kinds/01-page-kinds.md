@@ -1,9 +1,13 @@
 ---
-status: completed
+status: superseded
 milestone: 12
 ---
 
 # Page kinds are inferred
+
+## Retired by ADR-0014 (L59, 2026-10-05)
+
+Inferred page kinds are removed (cut-0oal): a page's kind is the one its playbook declares, or none. Retired: `kind-a7uy`, `kind-dnye`, `kind-ir9l`, `kind-jdcs`, `kind-s1k2`. `kind-tdrv` and `kind-4qke` stay, narrowed to declared kinds: `list` and `snap` show a kind only when an installed playbook declares it.
 
 ## Problem Statement
 

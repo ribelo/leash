@@ -338,61 +338,6 @@ type traces = {
 
 let default_traces = { enabled = true; retention = Traces.Retention.default }
 
-(* pilot-c77y: memory is written by the pilot and installed by replay. *)
-module Learning_mode = struct
-  type t = Off | Auto
-
-  let to_string = function Off -> "off" | Auto -> "auto"
-
-  let t_of_yojson = function
-    | `String "off" -> Ok Off
-    | `String "auto" -> Ok Auto
-    | _ ->
-        Error "expected off or auto; compile-from-traces modes were removed by pilot-c77y"
-
-  let yojson_of_t t = `String (to_string t)
-end
-
-type learning = { mode : Learning_mode.t; max_tries : int; retire_after : int }
-
-let default_learning = { mode = Learning_mode.Auto; max_tries = 3; retire_after = 5 }
-
-let learning_of_yojson = function
-  | `Assoc fields ->
-      let ( let* ) = Result.bind in
-      let* () =
-        match
-          List.find_opt
-            (fun (name, _) -> not (List.mem name [ "mode"; "max_tries"; "retire_after" ]))
-            fields
-        with
-        | None -> Ok ()
-        | Some (name, _) ->
-            Error ("learning." ^ name ^ ": removed compile-from-traces key (pilot-c77y)")
-      in
-      let field name decode default =
-        match List.assoc_opt name fields with
-        | None -> Ok default
-        | Some json -> decode json
-      in
-      let bounded = function
-        | `Int n when n >= 1 && n <= 100 -> Ok n
-        | _ -> Error "expected an integer between 1 and 100"
-      in
-      let* mode = field "mode" Learning_mode.t_of_yojson default_learning.mode in
-      let* max_tries = field "max_tries" bounded default_learning.max_tries in
-      let* retire_after = field "retire_after" bounded default_learning.retire_after in
-      Ok { mode; max_tries; retire_after }
-  | _ -> Error "learning: expected an object"
-
-let yojson_of_learning (v : learning) =
-  `Assoc
-    [
-      ("mode", Learning_mode.yojson_of_t v.mode);
-      ("max_tries", `Int v.max_tries);
-      ("retire_after", `Int v.retire_after);
-    ]
-
 type pilot = { turns : int; [@json.default 12] deadline_s : int [@json.default 600] }
 [@@deriving yojson]
 
@@ -430,7 +375,6 @@ type t = {
   challenges : challenges; [@json.default default_challenges]
   skill : skill; [@json.default default_skill]
   traces : traces; [@json.default default_traces]
-  learning : learning; [@json.default default_learning]
   pilot : pilot; [@json.default default_pilot]
 }
 [@@deriving yojson]
@@ -448,7 +392,6 @@ let default : t =
     challenges = default_challenges;
     skill = default_skill;
     traces = default_traces;
-    learning = default_learning;
     pilot = default_pilot;
   }
 
@@ -510,11 +453,6 @@ let default_toml =
 # [traces.retention]
 # count = 20                  # per site, 1..10000
 # days = 30                   # 1..3650; all traces obey retention
-#
-# [learning]
-# mode = "auto"              # off: no memory writes; auto: pilot drafts, replay install
-# max_tries = 3
-# retire_after = 5
 #
 # [pilot]
 # turns = 12                 # 1..100
@@ -976,7 +914,6 @@ let collect json =
               "challenges";
               "skill";
               "traces";
-              "learning";
               "pilot";
             ]
           fields
@@ -1149,53 +1086,6 @@ let collect json =
                               ]))
                   [ ("turns", 1, 100); ("deadline_s", 30, 3600) ])
       in
-      let learning_errors =
-        let pointer = child "" "learning" in
-        match List.assoc_opt "learning" fields with
-        | None -> []
-        | Some json ->
-            collect_object pointer json
-              ~known:
-                [
-                  "mode";
-                  "max_tries";
-                  "retire_after";
-                  "successes";
-                  "planner_model";
-                  "planner_reasoning";
-                  "planner_actions";
-                  "timeout_s";
-                ] (fun section ->
-                List.filter_map
-                  (fun key ->
-                    if List.mem_assoc key section then
-                      Some
-                        (issue (child pointer key)
-                           "removed compile-from-traces key (pilot-c77y)")
-                    else None)
-                  [
-                    "successes";
-                    "planner_model";
-                    "planner_reasoning";
-                    "planner_actions";
-                    "timeout_s";
-                  ]
-                @ field_errors pointer "mode" section (fun p j ->
-                    decode_with p Learning_mode.t_of_yojson j)
-                @ List.concat_map
-                    (fun (key, maximum) ->
-                      field_errors pointer key section (fun p j ->
-                          match j with
-                          | `Int n when n >= 1 && n <= maximum -> Ok ()
-                          | _ ->
-                              Error
-                                [
-                                  issue p
-                                    (Printf.sprintf "expected an integer between 1 and %d"
-                                       maximum);
-                                ]))
-                    [ ("max_tries", 100); ("retire_after", 100) ])
-      in
       let notify_errors =
         match List.assoc_opt "notify" fields with
         | None -> []
@@ -1231,7 +1121,7 @@ let collect json =
         errors =
           unknown @ chrome_errors @ tabs_errors @ expiry_errors @ control_errors
           @ otlp_errors @ models_errors @ handoff_errors @ skill_errors @ traces_errors
-          @ learning_errors @ pilot_errors @ notify_errors @ challenges_errors;
+          @ pilot_errors @ notify_errors @ challenges_errors;
         binary;
         profile_dir;
         socket;

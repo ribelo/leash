@@ -102,7 +102,6 @@ let harness ?(text = "Fact 42") ?(statuses = [ "done" ]) answers =
           (fun request ->
             requests := request :: !requests;
             Ok (pop answers));
-        propose = (fun ~site:_ _ -> Alcotest.fail "pilot compiled a procedure");
         hand_off =
           (fun ~reason:_ ->
             Ok
@@ -541,113 +540,6 @@ let empty_result () =
   let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
   Alcotest.(check string) "empty done refused" "failed" (P.Run_status.to_string r.status)
 
-(* pilot-3egp: a mission finished by the pilot's own acts is remembered — the acts as
-   goal steps in JEV's language, the final page as the expectation when the pilot gave
-   none (U2 on Tauron finished done twice and wrote nothing). *)
-let act_memory
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.time
-       ; Ox_caps.Cap.tmp
-       ; .. >) () =
-  let dir = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-run-memory-" "" in
-  Ox_caps.Cap_sys.remove ~caps dir;
-  Ox_caps.Cap_unix.mkdir ~caps dir 0o700;
-  Ox_caps.Cap_unix.putenv ~caps "XDG_STATE_HOME" dir;
-  Ox_caps.Cap_unix.putenv ~caps "XDG_CONFIG_HOME" dir;
-  let row =
-    P.
-      {
-        index = 1;
-        role = "link";
-        name = "Invoices";
-        value = None;
-        state = None;
-        options = None;
-        box = None;
-      }
-  in
-  let h, _, _ =
-    harness
-      [
-        reply
-          (R.Act
-             (P.Click
-                P.
-                  {
-                    tab;
-                    snapshot = sid;
-                    index = 1;
-                    snap = None;
-                    match_ = None;
-                    limit = None;
-                  }));
-        finish;
-      ]
-  in
-  let h =
-    {
-      h with
-      R.observe =
-        (fun ~image:_ () ->
-          Ok
-            {
-              (page "Invoices") with
-              R.snapshot = { snapshot with rows = [ row ]; total = 1 };
-            });
-    }
-  in
-  let clicked =
-    P.
-      {
-        tab;
-        url = snapshot.url;
-        title = snapshot.title;
-        snapshot = None;
-        dialog = None;
-        popups = [];
-        hits = None;
-        shots = None;
-        via = None;
-      }
-  in
-  Eio_main.run (fun _ ->
-      Eio.Switch.run (fun sw ->
-          let memory =
-            Leash.Learning.create ~sw ~caps ~config:Leash.Config.default.learning
-              ~warn:ignore ()
-          in
-          ignore
-            (ran
-               (R.loop ~handler:h
-                  ~now:(fun () -> 0.)
-                  ~installed:[] ~learning:memory
-                  ~planner_action:(fun _ -> Ok clicked)
-                  (params ())));
-          Leash.Learning.await_pending memory;
-          let kind, _ =
-            Leash.Page_kind.classify (Leash.Page_kind.session ()) ~declared:None
-              ~url:snapshot.url ~title:snapshot.title
-          in
-          match
-            Leash.Learning.candidates memory ~site:"site.example" ~kind:(Some kind.name)
-              ~secrets:[]
-          with
-          | [ (proc, _) ] ->
-              Alcotest.(check bool)
-                "act remembered as a leg" true
-                (proc.steps
-                = [
-                    Leash.Playbook.Goal
-                      { goal = "Click the link named Invoices"; hint = None };
-                  ]);
-              Alcotest.(check int) "an expectation" 1 (List.length proc.expect)
-          | found ->
-              Alcotest.failf "expected one remembered procedure, got %d"
-                (List.length found)))
-
 let secret_dispatch () =
   let h, requests, _ =
     harness
@@ -924,6 +816,7 @@ let stale_memory () =
             procedures = [ proc ];
             shapes = None;
             scripts = None;
+            notes = None;
           };
         checks = [];
         scripts = [];
@@ -941,7 +834,7 @@ let stale_memory () =
     (P.Run_status.to_string result.status);
   Alcotest.(check int) "the stale procedure ran once" 1 (List.length !goals);
   let offered (request : R.plan_request) =
-    List.map (fun ((p : Leash.Playbook.procedure), _) -> p.slug) request.candidates
+    List.map (fun (p : Leash.Playbook.procedure) -> p.slug) request.candidates
   in
   match List.rev !requests with
   | first :: second :: third :: _ ->
@@ -966,7 +859,6 @@ let schema_redaction () =
           (params ())))
 
 let () =
-  let caps = Ox_test.powerbox () in
   Alcotest.run "mission pilot"
     [
       ( "pilot",
@@ -988,8 +880,7 @@ let () =
             ("dangerous leg refusal", dangerous_leg);
             ("refusal words are whole words", unsafe_words);
             ("refused reply costs a turn", refused_reply_costs_a_turn);
-            ("acts are remembered", act_memory ~caps);
-            ("pilot-z1nr failed memory is not offered again", stale_memory);
+            ("failed playbook procedure is not offered again", stale_memory);
             ("pilot-h506 pilot uploads only named files", pilot_upload);
             ("pilot-gn4w pilot-pw7x generated password", generated_password);
             ("pilot-sc9t pilot records reach --out", pilot_records);

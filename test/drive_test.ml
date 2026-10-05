@@ -961,7 +961,7 @@ let scoped_action_risk () =
   check_case ~title:"Checkout payment" ~body:"Search\nSend Product Feedback"
     ~ambient:"Send Product Feedback" true;
   check_case
-    ~kind:(Some P.{ name = "deletion"; source = Inferred })
+    ~kind:(Some P.{ name = "deletion"; source = Declared })
     ~body:"Search" ~ambient:"Cancel" true;
   check_case ~body:"Search\nThis action will delete your account" ~ambient:"Cancel" true;
   check_case ~index:None ~body:"Send Product Feedback" ~ambient:"Send Product Feedback"

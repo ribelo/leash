@@ -886,7 +886,6 @@ let playbook_command ~caps ~send ~base ~run_owned =
         0
   in
   let name = Arg.(required & pos 0 (some string) None & info [] ~docv:"NAME") in
-  let file = Arg.(required & pos 0 (some string) None & info [] ~docv:"FILE") in
   let list =
     Cmd.v
       (Cli_help.local_info ~docs:"INSTALLED PLAYBOOKS" "list"
@@ -1003,28 +1002,8 @@ let playbook_command ~caps ~send ~base ~run_owned =
         "leash playbook test shop/search --tab t_9xk --arg q=gpu --arg max=2000";
       ]
   in
-  (* run-m0r8: the operator's one way to merge a proposal the planner wrote. The run
-     writes proposals to XDG state and never touches a playbook; this command is the hand
-     that accepts one, and it validates the merged playbook before it writes. *)
-  let accept =
-    Cmd.v
-      (Cli_help.local_info ~docs:"AUTHORING" "accept"
-         ~doc:"Merge a proposed procedure into its site's playbook."
-         ~examples:[ "leash playbook accept ~/.local/state/leash/proposed/shop.json" ])
-      Term.(
-        const (fun file () () ->
-            owned (fun () ->
-                match Leash.Playbook.accept ~caps file with
-                | Error message -> invalid_playbook ~caps message
-                | Ok accepted ->
-                    Cap_stdlib.print_endline ~caps
-                      (Yojson.Safe.pretty_to_string
-                         (Leash.Playbook.yojson_of_accepted accepted));
-                    0))
-        $ file $ const ())
-  in
   Cmd.group
-    (Cli_help.command_info "playbook" ~doc:"Inspect, validate and grow site playbooks."
+    (Cli_help.command_info "playbook" ~doc:"Inspect and validate site playbooks."
        ~man:
          [
            `S "DESCRIPTION";
@@ -1036,7 +1015,7 @@ let playbook_command ~caps ~send ~base ~run_owned =
               Format, example, and every loader refusal: leash help playbooks";
          ]
        ~examples:[ "leash playbook list"; "leash playbook check ./my-playbook" ])
-    [ list; show; check; test; accept ]
+    [ list; show; check; test ]
 
 (* field-swvb: the same filters as snap, applied to the snapshot taken after the action. *)
 let snap_opts =
@@ -1630,18 +1609,13 @@ let program env (config : Leash.Config.t) sw =
     Leash.Models.create ~sw ~net:base#net ~clock:base#clock ~logger:env.logger
       config.models
   in
-  let learning =
-    Leash.Learning.create ~sw ~caps:env.caps ~config:config.learning
-      ~warn:(fun why -> Ox_observability.Logger.warn env.logger ("learning: " ^ why))
-      ()
-  in
   Eio.Switch.on_release sw (fun () -> Leash.Tabs.stop tabs);
   let status_query = Ox_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in
   (* svc-o4wt: the listener owns the configured socket path; validation refused anything
      that is not a real absolute path, so the variable is resolved by now. *)
   let socket = Leash.Config.Text.to_string config.control.socket in
   let* _control =
-    Leash.Control.create ~learning ~pilot:config.pilot
+    Leash.Control.create ~pilot:config.pilot
       ~chrome_pid:(fun () -> (Leash.Chrome.status chrome).pid)
       ~models
       ~model:(Leash.Config.Text.to_string config.models.jev_model)

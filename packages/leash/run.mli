@@ -81,7 +81,9 @@ type plan_trigger =
           not wait for a JEV trigger. *)
 
 type leg = { goal : string; outcome : string; steps : Protocol.step list }
-type candidate = Playbook.procedure * [ `Installed | `Draft of string ]
+
+type candidate = Playbook.procedure
+(** A procedure of the site's hand-written playbook, offered to the pilot as a leg. *)
 
 type plan_answer =
   | Leg of string
@@ -127,6 +129,8 @@ type plan_request = {
   image_input : bytes option;
   planner_actions : int;
   page_kind : string option;
+  notes : string option;
+      (* cut-yk93: the site playbook's notes, on every turn on that site. *)
   title : string;
   url : string;
   text : string;
@@ -176,7 +180,7 @@ type handler = {
     checks:(string * Playbook.checker) list ->
     timeout_s:int ->
     (Protocol.run_expectation list * observation, Protocol.error) result;
-      (** run-l06s run-vbys run-xqh8: each expectation with its verdict, checked by code
+      (** run-xflk run-vbys run-xqh8: each expectation with its verdict, checked by code
           where a checker applies and scored by JEV where none does, with the bounded
           wait. [pages] are the current playbook's page kinds: the [page_kind] checker is
           decided against them. The observation it returns is the one it judged. *)
@@ -184,11 +188,6 @@ type handler = {
       (** run-w7ke run-rq6i: the planner turn, asked only at the three triggers and only
           while the turn cap allows it. Production is Luna through {!Models.levels}; a
           scripted test answers with a record of its own. *)
-  propose : site:string -> Playbook.procedure -> (string, Protocol.error) result;
-      (** run-m0r8: write a planner-written procedure that ran and passed its expectations
-          to the XDG state directory and answer the path written. Production writes the
-          file; the run only reports it, and nothing merges it but the operator's
-          [playbook accept]. *)
   hand_off : reason:string -> (Protocol.tab_info, Protocol.error) result;
       (** run-klp9: a planner's handoff, which leaves the tab [with_human]. *)
   script :
@@ -233,9 +232,6 @@ val loop :
   handler:handler ->
   now:(unit -> float) ->
   installed:Playbook.loaded list ->
-  ?page_kinds:Page_kind.session ->
-  ?drafts:(site:string -> kind:string option -> Playbook.draft list) ->
-  ?learning:Learning.t ->
   ?secrets:(string * string) list ->
   ?on_secrets:((string * string) list -> unit) ->
   ?on_book:(Playbook.loaded option -> unit) ->

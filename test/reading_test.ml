@@ -278,7 +278,7 @@ let dialog_and_shot ~(caps : < Ox_caps.Cap.fs_write ; .. >) () =
       Alcotest.(check int) "bytes" Fake.png_bytes shot.P.bytes;
       Alcotest.(check bool) "written" true (Sys.file_exists path))
 
-(* gencaps-rh1m: the small PNG stays buffered until close; /dev/full rejects the flush. *)
+(* gencaps-5tyt: the small PNG stays buffered until close; /dev/full rejects the flush. *)
 let shot_close_failure ~(caps : < Ox_caps.Cap.fs_write ; .. >) () =
   let b = browser ~reply:stub () in
   match R.shot ~caps b P.{ tab = handle; path = "/dev/full"; full_page = None } with
@@ -1032,7 +1032,7 @@ let () =
           Alcotest.test_case "indexed text and disappearance" `Quick (fun () ->
               Ox_test.run (fun _ _ -> indexed_text_and_disappearance ()));
           Alcotest.test_case "dialog and PNG" `Quick (dialog_and_shot ~caps);
-          Alcotest.test_case "gencaps-rh1m PNG close failure" `Quick
+          Alcotest.test_case "gencaps-5tyt PNG close failure" `Quick
             (shot_close_failure ~caps);
           Alcotest.test_case "debug ring" `Quick debug_ring;
           Alcotest.test_case "control seam" `Quick (protocol_smoke ~caps);

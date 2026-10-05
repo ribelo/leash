@@ -100,9 +100,6 @@ Local authoring errors also use the envelope; no service is contacted.
 
   $ check playbook-invalid leash playbook check "$tmp/missing/"
   playbook-invalid: exit 65, JSON-only stderr, hint, empty stdout
-  $ printf 'not json\n' > "$tmp/proposal.json"
-  $ check playbook-invalid leash playbook accept "$tmp/proposal.json"
-  playbook-invalid: exit 65, JSON-only stderr, hint, empty stdout
   $ check usage leash help nonsense
   usage: exit 64, JSON-only stderr, hint, empty stdout
 

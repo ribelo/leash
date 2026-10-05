@@ -129,17 +129,7 @@ type otlp = { endpoint : Text.t option; headers : otlp_header list }
 (** svc-f4op: no endpoint means no exporter. [headers] defaults to []. TOML uses
     [[otlp.headers]] entries with [name] and [value]. *)
 
-module Learning_mode : sig
-  type t = Off | Auto
-
-  val to_string : t -> string
-end
-
-type learning = { mode : Learning_mode.t; max_tries : int; retire_after : int }
 type pilot = { turns : int; deadline_s : int }
-
-val default_learning : learning
-
 type traces = { enabled : bool; retention : Traces.Retention.t }
 
 val default_traces : traces
@@ -160,7 +150,6 @@ type t = {
   challenges : challenges;
   skill : skill;
   traces : traces;
-  learning : learning;
   pilot : pilot;
 }
 (** svc-x8rp: every section and every field has a default, so a file that names one

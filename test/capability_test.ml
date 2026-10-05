@@ -262,21 +262,16 @@ let capabilities
             | `Assoc fields ->
                 List.map fst fields |> List.sort String.compare
                 = List.sort String.compare
-                    ([
-                       "label";
-                       "url";
-                       "title";
-                       "origin";
-                       "age_s";
-                       "idle_s";
-                       "closes_in_s";
-                       "with_human";
-                     ]
-                    @
-                    match field "url" row with
-                    | Some (`String url) when Leash.Page_kind.is_page ~url ->
-                        [ "page_kind" ]
-                    | _ -> [])
+                    [
+                      "label";
+                      "url";
+                      "title";
+                      "origin";
+                      "age_s";
+                      "idle_s";
+                      "closes_in_s";
+                      "with_human";
+                    ]
             | _ -> false))
         all;
       Alcotest.(check bool)

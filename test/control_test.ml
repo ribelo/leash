@@ -242,23 +242,11 @@ let lifecycle
       Alcotest.(check bool)
         "hand-x3hi list shows the tab and never the handle" true
         (visible_without_handle mine && mine = theirs);
-      let listed_kind =
-        match mine with
-        | `List [ row ] -> get "page_kind" row
-        | _ -> Alcotest.fail "kind-tdrv list did not return one tab"
-      in
-      let listed_url =
-        match mine with
-        | `List [ row ] -> ( match get "url" row with `String s -> s | _ -> "")
-        | _ -> ""
-      in
-      Alcotest.(check string)
-        "kind-tdrv list names the inferred kind"
-        (Leash.Page_kind.infer ~url:listed_url ~title:"").name
-        (match get "name" listed_kind with `String s -> s | _ -> "");
-      Alcotest.(check string)
-        "kind-tdrv list marks the kind inferred" "inferred"
-        (match get "source" listed_kind with `String s -> s | _ -> "");
+      Alcotest.(check bool)
+        "cut-0oal no playbook, no page kind" true
+        (match mine with
+        | `List [ `Assoc fields ] -> not (List.mem_assoc "page_kind" fields)
+        | _ -> false);
       let status = result (request tabs "alice" P.Status) in
       Alcotest.(check bool)
         "chrome-fuao generation and open" true
@@ -2473,7 +2461,7 @@ let document_at ~title ~url fake =
 
 (* The rig's clocks are Eio_mock's, so a run whose expectation wait sleeps needs the
    virtual clock moved while it works: this fiber advances it by 100 ms at a time until the
-   request is answered. The wait's own timeout bounds it (run-l06s). *)
+   request is answered. The wait's own timeout bounds it (run-xflk). *)
 let run_mission
     ~(caps :
        < Ox_caps.Cap.env
@@ -3000,9 +2988,8 @@ let run_refusals
             "daily-9ggi the run cleaned its tab, supplied tab remains" 1
             (match tabs_now with `List xs -> List.length xs | _ -> 0)))
 
-(* L32 run-m0r8 run-rq6i: a planner turn through the control seam — the production handler
-   writes the procedure it wrote and verified to XDG state, the reply reports the file, and
-   the installed playbook is left exactly as it was. Only [playbook accept] merges one. *)
+(* L32 run-rq6i cut-sqlp: the pilot chooses a playbook procedure through the control seam;
+   the run writes nothing into the installed playbook. *)
 let run_proposal
     ~(caps :
        < Ox_caps.Cap.env
@@ -3098,9 +3085,6 @@ let run_proposal
                 "run-m0r8 it is marked planned" true
                 (match get "planned" entry with `Bool b -> b | _ -> false)
           | _ -> Alcotest.fail "run-rq6i the trace is not the one planned procedure");
-          Alcotest.(check bool)
-            "pilot does not author raw proposals" true
-            (get "proposals" body = `List []);
           Alcotest.(check string)
             "run-m0r8 the installed playbook is untouched" before
             (read ~caps playbook.Leash.Playbook.file);
@@ -4197,6 +4181,7 @@ let pilot_leg_scope
                             procedures = [];
                             shapes = None;
                             scripts = None;
+                            notes = None;
                           };
                       };
                   ]
@@ -4297,170 +4282,6 @@ let saved_pilot_trace (caps : < Ox_caps.Cap.fs_read ; .. >) body =
   | Ok trace -> trace
   | Error why -> Alcotest.fail why
 
-let pilot_memory_replay
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.exec
-       ; Ox_caps.Cap.fork
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.random
-       ; Ox_caps.Cap.time
-       ; Ox_caps.Cap.tmp
-       ; .. >) () =
-  with_pilot_storage ~caps (fun root ->
-      rig ~caps (fun env sw _ tabs fake ->
-          let warnings = ref [] in
-          let memory =
-            Leash.Learning.create ~sw ~caps ~config:Leash.Config.default.learning
-              ~warn:(fun why -> warnings := why :: !warnings)
-              ()
-          in
-          let traces =
-            Leash.Traces.create ~caps ~root:(Filename.concat root "traces") ()
-          in
-          let f = fake () in
-          page_script f (fixture "unlabelled-controls-chrome.json") modal_text;
-          document_at ~title:"Invoices" ~url:"https://example.com/" f;
-          let h =
-            result
-              (request tabs "alice"
-                 (P.New { url = Some "https://example.com/"; label = None }))
-            |> tab
-          in
-          Fake.on_method f "Accessibility.getPartialAXTree" (fun _ ->
-              obj
-                [
-                  ( "nodes",
-                    `List
-                      [
-                        obj
-                          [
-                            ("role", obj [ ("value", str "textbox") ]);
-                            ("name", obj [ ("value", str "Search terms") ]);
-                          ];
-                      ] );
-                ]);
-          Fake.on_method f "DOM.describeNode" (fun request ->
-              obj
-                [
-                  ("node", obj [ ("nodeId", get "backendNodeId" (get "params" request)) ]);
-                ]);
-          let slug = ref "" and revision = ref "" in
-          for run = 1 to 3 do
-            let turns = ref 0 and navigation = ref 0 in
-            let plan ~deadline:_ (request : Run.plan_request) =
-              incr turns;
-              let answer =
-                if !turns = 1 then (
-                  (match (run, request.candidates) with
-                  | 1, [] -> ()
-                  | 2, [ (proc, `Draft value) ] -> (
-                      slug := proc.slug;
-                      revision := value;
-                      Alcotest.(check string)
-                        "remembered mission" "Check invoices" proc.description;
-                      match proc.steps with
-                      | [ Leash.Playbook.Goal { goal; _ } ] ->
-                          Alcotest.(check string)
-                            "remembered goal"
-                            "Press Escape on the textbox named Search terms" goal
-                      | _ -> Alcotest.fail "missing goal steps")
-                  | 3, [ (proc, `Installed) ] ->
-                      Alcotest.(check string) "installed slug" !slug proc.slug
-                  | _ -> Alcotest.fail "unexpected memory candidates");
-                  if run = 1 then
-                    Run.Act
-                      (P.Press
-                         {
-                           tab = h;
-                           snapshot = request.snapshot.snapshot;
-                           index = Some 3;
-                           key = "Escape";
-                           snap = None;
-                           match_ = None;
-                           limit = None;
-                         })
-                  else Run.Leg !slug)
-                else (
-                  if run = 1 then
-                    Alcotest.(check string)
-                      "pilot act succeeded" "done" (List.hd request.legs).outcome;
-                  Alcotest.(check int)
-                    "replay navigation calls"
-                    (if run = 1 then 0 else 1)
-                    !navigation;
-                  Run.Done
-                    {
-                      result = "Invoices checked";
-                      evidence = [ "invoice page" ];
-                      records = [];
-                    })
-              in
-              Ok
-                Run.
-                  {
-                    answer;
-                    expect = [ "the page shows Added!" ];
-                    usage = None;
-                    reasoning_summary = None;
-                    secrets_for_operator = [];
-                  }
-            in
-            let decide ~deadline request =
-              incr navigation;
-              Alcotest.(check bool)
-                "navigator gets goal, not slug" true
-                (contains
-                   (Yojson.Safe.to_string (Jev.body request))
-                   "Press Escape on the textbox named Search terms");
-              decide_done ~deadline request
-            in
-            let levels = { (levels_with [] (ref [])) with Run.plan } in
-            let body =
-              with_ticking_clock env sw (fun () ->
-                  Leash.Control.handle ~learning:memory ~traces ~levels ~installed:[]
-                    ~decide tabs
-                    (run_wire ~tab:h "Check invoices"))
-              |> Yojson.Safe.from_string |> P.decode_reply |> decoded
-            in
-            Alcotest.(check bool) "mission done" true (get "status" body = str "done");
-            Alcotest.(check bool)
-              "mission expectation verified" true
-              (match get "mission_expectations" body with
-              | `List [ check ] -> get "passed" check = `Bool true
-              | _ -> false);
-            let trace = saved_pilot_trace caps body in
-            let first = List.hd trace.planner_turns in
-            let expected =
-              if run = 1 then []
-              else
-                [
-                  P.Trace.
-                    {
-                      slug = !slug;
-                      revision = (if run = 2 then Some !revision else None);
-                    };
-                ]
-            in
-            Alcotest.(check bool)
-              "offered slugs and draft revisions durable" true
-              (List.for_all
-                 (fun (turn : P.Trace.planner_turn) -> turn.candidates = expected)
-                 trace.planner_turns);
-            Alcotest.(check bool)
-              "chosen candidate durable" true
-              (first.chosen
-              = match expected with [] -> None | candidate :: _ -> Some candidate);
-            Alcotest.(check bool)
-              "done chose no candidate" true
-              ((List.nth trace.planner_turns 1).chosen = None);
-            Leash.Learning.await_pending memory
-          done;
-          Alcotest.(check (list string)) "no learning warnings" [] !warnings))
-
-(* pilot-r94o: refused completions and accepted legs cost money even when the
-   next provider call fails; partial unpriced usage must remain unknown. *)
 let pilot_error_usage
     ~(caps :
        < Ox_caps.Cap.env
@@ -4709,19 +4530,16 @@ let durable_drive_traces
               (run_wire ~tab:h "operator NONE with matching installed pages")
             |> decoded |> saved ~caps
           in
-          Alcotest.(check bool)
-            "kind-dnye NONE infers a kind and does not borrow the unselected book" true
-            (List.mem "product_details-<id>" fly.page_kind_path
-            && (not (List.mem "products" fly.page_kind_path))
-            && not (List.mem "cart" fly.page_kind_path));
-          Alcotest.(check bool)
-            "kind-s1k2 NONE records the generalized pattern" true
-            (List.exists
-               (fun (page : P.Trace.inferred_page) ->
-                 page.name = "product_details-<id>"
-                 && page.url_pattern
-                    = "https://automationexercise.com/product_details/<id>")
-               fly.inferred_pages);
+          Alcotest.(check string)
+            "cut-0oal NONE records only declared kinds" ""
+            (String.concat ","
+               (List.filter
+                  (fun kind ->
+                    not
+                      (List.exists
+                         (fun (p : Leash.Playbook.page) -> p.name = kind)
+                         book.playbook.pages))
+                  fly.page_kind_path));
           let authored =
             invoke ~traces:store ~installed:[ book ]
               ~levels:
@@ -4736,13 +4554,10 @@ let durable_drive_traces
           in
           let path = String.concat "," authored.page_kind_path in
           Alcotest.(check bool)
-            ("kind-4qke declared kinds win; unmatched pages are inferred (" ^ path ^ ")")
+            ("kind-4qke cut-0oal only declared kinds are recorded (" ^ path ^ ")")
             true
             (authored.page_kind_path <> []
-            && List.for_all
-                 (fun kind ->
-                   declared kind || kind = "product_details-<id>" || kind = "blank")
-                 authored.page_kind_path);
+            && List.for_all declared authored.page_kind_path);
           Alcotest.(check bool)
             "trace-lg58 authored procedures flatten compiler-safe steps" true
             (List.exists
@@ -4831,8 +4646,6 @@ let () =
             (collection_done_guard ~caps);
           Alcotest.test_case "pilot-x1f3 pilot-r94o navigation legs and audit" `Quick
             (pilot_leg_scope ~caps);
-          Alcotest.test_case "pilot-oijk pilot-r94o memory replay and candidate audit"
-            `Quick (pilot_memory_replay ~caps);
           Alcotest.test_case "pilot-r94o error usage" `Quick (pilot_error_usage ~caps);
           Alcotest.test_case "trace-qe8c trace-iqqz public durable drives" `Quick
             (durable_drive_traces ~caps);

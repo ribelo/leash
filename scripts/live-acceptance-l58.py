@@ -193,8 +193,6 @@ headless = true
 [models]
 planner_model = "{self.args.planner_model}"
 planner_reasoning = "{self.args.planner_reasoning}"
-[learning]
-mode = "off"
 [handoff]
 focus_command = []
 notify_command = []

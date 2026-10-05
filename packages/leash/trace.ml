@@ -29,10 +29,8 @@ type trace_procedure = {
 }
 [@@deriving yojson]
 
-type inferred_page = { name : string; url_pattern : string } [@@deriving yojson]
-
 (* pilot-r94o: safe per-turn audit, without raw pilot input or capabilities. *)
-type candidate = { slug : string; revision : string option } [@@deriving yojson]
+type candidate = { slug : string } [@@deriving yojson]
 
 type planner_turn = {
   n : int;
@@ -57,7 +55,6 @@ type t = {
   model_calls : int;
   start_url : string option; [@json.default None]
   page_kind_path : string list;
-  inferred_pages : inferred_page list; [@json.default []]
   planner_turns : planner_turn list; [@json.default []]
   procedures : trace_procedure list;
   steps : trace_step list;

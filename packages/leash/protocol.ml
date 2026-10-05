@@ -593,11 +593,7 @@ type dialog = {
 }
 [@@deriving yojson]
 
-type page_kind_source =
-  | Declared [@json.name "declared"]
-  | Inferred [@json.name "inferred"]
-[@@deriving yojson]
-
+type page_kind_source = Declared [@json.name "declared"] [@@deriving yojson]
 type page_kind_label = { name : string; source : page_kind_source } [@@deriving yojson]
 
 type tab_info = {
@@ -982,7 +978,6 @@ type status_result = {
   version : string;
   pid : int option; [@json.null]
   headed : bool;
-  learning : Yojson.Safe.t option;
   key_present : bool;
 }
 [@@deriving yojson]
@@ -1227,9 +1222,7 @@ type planner_turn = {
 }
 [@@deriving yojson]
 
-(* run-9ypy run-m0r8: the whole run. [procedures] is the trace, oldest first;
-   [proposals] are the files a planner-written procedure was written to, oldest first —
-   the run never merges one; [final] is the last snapshot the run observed, whose [dialog]
+(* run-9ypy: the whole run. [procedures] is the trace, oldest first; [final] is the last snapshot the run observed, whose [dialog]
    is what ended an [error]; [reason] names why the run stopped. *)
 type run_result = {
   result : string option;
@@ -1247,8 +1240,6 @@ type run_result = {
   procedures : run_procedure list;
   mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
-  proposals : string list;
-  installed : string list; [@json.default []]
   collected : int;
   data : Yojson.Safe.t;
   model_calls : int;

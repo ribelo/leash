@@ -215,21 +215,6 @@ def main():
         assert downloads[0].get('suggested_name', '').endswith('.pdf') and downloads[0].get('state') == 'completed', 'no completed PDF download'
         cli('close', tab)
 
-    if phase in ('all', 'discover'):
-        # Discovery must remain a proposal until explicit accept into this temp config.
-        site = 'https://example.com/'
-        mission = 'Learn how to identify the Example Domain heading without external navigation'
-        discovery = timed('discovery', mission, 'discover', site, '--goal', mission,
-                          '--max-turns', 3, '--max-steps', 6, '--max-cost', 0.2,
-                          '--deadline-s', 180, timeout=220)
-        proposals = discovery.get('proposals', [])
-        assert proposals, 'discovery produced no proposal'
-        proposal = Path(proposals[0]); assert proposal.is_file(), 'proposal file absent'
-        print(f"  proposed={proposal.name} (not auto-accepted)", flush=True)
-        accepted = cli('playbook', 'accept', proposal)
-        assert accepted, 'accept reply absent'
-        print(f"  accepted={proposal.name} into isolated XDG_CONFIG_HOME", flush=True)
-
     with open(LOG, encoding='utf8', errors='replace') as f:
         logged = f.read()
     assert KEY not in logged and all(KEY not in value for value in OUTPUTS), 'key leaked'

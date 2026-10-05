@@ -204,15 +204,11 @@ type dialog = { kind : Dialog_kind.t; message : string; default_prompt : string 
 val dialog_of_yojson : Yojson.Safe.t -> (dialog, string) result
 val yojson_of_dialog : dialog -> Yojson.Safe.t
 
-type page_kind_source =
-  | Declared
-  | Inferred
-      (** kind-tdrv: [Declared] is a loaded playbook's kind. [Inferred] is {!Page_kind}.
-      *)
+type page_kind_source = Declared  (** kind-tdrv: a loaded playbook's declared kind. *)
 
 type page_kind_label = { name : string; source : page_kind_source }
-(** Shown by [list] and [snap]. [name] is the kind; [source] is [declared] or [inferred].
-*)
+(** Shown by [list] and [snap] when an installed playbook declares the page's kind
+    (cut-0oal: nothing is inferred). [source] is [declared]. *)
 
 val page_kind_source_of_yojson : Yojson.Safe.t -> (page_kind_source, string) result
 val yojson_of_page_kind_source : page_kind_source -> Yojson.Safe.t
@@ -637,7 +633,6 @@ type status_result = {
   version : string;
   pid : int option; [@json.null]
   headed : bool;
-  learning : Yojson.Safe.t option;
   key_present : bool;
 }
 (** [models] is [T|null]: the service's models section, which every service the Door
@@ -964,8 +959,6 @@ type run_result = {
   procedures : run_procedure list;
   mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
-  proposals : string list;
-  installed : string list;
   collected : int;
   data : Yojson.Safe.t;
   model_calls : int;
@@ -977,15 +970,13 @@ type run_result = {
   reason : string option;
   trace_path : string option;
 }
-(** run-9ypy run-m0r8: the whole run. [site] is the playbook that served the mission,
-    [T|null] when the run never chose one; [procedures] is the trace, oldest first;
+(** run-9ypy: the whole run. [site] is the playbook that served the mission, [T|null] when
+    the run never chose one; [procedures] is the trace, oldest first;
     [mission_expectations] is how the mission's own expectations — the caller's, or the
     ones the planner attached on its first turn — came out at the DONE guard (empty when
     the mission carried none); [planner_turns] is every planner turn with its cost;
-    [proposals] lists the proposal files a planner-written procedure was written to,
-    oldest first, which the operator merges with `leash playbook accept` and nothing else
-    does; [collected] is how many records the run's script steps produced (extr-8o1h);
-    [final] is the last snapshot the run observed — its [dialog] is what ended an [error]
+    [collected] is how many records the run's script steps produced (extr-8o1h); [final]
+    is the last snapshot the run observed — its [dialog] is what ended an [error]
     (run-klp9); [reason] is [key?] and names why the run stopped. *)
 
 val run_result_of_yojson : Yojson.Safe.t -> (run_result, string) result

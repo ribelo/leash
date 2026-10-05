@@ -11,9 +11,8 @@ adds `error.detail.trace_path`. The path exists before reply encoding. Disabled
 tracing or a failed write omits the field, and persistence failures never replace
 the drive outcome. `Protocol.drive_trace` is the version-1 derived safe durable
 projection, not the live result type, to exclude handles, page text, records, and
-raw state. It records headers, the page-kind path (declared kinds win; otherwise
-inferred), `inferred_pages` (`{name, url_pattern}`[], default empty), procedures,
-steps, URL/title, `arguments` (`[name, value][]`, default `[]`), unattended events (default `[]`), a `compiled` marker (default false), and nullable `structural_outline` (default null; bounded final tag/class structure for done collection missions). Only argument values feeding retained non-redacted typed steps are persisted. Operator and planner
+raw state. It records headers, the page-kind path (the selected playbook's declared kinds; nothing is inferred), procedures,
+steps, URL/title, `arguments` (`[name, value][]`, default `[]`) and unattended events (default `[]`). Only argument values feeding retained non-redacted typed steps are persisted. Operator and planner
 steps share one chronological sequence, renumbered from 1; a failed planner
 action is retained with its error code, including on a partial-failure trace.
 The safe step shape is:
@@ -65,7 +64,7 @@ Tab lifecycle:
 | `list` | `{}` | `{tabs: TabListing[]}` | [errors](help/errors.md) |
 | `take` | exactly one of `{url}`, `{title}`, `{label}` | `TabInfo` | [errors](help/errors.md) |
 | `close` | `{tab}` | `{closed: true}` | [errors](help/errors.md) |
-| `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null, learning?: LearningStatus}` | [errors](help/errors.md) |
+| `status` | `{}` | `{version, generation, pid: int\|null, headed: bool, key_present: bool, tabs: {open, cap}, chrome: "running"\|"restarting", uptime_s, models: Models\|null}` | [errors](help/errors.md) |
 
 `pid` is the actual managed Chrome child PID, not the Leash service PID or a
 `/proc` profile search. It is null whenever that child is not running, including
@@ -155,7 +154,7 @@ Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [-
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], proposals: string[], installed: string[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string, unattended: UnattendedEvent[], detail?: {challenge: string}}` | [errors](help/errors.md) |
+| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string, unattended: UnattendedEvent[], detail?: {challenge: string}}` | [errors](help/errors.md) |
 
 `--url` is `start_url`: an optional explicit `http://` or `https://` URL with no userinfo. It opens a drive-owned tab; it does not replace an already populated `--tab`. The CLI rejects a bad scheme, `about:blank`, userinfo, or a non-positive `--max-steps` before it connects, as `usage` (64), and the message names a correct example. `--max-steps` is the on-the-fly executed-action cap (default 60, omitted on the wire when the caller accepts the default); the prediction cap is twice that value, including discarded stale decisions. `--max-procedures` is the playbook-lane cap (default 40). `--deadline-s` is the whole-mission budget (default 900). All three must be positive when present.
 
@@ -179,7 +178,7 @@ OperatorState = {status: string, reason: string|null, error: Error|null,
                  page: OperatorPage, history: ActionLog[], predictions: Prediction[],
                  text_calls: TextCall[], metrics: OperatorMetrics}
 OperatorPage  = {snapshot: Snapshot, url, title, text,
-                 page_kind: string|null, page_kind_source: "declared"|"inferred"|null,
+                 page_kind: string|null, page_kind_source: "declared"|null,
                  text_truncated: bool, omitted_elements: int,
                  can_scroll_up: bool, can_scroll_down: bool,
                  coverage: Coverage, bounds: CoverageBounds}
@@ -200,10 +199,7 @@ OperatorMetrics = {actions, predictions, text_calls, observation_calls,
 `page.text` is viewport text, at most 6000 characters, including visible titles, prices and records. `omitted_elements` counts action candidates beyond the 250 offered. This is the observation JEV used. It is not a normalized schema, not proof of exhaustive collection across pagination or offscreen content, and not a prepared script result. Prepared script payloads still bypass every model. `history` records executed input, including an uncertain mutation that must not be replayed. `predictions` includes discarded stale decisions. `usage` on a prediction or text call is the provider object, or null when that call reported none.
 
 `model_calls` counts attempted provider requests during the drive, including retries and
-failed attempts. It does not include post-reply learning compilation, validation retries,
-or confirmation. Those run after the reply, on a service fiber, and their calls and cost
-are recorded on the proposal's provenance and in `status.learning`, not in this reply or
-the durable trace totals. `model_cost` sums provider-reported costs of the counted drive
+failed attempts. `model_cost` sums provider-reported costs of the counted drive
 calls, including answers later rejected, and is `null` when any counted call has no valid
 reported cost. `null` is unknown, not zero. Text-helper memo hits and deterministic
 checks make no model call.
@@ -230,10 +226,10 @@ the tab is still open" and ends `handoff-expired`, not a protocol error. Challen
 expiry instead ends `blocked` with `detail.challenge` (origin). The tab stays open,
 `with_human` is cleared, and normal idle expiry restarts.
 
-Debug challenge signals and inferred challenge page kinds trigger bounded planner
+Debug challenge signals and challenge page kinds trigger bounded planner
 attempts before JEV. Defaults: `challenges.attempt = true`, `challenges.turns = 2`;
 turns must be 1–10. Only ordinary snapshot-row actions are available, at most
-`learning.planner_actions` per turn. No JavaScript, invented coordinates or external
+the pilot action bound per turn. No JavaScript, invented coordinates or external
 solver. Disappearance resumes JEV; disabled/exhausted attempts hand off as `captcha`.
 
 UnattendedEvent is one of:
@@ -256,12 +252,10 @@ A field shown as `T|null` is always present, `null` when it has no value; a fiel
 `key?` is omitted when it has no value.
 
 ```
-PageKind     = {name, source: "declared"|"inferred"}
-                 declared: an installed playbook's url_pattern matched (list and snap do
-                 not read page text, so a text_marker-only kind is inferred here)
-                 inferred: no declared kind; name and the trace's url_pattern come from
-                 the URL shape (ids and content slugs collapse; ref=/coordinates/data blobs
-                 drop; the query is stripped). See leash help handles.
+PageKind     = {name, source: "declared"}
+                 present only when an installed playbook's url_pattern matched (list and
+                 snap do not read page text, so a text_marker-only kind is not shown);
+                 nothing is inferred (ADR-0014). See leash help handles.
 TabListing   = {label: string|null, url, title, page_kind: PageKind, origin: "agent"|"human",
                  age_s: int, idle_s: int, closes_in_s: int|null, with_human: bool}
 TabInfo      = {tab, ...TabListing, generation: int, dialog: Dialog|null, reason?: string, loaded?: bool}
@@ -344,48 +338,7 @@ Models       = {configured: bool, jev_model: string, text_model: string,
                 systemone_endpoint: string, chat_base_url: string}
                  the models section as configured; configured is whether an API key is present,
                  and no field ever carries the key
-LearningStatus = {mode: "off"|"draft"|"auto", pending: int, drafts: int,
-                  sites: [{site, last_compile: string|null,
-                           installed_by_replay: int, installed_by_agreement: int,
-                           learning_calls: int, learning_cost: number|null}]}
-Provenance   = {traces: string[], model, time, tries: int, last_failure?: string,
-                path: string[], entry_kind: string, exit_kind: string,
-                signature: [[operation: string, target: {role,label}|null]],
-                kind_mapping: [[raw_key: string, meaningful_name: string]],
-                secrets: string[],
-                repeatable: bool, reason, gate, repair: bool,
-                model_calls: int, model_cost: number|null}
 ```
-
-### Learning results and provenance (L53)
-
-`status.learning` is omitted when no learning runtime is attached, not encoded
-as null. `pending` counts learning work (compile, confirmation, repair, install) still running after a drive replied; wait for 0 before judging what a mission taught. `mode` reports the configured policy, `drafts` the current count of
-pending learned procedures, and `sites` the known installed, draft or previously compiled
-sites. `last_compile` is the last compile attempt's UTC timestamp, or null.
-The two installed counts reflect current procedure provenance gates containing
-`replay` or `agreement`, not lifetime installation counts. `learning_calls` and
-`learning_cost` are the latest post-reply compile, confirmation or repair for that
-site. `learning_cost` is null when that work has not run or any of its calls was unpriced.
-
-The drive result's `installed` and `proposals` are what the request produced before
-the reply. Learning compile, confirmation, repair and install run after the reply, so
-they are not listed there. `status.learning` and the proposal or playbook files show
-them once that work finishes. An omitted `installed` decodes as []. Use
-`status.learning.drafts` for pending learned procedures, not `proposals.length`.
-
-`Provenance` is a sidecar `<slug>.provenance.json` beside `playbook.json` and beside a proposal, never a field inside `playbook.json` and never read by the runner. Learning and `playbook show` read it. A `provenance` field inside `playbook.json` is refused. It is not a field of `RunProcedure`. It records source trace
-paths, the compiler model, a UTC timestamp, the failed replay count and
-optional last failure, the operation page-kind path, raw entry and exit kinds,
-the ordered action/role/label signature, raw-to-meaningful kind mappings, repeatability and its reason, the
-validation gate, whether this is a repair, and the planner calls and reported cost of
-the compile or repair that wrote it. `model_calls` defaults to 0 when absent.
-`model_cost` is null when unknown. Pilot memory sets `entry_kind` to the page kind where its first remembered leg ran, and `secrets` to the secret names the mission filled before that leg. A memory is offered only on its entry kind (empty offers it anywhere) and only once the current mission has filled all of its `secrets` (pilot-z1nr). Older provenance defaults `entry_kind` and `exit_kind` to `""`, and `signature`, `kind_mapping` and `secrets` to `[]`. Traces keep their raw kind keys; meaningful names and generalized patterns belong to the proposed book.
-
-Compilation requires `successes` independent stored successful traces agreeing per operation (map-op03). Repeatable operations require the same entry and exit kinds and compatible distinct (operation, role) sets: order and duplicates do not matter, optional click/scroll/wait extras are allowed, but all type_text/select role pairs must remain present. Labels normalize supplied/typed values and date/number/currency fragments as compiler evidence, not equality identity. Non-repeatable agreement remains strict ordered action/role/exact-label matching with only typed text differing. Repeated matching operations within one trace count once; the compiled marker does not exclude evidence. The transition action belongs to the departing operation, and DONE is an observation rather than an action. Consent and off-final-host entries are excluded; the first remaining observed URL becomes a new site's entry. The compiler receives feeding argument names and observation-based naming evidence, and must return an exit-kind check and meaningful result expectations. Learned top-level procedures require at least two goal steps, except directly `use:`-referenced children; the full-book loader enforces this too. Compiled page names are lowercase words separated by hyphens, without placeholder markers or single-letter names; plain `flights` is valid even if it equals the URL-shape key. Invalid compiler output receives one validation retry. For done collection missions, the trace adds nullable `structural_outline`: a final-page tag/class skeleton of repeated containers, bounded to 4096 bytes and containing no text nodes, attributes, field values or URLs; legacy traces default to null (map-op09). Capture runs the trusted service-owned DOM walk without V8 side-effect checking; evaluation exceptions, empty/invalid results and final-URL changes log a warning with the reason instead of disappearing silently. The compiler may declare inline scripts with `returns` and Script steps only for repeatable collection operations with an observed outline. The loader conservatively refuses navigation, submission, input/event, network, storage and dynamic-code references; it is not a JavaScript sandbox. Installation needs JEV choosing that exact draft revision, every declared script successfully executing, and non-empty passing expectations. Manual acceptance cannot bypass this replay gate (map-op08).
-
-Current gate values are `replay`,
-`agreement` and `agreement-repair`; the codec's field is a string.
 
 ### Planner Done (map-op10)
 
@@ -426,7 +379,7 @@ mask. (map-op12)
 For collection goals asking for every/all items, operator DONE is refused while
 the page can scroll down or offers an enabled next-page link/button. JEV receives
 the reason and can continue; after three refusals another incomplete DONE ends
-blocked, never as a successful learning baseline. This frontier guard does not
+blocked. This frontier guard does not
 prove that records were accumulated. (map-op08, map-bjon)
 
 A row-not-actionable refusal before input dispatch makes the operator re-observe
@@ -578,8 +531,7 @@ Rules:
   script from a loaded playbook directory. No model output is ever any of them: a model chooses a playbook, a procedure, a
   criterion or an argument value, and an argument value travels as JSON in the call's `arguments`, never in the function
   text. A script is a `Playbook.script`, a type only the loader can build, and `Reading.script` is the one function that
-  hands one to the browser; a learned draft or planner answer cannot carry scripts, and a planner procedure may only
-  name one the playbook already has (extr-k40c).
+  hands one to the browser; a planner answer cannot carry scripts (extr-k40c).
 - `dry_run: true` asks the playbook and the procedure levels and reports the chosen
   playbook, the chosen procedure with its choice and resolved checkers, and ends
   `blocked`: it navigates nothing, executes no step, and never calls the text helper.
@@ -610,11 +562,6 @@ Rules:
   also attach the mission's expectations (`"expect": [...]`), which the DONE guard then
   verifies when the caller stated none. Every turn's tokens are in `planner_turns[].usage`
   (`cost` is zero: the chat route reports tokens, not the provider's own cost) and logged.
-- **Proposals.** A planner-written procedure that ran and passed its expectations is written
-  to `$XDG_STATE_HOME/leash/proposed/<site>-<slug>.json` and listed in the run's
-  `proposals`. A run never merges a proposal: `leash playbook accept <file>` does, under
-  the operator's hand — it replaces the same slug or appends, refuses a merge the loader
-  would not accept, and leaves the file alone when it refuses.
 - A run's handler budget is its `deadline_s` plus 75 seconds — the last procedure's own
   bounded expectation wait (at most 30 s), a planner turn's correction call (at most 30 s)
   and the reply — so the listener never cancels a run at the instant it is due to answer.

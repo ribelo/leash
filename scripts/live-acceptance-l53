@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-# L53/map-4lw2 map-ngyr map-fxra: live model learning with private headless Chrome.
-# Build first with the exact bounded command recorded in the evidence README.
-# Usage: secret-env ai -- bash scripts/live-acceptance-l53 books|maps|flights|form EVIDENCE_DIR
-set -euo pipefail
-repo="$(cd "$(dirname "$0")/.." && pwd)"
-exec python3 "$repo/scripts/live-acceptance-l53.py" "$@"

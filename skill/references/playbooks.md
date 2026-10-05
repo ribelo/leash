@@ -1,8 +1,8 @@
 # Playbooks
 
-A playbook describes one site. It is a directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/`, holding `playbook.json` and the files beside it (usually `~/.config/leash/playbooks/<name>/` when that variable is unset). The operator or an agent writes it. After a successful mission, the pilot can remember the legs that worked as a draft procedure and install it after a later verified replay. Authored and pilot-written collection scripts use the same loader and validator. Beside `playbook.json`, the only other JSON allowed is a learned procedure sidecar named `<slug>.provenance.json`. The runner never reads those sidecars. Any other `.json` file beside `playbook.json` is refused. A `.json` file left in the playbooks root is not a playbook.
+A playbook describes one site. It is a directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/`, holding `playbook.json` and the files beside it (usually `~/.config/leash/playbooks/<name>/` when that variable is unset). The operator or a coordinating agent writes it; a run never does (ADR-0014). Any other `.json` file beside `playbook.json` is refused. A `.json` file left in the playbooks root is not a playbook.
 
-Install by copying the directory. `leash playbook list` lists validated installed books. `leash playbook show NAME` prints one, including script text. `leash playbook check ./DIR` validates a directory and skips JavaScript compilation. `leash playbook check NAME` does the same for an installed name and compiles each script in a blank tab. `leash playbook accept FILE` merges a reviewed proposal. The format below is what `check` accepts.
+Install by copying the directory. `leash playbook list` lists validated installed books. `leash playbook show NAME` prints one, including script text. `leash playbook check ./DIR` validates a directory and skips JavaScript compilation. `leash playbook check NAME` does the same for an installed name and compiles each script in a blank tab. The format below is what `check` accepts.
 
 ## Format, field by field
 
@@ -15,6 +15,8 @@ Install by copying the directory. `leash playbook list` lists validated installe
 `pages` is the list of page kinds. Each has `name` (a unique lowercase slug: `a-z`, `0-9`, `-`, `_`) and at least one of `url_pattern` or `text_marker`. A page `description` is a removed field and is refused. `url_pattern` matches the whole URL; `*` matches any characters, including `?` and `#`; without `*` it is exact. `text_marker` is a case-insensitive substring of the page text. `null` means that recogniser is absent. `repeatable` defaults to `true`; set it to `false` for irreversible pages such as checkout or upload, overriding inferred safety.
 
 `shapes` is an object of shape name (a lowercase slug) to a shape. A shape is `string`, `number`, `boolean`, `url`, an object of field to shape, or a one-element array for a list. A field name ending in `?` is optional. Nesting is at most eight deep. See `leash help scripts`.
+
+`notes` is optional free text about the site for the pilot: where things are, how login works. It is at most 2,000 characters and is shown to the pilot on every turn on that site (cut-yk93). It is not shown to JEV.
 
 `scripts` is an object of script name (a lowercase slug) to a declaration: exactly one of `file` or `source`, a one-sentence `description`, optional `pages`, optional `args`, optional `returns` naming a shape. `max_bytes` and `origin` are removed fields. Every script result is bounded by one global limit, 8 MiB. `file` is relative to the playbook directory, ends in `.js`, has no `..`, and is not absolute. See `leash help scripts`.
 
@@ -129,10 +131,6 @@ Here is a complete `playbook.json` for the bookshop catalogue. Save it in your o
 ```
 
 The directory also holds `scripts/list-page.js` and `scripts/last-page.js`. Those files are not inside the JSON. `list-page.js` starts with `/** returns: "book" */` and returns one record per card. `last-page.js` returns `{done: true}` when the listing has no next link.
-
-Compiled page names use lowercase words separated by hyphens, with no placeholder
-markers (`<id>`, `<slug>`) or single-letter names. A plain word such as `flights`
-remains valid even when it equals the inferred URL-shape key. (map-op04)
 
 ### A sentence for each field
 
@@ -296,8 +294,7 @@ DIR: stray JSON beside playbook.json (NAMES); a playbook directory holds one    
 FILE: invalid JSON: REASON
 PATH: playbooks are directories; move it to <name>/playbook.json
 NAME: invalid playbook name
-no installed playbook for site SITE
-proposed scripts must run successfully through the replay gate before installation
+notes must be at most 2000 characters
 returns: shape nested more than 8 deep
 returns: a field is optional by a ? on its name, not on its type (TYPE?)
 returns: unknown type "TYPE" (string, number, boolean or url)
@@ -311,14 +308,6 @@ returns must be a record or a list of records
 
 The two lines with long runs of spaces are exact. A symlink that resolves outside the playbook directory is the "resolves outside" message. A unix error on a script file is `file PATH: ` plus the system message.
 
-## Pilot memory
-
-`[learning] mode = "off" | "auto"` defaults to `auto`. `max_tries = 3` bounds failed draft trials; `retire_after = 5` bounds consecutive failures of installed procedures. Old compile settings (`successes`, `planner_model`, `planner_reasoning`, `planner_actions`, `timeout_s`) and `draft` mode are refused.
-
-After pilot `done`, the legs that worked are saved below `$XDG_STATE_HOME/leash/proposed/` with a provenance sidecar. Mission argument values become `{arg}` placeholders, and expectations are what the pilot verified. Identical installed or draft legs are not saved twice. This write runs asynchronously on the service switch. `status` reports pending work and waiting drafts.
-
-Installed procedures and applicable drafts are offered to the pilot as candidates, not selected as a mission plan by JEV. A draft used in a mission that ends `done` with its expectations verified is installed through `playbook accept`. A stale revision cannot install. Failed or unverified trials increment `tries` and record `last_failure`; exhausted drafts are retired. Two consecutive installed failures create a repair-marked replay draft for the pilot. Failures count toward `retire_after`; a successful mission or repair replay resets that count. Provenance remains a sidecar, not runner input.
-
-There is no compile-from-traces pass, structural agreement gate, or captured page outline. Traces remain evidence. Page kinds, authored scripts, script validation and replay verification remain.
+## Pilot limits
 
 `[pilot] turns = 12` (1..100) and `deadline_s = 600` (30..3600) bound a mission. The pilot uses `models.planner_reasoning = "max"` by default.

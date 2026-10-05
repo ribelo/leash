@@ -23,6 +23,10 @@ Recorded, outside the L57F sequence:
 
 U3/U4 acceptance is pending the operator's Allegro credentials (`pilot-sa3f`, `pilot-ivzx`), not an implemented pass. U1/U2/U6 passed in L57.
 
+## Retired by ADR-0014 (L59, 2026-10-05)
+
+The pilot writes nothing into playbooks (cut-6mvl). Retired with the code and tests that served them: `pilot-3egp` (acts remembered as legs), `pilot-c77y` (`[learning] mode`), `pilot-ivzx` (installed-memory comparison), `pilot-z1nr` (inapplicable memory), `pilot-exx7` (replayed download leg). A failed playbook procedure is still not offered again in the same mission. `pilot-oijk` and `pilot-r94o` stay for hand-written procedures.
+
 ## Problem Statement
 
 `drive` is JEV's loop with the planner as a fallback. JEV cannot know when a mission is done; it sees only whether a page looks right. So missions that ask for an answer, a quantifier, or an action with a result end `done` with nothing: Flights five times, Maps four of five. The operator's actual use — "check whether I owe anything on Tauron", "download the invoice", "add the cheapest one to my cart" — is exactly this kind of mission, said ad hoc, without a script and without a playbook. The thing that can reason about the result (Luna) was only asked when JEV gave up, and JEV does not give up — it declares `done`.

@@ -108,7 +108,6 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
                 reasoning_summary = None;
                 secrets_for_operator = [];
               });
-        propose = (fun ~site:_ _ -> assert false);
         hand_off = (fun ~reason:_ -> assert false);
         script =
           (fun script ~args:_ ->

@@ -49,11 +49,9 @@ Verify the requested outcome separately: reread account amounts, inspect the com
 
 `--dry-run` returns the first decision and reasoning summary without executing it or writing records. It still makes billable model calls and can allocate a tab. Add repeatable `--expect SENTENCE` for explicit live-page completion checks; see `leash help expectations`.
 
-## Playbooks as memory
+## Hand-written playbooks
 
-Installed and draft procedures are candidates for the pilot, never mandatory routes. After a done mission, learning auto records successful legs/actions as a proposed procedure. A later pilot-selected, verified replay can install it. Read `leash help playbooks` for validation, review/accept and provenance; there is no compile-from-traces phase.
-
-Measure memory with the same mission, recording first/second pilot turns and cost side by side, and checking which procedure was offered, chosen and installed. A faster authenticated session is not evidence of learning. Review/accept installation is not automatic replay-gated installation. Current live measurements found a cheaper turn count but higher cost on Maps, repeated stale-procedure failures on Flights and the portal, and extra downloads during invoice replay (pilot-z1nr, pilot-exx7).
+The procedures of the site's installed playbook are candidates for the pilot, never mandatory routes. A procedure that failed in a mission is not offered again in it. The playbook's `notes`, when present, are shown to the pilot on every turn on that site. The pilot writes nothing into playbooks (ADR-0014). Read `leash help playbooks` for the format.
 
 ## Durable traces
 

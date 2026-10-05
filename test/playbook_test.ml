@@ -130,7 +130,7 @@ let refusal
                  [ `Assoc [ ("goal", `String "Open") ] ]))))
 
 let grammar () =
-  (* run-r1e9 run-2lei run-84ds run-zmz8 run-tny5 run-vbys run-xfxx *)
+  (* run-mjnw run-2lei run-84ds run-zmz8 run-tny5 run-vbys run-xfxx *)
   let resolve s =
     B.resolve
       [
@@ -181,10 +181,10 @@ let grammar () =
       }
   in
   Alcotest.(check (option string))
-    "run-r1e9 wildcard URL" (Some "offer")
+    "run-mjnw wildcard URL" (Some "offer")
     (B.page_kind [ page ] ~url:"https://allegro.pl/oferta/123" ~text:"");
   Alcotest.(check (option string))
-    "run-r1e9 not another route" None
+    "run-mjnw not another route" None
     (B.page_kind [ page ] ~url:"https://allegro.pl/koszyk" ~text:"")
 
 (* ncaps-mygj L34: the live example.com page has a browser title but no
@@ -262,7 +262,7 @@ let consent_cleared () =
   Alcotest.(check bool) "run-xqh8 returned to products" true (check (Some "products"))
 
 let await () =
-  (* run-l06s run-k8bx: bounded retry of checkers and one rerun, never unbounded. *)
+  (* run-xflk run-k8bx: bounded retry of checkers and one rerun, never unbounded. *)
   let elapsed = ref 0. in
   let calls = ref 0 in
   let observation () =
@@ -284,8 +284,8 @@ let await () =
       ~score:(fun _ _ -> 0.)
       ~threshold:0.75 ~timeout_s:5 [ B.Text "ready" ]
   in
-  Alcotest.(check bool) "run-l06s waits for settlement" true result;
-  Alcotest.(check int) "run-l06s three observations" 3 !calls;
+  Alcotest.(check bool) "run-xflk waits for settlement" true result;
+  Alcotest.(check int) "run-xflk three observations" 3 !calls;
   let elapsed = ref 0. in
   let failed =
     B.await
@@ -295,8 +295,8 @@ let await () =
       ~score:(fun _ _ -> 0.)
       ~threshold:0.75 ~timeout_s:1 [ B.Text "never" ]
   in
-  Alcotest.(check bool) "run-l06s bounded failure" false failed;
-  Alcotest.(check bool) "run-l06s deadline" true (!elapsed <= 1.);
+  Alcotest.(check bool) "run-xflk bounded failure" false failed;
+  Alcotest.(check bool) "run-xflk deadline" true (!elapsed <= 1.);
   let download state =
     B.
       {
@@ -316,8 +316,8 @@ let await () =
       ~timeout_s:0
       [ B.Download (Some "application/pdf") ]
   in
-  Alcotest.(check bool) "run-l06s active is not downloaded" false (check "in_progress");
-  Alcotest.(check bool) "run-l06s completed PDF" true (check "completed")
+  Alcotest.(check bool) "run-xflk active is not downloaded" false (check "in_progress");
+  Alcotest.(check bool) "run-xflk completed PDF" true (check "completed")
 
 let retry () =
   (* run-k8bx: replay the first step after failure exactly once. *)
@@ -626,31 +626,6 @@ let layout
             true
             (contains "playbooks are directories" why))
 
-let proposals_carry_no_scripts
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.tmp
-       ; .. >) () =
-  (* map-op08 amends extr-k40c: compiler scripts cannot bypass successful replay. *)
-  let root = temp_dir ~caps () in
-  Fun.protect
-    ~finally:(fun () -> rm_rf ~caps root)
-    (fun () ->
-      let path = Filename.concat root "proposal.json" in
-      write ~caps path
-        (books
-           ~scripts:
-             {|{"list":{"source":"return []","description":"List the page.","returns":"item"}}|}
-           ());
-      match B.accept ~caps path with
-      | Ok _ -> Alcotest.fail "extr-k40c a proposal with scripts was merged"
-      | Error why ->
-          Alcotest.(check bool)
-            ("extr-k40c refused: " ^ why) true (contains "replay gate" why))
-
-(* extr-zdst extr-8o1h: the shape language and its validation, as a table. *)
 let shape_of text =
   match Leash.Shape.t_of_yojson (Yojson.Safe.from_string text) with
   | Ok shape -> shape
@@ -825,52 +800,6 @@ let books_toscrape_example ~(caps : < Ox_caps.Cap.fs_read ; .. >) () =
         (Result.is_error
            (Leash.Shape.validate (script "list-page").B.returns (record {|"47.82"|})))
 
-(* extr-k40c: a procedure from outside a file — a planner's answer — can name a script the
-   playbook already has, and cannot bring one: no step carries source or a file, and a
-   script that is not in the playbook is refused before anything runs. *)
-let planner_procedures
-    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
-  with_playbook ~caps ~files:[ list_js ] (books ()) (fun dir _ ->
-      let book =
-        match B.load ~caps dir with Ok b -> b | Error why -> Alcotest.fail why
-      in
-      let procedure json =
-        match B.procedure_of_yojson (Yojson.Safe.from_string json) with
-        | Ok proc -> Ok proc
-        | Error why -> Error why
-      in
-      let of_steps steps =
-        Printf.sprintf
-          {|{"slug":"plan","description":"d","steps":[%s],"expect":["the page is list"]}|}
-          steps
-      in
-      (match procedure (of_steps {|{"script":"list"}|}) with
-      | Ok proc -> (
-          match B.check_procedure book.playbook proc with
-          | Ok () -> ()
-          | Error why -> Alcotest.fail ("extr-k40c a named script is allowed: " ^ why))
-      | Error why -> Alcotest.fail why);
-      (match procedure (of_steps {|{"script":"evil"}|}) with
-      | Ok proc -> (
-          match B.check_procedure book.playbook proc with
-          | Ok () -> Alcotest.fail "extr-k40c a script the playbook lacks was accepted"
-          | Error why ->
-              Alcotest.(check bool)
-                ("extr-k40c " ^ why) true
-                (contains "unknown script" why))
-      | Error why -> Alcotest.fail why);
-      List.iter
-        (fun step ->
-          match procedure (of_steps step) with
-          | Ok _ -> Alcotest.fail ("extr-k40c a step carrying code was decoded: " ^ step)
-          | Error _ -> ())
-        [
-          {|{"script":"list","source":"fetch('/x')"}|};
-          {|{"script":"list","file":"scripts/list.js"}|};
-          {|{"source":"fetch('/x')"}|};
-        ])
-
-(* hdoc-vqj7: pinned script/navigate steps do not fill declaration sources. *)
 let pinned_script_arguments
     ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
   let ok = function Ok loaded -> loaded | Error why -> Alcotest.fail why in
@@ -1028,6 +957,25 @@ let removed_fields
       expect_load_error ~caps ~story:("map-fmt01 " ^ field) needle json)
     cases
 
+(* cut-yk93: a playbook may carry free-text notes, at most 2,000 characters. *)
+let notes ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >)
+    () =
+  let with_notes text =
+    Str.global_replace
+      (Str.regexp_string "{\n \"site\"")
+      (Printf.sprintf "{\"notes\":%S,\n \"site\"" text)
+      (books ())
+  in
+  let short = "Login is under Moje konto; invoices are in Faktury." in
+  with_playbook ~caps ~files:[ list_js ] (with_notes short) (fun dir _ ->
+      match B.load ~caps dir with
+      | Ok book ->
+          Alcotest.(check (option string))
+            "cut-yk93 notes load" (Some short) book.playbook.notes
+      | Error why -> Alcotest.fail why);
+  expect_load_error ~caps ~story:"cut-yk93 notes bound" "notes must be at most 2000"
+    (with_notes (String.make 2001 'x'))
+
 let page text =
   B.{ kind = Some "travel-slug"; text; dialog = false; rows = []; downloads = [] }
 
@@ -1085,57 +1033,6 @@ let judgment_loading () =
 let learned_timeout () =
   Alcotest.(check int) "map-fmt01 one expect wait" 5 B.expect_timeout_s
 
-let provenance_sidecar
-    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) () =
-  with_playbook ~caps ~files:[ list_js ] (books ()) (fun dir file ->
-      let prov =
-        B.
-          {
-            traces = [ "trace-1" ];
-            model = "test";
-            time = "t";
-            tries = 0;
-            last_failure = None;
-            path = [ "list" ];
-            entry_kind = "list";
-            exit_kind = "list";
-            signature = [];
-            kind_mapping = [];
-            secrets = [];
-            repeatable = true;
-            reason = "test";
-            gate = "replay";
-            repair = false;
-            model_calls = 1;
-            model_cost = None;
-          }
-      in
-      (match B.write_provenance ~caps ~dir ~slug:"collect" prov with
-      | Ok () -> ()
-      | Error why -> Alcotest.fail why);
-      (match B.load ~caps dir with
-      | Error why -> Alcotest.fail why
-      | Ok book ->
-          Alcotest.(check string)
-            "map-fmt02 runner loads the book" "collect"
-            (List.hd book.playbook.procedures).slug);
-      let body =
-        Ox_caps.Cap_stdlib.In_channel.with_open_text ~caps file In_channel.input_all
-      in
-      Alcotest.(check bool)
-        "map-fmt02 provenance is not a playbook field" false
-        (try
-           ignore (Str.search_forward (Str.regexp_string "\"provenance\"") body 0);
-           true
-         with Not_found -> false);
-      match
-        B.read_provenance ~caps (Filename.concat dir (B.provenance_filename "collect"))
-      with
-      | Ok (Some read) ->
-          Alcotest.(check string) "map-fmt02 sidecar gate" "replay" read.gate
-      | Ok None -> Alcotest.fail "map-fmt02 sidecar missing"
-      | Error why -> Alcotest.fail why)
-
 let () =
   let caps = Ox_test.powerbox () in
   Alcotest.run "playbooks"
@@ -1143,9 +1040,9 @@ let () =
       ( "L29",
         [
           Alcotest.test_case "run-tcuz run-dbji refusals" `Quick (refusal ~caps);
-          Alcotest.test_case "run-r1e9 run-tny5 grammar" `Quick grammar;
+          Alcotest.test_case "run-mjnw run-tny5 grammar" `Quick grammar;
           Alcotest.test_case "run-xqh8 consent cleared" `Quick consent_cleared;
-          Alcotest.test_case "run-l06s wait" `Quick await;
+          Alcotest.test_case "run-xflk wait" `Quick await;
           Alcotest.test_case "map-bjon judgment waits out loading" `Quick judgment_loading;
           Alcotest.test_case "map-bjon learned expect timeout" `Quick learned_timeout;
           Alcotest.test_case "run-k8bx retry once" `Quick retry;
@@ -1166,10 +1063,6 @@ let () =
             no_directory_no_file_script;
           Alcotest.test_case "extr-plaz extr-lslp layout, show and check" `Quick
             (layout ~caps);
-          Alcotest.test_case "extr-k40c proposals carry no scripts" `Quick
-            (proposals_carry_no_scripts ~caps);
-          Alcotest.test_case "extr-k40c planner procedures" `Quick
-            (planner_procedures ~caps);
           Alcotest.test_case "extr-zdst extr-8o1h shapes" `Quick shapes;
           Alcotest.test_case "extr-8o1h many records" `Quick script_examples;
           Alcotest.test_case "hdoc-vqj7 explicit pinned arguments" `Quick
@@ -1181,7 +1074,6 @@ let () =
           Alcotest.test_case "pbk-85m1 pbk-lww9 pbk-8n2l pbk-i0zl format refusals" `Quick
             (format_refusals ~caps);
           Alcotest.test_case "map-fmt01 removed fields" `Quick (removed_fields ~caps);
-          Alcotest.test_case "map-fmt02 provenance sidecar" `Quick
-            (provenance_sidecar ~caps);
+          Alcotest.test_case "cut-yk93 notes" `Quick (notes ~caps);
         ] );
     ]

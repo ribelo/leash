@@ -9,6 +9,10 @@ milestone: 7
 
 Superseded by [L56: the pilot loop](<../pilot/01-pilot.md>), under [ADR-0012](<../../adr/0012-the-pilot-drives.md>). Prepared playbooks, scripts, page kinds and verification remain reusable memory, but the pilot owns the mission and the former three-level JEV chooser is gone. L33 discovery was removed by L53 (`map-gkww`). The recorded milestone-7 acceptance is historical.
 
+## Retired by ADR-0014 (L59, 2026-10-05)
+
+`run-m0r8` (planner-written procedures written to `proposed/`, merged by `playbook accept`) is retired: no code path writes a playbook, and `playbook accept` is removed.
+
 ## Problem Statement
 
 `drive` takes one goal on one tab and drives it with JEV until `done` or `blocked`. That is one step of real work. Buying something, filing an invoice and mailing it, or any task that crosses pages and sites is dozens of such steps whose *order* depends on where the previous one landed, whose *success* must be verified rather than believed, and whose know-how — how this site's search works, where its add-to-cart button is — is worth recording once and reusing. Today the outer agent has to do all of that itself, expensively, and learns nothing between runs.
@@ -24,7 +28,8 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 ### Playbooks
 
 1. As an operator, I want playbooks stored at `$XDG_CONFIG_HOME/leash/playbooks/<site>.json` and loaded on demand, so that `leash run` needs no playbook argument. ^run-tcuz
-2. As a playbook author, I want a playbook to declare `site` (a hostname pattern), `entry` (the URL to navigate to when switching to this site), `description`, `pages` (named page kinds, each with a description and a URL pattern or a text marker), and `procedures`, so that everything a run needs about a site is in one file. ^run-r1e9 (Retired 2026-10-03 by map-fm01: page description is removed.) ^run-r1e9
+2. As a playbook author, I want a playbook to declare `site` (a hostname pattern), `entry` (the URL to navigate to when switching to this site), `description`, `pages` (named page kinds, each with a description and a URL pattern or a text marker), and `procedures`, so that everything a run needs about a site is in one file. (Retired 2026-10-03 by map-fm01: page description is removed.) ^run-r1e9
+2a. As a playbook author, I want a playbook to declare `site`, `entry`, `description`, `pages` (named page kinds, each with a URL pattern or a text marker) and `procedures`, so that everything a run needs about a site is in one file. ^run-mjnw
 3. As a playbook author, I want a procedure to have a `slug`, a `description` in human language, optional `args` (names substituted into steps as `{name}`), `steps`, and a mandatory non-empty `expect` list, so that JEV can choose it by description and the runner can verify it. ^run-2lei
 4. As a playbook author, I want a step to be either `goal: "<drive goal>"` (with optional `hint`, a selector or label that shapes the goal text and `snap --match`, never a target) or `use: <slug>` (with `args` and `optional: true`), so that procedures compose by calling each other and never branch in the file. ^run-84ds
 5. As a playbook author, I want each expectation written as one sentence of human language, so that the file reads as prose. ^run-zmz8
@@ -36,7 +41,8 @@ This follows TypeSafe's own tier discipline for JEV (learnjev.com, "real-time lo
 
 9. As a runner, I want each expectation resolved to a checker at load time by matching its sentence against the playbook's page kinds and a small vocabulary — "the page is <kind>", "the page shows <text>", "a file was downloaded" (optionally "a PDF"), "no dialog is open", "a <role> named <text> is present" — so that most expectations are verified by code. ^run-tny5
 10. As a runner, I want an expectation that matches no deterministic checker verified by a JEV score question ("how well does the current page satisfy: <sentence>?") over the page summary, with a configurable pass threshold, so that judgment is used only where code cannot decide. ^run-vbys
-11. As a runner, I want expectations checked with a bounded wait (default 5 s, the procedure may set `expect_timeout_s`) so that a page still settling does not fail a correct procedure. ^run-l06s (Retired 2026-10-03 by map-fm01: the per-procedure field is gone; the wait is one 5 s constant.) ^run-l06s
+11. As a runner, I want expectations checked with a bounded wait (default 5 s, the procedure may set `expect_timeout_s`) so that a page still settling does not fail a correct procedure. (Retired 2026-10-03 by map-fm01: the per-procedure field is gone; the wait is one 5 s constant.) ^run-l06s
+11a. As a runner, I want expectations checked with one bounded wait of 5 s, so that a page still settling does not fail a correct procedure. ^run-xflk
 12. As a service author, I want Leash to observe downloads through `Browser.setDownloadBehavior` (allow, into `$XDG_DOWNLOAD_DIR/leash/` or the configured path, events on) and `Browser.downloadWillBegin`/`downloadProgress`, keeping a per-tab download inventory (id, suggested name, mime, state, path), so that "a file was downloaded" is a fact, and `leash downloads <tab>` lists it. ^run-ykq4
 13. As a runner, I want a procedure whose expectations fail to be retried once from its first step, and on a second failure to be reported as a failed procedure to the loop, so that one flaky page does not end a run and a broken procedure does not loop. ^run-k8bx
 

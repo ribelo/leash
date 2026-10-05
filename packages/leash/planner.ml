@@ -150,6 +150,8 @@ let pilot_request_json (request : Run.plan_request) =
        );
        ( "page_kind",
          match request.page_kind with Some kind -> `String kind | None -> `Null );
+       ( "site_notes",
+         match request.notes with Some notes -> `String notes | None -> `Null );
        ("url", `String request.url);
        ("title", `String request.title);
        ("text", `String (bounded 6000 request.text));
@@ -176,22 +178,7 @@ let pilot_request_json (request : Run.plan_request) =
                     ("steps", `List (List.map P.yojson_of_step leg.steps));
                   ])
               request.legs) );
-       ( "candidates",
-         `List
-           (List.map
-              (fun ((proc : Playbook.procedure), source) ->
-                let fields =
-                  Yojson.Safe.Util.to_assoc (Playbook.yojson_of_procedure proc)
-                in
-                `Assoc
-                  (fields
-                  @ [
-                      ( "source",
-                        match source with
-                        | `Installed -> `String "installed"
-                        | `Draft revision -> `String revision );
-                    ]))
-              request.candidates) );
+       ("candidates", `List (List.map Playbook.yojson_of_procedure request.candidates));
      ]
     @ picture)
 

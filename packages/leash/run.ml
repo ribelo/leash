@@ -84,7 +84,7 @@ type plan_trigger = Blocked | Failed | Arguments | Challenge
 
 type leg = { goal : string; outcome : string; steps : P.step list }
 
-type candidate = Playbook.procedure * [ `Installed | `Draft of string ]
+type candidate = Playbook.procedure
 
 type plan_answer = Leg of string | Read of { quote : string; note : string } | Act of Protocol.planner_action | Observe_image | Notify of string | Done of { result : string; evidence : string list; records : (string * string) list list } | Handoff of string | Fail of string
 
@@ -123,6 +123,8 @@ type plan_request = {
   image_input : bytes option;
   planner_actions : int;
   page_kind : string option;
+  notes : string option;
+      (* cut-yk93: the site playbook's notes, on every turn on that site. *)
   title : string;
   url : string;
   text : string;
@@ -161,17 +163,13 @@ type handler = {
     checks:(string * Playbook.checker) list ->
     timeout_s:int ->
     (P.run_expectation list * observation, P.error) result;
-      (** run-l06s run-vbys: the checkers first, the JEV score only where no checker
+      (** run-xflk run-vbys: the checkers first, the JEV score only where no checker
           applies, each expectation with its verdict. [pages] are the current playbook's
           page kinds, which the [page_kind] checker is decided against. The observation it
           returns is the one it judged. *)
   plan : plan_request -> (plan_reply, P.error) result;
       (** run-w7ke run-rq6i: the planner turn — Luna in production, a scripted answer in a
           test — asked only at the three triggers and only while the turn cap allows it. *)
-  propose : site:string -> Playbook.procedure -> (string, P.error) result;
-      (** run-m0r8: write a planner-written procedure that ran and passed its expectations
-          to the XDG state directory, and answer the path written. The run reports it; only
-          the operator's [playbook accept] ever merges it into a playbook. *)
   hand_off : reason:string -> (P.tab_info, P.error) result;
       (** run-klp9: a planner's handoff, which leaves the tab with the human. *)
   script :
@@ -351,8 +349,7 @@ let failures (results : P.run_expectation list) =
 
 
 (* pilot-ukoh pilot-eu1c pilot-rdjv: only the pilot owns mission completion. *)
-let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
-    ?(drafts = fun ~site:_ ~kind:_ -> []) ?learning
+let loop ~handler ~now ~installed
     ?(secrets = []) ?(on_secrets = fun _ -> ()) ?(on_book = fun _ -> ())
     ?(on_record = fun _ -> Ok ()) ?(notify = fun _ -> Ok ())
     ?(challenge = fun _ -> None) ?(challenge_attempt = true) ?(challenge_turns = 2)
@@ -366,7 +363,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     | Model_usage.Reported (_, Some cost) -> incr priced; reported_cost := !reported_cost +. cost
     | Model_usage.Reported (_, None) -> () in
   Model_usage.with_meter note (fun () ->
-  ignore (drafts, challenge, challenge_attempt, challenge_turns, pause_ms);
+  ignore (challenge, challenge_attempt, challenge_turns, pause_ms);
   let ( let* ) = Result.bind in
   let deadline = now () +. float_of_int args.deadline_s in
   let private_values = ref secrets in
@@ -382,13 +379,9 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
       rows = List.map (fun (role, name) -> (scrub role, scrub name)) page.rows;
       downloads = List.map (fun (name, mime, state) -> (scrub name, scrub mime, scrub state)) page.downloads } in
   let turns = ref [] and procedures = ref [] and legs = ref [] in
-  let successful = ref [] and used = ref [] and known = ref [] in
-  (* pilot-z1nr: remembered procedures that failed in this mission, the secrets filled so
-     far, and the page kind where the remembered legs begin. *)
-  let spent = ref [] and filled = ref [] and entry_kind = ref None and current_kind = ref None in
-  let remember goal =
-    if !successful = [] then entry_kind := !current_kind;
-    successful := !successful @ [ goal ] in
+  let known = ref [] in
+  (* A playbook procedure that failed in this mission is not offered again in it. *)
+  let spent = ref [] in
   let total_steps = ref 0 and operator_steps = ref [] and operator_state = ref None in
   let generated = ref [] and expectations = ref args.expect and checks = ref [] and unattended = ref [] in
   let records = ref [] and sites = ref [] and current_site = ref None in
@@ -405,20 +398,6 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     count, (if unreported = 0 then Some !reported_cost else None),
     ["model_calls_by_kind", `Assoc by_kind; "reported_cost", `Float !reported_cost; "cost_unreported", `Int unreported] in
   let finish (page : observation) name ?result ?(evidence = []) ?reason () =
-    Option.iter (fun memory ->
-      List.iter (fun site -> Learning.after_mission memory ~site
-        ~used:(List.filter_map (fun (s, item) -> if s = site then Some item else None) !used)
-        ~outcome:(if name = "done" then `Done else `Failed)
-        ~verified:(name = "done" && List.for_all (fun (c : P.run_expectation) -> c.passed) !checks)) !sites;
-      if name = "done" then Option.iter (fun site ->
-        Learning.record_legs memory ~site ~mission:(scrub args.mission)
-          ~args:(List.map (fun (key,value) -> scrub key,scrub value) !known) ~legs:!successful
-          ~entry_kind:(scrub (Option.value ~default:"" !entry_kind)) ~secrets:!filled
-          (* pilot-3egp: without an expectation from the pilot, the remembered procedure
-             checks where the mission ended (U2 on Tauron finished done and wrote nothing). *)
-          ~expect:(List.map scrub (match !expectations with
-            | [] -> [ "the mission is complete: " ^ args.mission ]
-            | expectations -> expectations))) !current_site) learning;
     let call_count, model_cost, usage_fields = accounting () in
     let reply = P.{ result = Option.map scrub result; evidence = List.map scrub evidence;
       pilot_turns = List.length !turns; navigator_steps = !total_steps;
@@ -426,7 +405,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
       unattended = List.rev !unattended; detail = None; playbook_choices = []; status = status name;
       answer = Option.map scrub result; site = !current_site;
       procedures = List.rev !procedures; mission_expectations = !checks;
-      planner_turns = List.rev !turns; proposals = []; installed = [];
+      planner_turns = List.rev !turns;
       collected = List.length !records;
       data = `Assoc (["count", `Int (List.length !records); "first", `List (List.rev !records)]
         @ (match !planned_choice with None -> [] | Some choice -> ["pilot_choice", choice])
@@ -449,20 +428,16 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     Error { error with P.message = scrub error.P.message; detail = Some (json detail) } in
   let infer (page : observation) =
     let book = List.find_opt (fun (book : Playbook.loaded) ->
-      Page_kind.host page.url = Some book.playbook.site) installed in
+      Web_url.host page.url = Some book.playbook.site) installed in
     current_book := book; on_book book;
     current_site := Option.map (fun (b : Playbook.loaded) -> b.playbook.site) book;
-    if !current_site = None then current_site := Page_kind.host page.url;
+    if !current_site = None then current_site := Web_url.host page.url;
     Option.iter (fun site -> if not (List.mem site !sites) then sites := !sites @ [site]) !current_site;
-    let declared = Option.bind book (fun b -> Playbook.page_kind b.playbook.pages ~url:page.url ~text:page.text) in
-    let kind, _ = Page_kind.classify page_kinds ~declared ~url:page.url ~title:page.title in
-    (if kind.name = "" then None else Some kind.name), book in
-  let get_candidates kind book =
-    (match learning, !current_site with
-    | Some memory, Some site -> Learning.candidates memory ~site ~kind ~secrets:!filled
-    | _ -> Option.fold ~none:[] ~some:(fun (b : Playbook.loaded) ->
-        List.map (fun p -> p, `Installed) b.playbook.procedures) book)
-    |> List.filter (fun ((p : Playbook.procedure), _) -> not (List.mem p.slug !spent)) in
+    (* cut-0oal: a page's kind is the one its playbook declares, or none. *)
+    Option.bind book (fun b -> Playbook.page_kind b.playbook.pages ~url:page.url ~text:page.text), book in
+  let get_candidates book =
+    Option.fold ~none:[] ~some:(fun (b : Playbook.loaded) -> b.playbook.procedures) book
+    |> List.filter (fun (p : Playbook.procedure) -> not (List.mem p.slug !spent)) in
   let record_failed_leg goal outcome reason =
     let goal = scrub goal and reason = scrub reason in
     legs := !legs @ [{goal;outcome;steps=[]}];
@@ -490,7 +465,6 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
         operator_state := drive.operator_state;
         let outcome = P.Drive_status.to_string drive.status in
         legs := !legs @ [{ goal; outcome; steps = drive.steps }];
-        if outcome = "done" then remember goal;
         let entry = P.{ revision = None; slug = goal; site = Option.value ~default:"" !current_site;
           planned = true; attempts = 1;
           choice = { key = "leg"; probabilities = `Null; confidence = 1.; usage = None };
@@ -705,37 +679,27 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     legs := !legs @ [ { goal = described;
       outcome = (match step.error with None -> "done" | Some why -> "refused: " ^ why);
       steps = [] } ];
-    (* pilot-3egp: an act that worked is a leg in JEV's language and is remembered, except
-       a fill whose text is a secret name — JEV would type the name. *)
-    (* pilot-z1nr: memory starts after the last secret fill, which it needs as a
-       prerequisite instead of replaying (U10 remembered "Sign in" without its fills). *)
-    (match step.error, command with
-     | None, (P.Fill { text; _ } | P.Type { text; _ }) when List.mem_assoc text !private_values ->
-         successful := []; entry_kind := None;
-         if not (List.mem text !filled) then filled := !filled @ [ text ]
-     | None, (P.Click _ | P.Select _ | P.Press _ | P.Fill _) -> remember described
-     | _ -> ());
     step in
   let rec turn (page : observation) =
     if now () >= deadline then finish page "deadline" ~reason:"pilot deadline reached" ()
     else if List.length !turns >= args.max_plans then finish page "limit" ~reason:"pilot turn cap reached" ()
     else
       let kind, book = infer page in
-      current_kind := kind;
       observed := (page.text :: List.map snd page.rows) @ !observed;
-      let candidates = get_candidates kind book in
+      let candidates = get_candidates book in
       let snapshot = { page.snapshot with P.rows = List.filteri (fun i _ -> i < 250) page.snapshot.rows } in
-      let model_candidates=List.filter_map (fun (proc,source) -> match Playbook.procedure_of_yojson (json (Playbook.yojson_of_procedure proc)) with
-        | Error _ -> None | Ok proc -> Some (proc,match source with `Installed -> `Installed | `Draft revision -> `Draft (scrub revision))) candidates in
+      let model_candidates=List.filter_map (fun proc -> match Playbook.procedure_of_yojson (json (Playbook.yojson_of_procedure proc)) with
+        | Error _ -> None | Ok proc -> Some proc) candidates in
       let request = { legs = List.map (fun (leg : leg) -> {leg with goal=scrub leg.goal}) !legs; candidates=model_candidates; secret_names = List.map fst !private_values;
         trigger = Blocked; reason = "pilot turn"; mission = scrub args.mission;
         site = Option.map scrub !current_site; playbook = None;
         recent = List.map (fun (leg : leg) -> scrub leg.goal, leg.outcome) !legs; arguments = List.map (fun (key,value) -> scrub key,scrub value) !known;
-        snapshot; image_input=page.image_input; planner_actions; page_kind = Option.map scrub kind; title = page.title; url = page.url;
+        snapshot; image_input=page.image_input; planner_actions; page_kind = Option.map scrub kind;
+        notes = Option.bind book (fun (b : Playbook.loaded) -> b.playbook.notes); title = page.title; url = page.url;
         text = if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text;
         downloads = List.map (fun (name, mime, state) -> (scrub name, mime, state)) page.downloads } in
-      let offered = List.map (fun ((proc : Playbook.procedure), source) ->
-        P.Trace.{slug = proc.slug; revision = (match source with `Installed -> None | `Draft revision -> Some revision)}) request.candidates in
+      let offered = List.map (fun (proc : Playbook.procedure) ->
+        P.Trace.{slug = proc.slug}) request.candidates in
       match handler.plan request with
       | Error error when (match error.P.detail with
           | Some (`Assoc fields) -> List.assoc_opt "code" fields = Some (`String "invalid-response")
@@ -832,15 +796,14 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
           | Leg goal when List.mem goal !spent ->
               recorded [] (Some goal);
               legs := !legs @ [ { goal = scrub goal; steps = [];
-                outcome = "refused: this remembered procedure already failed in this mission; act on the page instead" } ];
+                outcome = "refused: this procedure already failed in this mission; act on the page instead" } ];
               next ()
           | Leg goal ->
               recorded [] (Some goal);
-              let chosen = List.find_opt (fun ((p : Playbook.procedure), _) -> p.slug = goal) candidates in
+              let chosen = List.find_opt (fun (p : Playbook.procedure) -> p.slug = goal) candidates in
               let outcome = match chosen with
                 | None -> run_leg goal None
-                | Some (proc, revision) ->
-                    Option.iter (fun site -> used := !used @ [site, (proc.slug, revision)]) !current_site;
+                | Some proc ->
                     let before_checks = List.length !candidate_checks in
                     let before=List.length !legs and old_procedures = !procedures and before_scripts=List.length !script_calls and at=now () in
                     let outcome=execute_candidate 0 proc in
@@ -850,7 +813,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
                     legs := List.filteri (fun i _ -> i<before) !legs @ [{goal=scrub goal;outcome=status;steps}];
                     let drives = List.filteri (fun i _ -> i < List.length !procedures - List.length old_procedures) !procedures |> List.rev |> List.concat_map (fun (p : P.run_procedure) -> p.drives) in
                     let scripts = List.filteri (fun i _ -> i < List.length !script_calls - before_scripts) !script_calls |> List.rev in
-                    let entry=P.{revision=(match revision with `Installed -> None | `Draft value -> Some (scrub value));slug=scrub goal;site=Option.value ~default:"" !current_site;planned=true;attempts=1;
+                    let entry=P.{revision=None;slug=scrub goal;site=Option.value ~default:"" !current_site;planned=true;attempts=1;
                       choice={key="leg";probabilities=`Null;confidence=1.;usage=None};drives;scripts;expectations=List.filteri (fun i _ -> i>=before_checks) !candidate_checks;outcome=status;elapsed_ms=ms (now () -. at);reason=(match outcome with Ok () -> None | Error error -> Some (scrub error.message))} in
                     procedures := entry::old_procedures;
                     if status <> "done" then spent := proc.slug :: !spent;

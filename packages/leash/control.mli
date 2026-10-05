@@ -16,7 +16,6 @@ type ('clock, 'net) deps = {
 }
 
 val create :
-  ?learning:Learning.t ->
   ?pilot:Config.pilot ->
   ?planner_actions:int ->
   ?traces:Traces.t ->
@@ -84,7 +83,6 @@ val budget :
 val status : t -> Ox_app.Status.t
 
 val report :
-  ?learning:Learning.t ->
   ?models_status:(unit -> Protocol.models_status) ->
   ?chrome_pid:(unit -> int option) ->
   Tabs.t ->
@@ -94,7 +92,6 @@ val report :
     is consulted only while Chrome is running; a relaunch reports [pid: null]. *)
 
 val dispatch :
-  ?learning:Learning.t ->
   ?pilot:Config.pilot ->
   ?planner_actions:int ->
   ?traces:Traces.t ->
@@ -117,7 +114,6 @@ val dispatch :
 val decode : string -> (Protocol.request, string) result
 
 val handle :
-  ?learning:Learning.t ->
   ?pilot:Config.pilot ->
   ?planner_actions:int ->
   ?traces:Traces.t ->
