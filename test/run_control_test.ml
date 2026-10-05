@@ -246,6 +246,111 @@ let one_shot () =
            result.procedures))
     [ false; true ]
 
+(* pilot-1gv0: JEV runs the list script three times on an unchanged page; its records
+   are written once. *)
+let rerun_unchanged () =
+  let streamed = ref [] and outer = ref true in
+  let snapshot =
+    P.
+      {
+        snapshot = ok (Snapshot_id.of_string "s_test");
+        tab = ok (Handle.of_string "t_test");
+        url = "https://example.com/";
+        title = "Catalogue";
+        page_kind = None;
+        rows = [];
+        total = 0;
+        offset = 0;
+        truncated = false;
+        settled = true;
+        source = Ax;
+        image = None;
+        reason = None;
+        dialog = None;
+      }
+  in
+  let page =
+    R.
+      {
+        url = "https://example.com/";
+        title = "Catalogue";
+        text = "";
+        rows = [];
+        downloads = [];
+        dialog = None;
+        snapshot;
+      }
+  in
+  let handler =
+    R.
+      {
+        observe = (fun () -> Ok page);
+        navigate = (fun _ -> Ok ());
+        choose = (fun _ -> assert false);
+        text_value = (fun _ -> assert false);
+        step =
+          (fun request ->
+            if !outer then (
+              outer := false;
+              for _ = 1 to 3 do
+                (ignore
+                   (request.R.on_script ~url:page.url "list"
+                     : (Leash__Jev_request.script_effect, P.error) result)
+                 [@ox.allow
+                   "ox-discarded-result: the records written are what is checked"])
+              done);
+            Ok
+              P.
+                {
+                  status = ok (Drive_status.of_string "done");
+                  steps = [];
+                  final = snapshot;
+                  operator_state = None;
+                  reason = None;
+                });
+        verify = (fun ~pages:_ ~checks:_ ~timeout_s:_ -> Ok ([], page));
+        plan = (fun _ -> assert false);
+        hand_off = (fun ~reason:_ -> assert false);
+        script =
+          (fun _ ~args:_ ->
+            Ok
+              (Collected
+                 {
+                   value =
+                     `List
+                       [ `Assoc [ ("id", `String "a") ]; `Assoc [ ("id", `String "b") ] ];
+                   records = 2;
+                   bytes = 10;
+                   elapsed_ms = 1;
+                 }));
+      }
+  in
+  let result =
+    match
+      R.loop ~handler ~planner:false
+        ~now:(fun () -> 0.)
+        ~installed:[ book ]
+        ~on_record:(fun r ->
+          streamed := r :: !streamed;
+          Ok ())
+        R.
+          {
+            mission = "collect every book";
+            max_steps = 60;
+            start_url = None;
+            max_procedures = 10;
+            deadline_s = 60;
+            dry_run = false;
+            max_plans = 2;
+            expect = [];
+          }
+    with
+    | Ok r -> r
+    | Error e -> Alcotest.fail e.P.message
+  in
+  Alcotest.(check int) "pilot-1gv0 each record streamed once" 2 (List.length !streamed);
+  Alcotest.(check int) "pilot-1gv0 each record counted once" 2 result.collected
+
 let () =
   Alcotest.run "L40 controls"
     [
@@ -253,6 +358,8 @@ let () =
         [
           Alcotest.test_case "native repeat and terminal cap" `Quick native_repeat;
           Alcotest.test_case "keyed repeat deduplication" `Quick duplicate_records;
+          Alcotest.test_case "pilot-1gv0 re-run on an unchanged page" `Quick
+            rerun_unchanged;
           Alcotest.test_case "rejected control audit" `Quick rejected_trace;
           Alcotest.test_case "one-shot and empty completion" `Quick one_shot;
           Alcotest.test_case "fail closed controls" `Quick refuses_control;

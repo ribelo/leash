@@ -465,11 +465,18 @@ let loop ~handler ~now ~installed
     outcome in
   (* Records a script returned go to --out once each (the repeat key, when a procedure
      declares one, deduplicates across pages). *)
-  let store (script : Playbook.script) book value =
+  (* pilot-1gv0: a script run again on the same page returns the records it already
+     returned; each is written once per mission. Without a declared repeat key a record is
+     the same when its script, page URL and content are. *)
+  let written = Hashtbl.create 64 in
+  let store ~url (script : Playbook.script) book value =
     let values = match value with `List values -> values | value -> [value] in
     List.fold_left (fun acc record -> let* () = acc in
       let* duplicate = match !collection_key with
-        | None -> Ok false
+        | None ->
+            let id = (script.name, url, Yojson.Safe.to_string record) in
+            let seen = Hashtbl.mem written id in
+            Hashtbl.replace written id (); Ok seen
         | Some key -> (match record with
             | `Assoc fields -> (match List.assoc_opt key fields with
                 | None | Some `Null -> Error (invalid ("repeat record is missing key " ^ scrub key))
@@ -492,7 +499,9 @@ let loop ~handler ~now ~installed
     let* output = call_script script arguments in
     match output with
     | Rejected {reason; _} -> Error (invalid reason)
-    | Collected {value; records = n; _} -> let* () = store script book value in Ok n in
+    | Collected {value; records = n; _} ->
+        let url = match observe () with Ok page -> page.url | Error _ -> ("" [@ox.allow "ox-discarded-result: an unobservable page has no URL; records then compare by script and content"]) in
+        let* () = store ~url script book value in Ok n in
   let rec execute_candidate depth (proc : Playbook.procedure) =
     let previous_key = !collection_key in
     Option.iter (fun (repeat : Playbook.repeat) -> collection_key := Some repeat.key) proc.repeat;
