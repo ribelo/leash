@@ -1920,6 +1920,7 @@ let help_topics =
   let preferred =
     [
       "handles";
+      "browser";
       "playbooks";
       "authoring";
       "expectations";
@@ -1944,6 +1945,7 @@ let help_body name =
 (* hdoc-vqj7: the offline index says what each topic answers. *)
 let help_description = function
   | "handles" -> "Setup, tab handles, sharing, expiry, and human handoff."
+  | "browser" -> "Rows, aligned PNG/CSS pictures, native points and focused type."
   | "playbooks" -> "Install, validate, and read the playbook format and example."
   | "authoring" -> "Write and test reliable procedures and goals."
   | "expectations" -> "Checker sentences and when they are evaluated."
