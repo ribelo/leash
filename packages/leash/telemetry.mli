@@ -11,9 +11,11 @@ val create :
     The exporter handles its worker lifecycle when the switch closes.
 
     Suspension: may suspend while starting the switch-owned exporter worker; export I/O
-    runs in that worker. Cancellation: propagates from exporter startup and switch
-    teardown. Finalizers: sw owns exporter ending with its five-second budget. Locking:
-    exporter queue synchronization belongs to Ox_otel. Cancellation safety: safe to re-run
-    on a fresh switch after the previous exporter ends; do not register duplicate
-    reporters. [Invalid_argument] is raised when Ox_otel rejects the endpoint or headers.
-*)
+    runs in that worker; configuration-error printer callback invocation is delegated to
+    Format.asprintf with Ox_otel.pp_error. Cancellation: propagates from exporter startup
+    and switch teardown; configuration-error printer callback invocation is delegated to
+    Format.asprintf with Ox_otel.pp_error. Finalizers: sw owns exporter ending with its
+    five-second budget. Locking: exporter queue synchronization belongs to Ox_otel.
+    Cancellation safety: safe to re-run on a fresh switch after the previous exporter
+    ends; do not register duplicate reporters. [Invalid_argument] is raised when Ox_otel
+    rejects the endpoint or headers. *)

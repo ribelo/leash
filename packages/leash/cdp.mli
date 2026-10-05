@@ -57,12 +57,14 @@ val create :
 (** One correlator, its reader fiber and its deadline clock, all scoped to [sw]. The
     reader stops on switch teardown; the transport is not closed by this module.
 
-    Suspension: may suspend while starting a switch-owned reader; does not wait for a
-    browser reply. Cancellation: propagates from switch-scoped startup. Finalizers: the
-    correlator reader is scoped to sw; borrowed transport flows are not closed here.
-    Locking: correlation and outgoing writes are serialized by the correlator.
-    Cancellation safety: safe to re-run on a fresh owner switch after the old reader has
-    stopped. *)
+    Suspension: may suspend while starting a switch-owned reader; callback invocation for
+    framing and correlation is delegated to Ox_rpc.Correlator.create; does not wait for a
+    browser reply. Cancellation: propagates from switch-scoped startup; callback
+    scheduling and failure ownership are delegated to Ox_rpc.Correlator.create.
+    Finalizers: the correlator reader is scoped to sw; borrowed transport flows are not
+    closed here. Locking: correlation and outgoing writes are serialized by the
+    correlator. Cancellation safety: safe to re-run on a fresh owner switch after the old
+    reader has stopped. *)
 
 val call :
   t ->

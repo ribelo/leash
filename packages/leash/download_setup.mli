@@ -9,8 +9,10 @@ val prepare :
     seconds for Chrome's downloads page to acknowledge loading history. [on_target]
     identifies the internal target before attachment so it never enters the tab ledger.
 
-    Suspension: may suspend on browser calls and bounded history readiness polling.
-    Cancellation: propagates; target cleanup is protected. Finalizers: closes the internal
+    Suspension: may suspend on browser calls and bounded history readiness polling;
+    bootstrap callback invocation is delegated to Ox.Timeout.timeout and [on_target].
+    Cancellation: propagates; target cleanup is protected; bootstrap callback invocation
+    is delegated to Ox.Timeout.timeout and [on_target]. Finalizers: closes the internal
     setup target even on failure. Locking: none here; startup owns this CDP
     initialization. Cancellation safety: safe to re-run after the previous internal target
     cleanup; the operation only initializes download history.

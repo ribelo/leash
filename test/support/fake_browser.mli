@@ -74,8 +74,9 @@ val create : sw:Eio.Switch.t -> ?sleep:(float -> unit) -> unit -> t * client
     Cancellation: propagates from pipe and fiber startup. Finalizers: sw owns pipe ends
     and the peer daemon. Locking: the fake serializes outgoing frames with its write
     mutex. Cancellation safety: safe to re-run on a fresh switch after closing the old
-    fake; construction issues no browser action. [Assert_failure] can escape if the
-    scripted pipe-read invariant fails. *)
+    fake; construction issues no browser action. [Invalid_argument] is raised if [sw] has
+    finished or belongs to another domain when Eio.Fiber.fork_daemon checks it during
+    startup. Exceptions in the peer daemon fail [sw], not the calling fiber. *)
 
 val on_method : t -> string -> (Yojson.Safe.t -> Yojson.Safe.t) -> unit
 

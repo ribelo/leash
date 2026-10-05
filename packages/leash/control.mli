@@ -51,11 +51,13 @@ val create :
     run works from, which is how a scripted test runs a known playbook without touching
     the operator's XDG configuration; production leaves it [None] and the run loads them.
 
-    Suspension: may suspend during private socket validation and listener startup.
-    Cancellation: propagates from listener creation. Finalizers: sw owns the listener and
-    its request fibers and socket cleanup. Locking: the listener enforces single ownership
-    of its socket; tab serialization remains in Tabs. Cancellation safety: safe to re-run
-    after tearing down the previous owner switch; an existing listener is refused.
+    Suspension: may suspend during private socket validation and listener startup;
+    listener callback invocation is delegated to Ox_ipc.Listener.run. Cancellation:
+    propagates from listener creation; callback scheduling and failure ownership are
+    delegated to Ox_ipc.Listener.run. Finalizers: sw owns the listener and its request
+    fibers and socket cleanup. Locking: the listener enforces single ownership of its
+    socket; tab serialization remains in Tabs. Cancellation safety: safe to re-run after
+    tearing down the previous owner switch; an existing listener is refused.
 
     [Assert_failure] if an internal handler invariant fails. [Eio.Cancel.Cancelled]
     propagates. An owned handler cleanup can raise [Fun.Finally_raised].

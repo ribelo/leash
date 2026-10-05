@@ -41,13 +41,16 @@ val create :
   'clock deps ->
   t
 (** Suspension: may suspend while starting ledger and browser-event fibers; attachment
-    runs in the event owner. Cancellation: propagates from switch-scoped startup.
-    Finalizers: sw owns ledger/event fibers and agent-tab shutdown; human-origin tabs are
-    not closed. Locking: the ledger actor serializes bookkeeping and per-tab locks
-    serialize actions. Cancellation safety: safe to re-run only after tearing down the
-    previous registry switch and its agent-tab cleanup. [Assert_failure] can escape if an
-    internal tab-registry invariant fails. [Eio.Cancel.Cancelled] propagates from
-    switch-scoped startup. *)
+    runs in the event owner; ledger initializer and handler callback invocation is
+    delegated to Ox.Actor.create. Cancellation: propagates from switch-scoped startup;
+    ledger initializer and handler callback scheduling and failure ownership are delegated
+    to Ox.Actor.create. Finalizers: sw owns ledger/event fibers and agent-tab shutdown;
+    human-origin tabs are not closed. Locking: the ledger actor serializes bookkeeping and
+    per-tab locks serialize actions. Cancellation safety: safe to re-run only after
+    tearing down the previous registry switch and its agent-tab cleanup.
+    [Invalid_argument] is raised if [sw] has finished or belongs to another domain when
+    Eio.Fiber.fork_daemon checks it during startup. Failures in child ledger and
+    browser-event fibers fail [sw], not the calling fiber. *)
 
 val status : t -> Ox_app.Status.t
 

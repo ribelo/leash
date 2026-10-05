@@ -132,7 +132,9 @@ val create : sw:Eio.Switch.t -> ?launch:'clock launch -> config -> 'clock deps -
     startup.
 
     Suspension: may suspend while starting supervisor fibers without waiting for the first
-    generation. Cancellation: propagates from switch-scoped startup. Finalizers: sw stops
+    generation; tail-ledger initializer callback invocation is delegated to
+    Ox.Agent.create. Cancellation: propagates from switch-scoped startup; tail-ledger
+    initializer callback invocation is delegated to Ox.Agent.create. Finalizers: sw stops
     the supervisor and retires its managed generations. Locking: supervisor state changes
     are owned by its supervisor fibers. Cancellation safety: safe to re-run on a fresh
     switch after the old supervisor and child have stopped. [Invalid_argument] is raised

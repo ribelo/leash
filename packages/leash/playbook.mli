@@ -387,13 +387,16 @@ val propose :
     the proposal.
 
     Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous. Cancellation: propagates while acquiring the mutex before
-    writes; the locked transaction is cancellation-protected. Finalizers: release the
-    mutex and file locks and close owned descriptors and channels. Locking: the shared
-    installation mutex and non-blocking filesystem installation/proposal locks serialize
-    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
-    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
-    validated-playbook invariant fails. *)
+    operations are synchronous, with JSON read-callback invocation delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel.
+    Cancellation: propagates while acquiring the mutex before writes; the locked
+    transaction is cancellation-protected; JSON read-callback invocation is delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. Finalizers:
+    release the mutex and file locks and close owned descriptors and channels. Locking:
+    the shared installation mutex and non-blocking filesystem installation/proposal locks
+    serialize transactions. Cancellation safety: safe to re-run after cancellation while
+    acquiring the mutex; no transaction has begun. [Assert_failure] can escape if an
+    internal validated-playbook invariant fails. *)
 
 val retire :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
@@ -401,13 +404,16 @@ val retire :
   slug:string ->
   (unit, string) result
 (** Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous. Cancellation: propagates while acquiring the mutex before
-    writes; the locked transaction is cancellation-protected. Finalizers: release the
-    mutex and file locks and close owned descriptors and channels. Locking: the shared
-    installation mutex and non-blocking filesystem installation/proposal locks serialize
-    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
-    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
-    validated-playbook invariant fails. *)
+    operations are synchronous, with script and sidecar read-callback invocation delegated
+    to Ox_caps.Cap_stdlib.In_channel.with_open_bin with In_channel.input_all.
+    Cancellation: propagates while acquiring the mutex before writes; the locked
+    transaction is cancellation-protected; script and sidecar read-callback invocation is
+    delegated to Ox_caps.Cap_stdlib.In_channel.with_open_bin with In_channel.input_all.
+    Finalizers: release the mutex and file locks and close owned descriptors and channels.
+    Locking: the shared installation mutex and non-blocking filesystem
+    installation/proposal locks serialize transactions. Cancellation safety: safe to
+    re-run after cancellation while acquiring the mutex; no transaction has begun.
+    [Assert_failure] can escape if an internal validated-playbook invariant fails. *)
 
 val retire_draft :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
@@ -420,13 +426,16 @@ val retire_draft :
     transaction as its installation.
 
     Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous. Cancellation: propagates while acquiring the mutex before
-    writes; the locked transaction is cancellation-protected. Finalizers: release the
-    mutex and file locks and close owned descriptors and channels. Locking: the shared
-    installation mutex and non-blocking filesystem installation/proposal locks serialize
-    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
-    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
-    validated-playbook invariant fails. *)
+    operations are synchronous, with JSON read-callback invocation delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel.
+    Cancellation: propagates while acquiring the mutex before writes; the locked
+    transaction is cancellation-protected; JSON read-callback invocation is delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. Finalizers:
+    release the mutex and file locks and close owned descriptors and channels. Locking:
+    the shared installation mutex and non-blocking filesystem installation/proposal locks
+    serialize transactions. Cancellation safety: safe to re-run after cancellation while
+    acquiring the mutex; no transaction has begun. [Assert_failure] can escape if an
+    internal validated-playbook invariant fails. *)
 
 val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
 
@@ -438,13 +447,16 @@ val archive_proposal :
 (** map-b3kk: archive only the inspected draft revision, under the install lock.
 
     Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous. Cancellation: propagates while acquiring the mutex before
-    writes; the locked transaction is cancellation-protected. Finalizers: release the
-    mutex and file locks and close owned descriptors and channels. Locking: the shared
-    installation mutex and non-blocking filesystem installation/proposal locks serialize
-    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
-    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
-    validated-playbook invariant fails. *)
+    operations are synchronous, with JSON read-callback invocation delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel.
+    Cancellation: propagates while acquiring the mutex before writes; the locked
+    transaction is cancellation-protected; JSON read-callback invocation is delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. Finalizers:
+    release the mutex and file locks and close owned descriptors and channels. Locking:
+    the shared installation mutex and non-blocking filesystem installation/proposal locks
+    serialize transactions. Cancellation safety: safe to re-run after cancellation while
+    acquiring the mutex; no transaction has begun. [Assert_failure] can escape if an
+    internal validated-playbook invariant fails. *)
 
 val accept :
   ?revision:string ->
@@ -460,13 +472,16 @@ val accept :
     command and the learning auto gate share this validated merge path.
 
     Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
-    operations are synchronous. Cancellation: propagates while acquiring the mutex before
-    writes; the locked transaction is cancellation-protected. Finalizers: release the
-    mutex and file locks and close owned descriptors and channels. Locking: the shared
-    installation mutex and non-blocking filesystem installation/proposal locks serialize
-    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
-    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
-    validated-playbook invariant fails. *)
+    operations are synchronous, with JSON read-callback invocation delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel.
+    Cancellation: propagates while acquiring the mutex before writes; the locked
+    transaction is cancellation-protected; JSON read-callback invocation is delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. Finalizers:
+    release the mutex and file locks and close owned descriptors and channels. Locking:
+    the shared installation mutex and non-blocking filesystem installation/proposal locks
+    serialize transactions. Cancellation safety: safe to re-run after cancellation while
+    acquiring the mutex; no transaction has begun. [Assert_failure] can escape if an
+    internal validated-playbook invariant fails. *)
 
 (* run-k8bx: restart every step from the beginning after the first failed check. *)
 val retry_once : execute:(unit -> unit) -> verify:(unit -> bool) -> bool

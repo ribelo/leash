@@ -197,11 +197,14 @@ val upload :
     need [multiple]. Every other action refuses a [file-input] row with
     [row-not-actionable] (hard-2gnf).
 
-    Suspension: may suspend on CDP calls and settling. Cancellation: propagates; file
-    assignment may already have occurred. Finalizers: none registered; Chrome owns
-    file-input resources. Locking: none here; the Tabs caller serializes tab actions.
-    Cancellation safety: unsafe because progress is lost; never replay an uncertain file
-    assignment.
+    Suspension: may suspend on CDP calls and settling; callback invocation is delegated to
+    Eio.Fiber.first in Dialog_race.first, the tab's dialog subscription, and Protocol's
+    wire-value decoders. Cancellation: propagates; file assignment may already have
+    occurred; callback invocation is delegated to Eio.Fiber.first in Dialog_race.first,
+    the tab's dialog subscription, and Protocol's wire-value decoders. Finalizers: none
+    registered; Chrome owns file-input resources. Locking: none here; the Tabs caller
+    serializes tab actions. Cancellation safety: unsafe because progress is lost; never
+    replay an uncertain file assignment.
 
     [Assert_failure] if an internal browser invariant fails. [Eio.Cancel.Cancelled]
     propagates. *)

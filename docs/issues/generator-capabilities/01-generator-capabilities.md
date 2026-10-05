@@ -331,3 +331,320 @@ powerbox. A single entry mint supplies each capability-using executable.
 
 - `env, exec, fork, fs_read, fs_write, random`: [rig:41](<../../../test/unattended_test.ml#L41>), [notify_then_done:307](<../../../test/unattended_test.ml#L307>), [expiry:344](<../../../test/unattended_test.ml#L344>), [challenge_case:454](<../../../test/unattended_test.ml#L454>), [forbidden_challenge_actions:503](<../../../test/unattended_test.ml#L503>), [disabled:582](<../../../test/unattended_test.ml#L582>), [bounded:593](<../../../test/unattended_test.ml#L593>), [cleared:604](<../../../test/unattended_test.ml#L604>), [resumed:643](<../../../test/unattended_test.ml#L643>), [canceled_notification:695](<../../../test/unattended_test.ml#L695>), [debug_challenge:739](<../../../test/unattended_test.ml#L739>), [debug_signal_lifecycle:777](<../../../test/unattended_test.ml#L777>), [semantic_challenge:848](<../../../test/unattended_test.ml#L848>).
 - `exec, fork, fs_write`: [launch:59](<../../../test/unattended_test.ml#L59>), [command_failure:625](<../../../test/unattended_test.ml#L625>), [notifier_bound:866](<../../../test/unattended_test.ml#L866>).
+
+## Second wave: all-rule derivation and paused repair (historical)
+
+The subsections here preserve the paused state. The resumed-verification
+section below supersedes their pending statuses and old pin.
+
+This extends ^gencaps-rh1m to the widened repository gate: every registered rule is
+selected, with an empty allow-list and no behavior changes except the deferred
+close-flush corrections below. **This wave is not yet verified.**
+
+### Last valid corrected-engine baseline
+
+- [Ox input](<../../../flake.nix#L6>) and [lock](<../../../flake.lock#L254-L269>)
+  pin `1fbb80f9e8a8a9e190d5a566f5ac93119c5cee18`. The engine was already
+  installed; no install helper was run.
+- The fresh ordered run, before concurrent consumer edits resumed, returned
+  **formatting 0, build 0, tests 0, gate 2**. Logs:
+  [formatting](</tmp/leash-wave2-corrected-baseline-fmt.log>),
+  [build](</tmp/leash-wave2-corrected-baseline-build.log>),
+  [tests](</tmp/leash-wave2-corrected-baseline-tests.log>), and
+  [gate](</tmp/leash-wave2-corrected-baseline-gate.log>).
+- Gate selected **28 registered rules (27 active, one dormant)** and reported
+  **three findings, all ox-val-behaviour, and 11 named-undecided modules**
+  (19 opaque callback-invocation diagnostics). Every other rule had zero findings;
+  there were no scratch capability findings after the fresh build. Three frozen
+  acceptance sources were correctly reported as outside Dune targets, not as
+  findings or undecided modules. The gate rebuilt `@check` with typed evidence required.
+- The corrected engine removed four earlier false positives: a caught
+  `Sys_error` in [Traces.read](<../../../packages/leash/traces.ml#L168>),
+  a merely stored callback in [Fake_browser.create](<../../../test/support/fake_browser.ml#L312>),
+  and child-fiber cancellation attributed to
+  [Expiry.create](<../../../packages/leash/expiry.ml#L16>) and
+  [Tabs.create](<../../../packages/leash/tabs.ml#L3325>). Do not restore false
+  raise tags for those paths. The genuine configuration error in
+  [Telemetry.create](<../../../packages/leash/telemetry.ml#L3-L13>) was already
+  documented by the other consumer session.
+
+### Applied startup disclosures
+
+Each constructor now discloses: **Invalid_argument is raised if sw has finished
+or belongs to another domain when Eio.Fiber.fork_daemon checks it during startup.**
+This is a caller-fiber startup check, not an exception re-raised from a child.
+The installed Eio implementation calls `Switch.check_our_domain` before spawning:
+[fork and fork_daemon](</home/ribelo/.cache/opam/5.4.0+ox/lib/eio/core/fiber.ml#L11-L39>);
+[finished/wrong-domain checks](</home/ribelo/.cache/opam/5.4.0+ox/lib/eio/core/switch.ml#L40-L42>).
+
+| Applied interface | Reachable startup evidence |
+| --- | --- |
+| [Tabs.create](<../../../packages/leash/tabs.mli#L31-L54>) | [Actor creation](<../../../packages/leash/tabs.ml#L3330-L3337>) followed by the [browser-event daemon](<../../../packages/leash/tabs.ml#L3406-L3408>) in the same constructor; attachment and handler failures belong to child fibers. |
+| [Fake_browser.create](<../../../test/support/fake_browser.mli#L68-L80>) | [Peer reader fork](<../../../test/support/fake_browser.ml#L326-L327>); stored screencast assertions are not executed by construction. |
+| [Fake_systemone.serve](<../../../test/support/fake_systemone.mli#L31-L44>) | [serve](<../../../test/support/fake_systemone.ml#L87-L91>) calls [start](<../../../test/support/fake_systemone.ml#L69-L84>), which forks the serving daemon. The listener-address assertion is synchronous and remains disclosed. |
+
+### Applied opaque-callback clauses
+
+Every interface below names its delegate **in both the Suspension and the
+Cancellation sentence**, not merely elsewhere in the comment. These qualify the
+unavailable invocation/ownership evidence; they do not assert that a supplied
+closure necessarily executes synchronously in the caller. The exact applied
+sentences are in the linked interfaces. All edits are documentation-only.
+
+| Applied value(s) | Named delegate and implementation evidence |
+| --- | --- |
+| [Actions.upload](<../../../packages/leash/actions.mli#L187-L210>) | Eio.Fiber.first in Dialog_race.first; the tab's dialog subscription; Protocol wire-value decoder callbacks. [guarded/with_result](<../../../packages/leash/actions.ml#L887-L903>) are reached by [upload](<../../../packages/leash/actions.ml#L1336-L1372>); [Dialog_race.first](<../../../packages/leash/dialog_race.ml#L9-L20>) calls the subscription and races work; [enum conversion](<../../../packages/leash/actions.ml#L11-L15>) and [disposition conversion](<../../../packages/leash/actions.ml#L95-L96>) use [Protocol.wire_value](<../../../packages/leash/protocol.ml#L64>). These correspond to the baseline's Fiber.first, wire_value_634 and indirect-at-12 diagnostics. |
+| [Skill_install.run](<../../../packages/leash/bin/skill_install.mli#L16-L37>) | Ox_caps.Cap_stdlib.In_channel.with_open_bin and Out_channel.with_open_bin. [Bundle writer](<../../../packages/leash/bin/skill_install.ml#L82>) passes an output callback; [installed-tree inspection](<../../../packages/leash/bin/skill_install.ml#L205>) passes an input callback; [run](<../../../packages/leash/bin/skill_install.ml#L260-L324>) reaches both and separately preserves cancellation. |
+| [Cdp.create](<../../../packages/leash/cdp.mli#L50-L67>) | Ox_rpc.Correlator.create owns invocation of read/write and correlation callbacks, supplied at [construction](<../../../packages/leash/cdp.ml#L44-L63>). |
+| [Chrome.create](<../../../packages/leash/chrome.mli#L128-L141>) | Ox.Agent.create invokes the tail-ledger initializer supplied at [line 348](<../../../packages/leash/chrome.ml#L348>). Supervisor startup does not wait for a generation. |
+| [Control.create](<../../../packages/leash/control.mli#L18-L65>) | Ox_ipc.Listener.run owns invocation and scheduling of the local decode, handler, budget, encode and peer-error callbacks passed by [construction](<../../../packages/leash/control.ml#L395-L419>). Its unavailable body is not evidence that those callbacks execute in the calling fiber. |
+| [Desktop.notify](<../../../packages/leash/desktop.mli#L58-L79>) | Stored t.notify method and supplied on_done/on_cancel callbacks. [Wrapper](<../../../packages/leash/desktop.ml#L222>) invokes the method; [create's method](<../../../packages/leash/desktop.ml#L195-L217>) selects a supplied callback after an action or dismissal. |
+| [Desktop.notifier](<../../../packages/leash/desktop.mli#L81-L97>) | Ox.Timeout.timeout invokes the bounded-command callback when the returned notifier is applied, at [lines 228-242](<../../../packages/leash/desktop.ml#L228-L242>). Construction itself does not run the command. |
+| [Download_setup.prepare](<../../../packages/leash/download_setup.mli#L3-L20>) | Ox.Timeout.timeout and on_target invoke the bootstrap callbacks at [lines 41-48](<../../../packages/leash/download_setup.ml#L41-L48>). The target identifier is recorded inside the enclosing [protected cleanup scope](<../../../packages/leash/download_setup.ml#L26-L40>) before on_target is called. |
+| [Playbook.propose](<../../../packages/leash/playbook.mli#L376>), [retire_draft](<../../../packages/leash/playbook.mli>), [archive_proposal](<../../../packages/leash/playbook.mli>), [accept](<../../../packages/leash/playbook.mli>) | Ox_caps.Cap_stdlib.In_channel.with_open_bin with Yojson.Safe.from_channel. [propose](<../../../packages/leash/playbook.ml#L2125-L2130>), [retire_draft](<../../../packages/leash/playbook.ml#L2116-L2119>) and [archive_proposal](<../../../packages/leash/playbook.ml#L2144-L2146>) call the [draft-revision reader](<../../../packages/leash/playbook.ml#L2099-L2110>); [accept](<../../../packages/leash/playbook.ml#L2071-L2097>) reads the proposal before locking and again through [accept_unlocked](<../../../packages/leash/playbook.ml#L1916-L1922>). The acceptance path can also read [provenance](<../../../packages/leash/playbook.ml#L1866-L1882>). Mutex acquisition can suspend; filesystem work remains synchronous. |
+| [Playbook.retire](<../../../packages/leash/playbook.mli#L401>) | Ox_caps.Cap_stdlib.In_channel.with_open_bin with In_channel.input_all, **not Yojson.Safe.from_channel**. [retire](<../../../packages/leash/playbook.ml#L2113-L2114>) calls [retire_unlocked](<../../../packages/leash/playbook.ml#L1604-L1628>), which uses [installed_for_site](<../../../packages/leash/playbook.ml#L1381>) and [load/validation](<../../../packages/leash/playbook.ml#L1247-L1281>), including the [script reader](<../../../packages/leash/playbook.ml#L796-L829>) and [sidecar reader](<../../../packages/leash/playbook.ml#L874-L895>). Their callback calls are at lines 828 and 891. The corrected interface names this delegate separately under Suspension and Cancellation. |
+| [Reading.shot](<../../../packages/leash/reading.mli#L79>) | Ox_json.Of_json.at invokes the local JSON-decoder callbacks through [nested](<../../../packages/leash/reading.ml#L24-L26>), used by [viewport and content-size reads](<../../../packages/leash/reading.ml#L534-L554>). **Only the opaque-callback clauses are applied; the finalizer and error-result correction below is still pending.** |
+| [Tabs.create](<../../../packages/leash/tabs.mli#L31>) | Ox.Actor.create owns ledger initializer/handler callback invocation at [lines 3330-3337](<../../../packages/leash/tabs.ml#L3330-L3337>); child failures belong to sw, rather than being re-raised by the constructor. |
+| [Telemetry.create](<../../../packages/leash/telemetry.mli#L1>) | Format.asprintf with Ox_otel.pp_error invokes the configuration-error printer callback at [lines 9-10](<../../../packages/leash/telemetry.ml#L9-L10>). Export I/O belongs to the switch-owned worker; formatting is only on the rejected-configuration path. |
+
+### Authorized Reading.shot correction: not yet applied
+
+**Implementation defect, not a missing exception disclaimer.**
+[Opening/writing the PNG](<../../../packages/leash/reading.ml#L576-L581>) currently
+uses `Fun.protect ~finally:(fun _ -> close_out output)` and catches only
+`Sys_error` outside it. A small PNG stays buffered; if the flush in `close_out`
+fails (for example, disk full), `Fun.protect` wraps the error in
+`Fun.Finally_raised`. It bypasses the intended `invalid-request` result with
+`screenshot path is not writable`. This follows directly from installed
+[close_out/close_out_noerr](</home/ribelo/.cache/opam/5.4.0+ox/lib/ocaml/stdlib.ml#L410-L415>)
+and [Fun.protect](</home/ribelo/.cache/opam/5.4.0+ox/lib/ocaml/fun.ml#L33-L44>).
+
+The user authorized this focused correction, preserving the ordinary result,
+message and operation order. Replace only the write/close block with:
+
+```ocaml
+Fun.protect
+  ~finally:(fun () -> close_out_noerr output)
+  (fun () ->
+    output_bytes output png;
+    close_out output);
+Ok result
+```
+
+Keep the existing outer `Sys_error` handler. The explicit success-path close
+keeps flush errors catchable; the no-error safety close runs on every path,
+including after a failed flush, without replacing the primary error. Installed
+`close_out_noerr` attempts the underlying close even when flushing fails.
+Do not document `Fun.Finally_raised` as the desired API behavior.
+
+The proposed replacement finalizer sentence is: **Finalizers: explicitly closes
+the owned output channel after writing and uses close_out_noerr as the
+failure-path safety net; the browser is borrowed.** Add the factual error-result
+sentence: **Sys_error from opening, writing or flushing the PNG is returned as
+invalid-request with the message screenshot path is not writable.** Apply these
+only with the implementation fix, not before it.
+
+The [new regression](<../../../test/reading_test.ml#L281-L292>) writes the existing
+1941-byte fixture to the [full-output device](</dev/full>) and asserts the exact protocol error code and
+unchanged message. It is registered as operations test **5** at
+[lines 1035-1036](<../../../test/reading_test.ml#L1035-L1036>). The small buffered
+write is intended to fail at close. **No red/green claim has been earned yet:**
+the attempted build failed before executing tests; its earlier selector 6 was
+also wrong (it would select the debug-ring test). Resume with the correct selector:
+
+```sh
+nix develop -c dune exec test/reading_test.exe -- test operations 5
+```
+
+Run it before changing the implementation and confirm that the failure is
+`Fun.Finally_raised (Sys_error ...)`, not an unrelated failure. Then apply the
+fix and verify the same test passes, followed by the existing ordinary PNG test.
+If the close-time failure is not reproducible, say so rather than claiming the
+regression proves it.
+
+### Eighth implementation defect: Playbook.archive_procedure, deferred
+
+The second genuine Leash defect is the same close-flush hazard, at
+[lines 1414-1422](<../../../packages/leash/playbook.ml#L1414-L1422>):
+
+```ocaml
+Fun.protect ~finally:(fun () -> close_out ch) (fun () -> output_string ch json);
+Ok ()
+(* The surrounding handler catches only Sys_error why -> Error why. *)
+```
+
+A buffered write can succeed while the final close fails during flush.
+Installed [close_out](</home/ribelo/.cache/opam/5.4.0+ox/lib/ocaml/stdlib.ml#L410>)
+flushes before closing; [Fun.protect](</home/ribelo/.cache/opam/5.4.0+ox/lib/ocaml/fun.ml#L33-L44>)
+wraps a finalizer failure in `Fun.Finally_raised`. The outer `Sys_error`
+handler therefore cannot return the intended `Error why`. When flushing fails,
+`close_out` also does not reach the underlying descriptor close. This is
+source-derived evidence, **not a claimed executable red/green result**.
+
+Reachability is explicit: [retire](<../../../packages/leash/playbook.ml#L2113-L2114>)
+calls [retire_unlocked](<../../../packages/leash/playbook.ml#L1604-L1628>), which calls
+archive_procedure before publishing the replacement book at lines 1624-1628.
+[accept](<../../../packages/leash/playbook.ml#L2093-L2094>) calls accept_unlocked,
+which archives displaced procedures in both the
+[draft-replacement branch](<../../../packages/leash/playbook.ml#L1996-L2009>) and
+[single-procedure replacement branch](<../../../packages/leash/playbook.ml#L2050-L2056>).
+
+The focused deferred fix is to replace only the protected output block with:
+
+```ocaml
+Fun.protect
+  ~finally:(fun () -> close_out_noerr ch)
+  (fun () ->
+    output_string ch json;
+    close_out ch);
+Ok ()
+```
+
+Keep the existing outer `Sys_error why -> Error why` handler, generated archive
+path, 0600 mode, payload, retirement reason, and archive-before-publication order.
+Explicit close leaves flush failures visible to that handler;
+[close_out_noerr](</home/ribelo/.cache/opam/5.4.0+ox/lib/ocaml/stdlib.ml#L411-L413>)
+is the failure-path safety net and still attempts the descriptor close after a
+failed flush. Do not add `Fun.Finally_raised` as an intended API exception.
+
+**No implementation or test for this second defect was changed.** The user
+asked to record it, then stop, and explicitly deferred both this fix and the
+screenshot fix until the concurrent tree compiles so they can land together.
+The day's contract derivation found eight real implementation defects in total:
+five in Grip, one in Ox, and these two in Leash. The corrected-engine false
+positives above are separate from that count.
+
+### Pause and remaining verification
+
+At the parent's request, no behavior repair or further repository gates were
+run after the shared tree became unstable. The
+[attempted regression build](</tmp/leash-wave2-shot-red.log>) exited **1** before
+running the test, with an unbound record field `path` in
+[planner](<../../../packages/leash/planner.ml#L327>) and missing `image_input` in
+[the tabs observation construction](<../../../packages/leash/tabs.ml>).
+The concurrent session owns the changing
+[models](<../../../packages/leash/models.ml>),
+[planner implementation](<../../../packages/leash/planner.ml>),
+[planner interface](<../../../packages/leash/planner.mli>),
+[protocol](<../../../packages/leash/protocol.ml>),
+[run implementation](<../../../packages/leash/run.ml>) and
+[run interface](<../../../packages/leash/run.mli>); these were not edited here.
+The two pre-existing scratch build-cache changes were also left alone.
+
+Applied work is the pin/lock, the three startup disclosures, every listed
+opaque-callback clause, this evidence, and the unrun screenshot regression.
+The interfaces and regression were formatted only on those worker-owned paths
+(`ocamlformat` exit **0**), not via promotion of the shared tree.
+**Still unapplied:** the screenshot implementation correction and its new
+finalizer/error-result sentences, plus the archive-procedure correction recorded
+above. The user explicitly directed that both behavior fixes wait and land
+together once Leash compiles again; the requested genuine screenshot
+red-before-green proof is still pending. No rule exclusions, allow-list
+entries, installs, staging, commits or changes to other consumers were made.
+
+After the concurrent source changes stabilize, perform the screenshot red/green
+sequence and apply both deferred close-flush corrections together, then run the
+four gates in this order and capture each command's exit
+status directly (not a pipeline's status):
+
+```sh
+nix develop -c dune build @fmt
+nix develop -c dune build @install @check
+nix develop -c dune test
+nix develop -c scripts/caps-gate
+```
+
+Rebuild before judging generated CLI evidence. The last valid **0,0,0,2** result
+is a baseline, not verification of the applied clauses or the paused fix. Success
+still requires zero findings and zero undecided with the empty allow-list.
+
+## Second wave resumed: isolated red proof and current census
+
+The live [input](<../../../flake.nix#L6>) and [lock](<../../../flake.lock#L254-L269>)
+were re-pinned to `11d8a1cf3169063b1f1d377193dd8e5110211261`;
+[lock update](</tmp/leash-wave2-final-lock.log>) exited **0**. This revision
+integrates the corrected coverage census into the capability gate.
+
+**Independent correction:** both [Reading.shot](<../../../packages/leash/reading.ml#L576-L583>)
+and [Playbook.archive_procedure](<../../../packages/leash/playbook.ml#L1414-L1426>)
+already contained the exact explicit-close / close_out_noerr corrections on
+resume. They appeared from another session during the pause; this worker
+previously derived and recorded the same corrections independently, then
+verified and preserved them rather than replacing anyone else's shared work.
+The [shot contract](<../../../packages/leash/reading.mli#L84-L97>) also now
+records explicit success-path close, failure-path cleanup, and the unchanged
+invalid-request result and message. No new archive-failure test is claimed.
+
+### Genuine screenshot red, then live green
+
+The live shared tree was never temporarily reverted. At the user's direction,
+a detached worktree at `/tmp/leash-red` was created from HEAD `ad1971f`, which
+still contains the original shot implementation. Only the existing screenshot
+regression and its registration were copied into that private tree. The exact
+command was:
+
+```sh
+nix develop -c dune exec test/reading_test.exe -- test operations 5
+```
+
+The [detached red log](</tmp/leash-wave2-shot-detached-red.log#L10-L36>) proves
+that the test **ran** and exited **1** with
+`Fun.Finally_raised: Sys_error("No space left on device")`, raised during
+Stdlib.close_out and wrapped by Fun.protect. This is the requested genuine
+before-image, unlike the earlier compilation failure.
+
+The same [live regression](<../../../test/reading_test.ml#L281-L292>) then
+passed (**0**) against the already-fixed shared code:
+[green log](</tmp/leash-wave2-shot-live-green.log>).
+The ordinary PNG case, `test operations 4`, also passed (**0**):
+[normal PNG log](</tmp/leash-wave2-shot-normal-green.log>).
+The temporary worktree was removed after verifying its absolute target and that
+its only tracked modification was the copied regression; the red log remains
+outside it. There were no commits, staging, or shared-source reversions.
+
+### First resumed ordered gates: honest remaining engine boundaries
+
+Direct command exits, in the required order, were **0, 0, 0, 2**:
+
+| Gate | Exit | Evidence |
+| --- | --- | --- |
+| `nix develop -c dune build @fmt` | 0 | [format log](</tmp/leash-wave2-final-fmt.log>) |
+| `nix develop -c dune build @install @check` | 0 | [build log](</tmp/leash-wave2-final-build.log>) |
+| `nix develop -c dune test` | 0 | [test log](</tmp/leash-wave2-final-tests.log>) |
+| `nix develop -c scripts/caps-gate` | 2 | [gate log](</tmp/leash-wave2-final-gate.log>) |
+
+The full test run includes the new screenshot regression and installed
+retirement coverage. The gate selected **28 rules (27 active, one dormant)**,
+reported **zero findings** and **two modules undecided**, and the repaired census
+also reported three documentation-source artifacts absent from Dune targets.
+These are historical, byte-frozen acceptance copies:
+[final learning](<../map-draws-itself/acceptance/live-2026-10-02-form-final/frozen-learning.ml>),
+[final page kind](<../map-draws-itself/acceptance/live-2026-10-02-form-final/frozen-page_kind.ml>),
+and [earlier learning](<../map-draws-itself/acceptance/live-2026-10-02/frozen-learning.ml>).
+The user rejected renaming or excluding them: their bytes and paths stay
+unchanged, while an Ox worker repairs the structural documentation-evidence
+classification. Unbuilt source outside a documentation tree remains a hole.
+
+The two named undecided results were:
+
+- [Planner.create](<../../../packages/leash/planner.mli#L54-L58>): opaque
+  Stdlib.String.lowercase_ascii invoked synchronously during
+  [reasoning normalization](<../../../packages/leash/planner.ml#L333-L337>).
+  The constructor's local behavior is now separated from that delegated call,
+  naming it under both Suspension and Cancellation; supplied callbacks remain
+  retained for plan rather than invoked during creation.
+- [Reading.shot](<../../../packages/leash/reading.mli#L88-L94>): cancellation-path
+  cleanup of the owned output depends on the noerr finalizer. The interface
+  already names Stdlib.close_out_noerr; at the pinned revision the
+  [cleanup recognizer](</home/ribelo/projects/ribelo/ocaml/ox/lib/ox_lint/interface_docs.ml#L1825-L1837>)
+  lists close_in and close_out but not their noerr counterparts. Its
+  [resource-claim branch](</home/ribelo/projects/ribelo/ocaml/ox/lib/ox_lint/interface_docs.ml#L2288-L2319>)
+  does not consult opaque-delegate qualifiers. The actual contract has not been
+  weakened merely to evade that lexical trigger; the engine recognition gap
+  was reported to the parent for resolution alongside the census correction.
+
+This resumed **0,0,0,2** run is not final success. Re-lock to the supplied fixed
+engine revision and repeat all four gates in order before claiming zero
+findings, zero undecided and no census holes. No ninth implementation defect
+has been established.
+

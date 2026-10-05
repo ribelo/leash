@@ -70,11 +70,13 @@ val notify :
     ending stops it.
 
     Suspension: may suspend while spawning, reading stdout, waiting for the command, or
-    running a callback. Cancellation: propagates and is not a notification dismissal.
-    Finalizers: sw owns managed process retirement and stdout cleanup. Locking: no shared
-    mutex; the first-action flag belongs to this call. Cancellation safety: unsafe because
-    progress is lost; an action callback may already have run, so never replay an
-    uncertain notification. *)
+    running a callback; invocation is delegated to the stored [t.notify] method and the
+    supplied [on_done] and [on_cancel] callbacks. Cancellation: propagates and is not a
+    notification dismissal; invocation is delegated to the stored [t.notify] method and
+    the supplied [on_done] and [on_cancel] callbacks. Finalizers: sw owns managed process
+    retirement and stdout cleanup. Locking: no shared mutex; the first-action flag belongs
+    to this call. Cancellation safety: unsafe because progress is lost; an action callback
+    may already have run, so never replay an uncertain notification. *)
 
 val notifier :
   caps:caps ->
@@ -86,8 +88,10 @@ val notifier :
 (** notif-7pha: non-blocking-kind notification, a five-second bounded command with
     [{message}] substituted as one argv element; [] disables it.
 
-    Suspension: may suspend for the bounded command when applying the returned notifier.
-    Cancellation: propagates after scoped process retirement. Finalizers: each invocation
-    owns a child switch and its managed process. Locking: none; notifications are
-    independent commands. Cancellation safety: unsafe because progress is lost; delivery
-    may precede cancellation, so repeating can duplicate the notification. *)
+    Suspension: may suspend for the bounded command when applying the returned notifier;
+    bounded command callback invocation is delegated to Ox.Timeout.timeout. Cancellation:
+    propagates after scoped process retirement; bounded command callback invocation is
+    delegated to Ox.Timeout.timeout. Finalizers: each invocation owns a child switch and
+    its managed process. Locking: none; notifications are independent commands.
+    Cancellation safety: unsafe because progress is lost; delivery may precede
+    cancellation, so repeating can duplicate the notification. *)

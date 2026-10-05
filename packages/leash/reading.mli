@@ -84,10 +84,17 @@ val shot :
 (** Writes the PNG to the caller's path, hence [fs_write] (^ncaps-4tjy).
 
     Suspension: may suspend during screenshot and viewport CDP calls; the PNG write is
-    synchronous. Cancellation: propagates from browser calls before the write. Finalizers:
-    closes the owned output channel; the browser is borrowed. Locking: none here; the Tabs
+    synchronous; local JSON-decoder callback invocation is delegated to
+    Ox_json.Of_json.at. Cancellation: propagates from browser calls before the write;
+    local JSON-decoder callback invocation is delegated to Ox_json.Of_json.at; owned
+    output-channel failure cleanup is delegated to Stdlib.close_out_noerr. Finalizers:
+    explicitly closes the owned output channel after writing and uses close_out_noerr as
+    the failure-path safety net; the browser is borrowed. Locking: none here; the Tabs
     caller serializes screenshot capture. Cancellation safety: safe to re-run at the same
     output path; it captures an image and dispatches no input.
+
+    Sys_error from opening, writing or flushing the PNG is returned as invalid-request
+    with the message screenshot path is not writable.
 
     [Assert_failure] if an internal screenshot invariant fails. *)
 

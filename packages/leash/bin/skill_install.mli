@@ -25,12 +25,16 @@ val run :
   confirm:(requested_action -> string -> bool) ->
   (outcome list, error) result
 (** Suspension: may suspend in the supplied confirmation callback; filesystem work is
-    synchronous. Cancellation: propagates, not converted into an installation failure.
-    Finalizers: installation cleanup removes staging directories and restores failed
-    replacements; completed roots remain installed. Locking: no shared installation mutex;
-    sibling paths and renames implement each replacement. Cancellation safety: safe to
-    re-run; completed current bundles are recognized before replacement or confirmation.
-*)
+    synchronous, with read and write callback invocation delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin and
+    Ox_caps.Cap_stdlib.Out_channel.with_open_bin. Cancellation: propagates, not converted
+    into an installation failure; read and write callback invocation is delegated to
+    Ox_caps.Cap_stdlib.In_channel.with_open_bin and
+    Ox_caps.Cap_stdlib.Out_channel.with_open_bin. Finalizers: installation cleanup removes
+    staging directories and restores failed replacements; completed roots remain
+    installed. Locking: no shared installation mutex; sibling paths and renames implement
+    each replacement. Cancellation safety: safe to re-run; completed current bundles are
+    recognized before replacement or confirmation. *)
 
 val show : string
 (** The stamped entrypoint, exactly as installed. *)

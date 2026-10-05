@@ -38,7 +38,10 @@ val serve : net:_ Eio.Net.t -> sw:Eio.Switch.t -> (request -> reply) -> t
     independent listener. Cancellation safety: safe to re-run on a fresh switch after the
     previous server stops.
 
-    [Assert_failure] if the loopback listener reports an unexpected address. *)
+    [Assert_failure] if the loopback listener reports an unexpected address.
+    [Invalid_argument] is raised if [sw] has finished or belongs to another domain when
+    Eio.Fiber.fork_daemon checks it during startup. Exceptions in the serving daemon fail
+    [sw], not the calling fiber. *)
 
 val requests : t -> request list
 (** Every request served, in arrival order. *)
