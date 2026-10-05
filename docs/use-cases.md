@@ -438,3 +438,16 @@ Run 1 recorded memory starting after the fills: "Click the button named Sign in"
 - The password was searched for in 8 places: the reply without `secrets_for_operator`, the durable trace and all other state files, the fixture state, the service log and stderr. It was found in none of them.
 
 **U7 passes.**
+### U8 — rerun with pilot records written to `--out` (pilot-sc9t)
+
+**Diagnosis.** In L57 the pilot returned all 11 records as text, but only a playbook script could write `--out`, so the file stayed empty.
+
+**Fix.** The pilot's `done` may carry `records`: flat objects of text. Each value must occur in page text or row names this mission read. Otherwise the done is refused, costs a turn, and the pilot sees why. Accepted records are written to `--out` as `{"kind":"pilot-record","source":"pilot","record":…}` lines, and `output_kinds` lists `pilot-record`.
+
+**Rerun.** Mission verbatim, `--url https://books.toscrape.com/ --out …/u8-1.jsonl`, fresh private profile. Result: `done` in 5 pilot turns (open Travel, three scrolls, done), 5 calls, $0.005445125. `output_kinds: ["pilot-record"]`, `collected: 11` ([reply](<issues/pilot/acceptance/l57f-2026-10-05/u8-pass.json>), [file](<issues/pilot/acceptance/l57f-2026-10-05/u8-out.jsonl>)).
+
+**Independent check** ([text](<issues/pilot/acceptance/l57f-2026-10-05/u8-independent.txt>)): the harness fetched the Travel category page itself. It compared each product's full `title` attribute and `.price_color` with the file: 11 products, 11 lines, none missing, none extra, no duplicates. **U8 passes.**
+
+### L57F summary
+
+U5, U10, U9, U7 and U8 pass on fresh private headless profiles, each confirmed independently of the reply (Google's own overview, fixture state, downloaded bytes, the PBKDF2 hash, the live category page). Commits: `ca2a649`, `957cff4` (U5), `19b17f5` (U10), `d2b0218` (U9), `024d4fe`, `ccfdf14` (U7), and this one (U8). `642b0b5` (hand-tdkk) came from the operator's direction during the sequence: a headless browser refuses handoff, and tests that need the operator present were removed. `pilot-exx7` stays recorded and open, outside this sequence.

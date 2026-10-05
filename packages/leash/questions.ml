@@ -82,7 +82,8 @@ Picture actions need no row. Points and row boxes use viewport CSS pixels: divid
 Only visible rows are offered: scroll for controls outside the view; observe an image only for visible controls without rows. Completed downloads are done; name their paths.
 {"answer":"handoff","reason":"operator required"}
 {"answer":"notify","message":"operator message"}
-{"answer":"done","result":"outcome with identifiers","evidence":["facts, URLs or files"]}
+{"answer":"done","result":"outcome with identifiers","evidence":["facts, URLs or files"],"records":[{"field":"exact page text"}]}
+Records, only when the mission asks for collected records or a file: one flat object per item, every value copied exactly from page text you read.
 {"answer":"fail","reason":"why"}
 Optional: expect, reasoning_summary, secrets_for_operator (generated names and values). Refuse unsupported commands, other tabs, automatic dialogs, and payment, checkout confirmation, sending or deletion unless the mission explicitly names that action.
 |}

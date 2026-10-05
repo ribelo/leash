@@ -333,7 +333,7 @@ let notify_then_done
             ignore (signal, request);
             reply
               (if !plans = 1 then R.Notify "Order 12345 placed"
-               else R.Done { result = "Notified"; evidence = [] }))
+               else R.Done { result = "Notified"; evidence = []; records = [] }))
           ~decide:(fun _ ->
             incr jev;
             Ok (decision (if !jev = 1 then signal else "done")))
@@ -520,7 +520,7 @@ let challenge_case
           ~plan:(fun request ->
             plans := request :: !plans;
             if clears && List.length !plans > 1 then
-              reply (R.Done { result = "Challenge cleared"; evidence = [] })
+              reply (R.Done { result = "Challenge cleared"; evidence = []; records = [] })
             else if attempt && actions && List.length !plans <= 2 then
               reply (click request)
             else reply (R.Handoff "captcha"))
@@ -728,7 +728,7 @@ let resumed
                incr n;
                reply
                  (if !n = 1 then R.Handoff "Login"
-                  else R.Done { result = "Resumed"; evidence = [] }))
+                  else R.Done { result = "Resumed"; evidence = []; records = [] }))
           ~decide:(fun _ -> Ok (decision "blocked"))
       in
       status "done" result;
@@ -875,7 +875,7 @@ let debug_signal_lifecycle
               ~plan:(fun request ->
                 incr plans;
                 if navigates then
-                  reply (R.Done { result = "New document"; evidence = [] })
+                  reply (R.Done { result = "New document"; evidence = []; records = [] })
                 else if !plans = 1 then reply (click request)
                 else reply (R.Handoff "captcha"))
               ~decide:(fun _ ->
@@ -1029,7 +1029,9 @@ let picture_pilot
                           to_ = { x = 25.25; y = 26.25 };
                           shot = None;
                         }))
-            | 4 -> reply (R.Done { result = "Canvas inspected"; evidence = [] })
+            | 4 ->
+                reply
+                  (R.Done { result = "Canvas inspected"; evidence = []; records = [] })
             | _ -> Alcotest.fail "unexpected repeat")
       in
       status "done" result;

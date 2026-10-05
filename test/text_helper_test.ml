@@ -523,7 +523,13 @@ let drive ?levels models tabs handle goal =
                 Ok
                   Leash.Run.
                     {
-                      answer = Done { result = "Navigation leg completed"; evidence = [] };
+                      answer =
+                        Done
+                          {
+                            result = "Navigation leg completed";
+                            evidence = [];
+                            records = [];
+                          };
                       expect = [];
                       reasoning_summary = None;
                       secrets_for_operator = [];

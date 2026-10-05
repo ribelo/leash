@@ -89,8 +89,14 @@ type plan_answer =
   | Act of Protocol.planner_action
   | Observe_image
   | Notify of string
-  | Done of { result : string; evidence : string list }
-      (** map-op10: one-line result, verified against live-page expectations. *)
+  | Done of {
+      result : string;
+      evidence : string list;
+      records : (string * string) list list;
+    }
+      (** map-op10: one-line result, verified against live-page expectations. pilot-sc9t:
+          [records] are flat text records for [--out], each value text the mission read;
+          they are written as [pilot-record] lines when done is accepted. *)
   | Handoff of string
   | Fail of string  (** Exactly one of the eight pilot decisions (pilot-gt2h). *)
 

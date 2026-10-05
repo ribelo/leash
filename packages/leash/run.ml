@@ -86,7 +86,7 @@ type leg = { goal : string; outcome : string; steps : P.step list }
 
 type candidate = Playbook.procedure * [ `Installed | `Draft of string ]
 
-type plan_answer = Leg of string | Read of { quote : string; note : string } | Act of Protocol.planner_action | Observe_image | Notify of string | Done of { result : string; evidence : string list } | Handoff of string | Fail of string
+type plan_answer = Leg of string | Read of { quote : string; note : string } | Act of Protocol.planner_action | Observe_image | Notify of string | Done of { result : string; evidence : string list; records : (string * string) list list } | Handoff of string | Fail of string
 
 type plan_reply = {
   reasoning_summary : string option;
@@ -340,7 +340,7 @@ let pilot_choice_json answer =
     | Observe_image -> ["image", `Bool true]
     | Notify message -> ["message", `String message]
     | Handoff reason | Fail reason -> ["reason", `String reason]
-    | Done {result;evidence} -> ["result", `String result; "evidence", `List (List.map (fun value -> `String value) evidence)] in
+    | Done {result;evidence;_} -> ["result", `String result; "evidence", `List (List.map (fun value -> `String value) evidence)] in
   `Assoc (("answer", `String (answer_name answer)) :: fields)
 
 let failures (results : P.run_expectation list) =
@@ -392,6 +392,9 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
   let total_steps = ref 0 and operator_steps = ref [] and operator_state = ref None in
   let generated = ref [] and expectations = ref args.expect and checks = ref [] and unattended = ref [] in
   let records = ref [] and sites = ref [] and current_site = ref None in
+  (* pilot-sc9t: the page text and row names this mission read, against which every value
+     of a pilot record is checked, and how many records the pilot wrote. *)
+  let observed = ref [] and pilot_records = ref 0 in
   let script_calls = ref [] in
   let reasoning = ref None and current_book = ref None and planned_choice = ref None in
   let remaining () = max 1 (int_of_float (deadline -. now ())) in
@@ -429,7 +432,8 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
         @ (match !planned_choice with None -> [] | Some choice -> ["pilot_choice", choice])
         @ usage_fields);
       model_calls = call_count; model_cost; operator_steps = List.rev !operator_steps;
-      operator_state = !operator_state; output_kinds = (if !records=[] then [] else ["script-record"]) @ (if !operator_state=None then [] else ["operator-state"]); final = page.snapshot;
+      operator_state = !operator_state; output_kinds = (if List.length !records > !pilot_records then ["script-record"] else [])
+        @ (if !pilot_records > 0 then ["pilot-record"] else []) @ (if !operator_state=None then [] else ["operator-state"]); final = page.snapshot;
       reason = Option.map scrub reason; trace_path = None } in
     match P.run_result_of_yojson (json (P.yojson_of_run_result reply)) with
     | Ok clean -> Ok { clean with P.secrets_for_operator = !generated }
@@ -718,6 +722,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     else
       let kind, book = infer page in
       current_kind := kind;
+      observed := (page.text :: List.map snd page.rows) @ !observed;
       let candidates = get_candidates kind book in
       let snapshot = { page.snapshot with P.rows = List.filteri (fun i _ -> i < 250) page.snapshot.rows } in
       let model_candidates=List.filter_map (fun (proc,source) -> match Playbook.procedure_of_yojson (json (Playbook.yojson_of_procedure proc)) with
@@ -765,9 +770,25 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
           let next ?(image=false) () = match observe ~image () with Ok page -> turn page | Error error -> failed error in
           if args.dry_run then (planned_choice := Some (json (pilot_choice_json reply.answer)); recorded [] reply.reasoning_summary; finish page "planned" ~reason:(answer_name reply.answer) ())
           else match reply.answer with
-          | Done {result; evidence} ->
+          | Done {result; evidence; records = pilot} ->
+              (* pilot-sc9t: a record value must be text this mission read; one that is
+                 not costs the turn and the pilot sees why. *)
+              let unseen = List.find_map (fun record -> List.find_map (fun (key, value) ->
+                if String.trim value <> "" && List.exists (fun text -> contains ~needle:value text) !observed then None
+                else Some key) record) pilot in
+              (match unseen with
+               | Some key ->
+                   let why = "refused records: a " ^ scrub key ^ " value is not text this mission read; quote values exactly" in
+                   recorded [] (Some why);
+                   legs := !legs @ [ { goal = "(done refused)"; outcome = why; steps = [] } ];
+                   next ()
+               | None ->
               recorded [] None;
               if String.trim result = "" then finish page "failed" ~reason:"pilot done requires a result" () else
+              let write () = List.fold_left (fun acc record -> let* () = acc in
+                let record = json (`Assoc (List.map (fun (key, value) -> key, `String value) record)) in
+                let* () = on_record (json (`Assoc ["kind", `String "pilot-record"; "source", `String "pilot"; "record", record])) in
+                records := record :: !records; incr pilot_records; Ok ()) (Ok ()) pilot in
               let verified = if !expectations = [] then Ok ([], page) else
                 let pages = Option.fold ~none:[] ~some:(fun (b : Playbook.loaded) -> b.Playbook.playbook.pages) book in
                 let resolved = List.map (fun sentence -> sentence, (match Playbook.resolve pages sentence with Ok checker -> checker | Error _ -> Playbook.Judgment sentence)) !expectations in
@@ -775,8 +796,9 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
               (match verified with
               | Error error -> failed error
               | Ok (verdicts, final) -> checks := verdicts;
-                  if List.for_all (fun (v : P.run_expectation) -> v.passed) verdicts then finish final "done" ~result ~evidence ()
-                  else next ())
+                  if List.for_all (fun (v : P.run_expectation) -> v.passed) verdicts then
+                    (match write () with Ok () -> finish final "done" ~result ~evidence () | Error error -> failed error)
+                  else next ()))
           | Fail reason -> recorded [] (Some reason); finish page "failed" ~reason ()
           | Handoff reason ->
               recorded [] (Some reason);

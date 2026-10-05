@@ -128,7 +128,7 @@ let harness ?(text = "Fact 42") ?(statuses = [ "done" ]) answers =
   in
   (handler, requests, goals)
 
-let finish = reply (R.Done { result = "42"; evidence = [ "Fact 42" ] })
+let finish = reply (R.Done { result = "42"; evidence = [ "Fact 42" ]; records = [] })
 
 let legs_return () =
   List.iter
@@ -213,7 +213,10 @@ let secrets () =
       answer = R.Notify generated;
     }
   in
-  let last = reply (R.Done { result = supplied ^ generated; evidence = [ supplied ] }) in
+  let last =
+    reply
+      (R.Done { result = supplied ^ generated; evidence = [ supplied ]; records = [] })
+  in
   let h, requests, _ = harness ~text:supplied [ first; last ] in
   let r =
     ran
@@ -333,6 +336,39 @@ let action_refusal () =
       ("Pay", "Pay and send a message", true);
       ("Send", "Pay and send a message", true);
     ]
+
+(* pilot-sc9t: records the pilot returns with done go to --out as pilot-record lines,
+   and only when every value is text the mission read. *)
+let pilot_records () =
+  let done_with value =
+    reply
+      (R.Done
+         {
+           result = "Collected";
+           evidence = [ "Fact 42" ];
+           records = [ [ ("fact", value) ] ];
+         })
+  in
+  let h, _, _ = harness ~text:"Fact 42" [ done_with "Fact 99"; done_with "Fact 42" ] in
+  let written = ref [] in
+  let result =
+    ran
+      (R.loop ~handler:h
+         ~now:(fun () -> 0.)
+         ~installed:[]
+         ~on_record:(fun line ->
+           written := Yojson.Safe.to_string line :: !written;
+           Ok ())
+         (params ~mission:"Collect the fact to a JSONL file" ()))
+  in
+  Alcotest.(check string) "pilot-sc9t done" "done" (P.Run_status.to_string result.status);
+  Alcotest.(check (list string))
+    "pilot-sc9t only the observed record is written"
+    [ {|{"kind":"pilot-record","source":"pilot","record":{"fact":"Fact 42"}}|} ]
+    !written;
+  Alcotest.(check (list string))
+    "pilot-sc9t output kind" [ "pilot-record" ] result.output_kinds;
+  Alcotest.(check int) "pilot-sc9t invented record cost a turn" 2 result.pilot_turns
 
 (* pilot-gn4w pilot-pw7x: a password the pilot invents and fills is handed to the operator
    once, and never appears anywhere else in the reply or the steps it emits. *)
@@ -501,7 +537,7 @@ let pilot_upload () =
     ]
 
 let empty_result () =
-  let h, _, _ = harness [ reply (R.Done { result = ""; evidence = [] }) ] in
+  let h, _, _ = harness [ reply (R.Done { result = ""; evidence = []; records = [] }) ] in
   let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
   Alcotest.(check string) "empty done refused" "failed" (P.Run_status.to_string r.status)
 
@@ -956,5 +992,6 @@ let () =
             ("pilot-z1nr failed memory is not offered again", stale_memory);
             ("pilot-h506 pilot uploads only named files", pilot_upload);
             ("pilot-gn4w pilot-pw7x generated password", generated_password);
+            ("pilot-sc9t pilot records reach --out", pilot_records);
           ] );
     ]

@@ -98,6 +98,7 @@ let levels_with ?plan answers _questions =
                               {
                                 result = "Navigation completed";
                                 evidence = [ "Navigator reported DONE" ];
+                                records = [];
                               }
                           else Fail "navigation did not complete"))));
     }
@@ -2816,7 +2817,7 @@ let drive_tab_lifecycle
                     answer =
                       (if outcome = "handoff" then Handoff "Please inspect this"
                        else if outcome = "done" then
-                         Done { result = "Complete"; evidence = [] }
+                         Done { result = "Complete"; evidence = []; records = [] }
                        else Fail "scripted stop");
                     expect = [];
                     reasoning_summary = None;
@@ -4146,7 +4147,9 @@ let pilot_leg_scope
                     {
                       answer =
                         (if !turns = 1 then Leg "Find the latest invoice"
-                         else Done { result = "Checked the page"; evidence = [] });
+                         else
+                           Done
+                             { result = "Checked the page"; evidence = []; records = [] });
                       expect = [];
                       usage = None;
                       reasoning_summary =
@@ -4387,7 +4390,12 @@ let pilot_memory_replay
                     "replay navigation calls"
                     (if run = 1 then 0 else 1)
                     !navigation;
-                  Run.Done { result = "Invoices checked"; evidence = [ "invoice page" ] })
+                  Run.Done
+                    {
+                      result = "Invoices checked";
+                      evidence = [ "invoice page" ];
+                      records = [];
+                    })
               in
               Ok
                 Run.

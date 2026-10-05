@@ -1,0 +1,4 @@
+page https://books.toscrape.com/catalogue/category/books/travel_2/index.html: 11 products; file: 11 pilot-record lines
+missing from file: []
+extra in file: []
+duplicates in file: 0

@@ -350,7 +350,9 @@ let raw ?models ?decide ?model tabs command =
                 List.for_all
                   (fun (leg : Leash.Run.leg) -> leg.outcome = "done")
                   request.legs
-              then Leash.Run.Done { result = "Navigation completed"; evidence = [] }
+              then
+                Leash.Run.Done
+                  { result = "Navigation completed"; evidence = []; records = [] }
               else Leash.Run.Fail "Navigation leg failed"
             in
             Ok

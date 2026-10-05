@@ -161,16 +161,17 @@ Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [-
 
 Routing (fly-8xiq fly-mepw fly-yolk fly-2akp): no installed books means no playbook question and no planner call. One book is offered with `NONE` and is never forced. Many books are distinct identities plus `NONE`; an identity is `book:<loaded file>`, so two books for one site stay distinct. Books are never merged. A question holds at most 255 choices including `NONE`; a larger library uses bounded hierarchical choices and still offers `NONE`. Selecting `NONE`, or a procedure-level `NONE`, enters the operator on the current page with the whole mission and retained progress. That is a successful route, not `BLOCKED`, not discovery, and not a planner review. No confidence-triggered planner reinterprets `NONE`.
 
-`output_kinds` is always present. It lists `script-record` when a prepared script produced records, then `operator-state` when the reply carries `operator_state`. `operator_state` is `key?`: omitted when the operator lane did not run. It is the bounded observed page, not validated script records, and the reply carries it without `--out`. On the fly, `data` is not a synthesized record list.
+`output_kinds` is always present. It lists `script-record` when a prepared script produced records, then `pilot-record` when the pilot's accepted `done` carried records, then `operator-state` when the reply carries `operator_state`. `operator_state` is `key?`: omitted when the operator lane did not run. It is the bounded observed page, not validated script records, and the reply carries it without `--out`. On the fly, `data` is not a synthesized record list.
 
 `--out` is JSONL. Each line is one object with `kind` and `source`. Script records stream as pages complete. The operator line is one terminal object, written only when the run is not a dry run:
 
 ```
 {"kind":"script-record","source":"playbook","playbook":"book:<file>","procedure":string,"script":string,"record":object}
+{"kind":"pilot-record","source":"pilot","record":{string: string}}
 {"kind":"operator-state","source":"operator","state":OperatorState}
 ```
 
-A dry run does not create or append the file. Untagged lines are not written. A mixed run that collects by script and then enters the operator writes both kinds, in that order, and lists both in `output_kinds`.
+A `pilot-record` is one flat text record the pilot returned with `done` (pilot-sc9t). Every value must occur in page text or row names the mission read, or the done is refused and costs a turn. The lines are written only when the done is accepted. A dry run does not create or append the file. Untagged lines are not written. A mixed run that collects by script and then enters the operator writes both kinds, in that order, and lists both in `output_kinds`.
 
 ```
 OperatorState = {status: string, reason: string|null, error: Error|null,

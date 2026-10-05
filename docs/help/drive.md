@@ -41,7 +41,7 @@ Exit 0 means the service answered, not that the mission succeeded. Save the full
 
 Verify the requested outcome separately: reread account amounts, inspect the completed download and its contents, check the actual uploaded link, or compare every requested record with the source. A reported result with an empty requested output file is a failure.
 
-`--out FILE` appends tagged JSONL records emitted by validated procedure scripts. It does not serialize the pilot's result text. U8 currently returns collection text while leaving the file empty (pilot-sc9t). This is a known unsupported path, not a successful mission. The pilot uploads with the validated `upload` action, and only files whose absolute paths the mission names verbatim (pilot-h506).
+`--out FILE` appends tagged JSONL records: `script-record` lines from validated procedure scripts, and `pilot-record` lines the pilot returns with `done` (pilot-sc9t). A pilot record's values must be text the mission read, and they are written only when the done is accepted. The file never holds the pilot's result text. The pilot uploads with the validated `upload` action, and only files whose absolute paths the mission names verbatim (pilot-h506).
 
 ## Limits and preview
 

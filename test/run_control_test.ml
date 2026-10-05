@@ -101,7 +101,8 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
                 answer =
                   (if !asked = 1 then Leg "collect"
                    else if malformed_done || rejected then Fail "collection failed"
-                   else Done { result = "Collected catalogue"; evidence = [] });
+                   else
+                     Done { result = "Collected catalogue"; evidence = []; records = [] });
                 expect = [];
                 usage = None;
                 reasoning_summary = None;

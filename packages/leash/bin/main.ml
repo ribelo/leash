@@ -1481,11 +1481,13 @@ let commands ~caps ~send ~base ~run_owned =
                Leg DONE/BLOCKED returns to the pilot; only pilot done completes.";
             `P
               "--out JSONL is tagged. script-record, source playbook, is a validated \
-               script record. operator-state, source operator, is one terminal bounded \
-               page observation, not a record list. The Travel example writes \
-               operator-state. output_kinds names the kinds in the reply. A successful \
-               reply is not proof the mission succeeded. model_cost is null when any \
-               call is unpriced; data.reported_cost is the known subtotal.";
+               script record. pilot-record, source pilot, is a flat record the pilot \
+               returned with done, every value text the mission read. operator-state, \
+               source operator, is one terminal bounded page observation, not a record \
+               list. The Travel example writes operator-state. output_kinds names the \
+               kinds in the reply. A successful reply is not proof the mission \
+               succeeded. model_cost is null when any call is unpriced; \
+               data.reported_cost is the known subtotal.";
           ]
         "drive"
         "Drive MISSION with the pilot, using short navigation legs and direct row \

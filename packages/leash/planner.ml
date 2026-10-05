@@ -229,7 +229,7 @@ let decode_pilot (request : Run.plan_request) content =
         | "act" -> [ "action" ]
         | "observe" -> [ "image" ]
         | "notify" -> [ "message" ]
-        | "done" -> [ "result"; "evidence" ]
+        | "done" -> [ "result"; "evidence"; "records" ]
         | "handoff" | "fail" -> [ "reason" ]
         | _ -> []
       in
@@ -262,7 +262,33 @@ let decode_pilot (request : Run.plan_request) content =
               | None -> Error "done requires evidence"
               | Some _ -> strings "evidence"
             in
-            Ok (Run.Done { result; evidence })
+            (* pilot-sc9t: records are flat objects of text, at most 10000. *)
+            let* records =
+              match List.assoc_opt "records" fields with
+              | None | Some `Null -> Ok []
+              | Some (`List values) when List.length values <= 10_000 ->
+                  List.fold_right
+                    (fun value acc ->
+                      let* rest = acc in
+                      match value with
+                      | `Assoc pairs ->
+                          let* record =
+                            List.fold_right
+                              (fun (key, v) acc ->
+                                let* rest = acc in
+                                match v with
+                                | `String s -> Ok ((key, s) :: rest)
+                                | `Int i -> Ok ((key, string_of_int i) :: rest)
+                                | `Float f -> Ok ((key, Printf.sprintf "%g" f) :: rest)
+                                | _ -> Error "a record value must be text")
+                              pairs (Ok [])
+                          in
+                          Ok (record :: rest)
+                      | _ -> Error "records must be objects")
+                    values (Ok [])
+              | Some _ -> Error "records must be a list of at most 10000 objects"
+            in
+            Ok (Run.Done { result; evidence; records })
         | "handoff" ->
             let* reason = string "reason" in
             Ok (Run.Handoff reason)
