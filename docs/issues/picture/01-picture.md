@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: completed
 milestone: 13
 ---
 
@@ -55,6 +55,8 @@ As an operator, I want proof that a picture-only control works before attempting
 
 As an operator, I want Leash to operate the real streamed browser rather than just its surrounding page. When the headed live gate opens `https://wiser-staging.csaisandbox.csa.comscore.com`, Leash shall take control of Wiser's browser pane and sign in to Slack through the streamed picture, with the operator present for Okta. It shall independently verify the signed-in Slack view and record the installed build, actions, screenshot evidence and outcome as U11 in `docs/use-cases.md`, without recording credentials or claiming success when authentication is incomplete. ^pic-et67
 
+**Withdrawn 2026-10-05 by the operator:** testing on Wiser staging is out of scope. No U11 gate was run and none is recorded in `docs/use-cases.md`.
+
 ## Landing order
 
 1. ADR-0013 and AGENTS.md policy reversal (delivered separately).
@@ -63,7 +65,7 @@ As an operator, I want Leash to operate the real streamed browser rather than ju
 4. `snap --with-image` and row boxes with fake-browser tests.
 5. Bounded image-aware pilot acts and observations with fake-model tests.
 6. Bundled skill and `help browser`.
-7. Local canvas gate, then headed Wiser/Slack U11 and recorded evidence.
+7. Local canvas gate. (The headed Wiser/Slack U11 gate was withdrawn; see `pic-et67`.)
 
 One verified pushed commit per step. Only afterward resume L57F: U5, U10, U9, U7, U8, in that order and under their existing IDs.
 
