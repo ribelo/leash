@@ -105,21 +105,14 @@ type script_ran = { value : Yojson.Safe.t; records : int; bytes : int; elapsed_m
 
 val script :
   browser ->
-  Playbook.script ->
+  Script.t ->
   args:(string * string) list ->
   (script_ran, Protocol.error) result
-(** extr-8o1h extr-vgir extr-k40c: run a playbook script in the tab's page through
-    [Runtime.callFunctionOn] with [awaitPromise] and [returnByValue], as the body of an
-    async function of [args]; a script may [fetch] the site's own endpoints. This is the
-    only function that hands script text to the browser, and it takes a
-    {!Playbook.script}, which only the playbook loader makes.
+(** extr-8o1h extr-vgir extr-k40c scr-run: run a script the agent brought in the tab's
+    page through [Runtime.callFunctionOn] with [awaitPromise] and [returnByValue], as the
+    body of an async function of [args]; a script may [fetch] the site's own endpoints.
 
     A script that threw or that the browser could not return is [script-failed]; a result
-    over {!Playbook.script_max_bytes} is [too-large]; a result that does not fit its
+    over {!Script.max_bytes} is [too-large]; a result that does not fit its declared
     [returns] is [script-invalid] with the path of the first mismatch; a dialog the script
     opened is [dialog-open]. Arguments over 64 KiB are [too-large]. *)
-
-val script_syntax : browser -> Playbook.script -> (string option, Protocol.error) result
-(** extr-lslp: compile the script, without calling it, as [new Function] in the page —
-    which the caller makes a blank one. [None] parses; [Some message] is the engine's
-    syntax error. *)

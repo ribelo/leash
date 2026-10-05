@@ -5,7 +5,7 @@ open Cmdliner
 let exit_doc = function
   | 0 -> "Success."
   | 64 -> "Invalid request or invocation; fix the input."
-  | 65 -> "Invalid configuration, playbook, or stale page data."
+  | 65 -> "Invalid configuration, a script error, or stale page data."
   | 66 -> "Unknown or gone tab, row, or network request."
   | 69 -> "Service, browser, or model unavailable."
   | 70 -> "Internal failure or invalid service response."
@@ -30,9 +30,8 @@ let docs = function
   | "nav" | "click" | "fill" | "press" | "select" | "scroll" | "wait" | "upload" | "hover"
   | "check" | "uncheck" | "dialog" ->
       "ACT"
-  | "net" | "debug" | "eval" | "cookies" | "storage" -> "NETWORK AND DEBUG"
+  | "net" | "debug" | "eval" | "script" | "cookies" | "storage" -> "NETWORK AND DEBUG"
   | "drive" -> "MISSIONS"
-  | "playbook" -> "PLAYBOOKS"
   | _ -> "SERVICE"
 
 let exits name =

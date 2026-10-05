@@ -14,7 +14,6 @@ let snapshot =
       tab;
       url = "https://site.example/";
       title = "Page";
-      page_kind = None;
       rows =
         [
           {
@@ -46,7 +45,6 @@ let request ?(headless = false) trigger =
       secret_names = [ "portal_password" ];
       headless;
       site = Some "site.example";
-      notes = Some "Reports are under Archive.";
       history = [ ("Find the report", "blocked: no control") ];
       url = snapshot.url;
       title = snapshot.title;
@@ -54,7 +52,6 @@ let request ?(headless = false) trigger =
       snapshot;
       image_input = None;
       downloads = [];
-      offered = [ ("open-reports", "Open the reports page") ];
     }
 
 let answer ?headless trigger json =
@@ -81,9 +78,6 @@ let shapes () =
   is
     (function R.Observe_image -> true | _ -> false)
     {|{"answer":"observe","image":true}|};
-  is
-    (function R.Run "open-reports" -> true | _ -> false)
-    {|{"answer":"run","name":"open-reports"}|};
   is
     (function R.Handoff _ -> true | _ -> false)
     {|{"answer":"handoff","reason":"captcha"}|};
@@ -126,15 +120,9 @@ let shown () =
   Alcotest.(check string)
     "mission" "Find the report"
     (Yojson.Safe.Util.to_string (field "mission"));
-  Alcotest.(check string)
-    "notes" "Reports are under Archive."
-    (Yojson.Safe.Util.to_string (field "site_notes"));
   Alcotest.(check int)
     "history" 1
-    (List.length (Yojson.Safe.Util.to_list (field "history")));
-  Alcotest.(check int)
-    "offered" 1
-    (List.length (Yojson.Safe.Util.to_list (field "offered")))
+    (List.length (Yojson.Safe.Util.to_list (field "history")))
 
 let () =
   Alcotest.run "planner takeover"

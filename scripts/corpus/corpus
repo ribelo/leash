@@ -3,11 +3,11 @@
 
     secret-env ai -- scripts/corpus/corpus list
     secret-env ai -- scripts/corpus/corpus run [--models jev,clef,clef-flash]
-        [--styles loose,goal,steps] [--knowledge none,notes,procedures]
+        [--styles loose,goal,steps]
         [--image off,b,c] [--missions ID,...] [--tags TAG,...] [--parallel 4]
         [--deadline 300] [--out docs/corpus/DATE] [--leash PATH]
 
-Each (model, image, knowledge) group runs on its own private headless service with a
+Each (model, image) group runs on its own private headless service with a
 temporary XDG root; every mission x style is one cell with its own deadline. A cell
 passes only by its independent check (checks.py), never by the reply's own status.
 Image modes b and c apply to a model that accepts images; a text-only model runs off
@@ -42,37 +42,13 @@ def available(mission):
     return True
 
 
-def playbook_variant(site, knowledge, into):
-    """corp-zeh2: the site's hand-written playbook, cut to the knowledge variant."""
-    src = HERE / "playbooks" / site
-    if knowledge == "none" or not (src / "playbook.json").is_file():
-        return False
-    book = json.loads((src / "playbook.json").read_text())
-    dest = into / site
-    dest.mkdir(parents=True, exist_ok=True)
-    if knowledge == "notes":
-        if not book.get("notes"):
-            return False
-        book = {k: book[k] for k in ("site", "entry", "description", "pages", "notes") if k in book}
-        book["procedures"] = []
-    else:
-        book.pop("notes", None)
-        if not book.get("procedures"):
-            return False
-        if (src / "scripts").is_dir():
-            shutil.copytree(src / "scripts", dest / "scripts", dirs_exist_ok=True)
-    (dest / "playbook.json").write_text(json.dumps(book, indent=1))
-    return True
-
-
 class Service:
-    def __init__(self, leash, model_id, image, knowledge, sites, root):
+    def __init__(self, leash, model_id, image, root):
         self.leash, self.root = leash, root
-        for d in ("config/leash/playbooks", "data", "state", "runtime", "cache"):
+        for d in ("config/leash", "data", "state", "runtime", "cache"):
             (root / d).mkdir(parents=True, exist_ok=True)
         os.chmod(root, 0o700)
         os.chmod(root / "runtime", 0o700)
-        self.knowledge_sites = [s for s in sites if playbook_variant(s, knowledge, root / "config/leash/playbooks")]
         (root / "config/leash/config.toml").write_text(
             "[chrome]\nheadless = true\n"
             f"[models]\ndecision_model = \"{model_id}\"\nplanner_model = \"{PLANNER}\"\n"
@@ -164,7 +140,7 @@ def run_cell(svc, mission, style, deadline, work, budget=None):
         checks.stop_fixture(ctx)
 
 
-def row(mission, style, knowledge, model, image, reply, ok, note, wall):
+def row(mission, style, model, image, reply, ok, note, wall):
     detail = reply.get("detail") or {}
     src = reply if "navigator_steps" in reply else detail
     data = src.get("data") or {}
@@ -172,7 +148,7 @@ def row(mission, style, knowledge, model, image, reply, ok, note, wall):
     model_id, multimodal = MODELS[model]
     truncated = None if not multimodal else any(2150 <= n <= 2250 for n in tokens)
     return {
-        "mission": mission["id"], "style": style, "knowledge": knowledge, "model": model, "image": image,
+        "mission": mission["id"], "style": style, "model": model, "image": image,
         "pass": bool(ok), "status": reply.get("status") or (reply.get("code") and "error:" + reply["code"]),
         "planner_calls": len(src.get("planner_turns") or []), "navigator_steps": src.get("navigator_steps"),
         "calls": src.get("model_calls"), "cost": src.get("model_cost"), "wall_s": round(wall, 1),
@@ -183,8 +159,8 @@ def row(mission, style, knowledge, model, image, reply, ok, note, wall):
 
 
 def table(rows):
-    head = "| mission | style | knowledge | model | image | pass | status | planner calls | navigator steps | calls | cost $ | wall s | image parts | truncated | note |\n" \
-           "| --- | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n"
+    head = "| mission | style | model | image | pass | status | planner calls | navigator steps | calls | cost $ | wall s | image parts | truncated | note |\n" \
+           "| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n"
     def cell(v):
         if v is None:
             return "-"
@@ -193,7 +169,7 @@ def table(rows):
         if isinstance(v, float):
             return f"{v:.6f}".rstrip("0").rstrip(".")
         return str(v).replace("|", "/").replace("\n", " ")[:160]
-    keys = ["mission", "style", "knowledge", "model", "image", "pass", "status", "planner_calls", "navigator_steps",
+    keys = ["mission", "style", "model", "image", "pass", "status", "planner_calls", "navigator_steps",
             "calls", "cost", "wall_s", "image_parts", "truncated", "note"]
     return head + "".join("| " + " | ".join(cell(r[k]) for k in keys) + " |\n" for r in rows)
 
@@ -201,7 +177,7 @@ def table(rows):
 def summary(rows):
     """Pass rate and mean cost per factor level, for the conclusions."""
     out = ["| factor | level | cells | passed | pass rate | mean cost $ | mean planner calls |", "| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
-    for factor in ("model", "image", "style", "knowledge"):
+    for factor in ("model", "image", "style"):
         for level in sorted({r[factor] for r in rows}):
             rs = [r for r in rows if r[factor] == level]
             passed = sum(r["pass"] for r in rs)
@@ -232,7 +208,6 @@ def main():
     r = sub.add_parser("run")
     r.add_argument("--models", default="jev,clef,clef-flash")
     r.add_argument("--styles", default="loose,goal,steps")
-    r.add_argument("--knowledge", default="none,notes,procedures")
     r.add_argument("--image", default="off,b,c")
     r.add_argument("--missions", default="")
     r.add_argument("--tags", default="")
@@ -253,12 +228,11 @@ def main():
     pick = [m for m in missions if available(m)
             and (not args.missions or m["id"] in args.missions.split(","))
             and (not args.tags or set(args.tags.split(",")) & set(m.get("tags", [])))]
-    sites = sorted({m["site"] for m in pick})
     rows, statuses = [], []
     out = pathlib.Path(args.out)
     if (out / "results.json").is_file():
         rows = json.loads((out / "results.json").read_text())["cells"]
-    done = {(c["mission"], c["style"], c["knowledge"], c["model"], c["image"]) for c in rows}
+    done = {(c["mission"], c["style"], c["model"], c["image"]) for c in rows}
     lock = threading.Lock()
     scratch = pathlib.Path(tempfile.mkdtemp(prefix="leash-corpus-"))
     for model in args.models.split(","):
@@ -266,39 +240,37 @@ def main():
         for image in args.image.split(","):
             if image != "off" and not multimodal:
                 continue
-            for knowledge in args.knowledge.split(","):
-                cells = [(m, s) for m in pick for s in args.styles.split(",")
-                         if (m["id"], s, knowledge, model, image) not in done
-                         and (knowledge == "none" or (HERE / "playbooks" / m["site"] / "playbook.json").is_file())]
-                if not cells:
-                    continue
-                root = scratch / f"{model}-{image}-{knowledge}"
-                svc = Service(args.leash, model_id, image, knowledge, sites, root)
-                statuses.append({"group": root.name, "models": (svc.status or {}).get("models"), "knowledge_sites": svc.knowledge_sites})
-                print(f"== {root.name}: {len(cells)} cells; modalities {((svc.status or {}).get('models') or {}).get('decision_modalities')}", flush=True)
-                try:
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
-                        futures = {}
-                        for i, (m, s) in enumerate(cells):
-                            work = root / "cells" / f"{m['id']}-{s}"
-                            work.mkdir(parents=True, exist_ok=True)
-                            futures[pool.submit(run_cell, svc, m, s, args.deadline, work, args.budget)] = (m, s)
-                        for f in concurrent.futures.as_completed(futures):
-                            m, s = futures[f]
-                            try:
-                                done_cell = f.result()
-                                if done_cell is None:
-                                    continue
-                                reply, ok, note, wall = done_cell
-                            except Exception as e:  # a harness failure is a failed cell, recorded
-                                reply, ok, note, wall = {}, False, f"harness: {e}", 0.0
-                            r = row(m, s, knowledge, model, image, reply, ok, note, wall)
-                            with lock:
-                                rows.append(r)
-                                write(out, rows, args, statuses)
-                            print(f"   {'PASS' if ok else 'fail'} {m['id']} {s}: {note[:100]}", flush=True)
-                finally:
-                    svc.stop()
+            cells = [(m, s) for m in pick for s in args.styles.split(",")
+                     if (m["id"], s, model, image) not in done]
+            if not cells:
+                continue
+            root = scratch / f"{model}-{image}"
+            svc = Service(args.leash, model_id, image, root)
+            statuses.append({"group": root.name, "models": (svc.status or {}).get("models")})
+            print(f"== {root.name}: {len(cells)} cells; modalities {((svc.status or {}).get('models') or {}).get('decision_modalities')}", flush=True)
+            try:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
+                    futures = {}
+                    for i, (m, s) in enumerate(cells):
+                        work = root / "cells" / f"{m['id']}-{s}"
+                        work.mkdir(parents=True, exist_ok=True)
+                        futures[pool.submit(run_cell, svc, m, s, args.deadline, work, args.budget)] = (m, s)
+                    for f in concurrent.futures.as_completed(futures):
+                        m, s = futures[f]
+                        try:
+                            done_cell = f.result()
+                            if done_cell is None:
+                                continue
+                            reply, ok, note, wall = done_cell
+                        except Exception as e:  # a harness failure is a failed cell, recorded
+                            reply, ok, note, wall = {}, False, f"harness: {e}", 0.0
+                        r = row(m, s, model, image, reply, ok, note, wall)
+                        with lock:
+                            rows.append(r)
+                            write(out, rows, args, statuses)
+                        print(f"   {'PASS' if ok else 'fail'} {m['id']} {s}: {note[:100]}", flush=True)
+            finally:
+                svc.stop()
     write(out, rows, args, statuses)
     print(f"wrote {out / 'results.md'}")
 

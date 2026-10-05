@@ -99,13 +99,7 @@ let rich_success () =
                       [ ("name", `String "Authorization"); ("value", `String "secret") ];
                   ] );
             ] );
-        ( "models",
-          `Assoc
-            [
-              ("api_key", `String "sk-test");
-              ("choice_confidence", `Int 1);
-              ("planner_endpoint", `Null);
-            ] );
+        ("models", `Assoc [ ("api_key", `String "sk-test"); ("planner_endpoint", `Null) ]);
         ( "handoff",
           `Assoc
             [
@@ -219,7 +213,6 @@ let every_field_wrong_type () =
               ("planner_model", bad);
               ("planner_reasoning", bad);
               ("planner_endpoint", bad);
-              ("choice_confidence", `String "x");
             ] );
         ("handoff", `Assoc [ ("focus_command", bad); ("notify_command", bad) ]);
       ]
@@ -247,7 +240,6 @@ let every_field_wrong_type () =
       "/models/planner_model";
       "/models/planner_reasoning";
       "/models/planner_endpoint";
-      "/models/choice_confidence";
       "/handoff/focus_command";
       "/handoff/notify_command";
     ]

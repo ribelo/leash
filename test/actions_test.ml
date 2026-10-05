@@ -1381,7 +1381,6 @@ let unsafe_inputs () =
                     | Error _ -> assert false);
                   url = "https://example.org/";
                   title = "Sign up";
-                  page_kind = None;
                   rows = agent;
                   total = List.length agent;
                   offset = 0;

@@ -92,15 +92,13 @@ let top_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
       "ACT";
       "NETWORK AND DEBUG";
       "MISSIONS";
-      "PLAYBOOKS";
       "SERVICE";
       "SKILL";
       "take";
       "human tabs are never closed unless an agent takes one";
     ];
   Ox_caps.Cap_stdlib.print_endline ~caps
-    "top-level help groups tabs, observe, act, network/debug, missions, playbooks, \
-     service and skill"
+    "top-level help groups tabs, observe, act, network/debug, missions, service and skill"
 
 let error_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
   let actual = read_file ~caps path in
@@ -125,16 +123,7 @@ let help_topics ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path
   List.iter
     (fun topic ->
       if not (contains text topic) then failwith ("help list missing " ^ topic))
-    [
-      "handles";
-      "playbooks";
-      "authoring";
-      "expectations";
-      "drive";
-      "scripts";
-      "errors";
-      "traces";
-    ];
+    [ "handles"; "drive"; "errors"; "traces" ];
   (* hdoc-vqj7: each offline topic has a useful one-line description. *)
   String.split_on_char '\n' text
   |> List.filter (fun line -> String.trim line <> "")
@@ -142,9 +131,7 @@ let help_topics ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path
       match String.split_on_char '\t' line with
       | [ _topic; description ] when String.length description > 20 -> ()
       | _ -> failwith ("hdoc-vqj7 topic lacks a description: " ^ line));
-  Ox_caps.Cap_stdlib.print_endline ~caps
-    "help lists handles, playbooks, authoring, expectations, drive, scripts, errors, \
-     traces"
+  Ox_caps.Cap_stdlib.print_endline ~caps "help lists handles, drive, errors, traces"
 
 let run_leash ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; .. >) args =
   let cmd = Filename.quote_command "leash" args in
@@ -436,18 +423,12 @@ let drive_help ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path 
       "--max-steps";
       "(default 256)";
       "operator-state";
-      "script-record";
-      "https://books.toscrape.com/";
-      "--max-steps 15";
-      "--deadline-s 300";
-      "no-playbooks";
-      "one-book";
-      "many-books";
-      "none-matching";
+      "planner-record";
+      "result: the file path";
       "EXAMPLES";
     ];
   Ox_caps.Cap_stdlib.print_endline ~caps
-    "drive help: both routes, four playbook cases, operator-state example"
+    "drive help: the takeover, a goal with its result, operator-state"
 
 let drive_request ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path =
   let json = Yojson.Safe.from_string (String.trim (read_file ~caps path)) in

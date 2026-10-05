@@ -2,7 +2,7 @@
 
 The Leash service listens on the `control.socket` path its configuration names — `$XDG_RUNTIME_DIR/leash/control.sock` by default, mode 0600, in a verified private directory. A client connects, writes one JSON object per line, and reads one JSON object per line in reply. The CLI reads the same configuration file to find it (`--socket PATH` overrides it for one call, `--config FILE` names the file to read). One request per connection is the norm; the CLI opens a connection per command. Long-blocking requests (`handoff`, `drive`, `wait`) hold the connection open until they settle. The socket admits 64 requests at once (hard-b1na); see Concurrency below.
 
-Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec. Meaning of each field and error is `leash help`, not this file: [handles](help/handles.md) (tab, handle, origin, label, idle, take), [playbooks](help/playbooks.md) (playbook JSON), [authoring](help/authoring.md) (how to write one), [expectations](help/expectations.md) (checker sentences), [drive](help/drive.md) (mission, lanes, trace), [scripts](help/scripts.md) (script, pages, returns, args), [errors](help/errors.md) (every code).
+Wire shapes here are the contract; field names are stable across the CLI and any later adapter. Until 1.0 they may still change with the spec. Meaning of each field and error is `leash help`, not this file: [handles](help/handles.md) (tab, handle, origin, label, idle, take), [drive](help/drive.md) (mission, lanes, trace), [errors](help/errors.md) (every code).
 
 ## Durable drive traces (L51, L53)
 
@@ -11,8 +11,8 @@ adds `error.detail.trace_path`. The path exists before reply encoding. Disabled
 tracing or a failed write omits the field, and persistence failures never replace
 the drive outcome. `Protocol.drive_trace` is the version-1 derived safe durable
 projection, not the live result type, to exclude handles, page text, records, and
-raw state. It records headers, the page-kind path (the selected playbook's declared kinds; nothing is inferred), procedures,
-steps, URL/title, `arguments` (`[name, value][]`, default `[]`) and unattended events (default `[]`). Only argument values feeding retained non-redacted typed steps are persisted. Operator and planner
+raw state. It records headers, planner turns,
+steps, URL/title and unattended events (default `[]`). Operator and planner
 steps share one chronological sequence, renumbered from 1; a failed planner
 action is retained with its error code, including on a partial-failure trace.
 The safe step shape is:
@@ -127,21 +127,19 @@ last 20 debug-ring entries, newest first, without clearing the ring.
 `new` and `nav` return `TabInfo` (including the tab handle and any active dialog) even
 when a load is interrupted by `Page.javascriptDialogOpening`. A modal interrupts
 input settlement and `wait` immediately: action replies carry `dialog`, while `wait`
-reports `dialog-open` with the serialized dialog in `error.detail`. Run expectation
-waits stop with run status `error` and the dialog in the final observation. A prompt
+reports `dialog-open` with the serialized dialog in `error.detail`. A run stops with
+status `error` and the dialog in the final observation. A prompt
 reports Chrome’s `defaultPrompt` as `default_prompt` (null for other dialog kinds).
 Answer the dialog before another command on that tab; an handle-initiated close
 automatically accepts its own `beforeunload` dialog. When a handler exhausts its
 listener budget, its socket still returns `timeout` with `detail.command` and
 `detail.budget_ms` instead of closing without a reply.
 
-Playbooks (milestone 9): the two commands that need a page. `playbook list`, `show` and `accept` are local
-to the CLI and read the playbooks directory; nothing on the wire ever carries script text.
+Scripts (ADR-0016, scr-run): the agent's own JavaScript, run once on a tab's page. The CLI reads FILE and sends its name and text; nothing is installed.
 
 | cmd | args | result |
 | --- | --- | --- |
-| `playbook_test` | `{tab, script: "<playbook>/<script>", args?: {name: string}}` | `{script, value, records, bytes, elapsed_ms, truncated}` | [errors](help/errors.md) |
-| `playbook_check` | `{playbook}` | `{playbook, scripts: [{script, ok, error?}]}` | [errors](help/errors.md) |
+| `script_run` | `{tab, name, source, args?: {name: string}, out?: string}` | `{script, value, records, bytes, elapsed_ms}` | [errors](help/errors.md) |
 
 Human handoff:
 
@@ -150,26 +148,24 @@ Human handoff:
 | `handoff` | `{tab, reason, timeout_s?}` | `{resumed: true, url, title, warnings?: string[]}` | [errors](help/errors.md) |
 | `resume` | `{tab}` | `{resumed: true}` | [errors](help/errors.md) |
 
-Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [--url URL] [--max-steps N] [--deadline-s S] [--max-procedures N] [--expect SENTENCE]... [--out FILE] [--dry-run]` may select an installed playbook or enter the operator with the whole mission. A playbook is optional routing knowledge, not permission to work. There is no `run` protocol verb.
+Drive (milestone 11, fly-b6yt): one mission. `leash drive MISSION [--tab TAB] [--url URL] [--max-steps N] [--deadline-s S] [--out FILE] [--dry-run]` runs JEV's loop with the planner's takeover (ADR-0015, ADR-0016). There is no `run` protocol verb.
 
 | cmd | args | result |
 | --- | --- | --- |
-| `drive` | `{tab?, mission, start_url?, max_steps?, max_procedures?, deadline_s?, dry_run?, expect?: string[], out?: string}` | `{playbook_choices, status, site: string|null, procedures: RunProcedure[], mission_expectations: RunExpectation[], planner_turns: PlannerTurn[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string, unattended: UnattendedEvent[], detail?: {challenge: string}}` | [errors](help/errors.md) |
+| `drive` | `{tab?, mission, start_url?, max_steps?, deadline_s?, dry_run?, out?: string}` | `{status, site: string|null, planner_turns: PlannerTurn[], collected: int, data: Data, model_calls: int, model_cost: number|null, operator_steps: Step[], operator_state?: OperatorState, output_kinds: string[], final: Snapshot, reason?: string, trace_path?: string, unattended: UnattendedEvent[], detail?: {challenge: string}}` | [errors](help/errors.md) |
 
-`--url` is `start_url`: an optional explicit `http://` or `https://` URL with no userinfo. It opens a drive-owned tab; it does not replace an already populated `--tab`. The CLI rejects a bad scheme, `about:blank`, userinfo, or a non-positive `--max-steps` before it connects, as `usage` (64), and the message names a correct example. `--max-steps` is the on-the-fly executed-action cap (default 60, omitted on the wire when the caller accepts the default); the prediction cap is twice that value, including discarded stale decisions. `--max-procedures` is the playbook-lane cap (default 40). `--deadline-s` is the whole-mission budget (default 900). All three must be positive when present.
+`--url` is `start_url`: an optional explicit `http://` or `https://` URL with no userinfo. It opens a drive-owned tab; it does not replace an already populated `--tab`. The CLI rejects a bad scheme, `about:blank`, userinfo, or a non-positive `--max-steps` before it connects, as `usage` (64), and the message names a correct example. `--max-steps` is JEV's executed-action cap per stint (default 256); the prediction cap is twice that value, including discarded stale decisions. `--deadline-s` is the whole-mission budget (default 600). Both must be positive when present.
 
-Routing (fly-8xiq fly-mepw fly-yolk fly-2akp): no installed books means no playbook question and no planner call. One book is offered with `NONE` and is never forced. Many books are distinct identities plus `NONE`; an identity is `book:<loaded file>`, so two books for one site stay distinct. Books are never merged. A question holds at most 255 choices including `NONE`; a larger library uses bounded hierarchical choices and still offers `NONE`. Selecting `NONE`, or a procedure-level `NONE`, enters the operator on the current page with the whole mission and retained progress. That is a successful route, not `BLOCKED`, not discovery, and not a planner review. No confidence-triggered planner reinterprets `NONE`.
+`output_kinds` is always present. It lists `planner-record` when the planner returned records with done, then `operator-state` when the reply carries `operator_state`. `operator_state` is `key?`: omitted when the operator lane did not run. It is the bounded observed page, and the reply carries it without `--out`. On the fly, `data` is not a synthesized record list.
 
-`output_kinds` is always present. It lists `script-record` when a prepared script produced records, then `operator-state` when the reply carries `operator_state`. `operator_state` is `key?`: omitted when the operator lane did not run. It is the bounded observed page, not validated script records, and the reply carries it without `--out`. On the fly, `data` is not a synthesized record list.
-
-`--out` is JSONL. Each line is one object with `kind` and `source`. Script records stream as pages complete. The operator line is one terminal object, written only when the run is not a dry run:
+`--out` is JSONL. Each line is one object with `kind` and `source`. The operator line is one terminal object, written only when the run is not a dry run:
 
 ```
-{"kind":"script-record","source":"playbook","playbook":"book:<file>","procedure":string,"script":string,"record":object}
+{"kind":"planner-record","source":"planner","record":{string: string}}
 {"kind":"operator-state","source":"operator","state":OperatorState}
 ```
 
-A dry run does not create or append the file. Untagged lines are not written. A mixed run that collects by script and then enters the operator writes both kinds, in that order, and lists both in `output_kinds`.
+A dry run does not create or append the file. Untagged lines are not written. A run that returns planner records writes both kinds, in that order, and lists both in `output_kinds`.
 
 ```
 OperatorState = {status: string, reason: string|null, error: Error|null,
@@ -177,7 +173,6 @@ OperatorState = {status: string, reason: string|null, error: Error|null,
                  page: OperatorPage, history: ActionLog[], predictions: Prediction[],
                  text_calls: TextCall[], metrics: OperatorMetrics}
 OperatorPage  = {snapshot: Snapshot, url, title, text,
-                 page_kind: string|null, page_kind_source: "declared"|null,
                  text_truncated: bool, omitted_elements: int,
                  can_scroll_up: bool, can_scroll_down: bool,
                  coverage: Coverage, bounds: CoverageBounds}
@@ -251,16 +246,12 @@ A field shown as `T|null` is always present, `null` when it has no value; a fiel
 `key?` is omitted when it has no value.
 
 ```
-PageKind     = {name, source: "declared"}
-                 present only when an installed playbook's url_pattern matched (list and
-                 snap do not read page text, so a text_marker-only kind is not shown);
-                 nothing is inferred (ADR-0014). See leash help handles.
-TabListing   = {label: string|null, url, title, page_kind: PageKind, origin: "agent"|"human",
+TabListing   = {label: string|null, url, title, origin: "agent"|"human",
                  age_s: int, idle_s: int, closes_in_s: int|null, with_human: bool}
 TabInfo      = {tab, ...TabListing, generation: int, dialog: Dialog|null, reason?: string, loaded?: bool}
 PopupInfo    = {tab?: string, ...TabListing, state: "opening"|"blank"|"ready",
                  generation: int, dialog: Dialog|null, reason?: string, opener_url: string}
-Snapshot     = {snapshot: id, tab, url, title, page_kind: PageKind, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
+Snapshot     = {snapshot: id, tab, url, title, rows: Row[], total: int, offset: int, truncated: bool, settled: bool,
                 source: "ax"|"dom" (default "ax" when omitted), reason?: string, dialog: Dialog|null}
 Row          = {index: int, role: string, name: string, value?: string, state?: string[],
                 options?: [{index: int, label: string, value: string, selected: bool, disabled: bool}]}
@@ -301,32 +292,9 @@ status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
                  prediction cap is twice that. The operator uses the remaining mission
                  deadline_s (default 900), not a hidden 120 s cap. A present max_steps
                  or deadline_s must be positive.
-RunProcedure = {slug, site, planned: bool, attempts: int,
-                choice: {key: string, probabilities: {..}, confidence: float, usage: Usage|null},
-                drives: [{goal, status (drive), steps: Step[], reason?: string}],
-                scripts: RunScript[],
-                expectations: RunExpectation[],
-                outcome: "verified"|"failed"|"skipped"|"planned", elapsed_ms: int, reason?: string}
-                drives is empty for "planned" (a dry run executed nothing); attempts is 2 when the
-                retry-once rule replayed the procedure; planned is true when a planner turn wrote it
-PlaybookChoice = {source: "jev"|"planner"|"route", key: string|null, probabilities: {..}|null, confidence: float|null,
-                  usage: Usage|null, note: string|null}
-                 drive replies retain playbook_choices in decision order, including a JEV NONE
-                 and the route note when the operator is entered directly. NONE is the route:
-                 it is not BLOCKED, and no planner review reinterprets it (fly-yolk; the
-                 extr-uhnc confidence review does not gate this lane). JEV preserves its own
-                 distribution and confidence. A route entry has source "route", key "operator",
-                 and a note; its probabilities are empty and its confidence is null.
-                 Planner turns remain for applicable installed-playbook escalation and repair,
-                 not for initial on-the-fly routing or NONE review. No unvalidated planner text is executable.
-RunScript   = {script, url, records: int, bytes: int, elapsed_ms: int, error?: string}
-                 one script call of a procedure's `script:` step (extr-8o1h): the page it ran on, the records it produced,
-                 the size of its result, and — when the call was rejected — why; empty for a procedure with no script step
-RunExpectation = {sentence, checker: "page_kind"|"text"|"download"|"no_dialog"|"row"|"judgment",
-                  passed: bool, score: float|null}
-                 score is the JEV score a judgment expectation was given, null where code decided it
-PlannerTurn = {n: int, trigger: "blocked"|"failed"|"arguments",
-               answer: "procedure"|"continue"|"handoff"|"fail", steps: PlannerStep[],
+PlannerTurn = {n: int, trigger: "blocked"|"answer"|"holding",
+               answer: "jev"|"act"|"read"|"observe"|"notify"|"handoff"|"done"|"fail"|"error",
+               steps: PlannerStep[],
                reason?: string, usage: Usage|null}
                  steps defaults to [] when decoding an older turn
 PlannerStep = {n: int, command: "click"|"fill"|"press"|"scroll"|"nav",
@@ -334,8 +302,8 @@ PlannerStep = {n: int, command: "click"|"fill"|"press"|"scroll"|"nav",
                after: {url, title}, elapsed_ms: int, error?: string}
                  non_repeatable defaults to false; error is the failed action's protocol error code
 Usage       = {input_tokens: int, output_tokens: int, cost: float}
-status (run) = "done"|"blocked"|"failed"|"handoff"|"handoff-expired"|"canceled-by-operator"|"limit"|"deadline"|"error"
-               max_steps defaults to 60; max_procedures defaults to 40; deadline_s defaults to 900;
+status (run) = "done"|"planned"|"blocked"|"failed"|"handoff-expired"|"canceled-by-operator"|"deadline"|"error"
+               max_steps defaults to 256 per stint; deadline_s defaults to 600;
                each must be positive when present. model_cost is number|null.
 Models       = {configured: bool, decision_model: string, text_model: string,
                 systemone_endpoint: string, chat_base_url: string,
@@ -347,23 +315,6 @@ Models       = {configured: bool, decision_model: string, text_model: string,
                  the models section as configured; configured is whether an API key is present,
                  and no field ever carries the key
 ```
-
-### Planner Done (map-op10)
-
-The planner may answer:
-
-```json
-{"answer":"done","result":"ama Café, Berlin","evidence":["the page shows ama Café"]}
-```
-
-`result` is a nonempty single line of at most 1024 bytes; `evidence` is a nonempty
-list of sentences in the existing expectation vocabulary. No actions, message,
-procedure, reason or expect may be mixed into done. The runner resolves and
-verifies those checks, together with the mission expectations, against the live
-page before returning `status: "done"` and the optional `answer` result. Failed
-evidence records a refusal and consumes a bounded planner turn before continuing.
-An active challenge or incomplete collection cannot finish this way. Notify still
-sends a message and continues: it is not a completion answer.
 
 ### Default-decline consent and unchanged actions (map-op11, map-op12)
 
@@ -397,26 +348,6 @@ its remaining actions and returns to JEV. Dispatched input is never replayed.
 Invalid or empty JEV/text-helper provider responses are retried once within the
 original deadline. A valid helper `{"text":null}` still means a missing value;
 null provider message content is an invalid response. No token caps are added.
-
-### Planner Continue (L53)
-
-The planner model request includes the actual offered `snapshot` and the
-configured `planner_actions` cap (default 5, configuration range 1..20).
-A reply may be `{"answer":"continue","actions":[...]}`, with each action an
-ordinary `{v:1, cmd, args}` request from the five-command `PlannerStep`
-allowlist. This is a planner answer, not a new control-socket verb. Only
-Continue may carry actions. Missing or empty `actions` returns directly to JEV
-on the current page without a planner action.
-
-The whole batch is validated before dispatch and must fit the configured cap
-and remaining mission action budget. Every action names the offered tab;
-click, fill and press name the offered snapshot and row, and press requires an
-index. Scroll may name an offered row. Nav stays on the current HTTP(S)
-authority without userinfo. Actions use the ordinary locked protocol paths;
-a changed snapshot requires a unique role/name rebind, and protected actions
-are refused. A dry run dispatches none. Remaining deadline and action budget
-apply between actions. `PlannerTurn.steps` retains ordered action evidence
-and errors; after a successful batch a fresh observation returns control to JEV.
 
 Rules:
 
@@ -459,120 +390,37 @@ Rules:
   when present, is the explicit http(s) page that tab opens
   before the operator starts. On a blank tab with no `start_url`, one unambiguous http(s)
   URL in the mission is the bootstrap; none or several is `blocked` with the missing-start
-  reason, not a playbook failure and not a model call. It authorizes the handle and then holds
-  the tab action lock for the whole run. A playbook step is one operator call bounded by
-  the procedure and by what is left of the mission. The on-the-fly operator uses
-  `max_steps` (default 60 executed actions; prediction cap twice that) and the remaining
+  reason, not a model call. It authorizes the handle and then holds
+  the tab action lock for the whole run. JEV uses
+  `max_steps` (default 256 executed actions per stint; prediction cap twice that) and the remaining
   mission deadline. It is refused before it starts on a tab the caller does not own
   (`unknown-tab`), one the human holds (`with-human`), or one with a dialog open
   (`dialog-open`).
-- The playbook level is asked when at least one book is installed: at the start, after a
-  procedure whose description or the mission names another installed site the run has not
-  served yet, and once more when the procedure level answers BLOCKED. An empty library
-  skips the question and enters the operator (fly-8xiq). Criteria are book identities
-  (`book:<loaded file>`) plus NONE; even one book competes with NONE and is never forced
-  (fly-mepw). Books are never merged. A question holds at most 255 choices including NONE;
-  a larger library uses bounded hierarchical choices and still offers NONE (fly-95bw).
-  Selecting NONE, or a procedure-level NONE or BLOCKED, enters the operator on the current
-  page and does not call the planner (fly-yolk). A playbook other than the current one is
-  switched to by navigating the same tab to its `entry` URL, so the shared profile's logins
-  carry over.
-- The procedure level is asked every turn: the current playbook's procedures (slug and
-  description) plus `DONE` and `BLOCKED`. The state it and the playbook level are asked
-  over is small and semantic — the mission, the site, the page kind (from the playbook's
-  `pages`), the page title and URL, the last five procedures with their outcomes, and the
-  arguments already known — and, once a script has collected anything, `collected` (the count), `pages` (pages read) and `collection_complete` (the last pagination ran out: its `until` held or its next page did not exist, not `max` or a limit), so that the mission level can tell a finished collection from an unfinished one (extr-b3u0, found by the L39 live gate: told only a count, JEV chose the collection again and never DONE). **Prepared script records never reach any model, and page text does not reach the playbook or procedure levels**; those levels see summaries and counts. The operator sends the mission, URL, title, at most 6000 characters of viewport text (including visible titles, prices and records), indexed elements and the last ten actions to JEV. The text helper may see that page text when filling a field (fly-g0uh fly-iodm).
-- `{name}` placeholders in a goal or an expectation sentence are substituted from the
-  run's arguments; an argument the mission does not supply is asked of the text helper
-  once, and the value is reused for the rest of the run.
-- A procedure's expectations are verified with the bounded wait: the checker the loader
-  resolved where one applies (page kind, text, download, no dialog, row), a JEV score
-  question where none does. A procedure whose expectations fail is replayed once from its
-  first step and a second failure is reported to the planner. A `use` step runs the named
-  procedure inline with its own expectations; an `optional` one is skipped when its first
-  step ends blocked within two operator steps.
-- **The DONE guard.** `DONE` is accepted only against a fresh verification of the
-  mission's own expectations (the `expect` list), or — when the mission carries none — of
-  the last verified procedure's expectations, re-verified at that moment. The verification
-  is independent of the procedure that just ran: a confirmation page that does not show
-  the mission's end state fails it, and the run then asks the planner and ends `blocked`
-  naming the expectation that failed. A `DONE` nothing can verify is refused the same way.
-- **Playbook directories and scripts (milestone 9).** A playbook is a directory,
-  `$XDG_CONFIG_HOME/leash/playbooks/<name>/playbook.json`, and whatever files sit beside it; a `.json` file left directly
-  in the playbooks directory is refused. `playbook.json` may declare `scripts`, an object of script name (a lowercase slug)
-  to `{file | source, returns, max_bytes?}`. `file` is relative to the playbook directory, ends in `.js`, has no `..`
-  component and is not absolute; it is resolved with symlinks at load and refused when it leaves the directory (a link to
-  another file of the playbook is fine), and its text is read once, at load. `source` is a short inline script (at most
-  4096 bytes). Exactly one of the two. `returns` is the shape the script's result must have — a record or a list of records:
-  a type name (`string`, `number`, `boolean`, `url` — absolute http(s)), an object of field to shape (a field whose name
-  ends in `?` is optional, absent or null), or a one-element array for a list, at most eight deep. `max_bytes` bounds the
-  serialized result (default 8 MiB, at most 16 MiB). A malformed `returns`, a bad file, both or neither of `file` and
-  `source`, or a `script:` step naming a script the playbook does not declare refuses the playbook, with the path of
-  `playbook.json` first in the message.
-- A script is the body of an async function of `args` (an object of strings), called on the page's global object with
-  `Runtime.callFunctionOn`, `returnByValue` and `awaitPromise` (docs/cdp-shapes.md, L37): it may `await fetch(...)` the
-  site's own endpoints with the page's cookies. Its result is bounded by `max_bytes` (`too-large`), then validated against
-  `returns`, fail-closed: a missing field, an undeclared field, a value of another type, a null where a value is required
-  and a URL that is not absolute http(s) are each `script-invalid`, the message naming the path of the first mismatch
-  (`$[3].price: expected number, got string`). A script that threw or rejected, or whose value the browser could not
-  return, is `script-failed` with what it threw. A script's calls are serialized on the tab like `eval`, bounded by the
-  CDP call's 30 s deadline.
-- map-fm01: a `navigate` step is refused. Navigation is a goal; the procedure `expect` verifies the landing page. (Retired 2026-10-03 by map-fm01; the former L40 navigate step is gone.) `repeat.until` accepts either an existing expectation string or `{"script":"<name>"}` returning exactly `{done: boolean}`. Control scripts use their declared shape validation and appear in script traces with zero collected records; their values never enter JSONL. Termination is checked before the page cap; a cap with more pages remaining fails explicitly. Repeat targets are internal helpers, not mission choices.
-- A `{"script": "<name>", "args": {...}}` step in a procedure runs the playbook's script. `args` is an object of strings with
-  `{name}` placeholders substituted from the run's arguments. A rejected script (`script-failed`, `script-invalid`,
-  `too-large`) fails that attempt of the procedure — nothing is verified, the whole procedure is replayed once, and a second
-  rejection fails it (`outcome: "failed"`) and asks the planner, like a failed expectation; the call is in the procedure's
-  `scripts` with its error. A browser failure ends the run, and a dialog the script opened ends it `error` as a drive's
-  does. The runner streams each validated record to `--out` as a tagged `script-record` line (`kind`, `source: "playbook"`, playbook identity, procedure, script, record) as pages complete; it keeps only five bounded samples in memory and `collected` is the count. No model sees a prepared script record. A terminal `operator-state` line is separate and is not a script record. A dry run
-  runs no script. A procedure may declare `repeat: {next, max, until, delay_ms?, key}`: after its body the runner executes the named next-page procedure up to `max` pages, checks `until` and the next procedure’s expectations, waits `delay_ms` (default 500 ms), and streams each record once by `key` — the key de-duplicates for the rest of the run, so a page read twice (a replayed procedure, a next-page step the mission level chooses itself) never streams a record twice.
-- `playbook_test` runs one script of an installed playbook on the tab's page and answers its validated output, so that writing
-  a script is a fast loop; it is handle-based and takes the tab's action lock. The script is looked up by name in the
-  playbooks directory (`invalid-request` for a playbook or script that is not there; a path is never a playbook name).
-  `records` is the length of a list result, or 1; a result over 1 MiB is not echoed whole: `value` is its first five
-  records and `truncated` is true. `playbook_check` opens a blank tab for the caller, compiles every script of the
-  playbook with `new Function` — never calling it — closes the tab, and answers each script's verdict; it takes no tab, and
-  the CLI's `leash playbook check <name>` prints the loader's local checks (the file resolves, no escape, `returns` well
-  formed, expectations resolve) beside it and exits 1 when a script does not compile. `leash playbook check <dir>` (a path)
-  runs the local checks only.
-- **What reaches the page's JavaScript engine.** Only three kinds of text ever reach `Runtime.evaluate` or
-  `Runtime.callFunctionOn`: Leash's own fixed expressions, the expression an agent writes into the `eval` command, and a
-  script from a loaded playbook directory. No model output is ever any of them: a model chooses a playbook, a procedure, a
-  criterion or an argument value, and an argument value travels as JSON in the call's `arguments`, never in the function
-  text. A script is a `Playbook.script`, a type only the loader can build, and `Reading.script` is the one function that
-  hands one to the browser; a planner answer cannot carry scripts (extr-k40c).
-- `dry_run: true` asks the playbook and the procedure levels and reports the chosen
-  playbook, the chosen procedure with its choice and resolved checkers, and ends
-  `blocked`: it navigates nothing, executes no step, and never calls the text helper.
-- The endings are `done` (DONE verified), `blocked` (the loop stopped with nothing that
-  can progress), `failed` (a procedure failed twice and the planner failed), `handoff`
-  (the planner asked for the human, who resumed), `handoff-expired` (the configured
-  wait expired; the tab stays open with `with_human` cleared), `limit` (the procedure
-  cap), `deadline` (the run deadline) and `error` (a dialog opened on the page — it is in
-  `final.dialog`). A model or browser failure is a protocol **error**; when it is
-  `model-unavailable` its `detail` carries the provider `code` and the trace completed so
-  far in `detail.procedures`, so a failed mission is auditable.
-- **The planner (Luna).** A planner turn is asked exactly where JEV stops — the procedure
-  level answered `BLOCKED`, a procedure failed its expectations twice, or a required
-  argument could not be filled — and at most three times per run (the trigger that arrives
-  with the cap reached ends the run, `blocked` or `failed` naming the cap). It is one
-  `chat/completions` call to the configured `planner_endpoint` (default:
-  `chat_base_url + "/chat/completions"`) with `json_object` on, reasoning at
-  `planner_reasoning` (default `high`, `none` turns it off) and model
-  `planner_model` (default `openai/gpt-6-luna`); its messages are the planner instruction
-  and the mission, the current playbook in its own schema, the trace so far, the arguments
-  known and the observed page — its kind, title, URL and its visible text, bounded, the one
-  place page text reaches a level above the operator. It answers exactly one of
-  `{"answer": "procedure", "procedure": {...}}`, `{"answer": "handoff", "reason": "..."}`
-  or `{"answer": "fail", "reason": "..."}`, decoded fail-closed: an answer that is not one
-  of the three, a missing reason, a procedure the playbook cannot run, or a member the
-  shape does not name is refused and shown back with the refusal once; a second refusal
-  ends the run as `model-unavailable` with `code: "invalid-response"`. Its first turn may
-  also attach the mission's expectations (`"expect": [...]`), which the DONE guard then
-  verifies when the caller stated none. Every turn's tokens are in `planner_turns[].usage`
-  (`cost` is zero: the chat route reports tokens, not the provider's own cost) and logged.
-- A run's handler budget is its `deadline_s` plus 75 seconds — the last procedure's own
-  bounded expectation wait (at most 30 s), a planner turn's correction call (at most 30 s)
-  and the reply — so the listener never cancels a run at the instant it is due to answer.
+- **The planner takes over (ADR-0015, ADR-0016).** When JEV answers BLOCKED, stalls or reaches its
+  step cap, the page passes to the planner (`[models] planner_model`; absent means the mission ends
+  `blocked`). Each planner turn is one `chat/completions` call with `json_object` on: the mission,
+  why it was asked, the history (JEV's goals and outcomes, its own actions), the page's title, URL,
+  bounded text and element table, the secret names, and a screenshot as an image part when it asked
+  for one. It answers exactly one of `jev` (a goal string; JEV drives again), `act` (one ordinary
+  action request: click, fill, select, press, scroll, upload of a file the mission names, type,
+  click_at), `read`, `observe`, `notify`, `handoff` (not on a headless browser), `done`
+  (result, evidence, records) or `fail`, decoded fail-closed with one correction call. When JEV
+  reports DONE on a mission that asks for an answer, the planner is asked once over the final page and
+  answers or takes over. Only the mission deadline bounds it. `planner_turns` records each turn.
+- `script_run` runs the agent's script once on the tab's page: the body of an async function of
+  `args` (an object of strings), called on the page's global object with `Runtime.callFunctionOn`,
+  `returnByValue` and `awaitPromise`; it may `await fetch(...)` the site's own endpoints. Its result
+  is bounded at 8 MiB (`too-large`) and, when the file opens with a `/** returns: SHAPE */` block, validated
+  fail-closed against that shape (`script-invalid`, naming the first bad path). A script that threw is
+  `script-failed`. With `out`, a list result is appended to the file as JSONL. Nothing is installed.
+- **What reaches the page's JavaScript engine.** Only Leash's own fixed expressions, the expression an
+  agent writes into `eval`, and the file an agent passes to `script run`. No model output is ever any of them.
+- `dry_run: true` asks JEV once and reports its decision without acting.
+- The endings are `done`, `blocked` (JEV stopped and no planner is configured), `failed` (the
+  planner failed the mission), `handoff-expired`, `canceled-by-operator`, `deadline` and `error`.
+  A model or browser failure is a protocol **error** with the planner turns in its `detail`.
+- A run's handler budget is its `deadline_s` plus 75 seconds — a planner turn's
+  correction call and the reply — so the listener never cancels a run at the instant it is due to answer.
 - `status`'s `models` reports the models section — `configured` is whether an API key
   is present, and the two model ids and two endpoints are the configured ones. It is read
   from the live configuration: no probe, nothing at boot, and never the key. It is
@@ -716,13 +564,10 @@ Wire shapes stay in the sections above. Each field's meaning is the linked topic
 | --- | --- |
 | `v`, `cmd`, `args`, `ok`, `result`, `error.code`, `error.message`, `error.hint`, `error.detail` | [errors](help/errors.md) for codes; this file for the envelope |
 | `tab`, `handle`, `origin`, `label`, `age_s`, `idle_s`, `closes_in_s`, `with_human`, `generation`, `reason`, disposition | [handles](help/handles.md) | [errors](help/errors.md) |
-| `url`, `title`, `page_kind`, `loaded`, `dialog`, `popups`, `opener_url`, `state` (popup) | [handles](help/handles.md) for origin and page kind; this file for the wire object | [errors](help/errors.md) |
+| `url`, `title`, `loaded`, `dialog`, `popups`, `opener_url`, `state` (popup) | [handles](help/handles.md) for origin; this file for the wire object | [errors](help/errors.md) |
 | `snapshot`, `rows`, `index`, `role`, `name`, `value`, `options`, `match`, `limit`, `offset`, `truncated`, `settled`, `source` | this file; acting on a row needs the handle in [handles](help/handles.md) | [errors](help/errors.md) |
-| `mission`, `start_url`, `max_steps`, `max_procedures`, `deadline_s`, `dry_run`, `expect`, `out`, `status`, `playbook_choices`, `procedures`, `mission_expectations`, `operator_state`, `operator_steps`, `output_kinds`, `collected`, `model_cost`, `final`, `Step`, `Operation` | [drive](help/drive.md) | [errors](help/errors.md) |
-| `site`, `entry`, `pages`, `shapes`, `procedures`, `slug`, `repeat`, `until`, `goal`, `use` | [playbooks](help/playbooks.md) | [errors](help/errors.md) |
-| `script`, `file`, `source`, `returns`, `pages` (script), `args`, `records` | [scripts](help/scripts.md) | [errors](help/errors.md) |
-| `checker`, `sentence`, `passed`, `score`, page-kind sentences | [expectations](help/expectations.md) | [errors](help/errors.md) |
-| how to write a book | [authoring](help/authoring.md) |
+| `mission`, `start_url`, `max_steps`, `deadline_s`, `dry_run`, `out`, `status`, `planner_turns`, `operator_state`, `operator_steps`, `output_kinds`, `collected`, `model_cost`, `final`, `Step`, `Operation` | [drive](help/drive.md) | [errors](help/errors.md) |
+| `script`, `name`, `source`, `args`, `value`, `records` | this file (script_run) | [errors](help/errors.md) |
 
 ## Error codes
 
@@ -735,7 +580,7 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | class | exit | sysexits | when |
 | --- | --- | --- | --- |
 | usage | 64 | EX_USAGE | invalid request or invocation |
-| data | 65 | EX_DATAERR | configuration, playbook, or stale or invalid page data |
+| data | 65 | EX_DATAERR | configuration, a script error, or stale or invalid page data |
 | unknown | 66 | EX_NOINPUT | unknown or gone tab, row, or network request |
 | unavailable | 69 | EX_UNAVAILABLE | service, browser, or model cannot be used |
 | internal | 70 | EX_SOFTWARE | a defect, or a reply that is not protocol JSON |
@@ -771,9 +616,8 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry | [errors](help/errors.md) |
 | `model-timeout` | 75 | a model call exceeded its per-call deadline | the model provider timed out; retry, or raise models.<kind>_timeout | [errors](help/errors.md) |
 | `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry | [errors](help/errors.md) |
-| `script-failed` | 65 | an eval expression or playbook script threw, rejected, or could not be compiled; message carries the engine error | read message; fix the expression, script, or page; `leash help scripts` explains function bodies and `leash playbook test` tests installed scripts | [errors](help/errors.md) |
-| `script-invalid` | 65 | a playbook script's result does not fit its returns; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns | [errors](help/errors.md) |
-| `playbook-invalid` | 65 | a playbook failed validation (load, check or accept); message names the rule | fix the playbook as the message says, then `leash playbook check ./DIR`; `leash help playbooks` lists the rules | [errors](help/errors.md) |
+| `script-failed` | 65 | an eval expression or script threw, rejected, or could not be compiled; message carries the engine error | read message; fix the expression, script, or page; a script is the body of an async function of args |
+| `script-invalid` | 65 | a script's result does not fit its returns block; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |
 | `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message | [errors](help/errors.md) |
 | `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket | [errors](help/errors.md) |
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` | [errors](help/errors.md) |

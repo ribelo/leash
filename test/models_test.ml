@@ -336,12 +336,7 @@ let scripted ~model ?reply_model steps =
 
 let raw ?models ?decide ?model tabs command =
   let levels =
-    Leash.Run.
-      {
-        choose = (fun ~deadline:_ _ -> Alcotest.fail "unexpected JEV choice");
-        score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
-        plan = (fun ~deadline:_ _ -> Alcotest.fail "no planner is configured");
-      }
+    Leash.Run.{ plan = (fun ~deadline:_ _ -> Alcotest.fail "no planner is configured") }
   in
   let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   let answer =
@@ -368,10 +363,8 @@ let drive models tabs handle goal =
          mission = goal;
          max_steps = None;
          start_url = None;
-         max_procedures = Some 4;
          deadline_s = Some 30;
          dry_run = None;
-         expect = None;
          out = None;
          secrets = [];
        })
@@ -467,7 +460,6 @@ let clef_service
             tab = Result.get_ok (Handle.of_string "t_test");
             url = "https://example.com/";
             title = "Canvas";
-            page_kind = None;
             rows = [];
             total = 0;
             offset = 0;
@@ -987,10 +979,8 @@ let provider_timeout
                mission = "Finish";
                max_steps = None;
                start_url = None;
-               max_procedures = Some 1;
                deadline_s = Some 30;
                dry_run = None;
-               expect = None;
                out = None;
                secrets = [];
              })
@@ -1068,14 +1058,12 @@ let chat_timeout
                  reason = "blocked";
                  mission = "collect";
                  site = None;
-                 notes = None;
                  history = [];
                  title = "Books";
                  url = "https://example.com";
                  text = "Books";
                  image_input = None;
                  downloads = [];
-                 offered = [];
                  snapshot =
                    Leash.Protocol.
                      {
@@ -1083,7 +1071,6 @@ let chat_timeout
                        tab = Result.get_ok (Handle.of_string "t_test");
                        url = "https://example.com";
                        title = "Books";
-                       page_kind = None;
                        rows = [];
                        total = 0;
                        offset = 0;

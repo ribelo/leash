@@ -28,7 +28,6 @@ let decision name =
   Leash__Jev_request.
     {
       operation = ok (P.Operation.of_string name);
-      script = None;
       index = None;
       option = None;
       confidence = 1.;
@@ -235,10 +234,8 @@ let args ?tab () =
       mission = "Inspect this harmless page";
       max_steps = Some 8;
       start_url = Some "https://example.com/";
-      max_procedures = Some 8;
       deadline_s = Some 30;
       dry_run = Some false;
-      expect = None;
       out = None;
       secrets = [];
     }

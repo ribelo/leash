@@ -107,7 +107,6 @@ let select_by_label (snapshot : P.snapshot) json =
 
 let trigger_text = function
   | Run.Blocked -> "JEV stopped here (BLOCKED, a stall or its step cap); take over"
-  | Run.Expectation -> "an expectation failed; take over"
   | Run.Final ->
       "JEV reported DONE; give the mission's answer from this page, or take over"
   | Run.Holding -> "you hold the page; your last action came back"
@@ -152,19 +151,12 @@ let request_json (request : Run.plan_request) =
        ("mission", `String request.mission);
        ("secret_names", `List (List.map (fun name -> `String name) request.secret_names));
        ("site", match request.site with Some s -> `String s | None -> `Null);
-       ("site_notes", match request.notes with Some n -> `String n | None -> `Null);
        ( "history",
          `List
            (List.map
               (fun (what, outcome) ->
                 `Assoc [ ("what", `String what); ("outcome", `String outcome) ])
               request.history) );
-       ( "offered",
-         `List
-           (List.map
-              (fun (name, description) ->
-                `Assoc [ ("name", `String name); ("description", `String description) ])
-              request.offered) );
        ( "downloads",
          `List
            (List.map
@@ -222,9 +214,6 @@ let decode (request : Run.plan_request) content =
           in
           Ok Run.{ answer = Read { quote; note }; usage = None }
       | "observe" -> Ok Run.{ answer = Observe_image; usage = None }
-      | "run" ->
-          let* what = string "name" in
-          Ok Run.{ answer = Run what; usage = None }
       | "notify" ->
           let* message = string "message" in
           Ok Run.{ answer = Notify message; usage = None }
@@ -261,9 +250,8 @@ let decode (request : Run.plan_request) content =
             | Some _ -> Error "records must be a list of objects"
           in
           Ok Run.{ answer = Done { result; evidence; records }; usage = None }
-      | _ ->
-          Error
-            "answer must be jev, act, read, observe, run, notify, handoff, done or fail")
+      | _ -> Error "answer must be jev, act, read, observe, notify, handoff, done or fail"
+      )
   | _ -> Error "reply must be an object"
 
 let create ~now ~client ~model ~reasoning ~logger () =

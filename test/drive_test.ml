@@ -25,7 +25,6 @@ let snapshot ?(title = "Initial") () =
       tab = handle;
       url = "https://example.org";
       title;
-      page_kind = None;
       rows = [];
       total = 0;
       offset = 0;
@@ -62,7 +61,6 @@ let observation ?(rows = []) title =
 let decision ?index name : J.decision =
   {
     operation = op name;
-    script = None;
     index;
     option = None;
     confidence = 1.;
@@ -472,7 +470,6 @@ let dialog_popup_error () =
         tab = Some handle;
         url = "https://example.org/popup";
         title = "Popup";
-        page_kind = None;
         origin =
           (match Origin.of_string "agent" with Ok x -> x | Error _ -> assert false);
         label = None;
@@ -542,13 +539,13 @@ let metric result key =
   | `Int value -> value
   | _ -> Alcotest.fail key
 
-let fly_run ?label ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
+let fly_run ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(dry_run = false) ?(max_steps = None)
     ?(observe = fun () -> Ok (observation "Initial"))
     ?(text_value = fun _ -> Alcotest.fail "unexpected helper") ~decide ~act () =
   let handler = D.{ observe; decide; text_value; act } in
   match
-    D.run ?label ~validate ~coverage ~usage ~handler
+    D.run ~validate ~coverage ~usage ~handler
       ~now:(fun () -> 0.)
       ~model:"test"
       ~args:{ (args ()) with P.max_steps }
@@ -977,28 +974,6 @@ let fly_unsupported () =
     | Some reason -> contains reason "password field"
     | None -> false)
 
-let semantic_request_real_reply () =
-  let result =
-    fly_run
-      ~label:(fun ~url:_ ~title:_ ~text:_ ->
-        D.{ kind = "home"; source = "inferred"; url = "home" })
-      ~decide:(fun request ->
-        let page = J.body request |> json_member "state" |> json_member "page" in
-        Alcotest.(check bool)
-          "kind-ir9l request alone uses shown URL" true
-          (json_member "url" page = `String "home");
-        Ok (decision "done"))
-      ~act:(fun _ _ ~text:_ -> Alcotest.fail "unexpected action")
-      ()
-  in
-  let page = state result |> json_member "page" in
-  Alcotest.(check bool)
-    "trace-qe8c reply preserves real URL" true
-    (json_member "url" page = `String "https://example.org");
-  Alcotest.(check bool)
-    "kind-ir9l reply keeps kind separately" true
-    (json_member "page_kind" page = `String "home")
-
 let bounded_pre_action_risk () =
   let actions = ref 0 in
   let target =
@@ -1064,17 +1039,13 @@ let bounded_pre_action_risk () =
 (* map-yzqp map-ngyr: risk belongs to the chosen action, not unrelated controls. *)
 let scoped_action_risk () =
   let check_case ?(title = "Google Maps") ?(url = "https://www.google.com/maps")
-      ?(kind = None) ?(target = "Search") ?(role = "button") ?(index = Some 1)
-      ?(operation = "click") ?(truncated = false) ~body ~ambient expected =
+      ?(target = "Search") ?(role = "button") ?(index = Some 1) ?(operation = "click")
+      ?(truncated = false) ~body ~ambient expected =
     let selected = { (row 1 target) with P.role } in
     let other = { (row 2 ambient) with P.role = "button" } in
     let page = observation ~rows:[ selected; other ] title in
     let page =
-      {
-        page with
-        D.text = body;
-        snapshot = { page.snapshot with P.url; page_kind = kind; truncated };
-      }
+      { page with D.text = body; snapshot = { page.snapshot with P.url; truncated } }
     in
     let calls = ref 0 in
     let result =
@@ -1107,9 +1078,7 @@ let scoped_action_risk () =
   check_case ~target:"Submit" ~body:"Post this message\nSubmit" ~ambient:"Cancel" true;
   check_case ~title:"Checkout payment" ~body:"Search\nSend Product Feedback"
     ~ambient:"Send Product Feedback" true;
-  check_case
-    ~kind:(Some P.{ name = "deletion"; source = Declared })
-    ~body:"Search" ~ambient:"Cancel" true;
+
   check_case ~body:"Search\nThis action will delete your account" ~ambient:"Cancel" true;
   check_case ~index:None ~body:"Send Product Feedback" ~ambient:"Send Product Feedback"
     true;
@@ -1473,7 +1442,6 @@ let () =
             ("fly-vzzw fresh terminal", fly_terminal_refresh);
             ("fly-4lmg fly-4mio fly-2pn7 observation bound", fly_observation_bound);
             ("fly-g0uh fly-9e0f fly-u9eg fly-gn5z state", fly_structured_state);
-            ("kind-ir9l trace-qe8c shown request real reply", semantic_request_real_reply);
             ("done", done_path);
             ("daily-9ggi blocked reasons", blocked_reasons);
             ("map-op11 consent refusal context", consent_dispatch);

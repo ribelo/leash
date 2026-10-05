@@ -13,7 +13,6 @@ let decision ?(index = None) name =
   J.
     {
       operation = operation name;
-      script = None;
       index;
       option = None;
       confidence = 1.;

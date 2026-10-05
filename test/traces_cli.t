@@ -3,7 +3,7 @@ L51 offline durable commands: trace-o6ld, trace-dqr2, trace-szpg.
   $ export XDG_CONFIG_HOME="$PWD/config" XDG_STATE_HOME="$PWD/state" XDG_RUNTIME_DIR="$PWD/runtime"
   $ mkdir -p "$XDG_CONFIG_HOME/leash" "$XDG_STATE_HOME/leash/traces/example.com" "$XDG_STATE_HOME/leash/traces/other.com"
   $ printf '[traces.retention]\ncount = 1\ndays = 1\n' >"$XDG_CONFIG_HOME/leash/config.toml"
-  $ trace() { printf '{"version":1,"time":"%s","site":"%s","mission":"%s","outcome":"%s","cost":null,"duration_ms":12,"model_calls":1,"page_kind_path":[],"procedures":[],"steps":[],"final":null}\n' "$1" "$2" "$3" "$4" >"$XDG_STATE_HOME/leash/traces/$2/$1-$4.json"; }
+  $ trace() { printf '{"version":1,"time":"%s","site":"%s","mission":"%s","outcome":"%s","cost":null,"duration_ms":12,"model_calls":1,"steps":[],"final":null}\n' "$1" "$2" "$3" "$4" >"$XDG_STATE_HOME/leash/traces/$2/$1-$4.json"; }
   $ trace 2000-01-01T00:00:00.000000Z example.com preserved done
   $ trace 2000-01-02T00:00:00.000000Z example.com doomed error
   $ trace 2000-01-03T00:00:00.000000Z other.com untouched error

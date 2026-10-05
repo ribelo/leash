@@ -33,16 +33,13 @@ let trace ?(site = "toscrape.com") ?(outcome = "done") time : P.drive_trace =
       time = T.timestamp time;
       site;
       mission = "check catalog";
-      arguments = [];
       outcome;
       cost = Some 0.125;
       duration_ms = 200;
       model_calls = 2;
-      page_kind_path = [ "catalog" ];
       start_url = None;
       out_requested = false;
       planner_turns = [];
-      procedures = [];
       steps = [];
       final = Some { url = "https://books.toscrape.com/"; title = "Catalog" };
       error_code = None;
@@ -164,11 +161,11 @@ let config () =
 
 let capture () =
   let c = T.capture ~mission:"mission" ~now:10. in
-  T.page c ~url:"about:blank" ~kind:None;
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "detail");
-  T.page c ~url:"https://other.example/" ~kind:(Some "checkout");
+  T.page c ~url:"about:blank";
+  T.page c ~url:"https://books.toscrape.com/";
+  T.page c ~url:"https://books.toscrape.com/";
+  T.page c ~url:"https://books.toscrape.com/";
+  T.page c ~url:"https://other.example/";
   let error =
     P.make_error
       ~detail:
@@ -185,17 +182,10 @@ let capture () =
   let saved = T.finish c ~now:10.250 (Error error) in
   Alcotest.(check string)
     "trace-qe8c first site across navigation" "toscrape.com" saved.site;
-  Alcotest.(check (list string))
-    "trace-iqqz declared transitions, unchanged omitted"
-    [ "catalog"; "detail"; "checkout" ]
-    saved.page_kind_path;
   Alcotest.(check int) "trace-qe8c failed call counters" 3 saved.model_calls;
   Alcotest.(check int) "trace-qe8c duration" 250 saved.duration_ms;
   let json = Yojson.Safe.to_string (P.yojson_of_drive_trace saved) in
-  bool "trace-uovo errors and raw state absent" (not (String.contains json 'S'));
-  let fly = T.finish (T.capture ~mission:"fly" ~now:0.) ~now:1. (Error error) in
-  Alcotest.(check (list string))
-    "trace-iqqz no invented on-the-fly kinds" [] fly.page_kind_path
+  bool "trace-uovo errors and raw state absent" (not (String.contains json 'S'))
 
 let scripted_steps
     ~(caps :
@@ -206,8 +196,6 @@ let scripted_steps
        ; Ox_caps.Cap.tmp
        ; .. >) () =
   let c = T.capture ~mission:"fill search" ~now:0. in
-  T.arguments c
-    [ ("search", "alice"); ("token", "unused secret"); ("password", "[password]") ];
   let handle = ok (P.Handle.of_string "t_trace") in
   let sid = ok (P.Snapshot_id.of_string "s_trace") in
   let state = ref false in
@@ -221,7 +209,6 @@ let scripted_steps
               tab = handle;
               url = "https://books.toscrape.com/";
               title = "Catalog";
-              page_kind = None;
               rows =
                 [
                   {
@@ -259,7 +246,6 @@ let scripted_steps
           J.
             {
               operation = ok (P.Operation.of_string op);
-              script = None;
               index = (if op = "type_text" then Some 1 else None);
               option = None;
               confidence = 1.;
@@ -289,7 +275,7 @@ let scripted_steps
           via = None;
         }
   in
-  T.page c ~url:"https://books.toscrape.com/" ~kind:(Some "catalog");
+  T.page c ~url:"https://books.toscrape.com/";
   let result =
     match
       D.run ~on_step:(T.step c)
@@ -326,10 +312,6 @@ let scripted_steps
   Alcotest.(check int)
     "trace-qe8c partial capture after failure" (List.length result.steps)
     (List.length saved.steps);
-  Alcotest.(check (list (pair string string)))
-    "map-op01 only feeding non-redacted arguments are durable"
-    [ ("search", "alice") ]
-    saved.arguments;
   let first = List.hd saved.steps in
   Alcotest.(check (list (pair string (float 0.))))
     "trace-zbb9 upper-case JEV operation probabilities survive canonically"
@@ -343,7 +325,6 @@ let scripted_steps
     "trace-zbb9 target from before action" (Some "Search")
     (Option.map (fun (t : P.Trace.trace_target) -> t.label) first.target);
   let redacted = T.capture ~mission:"password backstop" ~now:0. in
-  T.arguments redacted [ ("password", "[password]"); ("secret", "never persist") ];
   T.step redacted { (List.hd result.steps) with P.text = Some "[password]" };
   let password =
     T.finish redacted ~now:1.
@@ -352,8 +333,6 @@ let scripted_steps
   Alcotest.(check (option string))
     "trace-uovo literal password marker retained" (Some "[password]")
     (List.hd password.steps).text;
-  Alcotest.(check (list (pair string string)))
-    "map-op01 password and unrelated arguments do not leak" [] password.arguments;
   temp ~caps (fun root ->
       let store = T.create ~caps ~root () in
       let path = ok (T.write store saved) in

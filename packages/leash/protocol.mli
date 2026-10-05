@@ -180,9 +180,8 @@ module Error_code : sig
 
   val exit_code : t -> int
   (** Sysexits class, one per class, the set [cli_help] documents: 64 usage, 65 stale or
-      invalid data (including configuration and playbook), 66 unknown or gone tab, row, or
-      request, 69 unavailable, 70 internal, 75 retryable, 77 permission, 124 command-line
-      parse. *)
+      invalid data (including configuration), 66 unknown or gone tab, row, or request, 69
+      unavailable, 70 internal, 75 retryable, 77 permission, 124 command-line parse. *)
 
   val hint : t -> string
   (** One line naming the next action. No tab and no newline (daily-6pde). *)
@@ -204,23 +203,11 @@ type dialog = { kind : Dialog_kind.t; message : string; default_prompt : string 
 val dialog_of_yojson : Yojson.Safe.t -> (dialog, string) result
 val yojson_of_dialog : dialog -> Yojson.Safe.t
 
-type page_kind_source = Declared  (** kind-tdrv: a loaded playbook's declared kind. *)
-
-type page_kind_label = { name : string; source : page_kind_source }
-(** Shown by [list] and [snap] when an installed playbook declares the page's kind
-    (cut-0oal: nothing is inferred). [source] is [declared]. *)
-
-val page_kind_source_of_yojson : Yojson.Safe.t -> (page_kind_source, string) result
-val yojson_of_page_kind_source : page_kind_source -> Yojson.Safe.t
-val page_kind_label_of_yojson : Yojson.Safe.t -> (page_kind_label, string) result
-val yojson_of_page_kind_label : page_kind_label -> Yojson.Safe.t
-
 type tab_info = {
   tab : Handle.t;
   label : string option;
   url : string;
   title : string;
-  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -236,7 +223,6 @@ type tab_listing = {
   label : string option;
   url : string;
   title : string;
-  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -255,7 +241,6 @@ type popup_info = {
   label : string option;
   url : string;
   title : string;
-  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -340,7 +325,6 @@ type snapshot = {
   tab : Handle.t;
   url : string;
   title : string;
-  page_kind : page_kind_label option;
   rows : row list;
   total : int;
   offset : int;
@@ -564,12 +548,16 @@ type hover_args = {
 
 type storage_args = { tab : Handle.t; area : Storage_area.t }
 
-type playbook_test_args = { tab : Handle.t; script : string; args : Yojson.Safe.t option }
-(** extr-mp5z: [script] is [<playbook>/<script>], [args] an object of strings. No script
-    text is ever on the wire: the service reads it from the playbook directory. *)
-
-type playbook_check_args = { playbook : string }
-(** extr-lslp: the installed playbook's directory name. *)
+type script_run_args = {
+  tab : Handle.t;
+  name : string;
+  source : string;
+  args : Yojson.Safe.t option;
+  out : string option;
+}
+(** scr-run: [leash script run TAB FILE]: the file's name and text, run once on the tab's
+    page; [args] are the --arg strings as an object; with [out], a list result is appended
+    to that file as JSONL, one item per line. *)
 
 type drive_args = {
   tab : Handle.t;
@@ -587,20 +575,15 @@ type run_args = {
   mission : string;
   max_steps : int option;
   start_url : string option;
-  max_procedures : int option;
   deadline_s : int option;
   dry_run : bool option;
-  expect : string list option;
   out : string option;
 }
-(** L31 run-9ypy: one mission over the installed playbooks. [tab] is [key?]: a run given
-    one reuses it, after checking the handle and that no dialog is open, and a run given
-    none opens a tab of its own — the one the [final] snapshot names — and leaves it open.
-    [max_procedures] defaults to 40 and [deadline_s] to 900; [dry_run] asks the two levels
-    and reports without acting (run-fp7i). [expect] is the mission's own expectations —
-    the sentences DONE is verified against independently of the last procedure (run-4j1v,
-    the L30 guard) — which L32's planner attaches on its first turn and which a caller may
-    state directly. It is a [key?] list: omitted when the mission carries none. *)
+(** run-9ypy: one mission (ADR-0015, ADR-0016). [tab] is [key?]: a run given one reuses
+    it, after checking the handle and that no dialog is open, and a run given none opens a
+    tab of its own and leaves it open. [max_steps] is JEV's step cap per stint (256);
+    [deadline_s] defaults to 600; [dry_run] reports JEV's first decision without acting.
+*)
 
 type tab_counts = { open_ : int; cap : int }
 
@@ -762,26 +745,18 @@ val yojson_of_net_request_result : net_request_result -> Yojson.Safe.t
 val yojson_of_cookies_result : cookies_result -> Yojson.Safe.t
 val yojson_of_storage_result : storage_result -> Yojson.Safe.t
 
-type playbook_test_result = {
+type script_result = {
   script : string;
   value : Yojson.Safe.t;
   records : int;
   bytes : int;
   elapsed_ms : int;
-  truncated : bool;
 }
-(** extr-mp5z: the output of one script after it was validated against its [returns].
-    [bytes] is the size of the whole result; over 1 MiB [value] is its first five records
-    and [truncated] is true. *)
+(** scr-run: a script's result, validated against its returns block when it has one, with
+    its size and time. *)
 
-type script_syntax = { script : string; ok : bool; error : string option }
-type playbook_check_result = { playbook : string; scripts : script_syntax list }
-
-val playbook_test_result_of_yojson :
-  Yojson.Safe.t -> (playbook_test_result, string) result
-
-val yojson_of_playbook_test_result : playbook_test_result -> Yojson.Safe.t
-val yojson_of_playbook_check_result : playbook_check_result -> Yojson.Safe.t
+val script_result_of_yojson : Yojson.Safe.t -> (script_result, string) result
+val yojson_of_script_result : script_result -> Yojson.Safe.t
 
 type handoff_result = {
   resumed : bool;
@@ -821,96 +796,6 @@ type run_usage = { input_tokens : int; output_tokens : int; cost : float }
 val run_usage_of_yojson : Yojson.Safe.t -> (run_usage, string) result
 val yojson_of_run_usage : run_usage -> Yojson.Safe.t
 
-type run_choice = {
-  key : string;
-  probabilities : Yojson.Safe.t;
-  confidence : float;
-  usage : run_usage option; [@json.null]
-}
-(** run-xqh8 run-qq3o: the upper level's answer with the distribution behind it: [key] is
-    the criterion it chose — a playbook's site, a procedure's slug, [DONE] or [BLOCKED] —
-    and [probabilities] the model's own object, keyed as the model answered it. *)
-
-val run_choice_of_yojson : Yojson.Safe.t -> (run_choice, string) result
-val yojson_of_run_choice : run_choice -> Yojson.Safe.t
-
-type playbook_choice = {
-  source : string;
-  key : string option; [@json.null]
-  probabilities : Yojson.Safe.t;
-  confidence : float option; [@json.null]
-  usage : run_usage option; [@json.null]
-  note : string option; [@json.null]
-}
-
-val yojson_of_playbook_choice : playbook_choice -> Yojson.Safe.t
-val playbook_choice_of_yojson : Yojson.Safe.t -> (playbook_choice, string) result
-
-type run_expectation = {
-  sentence : string;
-  checker : string;
-  passed : bool;
-  score : float option; [@json.null]
-}
-(** run-xqh8: one expectation and how it was verified — the checker's kind (["page_kind"],
-    ["text"], ["download"], ["no_dialog"], ["row"] or ["judgment"]) and, where only
-    judgment could decide, the JEV score. [score] is [T|null]. *)
-
-val run_expectation_of_yojson : Yojson.Safe.t -> (run_expectation, string) result
-val yojson_of_run_expectation : run_expectation -> Yojson.Safe.t
-
-type run_drive = {
-  goal : string;
-  status : Drive_status.t;
-  steps : step list;
-  reason : string option;
-}
-(** run-d82w run-xqh8: one operator step — the single [drive] call a playbook step became
-    — with the goal it was given and the drive's own result. *)
-
-val run_drive_of_yojson : Yojson.Safe.t -> (run_drive, string) result
-val yojson_of_run_drive : run_drive -> Yojson.Safe.t
-
-type run_script = {
-  script : string;
-  url : string;
-  records : int;
-  bytes : int;
-  elapsed_ms : int;
-  error : string option;
-}
-(** extr-8o1h extr-p152: one script call of a procedure — the page's URL, the records it
-    produced, its result's size and its time; [error] is [key?], the reason a call was
-    rejected. *)
-
-val run_script_of_yojson : Yojson.Safe.t -> (run_script, string) result
-val yojson_of_run_script : run_script -> Yojson.Safe.t
-
-type run_procedure = {
-  revision : string option;
-  slug : string;
-  site : string;
-  planned : bool;
-  attempts : int;
-  choice : run_choice;
-  drives : run_drive list;
-  scripts : run_script list;
-  expectations : run_expectation list;
-  outcome : string;
-  elapsed_ms : int;
-  reason : string option;
-}
-(** run-xqh8: one procedure the run executed. [outcome] is one of ["verified"], ["failed"]
-    (its second verification failed), ["skipped"] (an optional [use] whose first step
-    ended blocked) or ["planned"] (a dry run chose it and executed nothing). [attempts] is
-    2 when the retry-once rule replayed the procedure (run-k8bx); [planned] is true when a
-    planner turn wrote it (run-m0r8). [drives] is empty for ["planned"] — and, in a dry
-    run, for every entry: nothing was executed. [reason] is [key?] and says why a skipped
-    or failed procedure ended that way. *)
-
-val run_procedure_of_yojson : Yojson.Safe.t -> (run_procedure, string) result
-val yojson_of_run_procedure : run_procedure -> Yojson.Safe.t
-
 type planner_step = {
   non_repeatable : bool;
   n : int;
@@ -928,8 +813,6 @@ val planner_step_of_yojson : Yojson.Safe.t -> (planner_step, string) result
 val yojson_of_planner_step : planner_step -> Yojson.Safe.t
 
 type planner_turn = {
-  candidates : Trace.candidate list;
-  chosen : Trace.candidate option;
   n : int;
   trigger : string;
   answer : string;
@@ -957,12 +840,9 @@ type run_result = {
   secrets_for_operator : (string * string) list;
   unattended : Yojson.Safe.t list;
   detail : Yojson.Safe.t option;
-  playbook_choices : playbook_choice list;
   status : Run_status.t;
   answer : string option; [@json.default None]
   site : string option; [@json.null]
-  procedures : run_procedure list;
-  mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
   collected : int;
   data : Yojson.Safe.t;
@@ -975,14 +855,9 @@ type run_result = {
   reason : string option;
   trace_path : string option;
 }
-(** run-9ypy: the whole run. [site] is the playbook that served the mission, [T|null] when
-    the run never chose one; [procedures] is the trace, oldest first;
-    [mission_expectations] is how the mission's own expectations — the caller's, or the
-    ones the planner attached on its first turn — came out at the DONE guard (empty when
-    the mission carried none); [planner_turns] is every planner turn with its cost;
-    [collected] is how many records the run's script steps produced (extr-8o1h); [final]
-    is the last snapshot the run observed — its [dialog] is what ended an [error]
-    (run-klp9); [reason] is [key?] and names why the run stopped. *)
+(** run-9ypy: the whole run. [site] is the host of the last page; [planner_turns] are the
+    planner's turns, oldest first; [final] is the last snapshot the run observed; [reason]
+    names why it stopped. *)
 
 val run_result_of_yojson : Yojson.Safe.t -> (run_result, string) result
 val yojson_of_run_result : run_result -> Yojson.Safe.t
@@ -1071,8 +946,7 @@ type command =
   | Uncheck of click_args
   | Cookies of tab_args
   | Storage of storage_args
-  | Playbook_test of playbook_test_args
-  | Playbook_check of playbook_check_args
+  | Script_run of script_run_args
       (** The decoded command: one constructor per row of [docs/protocol.md]'s command
           tables, carrying that command's derived argument record. *)
 

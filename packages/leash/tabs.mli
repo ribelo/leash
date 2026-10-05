@@ -15,9 +15,9 @@ type caps =
   ; Ox_caps.Cap.random
   ; Ox_caps.Cap.tmp >
 (** What the registry may touch beyond its Eio values (^ncaps-4tjy): [random] for tab and
-    snapshot handles, [fs_write] for screenshots, [run --out] and playbook proposals,
-    [tmp] for private picture evidence, [fs_read] for uploads and installed playbooks,
-    [env] for the XDG directories those live in. *)
+    snapshot handles, [fs_write] for screenshots and [run --out], [tmp] for private
+    picture evidence, [fs_read] for uploads, [env] for the XDG directories those live in.
+*)
 
 type 'clock deps = {
   chrome : Chrome.t;
@@ -141,9 +141,8 @@ val drive :
     refusal over 4 KiB is [model-unavailable] with the steps completed (drive-ls3c). *)
 
 val run :
-  ?on_page:(url:string -> kind:string option -> unit) ->
+  ?on_page:(url:string -> unit) ->
   ?on_step:(Protocol.step -> unit) ->
-  ?on_arguments:((string * string) list -> unit) ->
   ?planner:bool ->
   ?levels:Run.levels ->
   ?model:string ->
@@ -155,32 +154,13 @@ val run :
   ?meter:meter ->
   t ->
   tab:Protocol.Handle.t ->
-  ?installed:Playbook.loaded list ->
   Protocol.run_args ->
   (Protocol.run_result, Protocol.error) result
-(** L31 run-9ypy run-vj48 run-shgh run-fwl8: one mission over the installed playbooks.
-
-    The run holds the tab's action lock for its whole duration (run-d82w), so no other
-    command interleaves while it works, and every step is one [drive_locked] call — the
-    very operator level the [drive] command runs, with its step cap and deadline. The
-    playbooks are loaded here once, from the XDG directory the [playbook] commands read
-    (run-tcuz), unless [installed] hands them in — which is how a control test runs a
-    known playbook without touching the operator's configuration.
-
-    [levels] is the run's upper levels (run-7blx): the two choice questions, the score
-    question a judgment expectation asks, and the planner turn — L32's Luna in production,
-    {!Models.levels} (run-w7ke). Without one every upper-level call refuses with
-    [model-unavailable], as a drive without a [decide] does. A planner-written procedure
-    that ran and passed its expectations is proposed to XDG state as the run works
-    (run-m0r8): the playbook an operator authored is never written here. [decide] and
-    [text_helper] are the operator level's seams, forwarded to every step's drive, and
-    [model] is the JEV model id those requests name.
-
-    The refusals of run-fwl8 come first: the handle must name a live tab, not handed to
-    the human, and free of an open dialog ([dialog-open]), so the run starts from a state
-    it can act in. Everything after that is a result — see {!Run.loop} — and a model or
-    browser failure is the protocol error it is, carrying the trace it had completed in
-    [detail.procedures]. *)
+(** run-9ypy run-shgh run-fwl8 (ADR-0015, ADR-0016): one mission. The run holds the tab's
+    action lock for its whole duration; every JEV stint is one [drive_locked] call and the
+    planner's turns go through {!Run.loop}'s handler over [levels]. [decide] and
+    [text_helper] are the operator's models; [planner] says whether a planner is
+    configured. *)
 
 val text : t -> Protocol.text_args -> (Protocol.text_result, Protocol.error) result
 val eval : t -> Protocol.eval_args -> (Protocol.eval_result, Protocol.error) result
@@ -274,17 +254,8 @@ val idleness : t -> idleness list
 val sweep : t -> decide:(idleness -> sweep_step) -> (Protocol.Handle.t * sweep_step) list
 val stop : t -> unit
 
-val playbook_test :
-  ?installed:Playbook.loaded list ->
-  t ->
-  Protocol.playbook_test_args ->
-  (Protocol.playbook_test_result, Protocol.error) result
-
-val playbook_check :
-  ?installed:Playbook.loaded list ->
-  t ->
-  Protocol.playbook_check_args ->
-  (Protocol.playbook_check_result, Protocol.error) result
-(** extr-lslp: compile every script of an installed playbook with [new Function] — never
-    calling it — in a blank agent tab opened for the duration and closed after, and answer
-    each script's verdict. hand-0y04. *)
+val script_run :
+  t -> Protocol.script_run_args -> (Protocol.script_result, Protocol.error) result
+(** scr-run (ADR-0016): run the agent's script once on the tab's page as the body of an
+    async function of [args], read-only, its result bounded and validated against its
+    leading returns block when it has one. A bad returns block is [script-invalid]. *)

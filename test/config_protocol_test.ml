@@ -176,10 +176,8 @@ let command_table =
         [
           ("tab", `String "t_9xk");
           ("mission", `String "buy the thing");
-          ("max_procedures", `Int 3);
           ("deadline_s", `Int 60);
           ("dry_run", `Bool true);
-          ("expect", `List [ `String "the page is cart" ]);
           ("out", `String "/tmp/leash-output.jsonl");
         ] );
   ]

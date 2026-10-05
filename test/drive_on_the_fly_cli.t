@@ -8,12 +8,12 @@ fly-hc3l fly-b6yt fly-mqkr).
   $ trap 'rm -rf "${tmp:?}"' EXIT
   $ check() { expected="$1"; shift; "$@" >out 2>err; status=$?; ./daily_cli_fixture.exe inspect "$expected" "$status" out err; }
 
-Help names both routes, the four playbook cases, and an operator-state example.
+Help names the takeover, the goal-with-result form, and the operator-state line.
 
   $ leash drive --help=plain >help 2>err
   $ test ! -s err
   $ ./daily_cli_fixture.exe drive-help help
-  drive help: both routes, four playbook cases, operator-state example
+  drive help: the takeover, a goal with its result, operator-state
 
 Zero, negative, and a non-http start fail as usage before any socket connect.
 A negative value uses the sticky form: Cmdliner treats a spaced -1 as an option.

@@ -50,8 +50,7 @@ let report ?models_status ?chrome_pid tabs =
   }
 
 let dispatch ?(planner = false) ?traces ?logger ?(model = "unconfigured") ?models ?levels
-    ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs (request : P.request)
-    =
+    ?decide ?text_helper ?models_status ?chrome_pid tabs (request : P.request) =
   let meter = Tabs.meter () in
   let decide, text_helper =
     match models with
@@ -86,10 +85,7 @@ let dispatch ?(planner = false) ?traces ?logger ?(model = "unconfigured") ?model
   | P.Net_request args -> lift P.yojson_of_net_request_result (Tabs.net_request tabs args)
   | P.Cookies args -> lift P.yojson_of_cookies_result (Tabs.cookies tabs args)
   | P.Storage args -> lift P.yojson_of_storage_result (Tabs.storage tabs args)
-  | P.Playbook_test args ->
-      lift P.yojson_of_playbook_test_result (Tabs.playbook_test ?installed tabs args)
-  | P.Playbook_check args ->
-      lift P.yojson_of_playbook_check_result (Tabs.playbook_check ?installed tabs args)
+  | P.Script_run args -> lift P.yojson_of_script_result (Tabs.script_run tabs args)
   | P.Upload args -> lift P.yojson_of_action_result (Tabs.upload tabs args)
   | P.Hover args -> lift P.yojson_of_action_result (Tabs.hover tabs args)
   | P.Check args -> lift P.yojson_of_action_result (Tabs.check tabs args)
@@ -129,10 +125,7 @@ let dispatch ?(planner = false) ?traces ?logger ?(model = "unconfigured") ?model
               ~now:(Traces.now store))
           traces
       in
-      let on_page ~url ~kind = Option.iter (fun c -> Traces.page c ~url ~kind) capture in
-      let on_arguments values =
-        Option.iter (fun c -> Traces.arguments c values) capture
-      in
+      let on_page ~url = Option.iter (fun c -> Traces.page c ~url) capture in
       let on_step step = Option.iter (fun c -> Traces.step c step) capture in
       let keep outcome =
         match (traces, capture) with
@@ -201,8 +194,8 @@ let dispatch ?(planner = false) ?traces ?logger ?(model = "unconfigured") ?model
               in
               let outcome =
                 try
-                  Tabs.run ~planner ~on_page ~on_step ~on_arguments ~meter ?levels ~model
-                    ?decide ?text_helper ?installed tabs ~tab args
+                  Tabs.run ~planner ~on_page ~on_step ~meter ?levels ~model ?decide
+                    ?text_helper tabs ~tab args
                 with exn ->
                   cleanup ();
                   raise exn
@@ -241,14 +234,14 @@ let with_command ?logger (request : P.request) f =
       f ())
 
 let handle ?(planner = false) ?traces ?(model = "unconfigured") ?models ?levels ?decide
-    ?text_helper ?installed ?models_status ?chrome_pid ?logger tabs line =
+    ?text_helper ?models_status ?chrome_pid ?logger tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
             dispatch ~planner ?traces ?logger ~model ?models ?levels ?decide ?text_helper
-              ?installed ?models_status ?chrome_pid tabs request)
+              ?models_status ?chrome_pid tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -301,11 +294,8 @@ let budget ?(handoff_timeout_s = 300) (request : (P.request, string) result) =
         (seconds
            (max 1 (Option.value ~default:600 args.deadline_s) + handoff_timeout_s + 75))
   | Ok { command = P.Snap args; _ } when args.with_image = Some true -> Some cdp_budget
-  | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _ | P.Playbook_test _; _ } ->
+  | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _ | P.Script_run _; _ } ->
       (* A script may await a fetch; the CDP call's own deadline is 30 s. *)
-      Some (seconds 35)
-  | Ok { command = P.Playbook_check _; _ } ->
-      (* A blank tab opens, each script compiles in one call, and the tab closes. *)
       Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
@@ -388,7 +378,7 @@ let on_peer_error logger error =
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
 let create ?(planner = false) ?traces ?(model = "unconfigured") ?models ?levels ?decide
-    ?text_helper ?installed ?chrome_pid ~sw ~path deps =
+    ?text_helper ?chrome_pid ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -398,8 +388,8 @@ let create ?(planner = false) ?traces ?(model = "unconfigured") ?models ?levels 
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
               dispatch ~planner ?traces ~logger:deps.logger ~model ?models ?levels ?decide
-                ?text_helper ?installed ~models_status:deps.models_status ?chrome_pid
-                deps.tabs request)
+                ?text_helper ~models_status:deps.models_status ?chrome_pid deps.tabs
+                request)
       | Error why -> invalid why
     in
     Ok reply

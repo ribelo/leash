@@ -37,6 +37,91 @@ let decide (t : token @ local) request = t.decide request
 let text_value (t : token @ local) context = t.text_value context
 let act (t : token @ local) page choice text = ((t.act page) choice) text
 
+(* The action-risk helpers that mark a step non-repeatable (map-yzqp), moved here by
+   ADR-0016. *)
+let non_repeatable_context text =
+  let text = String.lowercase_ascii text in
+  List.exists
+    (fun word ->
+      try
+        ignore (Str.search_forward (Str.regexp_string word) text 0);
+        true
+      with Not_found -> false)
+    [
+      "payment";
+      "pay";
+      "checkout";
+      "confirm";
+      "upload";
+      "post";
+      "send";
+      "delete";
+      "deletion";
+    ]
+
+(* map-yzqp: the table has no form ancestry. Only an explicitly named search
+   target gives enough scope to exclude other controls; generic OK/Continue,
+   missing targets and free page warnings retain the conservative full context. *)
+let action_risk_context ~(snapshot : Protocol.snapshot) ~text ~index =
+  let target =
+    Option.bind index (fun index ->
+        List.find_opt (fun (row : Protocol.row) -> row.index = index) snapshot.rows)
+  in
+  let text =
+    match target with
+    | Some target
+      when (not snapshot.truncated) && snapshot.offset = 0
+           && snapshot.total = List.length snapshot.rows
+           && snapshot.dialog = None
+           && List.mem target.role [ "button"; "combobox"; "searchbox"; "textbox" ]
+           &&
+           let name = String.lowercase_ascii (String.trim target.name) in
+           name = "search" || String.starts_with ~prefix:"search " name ->
+        let ambient =
+          List.filter_map
+            (fun (row : Protocol.row) ->
+              if
+                row.index <> target.index
+                && List.mem row.role
+                     [
+                       "button"; "link"; "menuitem"; "tab"; "checkbox"; "radio"; "switch";
+                     ]
+              then Some (String.trim row.name)
+              else None)
+            snapshot.rows
+        in
+        (* Each unrelated row can account for one label occurrence, not every
+           identical warning in the body. Duplicate row names are ambiguous. *)
+        let ambient =
+          List.filter
+            (fun name -> List.length (List.filter (( = ) name) ambient) = 1)
+            ambient
+        in
+        let rec scoped labels = function
+          | [] -> []
+          | line :: rest ->
+              let name = String.trim line in
+              if List.mem name labels then scoped (List.filter (( <> ) name) labels) rest
+              else line :: scoped labels rest
+        in
+        scoped ambient (String.split_on_char '\n' text) |> String.concat "\n"
+    | _ -> text
+  in
+  String.concat " "
+    [
+      snapshot.url;
+      snapshot.title;
+      Option.fold ~none:"" ~some:(fun (row : Protocol.row) -> row.name) target;
+      text;
+    ]
+
+let non_repeatable_action ~context operation =
+  non_repeatable_context context
+  && List.mem
+       (String.lowercase_ascii operation)
+       [ "submit"; "press"; "click"; "upload"; "select"; "type_text"; "fill" ]
+
+
 let operation name = match P.Operation.of_string name with Ok x -> x | Error _ -> assert false
 let op_name = P.Operation.to_string
 let status name = match P.Drive_status.of_string name with Ok x -> x | Error _ -> assert false
@@ -71,7 +156,6 @@ let history (step : P.step) changed =
 
 (* fly-hc3l, fly-4mio, fly-9e0f: predictions and executed input have separate
    budgets. A decision is consumed exactly once; stale input is not an action. *)
-type page_label = { kind : string; source : string; url : string }
 
 (* dmod-7w26 dmod-mcgn dmod-4ky5: how a decision model that accepts images is shown the
    page; absent for a text-only model. *)
@@ -84,14 +168,11 @@ type vision = {
 
 let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent
-    ~scripts ~run_script ~on_step ~label ~stop_on_navigation ~vision =
+    ~on_step ~stop_on_navigation ~vision =
   (* pilot-x1f3: navigation returns a leg to the pilot, not a DOM change. *)
   let navigated (before : observation) (after : observation) =
     let url page = List.hd (String.split_on_char '#' page.snapshot.url) in
-    let kind page = match label with
-      | None -> Option.map (fun (kind : P.page_kind_label) -> kind.name) page.snapshot.page_kind
-      | Some label -> Some (label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text).kind in
-    stop_on_navigation && (url before <> url after || kind before <> kind after) in
+    stop_on_navigation && url before <> url after in
   let started = now () in
   let deadline = started +. float_of_int (Option.value ~default:120 args.P.deadline_s) in
   let cap = Option.value ~default:60 args.P.max_steps in
@@ -212,12 +293,6 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
       "observation_ms", integer !observation_ms; "prediction_ms", integer !prediction_ms;
       "text_helper_ms", integer !helper_ms; "input_ms", metric "input_ms" !input_ms;
       "settle_ms", metric "settle_ms" 0; "elapsed_ms", integer (ms (now () -. started)) ] in
-    let shown =
-      if Web_url.is_page ~url:page.snapshot.url then
-        Option.bind label (fun label ->
-          let shown = label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text in
-          if shown.kind = "" then None else Some shown)
-      else None in
     let state = `Assoc [
       "status", string name; "reason", optional_string reason;
       "error", (match error with None -> `Null | Some error -> P.yojson_of_error error);
@@ -226,8 +301,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
         (* trace-qe8c kind-ir9l: only model requests substitute the kind. *)
         "url", string page.snapshot.url;
         "title", string page.snapshot.title;
-        "page_kind", (match shown with Some shown -> string shown.kind | None -> `Null);
-        "page_kind_source", (match shown with Some shown -> string shown.source | None -> `Null);
+
         "text", string page.text; "text_truncated", text_truncated;
         "omitted_elements", omitted_elements;
         "unsupported_states", Option.value ~default:(`List []) (member "unsupported_states" bounds);
@@ -261,8 +335,8 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     (* takeover: a typed password stays in the history, so a confirmation field gets the
        same value (field-5sdo dropped by the operator). *)
     let recorded = P.{
-        non_repeatable = Playbook.non_repeatable_action
-          ~context:(Playbook.action_risk_context ~snapshot:page.snapshot ~text:page.text ~index:choice.J.index)
+        non_repeatable = non_repeatable_action
+          ~context:(action_risk_context ~snapshot:page.snapshot ~text:page.text ~index:choice.J.index)
           (P.Operation.to_string choice.J.operation);
         n = List.length steps + 1; snapshot = page.snapshot.snapshot;
         operation = choice.J.operation; index = choice.index;
@@ -302,14 +376,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
           let request = J.make ~model ~goal:args.goal ~snapshot:page.snapshot ~text:page.text
             ~recent:(List.rev recent) ~can_scroll_down:page.can_scroll_down ~can_scroll_up:page.can_scroll_up
             |> fun request -> J.without_actions request (masks page)
-            |> fun request -> J.with_scripts request (scripts page)
             |> fun request -> J.with_coverage request (coverage page)
-            |> fun request -> (
-              match label with
-              | None -> request
-              | Some label ->
-                  let shown = label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text in
-                  if shown.url = page.snapshot.url then request else J.with_shown_url request shown.url)
             |> fun request -> (match image with Some image -> J.with_image request image | None -> request)
             |> fun request -> (match vision with
                 | None -> request
@@ -337,9 +404,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                 else None in
               prediction_log := `Assoc [ "n", integer !predictions;
                 "snapshot", string (P.Snapshot_id.to_string page.snapshot.snapshot);
-                "operation", string (match choice.J.script with
-                  | Some name -> J.run_script_prefix ^ name
-                  | None -> op_name op);
+                "operation", string (op_name op);
                 "index", optional_int choice.index;
                 "option", optional_int choice.option;
                 "probabilities", P.yojson_of_probabilities (J.trace_probabilities choice);
@@ -352,7 +417,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                   target_probabilities = []; targets = [] } in
               let op = choice.J.operation in
               let terminal =
-                choice.J.script = None && (op = operation "done" || op = operation "blocked") in
+                op = operation "done" || op = operation "blocked" in
               let refresh ?(recent = recent) why =
                 incr stale;
                 update_prediction why;
@@ -371,35 +436,6 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                 look_pending := true;
                 update_prediction "look; no input";
                 go page steps recent)
-              else if Option.is_some choice.J.script then
-              let name = Option.get choice.J.script in (
-                  match run_script with
-                  | None ->
-                      finish ~reason:"internal: a script was chosen without a runner" "error" steps page
-                  | Some run_script -> (
-                      match run_script ~url:page.snapshot.url name with
-                      | Error error ->
-                          update_prediction "script error";
-                          finish ~error ~reason:(failed "run_script" error) "error" steps page
-                      | Ok (J.Script_blocked { argument }) ->
-                          update_prediction "missing argument; no input";
-                          finish ~reason:(Printf.sprintf "no value for argument %S" argument) "blocked" steps page
-                      | Ok (J.Script_continue { summary }) -> (
-                          update_prediction "script";
-                          match observe_page () with
-                          | Error error ->
-                              finish ~error ~reason:(failed "observe after script" error) "error" steps page
-                          | Ok next ->
-                              let changed = page.fingerprint <> next.fingerprint in
-                              let recent =
-                                J.{ action = summary; kind = Some "script"; text = None; page_changed = Some changed }
-                                :: recent
-                              in
-                              if navigated page next then
-                                finish ~reason:"navigated" "done" steps next
-                              else if J.stalled (List.rev recent) then
-                                finish ~reason:"the operator repeated three non-WAIT actions without changing the page" "blocked" steps next
-                              else go next steps recent)))
               else if not terminal && !actions >= cap then (
                 update_prediction "action budget; no input";
                 finish ~reason:(Printf.sprintf "action budget exhausted (%d executed actions)" cap) "step-cap" steps page)
@@ -549,7 +585,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
 
 let run ?(stop_on_navigation = false) ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(telemetry = fun () -> `Assoc []) ?(observe_attempts = 10) ?(recent = [])
-    ?(scripts = fun _ -> []) ?run_script ?label ?vision
+    ?vision
     ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run () =
   if Option.value ~default:60 args.P.max_steps < 1 ||
      Option.value ~default:120 args.deadline_s < 1 || observe_attempts < 1 || observe_attempts > 10 then
@@ -572,7 +608,7 @@ let run ?(stop_on_navigation = false) ?(on_step = fun (_ : P.step) -> ()) ?(vali
       text_value = (fun context -> Effect.perform (M.Text context));
       act = (fun page choice text -> Effect.perform (M.Act (page, choice, text)));
     } in
-    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~on_step ~label ~stop_on_navigation ~vision) ()
+    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~on_step ~stop_on_navigation ~vision) ()
       { retc = Fun.id; exnc = raise;
         effc = (fun (type a) (eff : a Effect.t) -> match eff with
           | M.Observe -> Some (fun (k : (a, (P.drive_result, P.error) result) Effect.Deep.continuation) -> Effect.Deep.continue k (handler.observe ()))

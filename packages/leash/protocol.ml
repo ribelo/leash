@@ -323,7 +323,6 @@ type error_code =
   | Too_large [@json.name "too-large"]
   | Script_failed [@json.name "script-failed"]
   | Script_invalid [@json.name "script-invalid"]
-  | Playbook_invalid [@json.name "playbook-invalid"]
   | Internal [@json.name "internal"]
   | Service_unreachable [@json.name "service-unreachable"]
   | Not_installed [@json.name "not-installed"]
@@ -452,21 +451,16 @@ module Error_code = struct
           "shrink the text, expression, argument, or files under the bound and retry"
     | Script_failed ->
         info 65
-          "an eval expression or playbook script threw, rejected, or could not be \
-           compiled; message carries the engine error"
-          "read message; fix the expression, script, or page; `leash help scripts` \
-           explains function bodies and `leash playbook test` tests installed scripts"
+          "an eval expression or script threw, rejected, or could not be compiled; \
+           message carries the engine error"
+          "read message; fix the expression, script, or page; a script is the body of an \
+           async function of args"
     | Script_invalid ->
         info 65
-          "a playbook script's result does not fit its returns; message is the first \
+          "a script's result does not fit its returns block; message is the first \
            mismatch"
           "the result missed its returns shape; message is the first bad path, so fix \
            the script or the returns"
-    | Playbook_invalid ->
-        info 65
-          "a playbook failed validation (load, check or accept); message names the rule"
-          "fix the playbook as the message says, then `leash playbook check ./DIR`; \
-           `leash help playbooks` lists the rules"
     | Internal ->
         info 70 "a defect; the message carries no page content"
           "a defect, not a page failure; retry once, then report the message"
@@ -538,7 +532,6 @@ module Error_code = struct
       Too_large;
       Script_failed;
       Script_invalid;
-      Playbook_invalid;
       Internal;
       Service_unreachable;
       Not_installed;
@@ -598,15 +591,11 @@ type dialog = {
 }
 [@@deriving yojson]
 
-type page_kind_source = Declared [@json.name "declared"] [@@deriving yojson]
-type page_kind_label = { name : string; source : page_kind_source } [@@deriving yojson]
-
 type tab_info = {
   tab : Handle.t;
   label : string option; [@json.null]
   url : string;
   title : string;
-  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -623,7 +612,6 @@ type tab_listing = {
   label : string option; [@json.null]
   url : string;
   title : string;
-  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -638,7 +626,6 @@ type popup_info = {
   label : string option; [@json.null]
   url : string;
   title : string;
-  page_kind : page_kind_label option;
   origin : Origin.t;
   age_s : int;
   idle_s : int;
@@ -695,7 +682,6 @@ type snapshot = {
   tab : Handle.t;
   url : string;
   title : string;
-  page_kind : page_kind_label option;
   rows : row list;
   total : int;
   offset : int;
@@ -921,15 +907,6 @@ type hover_args = {
 
 type storage_args = { tab : Handle.t; area : Storage_area.t } [@@deriving yojson]
 
-(* extr-mp5z: run one script of an installed playbook on the tab's page. [script] is
-   [<playbook>/<script>]; [args] is an object of strings, [key?]. Nothing on the wire
-   carries script text: the service looks the script up in the playbook directory. *)
-type playbook_test_args = { tab : Handle.t; script : string; args : Yojson.Safe.t option }
-[@@deriving yojson]
-
-(* extr-lslp: check an installed playbook's scripts for syntax in a blank page. *)
-type playbook_check_args = { playbook : string } [@@deriving yojson]
-
 type drive_args = {
   tab : Handle.t;
   goal : string;
@@ -939,21 +916,15 @@ type drive_args = {
 }
 [@@deriving yojson]
 
-(* L31 run-9ypy: one mission over the installed playbooks. [expect] is the mission's own
-   expectations, which L32's planner attaches on its first turn and which a caller may
-   state directly; they are what DONE is verified against, independently of the last
-   procedure (run-4j1v, the L30 guard). A [key?] list: omitted when the mission carries
-   none. *)
+(* run-9ypy: one mission: JEV's loop with the planner's takeover (ADR-0015, ADR-0016). *)
 type run_args = {
   secrets : (string * string) list; [@json.default []]
   tab : Handle.t option;
   mission : string;
   max_steps : int option;
   start_url : string option;
-  max_procedures : int option;
   deadline_s : int option;
   dry_run : bool option;
-  expect : string list option;
   out : string option;
 }
 [@@deriving yojson]
@@ -1077,24 +1048,25 @@ type storage_result = {
 }
 [@@deriving yojson]
 
-(* extr-mp5z: the validated output of one script, with its size and time. A result over
-   1 MiB is not echoed whole: [value] is then its first five records and [truncated] says
-   so. *)
-type playbook_test_result = {
+(* scr-run: [leash script run TAB FILE]. The client sends the file's name and text; the
+   service runs it once on the tab's page. [args] are the --arg strings. *)
+type script_run_args = {
+  tab : Handle.t;
+  name : string;
+  source : string;
+  args : Yojson.Safe.t option; [@json.default None]
+  out : string option; [@json.default None]
+}
+[@@deriving yojson]
+
+(* scr-run: the script's validated result with its size and time. *)
+type script_result = {
   script : string;
   value : Yojson.Safe.t;
   records : int;
   bytes : int;
   elapsed_ms : int;
-  truncated : bool;
 }
-[@@deriving yojson]
-
-(* extr-lslp: one script's syntax verdict. *)
-type script_syntax = { script : string; ok : bool; error : string option }
-[@@deriving yojson]
-
-type playbook_check_result = { playbook : string; scripts : script_syntax list }
 [@@deriving yojson]
 
 (* hand-rg9h: [warnings] is [key?] — the human-facing steps a handoff ran and could not
@@ -1126,83 +1098,6 @@ type drive_result = {
 type run_usage = { input_tokens : int; output_tokens : int; cost : float }
 [@@deriving yojson]
 
-(* run-xqh8 run-qq3o: the upper level's answer with the distribution behind it. [key] is
-   the criterion the model chose — a playbook's site, a procedure's slug, [DONE] or
-   [BLOCKED] — and [probabilities] the model's own object, as the step trace carries one. *)
-type run_choice = {
-  key : string;
-  probabilities : Yojson.Safe.t;
-  confidence : float;
-  usage : run_usage option; [@json.null]
-}
-[@@deriving yojson]
-
-(* extr-uhnc run-xqh8: original playbook judgments in order. A planner answer has
-   no distribution or confidence; a refused review has no key and explains fallback. *)
-type playbook_choice = {
-  source : string;
-  key : string option; [@json.null]
-  probabilities : Yojson.Safe.t;
-  confidence : float option; [@json.null]
-  usage : run_usage option; [@json.null]
-  note : string option; [@json.null]
-}
-[@@deriving yojson]
-
-type run_expectation = {
-  sentence : string;
-  checker : string;
-  passed : bool;
-  score : float option; [@json.null]
-}
-[@@deriving yojson]
-
-(* run-d82w run-xqh8: one operator step — a single [drive] call — with the goal it was
-   given and the drive's own result, so the run's trace holds the operator level's steps
-   without renumbering them. *)
-type run_drive = {
-  goal : string;
-  status : Drive_status.t;
-  steps : step list;
-  reason : string option;
-}
-[@@deriving yojson]
-
-(* run-xqh8: one procedure the run executed: the choice that picked it, the drive calls its
-   steps became, the expectations it was verified against, and how it ended — [verified],
-   [failed] (its second verification failed), [skipped] (an optional [use] whose first step
-   ended blocked) or [planned] (a dry run chose it and executed nothing). [planned] is true
-   when a planner turn wrote it (L32). [attempts] counts the verification rounds, 2 when the
-   retry-once rule replayed the procedure. *)
-(* extr-8o1h extr-p152: one script call a procedure made — the page it ran on, how many
-   records it produced, the size of its result and how long it took; [error] says why a
-   call was rejected (it threw, its result did not fit its shape, or it was too large). *)
-type run_script = {
-  script : string;
-  url : string;
-  records : int;
-  bytes : int;
-  elapsed_ms : int;
-  error : string option;
-}
-[@@deriving yojson]
-
-type run_procedure = {
-  revision : string option; [@json.default None]
-  slug : string;
-  site : string;
-  planned : bool;
-  attempts : int;
-  choice : run_choice;
-  drives : run_drive list;
-  scripts : run_script list;
-  expectations : run_expectation list;
-  outcome : string;
-  elapsed_ms : int;
-  reason : string option;
-}
-[@@deriving yojson]
-
 (* run-xqh8 run-klp9 run-obtt: one planner turn and what it answered — [procedure],
    [handoff] or [fail] — with the trigger it was taken at and what it cost. L32's planner
    is Luna, so [usage] is the tokens and provider-reported cost summed across both
@@ -1222,8 +1117,6 @@ type planner_step = {
 [@@deriving yojson]
 
 type planner_turn = {
-  candidates : Trace.candidate list;
-  chosen : Trace.candidate option;
   n : int;
   trigger : string;
   answer : string;
@@ -1243,12 +1136,9 @@ type run_result = {
   secrets_for_operator : (string * string) list;
   unattended : Yojson.Safe.t list; [@json.default []]
   detail : Yojson.Safe.t option; [@json.default None]
-  playbook_choices : playbook_choice list;
   status : Run_status.t;
   answer : string option; [@json.default None]
   site : string option; [@json.null]
-  procedures : run_procedure list;
-  mission_expectations : run_expectation list;
   planner_turns : planner_turn list;
   collected : int;
   data : Yojson.Safe.t;
@@ -1396,8 +1286,7 @@ type command =
   | Uncheck of click_args
   | Cookies of tab_args
   | Storage of storage_args
-  | Playbook_test of playbook_test_args
-  | Playbook_check of playbook_check_args
+  | Script_run of script_run_args
 
 let command_name = function
   | New _ -> "new"
@@ -1435,8 +1324,7 @@ let command_name = function
   | Uncheck _ -> "uncheck"
   | Cookies _ -> "cookies"
   | Storage _ -> "storage"
-  | Playbook_test _ -> "playbook_test"
-  | Playbook_check _ -> "playbook_check"
+  | Script_run _ -> "script_run"
 
 let args_to_json = function
   | New args -> yojson_of_new_args args
@@ -1472,8 +1360,7 @@ let args_to_json = function
   | Check args | Uncheck args -> yojson_of_click_args args
   | Cookies args -> yojson_of_tab_args args
   | Storage args -> yojson_of_storage_args args
-  | Playbook_test args -> yojson_of_playbook_test_args args
-  | Playbook_check args -> yojson_of_playbook_check_args args
+  | Script_run args -> yojson_of_script_run_args args
 
 let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
@@ -1526,10 +1413,7 @@ let command_of_args ~cmd args =
   | "uncheck" -> with_args click_args_of_yojson (fun args -> Uncheck args)
   | "cookies" -> with_args tab_args_of_yojson (fun args -> Cookies args)
   | "storage" -> with_args storage_args_of_yojson (fun args -> Storage args)
-  | "playbook_test" ->
-      with_args playbook_test_args_of_yojson (fun args -> Playbook_test args)
-  | "playbook_check" ->
-      with_args playbook_check_args_of_yojson (fun args -> Playbook_check args)
+  | "script_run" -> with_args script_run_args_of_yojson (fun args -> Script_run args)
   | other ->
       Error
         (Printf.sprintf "cmd: unknown command %s" (Yojson.Safe.to_string (`String other)))

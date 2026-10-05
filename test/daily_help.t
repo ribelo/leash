@@ -18,9 +18,9 @@ Help is offline and short first contact is not the full manual.
   $ leash --help=plain >help 2>err
   $ test "$(grep -c '^[ ]*discover[ ]' help)" -eq 0
   $ ./daily_cli_fixture.exe top-help help; test ! -s err
-  top-level help groups tabs, observe, act, network/debug, missions, playbooks, service and skill
-  $ for cmd in new downloads list take close status snap text shot debug eval nav click fill press select scroll wait upload hover check uncheck net cookies storage dialog handoff resume drive playbook traces serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
-  $ for cmd in list show check test; do leash playbook "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
+  top-level help groups tabs, observe, act, network/debug, missions, service and skill
+  $ for cmd in new downloads list take close status snap text shot debug eval nav click fill press select scroll wait upload hover check uncheck net cookies storage dialog handoff resume drive script traces serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
+  $ for cmd in run; do leash script "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in list show prune; do leash traces "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in install show; do leash skill "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in init check; do leash config "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
@@ -31,28 +31,21 @@ Help is offline and short first contact is not the full manual.
   hand-3v5u list help states the tab rule and never shows handles
   $ leash help >topics 2>err; test ! -s err
   $ ./daily_cli_fixture.exe help-topics topics; test ! -s err
-  help lists handles, playbooks, authoring, expectations, drive, scripts, errors, traces
+  help lists handles, drive, errors, traces
   $ leash help handles >handles 2>err; test ! -s err
   $ grep -q 'agent tabs close after 30 idle minutes; human tabs are never closed unless an agent takes one' handles
   $ leash help errors >errors 2>err
   $ ./daily_cli_fixture.exe error-help errors; test ! -s err
-  all 40 error codes, exit classes, meanings and hints are discoverable
-  $ leash playbook --help=plain >playbook-help 2>err; test ! -s err
-  $ grep -q 'A playbook is a directory that describes one site: pages, procedures, and scripts.' playbook-help
-  $ grep -q 'The operator writes it. A model never does. JEV is offered its procedures and scripts on its site.' playbook-help
-  $ grep -q 'Format, example, and every loader refusal: leash help playbooks' playbook-help
+  all 39 error codes, exit classes, meanings and hints are discoverable
   $ leash drive --help=plain >drive-help 2>err; test ! -s err
   $ grep -q 'Drive runs one mission on one tab until done, blocked, a cap, a deadline, or an error.' drive-help
-  $ grep -q 'It may follow an installed playbook or act on the page. Leash never asserts the goal.' drive-help
+  $ grep -q 'JEV acts on the page; the planner takes over where it stops. Leash never asserts the goal.' drive-help
   $ grep -q 'Lanes, options, and how to read a trace: leash help drive' drive-help
   $ ./daily_cli_fixture.exe option-docs help
 
-hdoc-vqj7: required press snapshot, playbook groups, and actionable help.
+hdoc-vqj7: required press snapshot and actionable help.
   $ leash press --help=plain >press-help 2>err; test ! -s err
   $ grep -q 'leash press.*TAB SNAPSHOT KEY' press-help
-  $ leash playbook --help=plain >playbook-help 2>err; test ! -s err
-  $ for section in "INSTALLED PLAYBOOKS" "VALIDATION"; do grep -q "$section" playbook-help || exit 1; done
-  $ test "$(grep -c '^ACT$' playbook-help)" -eq 0
   $ leash eval --help=plain >eval-help 2>err; test ! -s err
   $ grep -q 'returned promise is awaited' eval-help
   $ grep -q 'top-level await' eval-help

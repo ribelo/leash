@@ -96,10 +96,8 @@ classified. Aggregate field/path checks are also asserted below.
   $ ./daily_cli_fixture.exe config-details "$tmp/invalid.toml" err
   config path and all four problems are present
 
-Local authoring errors also use the envelope; no service is contacted.
+Local errors also use the envelope; no service is contacted.
 
-  $ check playbook-invalid leash playbook check "$tmp/missing/"
-  playbook-invalid: exit 65, JSON-only stderr, hint, empty stdout
   $ check usage leash help nonsense
   usage: exit 64, JSON-only stderr, hint, empty stdout
 

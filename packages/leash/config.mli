@@ -81,8 +81,6 @@ type models = {
   planner_timeout : Seconds.t;
       (** Per-attempt provider timeouts in seconds (10, 10, 60); the caller deadline
           bounds the entire call including retries. daily-9ggi. *)
-  choice_confidence : Probability.t;
-      (** Top playbook probability below which Luna reviews the choice; default 0.7. *)
 }
 (** drive-e7oi drive-yqxg: the models section. [api_key] is absent when the file does not
     carry one and the environment does not either; {!env} fills it from

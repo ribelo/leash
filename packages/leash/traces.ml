@@ -307,41 +307,18 @@ type captured_step = Operator of P.step | Planner of P.planner_step
 
 type capture = {
   mission : string;
-  mutable arguments : (string * string) list;
   started : float;
   mutable first : string option;
   mutable start_url : string option;
-  mutable kinds : (string * string) list;
-  mutable last_page : (string * string option) option;
   mutable steps : captured_step list;
 }
 
 let capture ~mission ~now =
-  {
-    mission;
-    arguments = [];
-    started = now;
-    first = None;
-    start_url = None;
-    kinds = [];
-    last_page = None;
-    steps = [];
-  }
+  { mission; started = now; first = None; start_url = None; steps = [] }
 
-let arguments t values =
-  List.iter
-    (fun (name, value) ->
-      t.arguments <-
-        (name, value) :: List.filter (fun pair -> pair <> (name, value)) t.arguments)
-    values
-
-let page t ~url ~kind =
+let page t ~url =
   if t.first = None then t.first <- site url;
-  if t.start_url = None && site url <> None then t.start_url <- Some url;
-  (* cut-tsk4: the path records the kinds the playbook declares; nothing is inferred. *)
-  if Web_url.is_page ~url && t.last_page <> Some (url, kind) then (
-    Option.iter (fun k -> t.kinds <- (url, k) :: t.kinds) kind;
-    t.last_page <- Some (url, kind))
+  if t.start_url = None && site url <> None then t.start_url <- Some url
 
 (* trace-zbb9: Drive publishes acknowledged execution before observing, then
    refines that same step with its after-page. Do not count the refinement twice. *)
@@ -448,31 +425,15 @@ let safe_unattended events =
     events
 
 let finish t ~now outcome =
-  let procedures, cost, model_calls, final, outcome_name, error_code =
+  let cost, model_calls, final, outcome_name, error_code =
     match outcome with
     | Ok result ->
-        ( result.P.procedures,
-          result.model_cost,
+        ( result.P.model_cost,
           result.model_calls,
           Some P.Trace.{ url = result.final.url; title = result.final.title },
           P.Run_status.to_string result.status,
           None )
     | Error error ->
-        let procedures =
-          match error.P.detail with
-          | Some (`Assoc fields) -> (
-              match List.assoc_opt "procedures" fields with
-              | Some (`List xs) ->
-                  List.filter_map
-                    (fun x ->
-                      (Result.to_option (P.run_procedure_of_yojson x)
-                       [@ox.allow
-                         "ox-discarded-result: a procedure that does not decode is left \
-                          out of the trace"]))
-                    xs
-              | _ -> [])
-          | _ -> []
-        in
         let fields =
           match error.P.detail with Some (`Assoc fields) -> fields | _ -> []
         in
@@ -485,22 +446,7 @@ let finish t ~now outcome =
           | Some (`Int n) -> Some (float_of_int n)
           | _ -> None
         in
-        (procedures, cost, calls, None, "error", Some (P.Error_code.to_string error.code))
-  in
-  let procedures =
-    List.mapi
-      (fun i (p : P.run_procedure) ->
-        P.Trace.
-          {
-            n = i + 1;
-            procedure = p.slug;
-            outcome = p.outcome;
-            planned = p.planned;
-            steps =
-              List.concat_map (fun (d : P.run_drive) -> d.steps) p.drives
-              |> List.mapi (fun i s -> safe_step (i + 1) s);
-          })
-      procedures
+        (cost, calls, None, "error", Some (P.Error_code.to_string error.code))
   in
   let steps =
     List.rev t.steps
@@ -525,27 +471,11 @@ let finish t ~now outcome =
       time = timestamp now;
       site = Option.value ~default:"unknown" t.first;
       mission = t.mission;
-      arguments =
-        List.rev t.arguments
-        |> List.filter (fun (_, value) ->
-            value <> "[password]"
-            && List.exists
-                 (fun (step : P.Trace.trace_step) -> step.text = Some value)
-                 steps);
       outcome = outcome_name;
       cost;
       duration_ms = max 0 (int_of_float ((now -. t.started) *. 1000.));
       model_calls;
       start_url = t.start_url;
-      page_kind_path =
-        List.rev t.kinds |> List.map snd
-        |> List.fold_left
-             (fun path kind ->
-               match path with
-               | previous :: _ when previous = kind -> path
-               | _ -> kind :: path)
-             []
-        |> List.rev;
       planner_turns =
         (match outcome with
           | Ok result -> result.P.planner_turns
@@ -573,10 +503,7 @@ let finish t ~now outcome =
                 trigger = turn.trigger;
                 answer = turn.answer;
                 reason = turn.reason;
-                candidates = turn.candidates;
-                chosen = turn.chosen;
               });
-      procedures;
       steps;
       out_requested = false;
       final;

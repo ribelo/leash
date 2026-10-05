@@ -105,44 +105,9 @@ val text_helper : ?on_usage:(Yojson.Safe.t -> unit) -> t -> Text_helper.t
     client underneath is this service's. Without an API key the helper refuses with
     [detail.code = "missing-key"] and nothing is sent. *)
 
-(* ---------- L31: the run's upper levels (run-7blx run-vj48) ---------- *)
-
-val choose :
-  ?deadline:Ox.Duration.t -> t -> Run.question -> (Run.choice, Protocol.error) result
-(** [choose ?deadline t question] is one upper-level choice question — the playbook
-    level's or the procedure level's — through the same System One client, the same model
-    and the same transport the operator level uses (run-7blx). The answer is validated
-    fail-closed against the criteria the question offered and the reference's own
-    distribution check: a key the question did not offer, or a distribution that is not a
-    valid choice, is [model-unavailable] with [detail.code = "invalid-response"]. Without
-    a key it is [missing-key] before anything is sent, as {!decide} is.
-
-    [deadline] (30 seconds by default) bounds the whole call, both attempts and the
-    backoff included; the run passes what is left of its own deadline. An answered call is
-    logged at info with the tokens and cost the provider reported, and those ride on as
-    the answer's [usage] so the run's trace carries them (run-xqh8).
-
-    For [select_playbook] only, a top probability below [models.choice_confidence]
-    (default 0.7) adds one bounded choice-only planner review over the same state and
-    options. [Run.choice.judgments] retains both answers and their own usage. An invalid
-    review leaves the validated JEV argmax in force with a trace note. The review is
-    capped at 30 seconds and the remaining caller budget, with no correction call. *)
-
-val score :
-  ?deadline:Ox.Duration.t ->
-  t ->
-  sentence:string ->
-  state:Yojson.Safe.t ->
-  (float, Protocol.error) result
-(** run-vbys: the score question one expectation no checker resolves is asked, over the
-    page summary the caller builds. The answer is the position on
-    {!Questions.score_levels} and must be a finite number in [0, 1]; anything else is
-    [invalid-response]. The caller compares it against its threshold. *)
-
 val levels : t -> Run.levels
-(** run-7blx run-w7ke run-d99l: the run's three upper-level calls over this one service.
-    [plan] is L32's planner turn — {!Planner} over the configured [planner_model], at the
-    configured [planner_reasoning], through the planner's own chat client — so a run that
-    stops needing judgment gets Luna's answer, and without an API key it is [missing-key]
-    before anything is sent. Every answered call is logged at info with its tokens, and
-    those ride on as the reply's [usage] so the run's trace carries them (run-obtt). *)
+(** run-w7ke run-d99l: the planner call over this one service: {!Planner} over the
+    configured [planner_model], at the configured [planner_reasoning], through the
+    planner's own chat client; without an API key it is [missing-key] before anything is
+    sent. Every answered call is logged at info with its tokens, and those ride on as the
+    reply's [usage] (run-obtt). *)

@@ -48,9 +48,6 @@ let levels_with ?plan answers _questions =
   let reply answer = Run.{ answer; usage = None } in
   Run.
     {
-      choose =
-        (fun ~deadline:_ _ -> Alcotest.fail "mission invoked the withdrawn JEV selector");
-      score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
       plan =
         (fun ~deadline:_ (request : Run.plan_request) ->
           match plan with
@@ -237,8 +234,6 @@ let lifecycle
                 mission = "Do a task";
                 max_steps = None;
                 start_url = None;
-                max_procedures = None;
-                expect = None;
                 out = None;
                 secrets = [];
                 deadline_s = None;
@@ -527,10 +522,8 @@ let budget () =
             mission = "do the thing";
             max_steps = None;
             start_url = None;
-            max_procedures = None;
             deadline_s = Some 900;
             dry_run = None;
-            expect = None;
             out = None;
             secrets = [];
           }));
@@ -1549,7 +1542,6 @@ let refused_click_redecides
           Leash__Jev_request.
             {
               operation;
-              script = None;
               index = Some index;
               option = None;
               confidence = 1.;
@@ -1570,8 +1562,6 @@ let refused_click_redecides
                   mission = "Open a result";
                   max_steps = Some 4;
                   start_url = Some "https://example.com/";
-                  max_procedures = None;
-                  expect = None;
                   out = None;
                   secrets = [];
                   deadline_s = Some 30;
@@ -1582,7 +1572,7 @@ let refused_click_redecides
       in
       let reply =
         with_ticking_clock ~tick_ms:1 ~ticks:500_000 env sw (fun () ->
-            Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide
+            Leash.Control.handle ~model:"fixture-model" ~decide
               ~levels:(levels_with [] (ref []))
               ~text_helper:(fun () ->
                 Leash.Text_helper.
@@ -2031,10 +2021,8 @@ let journal_redaction
                 mission = "test";
                 max_steps = None;
                 start_url = None;
-                max_procedures = Some 1;
                 deadline_s = Some 1;
                 dry_run = Some true;
-                expect = None;
                 out = None;
                 secrets = [];
               };
@@ -2225,7 +2213,6 @@ let decide_done ~deadline:_ (_ : Jev.request) =
     Jev.
       {
         operation = operation "done";
-        script = None;
         index = None;
         option = None;
         confidence = 1.;
@@ -2236,28 +2223,6 @@ let decide_done ~deadline:_ (_ : Jev.request) =
         targets = [];
       }
 
-let run_wire ?(who = "alice") ?expect ?tab ?max_steps ?deadline_s mission =
-  P.encode_request
-    {
-      command =
-        P.Drive
-          {
-            tab;
-            mission;
-            max_steps;
-            start_url = None;
-            max_procedures = None;
-            deadline_s;
-            dry_run = None;
-            expect;
-            out = None;
-            secrets = [];
-          };
-    }
-  |> Yojson.Safe.to_string
-
-(* The page the fake CDP peer serves: the recorded sh*ap*es of the unlabelled-controls
-   fixture for the tree and the modal's text for the document. *)
 let page_script fake fixture text =
   Fake.on_method fake "Accessibility.getFullAXTree" (fun _ -> get "ax" fixture);
   Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ -> get "dom" fixture);
@@ -2309,112 +2274,6 @@ let document_at ~title ~url fake =
       Fake.emit ~session fake ~method_:"Page.loadEventFired"
         ~params:(Fake.event "Page.loadEventFired");
       obj [])
-
-let run_refusals
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.exec
-       ; Ox_caps.Cap.fork
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.random
-       ; .. >) () =
-  rig ~caps (fun env sw _ tabs fake ->
-      with_ticking_clock ~tick_ms:1 ~ticks:500_000 env sw (fun () ->
-          let f = fake () in
-          let fixture = fixture "unlabelled-controls-chrome.json" in
-          page_script f fixture "";
-          document_at ~title:"A page" ~url:"https://example.com/" f;
-          let h =
-            result
-              (request tabs "alice"
-                 (P.New { url = Some "https://example.com/"; label = None }))
-            |> tab
-          in
-          let levels = levels_with [] (ref []) in
-          let run ?expect who =
-            reply_of
-              (P.decode_reply
-                 (Yojson.Safe.from_string
-                    (Leash.Control.handle ~model:"fixture-model" ~levels ~installed:[]
-                       ~decide:decide_done tabs
-                       (run_wire ~who ?expect ~tab:h "do the thing"))))
-          in
-          let bad =
-            match P.Handle.of_string "t_not_a_tab" with
-            | Ok h -> h
-            | Error e -> Alcotest.fail e
-          in
-          check_code "hand-oyzl a bad handle is unknown" "unknown-tab"
-            (reply_of
-               (P.decode_reply
-                  (Yojson.Safe.from_string
-                     (Leash.Control.handle ~model:"fixture-model" ~levels ~installed:[]
-                        ~decide:decide_done tabs
-                        (run_wire ~tab:bad "do the thing")))));
-          (* The human's hold: every command on the tab answers [with-human], a run included. *)
-          (match Leash.Tabs.hand_over tabs ~reason:"look at this" h with
-          | Ok _ -> ()
-          | Error error -> Alcotest.fail error.P.message);
-          check_code "run-fwl8 with-human" "with-human" (run "alice");
-          (* The following dialog assertion needs the handoff fixture released. *)
-          let _resumed_fixture =
-            Leash.Tabs.resume tabs h
-              [@@ox.allow "ox-discarded-result: best effort: resumed fixture"]
-          in
-          (* A dialog waiting to be answered: the run refuses to start rather than fight it. *)
-          Fake.emit ~session:"session-1" f ~method_:"Page.javascriptDialogOpening"
-            ~params:
-              (obj
-                 [
-                   ("type", str "alert");
-                   ("message", str "stay here");
-                   ("url", str "https://example.com/");
-                   ("hasBrowserHandler", `Bool true);
-                 ]);
-          let rec wait_dialog n =
-            if n = 0 then Alcotest.fail "run-fwl8 the dialog event was not delivered"
-            else
-              match
-                Leash.Tabs.snap tabs
-                  {
-                    tab = h;
-                    match_ = None;
-                    limit = None;
-                    offset = None;
-                    with_image = None;
-                  }
-              with
-              | Ok { dialog = Some _; _ } -> ()
-              | _ ->
-                  Eio.Fiber.yield ();
-                  wait_dialog (n - 1)
-          in
-          wait_dialog 100;
-          check_code "run-fwl8 dialog-open" "dialog-open" (run "alice");
-          (* daily-9ggi: a mission closes its own tab but preserves a supplied tab. *)
-          let opened =
-            reply_of
-              (P.decode_reply
-                 (Yojson.Safe.from_string
-                    (Leash.Control.handle ~model:"fixture-model"
-                       ~levels:
-                         {
-                           levels with
-                           plan =
-                             (fun ~deadline:_ _ ->
-                               Ok
-                                 Run.{ answer = Fail "mission needs a URL"; usage = None });
-                         }
-                       ~installed:[] ~decide:decide_done tabs (run_wire "learn the thing"))))
-          in
-          (match opened with
-          | P.Failure error -> Alcotest.fail error.P.message
-          | P.Success _ -> ());
-          let tabs_now = result (request tabs "alice" P.List_tabs) |> get "tabs" in
-          Alcotest.(check int)
-            "daily-9ggi the run cleaned its tab, supplied tab remains" 1
-            (match tabs_now with `List xs -> List.length xs | _ -> 0)))
 
 let dialog_interruptions
     ~(caps :
@@ -2647,53 +2506,6 @@ let write_tree ~(caps : < Ox_caps.Cap.fs_write ; .. >) root files =
       close_out channel)
     files
 
-let list_js =
-  "const rows = await (await fetch('/api/books.json')).json();\n\
-   return rows.map(r => ({title: r.title, price: r.price}));"
-
-let books_json =
-  {|{
- "site":"automationexercise.com","entry":"https://automationexercise.com/","description":"Books to collect",
- "pages":[{"name":"page","url_pattern":"https://automationexercise.com/*"}],
- "shapes":{"row":[{"title":"string","price":"number"}],"title":[{"title":"string"}]},
- "scripts":{
-   "list":{"file":"scripts/list.js","description":"List the books.","returns":"row"},
-   "tiny":{"source":"return [{title: 'a long title that is over ten bytes'}]","description":"A tiny list.","returns":"title"},
-   "broken":{"source":"return [SYNTAX_BAD","description":"Broken on purpose.","returns":"title"}
- },
- "procedures":[{"slug":"collect","description":"Collect the list.","args":{"q":{"from":"mission"}},
-   "steps":[{"script":"list","args":{"q":"{q}"}}],"expect":["the page shows Added!"]},
-  {"slug":"open","description":"Open the list.","steps":[{"goal":"Open the list."},{"use":"collect"}],"expect":["the page shows Added!"]}]
-}|}
-
-(* The playbook directory is made and loaded the way an operator's is, under a directory
-   called [books]. *)
-let with_books
-    ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
-  let root = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-books" "" in
-  Ox_caps.Cap_sys.remove ~caps root;
-  Ox_caps.Cap_unix.mkdir ~caps root 0o700;
-  Fun.protect
-    ~finally:(fun () -> rm_rf ~caps root)
-    (fun () ->
-      write_tree ~caps root
-        [ ("books/playbook.json", books_json); ("books/scripts/list.js", list_js) ];
-      match Leash.Playbook.load ~caps (Filename.concat root "books") with
-      | Ok book -> f book
-      | Error why -> Alcotest.fail why)
-
-let handle_with ?levels ?text_helper ?(decide = decide_done) ~installed tabs who command =
-  let levels = Some (Option.value levels ~default:(levels_with [] (ref []))) in
-  let wire = P.encode_request { command } |> Yojson.Safe.to_string in
-  match
-    P.decode_reply
-      (Yojson.Safe.from_string
-         (Leash.Control.handle ~model:"fixture-model" ?levels ?text_helper ~installed
-            ~decide tabs wire))
-  with
-  | Ok reply -> reply
-  | Error why -> Alcotest.fail why
-
 let value_reply value =
   obj [ ("result", obj [ ("type", str "object"); ("value", value) ]) ]
 
@@ -2756,266 +2568,6 @@ let books_rows =
       `Assoc [ ("title", `String "A Light in the Attic"); ("price", `Float 51.77) ];
       `Assoc [ ("title", `String "Tipping the Velvet"); ("price", `Int 53) ];
     ]
-
-let playbook_test_command
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.exec
-       ; Ox_caps.Cap.fork
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.random
-       ; Ox_caps.Cap.tmp
-       ; .. >) () =
-  with_books ~caps (fun book ->
-      rig ~caps (fun _ _ _ tabs fake ->
-          let f = fake () in
-          let answer = ref (value_reply books_rows) in
-          script_page f ~reply:(fun _ _ -> !answer);
-          let h =
-            result (request tabs "alice" (P.New { url = Some product_url; label = None }))
-            |> tab
-          in
-          let test ?(who = "alice") ?args script =
-            handle_with ~installed:[ book ] tabs who
-              (P.Playbook_test { tab = h; script; args })
-          in
-          (* extr-mp5z extr-8o1h extr-vgir: the script runs in the page through
-             callFunctionOn with awaitPromise, as the body of an async function of args. *)
-          let body = result (test ~args:(obj [ ("q", str "gpu") ]) "books/list") in
-          Alcotest.(check bool)
-            "extr-mp5z the validated output is printed" true
-            (get "value" body = books_rows);
-          Alcotest.(check bool)
-            "extr-mp5z the record count" true
-            (get "records" body = `Int 2);
-          (match script_calls f with
-          | [ call ] ->
-              Alcotest.(check bool)
-                "extr-vgir the file's text, fetch and all, is the function body" true
-                (get "functionDeclaration" call = str (wrapped list_js));
-              Alcotest.(check bool)
-                "extr-8o1h awaitPromise, so a script may await a fetch" true
-                (get "awaitPromise" call = `Bool true);
-              Alcotest.(check bool)
-                "extr-8o1h the result comes by value" true
-                (get "returnByValue" call = `Bool true);
-              Alcotest.(check bool)
-                "extr-8o1h the arguments are JSON" true
-                (get "arguments" call
-                = `List [ obj [ ("value", obj [ ("q", str "gpu") ]) ] ])
-          | calls -> Alcotest.failf "extr-mp5z %d script calls" (List.length calls));
-          (* extr-8o1h: the result must fit its shape, and the error names the path. *)
-          answer :=
-            value_reply
-              (`List [ `Assoc [ ("title", `String "x"); ("price", `String "9") ] ]);
-          (match test "books/list" with
-          | P.Failure error ->
-              Alcotest.(check string)
-                "extr-8o1h invalid output" "script-invalid"
-                (P.Error_code.to_string error.P.code);
-              Alcotest.(check string)
-                "extr-8o1h the path of the first mismatch"
-                "$[0].price: expected number, got string" error.P.message
-          | P.Success _ -> Alcotest.fail "extr-8o1h invalid output was accepted");
-          (* extr-8o1h: a script that throws is script-failed with what it threw. *)
-          answer := threw "TypeError: rows is not iterable\n    at <anonymous>:2:9";
-          (match test "books/list" with
-          | P.Failure error ->
-              Alcotest.(check string)
-                "extr-8o1h a throw" "script-failed"
-                (P.Error_code.to_string error.P.code);
-              Alcotest.(check bool)
-                "extr-mp5z the exception is shown to the author" true
-                (contains error.P.message "rows is not iterable")
-          | P.Success _ -> Alcotest.fail "extr-8o1h a throw was accepted");
-          (* extr-8o1h: a result over the script's bound is never returned as data. *)
-          answer :=
-            value_reply
-              (`List
-                 [ `Assoc [ ("title", `String "a long title that is over ten bytes") ] ]);
-          (* map-fmt01: the bound is one global 8 MiB, not a per-script 10-byte cap. *)
-          (match test "books/tiny" with
-          | P.Success _ -> ()
-          | P.Failure error ->
-              Alcotest.failf "map-fmt01 a small result fits the global bound: %s"
-                error.P.message);
-          (* names: nothing else is looked up, nothing is sent for what is not a script *)
-          let before = List.length (payloads f) in
-          check_code "extr-mp5z no such script" "invalid-request" (test "books/absent");
-          check_code "extr-mp5z no such playbook" "invalid-request" (test "shelf/list");
-          check_code "extr-mp5z the reference is playbook/script" "invalid-request"
-            (test "books");
-          check_code "extr-k40c a path is not a playbook name" "invalid-request"
-            (test "../books/list");
-          check_code "extr-mp5z args are strings" "invalid-request"
-            (test ~args:(obj [ ("q", `Int 1) ]) "books/list");
-          let bad =
-            match P.Handle.of_string "t_not_a_tab" with
-            | Ok h -> h
-            | Error e -> Alcotest.fail e
-          in
-          check_code "hand-0y04 playbook test needs the handle" "unknown-tab"
-            (handle_with ~installed:[ book ] tabs "second"
-               (P.Playbook_test { tab = bad; script = "books/list"; args = None }));
-          Alcotest.(check int)
-            "extr-k40c a refusal reaches the page with nothing" before
-            (List.length (payloads f))))
-
-let playbook_check_command
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.exec
-       ; Ox_caps.Cap.fork
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.random
-       ; Ox_caps.Cap.tmp
-       ; .. >) () =
-  with_books ~caps (fun book ->
-      rig ~caps (fun _ _ _ tabs fake ->
-          let f = fake () in
-          Fake.on_method f "Runtime.evaluate" (fun request ->
-              match get "expression" (get "params" request) with
-              | `String "globalThis" ->
-                  obj [ ("result", obj [ ("objectId", str "global-object") ]) ]
-              | `String e when contains e "getPrototypeOf(async function" ->
-                  value_reply
-                    (if contains e "SYNTAX_BAD" then
-                       str "SyntaxError: missing ] after element list"
-                     else `Null)
-              | _ -> obj [ ("result", obj [ ("type", str "undefined") ]) ]);
-          let body =
-            result
-              (handle_with ~installed:[ book ] tabs "alice"
-                 (P.Playbook_check { playbook = "books" }))
-          in
-          let verdicts =
-            match get "scripts" body with
-            | `List xs -> xs
-            | _ -> Alcotest.fail "no scripts"
-          in
-          let verdict name =
-            match List.find_opt (fun v -> get "script" v = str name) verdicts with
-            | Some v -> v
-            | None -> Alcotest.failf "extr-lslp no verdict for %s" name
-          in
-          Alcotest.(check bool)
-            "extr-lslp a good script compiles" true
-            (get "ok" (verdict "list") = `Bool true);
-          Alcotest.(check bool)
-            "extr-lslp a syntax error is reported" true
-            (get "ok" (verdict "broken") = `Bool false
-            && contains
-                 (match get "error" (verdict "broken") with `String e -> e | _ -> "")
-                 "missing ]");
-          (* Compiled, never called: no callFunctionOn, the text only inside new Function. *)
-          Alcotest.(check int)
-            "extr-lslp nothing was called" 0
-            (List.length (script_calls f));
-          let compiled =
-            payloads f
-            |> List.filter (fun e -> contains e "getPrototypeOf(async function")
-          in
-          Alcotest.(check int) "extr-lslp one compile per script" 3 (List.length compiled);
-          Alcotest.(check bool)
-            "extr-lslp the file's text is in a compile" true
-            (List.exists
-               (fun e -> contains e (Yojson.Safe.to_string (str list_js)))
-               compiled);
-          (* The blank page is the caller's for the duration and gone after. *)
-          let created =
-            Fake.received f
-            |> List.filter (fun j -> field "method" j = Some (str "Target.createTarget"))
-          in
-          Alcotest.(check bool)
-            "extr-lslp a blank tab was used" true
-            (List.for_all
-               (fun j -> get "url" (get "params" j) = str "about:blank")
-               created
-            && created <> []);
-          Alcotest.(check bool)
-            "extr-lslp and closed" true
-            (List.exists
-               (fun j -> field "method" j = Some (str "Target.closeTarget"))
-               (Fake.received f));
-          Alcotest.(check bool)
-            "extr-lslp no tab is left" true
-            (get "open" (get "tabs" (result (request tabs "alice" P.Status))) = `Int 0);
-          check_code "extr-lslp no such playbook" "invalid-request"
-            (handle_with ~installed:[ book ] tabs "alice"
-               (P.Playbook_check { playbook = "shelf" }))))
-
-(* extr-8o1h extr-k40c: a mission whose every model-controlled string is hostile — the
-   mission text, the argument the text helper fills — runs a script step. The page's engine
-   is handed the playbook's script text exactly, with the hostile value only inside the
-   JSON arguments; every other text it is handed is one the service itself owns. *)
-let run_scripts
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.exec
-       ; Ox_caps.Cap.fork
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.random
-       ; Ox_caps.Cap.tmp
-       ; .. >) ?out hostile =
-  with_books ~caps (fun book ->
-      rig ~caps (fun env sw _ tabs fake ->
-          let f = fake () in
-          script_page f ~reply:(fun _ _ -> value_reply books_rows);
-          let h =
-            result (request tabs "alice" (P.New { url = Some product_url; label = None }))
-            |> tab
-          in
-          let questions = ref [] in
-          let base = levels_with [ "collect"; "DONE" ] (ref []) in
-          let levels =
-            Run.
-              {
-                base with
-                plan =
-                  (fun ~deadline request ->
-                    questions := request :: !questions;
-                    Leash__Model_usage.start "planner";
-                    let answer = base.plan ~deadline request in
-                    Leash__Model_usage.report "planner" (Some 0.2);
-                    answer);
-              }
-          in
-          let text_helper () =
-            {
-              Leash.Text_helper.complete =
-                (fun ?deadline:_ _ ->
-                  Leash__Model_usage.start "text_helper";
-                  Leash__Model_usage.report "text_helper" None;
-                  Ok (Some hostile));
-            }
-          in
-          let decide ~deadline request =
-            Leash__Model_usage.start "operator";
-            let answer = decide_done ~deadline request in
-            Leash__Model_usage.report "operator" (Some 0.4);
-            answer
-          in
-          let reply =
-            with_ticking_clock env sw (fun () ->
-                handle_with ~levels ~text_helper ~decide ~installed:[ book ] tabs "alice"
-                  (P.Drive
-                     {
-                       tab = Some h;
-                       mission = "collect the books " ^ hostile;
-                       max_steps = None;
-                       start_url = None;
-                       max_procedures = None;
-                       deadline_s = None;
-                       dry_run = None;
-                       expect = None;
-                       out;
-                       secrets = [];
-                     }))
-          in
-          (result reply, payloads f, script_calls f, !questions)))
 
 let shared_handle_over_socket
     ~(caps :
@@ -3123,52 +2675,6 @@ let shared_handle_over_socket
           check_code "hand-0wo8 queued client deadline" "timeout" (Option.get !second);
           ignore (result (call text))))
 
-(* trace-qe8c trace-iqqz trace-zbb9 trace-uovo: public control persists every
-   drive outcome before replying, without a browser/service/provider. *)
-let collection_done_guard
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.exec
-       ; Ox_caps.Cap.fork
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.random
-       ; .. >) () =
-  rig ~caps (fun env sw _ tabs fake ->
-      let f = fake () in
-      page_script f (fixture "unlabelled-controls-chrome.json") "Category";
-      document_at ~title:"Category" ~url:product_url f;
-      let evidence = get "books" (fixture "op07b-regressions.json") in
-      Alcotest.(check bool)
-        "map-op08 live books DONE left scroll frontier" true
-        (get "can_scroll_down" evidence = `Bool true);
-      let h =
-        result (request tabs "alice" (P.New { url = Some product_url; label = None }))
-        |> tab
-      in
-      let calls = ref 0 in
-      let decide ~deadline request =
-        incr calls;
-        if !calls > 1 then
-          Alcotest.(check bool)
-            "map-bjon refusal reason reaches next JEV decision" true
-            (contains (Yojson.Safe.to_string (Jev.body request)) "can still scroll down");
-        decide_done ~deadline request
-      in
-      let reply =
-        with_ticking_clock env sw (fun () ->
-            Leash.Control.handle ~model:"fixture-model" ~installed:[] ~decide
-              ~levels:(levels_with [] (ref []))
-              tabs
-              (run_wire ~tab:h
-                 (match get "mission" evidence with `String s -> s | _ -> assert false)))
-        |> Yojson.Safe.from_string |> P.decode_reply |> decoded
-      in
-      Alcotest.(check int) "map-op08 exactly three refusals then blocked" 4 !calls;
-      Alcotest.(check bool)
-        "map-op08 incomplete collection never supplies done baseline" true
-        (get "status" reply <> str "done"))
-
 let with_pilot_storage
     ~(caps :
        < Ox_caps.Cap.env
@@ -3203,6 +2709,132 @@ let saved_pilot_trace (caps : < Ox_caps.Cap.fs_read ; .. >) body =
   match Leash.Traces.read ~caps path with
   | Ok trace -> trace
   | Error why -> Alcotest.fail why
+
+let run_wire ?(who = "alice") ?tab ?max_steps ?deadline_s mission =
+  P.encode_request
+    {
+      command =
+        P.Drive
+          {
+            tab;
+            mission;
+            max_steps;
+            start_url = None;
+            deadline_s;
+            dry_run = None;
+            out = None;
+            secrets = [];
+          };
+    }
+  |> Yojson.Safe.to_string
+
+(* The page the fake CDP peer serves: the recorded sh*ap*es of the unlabelled-controls
+   fixture for the tree and the modal's text for the document. *)
+
+let run_refusals
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  rig ~caps (fun env sw _ tabs fake ->
+      with_ticking_clock ~tick_ms:1 ~ticks:500_000 env sw (fun () ->
+          let f = fake () in
+          let fixture = fixture "unlabelled-controls-chrome.json" in
+          page_script f fixture "";
+          document_at ~title:"A page" ~url:"https://example.com/" f;
+          let h =
+            result
+              (request tabs "alice"
+                 (P.New { url = Some "https://example.com/"; label = None }))
+            |> tab
+          in
+          let levels = levels_with [] (ref []) in
+          let run who =
+            reply_of
+              (P.decode_reply
+                 (Yojson.Safe.from_string
+                    (Leash.Control.handle ~model:"fixture-model" ~levels
+                       ~decide:decide_done tabs
+                       (run_wire ~who ~tab:h "do the thing"))))
+          in
+          let bad =
+            match P.Handle.of_string "t_not_a_tab" with
+            | Ok h -> h
+            | Error e -> Alcotest.fail e
+          in
+          check_code "hand-oyzl a bad handle is unknown" "unknown-tab"
+            (reply_of
+               (P.decode_reply
+                  (Yojson.Safe.from_string
+                     (Leash.Control.handle ~model:"fixture-model" ~levels
+                        ~decide:decide_done tabs
+                        (run_wire ~tab:bad "do the thing")))));
+          (* The human's hold: every command on the tab answers [with-human], a run included. *)
+          (match Leash.Tabs.hand_over tabs ~reason:"look at this" h with
+          | Ok _ -> ()
+          | Error error -> Alcotest.fail error.P.message);
+          check_code "run-fwl8 with-human" "with-human" (run "alice");
+          (* The following dialog assertion needs the handoff fixture released. *)
+          let _resumed_fixture =
+            Leash.Tabs.resume tabs h
+              [@@ox.allow "ox-discarded-result: best effort: resumed fixture"]
+          in
+          (* A dialog waiting to be answered: the run refuses to start rather than fight it. *)
+          Fake.emit ~session:"session-1" f ~method_:"Page.javascriptDialogOpening"
+            ~params:
+              (obj
+                 [
+                   ("type", str "alert");
+                   ("message", str "stay here");
+                   ("url", str "https://example.com/");
+                   ("hasBrowserHandler", `Bool true);
+                 ]);
+          let rec wait_dialog n =
+            if n = 0 then Alcotest.fail "run-fwl8 the dialog event was not delivered"
+            else
+              match
+                Leash.Tabs.snap tabs
+                  {
+                    tab = h;
+                    match_ = None;
+                    limit = None;
+                    offset = None;
+                    with_image = None;
+                  }
+              with
+              | Ok { dialog = Some _; _ } -> ()
+              | _ ->
+                  Eio.Fiber.yield ();
+                  wait_dialog (n - 1)
+          in
+          wait_dialog 100;
+          check_code "run-fwl8 dialog-open" "dialog-open" (run "alice");
+          (* daily-9ggi: a mission closes its own tab but preserves a supplied tab. *)
+          let opened =
+            reply_of
+              (P.decode_reply
+                 (Yojson.Safe.from_string
+                    (Leash.Control.handle ~model:"fixture-model"
+                       ~levels:
+                         {
+                           plan =
+                             (fun ~deadline:_ _ ->
+                               Ok
+                                 Run.{ answer = Fail "mission needs a URL"; usage = None });
+                         }
+                       ~decide:decide_done tabs (run_wire "learn the thing"))))
+          in
+          (match opened with
+          | P.Failure error -> Alcotest.fail error.P.message
+          | P.Success _ -> ());
+          let tabs_now = result (request tabs "alice" P.List_tabs) |> get "tabs" in
+          Alcotest.(check int)
+            "daily-9ggi the run cleaned its tab, supplied tab remains" 1
+            (match tabs_now with `List xs -> List.length xs | _ -> 0)))
 
 let durable_drive_traces
     ~(caps :
@@ -3248,11 +2880,11 @@ let durable_drive_traces
                      Buffer.add_string logs text))
               ()
           in
-          let invoke ?traces ?levels ?(installed = []) ?(decide = decide_done) wire =
+          let invoke ?traces ?levels ?(decide = decide_done) wire =
             let levels = Some (Option.value levels ~default:(levels_with [] (ref []))) in
             with_ticking_clock env sw (fun () ->
                 Leash.Control.handle ?traces ~logger ~model:"fixture-model" ?levels
-                  ~installed ~decide tabs wire)
+                  ~decide tabs wire)
             |> Yojson.Safe.from_string |> P.decode_reply
           in
           let count () =
@@ -3334,58 +2966,6 @@ let durable_drive_traces
           Alcotest.(check bool)
             "trace-szpg disabled omits path and writes nothing" true
             (field "trace_path" disabled = None && count () = before);
-          let book_dir =
-            if
-              Sys.file_exists "../examples/playbooks/automationexercise.com/playbook.json"
-            then "../examples/playbooks/automationexercise.com"
-            else "examples/playbooks/automationexercise.com"
-          in
-          let book =
-            match Leash.Playbook.load ~caps book_dir with
-            | Ok book -> book
-            | Error why -> Alcotest.fail why
-          in
-          let fly =
-            invoke ~traces:store ~installed:[ book ]
-              ~levels:(levels_with [ "none" ] (ref []))
-              (run_wire ~tab:h "operator NONE with matching installed pages")
-            |> decoded |> saved ~caps
-          in
-          Alcotest.(check string)
-            "cut-0oal NONE records only declared kinds" ""
-            (String.concat ","
-               (List.filter
-                  (fun kind ->
-                    not
-                      (List.exists
-                         (fun (p : Leash.Playbook.page) -> p.name = kind)
-                         book.playbook.pages))
-                  fly.page_kind_path));
-          let authored =
-            invoke ~traces:store ~installed:[ book ]
-              ~levels:
-                (levels_with [ "automationexercise.com"; "add-to-cart"; "DONE" ] (ref []))
-              (run_wire ~tab:h "add Blue Top to the cart")
-            |> decoded |> saved ~caps
-          in
-          let declared kind =
-            List.exists
-              (fun (p : Leash.Playbook.page) -> p.name = kind)
-              book.playbook.pages
-          in
-          let path = String.concat "," authored.page_kind_path in
-          Alcotest.(check bool)
-            ("kind-4qke cut-0oal only declared kinds are recorded (" ^ path ^ ")")
-            true
-            (authored.page_kind_path <> []
-            && List.for_all declared authored.page_kind_path);
-          let json = P.yojson_of_drive_trace authored |> Yojson.Safe.to_string in
-          Alcotest.(check bool)
-            "trace-lg58 authored trace excludes rows handles and raw operator state" true
-            ((not (contains json "\"rows\""))
-            && (not (contains json "\"snapshot\""))
-            && (not (contains json "operator_state"))
-            && not (contains json modal_text));
           let bad_root = Filename.concat root "not-a-directory" in
           let fd =
             Ox_caps.Cap_unix.openfile ~caps bad_root
@@ -3457,10 +3037,9 @@ let () =
           Alcotest.test_case "tab-zc36 empty names" `Quick (empty_names ~caps);
           Alcotest.test_case "tab-bw4j pseudo-icon click safety" `Quick
             (pseudo_icon_hit ~caps);
-          Alcotest.test_case "map-op08 map-bjon live collection DONE guard" `Quick
-            (collection_done_guard ~caps);
-          Alcotest.test_case "trace-qe8c trace-iqqz public durable drives" `Quick
+          Alcotest.test_case "trace-qe8c public durable drives" `Quick
             (durable_drive_traces ~caps);
+          Alcotest.test_case "run-fwl8 run refusals" `Quick (run_refusals ~caps);
           Alcotest.test_case "tab-bw4j refused click is decided again" `Quick
             (refused_click_redecides ~caps ~operation_name:"click");
           Alcotest.test_case "map-op07 covered type_text re-decides without input" `Quick
@@ -3477,13 +3056,6 @@ let () =
                 ~operation_name:
                   (match get "operation" action with `String s -> s | _ -> assert false)
                 ());
-          Alcotest.test_case "run-fwl8 run refusals" `Quick (run_refusals ~caps);
         ] );
-      ( "L37 scripts",
-        [
-          Alcotest.test_case "extr-mp5z extr-8o1h extr-vgir playbook test" `Quick
-            (playbook_test_command ~caps);
-          Alcotest.test_case "extr-lslp playbook check" `Quick
-            (playbook_check_command ~caps);
-        ] );
+      ("L37 scripts", []);
     ]

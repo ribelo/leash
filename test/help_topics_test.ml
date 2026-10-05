@@ -71,16 +71,7 @@ let portable ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) () =
   in
   List.iter
     (fun name -> if not (List.mem name names) then failf "missing embedded topic %s" name)
-    [
-      "handles";
-      "playbooks";
-      "authoring";
-      "expectations";
-      "drive";
-      "scripts";
-      "errors";
-      "traces";
-    ];
+    [ "handles"; "drive"; "errors"; "traces" ];
   let errors = List.assoc "errors.md" Leash_cli_support.Leash_help_data.topics in
   if errors <> Leash.Protocol.Error_code.topic_markdown then
     failf "embedded errors.md drifted from Protocol.Error_code";
@@ -126,48 +117,13 @@ let fresh_agent_guidance () =
           "persist in the managed Chrome profile";
           "refused click can scroll";
         ] );
-      ("playbooks", [ "no source checkout is needed"; "navigate"; "step args" ]);
-      ( "scripts",
-        [
-          "three argument locations";
-          "text-helper model";
-          "returned promise is awaited";
-          "Top-level";
-          "script-failed";
-          "`_`";
-        ] );
-      ( "authoring",
-        [
-          "exactly once";
-          "procedure expect";
-          "sampled field values";
-          "must contain at least one goal";
-        ] );
-      ("drive", [ "JEV runs the mission"; "offered to JEV as operations" ]);
-      ("errors", [ "leash help playbooks"; "engine error" ]);
+      ("drive", [ "JEV runs the mission"; "a goal with its result"; "Drive first" ]);
+      ("errors", [ "engine error" ]);
     ];
-  (* hdoc-vqj7: the first authoring JSON fence is a loadable navigation book. *)
-  let rec fence = function
-    | [] -> failf "hdoc-vqj7 no minimal JSON example"
-    | "```json" :: rest -> rest
-    | _ :: rest -> fence rest
-  in
-  let rec body = function
-    | [] -> failf "hdoc-vqj7 unterminated JSON example"
-    | "```" :: _ -> []
-    | line :: rest -> line :: body rest
-  in
-  let json =
-    topic "authoring" |> String.split_on_char '\n' |> fence |> body |> String.concat "\n"
-    |> Yojson.Safe.from_string
-  in
-  (match Leash.Playbook.of_json ~file:"hdoc-vqj7.json" json with
-  | Ok _ -> ()
-  | Error why -> failf "hdoc-vqj7 minimal example does not load: %s" why);
   List.iter
     (fun (_, contents) ->
-      if contains contents "examples/playbooks/" then
-        failf "hdoc-vqj7 repository-only example reference")
+      if contains contents "playbook" then
+        failf "ADR-0016 a topic still mentions playbooks")
     Leash_cli_support.Leash_help_data.topics
 
 let () =

@@ -1,5 +1,5 @@
 (* cut-0oal: the two facts about a URL the runner needs once inferred page kinds are gone —
-   whether it is a web page, and its host, which names the site whose playbook applies. *)
+   whether it is a web page, and its host, which names the site of a trace. *)
 
 let take_until s stops =
   let stop =

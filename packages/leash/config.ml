@@ -151,7 +151,6 @@ type models = {
   decision_timeout : Seconds.t;
   text_timeout : Seconds.t;
   planner_timeout : Seconds.t;
-  choice_confidence : Probability.t;
 }
 
 (* daily-9ggi: the minimal deriver duplicates the remaining decoder for every
@@ -175,7 +174,6 @@ let yojson_of_models (value : models) =
         ("decision_timeout", Seconds.yojson_of_t value.decision_timeout);
         ("text_timeout", Seconds.yojson_of_t value.text_timeout);
         ("planner_timeout", Seconds.yojson_of_t value.planner_timeout);
-        ("choice_confidence", Probability.yojson_of_t value.choice_confidence);
       ])
 
 let models_of_yojson = function
@@ -212,7 +210,6 @@ let models_of_yojson = function
       let* planner_timeout =
         field "planner_timeout" Seconds.t_of_yojson default_planner_timeout
       in
-      let* choice_confidence = field "choice_confidence" Probability.t_of_yojson 0.7 in
       let known =
         [
           "api_key";
@@ -226,7 +223,6 @@ let models_of_yojson = function
           "decision_timeout";
           "text_timeout";
           "planner_timeout";
-          "choice_confidence";
         ]
       in
       match List.find_opt (fun (name, _) -> not (List.mem name known)) fields with
@@ -245,7 +241,6 @@ let models_of_yojson = function
               decision_timeout;
               text_timeout;
               planner_timeout;
-              choice_confidence;
             })
   | _ -> Error "models: expected an object"
 
@@ -266,7 +261,6 @@ let default_models =
     planner_model = default_planner_model;
     planner_reasoning = default_planner_reasoning;
     planner_endpoint = None;
-    choice_confidence = 0.7;
     decision_timeout = default_decision_timeout;
     text_timeout = default_text_timeout;
     planner_timeout = default_planner_timeout;
@@ -447,7 +441,6 @@ let default_toml =
 # text_model = %S
 # planner_model = "openai/gpt-6-luna"  # optional; asked only on BLOCKED, failed expectations and for a final answer
 # planner_reasoning = %S      # OpenRouter effort; "none" turns reasoning off
-# choice_confidence = 0.7     # review a playbook choice below this top probability
 # decision_timeout = %d           # seconds for the one attempt; the caller deadline bounds it
 # text_timeout = %d
 # planner_timeout = %d
@@ -990,7 +983,6 @@ let collect json =
                   "planner_model";
                   "planner_reasoning";
                   "planner_endpoint";
-                  "choice_confidence";
                   "decision_timeout";
                   "text_timeout";
                   "planner_timeout";
@@ -1010,9 +1002,7 @@ let collect json =
                     (fun name ->
                       field_errors pointer name section (fun pointer json ->
                           decode_with pointer Seconds.t_of_yojson json))
-                    [ "decision_timeout"; "text_timeout"; "planner_timeout" ]
-                @ field_errors pointer "choice_confidence" section (fun pointer json ->
-                    decode_with pointer Probability.t_of_yojson json))
+                    [ "decision_timeout"; "text_timeout"; "planner_timeout" ])
       in
       let skill_roots, skill_errors =
         let pointer = child "" "skill" in

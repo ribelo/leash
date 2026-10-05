@@ -189,20 +189,6 @@ let scroll_down_label = "Scroll down"
 let scroll_up_label = "Scroll up"
 let wait_label = "Wait for the page to update"
 
-(* pbk-otsl pbk-rai1: pinned verbatim. The operator option key is the prefix plus the
-   script name; the criterion text is the script's one-sentence description. *)
-let run_script_prefix = "run_script:"
-
-let run_script_rule =
-  "run_script:<name> runs that prepared script on the current page. Choose it to \
-   collect    the page; its records are saved and do not need to be clicked."
-
-type offered_script = { name : string; description : string }
-
-type script_effect =
-  | Script_continue of { summary : string }
-  | Script_blocked of { argument : string }
-
 (* snapshot.js:102-103 — a scroll is offered only while the page can still move that way:
    [can_scroll_down] is scrollY + innerHeight < height - 2 and [can_scroll_up] is
    scrollY > 0. Wait is always offered, and snapshot.js pushes the three in this order. *)
@@ -275,9 +261,7 @@ type request = {
   can_scroll_down : bool;
   can_scroll_up : bool;
   elements : element list;
-  scripts : offered_script list;
   coverage : Yojson.Safe.t;
-  shown_url : string option;
 }
 
 (* pilot-02ij: model requests cannot carry secret values reflected by a page. *)
@@ -314,11 +298,6 @@ let redact secrets request =
                 element.options;
           })
         request.elements;
-    scripts =
-      List.map
-        (fun script -> { name = text script.name; description = text script.description })
-        request.scripts;
-    shown_url = Option.map text request.shown_url;
     coverage = P.redact_json secrets request.coverage;
   }
 
@@ -371,8 +350,6 @@ let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
         (fun (element : element) ->
           uploadable || not (List.mem (operation "upload") element.operations))
         (elements snapshot);
-    scripts = [];
-    shown_url = None;
     image = None;
     look = false;
     point_levels = 10;
@@ -408,9 +385,6 @@ let without_actions request masked =
       request.can_scroll_down && not (blocked (operation "scroll_down") None);
     can_scroll_up = request.can_scroll_up && not (blocked (operation "scroll_up") None);
   }
-
-let with_scripts request scripts = { request with scripts }
-let with_shown_url request url = { request with shown_url = Some url }
 
 let with_coverage request coverage =
   match (request.coverage, coverage) with
@@ -504,11 +478,6 @@ let target_keys op (element : element) = List.map fst (target_keys_of op element
 (* model.py:88-90 — the criteria of the operation choice: the operations that have targets,
    in the order the elements first carry them, then the controls, then DONE and BLOCKED. The
    same list is what decide validates the answer against. *)
-(* pbk-otsl: the operation choice stays under 255 criteria, scripts included. Element
-   operations, then scroll/wait, then run_script:<name> in offer order, then DONE and
-   BLOCKED. Scripts that would reach 255 are not offered. *)
-let max_operation_options = 254
-
 let operation_criteria request =
   let operations =
     List.map
@@ -523,17 +492,7 @@ let operation_criteria request =
     (if request.look then [ ("LOOK", Questions.look_label) ] else [])
     @ if request.image <> None then [ ("CLICK_AT", Questions.click_at_label) ] else []
   in
-  let room =
-    max 0
-      (max_operation_options - List.length operations - List.length controls
-     - List.length vision - List.length terminal)
-  in
-  let scripts =
-    request.scripts
-    |> List.filteri (fun i _ -> i < room)
-    |> List.map (fun script -> (run_script_prefix ^ script.name, script.description))
-  in
-  operations @ controls @ vision @ scripts @ terminal
+  operations @ controls @ vision @ terminal
 
 let operation_keys request = List.map fst (operation_criteria request)
 
@@ -555,13 +514,7 @@ let operation_question request =
                ( "rules",
                  Some
                    (E.string
-                      ((if
-                          List.exists
-                            (fun (key, _) ->
-                              String.starts_with ~prefix:run_script_prefix key)
-                            (operation_criteria request)
-                        then Questions.next_action ^ "\n" ^ run_script_rule
-                        else Questions.next_action)
+                      (Questions.next_action
                       ^
                       if request.image <> None then "\n" ^ Questions.click_at_rule else ""
                       )) );
@@ -685,8 +638,7 @@ let body request =
                    Some
                      (yojson_of_page
                         {
-                          url =
-                            Option.value ~default:request.snapshot.url request.shown_url;
+                          url = request.snapshot.url;
                           title = request.snapshot.title;
                           text = request.text;
                         }) );
@@ -701,7 +653,6 @@ let body request =
 
 type decision = {
   operation : P.Operation.t;
-  script : string option;
   index : int option;
   option : int option;
   confidence : float;
@@ -799,103 +750,79 @@ let decide request ~answers =
     | Some answer -> validated ~keys:(operation_keys request) answer
     | None -> Error invalid
   in
-  if String.starts_with ~prefix:run_script_prefix chosen_key then
-    let name =
-      String.sub chosen_key
-        (String.length run_script_prefix)
-        (String.length chosen_key - String.length run_script_prefix)
-    in
-    if List.exists (fun script -> script.name = name) request.scripts then
-      Ok
-        {
-          operation = operation "blocked";
-          script = Some name;
-          index = None;
-          option = None;
-          confidence;
-          target_confidence = None;
-          point = None;
-          operation_probabilities;
-          target_probabilities = [];
-          targets = [];
-        }
-    else Error invalid
-  else
-    let* operation =
-      match operation_of_key chosen_key with
-      | Some operation -> Ok operation
-      | None -> Error invalid
-    in
-    let candidates =
-      List.filter
-        (fun (element : element) -> List.mem operation element.operations)
-        request.elements
-    in
-    (* dmod-4ky5: a score answer on one axis is the band's index; the point is the band's
+  let* operation =
+    match operation_of_key chosen_key with
+    | Some operation -> Ok operation
+    | None -> Error invalid
+  in
+  let candidates =
+    List.filter
+      (fun (element : element) -> List.mem operation element.operations)
+      request.elements
+  in
+  (* dmod-4ky5: a score answer on one axis is the band's index; the point is the band's
        centre on the screenshot, divided by its PNG-to-CSS scale. *)
-    let axis name extent =
-      match (member name answers, request.image) with
-      | Some answer, Some image -> (
-          match Option.map E.Of_json.float (member "score" answer) with
-          | Some (Ok score)
-            when Float.is_finite score && score >= 0.
-                 && score <= float_of_int (request.point_levels - 1) ->
-              Ok
-                ((score +. 0.5)
-                /. float_of_int request.point_levels
-                *. float_of_int (extent image)
-                /. image.scale)
-          | _ -> Error invalid)
-      | _ -> Error invalid
-    in
-    let* point =
-      if P.Operation.to_string operation <> "click_at" then Ok None
-      else
-        let* x = axis "click_at_x" (fun image -> image.width) in
-        let* y = axis "click_at_y" (fun image -> image.height) in
-        Ok (Some P.{ x; y })
-    in
-    if candidates = [] then
-      Ok
-        {
-          operation;
-          script = None;
-          index = None;
-          option = None;
-          confidence;
-          target_confidence = None;
-          operation_probabilities;
-          target_probabilities = [];
-          targets = [];
-          point;
-        }
+  let axis name extent =
+    match (member name answers, request.image) with
+    | Some answer, Some image -> (
+        match Option.map E.Of_json.float (member "score" answer) with
+        | Some (Ok score)
+          when Float.is_finite score && score >= 0.
+               && score <= float_of_int (request.point_levels - 1) ->
+            Ok
+              ((score +. 0.5)
+              /. float_of_int request.point_levels
+              *. float_of_int (extent image)
+              /. image.scale)
+        | _ -> Error invalid)
+    | _ -> Error invalid
+  in
+  let* point =
+    if P.Operation.to_string operation <> "click_at" then Ok None
     else
-      let keys =
-        List.concat_map (fun element -> target_keys operation element) candidates
-      in
-      let* target_key, target_probabilities, target_confidence =
-        match (member (target_key operation) answers, keys) with
-        | Some answer, _ -> validated ~keys answer
-        | None, [ only ] when single_target request operation <> None ->
-            Ok (only, [ (only, 1.) ], 1.)
-        | None, _ -> Error invalid
-      in
-      match chosen operation candidates target_key with
-      | None -> Error invalid
-      | Some (element, option_) ->
-          Ok
-            {
-              operation;
-              script = None;
-              index = Some element.row;
-              option = Option.map (fun option_ -> option_.dom) option_;
-              confidence;
-              target_confidence = Some target_confidence;
-              point = None;
-              operation_probabilities;
-              target_probabilities;
-              targets = targets ~operation candidates target_probabilities;
-            }
+      let* x = axis "click_at_x" (fun image -> image.width) in
+      let* y = axis "click_at_y" (fun image -> image.height) in
+      Ok (Some P.{ x; y })
+  in
+  if candidates = [] then
+    Ok
+      {
+        operation;
+        index = None;
+        option = None;
+        confidence;
+        target_confidence = None;
+        operation_probabilities;
+        target_probabilities = [];
+        targets = [];
+        point;
+      }
+  else
+    let keys =
+      List.concat_map (fun element -> target_keys operation element) candidates
+    in
+    let* target_key, target_probabilities, target_confidence =
+      match (member (target_key operation) answers, keys) with
+      | Some answer, _ -> validated ~keys answer
+      | None, [ only ] when single_target request operation <> None ->
+          Ok (only, [ (only, 1.) ], 1.)
+      | None, _ -> Error invalid
+    in
+    match chosen operation candidates target_key with
+    | None -> Error invalid
+    | Some (element, option_) ->
+        Ok
+          {
+            operation;
+            index = Some element.row;
+            option = Option.map (fun option_ -> option_.dom) option_;
+            confidence;
+            target_confidence = Some target_confidence;
+            point = None;
+            operation_probabilities;
+            target_probabilities;
+            targets = targets ~operation candidates target_probabilities;
+          }
 
 let distribution pairs =
   E.object_ (List.map (fun (key, number) -> (key, E.float number)) pairs)

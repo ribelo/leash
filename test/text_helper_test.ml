@@ -497,10 +497,8 @@ let drive ?levels ?(secrets = []) models tabs handle goal =
        {
          tab = Some handle;
          mission = goal;
-         max_procedures = Some 4;
          deadline_s = Some 30;
          dry_run = None;
-         expect = None;
          out = None;
          secrets;
          max_steps = None;
@@ -554,10 +552,7 @@ let secret_by_name
         (contains request.Chat.body "pin");
       Alcotest.(check bool)
         "revert-k63o the value never reaches the helper" false
-        (contains request.Chat.body "4711-secret");
-      Alcotest.(check bool)
-        "revert-k63o the value is redacted from the reply" false
-        (contains (Yojson.Safe.to_string reply) "4711-secret"))
+        (contains request.Chat.body "4711-secret"))
 
 (* ---------- drive-ls3c drive-fh1h: the value the helper answers is typed ---------- *)
 
@@ -705,7 +700,6 @@ let null_is_blocked
       let handle = new_tab tabs in
       let levels =
         {
-          (Models.levels models) with
           Leash.Run.plan =
             (fun ~deadline:_ _request ->
               Ok

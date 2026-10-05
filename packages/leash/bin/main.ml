@@ -28,7 +28,6 @@ let emit_error ~caps (error : P.error) =
 let report ~caps ?detail code message = emit_error ~caps (make_error ?detail code message)
 let usage ~caps message = report ~caps "usage" message
 let failure ~caps message = report ~caps "internal" message
-let invalid_playbook ~caps message = report ~caps "playbook-invalid" message
 
 let protect ~caps run =
   try run () with
@@ -412,6 +411,17 @@ let rec perform ~caps ~send ~base command fields positionals options =
   | "net", [ _; _ ] -> usage ~caps "net takes body ID or request ID after the tab"
   | "net", _ :: _ :: _ :: _ ->
       usage ~caps "net takes a tab, and optionally body or request with an ID"
+  (* scr-run: the client reads FILE and sends its name and text. *)
+  | "script_run", [ tab; file ] -> (
+      match
+        try Ok (Cap_stdlib.In_channel.with_open_bin ~caps file In_channel.input_all)
+        with Sys_error why -> Error why
+      with
+      | Error why -> usage ~caps ("script run: cannot read " ^ file ^ ": " ^ why)
+      | Ok source ->
+          perform_wire ~caps ~send ~base command [ "tab"; "name"; "source" ]
+            [ tab; Filename.basename file; source ]
+            options)
   (* hard-o3za: the files are the trailing positionals. *)
   | "upload", tab :: snapshot :: index :: (_ :: _ as paths) ->
       perform_wire ~caps ~send ~base command
@@ -875,147 +885,36 @@ let command ~caps ~send ~base ~run_owned ?wire ?docs ?(man = []) name doc positi
                   | None -> perform ~caps ~send ~base wire fields args opts)))
       $ positional_term positionals $ collected)
 
-(* run-tcuz run-dbji run-ykq4: these authoring commands need no service. *)
-let playbook_command ~caps ~send ~base ~run_owned =
-  let owned run = run_owned (fun _sw -> protect ~caps run) in
-  let output ?code = function
-    | Error message -> invalid_playbook ~caps message
-    | Ok book ->
-        Cap_stdlib.print_endline ~caps
-          (Yojson.Safe.pretty_to_string (Leash.Playbook.inspect ?code book));
-        0
-  in
-  let name = Arg.(required & pos 0 (some string) None & info [] ~docv:"NAME") in
-  let list =
-    Cmd.v
-      (Cli_help.local_info ~docs:"INSTALLED PLAYBOOKS" "list"
-         ~doc:"List validated installed site playbooks."
-         ~examples:[ "leash playbook list" ])
-      Term.(
-        const (fun () () ->
-            owned (fun () ->
-                match Leash.Playbook.list ~caps () with
-                | Error message -> invalid_playbook ~caps message
-                | Ok books ->
-                    List.iter
-                      (fun (book : Leash.Playbook.loaded) ->
-                        Cap_stdlib.printf ~caps "%s\t%s\n" book.playbook.site
-                          book.playbook.description)
-                      books;
-                    0))
-        $ const ())
-  in
-  let show =
-    Cmd.v
-      (Cli_help.local_info ~docs:"INSTALLED PLAYBOOKS" "show"
-         ~doc:
-           "Show a named installed playbook: scripts, their text and resolved checkers."
-         ~examples:[ "leash playbook show books.toscrape.com" ])
-      Term.(
-        const (fun name () () ->
-            owned (fun () -> output ~code:true (Leash.Playbook.show ~caps name)))
-        $ name $ const ())
-  in
-  (* extr-lslp: the local checks — the file resolves, no escape, `returns` well formed,
-     expectations resolve — are the loader's; the syntax check needs a page, so an
-     installed playbook (named, not a path) is sent to the service, which compiles each
-     script in a blank tab of its own. *)
-  let check =
-    let collected =
-      List.fold_left
-        (fun term spec -> Term.(const (fun xs x -> xs @ [ x ]) $ term $ option_term spec))
-        (Term.const []) shared_options
-    in
-    let target = Arg.(required & pos 0 (some string) None & info [] ~docv:"NAME|DIR") in
-    let run target opts () =
-      let options = List.filter_map Fun.id opts in
-      let text key =
-        match List.assoc_opt key options with Some (`String v) -> Some v | _ -> None
-      in
-      let installed = not (String.contains target '/') in
-      match
-        if installed then Leash.Playbook.show ~caps target
-        else Leash.Playbook.load ~caps target
-      with
-      | Error message -> invalid_playbook ~caps message
-      | Ok book -> (
-          let local = match Leash.Playbook.inspect book with `Assoc f -> f | _ -> [] in
-          let print syntax =
-            Cap_stdlib.print_endline ~caps
-              (Yojson.Safe.pretty_to_string (`Assoc (local @ [ ("syntax", syntax) ])))
-          in
-          if not installed then (
-            print
-              (str
-                 "skipped: only an installed playbook (its name, not a path) is compiled");
-            0)
-          else if book.Leash.Playbook.scripts = [] then (
-            print (`List []);
-            0)
-          else
-            let request =
-              P.encode_request P.{ command = Playbook_check { playbook = target } }
-            in
-            match
-              exchange ~caps ~send ~base ~config:(text "config") ~socket:(text "socket")
-                request
-            with
-            | Error status -> status
-            | Ok (P.Failure error) -> emit_error ~caps error
-            | Ok (P.Success result) ->
-                let scripts =
-                  match field "scripts" result with `List xs -> xs | _ -> []
-                in
-                if List.for_all (fun s -> field "ok" s = `Bool true) scripts then (
-                  print (`List scripts);
-                  0)
-                else
-                  report ~caps
-                    ~detail:(obj [ ("scripts", `List scripts) ])
-                    "script-invalid" "one or more playbook scripts did not compile")
-    in
-    Cmd.v
-      (Cli_help.command_info ~docs:"VALIDATION" "check"
-         ~doc:"Check local playbook data and, for an installed NAME, compile its scripts."
-         ~examples:
-           [
-             "leash playbook check books.toscrape.com";
-             "leash playbook check ./my-playbook";
-           ])
-      Term.(
-        const (fun target opts () -> owned (fun () -> run target opts ()))
-        $ target $ collected)
-  in
-  (* extr-mp5z: runs one script of an installed playbook on a tab's page; the service
-     looks the script up by name, and nothing of it travels on the wire. *)
-  let test =
-    command ~caps ~send ~base ~run_owned ~wire:"playbook_test" ~docs:"VALIDATION" "test"
-      "Run one playbook script on a tab and print its validated output."
-      [ pos "script" "PLAYBOOK/SCRIPT" ]
+(* scr-run (ADR-0016): the agent's own JavaScript, run once on a tab's page. *)
+let script_command ~caps ~send ~base ~run_owned =
+  let run =
+    command ~caps ~send ~base ~run_owned ~wire:"script_run" "run"
+      "Run a JavaScript file once on a tab's page and print its result."
+      [ pos "tab" "TAB"; pos "name" "FILE" ]
       ([
-         opt "tab" Str "TAB" "The tab whose page runs the script (required).";
-         opt_list "arg" Pairs "K=V" "A string argument for the script (repeatable).";
+         opt_list "arg" Pairs "K=V"
+           "A string argument for the script, in args (repeatable).";
+         opt "out" Str "FILE" "Append a list result to FILE as JSONL, one item per line.";
        ]
       @ shared_options)
       [
-        "leash playbook test books.toscrape.com/list-books --tab t_9xk";
-        "leash playbook test shop/search --tab t_9xk --arg q=gpu --arg max=2000";
+        "leash script run t_9xk ./titles.js --out titles.jsonl";
+        "leash script run t_9xk ./search.js --arg q=gpu --arg max=2000";
       ]
   in
   Cmd.group
-    (Cli_help.command_info "playbook" ~doc:"Inspect and validate site playbooks."
+    (Cli_help.command_info "script" ~doc:"Run the agent's own JavaScript on a tab."
        ~man:
          [
            `S "DESCRIPTION";
            `Pre
-             "A playbook is a directory that describes one site: pages, procedures, and \
-              scripts.\n\
-              The operator writes it. A model never does. JEV is offered its procedures \
-              and scripts on its site.\n\
-              Format, example, and every loader refusal: leash help playbooks";
+             "FILE is the body of an async function of args, run read-only on the tab's \
+              page; it may await fetch on the site's own endpoints. A leading /** \
+              returns: SHAPE */ block validates the result. Results are bounded to 8 \
+              MiB. Nothing is installed or remembered.";
          ]
-       ~examples:[ "leash playbook list"; "leash playbook check ./my-playbook" ])
-    [ list; show; check; test ]
+       ~examples:[ "leash script run t_9xk ./titles.js --out titles.jsonl" ])
+    [ run ]
 
 (* field-swvb: the same filters as snap, applied to the snapshot taken after the action. *)
 let snap_opts =
@@ -1449,25 +1348,24 @@ let commands ~caps ~send ~base ~run_owned =
             `Pre
               "Drive runs one mission on one tab until done, blocked, a cap, a deadline, \
                or an error.\n\
-               It may follow an installed playbook or act on the page. Leash never \
+               JEV acts on the page; the planner takes over where it stops. Leash never \
                asserts the goal.\n\
                Lanes, options, and how to read a trace: leash help drive";
             `S "ROUTING";
             `P
               "JEV runs the mission: one decision-model call per step over the element \
-               table, the text helper for field values, the site playbook's procedures \
-               and scripts offered as operations.";
+               table, the text helper for field values.";
             `P
               "When JEV is blocked, stalls or reaches its step cap, the planner \
                ([models] planner_model) takes the page over, acts on it, and hands it \
                back to JEV with a goal or finishes the mission.";
             `P
-              "--out JSONL is tagged. script-record, source playbook, is a validated \
-               script record. operator-state, source operator, is one terminal bounded \
-               page observation, not a record list. The Travel example writes \
-               operator-state. output_kinds names the kinds in the reply. A successful \
-               reply is not proof the mission succeeded. model_cost is null when any \
-               call is unpriced; data.reported_cost is the known subtotal.";
+              "--out JSONL is tagged. planner-record, source planner, is a record the \
+               planner returned with done. operator-state, source operator, is one \
+               terminal bounded page observation, not a record list. output_kinds names \
+               the kinds in the reply. A successful reply is not proof the mission \
+               succeeded. model_cost is null when any call is unpriced; \
+               data.reported_cost is the known subtotal.";
           ]
         "drive" "Drive MISSION with JEV's loop over the page."
         [ pos "mission" "MISSION" ]
@@ -1480,14 +1378,11 @@ let commands ~caps ~send ~base ~run_owned =
              "Explicit http(s) start (start_url). Not a model navigation target.";
            opt "max_steps" Int "N"
              "JEV's step cap per stint (default 256). Must be positive.";
-           opt "max_procedures" Int "N" "Procedure cap (default 40).";
            opt "out" Str "FILE"
-             "Append tagged JSONL: script-record from a playbook, operator-state from \
+             "Append tagged JSONL: planner-record from the planner, operator-state from \
               the operator.";
            opt "deadline_s" Int "S" "Seconds for the whole mission (default 600).";
            opt "dry_run" Bool "" "Return JEV's first decision without executing it.";
-           opt_list "expect" Strings "SENTENCE"
-             "Mission expectation the DONE guard verifies (repeatable).";
          ]
         @ shared_options)
         [
@@ -1495,16 +1390,11 @@ let commands ~caps ~send ~base ~run_owned =
            https://books.toscrape.com/ --out travel-state.jsonl";
           "leash drive 'Complete this page search and open the matching result' --tab \
            TAB --max-steps 15 --deadline-s 300";
-          "no-playbooks: leash drive 'Open Travel and return the visible titles and \
-           prices' --url https://books.toscrape.com/ --max-steps 15";
-          "one-book: leash drive 'Collect the supported category' --url \
-           https://books.toscrape.com/ --out books.jsonl";
-          "many-books: leash drive 'Collect the supported category' --tab TAB \
-           --max-steps 15";
-          "none-matching: leash drive 'Search one-way and stop at the visible options' \
-           --url https://www.google.com/travel/flights --max-steps 15 --deadline-s 300";
+          "leash drive 'Download my latest invoice as PDF; result: the file path and the \
+           invoice number' --url https://moj.tauron.pl/ --secret login=@/private/login \
+           --secret password=@/private/password";
         ];
-      playbook_command ~caps ~send ~base ~run_owned;
+      script_command ~caps ~send ~base ~run_owned;
       traces_command ~caps ~run_owned;
     ]
 
@@ -1620,9 +1510,7 @@ let program env (config : Leash.Config.t) sw =
       ~chrome_pid:(fun () -> (Leash.Chrome.status chrome).pid)
       ~models
       ~model:(Leash.Config.Text.to_string config.models.decision_model)
-        (* run-7blx: the run's three upper levels over the same one models service — the
-           playbook question, the procedure question and the judgment score — and L31's
-           planner stub inside them. *)
+        (* run-w7ke: the planner call over the same one models service. *)
       ~levels:(Leash.Models.levels models)
       ~decide:(fun ~deadline request -> Leash.Models.decide ~deadline models request)
         (* drive-ls3c: the helper is a thunk, not a value — each drive takes its own
@@ -1894,19 +1782,7 @@ let skill_command ~caps ~run_owned =
 (* hdoc-ztwo hdoc-8c12 hdoc-em5c: topics are embedded markdown. This command never
    opens the control socket. errors is rendered from Protocol.Error_code. *)
 let help_topics =
-  let preferred =
-    [
-      "handles";
-      "browser";
-      "playbooks";
-      "authoring";
-      "expectations";
-      "drive";
-      "traces";
-      "scripts";
-      "errors";
-    ]
-  in
+  let preferred = [ "handles"; "browser"; "drive"; "traces"; "errors" ] in
   let present =
     Leash_cli_support.Leash_help_data.topics
     |> List.map (fun (path, _) -> Filename.chop_suffix path ".md")
@@ -1923,11 +1799,7 @@ let help_body name =
 let help_description = function
   | "handles" -> "Setup, tab handles, sharing, expiry, and human handoff."
   | "browser" -> "Rows, aligned PNG/CSS pictures, native points and focused type."
-  | "playbooks" -> "Install, validate, and read the playbook format and example."
-  | "authoring" -> "Write and test reliable procedures and goals."
-  | "expectations" -> "Checker sentences and when they are evaluated."
-  | "drive" -> "Mission lanes, arguments, results, and traces."
-  | "scripts" -> "Script and navigate steps, arguments, and validated results."
+  | "drive" -> "Writing a mission, results, the planner's takeover, and traces."
   | "traces" ->
       "Read and prune durable drive traces without a service, model, or browser."
   | "errors" -> "Error codes, exit statuses, and recovery hints."
@@ -1962,7 +1834,7 @@ let help_command ~caps =
   Cmd.v
     (Cli_help.local_info "help"
        ~doc:"Print a help topic, or list topics. Does not contact the service."
-       ~examples:[ "leash help"; "leash help playbooks"; "leash help errors" ])
+       ~examples:[ "leash help"; "leash help drive"; "leash help errors" ])
     Term.(const run $ topic)
 
 (* hdoc-fixp: one paragraph. Documentation does not probe the service. *)

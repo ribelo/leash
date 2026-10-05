@@ -1,97 +1,51 @@
-(** takeover (confirmed by the operator 2026-10-05): [drive MISSION] is JEV's loop. JEV
-    decides every step over the element table ({!Drive}); the site playbook's procedures
-    and scripts are offered to it as operations. When JEV answers BLOCKED, stalls or
-    reaches its step cap, the page passes to Luna (the planner) with the mission and what
-    JEV did. Luna may act on the page, read, run playbook procedures and scripts, notify,
-    hand off on a headed browser, finish or fail, and hands control back to JEV with a
-    goal string. Only the deadline bounds it. All effects use handlers, so tests and
-    dry-run need no browser or model service. *)
+(** ADR-0015 (amended) ADR-0016: [drive MISSION] is JEV's loop over the page. JEV decides
+    every step over the element table ({!Drive}); the text helper writes field values.
+    When JEV answers BLOCKED, stalls or reaches its step cap, the planner (Luna) takes the
+    page over with the mission and what happened so far: it acts, reads, looks at a
+    screenshot, notifies, hands off on a headed browser, finishes or fails, and hands
+    control back to JEV with a goal string. When JEV reports DONE on a mission that asks
+    for an answer, the planner gives the answer from the final page or takes over. Only
+    the deadline bounds the planner. All effects use handlers, so tests and dry-run need
+    no browser or model service. *)
 
 type observation = {
   url : string;
   title : string;
   text : string;
-      (** The page's visible text. Checkers and the text helper read it; the upper levels
-          receive a bounded projection (pilot-ukoh). *)
   dialog : Protocol.dialog option;
   rows : (string * string) list;
-      (** Role and accessible name of each row, for the [<role> named <text>] checker. *)
   downloads : (string * string * string) list;
-      (** Suggested name, MIME and state of each download of the tab, for the download
-          checker (run-ykq4). *)
+      (** Suggested name, MIME and state of each download of the tab. *)
   snapshot : Protocol.snapshot;
   image_input : bytes option;
-      (** takeover: private PNG bytes for Luna's image input; never a text field. *)
+      (** takeover: private PNG bytes for the planner's image input; never a text field.
+      *)
 }
-(** What one observation of the page gives the loop: the same facts the checkers, the text
-    helper and the last snapshot of a result need. *)
-
-type choice = {
-  key : string;
-  probabilities : Yojson.Safe.t;
-  confidence : float;
-  usage : Protocol.run_usage option;
-  judgments : Protocol.playbook_choice list;
-}
-(** One upper-level decision (run-xqh8). Probability, confidence and usage describe JEV;
-    [key] may be the reviewed choice. [judgments] preserves each original playbook answer
-    in decision order, including a refused planner review. Empty for unreviewed answers;
-    the run then records JEV directly. *)
-
-type question = {
-  name : string;
-  instructions : string;
-  criteria : (string * string) list;
-  state : Yojson.Safe.t;
-}
-(** One choice question as the loop builds it. [state] is the small semantic state of
-    story 18 (run-pvmc) and [criteria] never exceeds 255 entries (the JEV ceiling, the
-    reason playbooks are selected rather than merged). *)
 
 type step_request = {
   goal : string;
-  hint : string option;
   recent : Jev_request.recent_action list;
   max_steps : int;
   stop_on_navigation : bool;
   deadline_s : int;
   dry_run : bool;
-  script_offers : url:string -> text:string -> Jev_request.offered_script list;
-  on_script : url:string -> string -> (Jev_request.script_effect, Protocol.error) result;
-      (** pbk-eyya: the goal step's [until], checked in code after each executed action;
-          [true] ends the step [done]. *)
 }
-(** One playbook step as the operator level receives it (run-d82w): the goal with the
-    step's hint shaping its text, and the step's own cap and deadline — the procedure's
-    when it declares them, the operator's defaults otherwise, always bounded by what is
-    left of the run. *)
-
-type script_outcome =
-  | Collected of { value : Yojson.Safe.t; records : int; bytes : int; elapsed_ms : int }
-  | Rejected of { reason : string; elapsed_ms : int }
-      (** extr-8o1h: what a script step came to. [Collected] is a result that fit its
-          [returns] shape and its size bound; [Rejected] is a script that threw, whose
-          result did not fit its shape or was too large. A rejection fails the procedure's
-          leg with its reason in the trace; the pilot receives the failure and chooses the
-          next mission step. *)
+(** One stint of JEV's loop: the goal, its step cap and the mission's remaining deadline.
+*)
 
 type plan_trigger =
   | Blocked
-  | Expectation
   | Final
   | Holding
-      (** takeover: why Luna is asked. JEV answered BLOCKED, stalled or reached its step
-          cap; an expectation failed; JEV reported DONE on a mission that asks for an
-          answer; or Luna holds the page and its last action came back. *)
-
-type candidate = Playbook.procedure
+      (** JEV answered BLOCKED, stalled or reached its step cap; JEV reported DONE on a
+          mission that asks for an answer; or the planner holds the page and its last
+          action came back. *)
 
 type plan_answer =
   | Jev of string
   | Act of Protocol.planner_action
   | Read of { quote : string; note : string }
   | Observe_image
-  | Run of string
   | Notify of string
   | Handoff of string
   | Done of {
@@ -100,9 +54,8 @@ type plan_answer =
       records : (string * string) list list;
     }
   | Fail of string
-      (** takeover: what Luna does while it holds the page. [Jev goal] hands control back
-          to JEV with [goal] as its goal; [Run] runs a playbook procedure or script by
-          name. *)
+      (** What the planner does while it holds the page. [Jev goal] hands control back to
+          JEV with [goal] as its goal. *)
 
 type plan_reply = { answer : plan_answer; usage : Protocol.run_usage option }
 
@@ -112,98 +65,50 @@ type plan_request = {
   mission : string;
   secret_names : string list;
   headless : bool;
-      (* revert-r9ka: nobody can see the browser; handoff is neither offered nor accepted. *)
+      (** revert-r9ka: nobody can see the browser; handoff is neither offered nor
+          accepted. *)
   site : string option;
-  notes : string option;
   history : (string * string) list;
-      (* What happened so far, oldest first: each JEV stint and each of Luna's actions. *)
+      (** What happened so far, oldest first: each JEV stint and each planner action. *)
   url : string;
   title : string;
   text : string;
   snapshot : Protocol.snapshot;
   image_input : bytes option;
   downloads : (string * string * string) list;
-  offered : (string * string) list;
-      (* The site playbook's procedures and scripts Luna may [Run], name and description. *)
 }
-
-val trigger_name : plan_trigger -> string
-(** run-xqh8: the trigger as the trace and the planner's request name it — ["blocked"],
-    ["failed"] or ["arguments"]. *)
 
 type levels = {
-  choose : deadline:Ox.Duration.t -> question -> (choice, Protocol.error) result;
-  score :
-    deadline:Ox.Duration.t ->
-    sentence:string ->
-    state:Yojson.Safe.t ->
-    (float, Protocol.error) result;
   plan : deadline:Ox.Duration.t -> plan_request -> (plan_reply, Protocol.error) result;
 }
-(** run-7blx: the upper levels as one seam over one models service — the two choice
-    questions, the score question a judgment checker asks ("how well does the current page
-    satisfy: <sentence>?" over the page summary), and the planner turn. Production passes
-    {!Models.levels}; a scripted test passes its own record. *)
+(** The planner call, as one seam over the models service, so a scripted test replaces the
+    model with a function and production passes {!Models.levels}. *)
 
 type handler = {
   observe : image:bool -> unit -> (observation, Protocol.error) result;
   navigate : string -> (unit, Protocol.error) result;
-      (** run-xh5d: the entry navigation of a playbook switch, through the same registry
-          path the [nav] command uses. *)
-  choose : question -> (choice, Protocol.error) result;
-      (** Both choice levels: [question]'s [name] says which one. *)
-  text_value : Text_helper.context -> (string option, Protocol.error) result;
-      (** run-5rll: the text helper, asked once per argument the mission does not supply.
-      *)
   step : step_request -> (Protocol.drive_result, Protocol.error) result;
-      (** run-d82w: one operator step — exactly one {!Drive} call. *)
-  verify :
-    pages:Playbook.page list ->
-    checks:(string * Playbook.checker) list ->
-    timeout_s:int ->
-    (Protocol.run_expectation list * observation, Protocol.error) result;
-      (** run-xflk run-vbys run-xqh8: each expectation with its verdict, checked by code
-          where a checker applies and scored by JEV where none does, with the bounded
-          wait. [pages] are the current playbook's page kinds: the [page_kind] checker is
-          decided against them. The observation it returns is the one it judged. *)
+      (** One stint of JEV's loop. *)
   plan : plan_request -> (plan_reply, Protocol.error) result;
-      (** run-w7ke run-rq6i: the planner turn, asked only at the three triggers and only
-          while the turn cap allows it. Production is Luna through {!Models.levels}; a
-          scripted test answers with a record of its own. *)
   act : Protocol.planner_action -> (Protocol.action_result, Protocol.error) result;
-      (** takeover: Luna's own action on the page, through the public action path. *)
+      (** The planner's own action on the page, through the public action path. *)
   hand_off : reason:string -> (Protocol.tab_info, Protocol.error) result;
-      (** run-klp9: a planner's handoff, which leaves the tab [with_human]. *)
-  script :
-    Playbook.script ->
-    args:(string * string) list ->
-    (script_outcome, Protocol.error) result;
-      (** extr-8o1h extr-k40c: run one of the current playbook's scripts on the page. The
-          argument is a {!Playbook.script}, which only the playbook loader makes, so
-          nothing a model wrote can reach it; production passes {!Reading.script}'s result
-          mapped to a {!script_outcome}. A [dialog-open] error ends the run as a drive's
-          dialog does. *)
 }
 
 type args = {
   mission : string;
-  max_steps : int;
+  max_steps : int;  (** JEV's step cap per stint, 256 by default. *)
   start_url : string option;
-  max_procedures : int;  (** Default 40 (run-vspj). *)
-  deadline_s : int;  (** Default 900 (run-vspj). *)
+  deadline_s : int;
   dry_run : bool;
-  max_plans : int;
-      (** run-obtt: how many planner turns the run may take, 3 by default. The trigger
-          that arrives with the cap reached ends the run instead of asking again. *)
-  expect : string list;
-      (** The mission's own expectations, which DONE is verified against independently of
-          the last procedure (run-4j1v). L32's planner attaches them when the mission
-          implies them; a caller may state them from L31 on. *)
 }
 
 val of_args : Protocol.run_args -> args
-(** The wire arguments with their defaults: 15 navigator steps, 12 pilot turns, 600
-    seconds, no dry run and no mission expectations. *)
+val trigger_name : plan_trigger -> string
+
+val asks_answer : string -> bool
+(** Whether a mission asks for an answer: a question, a [Result:] clause, or a request to
+    tell, find, list, check or report. *)
 
 val authorises : string -> string -> bool
 (** Whether the mission explicitly names the protected action category without a refusal.
@@ -215,25 +120,20 @@ val unsafe_action : string -> string option
 val loop :
   handler:handler ->
   now:(unit -> float) ->
-  installed:Playbook.loaded list ->
   ?planner:bool ->
   ?headless:bool ->
   ?secrets:(string * string) list ->
-  ?on_secrets:((string * string) list -> unit) ->
-  ?on_book:(Playbook.loaded option -> unit) ->
   ?on_record:(Yojson.Safe.t -> (unit, Protocol.error) result) ->
   ?notify:(string -> (unit, string) result) ->
-  ?on_arguments:((string * string) list -> unit) ->
-  ?pause_ms:(int -> unit) ->
   args ->
   (Protocol.run_result, Protocol.error) result
-(** [loop ~handler ~now ~installed args] runs the mission as JEV's loop (revert-eft1).
-    [planner] says whether a planner model is configured; without one it is never asked, a
-    BLOCKED loop ends [blocked], and [result] stays null.
+(** [loop ~handler ~now args] runs the mission. [planner] says whether a planner model is
+    configured; without one it is never asked, a stop ends [blocked], and [result] stays
+    null.
 
-    Endings: [done] when JEV reported DONE, the mission's expectations held and, for a
-    mission that asks for an answer, the planner judged it done with a result; [failed]
-    when the planner judged it not done or answered fail; [blocked] when JEV stopped and
-    no planner helped; [limit] at the consultation cap; [deadline]; [handoff-expired] and
-    [canceled-by-operator] after a handoff; [planned] for a dry run; [error] otherwise. A
-    model or browser failure is a protocol error carrying the trace in [detail]. *)
+    Endings: [done] when JEV reported DONE (and, for a mission that asks for an answer,
+    the planner gave it) or the planner finished; [failed] when the planner failed it;
+    [blocked] when JEV stopped and no planner is configured; [deadline]; [handoff-expired]
+    and [canceled-by-operator] after a handoff; [planned] for a dry run; [error]
+    otherwise. A model or browser failure is a protocol error carrying the planner turns
+    in [detail]. *)

@@ -20,26 +20,7 @@ type trace_step = {
 }
 [@@deriving yojson]
 
-type trace_procedure = {
-  n : int;
-  procedure : string;
-  outcome : string;
-  planned : bool;
-  steps : trace_step list;
-}
-[@@deriving yojson]
-
-(* pilot-r94o: safe per-turn audit, without raw pilot input or capabilities. *)
-type candidate = { slug : string } [@@deriving yojson]
-
-type planner_turn = {
-  n : int;
-  trigger : string;
-  answer : string;
-  reason : string option;
-  candidates : candidate list;
-  chosen : candidate option;
-}
+type planner_turn = { n : int; trigger : string; answer : string; reason : string option }
 [@@deriving yojson]
 
 type t = {
@@ -48,15 +29,12 @@ type t = {
   time : string;
   site : string;
   mission : string;
-  arguments : (string * string) list; [@json.default []]
   outcome : string;
   cost : float option; [@json.null]
   duration_ms : int;
   model_calls : int;
   start_url : string option; [@json.default None]
-  page_kind_path : string list;
   planner_turns : planner_turn list; [@json.default []]
-  procedures : trace_procedure list;
   steps : trace_step list;
   out_requested : bool; [@json.default false]
   final : trace_page option; [@json.null]

@@ -43,23 +43,9 @@
   alcotest))
 
 (test
- (name run_control_test)
- (modules run_control_test)
- (libraries leash yojson alcotest))
-
-(test
  (name run_test)
  (modules run_test)
- (deps
-  (source_tree ../examples/playbooks))
  (libraries leash ox_caps ox_test eio_main yojson alcotest str))
-
-(test
- (name playbook_test)
- (modules playbook_test)
- (deps
-  (source_tree ../examples/playbooks))
- (libraries leash ox_caps ox_test yojson alcotest str unix))
 
 (test
  (name fake_browser_test)
@@ -114,8 +100,7 @@
   fixtures/snapshot-chrome.json
   fixtures/daily-snapshot-chrome.json
   fixtures/unlabelled-controls-chrome.json
-  fixtures/download-chrome.json
-  (source_tree ../examples/playbooks))
+  fixtures/download-chrome.json)
  (libraries
   leash
   leash_test_support

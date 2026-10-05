@@ -26,7 +26,6 @@ val create :
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
-  ?installed:Playbook.loaded list ->
   ?chrome_pid:(unit -> int option) ->
   sw:Eio.Switch.t ->
   path:string ->
@@ -42,12 +41,8 @@ val create :
     passes a thunk over {!Models.text_helper}, so every drive gets the fresh instance its
     reuse memo belongs to (drive-ls3c); without one a [type_text] step refuses.
 
-    L31 run-7blx run-4mzm: [levels] are the run's upper levels — production passes
-    {!Models.levels}, one System One client for the playbook level, the procedure level
-    and the judgment score, whose planner is L31's stub; without one every upper-level
-    call refuses with [model-unavailable]. [installed] hands a listener the playbooks a
-    run works from, which is how a scripted test runs a known playbook without touching
-    the operator's XDG configuration; production leaves it [None] and the run loads them.
+    run-w7ke: [levels] are the run's planner call; production passes {!Models.levels}, and
+    without one a planner turn refuses with [model-unavailable].
 
     Suspension: may suspend during private socket validation and listener startup;
     listener callback invocation is delegated to Ox_ipc.Listener.run. Cancellation:
@@ -99,7 +94,6 @@ val dispatch :
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
-  ?installed:Playbook.loaded list ->
   ?models_status:(unit -> Protocol.models_status) ->
   ?chrome_pid:(unit -> int option) ->
   Tabs.t ->
@@ -119,7 +113,6 @@ val handle :
     Jev_request.request ->
     (Jev_request.decision, Protocol.error) result) ->
   ?text_helper:(unit -> Text_helper.t) ->
-  ?installed:Playbook.loaded list ->
   ?models_status:(unit -> Protocol.models_status) ->
   ?chrome_pid:(unit -> int option) ->
   ?logger:Ox_observability.Logger.t ->

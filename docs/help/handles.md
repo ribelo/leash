@@ -10,7 +10,7 @@ Offline help does not need the service. For browser commands, run `leash config 
 - `PATH` must contain `google-chrome-stable` by default, or set `chrome.binary` to your Chrome executable's absolute path.
 - `OPENROUTER_API_KEY` in the service's environment takes precedence over `models.api_key` in the config. Browser-only commands do not need a model key; missions do. Never print the key.
 
-The service keeps its startup environment: exporting a variable in the agent's shell does not change an already-running service. Set variables in the environment that launches `leash serve` (or its user service), restart it when needed, and check again. There is no playbook install or uninstall command: copy or remove an installed playbook directory yourself; `leash help playbooks` explains where.
+The service keeps its startup environment: exporting a variable in the agent's shell does not change an already-running service. Set variables in the environment that launches `leash serve` (or its user service), restart it when needed, and check again.
 
 ## Tab capability
 
@@ -18,7 +18,7 @@ A handle is the only way to act on a tab. It is 128 bits from the system's rando
 
 `leash new` and `leash take` return a handle. Keep it. Losing it loses the tab: an agent tab closes when it has been idle, and a new one is opened. `leash list` shows every tab and never a handle. A label is a free string for finding a tab. It is not a capability.
 
-`list` and `snap` include `page_kind`: `{name, source}`, only when an installed playbook's URL pattern matches the page; `source` is `declared`. Nothing is inferred (ADR-0014). `list --table` adds `PAGE_KIND` and `KIND_SOURCE`. `snap --table` prints the kind above the rows and still omits the snapshot id.
+`snap --table` omits the snapshot id.
 
 ## Origin
 

@@ -260,8 +260,8 @@ type answer =
 type t = {
   chrome : Chrome.t;
   caps : caps;
-      (** ^ncaps-4tjy: handles from the system's randomness; screenshots, [run --out] and
-          proposals written, uploads and playbooks read, the XDG directories looked up. *)
+      (** ^ncaps-4tjy: handles from the system's randomness; screenshots and [run --out]
+          written, uploads read, the XDG directories looked up. *)
   now : unit -> float;
   sleep : float -> unit;
   capture_timeout :
@@ -591,33 +591,11 @@ let call t request =
 let call_protected t request = Eio.Cancel.protect (fun () -> call t request)
 let transition t request = Result.map entry_of_answer (call t request)
 
-(* kind-tdrv kind-4qke cut-0oal: list and snap name the page by an installed playbook's
-   declared kind, or not at all. Text markers need page text, which list and snap do not
-   read, so a marker-only kind is not shown here. *)
-let installed_books t =
-  match Playbook.list ~caps:t.caps () with
-  | Ok books -> books
-  | Error _ ->
-      []
-      [@ox.allow
-        "ox-discarded-result: list and snap label pages without an unreadable playbook \
-         set"]
-
-let page_label ~books ~url ~title:_ =
-  if not (Web_url.is_page ~url) then None
-  else
-    List.find_map
-      (fun (book : Playbook.loaded) ->
-        Playbook.page_kind book.playbook.pages ~url ~text:"")
-      books
-    |> Option.map (fun name -> P.{ name; source = Declared })
-
-let listing_of t ?(books = installed_books t) (entry : entry) : P.tab_listing =
+let listing_of t (entry : entry) : P.tab_listing =
   {
     label = entry.tab.label;
     url = entry.tab.url;
     title = entry.tab.title;
-    page_kind = page_label ~books ~url:entry.tab.url ~title:entry.tab.title;
     origin = entry.tab.origin;
     age_s = max 0 (int_of_float (now t -. entry.tab.opened_at));
     idle_s = max 0 (int_of_float (now t -. entry.last_activity));
@@ -633,7 +611,6 @@ let info_of t (entry : entry) : P.tab_info =
     label = i.label;
     url = i.url;
     title = i.title;
-    page_kind = i.page_kind;
     origin = i.origin;
     age_s = i.age_s;
     idle_s = i.idle_s;
@@ -1035,8 +1012,8 @@ let new_tab ?label t ~url =
                 in
                 Ok { (info t tab) with P.loaded = Some loaded }))
 
-(* chrome-1yn9: the lock-free body, for a caller that already holds the tab's lock (the
-   run's playbook switch, run-xh5d). *)
+(* chrome-1yn9: the lock-free body, for a caller that already holds the tab's lock (a run's
+   start navigation, run-xh5d). *)
 let navigate_locked t ~tab url =
   let* cdp = ready t in
   let* session = page_session t cdp tab in
@@ -1830,7 +1807,6 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
           tab = credential tab;
           url = tab.url;
           title = tab.title;
-          page_kind = page_label ~books:(installed_books t) ~url:tab.url ~title:tab.title;
           rows = shown;
           image;
           total;
@@ -2005,7 +1981,6 @@ let action_view t ~session tab cdp : Actions.tab =
                 label = i.label;
                 url = i.url;
                 title = i.title;
-                page_kind = i.page_kind;
                 origin = i.origin;
                 age_s = i.age_s;
                 idle_s = i.idle_s;
@@ -2227,9 +2202,8 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable)
-    ?(scripts = fun (_ : Drive.observation) -> []) ?run_script ?label t ~model tab
-    (args : P.drive_args) =
+    ?(text_helper = fun () -> Text_helper.unavailable) t ~model tab (args : P.drive_args)
+    =
   (* drive-kh2u drive-ix5t: one Decide is one System One call, and it is inside the
          drive's own deadline: the caller's remaining budget is what the model call is
          bounded by, so a slow provider cannot outlast the reply the client is waiting
@@ -2575,8 +2549,7 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
       (t.vision ())
   in
   Drive.run ~stop_on_navigation ~validate ~coverage ~usage:(usage meter)
-    ~telemetry:(telemetry meter) ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script
-    ?label ?vision
+    ~telemetry:(telemetry meter) ~observe_attempts:1 ?recent ?on_step ?vision
     ~handler:Drive.{ observe; decide; text_value; act }
     ~now:(fun () -> now t)
     ~model ~args
@@ -2591,27 +2564,14 @@ let drive ?decide ?text_helper ?meter ?recent t ~model (args : P.drive_args) =
       let* tab = locate t ~access:Act args.tab in
       drive_locked ?decide ?text_helper ?meter ?recent t ~model tab args)
 
-(* L31 run-9ypy run-vj48 run-shgh run-fwl8, L32 run-m0r8: a mission over the installed
-   playbooks, with the
-   tab's action lock held for the whole run. Every step is one [drive_locked] call — the
-   very operator level the [drive] command runs — and every judgment goes through
-   [Run.loop]'s handler, which this builds over the browser and the models service's levels
-   (Control installs them; a scripted test installs its own, which is what makes the whole
-   loop testable offline). The playbooks are loaded here, once, from the XDG directory the
-   [playbook] commands read (run-tcuz) unless a test hands them in. *)
+(* run-9ypy run-shgh run-fwl8 (ADR-0015, ADR-0016): a mission, with the tab's action lock
+   held for the whole run. Every JEV stint is one [drive_locked] call, the very loop the
+   [drive] command runs; the planner's turns go through [Run.loop]'s handler, which this
+   builds over the browser and the models service's levels (a scripted test installs its
+   own). *)
 let no_levels : Run.levels =
   Run.
     {
-      choose =
-        (fun ~deadline:_ _ ->
-          Error
-            (error "model-unavailable"
-               "no model client is configured for the run's playbook and procedure levels"));
-      score =
-        (fun ~deadline:_ ~sentence:_ ~state:_ ->
-          Error
-            (error "model-unavailable"
-               "no model client is configured for the run's judgment score"));
       plan =
         (fun ~deadline:_ _ ->
           Error
@@ -2619,15 +2579,14 @@ let no_levels : Run.levels =
                "no model client is configured for the run's planner"));
     }
 
-let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ -> ())
-    ?(planner = false) ?(levels = no_levels) ?(model = "unconfigured")
+let run ?(on_page = fun ~url:_ -> ()) ?on_step ?(planner = false) ?(levels = no_levels)
+    ?(model = "unconfigured")
     ?(decide =
       fun ~deadline:_ _ ->
         Error
           (error "model-unavailable" "System One client unavailable"
              ~detail:(obj [ ("code", str "client-unavailable") ])))
-    ?(text_helper = fun () -> Text_helper.unavailable) ?meter t ~tab ?installed
-    (args : P.run_args) =
+    ?(text_helper = fun () -> Text_helper.unavailable) ?meter t ~tab (args : P.run_args) =
   let handle = tab in
   let* tab = peek t ~access:Act handle in
   with_tab_lock tab (fun () ->
@@ -2640,7 +2599,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
             (error "dialog-open"
                (Printf.sprintf "a %s dialog is open on the tab; answer it before the run"
                   (P.Dialog_kind.to_string dialog.P.kind)))
-      | None -> (
+      | None ->
           let* cdp = ready t in
           let* session = page_session t cdp tab in
           let browser = reading_browser t ~session tab cdp in
@@ -2665,38 +2624,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
             Ox.Duration.ms
               (max 1 (int_of_float ((budget -. (now t -. started)) *. 1000.)))
           in
-          let bounded limit text =
-            if String.length text <= limit then text else String.sub text 0 limit
-          in
-          (* run-pvmc: the page text stays on this side of the loop; the upper levels are
-             asked over the small state Run builds. *)
-          (* trace-iqqz: only the selected authored book supplies declared kinds.
-             cut-0oal: a page with no declared kind has none. *)
-          let trace_book = ref None and trace_page = ref None in
-          let declared_kind ~url ~text =
-            Option.bind !trace_book (fun (book : Playbook.loaded) ->
-                Playbook.page_kind book.playbook.pages ~url ~text)
-          in
-          let classify (snapshot : P.snapshot) text =
-            on_page ~url:(clean snapshot.url)
-              ~kind:(Option.map clean (declared_kind ~url:snapshot.url ~text))
-          in
-          let label ~url ~title:_ ~text =
-            Drive.
-              {
-                kind = Option.value ~default:"" (declared_kind ~url ~text);
-                source = "declared";
-                url;
-              }
-          in
-          let traced (snapshot : P.snapshot) text =
-            trace_page := Some (snapshot, text);
-            classify snapshot text
-          in
-          let on_book book =
-            trace_book := book;
-            Option.iter (fun (snapshot, text) -> classify snapshot text) !trace_page
-          in
+          let traced (snapshot : P.snapshot) _text = on_page ~url:(clean snapshot.url) in
           let observe_once ?(image = false) () =
             let* snapshot =
               snap_locked t tab
@@ -2861,116 +2789,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
                     }
             | _ -> Error (error "invalid-request" "unsupported planner action")
           in
-          (* run-xflk run-vbys run-xqh8: the checkers first and the JEV score only where no
-             checker applies. The score is one model call per unchanged page — the bounded
-             wait would otherwise ask it every 100 ms — so the answer is memoized on the
-             sentence and the text it was asked over. *)
-          let verify ~pages ~checks ~timeout_s =
-            (* map-bjon: one judgment must not consume expect_timeout_s. Leave time
-               to observe the page again after a loading frame. *)
-            let expect_deadline = now t +. float_of_int timeout_s in
-            let failure = ref None in
-            let memo = Hashtbl.create 4 in
-            let last = ref None in
-            let observe_page () =
-              match observe () with
-              | Error _ ->
-                  Playbook.
-                    { kind = None; text = ""; dialog = false; rows = []; downloads = [] }
-              | Ok observation ->
-                  last := Some observation;
-                  Playbook.
-                    {
-                      kind =
-                        Playbook.page_kind pages ~url:observation.Run.url
-                          ~text:observation.Run.text;
-                      text = observation.Run.text;
-                      dialog = Option.is_some observation.Run.dialog;
-                      rows = observation.Run.rows;
-                      downloads = observation.Run.downloads;
-                    }
-            in
-            let score sentence (observation : Playbook.observation) =
-              let key = sentence ^ "\000" ^ observation.Playbook.text in
-              match Hashtbl.find_opt memo key with
-              | Some value -> value
-              | None ->
-                  let state =
-                    match !last with
-                    | Some observation ->
-                        `Assoc
-                          [
-                            ("title", `String observation.Run.title);
-                            ("url", `String observation.Run.url);
-                            ( "page_kind",
-                              match
-                                Playbook.page_kind pages ~url:observation.Run.url
-                                  ~text:observation.Run.text
-                              with
-                              | Some kind -> `String kind
-                              | None -> `Null );
-                            ("text", `String (bounded 6_000 observation.Run.text));
-                          ]
-                    | None -> `Null
-                  in
-                  (* Leave time for another observation while the expect window is
-                     open. Never skip the score: a run clock that has already
-                     moved still has to judge the page (extr-5x9e). *)
-                  let expect_left = expect_deadline -. now t in
-                  let deadline =
-                    if expect_left > 1. then
-                      Ox.Duration.min (remaining ())
-                        (Ox.Duration.ms
-                           (max 1 (int_of_float (min 8. (expect_left -. 0.25) *. 1000.))))
-                    else remaining ()
-                  in
-                  let value =
-                    match
-                      levels.Run.score ~deadline ~sentence:(clean sentence)
-                        ~state:(clean_json state)
-                    with
-                    | Ok value -> value
-                    | Error error ->
-                        if !failure = None then failure := Some error;
-                        0.
-                  in
-                  Hashtbl.replace memo key value;
-                  value
-            in
-            let outcome =
-              Dialog_race.first (dialog_race tab) (fun () ->
-                  Playbook.await_results
-                    ~now:(fun () -> now t)
-                    ~sleep:t.sleep ~observe:observe_page ~score ~timeout_s checks)
-            in
-            let results =
-              match outcome with `Dialog _ -> [] | `Value results -> results
-            in
-            match outcome with
-            | `Dialog _ ->
-                let* observation = observe () in
-                Ok ([], observation)
-            | `Value _ -> (
-                match !failure with
-                | Some error -> Error error
-                | None -> (
-                    match !last with
-                    | None -> Error (error "internal" "the verification observed nothing")
-                    | Some observation ->
-                        Ok
-                          ( List.map
-                              (fun (checked : Playbook.checked) ->
-                                P.
-                                  {
-                                    sentence = checked.Playbook.expectation;
-                                    checker =
-                                      Playbook.checker_name checked.Playbook.checker;
-                                    passed = checked.Playbook.passed;
-                                    score = checked.Playbook.score;
-                                  })
-                              results,
-                            observation )))
-          in
           let handler : Run.handler =
             Run.
               {
@@ -2980,15 +2798,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
                   (fun url ->
                     let* _ = navigate_locked t ~tab url in
                     Ok ());
-                choose =
-                  (fun question -> levels.Run.choose ~deadline:(remaining ()) question);
-                text_value =
-                  (fun context ->
-                    (match meter with
-                    | Some meter -> clear_usage meter "text_helper"
-                    | None -> ());
-                    (text_helper ()).Text_helper.complete ~deadline:(remaining ())
-                      (Text_helper.redact !secret_values context));
                 step =
                   (fun request ->
                     drive_locked ~stop_on_navigation:request.Run.stop_on_navigation
@@ -2996,12 +2805,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
                       ~secrets:(fun () -> !secret_values)
                       ~recent:request.Run.recent ?meter ?on_step
                       ~observed:(fun page -> traced page.Drive.snapshot page.text)
-                      ~decide ~text_helper ~label
-                      ~scripts:(fun page ->
-                        request.Run.script_offers ~url:page.Drive.snapshot.url
-                          ~text:page.text)
-                      ~run_script:(fun ~url name -> request.Run.on_script ~url name)
-                      t ~model tab
+                      ~decide ~text_helper t ~model tab
                       P.
                         {
                           tab = handle;
@@ -3010,7 +2814,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
                           deadline_s = Some request.Run.deadline_s;
                           dry_run = Some request.Run.dry_run;
                         });
-                verify;
                 plan = (fun request -> levels.Run.plan ~deadline:(remaining ()) request);
                 hand_off =
                   (fun ~reason ->
@@ -3025,113 +2828,36 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
                         in
                         let* tab = locate t ~access:Act handle in
                         Ok (info t tab)));
-                (* extr-8o1h extr-k40c: the only script text that reaches the page in a run
-                   is a loaded playbook's, through {!Reading.script}. A script that threw,
-                   broke its shape or was too large is the procedure's failure; a browser
-                   failure ends the run. *)
-                script =
-                  (fun script ~args ->
-                    let started = now t in
-                    (* pbk-eyya: a script reads a loaded document. A goal step that ends
-                       the moment its until holds can hand over a page still streaming in
-                       (the Default category's page 2 read 12 of 20 cards); the load wait
-                       is bounded like every other. *)
-                    if tab.page_loading && tab.dialog = None then (
-                      let promise, waiter = Eio.Promise.create () in
-                      tab.page_loads <- waiter :: tab.page_loads;
-                      Fun.protect
-                        ~finally:(fun () ->
-                          tab.page_loads <-
-                            List.filter (fun pending -> pending != waiter) tab.page_loads)
-                        (fun () ->
-                          (* The following observation decides whether loading completed. *)
-                          let _load_notice =
-                            t.await_load promise
-                              [@@ox.allow "ox-discarded-result: best effort: load notice"]
-                          in
-                          ()));
-                    match Reading.script browser script ~args with
-                    | Ok ran ->
-                        Ok
-                          (Run.Collected
-                             {
-                               value = ran.Reading.value;
-                               records = ran.Reading.records;
-                               bytes = ran.Reading.bytes;
-                               elapsed_ms = ran.Reading.elapsed_ms;
-                             })
-                    | Error failure
-                      when List.mem
-                             (P.Error_code.to_string failure.P.code)
-                             [ "script-failed"; "script-invalid"; "too-large" ] ->
-                        Ok
-                          (Run.Rejected
-                             {
-                               reason = failure.P.message;
-                               elapsed_ms = int_of_float ((now t -. started) *. 1000.);
-                             })
-                    | Error failure -> Error failure);
               }
           in
-          match
-            match installed with
-            | Some books -> Ok books
-            | None -> Playbook.list ~caps:t.caps ()
-          with
-          | Error why -> Error (error "invalid-request" why)
-          | Ok books ->
-              let execute on_record =
-                Run.loop ~handler ~planner ~headless:(headless t) ~on_book ~on_record
-                  ~secrets:args.secrets
-                  ~on_secrets:(fun values -> secret_values := values)
-                  ~on_arguments
-                  ~notify:(fun message ->
-                    if headless t then Error (refuse_headless ()).P.message
-                    else t.notify message)
-                  ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
-                  ~now:(fun () -> now t)
-                  ~installed:books run_args
-              in
-              let* result =
-                match args.P.out with
-                | None -> execute (fun _ -> Ok ())
-                | Some path -> (
-                    try
-                      let channel = Ox_caps.Cap_stdlib.open_out ~caps:t.caps path in
-                      Fun.protect
-                        ~finally:(fun () -> close_out channel)
-                        (fun () ->
-                          execute (fun record ->
-                              try
-                                output_string channel (Yojson.Safe.to_string record);
-                                output_char channel '\n';
-                                flush channel;
-                                Ok ()
-                              with Sys_error why -> Error (error "internal" why)))
-                    with Sys_error why -> Error (error "invalid-request" why))
-              in
-              Ok result))
-
-(* extr-mp5z extr-lslp: the playbook commands that need a page. The script is looked up in
-   the playbook directory by name — nothing on the wire carries script text — and [installed]
-   hands a control test its playbooks the way it does a run's. *)
-let find_playbook ~caps ?installed name =
-  match installed with
-  | Some books -> (
-      match
-        List.find_opt
-          (fun (book : Playbook.loaded) ->
-            Option.map Filename.basename book.Playbook.dir = Some name)
-          books
-      with
-      | Some book -> Ok book
-      | None ->
-          Error
-            (error "invalid-request" (Printf.sprintf "no playbook %s is installed" name)))
-  | None -> (
-      match Playbook.show ~caps name with
-      | Ok book -> Ok book
-      | Error why -> Error (error "invalid-request" why))
+          let execute on_record =
+            Run.loop ~handler ~planner ~headless:(headless t) ~on_record
+              ~secrets:args.secrets
+              ~notify:(fun message ->
+                if headless t then Error (refuse_headless ()).P.message
+                else t.notify message)
+              ~now:(fun () -> now t)
+              run_args
+          in
+          let* result =
+            match args.P.out with
+            | None -> execute (fun _ -> Ok ())
+            | Some path -> (
+                try
+                  let channel = Ox_caps.Cap_stdlib.open_out ~caps:t.caps path in
+                  Fun.protect
+                    ~finally:(fun () -> close_out channel)
+                    (fun () ->
+                      execute (fun record ->
+                          try
+                            output_string channel (Yojson.Safe.to_string record);
+                            output_char channel '\n';
+                            flush channel;
+                            Ok ()
+                          with Sys_error why -> Error (error "internal" why)))
+                with Sys_error why -> Error (error "invalid-request" why))
+          in
+          Ok result)
 
 let script_arguments = function
   | None -> Ok []
@@ -3147,90 +2873,49 @@ let script_arguments = function
       go [] fields
   | Some _ -> Error (error "invalid-request" "args must be an object of strings")
 
-let echo_limit = 1_048_576
-
-let playbook_test ?installed t (args : P.playbook_test_args) =
-  let* playbook, name =
-    match String.split_on_char '/' args.script with
-    | [ playbook; script ] when playbook <> "" && script <> "" -> Ok (playbook, script)
-    | _ -> Error (error "invalid-request" "script must be <playbook>/<script>")
-  in
-  let* book = find_playbook ~caps:t.caps ?installed playbook in
+(* scr-run (ADR-0016): [leash script run TAB FILE]. The agent's script runs once on the
+   tab's page through {!Reading.script}: the body of an async function of [args], bounded,
+   validated against its returns block when it has one. Nothing is installed. *)
+let script_run t (args : P.script_run_args) =
   let* script =
-    match Playbook.script_named book name with
-    | Some script -> Ok script
-    | None ->
-        Error
-          (error "invalid-request"
-             (Printf.sprintf "playbook %s has no script %s" playbook name))
+    Result.map_error (error "script-invalid")
+      (Script.of_source ~name:args.name args.source)
   in
   let* arguments = script_arguments args.args in
   with_reading t ~access:Act args.tab (fun _ browser ->
       let* ran = Reading.script browser script ~args:arguments in
-      let value, truncated =
-        if ran.Reading.bytes <= echo_limit then (ran.Reading.value, false)
-        else
-          match ran.Reading.value with
-          | `List items -> (`List (List.filteri (fun i _ -> i < 5) items), true)
-          | _ -> (`Null, true)
+      let* () =
+        match args.out with
+        | None -> Ok ()
+        | Some path -> (
+            let items =
+              match ran.Reading.value with `List items -> items | value -> [ value ]
+            in
+            try
+              let channel =
+                Ox_caps.Cap_stdlib.open_out_gen ~caps:t.caps [ Open_append; Open_creat ]
+                  0o600 path
+              in
+              Fun.protect
+                ~finally:(fun () -> close_out channel)
+                (fun () ->
+                  List.iter
+                    (fun item ->
+                      output_string channel (Yojson.Safe.to_string item);
+                      output_char channel '\n')
+                    items;
+                  Ok ())
+            with Sys_error why -> Error (error "invalid-request" why))
       in
       Ok
         P.
           {
-            script = args.script;
-            value;
+            script = args.name;
+            value = ran.Reading.value;
             records = ran.Reading.records;
             bytes = ran.Reading.bytes;
             elapsed_ms = ran.Reading.elapsed_ms;
-            truncated;
           })
-
-(* extr-lslp: every script of the playbook is compiled, never called, in a blank page of
-   its own that the caller owns for the duration and that is closed after. *)
-let playbook_check ?installed t (args : P.playbook_check_args) =
-  let* book = find_playbook ~caps:t.caps ?installed args.playbook in
-  match book.Playbook.scripts with
-  | [] -> Ok P.{ playbook = args.playbook; scripts = [] }
-  | scripts -> (
-      let* blank = new_tab t ~url:None in
-      let close () =
-        Eio.Cancel.protect (fun () ->
-            (* The owned syntax-check tab is cleaned up without replacing its verdict. *)
-            let _closed =
-              close t blank.P.tab
-                [@@ox.allow "ox-discarded-result: best effort: closed"]
-            in
-            ())
-      in
-      match
-        with_reading t ~access:Act blank.P.tab (fun _ browser ->
-            let rec go acc = function
-              | [] -> Ok (List.rev acc)
-              | (script : Playbook.script) :: rest -> (
-                  match Reading.script_syntax browser script with
-                  | Error failure -> Error failure
-                  | Ok verdict ->
-                      go
-                        (P.
-                           {
-                             script = script.Playbook.name;
-                             ok = verdict = None;
-                             error = verdict;
-                           }
-                        :: acc)
-                        rest)
-            in
-            go [] scripts)
-      with
-      | exception exn ->
-          close ();
-          raise exn
-      | Error failure ->
-          close ();
-          Error failure
-      | Ok verdicts ->
-          close ();
-          Ok P.{ playbook = args.playbook; scripts = verdicts })
 
 let report t : P.status_result =
   let chrome = Chrome.status t.chrome in

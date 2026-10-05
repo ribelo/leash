@@ -249,105 +249,6 @@ let missing_key =
   Model_error.unavailable ~code:"missing-key"
     "no OpenRouter API key: set OPENROUTER_API_KEY or models.api_key"
 
-(* run-qq3o run-kli0: one choice question of the two upper levels, through the same System
-   One client the operator level's questions go through. A criterion the model did not
-   offer, or a distribution the reference validator refuses, is [model-unavailable] with
-   [invalid-response]: the loop does nothing with an answer like that. *)
-let choose_jev ~deadline (t : t) (question : Run.question) =
-  match t.systemone with
-  | None -> Error missing_key
-  | Some client -> (
-      let criteria =
-        List.map
-          (fun (key, description) -> (key, `String description))
-          question.Run.criteria
-      in
-      let wire =
-        Ox_ai_systemone.Codecs.choice ~instructions:(`String question.Run.instructions)
-          ~criteria
-      in
-      let kind =
-        if question.Run.name = "select_playbook" then "playbook" else "procedure"
-      in
-      Model_usage.start kind;
-      match
-        Ox_ai_systemone.Client.evaluate client ~deadline ~state:question.Run.state
-          ~questions:[ (question.Run.name, wire) ]
-      with
-      | Error error -> Error (Model_error.of_eta ~kind:"jev" error)
-      | Ok response -> (
-          log_usage t.logger response;
-          Model_usage.report kind (Some response.Ox_ai_systemone.Codecs.usage.cost);
-          match Ox_ai_systemone.Client.answer question.Run.name response with
-          | Some (Ox_ai_systemone.Codecs.Choice answer) ->
-              let chosen = answer.Ox_ai_systemone.Types.choice in
-              if not (List.mem_assoc chosen question.Run.criteria) then
-                Error
-                  (invalid_response
-                     (Printf.sprintf "the answer %S is not one of the offered criteria"
-                        chosen))
-              else if not (Ox_ai_systemone.Codecs.choice_answer_valid answer) then
-                Error
-                  (invalid_response
-                     (Printf.sprintf "the distribution behind %S is not a valid choice"
-                        chosen))
-              else
-                Ok
-                  Run.
-                    {
-                      key = chosen;
-                      probabilities =
-                        wire_probabilities answer.Ox_ai_systemone.Types.probabilities;
-                      confidence = answer.Ox_ai_systemone.Types.confidence;
-                      usage = Some (usage_of response.Ox_ai_systemone.Codecs.usage);
-                      judgments = [];
-                    }
-          | _ ->
-              Error
-                (invalid_response
-                   (Printf.sprintf "the reply carries no choice answer named %S"
-                      question.Run.name))))
-
-(* extr-uhnc: review uncertainty at the playbook boundary, not by tuning the JEV
-   instruction. Threshold the top probability, never JEV's margin-like confidence. *)
-(* fly-2akp: the original JEV choice is authoritative, including NONE. *)
-let choose ?(deadline = default_deadline) (t : t) (question : Run.question) =
-  retry_invalid t ~deadline (fun deadline -> choose_jev ~deadline t question)
-
-(* run-vbys: the score question a judgment expectation asks, over the page summary the
-   registry builds. Its two levels make the answer's position the [0, 1] score the wait's
-   threshold compares. *)
-let score_once ?(deadline = default_deadline) (t : t) ~sentence ~state =
-  match t.systemone with
-  | None -> Error missing_key
-  | Some client -> (
-      let wire =
-        Ox_ai_systemone.Codecs.score
-          ~instructions:(`String (Questions.score sentence))
-          ~criteria:Questions.score_levels
-      in
-      Model_usage.start "verifier";
-      match
-        Ox_ai_systemone.Client.evaluate client ~deadline ~state
-          ~questions:[ ("score", wire) ]
-      with
-      | Error error -> Error (Model_error.of_eta ~kind:"jev" error)
-      | Ok response -> (
-          log_usage t.logger response;
-          Model_usage.report "verifier" (Some response.Ox_ai_systemone.Codecs.usage.cost);
-          match Ox_ai_systemone.Client.answer "score" response with
-          | Some (Ox_ai_systemone.Codecs.Score answer) ->
-              let value = answer.Ox_ai_systemone.Types.score in
-              if Float.is_finite value && value >= 0. && value <= 1. then Ok value
-              else
-                Error
-                  (invalid_response
-                     (Printf.sprintf "the score %g is not inside 0..1" value))
-          | _ -> Error (invalid_response "the reply carries no score answer")))
-
-let score ?(deadline = default_deadline) t ~sentence ~state =
-  retry_invalid t ~deadline (fun deadline -> score_once ~deadline t ~sentence ~state)
-
 (* run-7blx run-w7ke run-d99l: the one seam a run's upper levels use. The planner turn is
    L32's Luna over the second chat client (run-d99l), with the configured model and
    reasoning; without a key there is no client and the turn refuses before anything is
@@ -355,8 +256,6 @@ let score ?(deadline = default_deadline) t ~sentence ~state =
 let levels (t : t) : Run.levels =
   Run.
     {
-      choose = (fun ~deadline question -> choose ~deadline t question);
-      score = (fun ~deadline ~sentence ~state -> score ~deadline t ~sentence ~state);
       plan =
         (fun ~deadline request ->
           match (t.planner_chat, t.config.planner_model) with

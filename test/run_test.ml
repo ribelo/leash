@@ -28,7 +28,6 @@ let snapshot =
       tab;
       url = "https://site.example/";
       title = "Page";
-      page_kind = None;
       rows = [ password_row ];
       total = 1;
       offset = 0;
@@ -64,17 +63,7 @@ let drive ?reason status =
     }
 
 let params ?(mission = "Open the reports page") () =
-  R.
-    {
-      mission;
-      max_steps = 256;
-      start_url = None;
-      max_procedures = 40;
-      deadline_s = 600;
-      dry_run = false;
-      max_plans = 6;
-      expect = [];
-    }
+  R.{ mission; max_steps = 256; start_url = None; deadline_s = 600; dry_run = false }
 
 let tab_info =
   P.
@@ -82,7 +71,6 @@ let tab_info =
       tab;
       url = snapshot.url;
       title = snapshot.title;
-      page_kind = None;
       origin = ok (Origin.of_string "agent");
       label = None;
       age_s = 0;
@@ -127,14 +115,11 @@ let harness ?(text = "Fact 42") ?(on_step = fun _ -> ()) drives answers =
       {
         observe = (fun ~image:_ () -> Ok (page text));
         navigate = (fun _ -> Ok ());
-        choose = (fun _ -> Alcotest.fail "no choice level");
-        text_value = (fun _ -> Ok None);
         step =
           (fun request ->
             goals := request.R.goal :: !goals;
             on_step request;
             Ok (pop drives));
-        verify = (fun ~pages:_ ~checks:_ ~timeout_s:_ -> Ok ([], page text));
         plan =
           (fun request ->
             asked := request :: !asked;
@@ -144,7 +129,6 @@ let harness ?(text = "Fact 42") ?(on_step = fun _ -> ()) drives answers =
             acts := command :: !acts;
             Ok acted);
         hand_off = (fun ~reason:_ -> Ok tab_info);
-        script = (fun _ ~args:_ -> Alcotest.fail "unexpected script");
       }
   in
   (handler, goals, asked, acts)
@@ -152,8 +136,8 @@ let harness ?(text = "Fact 42") ?(on_step = fun _ -> ()) drives answers =
 let status expected (r : P.run_result) =
   Alcotest.(check string) "status" expected (P.Run_status.to_string r.status)
 
-let loop ?(planner = true) ?(secrets = []) ?(installed = []) ?(now = fun () -> 0.) h p =
-  ran (R.loop ~handler:h ~planner ~secrets ~now ~installed p)
+let loop ?(planner = true) ?(secrets = []) ?(now = fun () -> 0.) h p =
+  ran (R.loop ~handler:h ~planner ~secrets ~now p)
 
 (* JEV's DONE ends a navigation mission; Luna is not asked. *)
 let jev_runs () =
@@ -249,7 +233,6 @@ let fail_and_records () =
     ran
       (R.loop ~handler:h
          ~now:(fun () -> 0.)
-         ~installed:[]
          ~on_record:(fun x ->
            written := x :: !written;
            Ok ())
@@ -277,63 +260,6 @@ let deadline_bounds () =
   status "deadline" (loop ~now:(fun () -> !clock) h (params ()));
   Alcotest.(check bool) "more turns than the old cap of 12" true (List.length !asked > 12)
 
-(* The playbook's procedures are offered to JEV; Luna sees them too and may run one. *)
-let procedures () =
-  let proc =
-    Leash.Playbook.
-      {
-        slug = "open-reports";
-        description = "Open the reports page";
-        args = None;
-        steps = [ Goal { goal = "Click the link named Reports"; hint = None } ];
-        expect = [];
-        repeat = None;
-      }
-  in
-  let book =
-    Leash.Playbook.
-      {
-        file = "<test>";
-        dir = None;
-        playbook =
-          {
-            site = "site.example";
-            entry = "https://site.example/";
-            description = "Reports";
-            pages = [];
-            procedures = [ proc ];
-            shapes = None;
-            scripts = None;
-            notes = Some "Reports are under Archive.";
-          };
-        checks = [];
-        scripts = [];
-      }
-  in
-  let offered = ref [] and outer = ref true in
-  let on_step (request : R.step_request) =
-    if !outer then (
-      outer := false;
-      offered :=
-        List.map
-          (fun (s : Leash__Jev_request.offered_script) -> s.name)
-          (request.script_offers ~url:"https://site.example/" ~text:""))
-  in
-  let h, goals, asked, _ =
-    harness ~on_step
-      [ drive "blocked"; drive "done" ]
-      [ R.Run "open-reports"; R.Fail "done looking" ]
-  in
-  status "failed" (loop ~installed:[ book ] h (params ()));
-  Alcotest.(check (list string)) "offered to JEV" [ "procedure:open-reports" ] !offered;
-  Alcotest.(check bool)
-    "Luna sees the procedure and the notes" true
-    (match List.rev !asked with
-    | q :: _ ->
-        q.R.offered = [ ("open-reports", "Open the reports page") ] && q.R.notes <> None
-    | [] -> false);
-  Alcotest.(check int) "Luna's run drove the procedure's goal" 2 (List.length !goals)
-
 let () =
   Alcotest.run "drive: JEV drives, Luna takes over"
     [
@@ -347,6 +273,5 @@ let () =
             ("the answer at the end", final_answer);
             ("fail and records", fail_and_records);
             ("only the deadline bounds Luna", deadline_bounds);
-            ("procedures for JEV and Luna", procedures);
           ] );
     ]

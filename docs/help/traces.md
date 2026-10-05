@@ -1,7 +1,7 @@
 # Traces
 
 Every public drive outcome is kept by default, including blocked, exhausted,
-error, handed-off, and failed drives, in playbook and on-the-fly lanes.
+error, handed-off, and failed drives.
 
 ```text
 $XDG_STATE_HOME/leash/traces/<site>/<UTC timestamp>-<outcome>.json
@@ -33,20 +33,16 @@ and exit 65. No service, browser, or model is needed.
 ## Safe typed files
 
 The version-1 derived Protocol.drive_trace projection contains time, site, mission,
-outcome, cost (number or null), duration_ms, model_calls, page_kind_path, arguments, procedures, steps, unattended, final (URL/title or null), and optional
-error_code. page_kind_path lists the kinds the selected playbook declared, in order. Procedures
-have n, procedure, outcome, planned, and safe steps. `arguments` is a list of `[name, value]` pairs (default `[]`): only bindings whose values occur in retained, non-redacted typed steps are saved; unused and password-marker bindings are discarded. Steps have n, operation, source (`operator` or `planner`, default `operator`), non_repeatable (default false), optional error code,
+outcome, cost (number or null), duration_ms, model_calls, planner_turns, steps, unattended, final (URL/title or null), and optional
+error_code. Steps have n, operation, source (`operator` or `planner`, default `operator`), non_repeatable (default false), optional error code,
 optional target {role,label}, optional text, operations and targets probability
 lists ({key,probability}), after {url,title}, and elapsed_ms.
 
 Targets come from the decision-time snapshot before an action replaces a row.
-Password-field text is exactly [password]. Page text, tab/snapshot handles,
+Page text, tab/snapshot handles,
 cookies, raw model state, script records, and error messages/details are not saved.
 Mission, URLs, titles, and target labels are retained: do not put secrets in the
 mission. Non-finite probabilities and undeclared operation keys are discarded.
-Only a selected playbook's declared kinds enter page_kind_path; an installed book
-that was not selected does not supply them, and nothing is inferred. Unchanged
-observations do not add duplicates.
 Persistence completes before reply encoding, so trace_path names an existing
 file. Errors expose error.detail.trace_path. Write/prune failures are logged and
 never change the drive outcome; a failed write omits the path.
@@ -79,4 +75,4 @@ toward the newest-first rank. Automatic pruning follows a successful write;
 prune applies the same rule offline. Cutoffs use UTC; the exact age boundary is
 kept.
 
-Done traces obey the same retention limits as every other outcome. Traces are evidence, not input to anything that writes playbooks.
+Done traces obey the same retention limits as every other outcome. Traces are evidence, not input to anything.

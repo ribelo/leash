@@ -1,4 +1,4 @@
-(** The declared shape of a playbook script's result (L37;
+(** The declared shape of a script's result (L37, ADR-0016;
     docs/issues/extract/01-extract.md).
 
     A shape is a small JSON type language, decoded once into this variant. A scalar is one
