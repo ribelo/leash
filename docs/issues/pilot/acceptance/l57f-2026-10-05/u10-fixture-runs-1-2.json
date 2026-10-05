@@ -1,0 +1,26 @@
+{
+  "accounts": [],
+  "registrations": 0,
+  "mail": [],
+  "uploads": [],
+  "portal": {
+    "logins": 1,
+    "opened_messages": [
+      "new"
+    ],
+    "messages": [
+      {
+        "id": "new",
+        "subject": "Your appointment is confirmed",
+        "body": "Your appointment is confirmed for Tuesday at 10:30. Please bring your reference number REF-2048.",
+        "read": true
+      },
+      {
+        "id": "old",
+        "subject": "Welcome to your member portal",
+        "body": "Welcome! You can find updates from our team in this inbox.",
+        "read": true
+      }
+    ]
+  }
+}

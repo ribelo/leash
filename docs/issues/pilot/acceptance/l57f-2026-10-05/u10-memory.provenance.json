@@ -1,0 +1,18 @@
+{
+  "traces": [],
+  "model": "pilot",
+  "time": "1791184660.83",
+  "tries": 0,
+  "path": [],
+  "entry_kind": "portal",
+  "exit_kind": "",
+  "signature": [],
+  "kind_mapping": [],
+  "secrets": [ "portal_user", "portal_password" ],
+  "repeatable": true,
+  "reason": "pilot legs",
+  "gate": "replay",
+  "repair": false,
+  "model_calls": 0,
+  "model_cost": 0.0
+}

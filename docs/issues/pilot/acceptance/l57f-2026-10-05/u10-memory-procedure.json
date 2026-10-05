@@ -1,0 +1,20 @@
+{
+  "site": "127.0.0.1",
+  "entry": "https://127.0.0.1/",
+  "description": "Pilot memory",
+  "pages": [],
+  "procedures": [
+    {
+      "slug": "legs-7d7f95c49da8",
+      "description": "Is there a new message in my fixture portal inbox, and what does it say",
+      "args": {},
+      "steps": [
+        { "goal": "Click the button named Sign in" },
+        { "goal": "Click the link named Your appointment is confirmed" }
+      ],
+      "expect": [
+        "the mission is complete: Is there a new message in my fixture portal inbox, and what does it say"
+      ]
+    }
+  ]
+}
