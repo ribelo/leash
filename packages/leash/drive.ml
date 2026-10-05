@@ -456,7 +456,21 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                             finish ~reason "blocked" (step :: steps) next)
                 | Ok () ->
                     let wanted =
-                      if op <> operation "type_text" then Ok Nothing
+                      if op = operation "upload" then
+                        (* revert-31w3: the file is one the mission names; with several,
+                           the text helper picks one, which must be named verbatim. *)
+                        match J.upload_paths args.P.goal with
+                        | [ path ] -> Ok (Value path)
+                        | [] -> Ok (Missing "file path")
+                        | paths -> (
+                            let context = Text_helper.{ goal = args.P.goal ^ "\nAnswer with exactly one of these files: " ^ String.concat ", " paths;
+                              field = { label = "file to upload"; role = "file-input"; value = "" };
+                              page_title = page.snapshot.title; page_text = page.text; recent = List.rev recent } in
+                            match text_value t context with
+                            | Ok (Some path) when List.mem (String.trim path) paths -> Ok (Value (String.trim path))
+                            | Ok _ -> Ok (Missing "file path")
+                            | Error error -> Error error)
+                      else if op <> operation "type_text" then Ok Nothing
                       else match context page choice recent with
                         | Error error -> Error error
                         | Ok context ->

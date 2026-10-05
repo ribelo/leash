@@ -22,7 +22,7 @@ The planner is optional: `[models] planner_model`; absent means it is never call
 
 The decision model is `[models] decision_model`: any Decisions-API model id (default `typesafe/jev-1.13-20260917`; `cloudflare/clef` and `cloudflare/clef-flash` speak the same contract). When the model's OpenRouter listing says it accepts images, `[decision]` controls what it is shown. The screenshot goes into the state when the page offers fewer than `image_when_rows_below` actionable elements (default 3; 0 never). The model may choose LOOK when `look = true` (default false), at most once per two steps, and the next state carries the screenshot. With a screenshot in the state it may choose CLICK_AT, whose point is two score answers over `point_levels` bands per axis (default and maximum 10, Clef's limit); a point gets the same safety and consent checks as the rows under it. `leash status` shows `models.decision_modalities` and `decision_tail_read`. Drive metrics name the `decision_model` and count `image_parts`.
 
-Payment, checkout confirmation, sending and deletion require explicit authorization in the mission. Never retry an uncertain submission merely because the reply failed.
+JEV can attach a file to a file input (UPLOAD) only when the mission names its absolute path verbatim, and only that file. Payment, checkout confirmation, sending and deletion require explicit authorization in the mission. Never retry an uncertain submission merely because the reply failed.
 
 ## Credentials and human handoff
 

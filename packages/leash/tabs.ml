@@ -2203,8 +2203,9 @@ let page_fingerprint ~url ~page_text ~rows ~scroll_y ~scroll_height =
              ])))
 
 let observation_of (snapshot : P.snapshot) (read : Snapshot_source.operator_read) =
-  let rows = List.filter (fun (row : P.row) -> row.role <> "file-input") snapshot.rows in
-  let snapshot = { snapshot with P.url = read.url; title = read.title; rows } in
+  (* revert-31w3: file-input rows stay; Jev_request offers them only when the mission
+     names a file. *)
+  let snapshot = { snapshot with P.url = read.url; title = read.title } in
   Drive.
     {
       snapshot;
@@ -2525,6 +2526,16 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
           | None ->
               Error
                 (error "internal" "a type_text step reached the browser without a value"))
+      | "upload" -> (
+          (* revert-31w3: the row path the public upload command uses. *)
+          match text with
+          | Some path when List.mem path (Jev_request.upload_paths args.goal) ->
+              Actions.upload ~caps:t.caps ~cdp view
+                P.{ tab = args.tab; snapshot; index; paths = [ path ] }
+          | _ ->
+              Error
+                (error "row-not-actionable"
+                   "upload attaches only a file the mission names"))
       | _ -> Error (error "invalid-request" "unsupported drive operation")
     in
     add_ms meter.input_ms started_act (now t);

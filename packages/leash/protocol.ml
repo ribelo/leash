@@ -156,6 +156,8 @@ type operation =
   | Type [@json.name "type"]
   | Type_text [@json.name "type_text"]
   | Select [@json.name "select"]
+  | Upload [@json.name "upload"]
+      (** revert-31w3: attach a file the mission names to a file-input row. *)
   | Scroll_up [@json.name "scroll_up"]
   | Scroll_down [@json.name "scroll_down"]
   | Wait [@json.name "wait"]

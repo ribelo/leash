@@ -106,6 +106,10 @@ type script_effect =
           carries the one-line recent-actions summary. [Script_blocked] names a required
           argument that could not be filled. *)
 
+val upload_paths : string -> string list
+(** revert-31w3: the absolute file paths a goal names verbatim, the only files an [upload]
+    step may attach. *)
+
 val make :
   model:string ->
   goal:string ->

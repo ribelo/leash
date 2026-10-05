@@ -86,6 +86,7 @@ let operations (row : P.row) =
     | Some options -> if List.exists offered options then [ operation "select" ] else []
     | None -> (
         match row.role with
+        | "file-input" -> [ operation "upload" ]
         | "heading" | "paragraph" | "img" | "status" | "alert" -> []
         | "textbox" | "searchbox" | "spinbutton" | "combobox" ->
             if carries "readonly" row then [ operation "click" ]
@@ -122,11 +123,10 @@ let select_targets index (row : P.row) =
 (* fly-eoqg field-sazr: the operator's table. The agent's snapshot lists password rows
    (field-8bzc); JEV is never offered one, nor a file input. *)
 let operator_row (row : P.row) =
-  row.role <> "file-input"
-  && not
-       (List.exists
-          (fun state -> P.Row_state.to_string state = "password")
-          (Option.value ~default:[] row.state))
+  not
+    (List.exists
+       (fun state -> P.Row_state.to_string state = "password")
+       (Option.value ~default:[] row.state))
 
 let elements (snapshot : P.snapshot) =
   snapshot.rows
@@ -183,6 +183,7 @@ let type_text_label =
   "Enter or replace text in an editable field. A small LLM will supply the value from \
    the goal."
 
+let upload_label = "Attach a file the goal names to a file input."
 let select_label = "Select an observed dropdown value."
 let done_label = "Every requirement is visibly satisfied."
 let blocked_label = "No supported operation can progress."
@@ -219,6 +220,7 @@ let operation_label operation =
   | "click" -> click_label
   | "type_text" -> type_text_label
   | "select" -> select_label
+  | "upload" -> upload_label
   | _ -> assert false
 
 (* snapshot.js:78-79 — the click an editable control also offers is the action labelled
@@ -333,8 +335,26 @@ let bounded_text text =
   done;
   (String.sub text 0 !at, !at < String.length text)
 
+(* revert-31w3 pilot-h506: the files a mission may upload are the absolute paths it
+   names verbatim. *)
+let upload_paths goal =
+  String.map
+    (function
+      | '\n' | '\r' | '\t' | '"' | '\'' | '<' | '>' | '(' | ')' | ',' -> ' ' | c -> c)
+    goal
+  |> String.split_on_char ' '
+  |> List.map (fun word ->
+      let n = String.length word in
+      if n > 1 && (word.[n - 1] = '.' || word.[n - 1] = ';' || word.[n - 1] = ':') then
+        String.sub word 0 (n - 1)
+      else word)
+  |> List.filter (fun word -> String.length word > 1 && word.[0] = '/' && word.[1] <> '/')
+  |> List.sort_uniq String.compare
+
 let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
   let text, text_truncated = bounded_text text in
+  (* revert-31w3: a file input is offered only when the mission names a file. *)
+  let uploadable = upload_paths goal <> [] in
   {
     coverage =
       `Assoc
@@ -350,7 +370,11 @@ let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
     recent;
     can_scroll_down;
     can_scroll_up;
-    elements = elements snapshot;
+    elements =
+      List.filter
+        (fun (element : element) ->
+          uploadable || not (List.mem (operation "upload") element.operations))
+        (elements snapshot);
     scripts = [];
     shown_url = None;
     image = None;

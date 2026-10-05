@@ -1307,6 +1307,32 @@ let single_target_clef () =
       Alcotest.(check (option int))
         "revert-v1hm the sole candidate" (Some 1) decision.J.index
 
+(* revert-31w3: a file input is offered as UPLOAD only when the goal names a file; the
+   files are the absolute paths the goal names verbatim. *)
+let upload_offered () =
+  let rows = [ row 1 "file-input" "Choose file"; button 2 "Upload" ] in
+  let ops goal =
+    let r =
+      J.make ~model ~goal ~snapshot:(snapshot rows) ~text:"" ~recent:[]
+        ~can_scroll_down:false ~can_scroll_up:false
+    in
+    match Option.bind (member "questions" (J.body r)) (member "operation") with
+    | Some q -> (
+        match member "criteria" q with Some (`Assoc c) -> List.map fst c | _ -> [])
+    | None -> []
+  in
+  Alcotest.(check bool)
+    "revert-31w3 offered with a named file" true
+    (List.mem "UPLOAD" (ops "Upload /tmp/report.txt to the service"));
+  Alcotest.(check bool)
+    "revert-31w3 not offered without one" false
+    (List.mem "UPLOAD" (ops "Upload my report"));
+  Alcotest.(check (list string))
+    "revert-31w3 verbatim absolute paths"
+    [ "/home/u/a.txt"; "/tmp/report.txt" ]
+    (J.upload_paths
+       {|Upload /tmp/report.txt, then "/home/u/a.txt". Not https://x.example/y|})
+
 let () =
   Alcotest.run "jev_request"
     [
@@ -1317,6 +1343,7 @@ let () =
           Alcotest.test_case "drive-y37b drive-zml5 the document" `Quick body_document;
           Alcotest.test_case "revert-v1hm one-candidate target for Clef" `Quick
             single_target_clef;
+          Alcotest.test_case "revert-31w3 upload offered" `Quick upload_offered;
           Alcotest.test_case "drive-y37b the element table" `Quick elements_table;
           Alcotest.test_case "drive-zml5 the operation criteria and controls" `Quick
             controls;
