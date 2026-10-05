@@ -58,10 +58,11 @@ let with_memory
 let record t =
   L.record_legs t ~site:"example.com" ~mission:"Find Ada"
     ~args:[ ("name", "Ada") ]
-    ~legs:[ "Search Ada"; "Open Ada" ] ~expect:[ "Ada is visible" ]
+    ~legs:[ "Search Ada"; "Open Ada" ] ~expect:[ "Ada is visible" ] ~entry_kind:""
+    ~secrets:[]
 
 let pick t =
-  match L.candidates t ~site:"example.com" ~kind:None with
+  match L.candidates t ~site:"example.com" ~kind:None ~secrets:[] with
   | [ (p, origin) ] -> (p, origin)
   | _ -> Alcotest.fail "expected one memory candidate"
 
@@ -89,7 +90,7 @@ let recording
       ignore (pick t);
       Alcotest.(check int)
         "site isolation" 0
-        (List.length (L.candidates t ~site:"other.com" ~kind:None)))
+        (List.length (L.candidates t ~site:"other.com" ~kind:None ~secrets:[])))
 
 let replay
     ~(caps :
@@ -138,7 +139,7 @@ let failed
       L.await_pending t;
       Alcotest.(check int)
         "retired after bound" 0
-        (List.length (L.candidates t ~site:"example.com" ~kind:None)))
+        (List.length (L.candidates t ~site:"example.com" ~kind:None ~secrets:[])))
 
 let stale
     ~(caps :
@@ -171,7 +172,7 @@ let single_leg
   with_memory ~caps (fun t ->
       L.record_legs t ~site:"example.com" ~mission:"Find Ada"
         ~args:[ ("name", "Ada"); ("short", "a") ]
-        ~legs:[ "Open Ada" ] ~expect:[ "Ada visible" ];
+        ~legs:[ "Open Ada" ] ~expect:[ "Ada visible" ] ~entry_kind:"" ~secrets:[];
       L.await_pending t;
       let p, origin = pick t in
       (match p.steps with
@@ -210,7 +211,7 @@ let installed_retirement
       done;
       Alcotest.(check int)
         "installed retired" 0
-        (List.length (L.candidates t ~site:"example.com" ~kind:None)))
+        (List.length (L.candidates t ~site:"example.com" ~kind:None ~secrets:[])))
 
 let repair
     ~(caps :
@@ -237,7 +238,7 @@ let repair
       let draft =
         List.find
           (fun (_, origin) -> match origin with `Draft _ -> true | _ -> false)
-          (L.candidates t ~site:"example.com" ~kind:None)
+          (L.candidates t ~site:"example.com" ~kind:None ~secrets:[])
       in
       L.after_mission t ~site:"example.com"
         ~used:[ (fst draft |> fun p -> (p.B.slug, snd draft)) ]
@@ -253,7 +254,51 @@ let repair
         "repair reset consecutive failures" true
         (List.exists
            (fun (_, origin) -> origin = `Installed)
-           (L.candidates t ~site:"example.com" ~kind:None)))
+           (L.candidates t ~site:"example.com" ~kind:None ~secrets:[])))
+
+(* pilot-z1nr: memory recorded after secret fills is offered only where its first leg
+   ran and once the mission has filled those secrets, as a draft and once installed. *)
+let prerequisites
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.time
+       ; Ox_caps.Cap.tmp
+       ; .. >) () =
+  with_memory ~caps (fun t ->
+      L.record_legs t ~site:"example.com" ~mission:"Read the message" ~args:[]
+        ~legs:[ "Click the button named Sign in" ]
+        ~expect:[ "message visible" ] ~entry_kind:"Login" ~secrets:[ "user"; "pass" ];
+      L.await_pending t;
+      let offered ~kind ~secrets =
+        List.length (L.candidates t ~site:"example.com" ~kind ~secrets)
+      in
+      let check label =
+        Alcotest.(check int)
+          (label ^ ": before the fills")
+          0
+          (offered ~kind:(Some "Login") ~secrets:[ "user" ]);
+        Alcotest.(check int)
+          (label ^ ": away from its entry page")
+          0
+          (offered ~kind:(Some "Message") ~secrets:[ "user"; "pass" ]);
+        Alcotest.(check int)
+          (label ^ ": applicable") 1
+          (offered ~kind:(Some "Login") ~secrets:[ "pass"; "user" ])
+      in
+      check "draft";
+      match
+        L.candidates t ~site:"example.com" ~kind:(Some "Login")
+          ~secrets:[ "user"; "pass" ]
+      with
+      | [ (p, origin) ] ->
+          L.after_mission t ~site:"example.com"
+            ~used:[ (p.slug, origin) ]
+            ~outcome:`Done ~verified:true;
+          L.await_pending t;
+          check "installed"
+      | _ -> Alcotest.fail "expected one draft")
 
 let off
     ~(caps :
@@ -269,7 +314,7 @@ let off
       L.await_pending t;
       Alcotest.(check int)
         "disabled memory" 0
-        (List.length (L.candidates t ~site:"example.com" ~kind:None)))
+        (List.length (L.candidates t ~site:"example.com" ~kind:None ~secrets:[])))
 
 let config () =
   Alcotest.(check string)
@@ -312,6 +357,7 @@ let () =
             ("installed retirement", installed_retirement ~caps);
             ("repair resets failures", repair ~caps);
             ("off", off ~caps);
+            ("pilot-z1nr secret and entry prerequisites", prerequisites ~caps);
             ("config", config);
           ] );
     ]

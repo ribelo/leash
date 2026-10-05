@@ -218,6 +218,7 @@ type provenance = {
   exit_kind : string; [@json.default ""]
   signature : (string * Trace.trace_target option) list; [@json.default []]
   kind_mapping : (string * string) list; [@json.default []]
+  secrets : string list; [@json.default []]
   repeatable : bool;
   reason : string;
   gate : string;

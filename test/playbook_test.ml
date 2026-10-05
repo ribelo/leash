@@ -1101,6 +1101,7 @@ let provenance_sidecar
             exit_kind = "list";
             signature = [];
             kind_mapping = [];
+            secrets = [];
             repeatable = true;
             reason = "test";
             gate = "replay";

@@ -29,12 +29,15 @@ val record_legs :
   args:(string * string) list ->
   legs:string list ->
   expect:string list ->
+  entry_kind:string ->
+  secrets:string list ->
   unit
 
 val candidates :
   t ->
   site:string ->
   kind:string option ->
+  secrets:string list ->
   (Playbook.procedure * [ `Installed | `Draft of string ]) list
 
 val after_mission :

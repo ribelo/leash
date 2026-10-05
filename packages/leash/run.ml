@@ -383,6 +383,12 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
       downloads = List.map (fun (name, mime, state) -> (scrub name, scrub mime, scrub state)) page.downloads } in
   let turns = ref [] and procedures = ref [] and legs = ref [] in
   let successful = ref [] and used = ref [] and known = ref [] in
+  (* pilot-z1nr: remembered procedures that failed in this mission, the secrets filled so
+     far, and the page kind where the remembered legs begin. *)
+  let spent = ref [] and filled = ref [] and entry_kind = ref None and current_kind = ref None in
+  let remember goal =
+    if !successful = [] then entry_kind := !current_kind;
+    successful := !successful @ [ goal ] in
   let total_steps = ref 0 and operator_steps = ref [] and operator_state = ref None in
   let generated = ref [] and expectations = ref args.expect and checks = ref [] and unattended = ref [] in
   let records = ref [] and sites = ref [] and current_site = ref None in
@@ -404,6 +410,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
       if name = "done" then Option.iter (fun site ->
         Learning.record_legs memory ~site ~mission:(scrub args.mission)
           ~args:(List.map (fun (key,value) -> scrub key,scrub value) !known) ~legs:!successful
+          ~entry_kind:(scrub (Option.value ~default:"" !entry_kind)) ~secrets:!filled
           (* pilot-3egp: without an expectation from the pilot, the remembered procedure
              checks where the mission ended (U2 on Tauron finished done and wrote nothing). *)
           ~expect:(List.map scrub (match !expectations with
@@ -447,10 +454,11 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     let kind, _ = Page_kind.classify page_kinds ~declared ~url:page.url ~title:page.title in
     (if kind.name = "" then None else Some kind.name), book in
   let get_candidates kind book =
-    match learning, !current_site with
-    | Some memory, Some site -> Learning.candidates memory ~site ~kind
+    (match learning, !current_site with
+    | Some memory, Some site -> Learning.candidates memory ~site ~kind ~secrets:!filled
     | _ -> Option.fold ~none:[] ~some:(fun (b : Playbook.loaded) ->
-        List.map (fun p -> p, `Installed) b.playbook.procedures) book in
+        List.map (fun p -> p, `Installed) b.playbook.procedures) book)
+    |> List.filter (fun ((p : Playbook.procedure), _) -> not (List.mem p.slug !spent)) in
   let record_failed_leg goal outcome reason =
     let goal = scrub goal and reason = scrub reason in
     legs := !legs @ [{goal;outcome;steps=[]}];
@@ -478,7 +486,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
         operator_state := drive.operator_state;
         let outcome = P.Drive_status.to_string drive.status in
         legs := !legs @ [{ goal; outcome; steps = drive.steps }];
-        if outcome = "done" then successful := !successful @ [goal];
+        if outcome = "done" then remember goal;
         let entry = P.{ revision = None; slug = goal; site = Option.value ~default:"" !current_site;
           planned = true; attempts = 1;
           choice = { key = "leg"; probabilities = `Null; confidence = 1.; usage = None };
@@ -660,9 +668,13 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
       steps = [] } ];
     (* pilot-3egp: an act that worked is a leg in JEV's language and is remembered, except
        a fill whose text is a secret name — JEV would type the name. *)
+    (* pilot-z1nr: memory starts after the last secret fill, which it needs as a
+       prerequisite instead of replaying (U10 remembered "Sign in" without its fills). *)
     (match step.error, command with
-     | None, P.Fill a when List.mem_assoc a.text !private_values -> ()
-     | None, (P.Click _ | P.Select _ | P.Press _ | P.Fill _) -> successful := !successful @ [ described ]
+     | None, (P.Fill { text; _ } | P.Type { text; _ }) when List.mem_assoc text !private_values ->
+         successful := []; entry_kind := None;
+         if not (List.mem text !filled) then filled := !filled @ [ text ]
+     | None, (P.Click _ | P.Select _ | P.Press _ | P.Fill _) -> remember described
      | _ -> ());
     step in
   let rec turn (page : observation) =
@@ -670,6 +682,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     else if List.length !turns >= args.max_plans then finish page "limit" ~reason:"pilot turn cap reached" ()
     else
       let kind, book = infer page in
+      current_kind := kind;
       let candidates = get_candidates kind book in
       let snapshot = { page.snapshot with P.rows = List.filteri (fun i _ -> i < 250) page.snapshot.rows } in
       let model_candidates=List.filter_map (fun (proc,source) -> match Playbook.procedure_of_yojson (json (Playbook.yojson_of_procedure proc)) with
@@ -757,6 +770,11 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
               if now () >= deadline || List.length !turns >= args.max_plans then turn page
               else next ~image:true ()
           | Act action -> let step = act page action in recorded [step] step.error; next ()
+          | Leg goal when List.mem goal !spent ->
+              recorded [] (Some goal);
+              legs := !legs @ [ { goal = scrub goal; steps = [];
+                outcome = "refused: this remembered procedure already failed in this mission; act on the page instead" } ];
+              next ()
           | Leg goal ->
               recorded [] (Some goal);
               let chosen = List.find_opt (fun ((p : Playbook.procedure), _) -> p.slug = goal) candidates in
@@ -775,7 +793,9 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
                     let scripts = List.filteri (fun i _ -> i < List.length !script_calls - before_scripts) !script_calls |> List.rev in
                     let entry=P.{revision=(match revision with `Installed -> None | `Draft value -> Some (scrub value));slug=scrub goal;site=Option.value ~default:"" !current_site;planned=true;attempts=1;
                       choice={key="leg";probabilities=`Null;confidence=1.;usage=None};drives;scripts;expectations=List.filteri (fun i _ -> i>=before_checks) !candidate_checks;outcome=status;elapsed_ms=ms (now () -. at);reason=(match outcome with Ok () -> None | Error error -> Some (scrub error.message))} in
-                    procedures := entry::old_procedures; outcome in
+                    procedures := entry::old_procedures;
+                    if status <> "done" then spent := proc.slug :: !spent;
+                    outcome in
               (match outcome with Error error ->
                 ignore error; next () | Ok () -> next ())
           in

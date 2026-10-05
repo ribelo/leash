@@ -77,7 +77,7 @@ Fill adds text (value or secret NAME); select adds option; press adds key. Row a
 Picture actions need no row. Points and row boxes use viewport CSS pixels: divide PNG pixels by image.scale. Type uses current focus. Native hits identify hosts, not controls drawn inside canvas or streams. Never repeat uncertain actions.
 {"answer":"observe","image":true}
 {"answer":"act","action":{"cmd":"scroll","args":{"tab":"offered tab","direction":"down"}}}
-Only visible rows are offered; scroll or request an image for missing controls. Completed downloads are done; name their paths.
+Only visible rows are offered: scroll for controls outside the view; observe an image only for visible controls without rows. Completed downloads are done; name their paths.
 {"answer":"handoff","reason":"operator required"}
 {"answer":"notify","message":"operator message"}
 {"answer":"done","result":"outcome with identifiers","evidence":["facts, URLs or files"]}

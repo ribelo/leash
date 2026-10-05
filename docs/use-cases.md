@@ -373,3 +373,26 @@ Replies: [U1](</tmp/leash-u12l-20261004-ziz93ryx/evidence/U1-installed-reply.jso
 **U1 completion of the setup.** The first additional U1 run had only U2 memory installed, so it was not the requested U1 replay. The existing pilot-written U1 draft from K was then reviewed and installed unchanged in L; [the further unchanged mission](</tmp/leash-u12l-20261004-ziz93ryx/evidence/U1-own-memory-reply.json>) selected it and completed. [Independent invoice text](</tmp/leash-u12l-20261004-ziz93ryx/evidence/U1-own-memory-independent-text.json>) confirms the two overdue rows, 544,92 + 211,96 = 756,88 zł, each two days overdue. This view uses relative overdue labels rather than the absolute due date; an initially over-specific verifier was corrected without rerunning the mission. Notifications were enabled with their original defaults for this final run. The private service was stopped afterward; final credential scan: 140 artifacts, 0 login / 0 password matches.
 
 **Conclusion:** installed memory was exercised, but it is not a reliable improvement: U1 and U6 replay successfully without a demonstrated cost saving, U5/U10 regress, and U2 selects a draft and over-downloads. Automatic replay-gated installation remains unproven.
+
+## Results — 2026-10-05, gate findings (L57F)
+
+Each case is diagnosed, fixed and rerun in a private headless service with its own XDG directories and Chrome profile, `[learning] mode = "auto"`, the default 12 pilot turns, and the real pilot. Redacted replies and memory files are in [the L57F evidence](<issues/pilot/acceptance/l57f-2026-10-05/>).
+
+### U5 — rerun with inapplicable memory suppressed (pilot-z1nr)
+
+**Diagnosis.** In L57 the installed U5 memory began with "Click the button named Reject all", a consent page that a profile with stored consent never shows again. The pilot selected it on all 12 turns. Two causes: a remembered procedure that failed in the mission was offered again on every turn, and memory recorded nothing about where it begins, so it was offered on a page where its first leg could not apply.
+
+**Fix.** A remembered procedure that fails in a mission is no longer offered for the rest of that mission. If the pilot names it again, the leg is refused in its history. Memory now records the page kind where its first leg ran, and is offered only on that kind. Memory recorded after a secret fill starts after that fill and is offered only once the mission has filled the same secrets (for U10). The pilot prompt also said to "request an image for missing controls". A picture shows only the viewport, so the image turns were wasted on pages with rows. The prompt now says: scroll for controls outside the view; observe an image only for visible controls without rows.
+
+**Rerun, fresh profile.** Built from `388938a` with the fix. Mission verbatim, `--url https://www.google.com/travel/flights`.
+
+| Run | Memory offered | Status | Pilot turns | Calls / cost |
+| --- | --- | --- | --- | --- |
+| First (consent page shown) | none | done | 10 | 12 / $0.00588462 |
+| Second (same profile, consent stored) | none: the draft's entry kind is the consent page `m`, the run starts on `flights` | done | 6 | 8 / $0.004836185 |
+
+Both results: "PLN 341, departing Saturday, November 28 … the return date would be approximately Saturday, December 5". The first run recorded draft `legs-5c12cb7f37e8` with `entry_kind: "m"` and its first goal "Click the button named Reject all" ([memory](<issues/pilot/acceptance/l57f-2026-10-05/u5-memory.json>), [provenance](<issues/pilot/acceptance/l57f-2026-10-05/u5-memory.provenance.json>)). In the second run every turn offered no candidate ([reply](<issues/pilot/acceptance/l57f-2026-10-05/u5-second.json>)).
+
+**Independent check** ([text](<issues/pilot/acceptance/l57f-2026-10-05/u5-second-independent.txt>)). The harness opened the pilot's evidence URL in a fresh tab. Google's own overview reads "Cheapest round-trip flights | PLN 341 | Ryanair | Nonstop | 5 hr | Sat, Nov 28 — Sat, Dec 5". A fresh search for those dates shows "Fly from WMI for PLN 341". Price and dates agree with the result. **U5 passes.** The pilot gives the return date as approximate because it read a 7-day-trip calendar. Google's overview confirms that exact pair.
+
+**Within-mission suppression on the old memory.** The L57 private root still holds `legs-f51320787656`, installed before memory recorded an entry kind. Rerun there with the fix, before the prompt correction ([reply](<issues/pilot/acceptance/l57f-2026-10-05/u5-stale-memory.json>)): the pilot chose it once (turn 1, blocked after 4 navigator steps), and it was never offered again. The mission still ended at the turn cap without a result. The failed leg left the page scrolled, and the pilot spent three turns on image observations and two on scrolls. Memory recorded before this fix has no entry state. It stays offered at the start of a mission until it retires.

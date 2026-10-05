@@ -173,32 +173,40 @@ let installed t =
       t.warn why;
       []
 
-let applicable entry kind = entry = "" || entry = "unknown" || kind = Some entry
+(* pilot-z1nr: a procedure applies where its first remembered leg ran, and only once the
+   mission has filled the secrets that preceded it (U10 replayed "Sign in" before the
+   fills, and again from the message it had already opened). *)
+let applicable ~kind ~secrets (provenance : B.provenance) =
+  (provenance.entry_kind = ""
+  || provenance.entry_kind = "unknown"
+  || kind = Some provenance.entry_kind)
+  && List.for_all (fun name -> List.mem name secrets) provenance.secrets
 
-let eligible t ~site ~kind d =
+let eligible t ~site ~kind ~secrets d =
   d.book.playbook.site = site
   && d.provenance.tries < t.config.max_tries
-  && applicable d.provenance.entry_kind kind
+  && applicable ~kind ~secrets d.provenance
 
-let candidates t ~site ~kind =
+let installed_provenance t (b : B.loaded) slug =
+  match b.dir with
+  | None -> None
+  | Some dir -> (
+      match
+        B.read_provenance ~caps:t.caps (Filename.concat dir (B.provenance_filename slug))
+      with
+      | Ok provenance -> provenance
+      | Error _ -> None)
+
+let candidates t ~site ~kind ~secrets =
   let known = installed t |> List.filter (fun (b : B.loaded) -> b.playbook.site = site) in
   let known =
     List.concat_map
       (fun (b : B.loaded) ->
         List.filter_map
           (fun (p : B.procedure) ->
-            let entry =
-              match b.dir with
-              | None -> ""
-              | Some dir -> (
-                  match
-                    B.read_provenance ~caps:t.caps
-                      (Filename.concat dir (B.provenance_filename p.slug))
-                  with
-                  | Ok (Some v) -> v.entry_kind
-                  | _ -> "")
-            in
-            if applicable entry kind then Some (p, `Installed) else None)
+            match installed_provenance t b p.slug with
+            | Some provenance when not (applicable ~kind ~secrets provenance) -> None
+            | _ -> Some (p, `Installed))
           b.playbook.procedures)
       known
   in
@@ -207,7 +215,7 @@ let candidates t ~site ~kind =
     known
     @ (proposals t
       |> List.filter_map (fun d ->
-          if eligible t ~site ~kind d then
+          if eligible t ~site ~kind ~secrets d then
             Some (d.proc, `Draft (B.draft_revision d.book.playbook))
           else None))
 
@@ -216,7 +224,7 @@ let drafts t ~site ~kind =
   else
     proposals t
     |> List.filter_map (fun d ->
-        if eligible t ~site ~kind d then
+        if eligible t ~site ~kind ~secrets:[] d then
           Some
             B.
               {
@@ -262,7 +270,7 @@ let generalize args text =
   in
   loop 0
 
-let record_legs t ~site ~mission ~args ~legs ~expect =
+let record_legs t ~site ~mission ~args ~legs ~expect ~entry_kind ~secrets =
   if
     t.config.mode <> Config.Learning_mode.Off
     && site <> "unknown" && legs <> [] && expect <> []
@@ -332,10 +340,11 @@ let record_legs t ~site ~mission ~args ~legs ~expect =
                 tries = 0;
                 last_failure = None;
                 path = [];
-                entry_kind = "";
+                entry_kind;
                 exit_kind = "";
                 signature = [];
                 kind_mapping = [];
+                secrets;
                 repeatable = not (B.non_repeatable_context mission);
                 reason = "pilot legs";
                 gate = "replay";
@@ -402,6 +411,7 @@ let after_mission t ~site ~used ~outcome ~verified =
                           List.iter
                             (fun (proc : B.procedure) ->
                               if proc.slug = slug then
+                                let original = installed_provenance t book slug in
                                 let provenance =
                                   B.
                                     {
@@ -413,10 +423,17 @@ let after_mission t ~site ~used ~outcome ~verified =
                                       last_failure =
                                         Some "installed procedure failed twice";
                                       path = [];
-                                      entry_kind = "";
+                                      entry_kind =
+                                        Option.fold ~none:""
+                                          ~some:(fun (p : B.provenance) -> p.entry_kind)
+                                          original;
                                       exit_kind = "";
                                       signature = [];
                                       kind_mapping = [];
+                                      secrets =
+                                        Option.fold ~none:[]
+                                          ~some:(fun (p : B.provenance) -> p.secrets)
+                                          original;
                                       repeatable =
                                         B.procedure_repeatable book.playbook
                                           ~context:proc.description proc;

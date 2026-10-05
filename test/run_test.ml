@@ -425,7 +425,14 @@ let act_memory
                   ~planner_action:(fun _ -> Ok clicked)
                   (params ())));
           Leash.Learning.await_pending memory;
-          match Leash.Learning.candidates memory ~site:"site.example" ~kind:None with
+          let kind, _ =
+            Leash.Page_kind.classify (Leash.Page_kind.session ()) ~declared:None
+              ~url:snapshot.url ~title:snapshot.title
+          in
+          match
+            Leash.Learning.candidates memory ~site:"site.example" ~kind:(Some kind.name)
+              ~secrets:[]
+          with
           | [ (proc, _) ] ->
               Alcotest.(check bool)
                 "act remembered as a leg" true
@@ -687,6 +694,64 @@ let unsafe_words () =
       ("Wyślij", Some "messaging");
     ]
 
+(* pilot-z1nr: a remembered procedure that failed in this mission is not offered or run
+   again; U5 selected the same stale consent-first procedure on all twelve turns. *)
+let stale_memory () =
+  let proc =
+    Leash.Playbook.
+      {
+        slug = "legs-stale";
+        description = "Find a fact";
+        args = None;
+        steps = [ Goal { goal = "Click the button named Reject all"; hint = None } ];
+        expect = [];
+        repeat = None;
+      }
+  in
+  let book =
+    Leash.Playbook.
+      {
+        file = "playbook.json";
+        dir = None;
+        playbook =
+          {
+            site = "site.example";
+            entry = "https://site.example/";
+            description = "Pilot memory";
+            pages = [];
+            procedures = [ proc ];
+            shapes = None;
+            scripts = None;
+          };
+        checks = [];
+        scripts = [];
+      }
+  in
+  let h, requests, goals =
+    harness ~statuses:[ "blocked" ]
+      [ reply (R.Leg "legs-stale"); reply (R.Leg "legs-stale"); finish ]
+  in
+  let result =
+    ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[ book ] (params ()))
+  in
+  Alcotest.(check string)
+    "mission still done" "done"
+    (P.Run_status.to_string result.status);
+  Alcotest.(check int) "the stale procedure ran once" 1 (List.length !goals);
+  let offered (request : R.plan_request) =
+    List.map (fun ((p : Leash.Playbook.procedure), _) -> p.slug) request.candidates
+  in
+  match List.rev !requests with
+  | first :: second :: third :: _ ->
+      Alcotest.(check (list string))
+        "offered before failing" [ "legs-stale" ] (offered first);
+      Alcotest.(check (list string)) "not offered after failing" [] (offered second);
+      Alcotest.(check (list string)) "still not offered" [] (offered third);
+      Alcotest.(check string)
+        "naming it again is refused in the history" "refused"
+        (String.sub (List.hd (List.rev third.R.legs)).outcome 0 7)
+  | _ -> Alcotest.fail "expected three pilot turns"
+
 let schema_redaction () =
   let h, _, _ = harness [ finish ] in
   Alcotest.(check bool)
@@ -722,5 +787,6 @@ let () =
             ("refusal words are whole words", unsafe_words);
             ("refused reply costs a turn", refused_reply_costs_a_turn);
             ("acts are remembered", act_memory ~caps);
+            ("pilot-z1nr failed memory is not offered again", stale_memory);
           ] );
     ]

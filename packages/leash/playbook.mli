@@ -56,6 +56,9 @@ type provenance = {
   exit_kind : string;
   signature : (string * Trace.trace_target option) list;
   kind_mapping : (string * string) list;
+  secrets : string list;
+      (** pilot-z1nr: secret names the mission filled before these steps; the procedure is
+          offered only once the current mission has filled them all. *)
   repeatable : bool;
   reason : string;
   gate : string;

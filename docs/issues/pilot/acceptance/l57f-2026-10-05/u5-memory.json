@@ -1,0 +1,24 @@
+{
+  "site": "www.google.com",
+  "entry": "https://www.google.com/",
+  "description": "Pilot memory",
+  "pages": [],
+  "procedures": [
+    {
+      "slug": "legs-5c12cb7f37e8",
+      "description": "Find the cheapest flight from Warsaw to Lisbon next month and tell me its price and dates",
+      "args": {},
+      "steps": [
+        { "goal": "Click the button named Reject all" },
+        { "goal": "Type Warsaw into the combobox named Where from?" },
+        { "goal": "Click the option named Warsaw" },
+        { "goal": "Type Lisbon into the combobox named Where to? " },
+        { "goal": "Click the option named Lisbon, Portugal" },
+        { "goal": "Click the textbox named Departure" }
+      ],
+      "expect": [
+        "the mission is complete: Find the cheapest flight from Warsaw to Lisbon next month and tell me its price and dates"
+      ]
+    }
+  ]
+}
