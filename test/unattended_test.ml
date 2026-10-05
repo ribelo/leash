@@ -302,7 +302,14 @@ let tab_open tabs result =
   ignore
     (succeeded
        (Tabs.snap tabs
-          P.{ tab = result.P.final.tab; match_ = None; limit = None; offset = None }))
+          P.
+            {
+              tab = result.P.final.tab;
+              match_ = None;
+              limit = None;
+              offset = None;
+              with_image = None;
+            }))
 
 let notify_then_done
     ~(caps :

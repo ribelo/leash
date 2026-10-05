@@ -1075,7 +1075,14 @@ let human
       ignore
         (result
            (request tabs "human"
-              (P.Snap { tab = human_tab; match_ = None; limit = None; offset = None })));
+              (P.Snap
+                 {
+                   tab = human_tab;
+                   match_ = None;
+                   limit = None;
+                   offset = None;
+                   with_image = None;
+                 })));
       Alcotest.(check bool)
         "tab-of0i adopted page installed" true
         (Fake.received (fake ())
@@ -1177,7 +1184,8 @@ let daily_snapshot
           let snap () =
             result
               (request tabs "alice"
-                 (P.Snap { tab; match_ = None; limit = None; offset = None }))
+                 (P.Snap
+                    { tab; match_ = None; limit = None; offset = None; with_image = None }))
           in
           let rows json = match get "rows" json with `List xs -> xs | _ -> [] in
           let observed = rows (snap ()) in
@@ -1266,7 +1274,9 @@ let snapshot
               ]));
       let h = result (request tabs "alice" (P.New { url = None; label = None })) |> tab in
       let snap ?match_ ?limit ?offset () =
-        result (request tabs "alice" (P.Snap { tab = h; match_; limit; offset }))
+        result
+          (request tabs "alice"
+             (P.Snap { tab = h; match_; limit; offset; with_image = None }))
       in
       let first = snap () in
       Alcotest.(check bool) "tab-of0i settled" true (get "settled" first = `Bool true);
@@ -1284,14 +1294,28 @@ let snapshot
       let calls = List.length (Fake.received fake) in
       check_code "tab-1rx9 reject negative offset" "invalid-request"
         (request tabs "alice"
-           (P.Snap { tab = h; match_ = None; limit = None; offset = Some (-1) }));
+           (P.Snap
+              {
+                tab = h;
+                match_ = None;
+                limit = None;
+                offset = Some (-1);
+                with_image = None;
+              }));
       Alcotest.(check int)
         "tab-1rx9 no CDP on invalid request" calls
         (List.length (Fake.received fake));
       ignore
         (result
            (request tabs "bob"
-              (P.Snap { tab = h; match_ = None; limit = None; offset = None })));
+              (P.Snap
+                 {
+                   tab = h;
+                   match_ = None;
+                   limit = None;
+                   offset = None;
+                   with_image = None;
+                 })));
       let bad =
         match P.Handle.of_string "t_not_a_tab" with
         | Ok h -> h
@@ -1299,7 +1323,8 @@ let snapshot
       in
       check_code "hand-scaz a handle you do not hold" "unknown-tab"
         (request tabs "bob"
-           (P.Snap { tab = bad; match_ = None; limit = None; offset = None }));
+           (P.Snap
+              { tab = bad; match_ = None; limit = None; offset = None; with_image = None }));
       let filtered = snap ~match_:"GO" ~limit:0 () in
       Alcotest.(check int)
         "tab-hyap matched total" 1
@@ -1340,7 +1365,8 @@ let snapshot
         if n = 0 then Alcotest.fail "dialog event was not delivered"
         else
           match
-            Leash.Tabs.snap tabs { tab = h; match_ = None; limit = None; offset = None }
+            Leash.Tabs.snap tabs
+              { tab = h; match_ = None; limit = None; offset = None; with_image = None }
           with
           | Ok { dialog = Some _; _ } -> ()
           | _ ->
@@ -1658,7 +1684,8 @@ let refused_click_redecides
       let observed =
         result
           (request tabs "alice"
-             (P.Snap { tab = h; match_ = None; limit = None; offset = None }))
+             (P.Snap
+                { tab = h; match_ = None; limit = None; offset = None; with_image = None }))
       in
       let rows = match get "rows" observed with `List rows -> rows | _ -> [] in
       let index =
@@ -1774,7 +1801,8 @@ let empty_names
       let snapshot () =
         result
           (request tabs "alice"
-             (P.Snap { tab = h; match_ = None; limit = None; offset = None }))
+             (P.Snap
+                { tab = h; match_ = None; limit = None; offset = None; with_image = None }))
       in
       let rows json = match get "rows" json with `List rows -> rows | _ -> [] in
       let value row = match field "value" row with Some (`String v) -> v | _ -> "" in
@@ -1886,7 +1914,8 @@ let pseudo_icon_hit
       let observed =
         result
           (request tabs "alice"
-             (P.Snap { tab; match_ = None; limit = None; offset = None }))
+             (P.Snap
+                { tab; match_ = None; limit = None; offset = None; with_image = None }))
       in
       let rows = match get "rows" observed with `List rows -> rows | _ -> [] in
       let index =
@@ -2062,7 +2091,14 @@ let journal_redaction
             Status;
             Take { url = None; title = None; label = Some "missing" };
             Close { tab = missing };
-            Snap { tab = missing; match_ = None; limit = None; offset = None };
+            Snap
+              {
+                tab = missing;
+                match_ = None;
+                limit = None;
+                offset = None;
+                with_image = None;
+              };
             Shot { tab = missing; path = "/tmp/no-shot"; full_page = None };
             Debug { tab = missing; limit = None; clear = None };
             Eval
@@ -2914,7 +2950,13 @@ let run_refusals
             else
               match
                 Leash.Tabs.snap tabs
-                  { tab = h; match_ = None; limit = None; offset = None }
+                  {
+                    tab = h;
+                    match_ = None;
+                    limit = None;
+                    offset = None;
+                    with_image = None;
+                  }
               with
               | Ok { dialog = Some _; _ } -> ()
               | _ ->

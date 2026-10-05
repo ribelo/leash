@@ -469,6 +469,7 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
                           | Error _ -> assert false);
                         ]);
                   options = None;
+                  box = None;
                 },
                 backend );
             ]
@@ -505,6 +506,7 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
                   value;
                   state = states n;
                   options = options_of effective_role n;
+                  box = None;
                 },
                 backend );
             ]
@@ -539,6 +541,7 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
               value = None;
               state;
               options = None;
+              box = None;
             },
             backend )
         in
@@ -622,6 +625,7 @@ let frame_rows ~url ~dom ~width ~height ~scroll_x ~scroll_y =
                         value = None;
                         state = Some [ state ];
                         options = None;
+                        box = None;
                       },
                     backend )
             | _ -> None))

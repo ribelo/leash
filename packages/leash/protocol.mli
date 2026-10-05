@@ -289,6 +289,32 @@ type row_option = {
 val row_option_of_yojson : Yojson.Safe.t -> (row_option, string) result
 val yojson_of_row_option : row_option -> Yojson.Safe.t
 
+type point = { x : float; y : float }
+(** Viewport CSS coordinates, never desktop or image pixels. *)
+
+val point_of_yojson : Yojson.Safe.t -> (point, string) result
+val yojson_of_point : point -> Yojson.Safe.t
+
+type viewport = { width : float; height : float }
+
+type shot_result = {
+  path : string;
+  bytes : int;
+  width : int;
+  height : int;
+  viewport : viewport;
+  scale : float;
+  full_page : bool;
+}
+(** Actual PNG pixels and pixels per CSS pixel. Full-page scale uses captured content
+    width, not viewport height. *)
+
+type css_box = { x : float; y : float; width : float; height : float }
+(** Native border rectangle in viewport CSS pixels, without screenshot scaling. *)
+
+val css_box_of_yojson : Yojson.Safe.t -> (css_box, string) result
+val yojson_of_css_box : css_box -> Yojson.Safe.t
+
 type row = {
   index : int;
   role : string;
@@ -296,12 +322,14 @@ type row = {
   value : string option;
   state : Row_state.t list option;
   options : row_option list option;
+  box : css_box option;
 }
 (** [value], [state] and [options] are [key?]: each is omitted when the row has none.
     [options] is the option list of a native select row — role [combobox] or [listbox],
     read from the accessibility tree even while the select is closed — in the select's own
     order; it is absent on every other row. A closed select's options have no layout box
-    and never become rows of their own (tab-5deq). *)
+    and never become rows of their own (tab-5deq). [box] is [CSS viewport box|null]: image
+    snapshots include available native geometry, never fabricated rectangles. *)
 
 val row_of_yojson : Yojson.Safe.t -> (row, string) result
 val yojson_of_row : row -> Yojson.Safe.t
@@ -323,33 +351,15 @@ type snapshot = {
   truncated : bool;
   settled : bool;
   source : snapshot_source;
+  image : shot_result option;
   reason : string option;
   dialog : dialog option;
 }
-(** [dialog] is [T|null]. *)
+(** [dialog] is [T|null]. [image] is a private viewport PNG with measured pixel dimensions
+    and CSS viewport/scale, present when [snap --with-image] captures it. *)
 
 val snapshot_of_yojson : Yojson.Safe.t -> (snapshot, string) result
 val yojson_of_snapshot : snapshot -> Yojson.Safe.t
-
-type point = { x : float; y : float }
-(** Viewport CSS coordinates, never desktop or image pixels. *)
-
-val point_of_yojson : Yojson.Safe.t -> (point, string) result
-val yojson_of_point : point -> Yojson.Safe.t
-
-type viewport = { width : float; height : float }
-
-type shot_result = {
-  path : string;
-  bytes : int;
-  width : int;
-  height : int;
-  viewport : viewport;
-  scale : float;
-  full_page : bool;
-}
-(** Actual PNG pixels and pixels per CSS pixel. Full-page scale uses captured content
-    width, not viewport height. *)
 
 type point_hit = {
   at : point;
@@ -439,6 +449,7 @@ type snap_args = {
   match_ : string option;
   limit : int option;
   offset : int option;
+  with_image : bool option;
 }
 
 type text_args = { tab : Handle.t; index : int option; max_chars : int option }

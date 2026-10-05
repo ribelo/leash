@@ -232,6 +232,7 @@ let scripted_steps
                     value = None;
                     state = None;
                     options = None;
+                    box = None;
                   };
                 ];
               total = 1;
@@ -239,6 +240,7 @@ let scripted_steps
               truncated = false;
               settled = true;
               source = Ax;
+              image = None;
               reason = None;
               dialog = None;
             };

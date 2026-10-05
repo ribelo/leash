@@ -71,4 +71,6 @@ One verified pushed commit per step. Only afterward resume L57F: U5, U10, U9, U7
 
 The coordinate slice implements `pic-egvj`, `pic-f2hy`, `pic-33hm` and `pic-ncu1`. Control/CDP tests cover every new command, fractional CSS dispatch versus native integer hit samples, canvas-host/empty-hit evidence, HiDPI and full-page scale, private before/after PNGs and refused-drag button release. CLI tests cover the picture forms, mixed/nonfinite input and protected text sources.
 
-`pic-cqcf` is complete for those native commands only; its image-snapshot and image-pilot tests remain open with the remaining seven stories. No live success is inferred from these fake-browser results.
+`pic-7nv6` implements `snap --with-image`: a private measured viewport PNG and each row's native viewport-CSS border box, explicitly null when unavailable. Native box evidence is not device-scaled and does not become row identity; row revalidation retains its existing targets. The control/CDP and CLI tests cover image admission, 2× PNG/CSS alignment, unavailable boxes, private PNGs and observation without input.
+
+`pic-cqcf` is complete for native commands and image snapshots; its image-pilot tests remain open with the remaining six stories. No live success is inferred from these fake-browser results.

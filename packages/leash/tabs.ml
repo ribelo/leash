@@ -1471,12 +1471,136 @@ let page_guard call =
 
 (* tab-of0i tab-tmoc tab-1r34 tab-hyap tab-1rx9 tab-0vh8:
    retain the unfiltered node table for later action-time revalidation. *)
+(* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax:
+   the registry owns identity and the page session; Reading owns browser-specific work. *)
+let reading_browser t ~session tab cdp : Reading.browser =
+  (* daily-6pde daily-9ggi: subscribe before each read so a dialog opening during
+     a withheld CDP call wins over the command deadline. Answering it bypasses the guard. *)
+  let call meth params =
+    if meth = "Page.handleJavaScriptDialog" then session_call cdp tab session meth params
+    else
+      match
+        Dialog_race.first (dialog_race tab) (fun () ->
+            session_call cdp tab session meth params)
+      with
+      | `Value result -> result
+      | `Dialog dialog ->
+          Error
+            (P.make_error
+               (enum P.Error_code.of_string "dialog-open")
+               ~message:"a dialog blocks page reads; answer it first"
+               ~detail:(P.yojson_of_dialog dialog))
+  in
+  {
+    call;
+    capture =
+      (fun ~full_page ->
+        match
+          Dialog_race.first (dialog_race tab) (fun () ->
+              Screenshot.capture tab.screenshot ~call ~within:t.capture_timeout ~full_page
+                ~stop:(fun () ->
+                  (* Bounded cleanup must not replace the capture result. *)
+                  let _screencast_stopped =
+                    cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
+                      "Page.stopScreencast" (obj [])
+                  in
+                  ()))
+        with
+        | `Value result -> result
+        | `Dialog dialog ->
+            Error
+              (P.make_error
+                 (enum P.Error_code.of_string "dialog-open")
+                 ~message:"a dialog blocks page reads; answer it first"
+                 ~detail:(P.yojson_of_dialog dialog)));
+    now = (fun () -> now t);
+    sleep = t.sleep;
+    current = (fun () -> (tab.url, tab.title));
+    dialog = (fun () -> tab.dialog);
+    dialog_race = dialog_race tab;
+    acknowledge = (fun () -> acknowledge tab);
+    row =
+      (fun index ->
+        match tab.snapshot with
+        | None -> None
+        | Some (_, _, rows) ->
+            List.find_map
+              (fun ((row : P.row), backend) ->
+                if row.P.index = index then Some backend else None)
+              rows);
+    snapshot = (fun () -> Option.map (fun (id, _, _) -> id) tab.snapshot);
+    baseline = (fun id -> List.assoc_opt id tab.baselines);
+    probe =
+      (fun () ->
+        let* loader = frame_loader call in
+        let* epoch, count, _, _, _, _ = page_guard call in
+        Ok Reading.{ loader; guard = Some (epoch, count) });
+  }
+
+let discard_picture t path =
+  try Ox_caps.Cap_sys.remove ~caps:t.caps path with Sys_error _ -> ()
+
+(* pic-7nv6: the owner is already focused and holds the tab lock. *)
+let capture_picture t ~session tab cdp =
+  try
+    let path =
+      Ox_caps.Cap_stdlib.Filename.temp_file ~caps:t.caps "leash-picture-" ".png"
+    in
+    let retained = ref false in
+    Fun.protect
+      ~finally:(fun () -> if not !retained then discard_picture t path)
+      (fun () ->
+        let result =
+          Reading.shot ~caps:t.caps
+            (reading_browser t ~session tab cdp)
+            P.{ tab = credential tab; path; full_page = Some false }
+        in
+        (match result with Ok _ -> retained := true | Error _ -> ());
+        result)
+  with Sys_error _ ->
+    Error (error "internal" "could not create private picture evidence")
+
+let picture_box call backend =
+  match call "DOM.getBoxModel" (obj [ ("backendNodeId", `Int backend) ]) with
+  | Error (e : P.error)
+    when P.Error_code.to_string e.code = "internal"
+         && e.message = "browser refused DOM.getBoxModel" ->
+      Ok None
+  | Error e -> Error e
+  | Ok value -> (
+      let quad = Option.bind (member "model" value) (member "border") in
+      let number = function
+        | `Float f when Float.is_finite f -> Some f
+        | `Int n -> Some (float n)
+        | _ -> None
+      in
+      match quad with
+      | Some (`List [ x1; y1; x2; y2; x3; y3; x4; y4 ]) -> (
+          match List.map number [ x1; y1; x2; y2; x3; y3; x4; y4 ] with
+          | [ Some x1; Some y1; Some x2; Some y2; Some x3; Some y3; Some x4; Some y4 ] ->
+              let x = min (min x1 x2) (min x3 x4) and y = min (min y1 y2) (min y3 y4) in
+              let width = max (max x1 x2) (max x3 x4) -. x
+              and height = max (max y1 y2) (max y3 y4) -. y in
+              if width > 0. && height > 0. then Ok (Some P.{ x; y; width; height })
+              else Ok None
+          | _ -> Ok None)
+      | _ -> Ok None)
+
 let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
   let offset = Option.value ~default:0 args.offset in
   let limit = Option.value ~default:120 args.limit in
   if offset < 0 || limit < 0 || limit > 1000 then
     Error (error "invalid-request" "snap offset must be nonnegative and limit 0..1000")
   else
+    let pending_picture = ref None in
+    let discard_pending () =
+      match !pending_picture with
+      | None -> ()
+      | Some (image : P.shot_result) ->
+          pending_picture := None;
+          discard_picture t image.path
+    in
+    Fun.protect ~finally:discard_pending @@ fun () ->
     let* cdp = ready t in
     let* session = page_session t cdp tab in
     with_focus t tab @@ fun engage ->
@@ -1553,6 +1677,21 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
                 rows,
               P.Ax )
       in
+      let* rows, image =
+        if args.with_image = Some true then
+          let rec boxes = function
+            | [] -> Ok []
+            | ((row : P.row), backend) :: rest ->
+                let* box = picture_box call backend in
+                let* rest = boxes rest in
+                Ok (({ row with box }, backend) :: rest)
+          in
+          let* rows = boxes rows in
+          let* image = capture_picture t ~session tab cdp in
+          Ok (rows, Some image)
+        else Ok (rows, None)
+      in
+      pending_picture := image;
       let* after = guard () in
       let* after_loader = loader () in
       let stable = before = after && before_loader = after_loader in
@@ -1563,23 +1702,33 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
         else None
       in
       let epoch, count, _, _, _, _ = after in
-      Ok (rows, settled, source, reason, after_loader, Some (epoch, count))
+      Ok (rows, settled, source, reason, after_loader, Some (epoch, count), image)
     in
     let rec attempt remaining =
-      let* rows, settled, source, reason, loader_id, guard =
-        if tab.dialog <> None then Ok ([], false, P.Ax, Some "dialog-open", "", None)
+      let* rows, settled, source, reason, loader_id, guard, image =
+        if tab.dialog <> None then Ok ([], false, P.Ax, Some "dialog-open", "", None, None)
         else capture ~fallback:(remaining = 0 && attempts >= 3) ()
       in
-      if (not settled) && remaining > 0 && tab.dialog = None then attempt (remaining - 1)
-      else Ok (rows, settled, source, reason, loader_id, guard)
+      if (not settled) && remaining > 0 && tab.dialog = None then (
+        discard_pending ();
+        attempt (remaining - 1))
+      else Ok (rows, settled, source, reason, loader_id, guard, image)
     in
-    let* rows, settled, source, reason, loader_id, guard = attempt (attempts - 1) in
+    let* rows, settled, source, reason, loader_id, guard, image =
+      attempt (attempts - 1)
+    in
     (* trace-qe8c: targetInfoChanged may hold the tab-strip URL, not the document title. *)
     refresh_titles t;
     let snapshot =
       enum P.Snapshot_id.of_string ("s_" ^ P.Handle.to_string (handle ~caps:t.caps))
     in
-    tab.snapshot <- Some (snapshot, loader_id, rows);
+    tab.snapshot <-
+      Some
+        ( snapshot,
+          loader_id,
+          List.map
+            (fun ((row : P.row), backend) -> ({ row with box = None }, backend))
+            rows );
     tab.dom_snapshot <- source = P.Dom;
     (* hard-sckn: what the page was when this table was taken, kept beyond the next
        navigation (which clears the table itself) so `wait --changed-since` can tell that
@@ -1609,7 +1758,7 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
     let all = rows |> List.map fst |> List.filter matches in
     let total = List.length all in
     let shown = all |> List.filteri (fun i _ -> i >= offset && i - offset < limit) in
-    Ok
+    let result =
       P.
         {
           snapshot;
@@ -1618,6 +1767,7 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
           title = tab.title;
           page_kind = page_label ~books:(installed_books t) ~url:tab.url ~title:tab.title;
           rows = shown;
+          image;
           total;
           offset;
           truncated = offset + List.length shown < total;
@@ -1626,78 +1776,15 @@ let snap_locked ?(attempts = 3) t tab (args : P.snap_args) =
           reason;
           dialog = tab.dialog;
         }
+    in
+    pending_picture := None;
+    Ok result
 
 let snap t (args : P.snap_args) =
   let* tab = peek t ~access:Act args.tab in
   with_tab_lock tab (fun () ->
       let* tab = locate t ~access:Act args.tab in
       snap_locked t tab args)
-
-(* tab-9x5e tab-x4v0 tab-a33o tab-qmei tab-5vnm tab-un75 tab-fepr tab-0lax:
-   the registry owns identity and the page session; Reading owns browser-specific work. *)
-let reading_browser t ~session tab cdp : Reading.browser =
-  (* daily-6pde daily-9ggi: subscribe before each read so a dialog opening during
-     a withheld CDP call wins over the command deadline. Answering it bypasses the guard. *)
-  let call meth params =
-    if meth = "Page.handleJavaScriptDialog" then session_call cdp tab session meth params
-    else
-      match
-        Dialog_race.first (dialog_race tab) (fun () ->
-            session_call cdp tab session meth params)
-      with
-      | `Value result -> result
-      | `Dialog dialog ->
-          Error
-            (P.make_error
-               (enum P.Error_code.of_string "dialog-open")
-               ~message:"a dialog blocks page reads; answer it first"
-               ~detail:(P.yojson_of_dialog dialog))
-  in
-  {
-    call;
-    capture =
-      (fun ~full_page ->
-        match
-          Dialog_race.first (dialog_race tab) (fun () ->
-              Screenshot.capture tab.screenshot ~call ~within:t.capture_timeout ~full_page
-                ~stop:(fun () ->
-                  (* Bounded cleanup must not replace the capture result. *)
-                  let _screencast_stopped =
-                    cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
-                      "Page.stopScreencast" (obj [])
-                  in
-                  ()))
-        with
-        | `Value result -> result
-        | `Dialog dialog ->
-            Error
-              (P.make_error
-                 (enum P.Error_code.of_string "dialog-open")
-                 ~message:"a dialog blocks page reads; answer it first"
-                 ~detail:(P.yojson_of_dialog dialog)));
-    now = (fun () -> now t);
-    sleep = t.sleep;
-    current = (fun () -> (tab.url, tab.title));
-    dialog = (fun () -> tab.dialog);
-    dialog_race = dialog_race tab;
-    acknowledge = (fun () -> acknowledge tab);
-    row =
-      (fun index ->
-        match tab.snapshot with
-        | None -> None
-        | Some (_, _, rows) ->
-            List.find_map
-              (fun ((row : P.row), backend) ->
-                if row.P.index = index then Some backend else None)
-              rows);
-    snapshot = (fun () -> Option.map (fun (id, _, _) -> id) tab.snapshot);
-    baseline = (fun id -> List.assoc_opt id tab.baselines);
-    probe =
-      (fun () ->
-        let* loader = frame_loader call in
-        let* epoch, count, _, _, _, _ = page_guard call in
-        Ok Reading.{ loader; guard = Some (epoch, count) });
-  }
 
 let with_reading t ~access handle f =
   let* tab = peek t ~access handle in
@@ -1880,7 +1967,8 @@ let attach_snap t tab ~snap ~match_ ~limit (result : P.action_result) =
   match snap with
   | Some true ->
       let* fresh =
-        snap_locked t tab { tab = credential tab; match_; limit; offset = None }
+        snap_locked t tab
+          { tab = credential tab; match_; limit; offset = None; with_image = None }
       in
       Ok { result with snapshot = Some fresh }
   | _ -> Ok result
@@ -1908,20 +1996,7 @@ let with_picture_action ?(before = true) t handle ~shot action =
   with_action t handle (fun cdp view ->
       let* tab = locate t ~access:Act handle in
       view.Actions.engage ();
-      let browser = reading_browser t ~session:view.session tab cdp in
-      let capture () =
-        try
-          let path =
-            Ox_caps.Cap_stdlib.Filename.temp_file ~caps:t.caps "leash-picture-" ".png"
-          in
-          Reading.shot ~caps:t.caps browser
-            P.{ tab = handle; path; full_page = Some false }
-        with Sys_error _ ->
-          Error
-            (P.make_error
-               (enum P.Error_code.of_string "internal")
-               ~message:"could not create private picture evidence")
-      in
+      let capture () = capture_picture t ~session:view.session tab cdp in
       let* images =
         if before then Result.map (fun image -> [ image ]) (capture ()) else Ok []
       in
@@ -2188,7 +2263,14 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
     | Ok (Snapshot_source.Payload before) -> (
         let* snapshot =
           snap_locked ~attempts:1 t tab
-            P.{ tab = args.tab; match_ = None; limit = Some 250; offset = None }
+            P.
+              {
+                tab = args.tab;
+                match_ = None;
+                limit = Some 250;
+                offset = None;
+                with_image = None;
+              }
         in
         match read_operator cdp ~session with
         | Error error -> Error error
@@ -2485,7 +2567,14 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
           let observe_once () =
             let* snapshot =
               snap_locked t tab
-                P.{ tab = handle; match_ = None; limit = Some 250; offset = None }
+                P.
+                  {
+                    tab = handle;
+                    match_ = None;
+                    limit = Some 250;
+                    offset = None;
+                    with_image = None;
+                  }
             in
             let* rendered =
               if snapshot.P.dialog <> None then

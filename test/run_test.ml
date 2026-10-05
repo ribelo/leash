@@ -23,6 +23,7 @@ let snapshot =
       truncated = false;
       settled = true;
       source = Ax;
+      image = None;
       reason = None;
       dialog = None;
     }
@@ -156,6 +157,7 @@ let bounded_context () =
         value = None;
         state = None;
         options = None;
+        box = None;
       }
   in
   let rows = List.init 300 (fun i -> { row with P.index = i + 1 }) in
@@ -254,7 +256,16 @@ let action_refusal () =
   List.iter
     (fun (name, mission, allowed) ->
       let row =
-        P.{ index = 1; role = "button"; name; value = None; state = None; options = None }
+        P.
+          {
+            index = 1;
+            role = "button";
+            name;
+            value = None;
+            state = None;
+            options = None;
+            box = None;
+          }
       in
       let observation = page "Ready" in
       let observation =
@@ -352,6 +363,7 @@ let act_memory
         value = None;
         state = None;
         options = None;
+        box = None;
       }
   in
   let h, _, _ =
@@ -455,6 +467,7 @@ let secret_dispatch () =
         value = None;
         state = None;
         options = None;
+        box = None;
       }
   in
   let h =

@@ -429,7 +429,8 @@ let params json = match field "params" json with Some p -> p | None -> obj []
 let snap tabs handle =
   result
     (request tabs "alice"
-       (P.Snap { tab = handle; match_ = None; limit = None; offset = None }))
+       (P.Snap
+          { tab = handle; match_ = None; limit = None; offset = None; with_image = None }))
 
 (* ---------- hard-xg6y hard-ovbx hard-vq5s: the net ring ---------- *)
 
@@ -1584,7 +1585,14 @@ let ten_clients
                     let flow = connect env sw path in
                     let reader = Eio.Buf_read.of_flow ~max_size:1_048_576 flow in
                     send_line flow
-                      (P.Snap { tab = handle; match_ = None; limit = None; offset = None })
+                      (P.Snap
+                         {
+                           tab = handle;
+                           match_ = None;
+                           limit = None;
+                           offset = None;
+                           with_image = None;
+                         })
                       "alice";
                     let snapshot = result (read_reply reader) in
                     let flow = connect env sw path in

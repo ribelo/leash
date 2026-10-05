@@ -1229,9 +1229,11 @@ let commands ~caps ~send ~base ~run_owned =
           opt "limit" Int "N" "At most N rows, default 120, max 1000.";
           opt "offset" Int "N"
             "Skip the first N rows, default 0. A negative offset is refused.";
+          opt "with_image" Bool ""
+            "Include a viewport PNG and every row's CSS box (null when unavailable).";
           table_opt;
         ],
-        [ "leash snap t_9xk --match Save --limit 10" ] );
+        [ "leash snap t_9xk --match Save --limit 10"; "leash snap t_9xk --with-image" ] );
       ( "text",
         "Extract the page's visible text.",
         [ pos "tab" "TAB" ],

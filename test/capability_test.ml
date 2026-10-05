@@ -121,7 +121,10 @@ let page_commands handle : (string * P.command) list =
   in
   [
     ("nav", P.Nav { tab = handle; url = "about:blank" });
-    ("snap", P.Snap { tab = handle; match_ = None; limit = Some 1; offset = None });
+    ( "snap",
+      P.Snap
+        { tab = handle; match_ = None; limit = Some 1; offset = None; with_image = None }
+    );
     ("text", P.Text { tab = handle; index = None; max_chars = None });
     ( "eval",
       P.Eval

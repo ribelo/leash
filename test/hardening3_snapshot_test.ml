@@ -190,7 +190,8 @@ let fresh tabs = tab (request tabs "alice" (P.New { url = None; label = None }) 
 
 let snap tabs h =
   request tabs "alice"
-    (P.Snap { tab = h; match_ = None; limit = Some 1000; offset = None })
+    (P.Snap
+       { tab = h; match_ = None; limit = Some 1000; offset = None; with_image = None })
   |> result
 
 let rows snapshot =

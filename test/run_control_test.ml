@@ -42,6 +42,7 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
           truncated = false;
           settled = true;
           source = P.Ax;
+          image = None;
           reason = None;
           dialog = None;
         }

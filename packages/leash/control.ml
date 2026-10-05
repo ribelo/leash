@@ -307,6 +307,7 @@ let budget ?(pilot = Config.default.pilot) ?(handoff_timeout_s = 300)
         (seconds
            (max 1 (Option.value ~default:pilot.deadline_s args.deadline_s)
            + handoff_timeout_s + 75))
+  | Ok { command = P.Snap args; _ } when args.with_image = Some true -> Some cdp_budget
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _ | P.Playbook_test _; _ } ->
       (* A script may await a fetch; the CDP call's own deadline is 30 s. *)
       Some (seconds 35)

@@ -44,6 +44,8 @@ removed caller flag below must be rejected rather than silently ignored.
 pic-egvj pic-f2hy pic-33hm: picture syntax reaches the socket without row arguments;
 malformed or mixed syntax and oversized protected text fail locally.
 
+  $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash snap t_9xk --with-image --socket "$tmp/missing.sock"
+  service-unreachable: exit 69, JSON-only stderr, hint, empty stdout
   $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash click t_9xk --at 10.25,20.5 --socket "$tmp/missing.sock"
   service-unreachable: exit 69, JSON-only stderr, hint, empty stdout
   $ LEASH_INSTALL_FIXTURE="$tmp/active.fixture" check service-unreachable leash dblclick t_9xk --at 10,20 --shot --socket "$tmp/missing.sock"

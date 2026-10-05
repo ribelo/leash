@@ -470,7 +470,8 @@ let new_tab tabs = new_tab_for tabs "alice"
 let snap tabs handle =
   result
     (request tabs "alice"
-       (P.Snap { tab = handle; match_ = None; limit = None; offset = None }))
+       (P.Snap
+          { tab = handle; match_ = None; limit = None; offset = None; with_image = None }))
 
 let await ~sw what cell =
   let rec loop n =
@@ -1386,6 +1387,7 @@ let unsafe_inputs () =
                   truncated = false;
                   settled = true;
                   source = P.Ax;
+                  image = None;
                   reason = None;
                   dialog = None;
                 }
@@ -1652,7 +1654,13 @@ let dialog
         else
           match
             Leash.Tabs.snap tabs
-              { tab = handle; match_ = None; limit = None; offset = None }
+              {
+                tab = handle;
+                match_ = None;
+                limit = None;
+                offset = None;
+                with_image = None;
+              }
           with
           | Ok snapshot when snapshot.dialog <> None -> ()
           | _ ->
@@ -2812,7 +2820,14 @@ let spa_navigation
       let observed =
         result
           (request tabs "alice"
-             (P.Snap { tab = handle; match_ = None; limit = None; offset = None }))
+             (P.Snap
+                {
+                  tab = handle;
+                  match_ = None;
+                  limit = None;
+                  offset = None;
+                  with_image = None;
+                }))
       in
       Alcotest.(check string)
         "pushState 300 ms after the click is in the next observation" !url
@@ -2900,6 +2915,181 @@ let picture_images count reply =
     Alcotest.(check bool)
       "before and after are distinct captures" true
       (text "path" (List.nth images 0) <> text "path" (List.nth images 1))
+
+let picture_snapshot ~caps () =
+  rig ~caps (fun _env _sw _chrome tabs fake ->
+      let directory =
+        Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-picture-test-" ""
+      in
+      Ox_caps.Cap_sys.remove ~caps directory;
+      Ox_caps.Cap_sys.mkdir ~caps directory 0o700;
+      let previous = Filename.get_temp_dir_name () in
+      Filename.set_temp_dir_name directory;
+      Fun.protect ~finally:(fun () ->
+          Filename.set_temp_dir_name previous;
+          Array.iter
+            (fun name -> Ox_caps.Cap_sys.remove ~caps (Filename.concat directory name))
+            (Ox_caps.Cap_sys.readdir ~caps directory);
+          Ox_caps.Cap_sys.rmdir ~caps directory)
+      @@ fun () ->
+      let retained_images () = Array.length (Ox_caps.Cap_sys.readdir ~caps directory) in
+      let changing = ref false in
+      let mutations = ref 1 in
+      let fake = fake () in
+      picture_host fake;
+      Fake.on_method fake "Runtime.evaluate" (fun request ->
+          if
+            E.string_member "expression" (params request)
+            = Some Leash__Snapshot_source.guard_expression
+          then (
+            if !changing then incr mutations;
+            o
+              [
+                ( "result",
+                  o
+                    [
+                      ("type", s "object");
+                      ( "value",
+                        o
+                          [
+                            ("epoch", s "picture-document");
+                            ("count", i !mutations);
+                            ("width", i 400);
+                            ("height", i 300);
+                            ("devicePixelRatio", num 2.);
+                          ] );
+                    ] );
+              ])
+          else evaluate_reply request);
+      let node id name =
+        o
+          [
+            ("nodeId", s name);
+            ("backendDOMNodeId", i id);
+            ("role", o [ ("value", s "button") ]);
+            ("name", o [ ("value", s name) ]);
+          ]
+      in
+      Fake.on_method fake "Accessibility.getFullAXTree" (fun _ ->
+          o [ ("nodes", `List [ node 700 "Inside page"; node 701 "No box" ]) ]);
+      Fake.on_method fake "DOMSnapshot.captureSnapshot" (fun _ ->
+          o
+            [
+              ("strings", `List [ s "BUTTON" ]);
+              ( "documents",
+                `List
+                  [
+                    o
+                      [
+                        ( "nodes",
+                          o
+                            [
+                              ("backendNodeId", `List [ i 700; i 701 ]);
+                              ("nodeName", `List [ i 0; i 0 ]);
+                              ("attributes", `List [ `List []; `List [] ]);
+                            ] );
+                        ( "layout",
+                          o
+                            [
+                              ("nodeIndex", `List [ i 0; i 1 ]);
+                              ( "bounds",
+                                `List
+                                  [
+                                    `List [ num 200.5; num 101.; num 201.; num 60.5 ];
+                                    `List [ num 0.; num 0.; num 100.; num 20. ];
+                                  ] );
+                              ("styles", `List [ `List []; `List [] ]);
+                            ] );
+                      ];
+                  ] );
+            ]);
+      Fake.on_method fake "DOM.getBoxModel" (fun request ->
+          if integer "backendNodeId" (params request) = 700 then
+            o
+              [
+                ( "model",
+                  o
+                    [
+                      ( "border",
+                        `List
+                          (List.map num
+                             [ 100.25; 50.5; 200.75; 50.5; 200.75; 80.75; 100.25; 80.75 ])
+                      );
+                    ] );
+              ]
+          else o []);
+      Fake.on_failure fake "DOM.getBoxModel" (fun request ->
+          if integer "backendNodeId" (params request) = 701 then
+            Some (-32000, "Could not compute box model.")
+          else None);
+      let tab = new_tab tabs in
+      let args : P.snap_args =
+        { tab; match_ = None; limit = None; offset = None; with_image = None }
+      in
+      let plain = result (request tabs "alice" (P.Snap args)) in
+      Alcotest.(check int)
+        "normal snap performs no geometry reads" 0
+        (List.length (calls fake "DOM.getBoxModel"));
+      Alcotest.(check bool)
+        "normal snap does not capture an image" true
+        (E.member "image" plain = None);
+      let reply =
+        result (request tabs "alice" (P.Snap { args with with_image = Some true }))
+      in
+      let rows = list (member "rows" reply) in
+      Alcotest.(check int)
+        "each shown row carries native geometry evidence" 2 (List.length rows);
+      let box = member "box" (List.hd rows) in
+      Alcotest.(check bool)
+        "viewport-CSS x is not device scaled" true
+        (member "x" box = num 100.25);
+      Alcotest.(check bool) "viewport-CSS y" true (member "y" box = num 50.5);
+      Alcotest.(check bool) "native border width" true (member "width" box = num 100.5);
+      Alcotest.(check bool) "native border height" true (member "height" box = num 30.25);
+      Alcotest.(check bool)
+        "unavailable geometry is explicitly null" true
+        (member "box" (List.nth rows 1) = `Null);
+      let image = member "image" reply in
+      Alcotest.(check bool)
+        "one measured viewport PNG" true
+        (member "scale" image = num 2.
+        && member "width" image = i 800
+        && member "width" (member "viewport" image) = num 400.);
+      Alcotest.(check int)
+        "private image" 0o600 (Unix.stat (text "path" image)).Unix.st_perm;
+      Alcotest.(check int)
+        "no input during image observation" 0
+        (List.length (calls fake "Input.dispatchMouseEvent"));
+      Alcotest.(check int) "only delivered image retained" 1 (retained_images ());
+      changing := true;
+      let unsettled =
+        result (request tabs "alice" (P.Snap { args with with_image = Some true }))
+      in
+      Alcotest.(check bool)
+        "changing page truthfully unsettled" true
+        (member "settled" unsettled = `Bool false);
+      Alcotest.(check int)
+        "bounded observation retries" 4
+        (List.length (calls fake "Page.startScreencast"));
+      Alcotest.(check int) "discarded attempts removed" 2 (retained_images ());
+      changing := false;
+      let before = List.length (calls fake "Page.startScreencast") in
+      Fake.on_failure fake "Runtime.evaluate" (fun request ->
+          if
+            E.string_member "expression" (params request)
+            = Some Leash__Snapshot_source.guard_expression
+            && List.length (calls fake "Page.startScreencast") > before
+          then Some (-32000, "document disappeared after capture")
+          else None);
+      check_code "post-capture guard failure" "internal"
+        (request tabs "alice" (P.Snap { args with with_image = Some true }));
+      Alcotest.(check int) "failed observation PNG removed" 2 (retained_images ());
+      Fake.on_failure fake "Runtime.evaluate" (fun _ -> None);
+      Fake.on_failure fake "Page.startScreencast" (fun _ ->
+          Some (-32000, "capture refused"));
+      check_code "refused screenshot" "internal"
+        (request tabs "alice" (P.Snap { args with with_image = Some true }));
+      Alcotest.(check int) "failed capture placeholder removed" 2 (retained_images ()))
 
 let picture_click ~caps ~double () =
   rig ~caps (fun _env _sw _chrome tabs fake ->
@@ -3070,6 +3260,8 @@ let () =
     [
       ( "picture",
         [
+          Alcotest.test_case "pic-7nv6 pic-cqcf image and CSS boxes" `Quick
+            (picture_snapshot ~caps);
           Alcotest.test_case "pic-egvj click" `Quick (picture_click ~caps ~double:false);
           Alcotest.test_case "pic-egvj double click" `Quick
             (picture_click ~caps ~double:true);

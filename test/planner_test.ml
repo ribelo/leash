@@ -21,6 +21,7 @@ let snapshot =
       truncated = false;
       settled = true;
       source = Ax;
+      image = None;
       reason = None;
       dialog = None;
     }
@@ -96,6 +97,7 @@ let select_label () =
         index = 3;
         role = "combobox";
         name = "Typ dokumentu";
+        box = None;
         value = None;
         state = None;
         options =

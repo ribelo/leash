@@ -32,12 +32,22 @@ let snapshot ?(title = "Initial") () =
       truncated = false;
       settled = true;
       source = P.Ax;
+      image = None;
       reason = None;
       dialog = None;
     }
 
 let row ?(value = "") index name =
-  P.{ index; role = "textbox"; name; value = Some value; state = None; options = None }
+  P.
+    {
+      index;
+      role = "textbox";
+      name;
+      value = Some value;
+      state = None;
+      options = None;
+      box = None;
+    }
 
 let observation ?(rows = []) title =
   D.
@@ -853,6 +863,7 @@ let bounded_pre_action_risk () =
         value = None;
         state = None;
         options = None;
+        box = None;
       }
   in
   let initial =
@@ -969,7 +980,16 @@ let consent_guard () =
     |> Yojson.Safe.Util.to_string
   in
   let button index name =
-    P.{ index; role = "button"; name; value = None; state = None; options = None }
+    P.
+      {
+        index;
+        role = "button";
+        name;
+        value = None;
+        state = None;
+        options = None;
+        box = None;
+      }
   in
   List.iter
     (fun (accept, reject) ->
@@ -1010,7 +1030,16 @@ let consent_guard () =
    still offered and acceptance masked. This is the guard/drive seam. *)
 let consent_dispatch () =
   let button index name =
-    P.{ index; role = "button"; name; value = None; state = None; options = None }
+    P.
+      {
+        index;
+        role = "button";
+        name;
+        value = None;
+        state = None;
+        options = None;
+        box = None;
+      }
   in
   let page =
     observation ~rows:[ button 1 "Accept all"; button 2 "Reject all" ] "consent"
@@ -1084,7 +1113,16 @@ let unchanged_action_mask () =
     |> Yojson.Safe.Util.member "unchanged_url_repetitions"
     |> Yojson.Safe.Util.to_int > 2);
   let button index name =
-    P.{ index; role = "button"; name; value = None; state = None; options = None }
+    P.
+      {
+        index;
+        role = "button";
+        name;
+        value = None;
+        state = None;
+        options = None;
+        box = None;
+      }
   in
   let page version =
     observation
@@ -1215,7 +1253,16 @@ let oscillating_action_mask ?(meaningful_change = false) () =
   let label = sample |> member "target" |> member "label" |> to_string in
   let input = ref 0 and calls = ref 0 in
   let button index name =
-    P.{ index; name; role = "button"; value = None; state = None; options = None }
+    P.
+      {
+        index;
+        name;
+        role = "button";
+        value = None;
+        state = None;
+        options = None;
+        box = None;
+      }
   in
   let observe () =
     let rating = button (!input + 1) label in
@@ -1288,6 +1335,7 @@ let collection_next_guard () =
         value = None;
         state = None;
         options = None;
+        box = None;
       }
   in
   let page = observation ~rows:[ next ] "category bottom" in

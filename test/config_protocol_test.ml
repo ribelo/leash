@@ -314,6 +314,7 @@ let snapshot_json =
                 ("name", `String "Save");
                 ("value", `String "1");
                 ("state", `List [ `String "disabled"; `String "required" ]);
+                ("box", `Null);
               ];
           ] );
       ("total", `Int 1);
@@ -362,7 +363,13 @@ let result_shapes () =
   (* docs/protocol.md: [Row.value] and [Row.state] are [key?]; [ActionResult.snapshot] and
      [ActionResult.dialog] are [T|null]; [DebugEntry.level] is [key?]. *)
   let bare_row_json =
-    assoc [ ("index", `Int 1); ("role", `String "textbox"); ("name", `String "Search") ]
+    assoc
+      [
+        ("index", `Int 1);
+        ("role", `String "textbox");
+        ("name", `String "Search");
+        ("box", `Null);
+      ]
   in
   let bare_row : P.row =
     {
@@ -372,6 +379,7 @@ let result_shapes () =
       value = None;
       state = None;
       options = None;
+      box = None;
     }
   in
   Alcotest.(check string)
@@ -404,6 +412,7 @@ let result_shapes () =
                   ("disabled", `Bool false);
                 ];
             ] );
+        ("box", `Null);
       ]
   in
   let select_row = assert_ok "select row" (P.row_of_yojson select_row_json) in

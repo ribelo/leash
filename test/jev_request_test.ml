@@ -64,7 +64,7 @@ let option_ ?(selected = false) ?(disabled = false) index label value =
   P.{ index; label; value; selected; disabled }
 
 let row ?value ?state ?options index role name =
-  P.{ index; role; name; value; state; options }
+  P.{ index; role; name; value; state; options; box = None }
 
 let snapshot rows =
   P.
@@ -80,6 +80,7 @@ let snapshot rows =
       truncated = false;
       settled = true;
       source = P.Ax;
+      image = None;
       reason = None;
       dialog = None;
     }

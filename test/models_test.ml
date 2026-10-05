@@ -980,6 +980,7 @@ let chat_timeout
                        truncated = false;
                        settled = true;
                        source = Ax;
+                       image = None;
                        reason = None;
                        dialog = None;
                      };

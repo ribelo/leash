@@ -221,7 +221,8 @@ let snapshot tabs h =
   let json =
     result
       (request tabs "alice"
-         (P.Snap { tab = h; offset = None; limit = None; match_ = None }))
+         (P.Snap
+            { tab = h; offset = None; with_image = None; limit = None; match_ = None }))
   in
   let id =
     match P.Snapshot_id.t_of_yojson (get "snapshot" json) with

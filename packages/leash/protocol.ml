@@ -654,6 +654,22 @@ type row_option = {
 }
 [@@deriving yojson]
 
+type point = { x : float; y : float } [@@deriving yojson]
+type viewport = { width : float; height : float } [@@deriving yojson]
+
+type shot_result = {
+  path : string;
+  bytes : int;
+  width : int;
+  height : int;
+  viewport : viewport;
+  scale : float;
+  full_page : bool;
+}
+[@@deriving yojson]
+
+type css_box = { x : float; y : float; width : float; height : float } [@@deriving yojson]
+
 type row = {
   index : int;
   role : string;
@@ -661,6 +677,7 @@ type row = {
   value : string option;
   state : Row_state.t list option;
   options : row_option list option;
+  box : css_box option; [@json.null]
 }
 [@@deriving yojson]
 
@@ -678,22 +695,9 @@ type snapshot = {
   truncated : bool;
   settled : bool;
   source : snapshot_source; [@json.default Ax]
+  image : shot_result option;
   reason : string option;
   dialog : dialog option; [@json.null]
-}
-[@@deriving yojson]
-
-type point = { x : float; y : float } [@@deriving yojson]
-type viewport = { width : float; height : float } [@@deriving yojson]
-
-type shot_result = {
-  path : string;
-  bytes : int;
-  width : int;
-  height : int;
-  viewport : viewport;
-  scale : float;
-  full_page : bool;
 }
 [@@deriving yojson]
 
@@ -769,6 +773,7 @@ type snap_args = {
   match_ : string option; [@json.key "match"]
   limit : int option;
   offset : int option;
+  with_image : bool option;
 }
 [@@deriving yojson]
 
