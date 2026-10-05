@@ -11,7 +11,7 @@ This skill is guidance, not permission. Stay inside the user's request.
 
 ## Drive first
 
-For any browser task with a describable outcome, run `leash drive` first, written as a goal with its result: what to achieve, then `Result:` and what to return. Example: `leash drive "Open the Poetry category on books.toscrape.com. Result: how many books it has."` Use the low-level commands (`snap`, `text`, `click`, …) to inspect, to verify a result independently, and for what drive reports it cannot do.
+For any browser task with a describable outcome, run `leash drive` first, written as numbered steps ending with `Result:` and what to return. Example: `leash drive "1. Open the Poetry category on books.toscrape.com. 2. Read the number of results. Result: that number."` In the 2026-10-05 corpus on JEV's loop, steps passed 174/423 cells, a goal with its result 162/423, a loose request 146/423. For a site you drive again, a playbook's `notes` help most (169/423, against 151 with no playbook). Use the low-level commands (`snap`, `text`, `click`, …) to inspect, to verify a result independently, and for what drive reports it cannot do.
 
 ## Run a mission
 

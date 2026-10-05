@@ -27,6 +27,7 @@ MODELS = {
     "clef": ("cloudflare/clef", True),
     "clef-flash": ("cloudflare/clef-flash", True),
 }
+PLANNER = "openai/gpt-6-luna"  # ADR-0015: consulted only, never drives
 TAURON = pathlib.Path.home() / ".config/leash/use-cases/tauron"
 
 
@@ -74,7 +75,7 @@ class Service:
         self.knowledge_sites = [s for s in sites if playbook_variant(s, knowledge, root / "config/leash/playbooks")]
         (root / "config/leash/config.toml").write_text(
             "[chrome]\nheadless = true\n"
-            f"[models]\ndecision_model = \"{model_id}\"\n"
+            f"[models]\ndecision_model = \"{model_id}\"\nplanner_model = \"{PLANNER}\"\n"
             "[decision]\n"
             f"image_when_rows_below = {3 if image == 'b' else 0}\n"
             f"look = {'true' if image == 'c' else 'false'}\n")
@@ -148,6 +149,7 @@ def run_cell(svc, mission, style, deadline, work):
             except json.JSONDecodeError:
                 continue
         reply = reply or {}
+        (work / "reply.json").write_text(json.dumps(reply, indent=1))
         ok, note = checks.check(mission, reply, ctx)
         return reply, ok, note, wall
     finally:
@@ -156,7 +158,7 @@ def run_cell(svc, mission, style, deadline, work):
 
 def row(mission, style, knowledge, model, image, reply, ok, note, wall):
     detail = reply.get("detail") or {}
-    src = reply if "pilot_turns" in reply else detail
+    src = reply if "navigator_steps" in reply else detail
     data = src.get("data") or {}
     tokens = data.get("decision_input_tokens") or []
     model_id, multimodal = MODELS[model]
@@ -164,7 +166,7 @@ def row(mission, style, knowledge, model, image, reply, ok, note, wall):
     return {
         "mission": mission["id"], "style": style, "knowledge": knowledge, "model": model, "image": image,
         "pass": bool(ok), "status": reply.get("status") or (reply.get("code") and "error:" + reply["code"]),
-        "pilot_turns": src.get("pilot_turns"), "navigator_steps": src.get("navigator_steps"),
+        "planner_calls": len(src.get("planner_turns") or []), "navigator_steps": src.get("navigator_steps"),
         "calls": src.get("model_calls"), "cost": src.get("model_cost"), "wall_s": round(wall, 1),
         "image_parts": data.get("image_parts", 0), "decision_calls": len(tokens),
         "truncated": truncated, "note": note,
@@ -173,7 +175,7 @@ def row(mission, style, knowledge, model, image, reply, ok, note, wall):
 
 
 def table(rows):
-    head = "| mission | style | knowledge | model | image | pass | status | pilot turns | navigator steps | calls | cost $ | wall s | image parts | truncated | note |\n" \
+    head = "| mission | style | knowledge | model | image | pass | status | planner calls | navigator steps | calls | cost $ | wall s | image parts | truncated | note |\n" \
            "| --- | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n"
     def cell(v):
         if v is None:
@@ -183,20 +185,20 @@ def table(rows):
         if isinstance(v, float):
             return f"{v:.6f}".rstrip("0").rstrip(".")
         return str(v).replace("|", "/").replace("\n", " ")[:160]
-    keys = ["mission", "style", "knowledge", "model", "image", "pass", "status", "pilot_turns", "navigator_steps",
+    keys = ["mission", "style", "knowledge", "model", "image", "pass", "status", "planner_calls", "navigator_steps",
             "calls", "cost", "wall_s", "image_parts", "truncated", "note"]
     return head + "".join("| " + " | ".join(cell(r[k]) for k in keys) + " |\n" for r in rows)
 
 
 def summary(rows):
     """Pass rate and mean cost per factor level, for the conclusions."""
-    out = ["| factor | level | cells | passed | pass rate | mean cost $ | mean pilot turns |", "| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
+    out = ["| factor | level | cells | passed | pass rate | mean cost $ | mean planner calls |", "| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
     for factor in ("model", "image", "style", "knowledge"):
         for level in sorted({r[factor] for r in rows}):
             rs = [r for r in rows if r[factor] == level]
             passed = sum(r["pass"] for r in rs)
             costs = [r["cost"] for r in rs if isinstance(r["cost"], (int, float))]
-            turns = [r["pilot_turns"] for r in rs if isinstance(r["pilot_turns"], int)]
+            turns = [r["planner_calls"] for r in rs if isinstance(r["planner_calls"], int)]
             out.append(f"| {factor} | {level} | {len(rs)} | {passed} | {passed / len(rs):.0%} | "
                        f"{(sum(costs) / len(costs)) if costs else 0:.5f} | {(sum(turns) / len(turns)) if turns else 0:.1f} |")
     return "\n".join(out) + "\n"

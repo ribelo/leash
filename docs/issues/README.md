@@ -207,7 +207,7 @@ ADR-0012 was the coordinator's inversion of the operator's design, not his decis
 
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
-| L62 | **JEV runs the loop again** (`revert-pilot/01-revert-pilot.md`). Pilot loop removed; drive.ml is drive; planner only on BLOCKED, failed expectation, and end judgment; result/evidence kept; corpus re-run; U1/U2 re-run. | revert-eft1, revert-o3fh, revert-24kr, revert-bqrq, revert-apgf, revert-k63o, revert-wrcc, revert-3zp1, revert-kmr3, revert-tjwo | L61 | [ ] |
+| L62 | **JEV runs the loop again** (`revert-pilot/01-revert-pilot.md`). Pilot loop removed; drive.ml is drive; planner only on BLOCKED, failed expectation, and end judgment; result/evidence kept; corpus re-run; U1/U2 re-run. | revert-eft1, revert-o3fh, revert-24kr, revert-bqrq, revert-apgf, revert-k63o, revert-wrcc, revert-3zp1, revert-kmr3, revert-tjwo | L61 | [x] |
 
 ## Later milestones
 

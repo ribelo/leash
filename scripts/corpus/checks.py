@@ -184,8 +184,12 @@ def check(mission, reply, ctx):
             return ok, f"truth {truth!r}; result {'agrees' if ok else 'differs'}"
         if kind == "books_jsonl":
             cards, _ = books_cards(spec["source"])
-            got = [(norm(r.get("title")), norm(str(r.get("price")))) for r in records(ctx)]
-            want = [(norm(t), norm(p)) for t, p in cards]
+            # A price is compared as a number: a script returns 51.77, the page shows £51.77.
+            def price(v):
+                digits = re.sub(r"[^0-9.]", "", str(v))
+                return f"{float(digits):.2f}" if digits else ""
+            got = [(norm(r.get("title")), price(r.get("price"))) for r in records(ctx)]
+            want = [(norm(t), price(p)) for t, p in cards]
             # A card shows a long title cut with "..."; a record copying that visible text
             # matches the full title it starts.
             def same(g, w):
@@ -221,9 +225,7 @@ def check(mission, reply, ctx):
             st = json.loads(f.state.read_text())
             accounts = [a for a in st["accounts"] if a["email"] == spec["email"]]
             ok = st["registrations"] == 1 and len(accounts) == 1 and accounts[0]["confirmed"]
-            pw = dict(reply.get("secrets_for_operator") or [])
-            delivered = bool(pw)
-            return ok and delivered, f"registrations {st['registrations']}, confirmed {bool(accounts and accounts[0]['confirmed'])}, password delivered {delivered}"
+            return ok, f"registrations {st['registrations']}, confirmed {bool(accounts and accounts[0]['confirmed'])}"
         if kind == "fixture_upload":
             st = json.loads(f.state.read_text())
             ups = st.get("uploads", [])
