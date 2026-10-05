@@ -141,6 +141,7 @@ let rig
              ~workspace:"test" ~headless:false ())
           {
             Chrome.clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             mgr = env#process_mgr;
             logger;
             caps :> Leash.Chrome.caps;
@@ -2923,7 +2924,10 @@ let run_refusals
           | Error error -> Alcotest.fail error.P.message);
           check_code "run-fwl8 with-human" "with-human" (run "alice");
           (* The following dialog assertion needs the handoff fixture released. *)
-          let _resumed_fixture = Leash.Tabs.resume tabs h in
+          let _resumed_fixture =
+            Leash.Tabs.resume tabs h
+              [@@ox.allow "ox-discarded-result: best effort: resumed fixture"]
+          in
           (* A dialog waiting to be answered: the run refuses to start rather than fight it. *)
           Fake.emit ~session:"session-1" f ~method_:"Page.javascriptDialogOpening"
             ~params:

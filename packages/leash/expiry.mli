@@ -9,7 +9,7 @@ val create :
   sw:Eio.Switch.t ->
   ?interval:Ox.Duration.t ->
   idle:Ox.Duration.t ->
-  clock:'clock Eio.Time.clock ->
+  clock:_ Eio.Time.Mono.t ->
   logger:Ox_observability.Logger.t ->
   Tabs.t ->
   t

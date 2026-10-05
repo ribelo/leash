@@ -1547,6 +1547,7 @@ let program env (config : Leash.Config.t) sw =
       (Leash.Config.chrome_config config.chrome)
       {
         Leash.Chrome.clock = base#clock;
+        mono_clock = base#mono_clock;
         mgr = base#process_mgr;
         logger = env.logger;
         (* ^ncaps-4tjy: the powerbox narrowed by ascription to what Chrome may touch. *)
@@ -1599,7 +1600,7 @@ let program env (config : Leash.Config.t) sw =
   (* own-uo77 own-hslp: the sweep is one more service in the service scope, closed with the
      switch. *)
   let _expiry =
-    Leash.Expiry.create ~sw ?interval:sweep_interval ~idle ~clock:base#clock
+    Leash.Expiry.create ~sw ?interval:sweep_interval ~idle ~clock:base#mono_clock
       ~logger:env.logger tabs
   in
   (* drive-e7oi drive-yqxg: the models service is one more resource in the service scope,

@@ -77,6 +77,7 @@ type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write >
 
 type 'clock deps = {
   clock : 'clock Eio.Time.clock;
+  mono_clock : Eio.Time.Mono.ty Eio.Resource.t;
   mgr : Eio_unix.Process.mgr_ty Eio.Resource.t;
   logger : Ox_observability.Logger.t;
   caps : caps;
@@ -409,6 +410,7 @@ let create ~sw ?launch config (deps : 'clock deps) =
               let _registered_tail =
                 Ox.Agent.update state.tails ~fn:(fun tails ->
                     (generation, tail, drained) :: tails)
+                  [@@ox.allow "ox-discarded-result: best effort: registered tail"]
               in
               (match Ox_process.Child.stderr child with
               | None -> Eio.Promise.resolve resolve ()
@@ -474,7 +476,7 @@ let create ~sw ?launch config (deps : 'clock deps) =
         match
           Ox.Scope.supervised_error ~sw (fun scope ->
               match
-                Ox.Supervisor.start ~scope ~clock:deps.clock ~intensity ~on_event
+                Ox.Supervisor.start ~scope ~clock:deps.mono_clock ~intensity ~on_event
                   ~strategy:Ox.Supervisor.One_for_one
                   [
                     Ox.Supervisor.child ~id:"chrome" ~restart:Ox.Supervisor.Permanent

@@ -412,6 +412,7 @@ let rig
                  ~workspace:"test" ~headless:true ())
               {
                 Chrome.clock = env#clock;
+                mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
                 mgr = env#process_mgr;
                 logger;
                 caps :> Leash.Chrome.caps;
@@ -976,7 +977,10 @@ let field_context () =
           let again = helper.Leash.Text_helper.complete context in
           Alcotest.(check (option string))
             "drive-ls3c the memo reuses the answer" (Some "hello")
-            (match again with Ok value -> value | Error _ -> None);
+            (match again with
+            | Ok value -> value
+            | Error _ ->
+                None [@ox.allow "ox-discarded-result: the test compares the value"]);
           Alcotest.(check int) "drive-ls3c one chat call" 1 (Chat.connections server);
           (* the helper input is the context as written to the wire: a page tail past the
              6000-character bound is not part of it, and does not force a second call *)
@@ -1159,7 +1163,10 @@ let unicode_and_usage () =
       Alcotest.(check string)
         "fly-gysl viewport bounded by characters" (repeat 6000) (text "text" page);
       (* The first answer was checked above; this call measures memoized HTTP traffic. *)
-      let _memoized_reply = ask "bound" in
+      let _memoized_reply =
+        ask "bound"
+          [@@ox.allow "ox-discarded-result: best effort: memoized reply"]
+      in
       Alcotest.(check int)
         "fly-gysl unchanged memo makes no model call" 1 (Chat.connections server);
       List.iter

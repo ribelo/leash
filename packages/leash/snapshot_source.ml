@@ -234,15 +234,24 @@ let states n =
   let checked =
     match prop "checked" n with
     | Some (`String "mixed") -> (
-        match P.Row_state.of_string "mixed" with Ok x -> [ x ] | Error _ -> [])
+        match P.Row_state.of_string "mixed" with
+        | Ok x -> [ x ]
+        | Error _ ->
+            [] [@ox.allow "ox-discarded-result: a constant state name always decodes"])
     | Some (`Bool false | `String "false") -> (
-        match P.Row_state.of_string "unchecked" with Ok x -> [ x ] | Error _ -> [])
+        match P.Row_state.of_string "unchecked" with
+        | Ok x -> [ x ]
+        | Error _ ->
+            [] [@ox.allow "ox-discarded-result: a constant state name always decodes"])
     | _ -> Option.to_list (state "checked" n)
   in
   let expanded =
     match prop "expanded" n with
     | Some (`Bool false | `String "false") -> (
-        match P.Row_state.of_string "collapsed" with Ok x -> [ x ] | Error _ -> [])
+        match P.Row_state.of_string "collapsed" with
+        | Ok x -> [ x ]
+        | Error _ ->
+            [] [@ox.allow "ox-discarded-result: a constant state name always decodes"])
     | _ -> Option.to_list (state "expanded" n)
   in
   let other =
@@ -335,7 +344,9 @@ let file_inputs ~dom ~ax_by_backend =
   let state wanted present backend =
     match P.Row_state.of_string wanted with
     | Ok s when Hashtbl.mem present backend -> [ s ]
-    | Ok _ | Error _ -> []
+    | Ok _ -> []
+    | Error _ ->
+        [] [@ox.allow "ox-discarded-result: a constant state name always decodes"]
   in
   let rec collect position backends names =
     match (backends, names) with

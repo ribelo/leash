@@ -180,6 +180,7 @@ let run
         Chrome.create ~sw config
           {
             Chrome.clock;
+            mono_clock = Eio.Stdenv.mono_clock env;
             mgr = Eio.Stdenv.process_mgr env;
             logger;
             caps :> Leash.Chrome.caps;

@@ -630,7 +630,10 @@ let validated ~keys json =
 let operation_of_key key =
   match P.Operation.of_string (String.lowercase_ascii key) with
   | Ok operation -> Some operation
-  | Error _ -> None
+  | Error _ ->
+      None
+      [@ox.allow
+        "ox-discarded-result: a failed probe reads as absent; the caller decides"]
 
 (* The target the model named, as the element and the option the drive would act on. *)
 let chosen op candidates key =

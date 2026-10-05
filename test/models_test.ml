@@ -225,6 +225,7 @@ let rig
                  ~workspace:"test" ~headless:true ())
               {
                 Chrome.clock = env#clock;
+                mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
                 mgr = env#process_mgr;
                 logger;
                 caps :> Leash.Chrome.caps;
@@ -902,10 +903,9 @@ let provider_timeout
         Alcotest.(check bool)
           "daily-9ggi total deadline bounds retries" true
           (Eio.Time.now env#clock -. started < Ox.Duration.to_seconds_float deadline +. 1.);
-        Alcotest.(check int)
-          "daily-9ggi bounded attempts"
-          (if attempt = 1 then 2 else 1)
-          (Server.connections server)
+        (* Ox safe-o2b6: a POST is never replayed without consent the model clients do
+           not give, so a timed-out attempt is the only one. *)
+        Alcotest.(check int) "daily-9ggi bounded attempts" 1 (Server.connections server)
       end)
 
 (* pic-k4ij pic-cqcf: real image parts, padding, correction and no token cap. *)
@@ -1144,10 +1144,9 @@ let chat_timeout
       Alcotest.(check string)
         "daily-9ggi identifies client kind" kind
         (text "model_kind" (Option.get error.detail));
+      (* Ox safe-o2b6: one attempt, timeout or not. *)
       Alcotest.(check int)
-        "daily-9ggi bounded retries; no auth retry"
-        (if expected = "timeout" then 2 else 1)
-        (Server.connections server))
+        "daily-9ggi one attempt; no replay" 1 (Server.connections server))
 
 (* daily-9ggi: a formatting correction shares the original total budget. *)
 let text_correction_budget

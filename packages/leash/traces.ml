@@ -464,7 +464,11 @@ let finish t ~now outcome =
               match List.assoc_opt "procedures" fields with
               | Some (`List xs) ->
                   List.filter_map
-                    (fun x -> Result.to_option (P.run_procedure_of_yojson x))
+                    (fun x ->
+                      (Result.to_option (P.run_procedure_of_yojson x)
+                       [@ox.allow
+                         "ox-discarded-result: a procedure that does not decode is left \
+                          out of the trace"]))
                     xs
               | _ -> [])
           | _ -> []
@@ -554,7 +558,11 @@ let finish t ~now outcome =
                         (fun turn ->
                           match P.planner_turn_of_yojson turn with
                           | Ok turn -> Some turn
-                          | Error _ -> None)
+                          | Error _ ->
+                              None
+                              [@ox.allow
+                                "ox-discarded-result: a failed probe reads as absent; \
+                                 the caller decides"])
                         turns
                   | _ -> [])
               | _ -> []))

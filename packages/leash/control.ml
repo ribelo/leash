@@ -195,7 +195,11 @@ let dispatch ?pilot ?(planner_actions = 5) ?traces ?logger ?(model = "unconfigur
                 if args.P.tab = None then
                   Eio.Cancel.protect (fun () ->
                       (* Exceptional cleanup must preserve the original failure. *)
-                      let _closed_owned_tab = Tabs.close tabs tab in
+                      let _closed_owned_tab =
+                        Tabs.close tabs tab
+                          [@@ox.allow
+                            "ox-discarded-result: best effort: closed owned tab"]
+                      in
                       ())
               in
               let outcome =
@@ -223,6 +227,7 @@ let dispatch ?pilot ?(planner_actions = 5) ?traces ?logger ?(model = "unconfigur
           (* Keep records the terminal state; the original exception is re-raised. *)
           let _recorded_interruption =
             keep (Error (P.make_error (enum "internal") ~message:"drive interrupted"))
+              [@@ox.allow "ox-discarded-result: best effort: recorded interruption"]
           in
           raise exn
       in
@@ -329,7 +334,9 @@ let budget_exceeded (request : (P.request, string) result) budget =
   let command =
     match request with
     | Ok request -> P.command_name request.command
-    | Error _ -> "invalid-request"
+    | Error _ ->
+        ("invalid-request"
+        [@ox.allow "ox-discarded-result: the failure maps to this fallback by design"])
   in
   let budget_ms = Ox.Duration.to_ms budget in
   failure

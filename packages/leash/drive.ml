@@ -436,8 +436,8 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                                   (match answer with Ok (Some value) -> pending_text := Some (context, value) | _ -> ());
                                   answer, true in
                             if called then text_log := `Assoc [ "field", string context.Text_helper.field.label;
-                              "value", (match answer with Ok value -> optional_string value | Error _ -> `Null);
-                              "outcome", string (match answer with Ok (Some _) -> "value" | Ok None -> "missing value" | Error _ -> "provider-error");
+                              "value", (match answer with Ok value -> optional_string value | Error _ -> (`Null [@ox.allow "ox-discarded-result: the error is logged as the outcome below"]));
+                              "outcome", string (match answer with Ok (Some _) -> "value" | Ok None -> "missing value" | Error _ -> ("provider-error" [@ox.allow "ox-discarded-result: the log names the failure; the error itself is returned below"]));
                               "usage", Option.value ~default:`Null (usage "text_helper");
                               "elapsed_ms", integer (ms (now () -. at)) ] :: !text_log;
                             match answer with

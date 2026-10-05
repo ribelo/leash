@@ -77,6 +77,7 @@ let rows ~call ~context ~selector =
       let _released_snapshot_group =
         call "Runtime.releaseObjectGroup"
           (`Assoc [ ("objectGroup", `String "leash-dom-snapshot") ])
+          [@@ox.allow "ox-discarded-result: best effort: released snapshot group"]
       in
       ())
     (fun () ->

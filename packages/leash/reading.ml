@@ -21,7 +21,11 @@ type browser = {
 let ( let* ) = Result.bind
 let obj xs = `Assoc xs
 let str x = `String x
-let value decoder json = Result.to_option (decoder json)
+
+let value decoder json =
+  Result.to_option (decoder json)
+  [@ox.allow "ox-discarded-result: an undecodable optional field is absent"]
+
 let field name decoder json = value (D.field name decoder) json
 let nested names decoder json = value (D.at names decoder) json
 let enum decode text = match decode text with Ok v -> v | Error _ -> assert false
@@ -861,7 +865,10 @@ let storage browser (args : P.storage_args) =
          ])
   in
   (* Best effort: the domain only reports changes, which nobody here wants. *)
-  let _storage_domain_disabled = page_call browser "DOMStorage.disable" (obj []) in
+  let _storage_domain_disabled =
+    page_call browser "DOMStorage.disable" (obj [])
+      [@@ox.allow "ox-discarded-result: best effort: storage domain disabled"]
+  in
   let* reply = read in
   match field "entries" (fun x -> Ok x) reply with
   | Some (`List entries) ->

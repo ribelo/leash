@@ -84,6 +84,7 @@ let rig
                      ~headless ())
                   {
                     Chrome.clock = env#clock;
+                    mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
                     mgr = env#process_mgr;
                     logger;
                     caps :> Chrome.caps;

@@ -93,6 +93,8 @@ type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write >
 
 type 'clock deps = {
   clock : 'clock Eio.Time.clock;
+  mono_clock : Eio.Time.Mono.ty Eio.Resource.t;
+      (** Ox's supervisor counts restarts on a monotonic clock. *)
   mgr : Eio_unix.Process.mgr_ty Eio.Resource.t;
   logger : Ox_observability.Logger.t;
   caps : caps;  (** The Door's powerbox narrowed to {!caps} (^ncaps-4tjy). *)

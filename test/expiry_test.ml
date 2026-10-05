@@ -92,6 +92,7 @@ let rig
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             mgr = env#process_mgr;
             logger;
             caps :> Leash.Chrome.caps;
@@ -120,7 +121,7 @@ let rig
       in
       Fake.on_method fake "Runtime.evaluate" (fun _ ->
           obj [ ("result", obj [ ("value", str "") ]) ]);
-      let expiry = Expiry.create ~sw ~interval ~idle ~clock:env#clock ~logger tabs in
+      let expiry = Expiry.create ~sw ~interval ~idle ~clock:env#mono_clock ~logger tabs in
       f ~env ~tabs ~expiry ~fake)
 
 (* ---------- The policy, pure ---------- *)
@@ -229,7 +230,10 @@ let idle_pause
   rig ~caps (fun ~env ~tabs ~expiry ~fake:_ ->
       let h = fresh tabs in
       (* The held-state assertion below checks the fixture transition. *)
-      let _human_handoff = Tabs.hand_over tabs ~reason:"captcha" h in
+      let _human_handoff =
+        Tabs.hand_over tabs ~reason:"captcha" h
+          [@@ox.allow "ox-discarded-result: best effort: human handoff"]
+      in
       advance env 3600;
       ignore (Expiry.sweep expiry);
       Alcotest.(check bool) "hand-len8 idle is paused" true (held tabs);

@@ -34,6 +34,7 @@ let prepare ~clock ~cdp ~on_target =
               let _closed_bootstrap_target =
                 call cdp ~deadline:(Ox.Duration.ms 500) "Target.closeTarget"
                   (obj [ ("targetId", str target) ])
+                  [@@ox.allow "ox-discarded-result: best effort: closed bootstrap target"]
               in
               ()))
         !target)

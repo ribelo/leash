@@ -103,6 +103,7 @@ let rig
              ~workspace:"test" ~headless:false ())
           {
             Chrome.clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             mgr = env#process_mgr;
             logger;
             caps :> Leash.Chrome.caps;
@@ -132,8 +133,8 @@ let rig
       Fake.on_method fake "Runtime.evaluate" (fun _ ->
           obj [ ("result", obj [ ("value", str "") ]) ]);
       let expiry =
-        Expiry.create ~sw ~interval:(Ox.Duration.hours 1) ~idle ~clock:env#clock ~logger
-          tabs
+        Expiry.create ~sw ~interval:(Ox.Duration.hours 1) ~idle ~clock:env#mono_clock
+          ~logger tabs
       in
       f ~env ~sw ~tabs ~expiry ~fake)
 

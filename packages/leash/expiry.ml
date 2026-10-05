@@ -21,6 +21,9 @@ let create ~sw ?(interval = interval) ~idle ~clock ~logger:_ tabs =
         Ok ()
       in
       (* The spaced schedule owns repetition; termination has no sweep value to report. *)
-      let _schedule_ended = Ox.Retry.repeat ~clock (Ox.Schedule.spaced interval) pass in
+      let _schedule_ended =
+        Ox.Retry.repeat ~clock (Ox.Schedule.spaced interval) pass
+          [@@ox.allow "ox-discarded-result: best effort: schedule ended"]
+      in
       `Stop_daemon);
   t

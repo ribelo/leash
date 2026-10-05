@@ -592,7 +592,13 @@ let transition t request = Result.map entry_of_answer (call t request)
    declared kind, or not at all. Text markers need page text, which list and snap do not
    read, so a marker-only kind is not shown here. *)
 let installed_books t =
-  match Playbook.list ~caps:t.caps () with Ok books -> books | Error _ -> []
+  match Playbook.list ~caps:t.caps () with
+  | Ok books -> books
+  | Error _ ->
+      []
+      [@ox.allow
+        "ox-discarded-result: list and snap label pages without an unreadable playbook \
+         set"]
 
 let page_label ~books ~url ~title:_ =
   if not (Web_url.is_page ~url) then None
@@ -660,6 +666,7 @@ let disappear t (tab : tab) disposition =
   (* A raced disappearance must still wake this tab's waiters. *)
   let _disappearance =
     call_protected t (Disappear { key = ledger_key tab; disposition; at = now t })
+      [@@ox.allow "ox-discarded-result: best effort: disappearance"]
   in
   match tab.load_waiter with
   | None -> ()
@@ -699,7 +706,7 @@ let diagnose tab (failure : P.error) =
           { P.tab = credential tab; limit = Some 20; clear = None }
       with
       | Ok debug -> debug.entries
-      | Error _ -> []
+      | Error _ -> [] [@ox.allow "ox-discarded-result: a failed read offers nothing"]
     in
     {
       failure with
@@ -776,7 +783,10 @@ let use_session t cdp tab session =
     tab.enabled_session <- Some session;
     let enable meth params =
       (* Domains are enabled best effort; subsequent reads validate their replies. *)
-      let _domain_enabled = session_call cdp tab session meth params in
+      let _domain_enabled =
+        session_call cdp tab session meth params
+          [@@ox.allow "ox-discarded-result: best effort: domain enabled"]
+      in
       ()
     in
     enable "Page.enable" (obj []);
@@ -815,6 +825,7 @@ let focus_emulation cdp session enabled =
     cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
       "Emulation.setFocusEmulationEnabled"
       (obj [ ("enabled", `Bool enabled) ])
+      [@@ox.allow "ox-discarded-result: best effort: focus emulation"]
   in
   ()
 
@@ -853,7 +864,8 @@ let adopted_of = function Adopted adopted -> adopted | _ -> []
 
 let discover t ~session (info : Discovery.target) =
   match call t (Discover { session; info; at = now t }) with
-  | Error _ -> ()
+  | Error _ ->
+      () [@ox.allow "ox-discarded-result: best effort; the outcome is decided elsewhere"]
   | Ok (Known { tab; _ }) ->
       (match (tab.session, session) with
       | None, Some session -> tab.session <- Some session
@@ -871,7 +883,8 @@ let discover t ~session (info : Discovery.target) =
    by this call. *)
 let refresh_from_target cdp tab =
   match cdp_call cdp "Target.getTargetInfo" (obj [ ("targetId", str tab.id) ]) with
-  | Error _ -> ()
+  | Error _ ->
+      () [@ox.allow "ox-discarded-result: best effort; the outcome is decided elsewhere"]
   | Ok result -> (
       match member "targetInfo" result with
       | None -> ()
@@ -900,7 +913,10 @@ let watch_navigation t cdp tab =
           tab.page_loads <- List.filter (fun pending -> pending != waiter) tab.page_loads)
         (fun () ->
           (* The following observation decides whether loading completed. *)
-          let _load_notice = t.await_load promise in
+          let _load_notice =
+            t.await_load promise
+              [@@ox.allow "ox-discarded-result: best effort: load notice"]
+          in
           ()));
     if tab.dialog = None && tab.navigations <> since then refresh_from_target cdp tab;
     seen := tab.navigations
@@ -948,7 +964,10 @@ let new_tab ?label t ~url =
            not be cancelled halfway, whatever ended the creation. *)
         match call_protected t (Creating { delta = -1; at = now t }) with
         | Ok answer -> wake_openers (adopted_of answer)
-        | Error _ -> ())
+        | Error _ ->
+            ()
+            [@ox.allow
+              "ox-discarded-result: best effort; the outcome is decided elsewhere"])
       (fun () ->
         let* created =
           (* Creating directly at [target] can finish a fast local load before
@@ -1193,6 +1212,7 @@ let announce t ~sw ~tab ~waiting ~reason ~warn ~clean =
             let _racing_answer =
               call t
                 (Answer_handoff { handle = credential tab; waiting; outcome; at = now t })
+                [@@ox.allow "ox-discarded-result: best effort: racing answer"]
             in
             ()
           in
@@ -1241,6 +1261,7 @@ and handoff_headed ~secrets t ~reason ~timeout_s handle =
             (* Restoration may race disappearance; cleanup still releases the lock. *)
             let _restored =
               call t (Restore { handle = credential tab; waiting; at = now t })
+                [@@ox.allow "ox-discarded-result: best effort: restored"]
             in
             ()))
   in
@@ -1285,7 +1306,10 @@ and handoff_headed ~secrets t ~reason ~timeout_s handle =
           let left = remaining () in
           (if not (Ox.Duration.is_zero left) then
              (* [answer] below reads the authoritative outcome, including expiry. *)
-             let _handoff_notice = t.await_handoff left waiting.promise in
+             let _handoff_notice =
+               t.await_handoff left waiting.promise
+                 [@@ox.allow "ox-discarded-result: best effort: handoff notice"]
+             in
              ());
           answer ()))
 
@@ -1296,12 +1320,15 @@ and handoff_headed ~secrets t ~reason ~timeout_s handle =
    call); a failure keeps the last known values. *)
 let refresh_titles t =
   match ready t with
-  | Error _ -> ()
+  | Error _ ->
+      () [@ox.allow "ox-discarded-result: best effort; the outcome is decided elsewhere"]
   | Ok cdp -> (
       match
         cdp_call ~deadline:(Ox.Duration.seconds 2) cdp "Target.getTargets" (obj [])
       with
-      | Error _ -> ()
+      | Error _ ->
+          ()
+          [@ox.allow "ox-discarded-result: best effort; the outcome is decided elsewhere"]
       | Ok result -> (
           match member "targetInfos" result with
           | Some (`List infos) ->
@@ -1410,7 +1437,11 @@ let sweep t ~decide =
                     | Ok _ ->
                         disappear t entry.tab (disposition "closed_by_idle");
                         Some (h, Close_idle)
-                    | Error _ -> None)
+                    | Error _ ->
+                        None
+                        [@ox.allow
+                          "ox-discarded-result: a failed probe reads as absent; the \
+                           caller decides"])
                 | _ -> None)
             | _ -> None))
     (live_entries t)
@@ -1509,6 +1540,7 @@ let reading_browser t ~session tab cdp : Reading.browser =
                   let _screencast_stopped =
                     cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
                       "Page.stopScreencast" (obj [])
+                      [@@ox.allow "ox-discarded-result: best effort: screencast stopped"]
                   in
                   ()))
         with
@@ -1595,6 +1627,7 @@ let picture_box call backend =
     when P.Error_code.to_string e.code = "internal"
          && e.message = "browser refused DOM.getBoxModel" ->
       Ok None
+      [@ox.allow "ox-discarded-result: a node without a box model has no picture box"]
   | Error e -> Error e
   | Ok value -> (
       let quad = Option.bind (member "model" value) (member "border") in
@@ -2287,7 +2320,10 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
               List.filter (fun pending -> pending != waiter) tab.page_loads)
           (fun () ->
             (* A fresh observation below distinguishes navigation from a wake or timeout. *)
-            let _load_notice = t.await_load promise in
+            let _load_notice =
+              t.await_load promise
+                [@@ox.allow "ox-discarded-result: best effort: load notice"]
+            in
             true))
     else tab.navigations <> started
   in
@@ -2528,7 +2564,10 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
               (fun callback step ->
                 match P.step_of_yojson (clean_json (P.yojson_of_step step)) with
                 | Ok step -> callback step
-                | Error _ -> ())
+                | Error _ ->
+                    ()
+                    [@ox.allow
+                      "ox-discarded-result: best effort; the outcome is decided elsewhere"])
               on_step
           in
           let run_args = Run.of_args args in
@@ -2928,7 +2967,10 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
                             List.filter (fun pending -> pending != waiter) tab.page_loads)
                         (fun () ->
                           (* The following observation decides whether loading completed. *)
-                          let _load_notice = t.await_load promise in
+                          let _load_notice =
+                            t.await_load promise
+                              [@@ox.allow "ox-discarded-result: best effort: load notice"]
+                          in
                           ()));
                     match Reading.script browser script ~args with
                     | Ok ran ->
@@ -3080,7 +3122,10 @@ let playbook_check ?installed t (args : P.playbook_check_args) =
       let close () =
         Eio.Cancel.protect (fun () ->
             (* The owned syntax-check tab is cleaned up without replacing its verdict. *)
-            let _closed = close t blank.P.tab in
+            let _closed =
+              close t blank.P.tab
+                [@@ox.allow "ox-discarded-result: best effort: closed"]
+            in
             ())
       in
       match
@@ -3460,6 +3505,9 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
                                         cdp_call ~deadline:(Ox.Duration.seconds 5)
                                           ~session cdp "Runtime.runIfWaitingForDebugger"
                                           (obj [])
+                                          [@@ox.allow
+                                            "ox-discarded-result: best effort: resumed \
+                                             target"]
                                       in
                                       `Stop_daemon)
                               | None -> ())
@@ -3501,6 +3549,7 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
                 let _discovery_enabled =
                   cdp_call cdp "Target.setDiscoverTargets"
                     (obj [ ("discover", `Bool true) ])
+                    [@@ox.allow "ox-discarded-result: best effort: discovery enabled"]
                 in
                 let _auto_attach_enabled =
                   cdp_call cdp "Target.setAutoAttach"
@@ -3510,9 +3559,13 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
                          ("waitForDebuggerOnStart", `Bool false);
                          ("flatten", `Bool true);
                        ])
+                    [@@ox.allow "ox-discarded-result: best effort: auto attach enabled"]
                 in
                 ()
-            | Error _ -> ())
+            | Error _ ->
+                ()
+                [@ox.allow
+                  "ox-discarded-result: best effort; the outcome is decided elsewhere"])
         | Chrome.Lost generation ->
             List.iter
               (fun (tab : tab) ->
@@ -3529,7 +3582,9 @@ let stop t =
   if not t.stopping then (
     t.stopping <- true;
     match ready t with
-    | Error _ -> ()
+    | Error _ ->
+        ()
+        [@ox.allow "ox-discarded-result: best effort; the outcome is decided elsewhere"]
     | Ok cdp ->
         List.iter
           (fun (tab : tab) ->
@@ -3537,6 +3592,7 @@ let stop t =
               (* Shutdown never retries closing a target or replaces the owner's outcome. *)
               let _closed_agent_target =
                 cdp_call cdp "Target.closeTarget" (obj [ ("targetId", str tab.id) ])
+                  [@@ox.allow "ox-discarded-result: best effort: closed agent target"]
               in
               ())
           (live_tabs t))

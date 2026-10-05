@@ -79,6 +79,7 @@ let rig
              ~workspace:"test" ~headless:true ())
           {
             Chrome.clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             mgr = env#process_mgr;
             logger;
             caps :> Leash.Chrome.caps;
@@ -330,7 +331,10 @@ let selectors
       | P.Failure e -> Alcotest.(check bool) "holder can share" true (e.hint <> "")
       | _ -> assert false);
       (* Ownership assertions below check this fixture transition. *)
-      let _human_handoff = Leash.Tabs.hand_over tabs ~reason:"captcha" h in
+      let _human_handoff =
+        Leash.Tabs.hand_over tabs ~reason:"captcha" h
+          [@@ox.allow "ox-discarded-result: best effort: human handoff"]
+      in
       check_code "hand-0o28 hand-gjqy human-held refusal" "with-human"
         (take tabs ~url:"https://example.com/in" ());
       Alcotest.(check bool)
@@ -382,7 +386,10 @@ let matrix
               (match condition with
               | `Human ->
                   (* The refusal assertion below checks the resulting ownership. *)
-                  let _human_handoff = Leash.Tabs.hand_over tabs ~reason:"captcha" h in
+                  let _human_handoff =
+                    Leash.Tabs.hand_over tabs ~reason:"captcha" h
+                      [@@ox.allow "ox-discarded-result: best effort: human handoff"]
+                  in
                   ()
               | `Closed -> ignore (result (request tabs "a" (P.Close { tab = h })))
               | _ -> ());

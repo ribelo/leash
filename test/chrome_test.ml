@@ -31,6 +31,7 @@ let deps ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ;
     : _ Chrome.deps =
   {
     clock = env#clock;
+    mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
     mgr = env#process_mgr;
     logger =
       Ox_observability.Logger.create ~service:"leash-test" ~clock:env#clock

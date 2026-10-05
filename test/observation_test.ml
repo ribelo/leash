@@ -137,6 +137,7 @@ let rig
                      ~headless:true ())
                   {
                     Leash.Chrome.clock = env#clock;
+                    mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
                     mgr = env#process_mgr;
                     logger;
                     caps :> Leash.Chrome.caps;
@@ -451,7 +452,10 @@ let retry_exhaustion
       script fake (fun () -> evaluated `Null);
       let started = Eio.Time.now env#clock in
       (* This case asserts retry count and elapsed time, not the terminal reply. *)
-      let _bounded_drive_reply = drive tabs [] in
+      let _bounded_drive_reply =
+        drive tabs []
+          [@@ox.allow "ox-discarded-result: best effort: bounded drive reply"]
+      in
       Alcotest.(check int)
         "fly-4mio exactly ten attempts" 10
         (List.length (operator_reads fake));

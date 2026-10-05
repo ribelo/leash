@@ -201,7 +201,7 @@ let accessed cdp tab backend =
            ("backendNodeId", Some (E.int backend)); ("fetchRelatives", Some (E.bool false));
          ])
   with
-  | Error _ -> None
+  | Error _ -> None [@ox.allow "ox-discarded-result: an unreadable AX node is no pair"]
   | Ok json -> ( match ax_pair json with Ok (pair :: _) -> Some pair | _ -> None)
 
 let described cdp tab backend =
@@ -209,11 +209,17 @@ let described cdp tab backend =
     attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
       (E.object_ [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
   with
-  | Error _ -> None
+  | Error _ ->
+      None
+      [@ox.allow
+        "ox-discarded-result: a failed probe reads as absent; the caller decides"]
   | Ok json -> (
       match E.Of_json.(at [ "node"; "nodeId" ] int) json with
       | Ok node -> Some node
-      | Error _ -> None)
+      | Error _ ->
+          None
+          [@ox.allow
+            "ox-discarded-result: a failed probe reads as absent; the caller decides"])
 
 (* field-jkx6: a DOM-derived row has no AX role to compare, so identity is the node
    itself. A connected node has a nonzero nodeId, and the backend id Chrome returns must
@@ -224,7 +230,10 @@ let described_identity cdp tab backend =
     attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
       (E.object_ [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
   with
-  | Error _ -> None
+  | Error _ ->
+      None
+      [@ox.allow
+        "ox-discarded-result: a failed probe reads as absent; the caller decides"]
   | Ok json -> (
       match
         ( E.Of_json.(at [ "node"; "nodeId" ] int) json,
@@ -362,7 +371,10 @@ let document_offset cdp tab =
     attempt ~deadline:call_deadline cdp ~session:tab.session "Page.getLayoutMetrics"
       (E.object_ [])
   with
-  | Error _ -> None
+  | Error _ ->
+      None
+      [@ox.allow
+        "ox-discarded-result: a failed probe reads as absent; the caller decides"]
   | Ok metrics -> (
       let read viewport =
         let open E.Of_json in
@@ -395,11 +407,18 @@ let hit_backend cdp tab ~x ~y =
              ])
       with
       | Error Timed_out -> unresponsive ()
-      | Error _ -> Ok None
+      | Error _ ->
+          Ok None
+          [@ox.allow
+            "ox-discarded-result: a failed probe reads as absent; the caller decides"]
       | Ok json -> (
           match E.Of_json.(field "backendNodeId" (try_or_none int)) json with
           | Ok hit -> Ok hit
-          | Error _ -> Ok None))
+          | Error _ ->
+              Ok None
+              [@ox.allow
+                "ox-discarded-result: a failed probe reads as absent; the caller decides"]
+          ))
 
 let node_name cdp tab backend =
   match
@@ -410,7 +429,10 @@ let node_name cdp tab backend =
   | Ok json -> (
       match E.Of_json.(at [ "node"; "nodeName" ] string) json with
       | Ok name -> Ok (Some (String.uppercase_ascii name))
-      | Error _ -> Ok None)
+      | Error _ ->
+          Ok None
+          [@ox.allow
+            "ox-discarded-result: a failed probe reads as absent; the caller decides"])
 
 (* HTMLLabelElement.control is the labeled element, whether the label wraps it or names
    it with for=. The object id comes back from the page; describeNode turns it into the
@@ -421,10 +443,16 @@ let label_control cdp tab label =
       (E.object_ [ ("backendNodeId", Some (E.int label)) ])
   with
   | Error Timed_out -> unresponsive ()
-  | Error _ -> Ok None
+  | Error _ ->
+      Ok None
+      [@ox.allow
+        "ox-discarded-result: a failed probe reads as absent; the caller decides"]
   | Ok resolved -> (
       match E.Of_json.(at [ "object"; "objectId" ] string) resolved with
-      | Error _ -> Ok None
+      | Error _ ->
+          Ok None
+          [@ox.allow
+            "ox-discarded-result: a failed probe reads as absent; the caller decides"]
       | Ok object_id -> (
           match
             attempt ~deadline:call_deadline cdp ~session:tab.session
@@ -438,7 +466,10 @@ let label_control cdp tab label =
                  ])
           with
           | Error Timed_out -> unresponsive ()
-          | Error _ -> Ok None
+          | Error _ ->
+              Ok None
+              [@ox.allow
+                "ox-discarded-result: a failed probe reads as absent; the caller decides"]
           | Ok called -> (
               match
                 E.Of_json.(at [ "result"; "objectId" ] (try_or_none string)) called
@@ -454,11 +485,19 @@ let label_control cdp tab label =
                          ])
                   with
                   | Error Timed_out -> unresponsive ()
-                  | Error _ -> Ok None
+                  | Error _ ->
+                      Ok None
+                      [@ox.allow
+                        "ox-discarded-result: a failed probe reads as absent; the caller \
+                         decides"]
                   | Ok described -> (
                       match E.Of_json.(at [ "node"; "backendNodeId" ] int) described with
                       | Ok id -> Ok (Some id)
-                      | Error _ -> Ok None))
+                      | Error _ ->
+                          Ok None
+                          [@ox.allow
+                            "ox-discarded-result: a failed probe reads as absent; the \
+                             caller decides"]))
               | _ -> Ok None)))
 
 (* A probe the fixture does not answer, or that fails, is not a label. It must not
@@ -562,7 +601,10 @@ let aim cdp tab (target : target) =
         with
         | Ok _ -> Ok ()
         | Error Timed_out -> unresponsive ()
-        | Error _ -> Ok ()
+        | Error _ ->
+            Ok ()
+            [@ox.allow
+              "ox-discarded-result: best effort; the outcome is decided elsewhere"]
       in
       match poll () with
       | Error e -> Error e
@@ -611,7 +653,9 @@ let settle_suggestions cdp tab =
     if remaining = 0 then ()
     else
       match evaluate ~deadline:(Ox.Duration.ms 20) cdp tab suggestions_expression with
-      | Error _ -> ()
+      | Error _ ->
+          ()
+          [@ox.allow "ox-discarded-result: best effort; the outcome is decided elsewhere"]
       | Ok json -> (
           match E.Of_json.(at [ "result"; "value" ] (try_or_none bool)) json with
           | Ok (Some true) -> ()
@@ -654,6 +698,7 @@ let settle cdp tab ~combobox =
      (* Settling is best effort; transition and dialog checks still decide the outcome. *)
      let _frame_settle =
        evaluate ~deadline:(Ox.Duration.ms 50) cdp tab frames_expression
+         [@@ox.allow "ox-discarded-result: settling is best effort"]
      in
      ());
   wait_for_transition tab;
@@ -775,6 +820,7 @@ let blur cdp tab =
   let _best_effort_blur =
     evaluate ~deadline:(Ox.Duration.seconds 1) cdp tab
       "document.activeElement && document.activeElement.blur()"
+      [@@ox.allow "ox-discarded-result: best effort: best effort blur"]
   in
   Ok ()
 
@@ -805,7 +851,10 @@ let read_checked cdp tab backend =
   in
   match E.Of_json.(at [ "result"; "value" ] (try_or_none bool)) json with
   | Ok value -> Ok value
-  | Error _ -> Ok None
+  | Error _ ->
+      Ok None
+      [@ox.allow
+        "ox-discarded-result: a failed probe reads as absent; the caller decides"]
 
 let choose_expression =
   "function (index) { const option = this.options[index]; if (!option) { return null; } \
@@ -1059,7 +1108,11 @@ let drag ~cdp tab (args : P.drag_args) =
                   if !held then
                     Eio.Cancel.protect (fun () ->
                         (* Cleanup must not replace the original failure or replay release. *)
-                        let _cleanup_release = release () in
+                        let _cleanup_release =
+                          release ()
+                            [@@ox.allow
+                              "ox-discarded-result: best effort: cleanup release"]
+                        in
                         ()))
                 (fun () ->
                   let rec move step =
@@ -1143,7 +1196,7 @@ let temporal_input cdp tab backend =
   let attributes =
     match E.Of_json.(at [ "node"; "attributes" ] (list string)) json with
     | Ok attributes -> attributes
-    | Error _ -> []
+    | Error _ -> [] [@ox.allow "ox-discarded-result: a failed read offers nothing"]
   in
   let rec kind = function
     | "type" :: value :: _ ->
@@ -1312,7 +1365,10 @@ let file_input_attributes cdp tab backend =
     attempt ~deadline:call_deadline cdp ~session:tab.session "DOM.describeNode"
       (E.object_ [ ("backendNodeId", Some (E.int backend)); ("depth", Some (E.int 0)) ])
   with
-  | Error _ -> None
+  | Error _ ->
+      None
+      [@ox.allow
+        "ox-discarded-result: a failed probe reads as absent; the caller decides"]
   | Ok json -> (
       match E.member "node" json with
       | None -> None
@@ -1440,7 +1496,11 @@ let operator_scroll ~cdp tab ~down =
                             y ->
                     Some y
                 | _ -> None)
-            | Error _ -> None
+            | Error _ ->
+                None
+                [@ox.allow
+                  "ox-discarded-result: a failed probe reads as absent; the caller \
+                   decides"]
           in
           (* pilot-x1f3: a renderer short of frames (a headed window behind others) acks a
              wheel late or never; the dispatch waited the full 30 s call deadline on Tauron
@@ -1498,10 +1558,14 @@ let operator_scroll ~cdp tab ~down =
                           (Printf.sprintf
                              "window.scrollTo({top:Math.max(0,%s+(%d)),behavior:'instant'}),String(window.scrollY)"
                              y delta)
+                          [@@ox.allow "ox-discarded-result: best effort: instant scroll"]
                       in
                       ()
                   | _ -> ())
-              | Error _ -> ()));
+              | Error _ ->
+                  ()
+                  [@ox.allow
+                    "ox-discarded-result: best effort; the outcome is decided elsewhere"]));
           Ok ()))
 
 let operator_settle ~cdp tab ~autocomplete =
@@ -1510,6 +1574,7 @@ let operator_settle ~cdp tab ~autocomplete =
   let _bounded_settle =
     evaluate ~deadline:(Ox.Duration.ms bound) cdp tab
       (Snapshot_source.settle_expression ~autocomplete)
+      [@@ox.allow "ox-discarded-result: best effort: bounded settle"]
   in
   wait_for_transition tab;
   Ok ()

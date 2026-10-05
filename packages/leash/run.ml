@@ -490,7 +490,7 @@ let loop ~handler ~now ~installed
   let call_script (script : Playbook.script) arguments =
     let at = now () in
     let outcome = handler.script script ~args:arguments in
-    let url = match observe () with Ok page -> page.url | Error _ -> "" in
+    let url = match observe () with Ok page -> page.url | Error _ -> ("" [@ox.allow "ox-discarded-result: an unobservable page has no URL to report"]) in
     let records, bytes, elapsed_ms, error = match outcome with
       | Ok (Collected value) -> value.records, value.bytes, value.elapsed_ms, None
       | Ok (Rejected value) -> 0, 0, value.elapsed_ms, Some (scrub value.reason)
@@ -652,8 +652,8 @@ let loop ~handler ~now ~installed
       after = (match outcome with Ok (result : P.action_result) -> {url = scrub result.P.url; title = scrub result.P.title}
         | Error _ -> {url = page.url; title = page.title}); elapsed_ms = ms (now () -. at);
       error = (match outcome with Ok _ -> None | Error e -> Some (scrub e.message));
-      hits = (match outcome with Ok result -> result.P.hits | Error _ -> None);
-      shots = (match outcome with Ok result -> result.P.shots | Error _ -> None) } in
+      hits = (match outcome with Ok result -> result.P.hits | Error _ -> (None [@ox.allow "ox-discarded-result: a failed act has no hit evidence"]));
+      shots = (match outcome with Ok result -> result.P.shots | Error _ -> (None [@ox.allow "ox-discarded-result: a failed act has no screenshots"])) } in
     let step = match P.planner_step_of_yojson (json (P.yojson_of_planner_step step)) with
       | Ok safe -> safe
       | Error _ -> {step with hits=None; shots=None; text=None;
@@ -689,7 +689,7 @@ let loop ~handler ~now ~installed
       let candidates = get_candidates book in
       let snapshot = { page.snapshot with P.rows = List.filteri (fun i _ -> i < 250) page.snapshot.rows } in
       let model_candidates=List.filter_map (fun proc -> match Playbook.procedure_of_yojson (json (Playbook.yojson_of_procedure proc)) with
-        | Error _ -> None | Ok proc -> Some proc) candidates in
+        | Error _ -> (None [@ox.allow "ox-discarded-result: a procedure that no longer decodes after redaction is not offered"]) | Ok proc -> Some proc) candidates in
       let request = { legs = List.map (fun (leg : leg) -> {leg with goal=scrub leg.goal}) !legs; candidates=model_candidates; secret_names = List.map fst !private_values;
         trigger = Blocked; reason = "pilot turn"; mission = scrub args.mission;
         site = Option.map scrub !current_site; playbook = None;
@@ -776,7 +776,7 @@ let loop ~handler ~now ~installed
               | Error _ when canceled -> finish page "canceled-by-operator" ~reason:"the operator canceled the handoff" ()
               | Error _ when expired ->
                    (* Expiry remains authoritative even if the notification cannot be shown. *)
-                   let _expiry_notification = notify "the agent gave up waiting; the tab is still open" in
+                   let _expiry_notification = notify "the agent gave up waiting; the tab is still open" [@@ox.allow "ox-discarded-result: best effort: expiry notification"] in
                    finish page "handoff-expired" ~reason:(scrub reason) ()
               | Error error -> failed error
               | Ok _ -> next ())
