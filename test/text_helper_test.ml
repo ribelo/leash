@@ -486,7 +486,7 @@ let raw ?models ?decide ?text_helper ?levels tabs command =
 let new_tab tabs =
   tab (result (raw tabs (P.New { url = Some "https://example.com/"; label = None })))
 
-let drive ?levels models tabs handle goal =
+let drive ?levels ?(secrets = []) models tabs handle goal =
   (* revert-eft1: drive is JEV's loop; no planner is configured here. *)
   let levels = Option.value ~default:(Models.levels models) levels in
   raw ~levels ~models
@@ -502,10 +502,62 @@ let drive ?levels models tabs handle goal =
          dry_run = None;
          expect = None;
          out = None;
-         secrets = [];
+         secrets;
          max_steps = None;
          start_url = None;
        })
+
+(* revert-k63o: --secret in JEV's loop. The helper answers a secret's name; the page gets
+   the value, and the value never reaches a model. *)
+let secret_by_name
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  rig ~caps (fun env sw tabs fake logger _memory ->
+      script_page fake;
+      let systemone =
+        scripted ~sw ~net:env#net
+          [
+            (fun body -> Chat.ok (answer ~choice:"TYPE_TEXT" ~label:"Search terms" body));
+            (fun body -> Chat.ok (answer ~choice:"DONE" body));
+          ]
+      in
+      let chat = chat_server ~sw ~net:env#net [ chat_reply (`String "pin") ] in
+      let config =
+        models_config
+          ~systemone_endpoint:(Chat.url systemone "/api/v1/systemone")
+          ~chat_base_url:(Chat.url chat "")
+      in
+      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let handle = new_tab tabs in
+      let reply =
+        result
+          (drive ~secrets:[ ("pin", "4711-secret") ] models tabs handle "Enter my pin")
+      in
+      Alcotest.(check string) "done" "done" (text "status" reply);
+      let inserted = calls fake "Input.insertText" in
+      Alcotest.(check (list string))
+        "revert-k63o the value is typed" [ "4711-secret" ]
+        (List.map (fun call -> text "text" (params call)) inserted);
+      let request =
+        match Chat.request chat with
+        | Some r -> r
+        | None -> Alcotest.fail "no chat request"
+      in
+      Alcotest.(check bool)
+        "revert-k63o the helper is told the name" true
+        (contains request.Chat.body "pin");
+      Alcotest.(check bool)
+        "revert-k63o the value never reaches the helper" false
+        (contains request.Chat.body "4711-secret");
+      Alcotest.(check bool)
+        "revert-k63o the value is redacted from the reply" false
+        (contains (Yojson.Safe.to_string reply) "4711-secret"))
 
 (* ---------- drive-ls3c drive-fh1h: the value the helper answers is typed ---------- *)
 
@@ -1143,6 +1195,7 @@ let () =
           Alcotest.test_case "fly-gysl fly-qr70 fly-9e0f Unicode and usage" `Quick
             unicode_and_usage;
           Alcotest.test_case "drive-ls3c type_text fills the value" `Quick (fills ~caps);
+          Alcotest.test_case "revert-k63o a secret by name" `Quick (secret_by_name ~caps);
           Alcotest.test_case "drive-ls3c null blocks naming the field" `Quick
             (null_is_blocked ~caps);
           Alcotest.test_case "drive-ls3c the 2000 characters bound" `Quick (bound ~caps);

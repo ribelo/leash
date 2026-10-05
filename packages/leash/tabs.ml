@@ -2246,10 +2246,34 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
          answer for an unchanged context — what a stale-row retry is — so it is taken
          here and goes away with the drive. *)
   let helper = text_helper () in
+  (* revert-k63o: --secret in JEV's loop. The helper learns the secret names; an answer
+     that is exactly a name is typed as its value, which never reaches a model. *)
   let text_value context =
     clear_usage meter "text_helper";
-    helper.Text_helper.complete ~deadline:(remaining ())
-      (Text_helper.redact (secrets ()) context)
+    let secrets = secrets () in
+    let context =
+      match secrets with
+      | [] -> context
+      | _ ->
+          {
+            context with
+            Text_helper.goal =
+              context.Text_helper.goal
+              ^ "\nSecrets available by name; answer with the name alone to type one: "
+              ^ String.concat ", " (List.map fst secrets);
+          }
+    in
+    let* answer =
+      helper.Text_helper.complete ~deadline:(remaining ())
+        (Text_helper.redact secrets context)
+    in
+    Ok
+      (Option.map
+         (fun text ->
+           match List.assoc_opt (String.trim text) secrets with
+           | Some value -> value
+           | None -> text)
+         answer)
   in
   let* cdp = ready t in
   let* session = page_session t cdp tab in
@@ -2872,22 +2896,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
                     (match meter with
                     | Some meter -> clear_usage meter "text_helper"
                     | None -> ());
-                    (* --secret in JEV's loop: the helper learns the names; Leash types the
-                       value when it answers with one. *)
-                    let context =
-                      match !secret_values with
-                      | [] -> context
-                      | secrets ->
-                          {
-                            context with
-                            Text_helper.goal =
-                              context.Text_helper.goal
-                              ^ "\n\
-                                 Secrets available by name (answer with the name and \
-                                 Leash types the secret): "
-                              ^ String.concat ", " (List.map fst secrets);
-                          }
-                    in
                     (text_helper ()).Text_helper.complete ~deadline:(remaining ())
                       (Text_helper.redact !secret_values context));
                 step =
