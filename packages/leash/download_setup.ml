@@ -30,9 +30,12 @@ let prepare ~clock ~cdp ~on_target =
       Option.iter
         (fun target ->
           Eio.Cancel.protect (fun () ->
-              ignore
-                (call cdp ~deadline:(Ox.Duration.ms 500) "Target.closeTarget"
-                   (obj [ ("targetId", str target) ]))))
+              (* Bootstrap cleanup must not replace the readiness outcome. *)
+              let _closed_bootstrap_target =
+                call cdp ~deadline:(Ox.Duration.ms 500) "Target.closeTarget"
+                  (obj [ ("targetId", str target) ])
+              in
+              ()))
         !target)
     (fun () ->
       Ox.Timeout.timeout ~clock (Ox.Duration.seconds 5) (fun () ->

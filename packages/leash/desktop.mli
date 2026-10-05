@@ -40,7 +40,12 @@ val create :
     was released — the handoff it belonged to ended — is cancelled, not reported:
     {!notify} runs on its caller's switch for exactly that reason. A command that cannot
     be started at all — a missing binary, an exec that fails — is an [Error], not a
-    defect: the caller turns it into a warning. *)
+    defect: the caller turns it into a warning.
+
+    Suspension: never suspends at construction; commands run only through the returned
+    methods. Cancellation: not a cancellation point at construction. Finalizers: none
+    registered by construction; command methods own their child scopes. Locking: none at
+    construction. Cancellation safety: safe to re-run; construction spawns no process. *)
 
 val disabled : t
 (** Neither step is configured, so nothing is ever run and no clock or process manager is
@@ -62,7 +67,14 @@ val notify :
     successful command exit without a selected action (notification dismissal). The first
     action wins. A failed command or fiber cancellation is not dismissal. Blocks for the
     command's whole life: the caller forks it on the handoff's switch so the handoff
-    ending stops it. *)
+    ending stops it.
+
+    Suspension: may suspend while spawning, reading stdout, waiting for the command, or
+    running a callback. Cancellation: propagates and is not a notification dismissal.
+    Finalizers: sw owns managed process retirement and stdout cleanup. Locking: no shared
+    mutex; the first-action flag belongs to this call. Cancellation safety: unsafe because
+    progress is lost; an action callback may already have run, so never replay an
+    uncertain notification. *)
 
 val notifier :
   caps:caps ->
@@ -72,4 +84,10 @@ val notifier :
   string ->
   (unit, string) result
 (** notif-7pha: non-blocking-kind notification, a five-second bounded command with
-    [{message}] substituted as one argv element; [] disables it. *)
+    [{message}] substituted as one argv element; [] disables it.
+
+    Suspension: may suspend for the bounded command when applying the returned notifier.
+    Cancellation: propagates after scoped process retirement. Finalizers: each invocation
+    owns a child switch and its managed process. Locking: none; notifications are
+    independent commands. Cancellation safety: unsafe because progress is lost; delivery
+    may precede cancellation, so repeating can duplicate the notification. *)

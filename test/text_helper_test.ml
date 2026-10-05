@@ -1152,7 +1152,8 @@ let unicode_and_usage () =
       let page = get "page" (user_context server) in
       Alcotest.(check string)
         "fly-gysl viewport bounded by characters" (repeat 6000) (text "text" page);
-      ignore (ask "bound");
+      (* The first answer was checked above; this call measures memoized HTTP traffic. *)
+      let _memoized_reply = ask "bound" in
       Alcotest.(check int)
         "fly-gysl unchanged memo makes no model call" 1 (Chat.connections server);
       List.iter

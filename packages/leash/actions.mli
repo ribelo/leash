@@ -195,7 +195,16 @@ val upload :
     readable regular file is [invalid-request], the total [too-large]); the row is
     revalidated as an [<input type=file>] rather than by role and name, and several files
     need [multiple]. Every other action refuses a [file-input] row with
-    [row-not-actionable] (hard-2gnf). *)
+    [row-not-actionable] (hard-2gnf).
+
+    Suspension: may suspend on CDP calls and settling. Cancellation: propagates; file
+    assignment may already have occurred. Finalizers: none registered; Chrome owns
+    file-input resources. Locking: none here; the Tabs caller serializes tab actions.
+    Cancellation safety: unsafe because progress is lost; never replay an uncertain file
+    assignment.
+
+    [Assert_failure] if an internal browser invariant fails. [Eio.Cancel.Cancelled]
+    propagates. *)
 
 val scroll :
   cdp:Cdp.t ->

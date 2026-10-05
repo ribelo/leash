@@ -649,8 +649,13 @@ let wait_for_transition tab =
 
 let settle cdp tab ~combobox =
   tab.engage ();
-  if combobox then settle_suggestions cdp tab
-  else ignore (evaluate ~deadline:(Ox.Duration.ms 50) cdp tab frames_expression);
+  (if combobox then settle_suggestions cdp tab
+   else
+     (* Settling is best effort; transition and dialog checks still decide the outcome. *)
+     let _frame_settle =
+       evaluate ~deadline:(Ox.Duration.ms 50) cdp tab frames_expression
+     in
+     ());
   wait_for_transition tab;
   Ok ()
 
@@ -767,9 +772,10 @@ let insert_text cdp tab text =
    [Input.insertText]. It is bounded and best effort: a change handler that opens a
    dialog blocks the renderer, and the reply must still report that dialog. *)
 let blur cdp tab =
-  ignore
-    (evaluate ~deadline:(Ox.Duration.seconds 1) cdp tab
-       "document.activeElement && document.activeElement.blur()");
+  let _best_effort_blur =
+    evaluate ~deadline:(Ox.Duration.seconds 1) cdp tab
+      "document.activeElement && document.activeElement.blur()"
+  in
   Ok ()
 
 let resolve_node cdp tab backend =
@@ -1050,7 +1056,11 @@ let drag ~cdp tab (args : P.drag_args) =
             let* () =
               Fun.protect
                 ~finally:(fun () ->
-                  if !held then Eio.Cancel.protect (fun () -> ignore (release ())))
+                  if !held then
+                    Eio.Cancel.protect (fun () ->
+                        (* Cleanup must not replace the original failure or replay release. *)
+                        let _cleanup_release = release () in
+                        ()))
                 (fun () ->
                   let rec move step =
                     if step > 12 then release ()
@@ -1482,19 +1492,24 @@ let operator_scroll ~cdp tab ~down =
                          short of frames defers it): put the document where the wheel
                          was taking it, instantly. An absolute instant scroll replaces a
                          smooth one still in flight, so the wheel cannot land twice. *)
-                      ignore
-                        (evaluate ~deadline:(Ox.Duration.ms 300) cdp tab
-                           (Printf.sprintf
-                              "window.scrollTo({top:Math.max(0,%s+(%d)),behavior:'instant'}),String(window.scrollY)"
-                              y delta))
+                      (* The fallback remains best effort; observation reports its effect. *)
+                      let _instant_scroll =
+                        evaluate ~deadline:(Ox.Duration.ms 300) cdp tab
+                          (Printf.sprintf
+                             "window.scrollTo({top:Math.max(0,%s+(%d)),behavior:'instant'}),String(window.scrollY)"
+                             y delta)
+                      in
+                      ()
                   | _ -> ())
               | Error _ -> ()));
           Ok ()))
 
 let operator_settle ~cdp tab ~autocomplete =
   let bound = if autocomplete then 200 else 50 in
-  ignore
-    (evaluate ~deadline:(Ox.Duration.ms bound) cdp tab
-       (Snapshot_source.settle_expression ~autocomplete));
+  (* A slow frame is not an action failure; transition checks follow. *)
+  let _bounded_settle =
+    evaluate ~deadline:(Ox.Duration.ms bound) cdp tab
+      (Snapshot_source.settle_expression ~autocomplete)
+  in
   wait_for_transition tab;
   Ok ()

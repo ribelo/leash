@@ -20,6 +20,7 @@ let create ~sw ?(interval = interval) ~idle ~clock ~logger:_ tabs =
         ignore (sweep t);
         Ok ()
       in
-      ignore (Ox.Retry.repeat ~clock (Ox.Schedule.spaced interval) pass);
+      (* The spaced schedule owns repetition; termination has no sweep value to report. *)
+      let _schedule_ended = Ox.Retry.repeat ~clock (Ox.Schedule.spaced interval) pass in
       `Stop_daemon);
   t

@@ -50,7 +50,17 @@ val create :
     call refuses with [model-unavailable]. [installed] hands a listener the playbooks a
     run works from, which is how a scripted test runs a known playbook without touching
     the operator's XDG configuration; production leaves it [None] and the run loads them.
-*)
+
+    Suspension: may suspend during private socket validation and listener startup.
+    Cancellation: propagates from listener creation. Finalizers: sw owns the listener and
+    its request fibers and socket cleanup. Locking: the listener enforces single ownership
+    of its socket; tab serialization remains in Tabs. Cancellation safety: safe to re-run
+    after tearing down the previous owner switch; an existing listener is refused.
+
+    [Assert_failure] if an internal handler invariant fails. [Eio.Cancel.Cancelled]
+    propagates. An owned handler cleanup can raise [Fun.Finally_raised].
+    [Invalid_argument] and [Stdlib.Sys_error] can propagate from the owned listener or
+    request handler. *)
 
 val policy : Ox_ipc.Listener.policy
 (** The listener's policy: 1 MiB request lines, 8 MiB replies (a 1 MiB response body,

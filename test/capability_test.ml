@@ -331,7 +331,8 @@ let selectors
       (match taken with
       | P.Failure e -> Alcotest.(check bool) "holder can share" true (e.hint <> "")
       | _ -> assert false);
-      ignore (Leash.Tabs.hand_over tabs ~reason:"captcha" h);
+      (* Ownership assertions below check this fixture transition. *)
+      let _human_handoff = Leash.Tabs.hand_over tabs ~reason:"captcha" h in
       check_code "hand-0o28 hand-gjqy human-held refusal" "with-human"
         (take tabs ~url:"https://example.com/in" ());
       Alcotest.(check bool)
@@ -381,7 +382,10 @@ let matrix
               let h = tab info in
               let chosen = if condition = `Bad then bad else h in
               (match condition with
-              | `Human -> ignore (Leash.Tabs.hand_over tabs ~reason:"captcha" h)
+              | `Human ->
+                  (* The refusal assertion below checks the resulting ownership. *)
+                  let _human_handoff = Leash.Tabs.hand_over tabs ~reason:"captcha" h in
+                  ()
               | `Closed -> ignore (result (request tabs "a" (P.Close { tab = h })))
               | _ -> ());
               let command = List.assoc name (commands chosen) in

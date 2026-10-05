@@ -450,7 +450,8 @@ let retry_exhaustion
       let fake = fake () in
       script fake (fun () -> evaluated `Null);
       let started = Eio.Time.now env#clock in
-      ignore (drive tabs []);
+      (* This case asserts retry count and elapsed time, not the terminal reply. *)
+      let _bounded_drive_reply = drive tabs [] in
       Alcotest.(check int)
         "fly-4mio exactly ten attempts" 10
         (List.length (operator_reads fake));

@@ -113,14 +113,30 @@ val launch_pipe :
 (** The real one, given the capabilities spawning needs; {!create} passes [deps.caps]. two
     pipes, the child ends on descriptors 3 and 4, the parent ends as the transport. The
     parent closes its copies of the child ends right after the spawn, so the browser's
-    exit reaches the CDP reader as end of input. *)
+    exit reaches the CDP reader as end of input.
+
+    Suspension: may suspend when the returned launcher runs during pipe creation and
+    process spawn. Cancellation: propagates from the child switch and spawning.
+    Finalizers: sw owns both pipe pairs and the managed child; parent copies of child ends
+    close after spawn. Locking: none; the supervisor owns generation ordering.
+    Cancellation safety: safe to re-run only after releasing the failed generation switch
+    and retiring its child. [Invalid_argument] is raised if a pipe flow has no Unix
+    descriptor. *)
 
 type t
 
 val create : sw:Eio.Switch.t -> ?launch:'clock launch -> config -> 'clock deps -> t
 (** Starts the supervisor and its two supervisor fibers on [sw]. The first spawn is
     asynchronous, so {!connection} answers [`Browser_unavailable] until the first
-    [Started]. Nothing synchronously fails; a spawn failure arrives as [Gave_up]. *)
+    [Started]. Spawn failures arrive as [Gave_up]; [Eio.Cancel.Cancelled] can escape
+    startup.
+
+    Suspension: may suspend while starting supervisor fibers without waiting for the first
+    generation. Cancellation: propagates from switch-scoped startup. Finalizers: sw stops
+    the supervisor and retires its managed generations. Locking: supervisor state changes
+    are owned by its supervisor fibers. Cancellation safety: safe to re-run on a fresh
+    switch after the old supervisor and child have stopped. [Invalid_argument] is raised
+    for invalid supervisor configuration. *)
 
 val generation : t -> int
 (** The supervisor's generation counter: zero before the first successful spawn. *)
@@ -131,7 +147,11 @@ val connection : t -> (Cdp.t, [ `Browser_unavailable ]) result
 
 val events : t -> event Eio.Stream.t
 (** Bounded to 32 events; overflow drops the oldest, never blocks. Take until [Stopped].
-*)
+
+    Suspension: never suspends; returns the existing event stream. Cancellation: not a
+    cancellation point. Finalizers: none registered by this accessor. Locking: none;
+    consumers share the same stream. Cancellation safety: safe to re-run; no event is
+    consumed. *)
 
 val status : t -> status
 

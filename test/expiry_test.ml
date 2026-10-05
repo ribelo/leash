@@ -228,7 +228,8 @@ let idle_pause
        ; .. >) () =
   rig ~caps (fun ~env ~tabs ~expiry ~fake:_ ->
       let h = fresh tabs in
-      ignore (Tabs.hand_over tabs ~reason:"captcha" h);
+      (* The held-state assertion below checks the fixture transition. *)
+      let _human_handoff = Tabs.hand_over tabs ~reason:"captcha" h in
       advance env 3600;
       ignore (Expiry.sweep expiry);
       Alcotest.(check bool) "hand-len8 idle is paused" true (held tabs);

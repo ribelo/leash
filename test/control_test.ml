@@ -2897,7 +2897,8 @@ let run_refusals
           | Ok _ -> ()
           | Error error -> Alcotest.fail error.P.message);
           check_code "run-fwl8 with-human" "with-human" (run "alice");
-          ignore (Leash.Tabs.resume tabs h);
+          (* The following dialog assertion needs the handoff fixture released. *)
+          let _resumed_fixture = Leash.Tabs.resume tabs h in
           (* A dialog waiting to be answered: the run refuses to start rather than fight it. *)
           Fake.emit ~session:"session-1" f ~method_:"Page.javascriptDialogOpening"
             ~params:

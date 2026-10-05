@@ -717,7 +717,10 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
               unattended := `Assoc ["kind",`String "handoff";"reason",`String (scrub reason);"elapsed_ms",`Int (int_of_float ((now ()-.started)*.1000.));"outcome",`String (if canceled then "canceled-by-operator" else if expired then "expired" else if Result.is_ok outcome then "resumed" else "failed")] :: !unattended;
               (match outcome with
               | Error _ when canceled -> finish page "canceled-by-operator" ~reason:"the operator canceled the handoff" ()
-              | Error _ when expired -> ignore (notify "the agent gave up waiting; the tab is still open"); finish page "handoff-expired" ~reason:(scrub reason) ()
+              | Error _ when expired ->
+                   (* Expiry remains authoritative even if the notification cannot be shown. *)
+                   let _expiry_notification = notify "the agent gave up waiting; the tab is still open" in
+                   finish page "handoff-expired" ~reason:(scrub reason) ()
               | Error error -> failed error
               | Ok _ -> next ())
           | Read {quote; note} ->

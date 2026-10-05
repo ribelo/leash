@@ -23,7 +23,13 @@ module Frame : sig
     write:Eio_unix.sink_ty Eio.Resource.t ->
     unit ->
     t
-  (** [max_size] bounds one buffered frame and defaults to one mebibyte. *)
+  (** [max_size] bounds one buffered frame and defaults to one mebibyte.
+
+      Suspension: never suspends; wrapper behavior depends on Eio.Buf_read.of_flow; wraps
+      flows without reading or writing. Cancellation: not a cancellation point; wrapper
+      behavior depends on Eio.Buf_read.of_flow. Finalizers: none; both flows are borrowed.
+      Locking: none; callers serialize reads and writes. Cancellation safety: safe to
+      re-run; construction consumes no bytes. *)
 
   val encode : Yojson.Safe.t -> string
   (** [encode message] is compact JSON followed by the NUL delimiter. *)
@@ -49,7 +55,14 @@ val create :
   transport ->
   t
 (** One correlator, its reader fiber and its deadline clock, all scoped to [sw]. The
-    reader stops on switch teardown; the transport is not closed by this module. *)
+    reader stops on switch teardown; the transport is not closed by this module.
+
+    Suspension: may suspend while starting a switch-owned reader; does not wait for a
+    browser reply. Cancellation: propagates from switch-scoped startup. Finalizers: the
+    correlator reader is scoped to sw; borrowed transport flows are not closed here.
+    Locking: correlation and outgoing writes are serialized by the correlator.
+    Cancellation safety: safe to re-run on a fresh owner switch after the old reader has
+    stopped. *)
 
 val call :
   t ->
@@ -64,7 +77,14 @@ val call :
 
 val events : t -> Yojson.Safe.t Ox_rpc.Correlator.notification Eio.Stream.t
 (** CDP events, unmatched and late messages, ending with [Closed reason] exactly once,
-    last. One consumer; a second reader steals from the first. *)
+    last. One consumer; a second reader steals from the first.
+
+    Suspension: never suspends; wrapper behavior depends on
+    Ox_rpc.Correlator.notifications; returns the existing notification stream.
+    Cancellation: not a cancellation point; wrapper behavior depends on
+    Ox_rpc.Correlator.notifications. Finalizers: none registered by this accessor.
+    Locking: none; the stream remains single-consumer. Cancellation safety: safe to
+    re-run; accessing the stream consumes no event. *)
 
 val closed : t -> Ox_rpc.Correlator.close_reason Eio.Promise.t
 (** Resolves at end of input, on a read failure, or on {!close}. It stays pending when

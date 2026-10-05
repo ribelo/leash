@@ -197,7 +197,10 @@ let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
           | Ok tab -> (
               let cleanup () =
                 if args.P.tab = None then
-                  Eio.Cancel.protect (fun () -> ignore (Tabs.close tabs tab))
+                  Eio.Cancel.protect (fun () ->
+                      (* Exceptional cleanup must preserve the original failure. *)
+                      let _closed_owned_tab = Tabs.close tabs tab in
+                      ())
               in
               let outcome =
                 try
@@ -221,8 +224,10 @@ let dispatch ?learning ?pilot ?(planner_actions = 5) ?traces ?logger
                   | Ok _ -> outcome
                   | Error error -> Error error))
         with exn ->
-          ignore
-            (keep (Error (P.make_error (enum "internal") ~message:"drive interrupted")));
+          (* Keep records the terminal state; the original exception is re-raised. *)
+          let _recorded_interruption =
+            keep (Error (P.make_error (enum "internal") ~message:"drive interrupted"))
+          in
           raise exn
       in
       lift P.yojson_of_run_result (keep outcome)

@@ -405,9 +405,11 @@ let create ~sw ?launch config (deps : 'clock deps) =
               let cdp = Cdp.create ~sw:child_sw ~clock:deps.clock transport in
               let tail = Chrome_stderr.create () in
               let drained, resolve = Eio.Promise.create () in
-              ignore
-                (Ox.Agent.update state.tails ~fn:(fun tails ->
-                     (generation, tail, drained) :: tails));
+              (* Only registration matters here; the returned ledger is not read. *)
+              let _registered_tail =
+                Ox.Agent.update state.tails ~fn:(fun tails ->
+                    (generation, tail, drained) :: tails)
+              in
               (match Ox_process.Child.stderr child with
               | None -> Eio.Promise.resolve resolve ()
               | Some source ->

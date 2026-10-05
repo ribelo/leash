@@ -1750,7 +1750,7 @@ let diagnostic ~config_path ~kind ~message =
     | `Config | `Validation -> (
         match
           try P.error_of_yojson (Yojson.Safe.from_string message)
-          with _ -> Error "not an error record"
+          with Yojson.Json_error _ -> Error "not an error record"
         with
         | Ok error -> error
         | Error _ ->
@@ -1758,7 +1758,10 @@ let diagnostic ~config_path ~kind ~message =
               match config_path with None -> [] | Some path -> [ ("config", str path) ]
             in
             let problems =
-              match try Some (Yojson.Safe.from_string message) with _ -> None with
+              match
+                try Some (Yojson.Safe.from_string message)
+                with Yojson.Json_error _ -> None
+              with
               | Some (`List problems) -> [ ("problems", `List problems) ]
               | _ -> []
             in

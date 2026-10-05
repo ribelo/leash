@@ -38,7 +38,18 @@ val create :
     refuses before anything is sent. The API key travels as a {!Ox_observability.Redact.t}
     and only {!Ox_ai.Bearer.header} reveals it, on the request path; the chat client is
     pure and synchronous, so it is built here beside the System One one and shares the
-    transport. *)
+    transport.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on Stdlib,
+    Ox_http.Client.create, Ox_ai_chat, Ox_ai_systemone and local model-client constructor
+    callbacks during construction; depends on Ox_http.Client.create; construction creates
+    the shared HTTP client and pure model clients. Cancellation: not a cancellation point;
+    behavior of the delegated helpers depends on Stdlib, Ox_http.Client.create,
+    Ox_ai_chat, Ox_ai_systemone and local model-client constructor callbacks at
+    construction; depends on Ox_http.Client.create. Finalizers: the HTTP client belongs to
+    sw; model clients register no additional cleanup. Locking: none at construction;
+    individual calls run in their calling fibers. Cancellation safety: safe to re-run on a
+    fresh owner switch after releasing the previous HTTP client scope. *)
 
 val status : t -> Protocol.models_status
 (** What [leash status] reports: [configured] is whether an API key is present, and the

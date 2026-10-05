@@ -850,13 +850,16 @@ let with_temp ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.tmp ; .. >) f =
       (try
          Ox_caps.Cap_unix.unlink ~caps
            (Filename.concat (Filename.concat path "leash") "control.sock")
-       with _ -> ());
-      (try Ox_caps.Cap_unix.rmdir ~caps (Filename.concat path "leash") with _ -> ());
+       with Unix.Unix_error _ -> ());
+      (try Ox_caps.Cap_unix.rmdir ~caps (Filename.concat path "leash")
+       with Unix.Unix_error _ -> ());
       List.iter
         (fun name ->
-          try Ox_caps.Cap_unix.unlink ~caps (Filename.concat path name) with _ -> ())
+          try Ox_caps.Cap_unix.unlink ~caps (Filename.concat path name)
+          with Unix.Unix_error _ -> ())
         [ "binary"; "config.toml"; "stdout"; "stderr" ];
-      (try Ox_caps.Cap_unix.rmdir ~caps (Filename.concat path "profile") with _ -> ());
+      (try Ox_caps.Cap_unix.rmdir ~caps (Filename.concat path "profile")
+       with Unix.Unix_error _ -> ());
       Ox_caps.Cap_unix.rmdir ~caps path)
     (fun () -> f path)
 
@@ -1224,7 +1227,10 @@ let with_tree
         Ox_caps.Cap_unix.rmdir ~caps path
     | _ -> Ox_caps.Cap_unix.unlink ~caps path
   in
-  Fun.protect ~finally:(fun () -> try remove ~caps root with _ -> ()) (fun () -> f root)
+  Fun.protect
+    ~finally:(fun () ->
+      try remove ~caps root with Unix.Unix_error _ | Sys_error _ -> ())
+    (fun () -> f root)
 
 (* The CLI with [env] replacing the inherited values of those names, answering its status,
    stdout and stderr. *)

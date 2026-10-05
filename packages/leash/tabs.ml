@@ -662,7 +662,10 @@ let tab_of_target t id =
 
 (* A tab leaves the ledger, and whatever waited on its load is woken. *)
 let disappear t (tab : tab) disposition =
-  ignore (call_protected t (Disappear { key = ledger_key tab; disposition; at = now t }));
+  (* A raced disappearance must still wake this tab's waiters. *)
+  let _disappearance =
+    call_protected t (Disappear { key = ledger_key tab; disposition; at = now t })
+  in
   match tab.load_waiter with
   | None -> ()
   | Some waiter ->
@@ -776,7 +779,11 @@ let use_session t cdp tab session =
   tab.session <- Some session;
   if tab.enabled_session <> Some session then (
     tab.enabled_session <- Some session;
-    let enable meth params = ignore (session_call cdp tab session meth params) in
+    let enable meth params =
+      (* Domains are enabled best effort; subsequent reads validate their replies. *)
+      let _domain_enabled = session_call cdp tab session meth params in
+      ()
+    in
     enable "Page.enable" (obj []);
     enable "Runtime.enable" (obj []);
     enable "Network.enable" (obj []);
@@ -809,10 +816,12 @@ let page_session t cdp tab =
    what the operator's own Chrome would. Best effort both ways; the disable is bounded and
    survives cancellation of the operation. *)
 let focus_emulation cdp session enabled =
-  ignore
-    (cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
-       "Emulation.setFocusEmulationEnabled"
-       (obj [ ("enabled", `Bool enabled) ]))
+  let _focus_emulation =
+    cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
+      "Emulation.setFocusEmulationEnabled"
+      (obj [ ("enabled", `Bool enabled) ])
+  in
+  ()
 
 let with_focus t tab f =
   let engaged = ref None in
@@ -894,7 +903,10 @@ let watch_navigation t cdp tab =
       Fun.protect
         ~finally:(fun () ->
           tab.page_loads <- List.filter (fun pending -> pending != waiter) tab.page_loads)
-        (fun () -> ignore (t.await_load promise)));
+        (fun () ->
+          (* The following observation decides whether loading completed. *)
+          let _load_notice = t.await_load promise in
+          ()));
     if tab.dialog = None && tab.navigations <> since then refresh_from_target cdp tab;
     seen := tab.navigations
 
@@ -1182,9 +1194,12 @@ let announce t ~sw ~tab ~waiting ~reason ~warn ~clean =
   Eio.Fiber.fork_daemon ~sw (fun () ->
       guarded "notify" (fun () ->
           let answer outcome =
-            ignore
-              (call t
-                 (Answer_handoff { handle = credential tab; waiting; outcome; at = now t }))
+            (* The ledger keeps the first answer; late or expired answers are harmless. *)
+            let _racing_answer =
+              call t
+                (Answer_handoff { handle = credential tab; waiting; outcome; at = now t })
+            in
+            ()
           in
           Desktop.notify t.desktop ~sw context
             ~on_cancel:(fun () ->
@@ -1217,7 +1232,11 @@ let handoff ?(secrets = []) t ~reason ~timeout_s handle =
        on a lock it will never get. *)
     Eio.Cancel.protect (fun () ->
         Eio.Mutex.use_rw ~protect:true tab.lock (fun () ->
-            ignore (call t (Restore { handle = credential tab; waiting; at = now t }))))
+            (* Restoration may race disappearance; cleanup still releases the lock. *)
+            let _restored =
+              call t (Restore { handle = credential tab; waiting; at = now t })
+            in
+            ()))
   in
   let warnings_json () =
     match List.rev !warnings with
@@ -1258,8 +1277,10 @@ let handoff ?(secrets = []) t ~reason ~timeout_s handle =
              the notifier is stopped when the request ends however it ends. *)
           announce t ~sw:human ~tab ~waiting ~reason ~warn ~clean;
           let left = remaining () in
-          if not (Ox.Duration.is_zero left) then
-            ignore (t.await_handoff left waiting.promise);
+          (if not (Ox.Duration.is_zero left) then
+             (* [answer] below reads the authoritative outcome, including expiry. *)
+             let _handoff_notice = t.await_handoff left waiting.promise in
+             ());
           answer ()))
 
 (* hand-x3hi: list is for finding. Every live tab, never a handle. *)
@@ -1640,9 +1661,12 @@ let reading_browser t ~session tab cdp : Reading.browser =
           Dialog_race.first (dialog_race tab) (fun () ->
               Screenshot.capture tab.screenshot ~call ~within:t.capture_timeout ~full_page
                 ~stop:(fun () ->
-                  ignore
-                    (cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
-                       "Page.stopScreencast" (obj []))))
+                  (* Bounded cleanup must not replace the capture result. *)
+                  let _screencast_stopped =
+                    cdp_call ~deadline:(Ox.Duration.seconds 2) ~session cdp
+                      "Page.stopScreencast" (obj [])
+                  in
+                  ()))
         with
         | `Value result -> result
         | `Dialog dialog ->
@@ -2147,7 +2171,8 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
             tab.page_loads <-
               List.filter (fun pending -> pending != waiter) tab.page_loads)
           (fun () ->
-            ignore (t.await_load promise);
+            (* A fresh observation below distinguishes navigation from a wake or timeout. *)
+            let _load_notice = t.await_load promise in
             true))
     else tab.navigations <> started
   in
@@ -2755,7 +2780,10 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                         ~finally:(fun () ->
                           tab.page_loads <-
                             List.filter (fun pending -> pending != waiter) tab.page_loads)
-                        (fun () -> ignore (t.await_load promise)));
+                        (fun () ->
+                          (* The following observation decides whether loading completed. *)
+                          let _load_notice = t.await_load promise in
+                          ()));
                     match Reading.script browser script ~args with
                     | Ok ran ->
                         Ok
@@ -2912,7 +2940,12 @@ let playbook_check ?installed t (args : P.playbook_check_args) =
   | [] -> Ok P.{ playbook = args.playbook; scripts = [] }
   | scripts -> (
       let* blank = new_tab t ~url:None in
-      let close () = Eio.Cancel.protect (fun () -> ignore (close t blank.P.tab)) in
+      let close () =
+        Eio.Cancel.protect (fun () ->
+            (* The owned syntax-check tab is cleaned up without replacing its verdict. *)
+            let _closed = close t blank.P.tab in
+            ())
+      in
       match
         with_reading t ~access:Act blank.P.tab (fun _ browser ->
             let rec go acc = function
@@ -3286,10 +3319,12 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
                               match text "sessionId" params with
                               | Some session ->
                                   Eio.Fiber.fork_daemon ~sw (fun () ->
-                                      ignore
-                                        (cdp_call ~deadline:(Ox.Duration.seconds 5)
-                                           ~session cdp "Runtime.runIfWaitingForDebugger"
-                                           (obj []));
+                                      (* The target may already be running or gone. *)
+                                      let _resumed_target =
+                                        cdp_call ~deadline:(Ox.Duration.seconds 5)
+                                          ~session cdp "Runtime.runIfWaitingForDebugger"
+                                          (obj [])
+                                      in
                                       `Stop_daemon)
                               | None -> ())
                           | _ -> ());
@@ -3325,17 +3360,22 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
                           "run-ykq4: Browser.setDownloadBehavior failed; downloads \
                            unavailable")
                   t.download_dir;
-                ignore
-                  (cdp_call cdp "Target.setDiscoverTargets"
-                     (obj [ ("discover", `Bool true) ]));
-                ignore
-                  (cdp_call cdp "Target.setAutoAttach"
-                     (obj
-                        [
-                          ("autoAttach", `Bool true);
-                          ("waitForDebuggerOnStart", `Bool false);
-                          ("flatten", `Bool true);
-                        ]))
+                (* Target discovery and optional auto-attach are best effort; readiness
+                   is decided by the target query below. *)
+                let _discovery_enabled =
+                  cdp_call cdp "Target.setDiscoverTargets"
+                    (obj [ ("discover", `Bool true) ])
+                in
+                let _auto_attach_enabled =
+                  cdp_call cdp "Target.setAutoAttach"
+                    (obj
+                       [
+                         ("autoAttach", `Bool true);
+                         ("waitForDebuggerOnStart", `Bool false);
+                         ("flatten", `Bool true);
+                       ])
+                in
+                ()
             | Error _ -> ())
         | Chrome.Lost generation ->
             List.iter
@@ -3358,8 +3398,11 @@ let stop t =
         List.iter
           (fun (tab : tab) ->
             if P.Origin.to_string tab.origin = "agent" then
-              ignore
-                (cdp_call cdp "Target.closeTarget" (obj [ ("targetId", str tab.id) ])))
+              (* Shutdown never retries closing a target or replaces the owner's outcome. *)
+              let _closed_agent_target =
+                cdp_call cdp "Target.closeTarget" (obj [ ("targetId", str tab.id) ])
+              in
+              ())
           (live_tabs t))
 
 let text = read_text

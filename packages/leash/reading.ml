@@ -561,11 +561,7 @@ let shot ~caps browser (args : P.shot_args) =
         let* png = decode_png encoded in
         let* width, height = png_size png in
         try
-          let output = Ox_caps.Cap_stdlib.open_out_bin ~caps args.path in
-          Fun.protect
-            ~finally:(fun () -> close_out output)
-            (fun () -> output_bytes output png);
-          Ok
+          let result =
             P.
               {
                 path = args.path;
@@ -576,6 +572,12 @@ let shot ~caps browser (args : P.shot_args) =
                 scale = float_of_int width /. capture_width;
                 full_page;
               }
+          in
+          let output = Ox_caps.Cap_stdlib.open_out_bin ~caps args.path in
+          Fun.protect
+            ~finally:(fun _ -> close_out output)
+            (fun () -> output_bytes output png);
+          Ok result
         with Sys_error _ -> Error (invalid "screenshot path is not writable"))
 
 type t = {
@@ -857,7 +859,7 @@ let storage browser (args : P.storage_args) =
          ])
   in
   (* Best effort: the domain only reports changes, which nobody here wants. *)
-  ignore (page_call browser "DOMStorage.disable" (obj []));
+  let _storage_domain_disabled = page_call browser "DOMStorage.disable" (obj []) in
   let* reply = read in
   match field "entries" (fun x -> Ok x) reply with
   | Some (`List entries) ->

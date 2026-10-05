@@ -196,11 +196,26 @@ val init :
   (string, init_error) result
 (** svc-x8rp: write {!default_toml} to [path], creating the parent directories 0700 and
     the file 0600, and answer the path written. Without [force] an existing file is left
-    exactly as it was. *)
+    exactly as it was.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix and Ox_caps filesystem helpers; directory creation and writes
+    are synchronous. Cancellation: not a cancellation point; behavior of the delegated
+    helpers depends on the synchronous Stdlib, Unix and Ox_caps filesystem helpers.
+    Finalizers: close the owned output descriptor on every exit. Locking: none; force
+    permits replacing the requested file. Cancellation safety: safe to re-run with the
+    same force policy; cancellation cannot interrupt the synchronous write. *)
 
 val ensure_dir : caps:< Ox_caps.Cap.fs_write ; .. > -> string -> (unit, string) result
 (** Create [path] and every missing parent, 0700; an existing path is left alone. The
-    service makes the configured profile directory with it before Chrome starts. *)
+    service makes the configured profile directory with it before Chrome starts.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix and Ox_caps filesystem helpers; directory creation is
+    synchronous. Cancellation: not a cancellation point; behavior of the delegated helpers
+    depends on the synchronous Stdlib, Unix and Ox_caps filesystem helpers. Finalizers:
+    none. Locking: none; existing directories are accepted. Cancellation safety: safe to
+    re-run; already-created parents are retained. *)
 
 val t_of_yojson : Yojson.Safe.t -> (t, string) result
 (** The derived decoder: an unknown key or a bad value is reported with its dotted path.
@@ -220,7 +235,13 @@ val decode_all :
     filesystem checks {!validate_paths} makes; when [fs] is passed without [getenv], the
     environment is treated as empty. [Ok] is {!t_of_yojson}'s value, before {!env}, so a
     successful decode is unchanged. Apply {!env} before printing the effective
-    configuration. *)
+    configuration.
+
+    Suspension: may suspend during the supplied getenv callback and filesystem checks when
+    fs is supplied. Cancellation: propagates from filesystem probes and the supplied
+    getenv callback. Finalizers: retains no filesystem resource. Locking: none; validation
+    does not reserve paths. Cancellation safety: safe to re-run; validation writes
+    nothing. *)
 
 val yojson_of_t : t -> Yojson.Safe.t
 (** The derived encoder [config check] prints; the API key renders as ["<redacted>"]. *)
@@ -249,8 +270,18 @@ val validate_paths :
     environment for a bare [chrome.binary] name's [PATH] lookup ({!validate} passes
     [Cap_sys.getenv_opt] over the Door's powerbox, ^ncaps-4tjy). Every problem is reported
     — {!validate_otlp}, the binary, the socket, then the profile — not only the first.
-    Errors carry JSON pointers and messages. *)
+    Errors carry JSON pointers and messages.
+
+    Suspension: may suspend during filesystem probes. Cancellation: propagates from probes
+    and the supplied getenv callback. Finalizers: retains no filesystem resource. Locking:
+    none; validation does not reserve paths. Cancellation safety: safe to re-run;
+    validation writes nothing. *)
 
 val validate :
   Eio_unix.Stdenv.base Ox_app.Env.t -> t -> (unit, Ox_app.validation_error list) result
-(** The Door's validator: {!validate_paths} against the environment's filesystem. *)
+(** The Door's validator: {!validate_paths} against the environment's filesystem.
+
+    Suspension: may suspend during filesystem probes. Cancellation: propagates from the
+    environment filesystem. Finalizers: retains no filesystem resource. Locking: none;
+    validation does not reserve paths. Cancellation safety: safe to re-run; validation
+    writes nothing. *)

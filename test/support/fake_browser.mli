@@ -68,7 +68,14 @@ type client = {
 val create : sw:Eio.Switch.t -> ?sleep:(float -> unit) -> unit -> t * client
 (** [sleep] is what a scripted reply may wait on before it is sent, so a test drives a
     slow reply with the clock it passes here ([Eio.Time.sleep] of the mock clock,
-    usually); a request whose script never sleeps is answered as soon as it is read. *)
+    usually); a request whose script never sleeps is answered as soon as it is read.
+
+    Suspension: may suspend creating pipes and starts the switch-owned peer reader.
+    Cancellation: propagates from pipe and fiber startup. Finalizers: sw owns pipe ends
+    and the peer daemon. Locking: the fake serializes outgoing frames with its write
+    mutex. Cancellation safety: safe to re-run on a fresh switch after closing the old
+    fake; construction issues no browser action. [Assert_failure] can escape if the
+    scripted pipe-read invariant fails. *)
 
 val on_method : t -> string -> (Yojson.Safe.t -> Yojson.Safe.t) -> unit
 

@@ -30,7 +30,15 @@ val failure : ?reason:string -> int -> string -> reply
 
 val serve : net:_ Eio.Net.t -> sw:Eio.Switch.t -> (request -> reply) -> t
 (** [serve ~net ~sw answer] listens on a fresh loopback port and answers every connection
-    with [answer request]. *)
+    with [answer request].
+
+    Suspension: may suspend during loopback listener creation and server startup.
+    Cancellation: propagates from switch-scoped setup. Finalizers: sw owns the listener
+    and serving fibers. Locking: none for construction; a fresh port gives each fake an
+    independent listener. Cancellation safety: safe to re-run on a fresh switch after the
+    previous server stops.
+
+    [Assert_failure] if the loopback listener reports an unexpected address. *)
 
 val requests : t -> request list
 (** Every request served, in arrival order. *)

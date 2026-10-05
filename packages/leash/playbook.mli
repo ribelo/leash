@@ -194,8 +194,18 @@ val atomic_write_json :
   string ->
   Yojson.Safe.t ->
   (unit, string) result
-(** The procedure as the playbook's own JSON: what a planner's reply is decoded into
-    (run-rq6i) and what a proposal file carries (run-m0r8). *)
+(** Atomically publishes JSON at the requested path and mode through a private temporary
+    file.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
+    filesystem writes are synchronous. Cancellation: not a cancellation point; behavior of
+    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
+    helpers and local parsing callbacks in the write. Finalizers: close the owned channel
+    and remove its temporary file on exit. Locking: exclusive temporary-file creation and
+    atomic rename, not the installation mutex. Cancellation safety: safe to re-run with
+    the same arguments; no cancellation point occurs between creating the temporary file
+    and publishing it. *)
 
 val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
 val yojson_of_proposal : proposal -> Yojson.Safe.t
@@ -210,17 +220,43 @@ val of_json :
     [..], and after symlinks are resolved still inside it (extr-plaz); without [dir] a
     file script is refused. A directory comes with the capability to read it
     (^ncaps-4tjy): a playbook decoded from a message, with no directory, touches nothing.
-*)
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
+    filesystem reads are synchronous. Cancellation: not a cancellation point; behavior of
+    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
+    helpers and local parsing callbacks. Finalizers: owned input channels are closed on
+    exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
+    to re-run; reads leave files unchanged. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val revalidate :
   caps:< Ox_caps.Cap.fs_read ; .. > -> loaded -> t -> (loaded, string) result
 (** [revalidate book playbook] validates another playbook value in [book]'s directory — a
-    planner's procedure added, a proposal merged. *)
+    planner's procedure added, a proposal merged.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
+    filesystem reads are synchronous. Cancellation: not a cancellation point; behavior of
+    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
+    helpers and local parsing callbacks. Finalizers: owned input channels are closed on
+    exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
+    to re-run; reads leave files unchanged. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val load : caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) result
 (** [load dir] reads [dir/playbook.json] and its scripts (extr-plaz). A path that is a
     file, and a directory that holds only a [playbook.yaml], are refused with a message
-    that says what a playbook is. *)
+    that says what a playbook is.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
+    filesystem reads are synchronous. Cancellation: not a cancellation point; behavior of
+    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
+    helpers and local parsing callbacks. Finalizers: owned input channels are closed on
+    exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
+    to re-run; reads leave files unchanged. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val check_proposed_script : string -> (unit, string) result
 (** map-op08: conservative source-reference refusal for compiled read-only scripts. *)
@@ -235,18 +271,43 @@ val script_only_message : string
 (** pbk-85m1: the loader's exact refusal when no procedure has a goal step. *)
 
 val directory : caps:< Ox_caps.Cap.env ; .. > -> unit -> string
-(** [$XDG_CONFIG_HOME/leash/playbooks]; each playbook is a subdirectory of it. *)
+(** [$XDG_CONFIG_HOME/leash/playbooks]; each playbook is a subdirectory of it.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks; this
+    only reads the environment. Cancellation: not a cancellation point; behavior of the
+    delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson helpers
+    and local parsing callbacks. Finalizers: none. Locking: none. Cancellation safety:
+    safe to re-run; no resource or file is changed. *)
 
 val list :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; .. > ->
   unit ->
   (loaded list, string) result
 (** Every subdirectory loaded, by name. A [.json] file left directly in the directory is
-    refused: it is the old layout. *)
+    refused: it is the old layout.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
+    filesystem reads are synchronous. Cancellation: not a cancellation point; behavior of
+    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
+    helpers and local parsing callbacks. Finalizers: owned input channels are closed on
+    exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
+    to re-run; reads leave files unchanged. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val show :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; .. > -> string -> (loaded, string) result
-(** The installed playbook whose directory is called this. *)
+(** The installed playbook whose directory is called this.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
+    filesystem reads are synchronous. Cancellation: not a cancellation point; behavior of
+    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
+    helpers and local parsing callbacks. Finalizers: owned input channels are closed on
+    exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
+    to re-run; reads leave files unchanged. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val check_goal_count :
   minimum:int -> ?file:string -> t -> procedure -> (unit, string) result
@@ -268,7 +329,14 @@ val check_procedure : ?file:string -> t -> procedure -> (unit, string) result
 val proposed_directory : caps:< Ox_caps.Cap.env ; .. > -> unit -> string
 (** run-m0r8: [$XDG_STATE_HOME/leash/proposed] ([$HOME/.local/state] when the variable is
     unset), where a run writes the procedures the planner wrote and verified. The playbook
-    directory is never written by a run. *)
+    directory is never written by a run.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks; this
+    only reads the environment. Cancellation: not a cancellation point; behavior of the
+    delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson helpers
+    and local parsing callbacks. Finalizers: none. Locking: none. Cancellation safety:
+    safe to re-run; no resource or file is changed. *)
 
 val provenance_of_yojson : Yojson.Safe.t -> (provenance, string) result
 val yojson_of_provenance : provenance -> Yojson.Safe.t
@@ -283,10 +351,27 @@ val write_provenance :
   slug:string ->
   provenance ->
   (unit, string) result
+(** Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
+    filesystem writes are synchronous. Cancellation: not a cancellation point; behavior of
+    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
+    helpers and local parsing callbacks in the write. Finalizers: close the owned channel
+    and remove its temporary file on exit. Locking: exclusive temporary-file creation and
+    atomic rename, not the installation mutex. Cancellation safety: safe to re-run with
+    the same arguments; no cancellation point occurs between creating the temporary file
+    and publishing it. *)
 
 val read_provenance :
   caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (provenance option, string) result
-(** [read_provenance path] is [Ok None] when the sidecar is absent. *)
+(** [read_provenance path] is [Ok None] when the sidecar is absent.
+
+    Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and local parsing callbacks;
+    filesystem reads are synchronous. Cancellation: not a cancellation point; behavior of
+    the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and Yojson
+    helpers and local parsing callbacks. Finalizers: owned input channels are closed on
+    exit. Locking: none; reads do not reserve filesystem state. Cancellation safety: safe
+    to re-run; reads leave files unchanged. *)
 
 val propose :
   ?book:t ->
@@ -299,13 +384,30 @@ val propose :
 (** run-m0r8 map-fmt02: write one proposed procedure to
     [<proposed_directory>/<site>-<slug>.json], 0600, and answer the path written.
     Provenance, when given, is written beside it as [<slug>.provenance.json], never inside
-    the proposal. *)
+    the proposal.
+
+    Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
+    operations are synchronous. Cancellation: propagates while acquiring the mutex before
+    writes; the locked transaction is cancellation-protected. Finalizers: release the
+    mutex and file locks and close owned descriptors and channels. Locking: the shared
+    installation mutex and non-blocking filesystem installation/proposal locks serialize
+    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
+    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val retire :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
   site:string ->
   slug:string ->
   (unit, string) result
+(** Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
+    operations are synchronous. Cancellation: propagates while acquiring the mutex before
+    writes; the locked transaction is cancellation-protected. Finalizers: release the
+    mutex and file locks and close owned descriptors and channels. Locking: the shared
+    installation mutex and non-blocking filesystem installation/proposal locks serialize
+    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
+    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val retire_draft :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
@@ -315,7 +417,16 @@ val retire_draft :
   slug:string ->
   (unit, string) result
 (** map-b3kk: pin failed-trial retirement to the inspected draft revision, under the same
-    transaction as its installation. *)
+    transaction as its installation.
+
+    Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
+    operations are synchronous. Cancellation: propagates while acquiring the mutex before
+    writes; the locked transaction is cancellation-protected. Finalizers: release the
+    mutex and file locks and close owned descriptors and channels. Locking: the shared
+    installation mutex and non-blocking filesystem installation/proposal locks serialize
+    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
+    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val proposal_of_yojson : Yojson.Safe.t -> (proposal, string) result
 
@@ -324,7 +435,16 @@ val archive_proposal :
   caps:< Ox_caps.Cap.env ; Ox_caps.Cap.fs_read ; Ox_caps.Cap.fs_write ; .. > ->
   string ->
   (unit, string) result
-(** map-b3kk: archive only the inspected draft revision, under the install lock. *)
+(** map-b3kk: archive only the inspected draft revision, under the install lock.
+
+    Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
+    operations are synchronous. Cancellation: propagates while acquiring the mutex before
+    writes; the locked transaction is cancellation-protected. Finalizers: release the
+    mutex and file locks and close owned descriptors and channels. Locking: the shared
+    installation mutex and non-blocking filesystem installation/proposal locks serialize
+    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
+    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 val accept :
   ?revision:string ->
@@ -337,7 +457,16 @@ val accept :
     replacing the same one and appending otherwise — and write that playbook back. The
     merged playbook must validate first, and a site served by no playbook, by more than
     one, or by an invalid merge is refused with nothing written. This is the operator's
-    command and the learning auto gate share this validated merge path. *)
+    command and the learning auto gate share this validated merge path.
+
+    Suspension: may suspend acquiring the installation mutex in an Eio fiber; filesystem
+    operations are synchronous. Cancellation: propagates while acquiring the mutex before
+    writes; the locked transaction is cancellation-protected. Finalizers: release the
+    mutex and file locks and close owned descriptors and channels. Locking: the shared
+    installation mutex and non-blocking filesystem installation/proposal locks serialize
+    transactions. Cancellation safety: safe to re-run after cancellation while acquiring
+    the mutex; no transaction has begun. [Assert_failure] can escape if an internal
+    validated-playbook invariant fails. *)
 
 (* run-k8bx: restart every step from the beginning after the first failed check. *)
 val retry_once : execute:(unit -> unit) -> verify:(unit -> bool) -> bool

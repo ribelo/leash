@@ -111,6 +111,7 @@ let replace_bundle ~caps destination =
       if existed then
         match remove_path ~caps backup with
         | () -> None
+        | exception (Eio.Cancel.Cancelled _ as exn) -> raise exn
         | exception exn ->
             Some
               ( backup,
@@ -157,6 +158,7 @@ let discovered_roots ~home =
                  (configuration_root ^ " is not an agent configuration directory")
                :: failures )
          | exception Unix.Unix_error (Unix.ENOENT, _, _) -> (roots, failures)
+         | exception (Eio.Cancel.Cancelled _ as exn) -> raise exn
          | exception exn ->
              ( roots,
                failure ~path:configuration_root (exception_kind exn)
@@ -173,6 +175,7 @@ let deduplicate roots =
         | canonical ->
             if List.mem canonical seen then loop seen acc failures rest
             else loop (canonical :: seen) (root :: acc) failures rest
+        | exception (Eio.Cancel.Cancelled _ as exn) -> raise exn
         | exception exn ->
             loop seen acc
               (failure ~path:root (exception_kind exn) (exception_message exn) :: failures)
@@ -307,6 +310,7 @@ let run ~caps ~home ~roots:configured ~path ~force ~no_input ~dry_run ~stdin_is_
              | Ok (outcome, None) -> (outcome :: outcomes, failures)
              | Ok (outcome, Some failure) -> (outcome :: outcomes, failure :: failures)
              | Error failure -> (outcomes, failure :: failures)
+             | exception (Eio.Cancel.Cancelled _ as exn) -> raise exn
              | exception exn ->
                  ( outcomes,
                    failure
@@ -340,7 +344,9 @@ let installed_stamp ~caps destination =
   try
     let lines = String.split_on_char '\n' (read ()) in
     (value "  leash-version:" lines, value "  leash-commit:" lines)
-  with _ -> (None, None)
+  with
+  | Eio.Cancel.Cancelled _ as exn -> raise exn
+  | _ -> (None, None)
 
 let status ~caps ~home ~roots:configured =
   let roots, discovery_failures =
@@ -358,7 +364,9 @@ let status ~caps ~home ~roots:configured =
             if not (path_exists path) then "missing"
             else if is_current ~caps path then "current"
             else "stale"
-          with _ -> "stale"
+          with
+          | Eio.Cancel.Cancelled _ as exn -> raise exn
+          | _ -> "stale"
         in
         let version, commit = installed_stamp ~caps path in
         let json_option = function None -> `Null | Some text -> `String text in

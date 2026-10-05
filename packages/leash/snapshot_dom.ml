@@ -73,9 +73,12 @@ let rows ~call ~context ~selector =
   in
   Fun.protect
     ~finally:(fun () ->
-      ignore
-        (call "Runtime.releaseObjectGroup"
-           (`Assoc [ ("objectGroup", `String "leash-dom-snapshot") ])))
+      (* Releasing temporaries must not replace the snapshot failure. *)
+      let _released_snapshot_group =
+        call "Runtime.releaseObjectGroup"
+          (`Assoc [ ("objectGroup", `String "leash-dom-snapshot") ])
+      in
+      ())
     (fun () ->
       let* reply =
         call "Runtime.evaluate"

@@ -11,6 +11,14 @@ val create :
   ?warn:(string -> unit) ->
   unit ->
   t
+(** Suspension: never suspends; behavior of the delegated helpers depends on
+    Stdlib.Hashtbl.create and Eio.Mutex.create; construction allocates state and mutexes
+    without reading or writing memory files. Cancellation: not a cancellation point;
+    behavior of the delegated helpers depends on Stdlib.Hashtbl.create and
+    Eio.Mutex.create at construction. Finalizers: none registered at construction;
+    subsequent asynchronous writes belong to sw. Locking: allocates the per-site and
+    pending-write synchronization state. Cancellation safety: safe to re-run; construction
+    changes no persisted memory. *)
 
 val config : t -> Config.learning
 

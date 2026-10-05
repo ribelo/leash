@@ -13,6 +13,14 @@ end
 type t
 
 val create : caps:< caps ; .. > -> ?root:string -> ?retention:Retention.t -> unit -> t
+(** Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and the local protected-reader
+    callback; resolves the root from environment without touching the filesystem.
+    Cancellation: not a cancellation point; behavior of the delegated helpers depends on
+    the synchronous Stdlib, Unix, Ox_caps and Yojson helpers and the local
+    protected-reader callback. Finalizers: none. Locking: none at construction.
+    Cancellation safety: safe to re-run; creates only an in-memory trace handle. *)
+
 val root : t -> string
 val now : t -> float
 val timestamp : float -> string
@@ -23,6 +31,14 @@ val site : string -> string option
 
 val read :
   caps:< Ox_caps.Cap.fs_read ; .. > -> string -> (Protocol.drive_trace, string) result
+(** Suspension: never suspends; behavior of the delegated helpers depends on the
+    synchronous Stdlib, Unix, Ox_caps and Yojson helpers and the local protected-reader
+    callback; filesystem reads are synchronous. Cancellation: not a cancellation point;
+    behavior of the delegated helpers depends on the synchronous Stdlib, Unix, Ox_caps and
+    Yojson helpers and the local let-operator invocation and protected-reader callback.
+    Finalizers: owned input channels are closed on exit. Locking: none; reads do not
+    reserve filesystem state. Cancellation safety: safe to re-run; reads leave files
+    unchanged. [Stdlib.Sys_error] can escape from closing the owned input channel. *)
 
 val list :
   t ->

@@ -173,7 +173,7 @@ let read ~caps path =
           raise (Sys_error "trace must be a regular file of at most 8 MiB");
         let ch = Cap_stdlib.open_in_bin ~caps path in
         Fun.protect
-          ~finally:(fun () -> close_in_noerr ch)
+          ~finally:(fun _ -> close_in ch)
           (fun () ->
             let after = Unix.fstat (Unix.descr_of_in_channel ch) in
             if after.st_kind <> Unix.S_REG || after.st_size > 8388608 then

@@ -81,7 +81,15 @@ val shot :
   browser ->
   Protocol.shot_args ->
   (Protocol.shot_result, Protocol.error) result
-(** Writes the PNG to the caller's path, hence [fs_write] (^ncaps-4tjy). *)
+(** Writes the PNG to the caller's path, hence [fs_write] (^ncaps-4tjy).
+
+    Suspension: may suspend during screenshot and viewport CDP calls; the PNG write is
+    synchronous. Cancellation: propagates from browser calls before the write. Finalizers:
+    closes the owned output channel; the browser is borrowed. Locking: none here; the Tabs
+    caller serializes screenshot capture. Cancellation safety: safe to re-run at the same
+    output path; it captures an image and dispatches no input.
+
+    [Assert_failure] if an internal screenshot invariant fails. *)
 
 val dialog :
   browser -> Protocol.dialog_args -> (Protocol.action_result, Protocol.error) result
