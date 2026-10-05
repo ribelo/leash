@@ -1589,10 +1589,12 @@ let planner_action_of_yojson json =
   Result.bind (decode_request json) (fun request ->
       match request.command with
       | Click _ | Click_at _ | Type _ | Drag _ | Fill _ | Select _ | Press _ | Scroll _
-      | Nav _ ->
+      | Nav _ | Upload _ ->
           Ok request.command
       | _ ->
-          Error "act accepts only click, type, drag, fill, select, press, scroll and nav")
+          Error
+            "act accepts only click, type, drag, fill, select, press, scroll, nav and \
+             upload")
 
 let yojson_of_planner_action command = encode_request { command }
 
@@ -1699,6 +1701,7 @@ let check_planner_action (page : snapshot) action =
   | Drag args -> same_tab args.tab (fun () -> consent [ args.from_; args.to_ ])
   | Fill args -> same_tab args.tab (fun () -> row args.snapshot args.index)
   | Select args -> same_tab args.tab (fun () -> row args.snapshot args.index)
+  | Upload args -> same_tab args.tab (fun () -> row args.snapshot args.index)
   | Press args ->
       same_tab args.tab (fun () ->
           match args.index with
@@ -1712,7 +1715,9 @@ let check_planner_action (page : snapshot) action =
           | Some index when not (named index) ->
               Error "continue scroll names no offered row"
           | _ -> Ok ())
-  | _ -> Error "pilot act accepts only click, type, drag, select, fill, press and scroll"
+  | _ ->
+      Error
+        "pilot act accepts only click, type, drag, select, fill, press, scroll and upload"
 
 (* pilot-02ij: redact values before any model, trace or diagnostic boundary. *)
 let redact_string secrets text =

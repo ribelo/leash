@@ -611,7 +611,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     collection_key := previous_key; outcome in
   let command_row = function
     | P.Click a -> Some a.index | P.Fill a -> Some a.index | P.Select a -> Some a.index
-    | P.Press a -> a.index | _ -> None in
+    | P.Press a -> a.index | P.Upload a -> Some a.index | _ -> None in
   let act (page : observation) command =
     let name = P.command_name command in
     let refusal = match P.check_planner_action page.snapshot command with
@@ -625,8 +625,28 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
                 List.find_opt (fun (r : P.row) -> r.index = index) page.snapshot.rows)) in
           let intent = List.find_opt (fun intent -> not (authorises args.mission intent))
             (List.filter_map (fun (row : P.row) -> unsafe_action row.name) rows) in
+          (* pilot-h506: the pilot uploads only files the mission names, verbatim. *)
+          let unnamed = match command with
+            | P.Upload a -> List.find_opt (fun path -> not (contains ~needle:path args.mission)) a.paths
+            | _ -> None in
+          match unnamed with
+          | Some path ->
+              (* The refusal quotes the paths the mission does name: in U9 the pilot
+                 mis-copied "l57f" as "l57-f" and, told only no, repeated it every turn. *)
+              let named = String.split_on_char ' ' args.mission
+                |> List.filter_map (fun word ->
+                    let word = String.trim word in
+                    let rec strip w = let n = String.length w in
+                      if n > 1 && String.contains ".,;:!?)\"'" w.[n-1] then strip (String.sub w 0 (n-1)) else w in
+                    let word = strip word in
+                    if String.length word > 1 && word.[0] = '/' then Some word else None) in
+              Some ("refused upload: the mission does not name " ^ path
+                ^ (match named with [] -> "; it names no file"
+                   | named -> "; it names exactly: " ^ String.concat ", " named))
+          | None ->
           Option.map (fun intent -> "refused " ^ intent ^ ": mission does not name that action") intent in
-    let text = match command with P.Fill a -> Some a.text | P.Type a -> Some a.text | _ -> None in
+    let text = match command with P.Fill a -> Some a.text | P.Type a -> Some a.text
+      | P.Upload a -> Some (String.concat " " a.paths) | _ -> None in
     let at = now () in
     let outcome = match refusal with
       | Some why -> Error (invalid why)

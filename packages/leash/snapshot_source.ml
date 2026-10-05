@@ -308,6 +308,21 @@ let options ~by_id ~values ~names n =
    name is what the accessibility tree calls it when that says something, otherwise the
    author's own words for it (aria-label, title, name, id). *)
 let file_inputs ~dom ~ax_by_backend =
+  (* pilot-h506: an attached file shows as the row's value, the name Chrome reports after
+     its fakepath directory prefix, so the pilot sees the upload took (U9 re-attached the
+     file every turn instead of submitting). *)
+  let attached = input_values dom in
+  let attached backend =
+    match Hashtbl.find_opt attached backend with
+    | None | Some "" -> None
+    | Some value ->
+        let cut =
+          max
+            (String.rindex_opt value '\\' |> Option.value ~default:(-1))
+            (String.rindex_opt value '/' |> Option.value ~default:(-1))
+        in
+        Some (String.sub value (cut + 1) (String.length value - cut - 1))
+  in
   let string = dom_strings dom in
   let nodes = dom_nodes dom in
   let backends = list (get "backendNodeId" nodes) in
@@ -352,7 +367,12 @@ let file_inputs ~dom ~ax_by_backend =
           let states =
             state "disabled" disabled backend @ state "required" required backend
           in
-          (position, backend, label, if states = [] then None else Some states) :: rest
+          ( position,
+            backend,
+            label,
+            (if states = [] then None else Some states),
+            attached backend )
+          :: rest
         else rest
     | _ -> []
   in
@@ -532,13 +552,13 @@ let rows ~ax ~dom ~width ~height ~scroll_x ~scroll_y =
       Option.value ~default:max_int (Hashtbl.find_opt order backend)
     in
     List.fold_left
-      (fun rows (at, backend, label, state) ->
+      (fun rows (at, backend, label, state, value) ->
         let row =
           ( {
               P.index = 0;
               role = "file-input";
               name = label;
-              value = None;
+              value;
               state;
               options = None;
               box = None;

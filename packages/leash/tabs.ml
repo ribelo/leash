@@ -2746,6 +2746,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
             | P.Fill args -> Actions.fill ~check_hit:true ~cdp view args
             | P.Press args -> Actions.press ~cdp view args
             | P.Select args -> Actions.select ~cdp view args
+            | P.Upload args -> Actions.upload ~caps:t.caps ~cdp view args
             | P.Scroll ({ index = None; _ } as args) ->
                 (* pilot-x1f3: a page scroll takes the navigator's path, which checks where
                    the wheel landed. The pilot's act scroll timed out after 30 s on Tauron

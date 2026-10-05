@@ -1,0 +1,32 @@
+{
+  "accounts": [],
+  "registrations": 0,
+  "mail": [],
+  "uploads": [
+    {
+      "id": "1",
+      "name": "upload-sample.txt",
+      "size": 48,
+      "sha256": "bb71eb83063930f70c0bc0c4e965d2e2ad09306e714f92d0ca824b81b1bc215a",
+      "link": "/files/1"
+    }
+  ],
+  "portal": {
+    "logins": 0,
+    "opened_messages": [],
+    "messages": [
+      {
+        "id": "new",
+        "subject": "Your appointment is confirmed",
+        "body": "Your appointment is confirmed for Tuesday at 10:30. Please bring your reference number REF-2048.",
+        "read": false
+      },
+      {
+        "id": "old",
+        "subject": "Welcome to your member portal",
+        "body": "Welcome! You can find updates from our team in this inbox.",
+        "read": true
+      }
+    ]
+  }
+}

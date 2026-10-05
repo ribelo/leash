@@ -334,6 +334,83 @@ let action_refusal () =
       ("Send", "Pay and send a message", true);
     ]
 
+(* pilot-h506: the pilot uploads through the validated upload action, and only the files
+   the mission names. *)
+let pilot_upload () =
+  List.iter
+    (fun (paths, allowed) ->
+      let row =
+        P.
+          {
+            index = 1;
+            role = "file-input";
+            name = "File";
+            value = None;
+            state = None;
+            options = None;
+            box = None;
+          }
+      in
+      let observation = page "Upload a file" in
+      let observation =
+        {
+          observation with
+          R.snapshot = { snapshot with rows = [ row ]; total = 1 };
+          rows = [ ("file-input", "File") ];
+        }
+      in
+      let h, _, _ =
+        harness
+          [ reply (R.Act (P.Upload P.{ tab; snapshot = sid; index = 1; paths })); finish ]
+      in
+      let h = { h with R.observe = (fun ~image:_ () -> Ok observation) } in
+      let dispatched = ref [] in
+      let result =
+        ran
+          (R.loop ~handler:h
+             ~now:(fun () -> 0.)
+             ~installed:[]
+             ~planner_action:(fun command ->
+               dispatched := P.command_name command :: !dispatched;
+               Ok
+                 P.
+                   {
+                     tab;
+                     url = snapshot.url;
+                     title = snapshot.title;
+                     snapshot = None;
+                     dialog = None;
+                     popups = [];
+                     hits = None;
+                     shots = None;
+                     via = None;
+                   })
+             (params ~mission:"Upload /tmp/report.txt and tell me the link" ()))
+      in
+      Alcotest.(check (list string))
+        "pilot-h506 only named files upload"
+        (if allowed then [ "upload" ] else [])
+        !dispatched;
+      let turn = List.hd result.planner_turns in
+      Alcotest.(check bool)
+        "pilot-h506 refusal is visible" (not allowed)
+        (turn.reason <> Some "pilot decision");
+      if not allowed then
+        Alcotest.(check bool)
+          "pilot-h506 refusal quotes the named path" true
+          (match turn.reason with
+          | Some why ->
+              let needle = "it names exactly: /tmp/report.txt" in
+              let n = String.length needle and m = String.length why in
+              let rec at i = i + n <= m && (String.sub why i n = needle || at (i + 1)) in
+              at 0
+          | None -> false))
+    [
+      ([ "/tmp/report.txt" ], true);
+      ([ "/home/ribelo/.ssh/id_ed25519" ], false);
+      ([ "/tmp/report.txt"; "/tmp/other.txt" ], false);
+    ]
+
 let empty_result () =
   let h, _, _ = harness [ reply (R.Done { result = ""; evidence = [] }) ] in
   let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
@@ -788,5 +865,6 @@ let () =
             ("refused reply costs a turn", refused_reply_costs_a_turn);
             ("acts are remembered", act_memory ~caps);
             ("pilot-z1nr failed memory is not offered again", stale_memory);
+            ("pilot-h506 pilot uploads only named files", pilot_upload);
           ] );
     ]

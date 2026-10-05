@@ -991,6 +991,65 @@ let row_named rows role =
   | Some row -> row
   | None -> Alcotest.failf "no %s row" role
 
+(* pilot-h506: once a file is attached, the file-input row's value is its name, without
+   the fakepath directory Chrome reports. *)
+let attached_file () =
+  let strings = function
+    | `Assoc fields ->
+        `Assoc
+          (List.map
+             (fun (key, value) ->
+               match (key, value) with
+               | "strings", `List names ->
+                   (key, `List (names @ [ str "C:\\fakepath\\report.txt" ]))
+               | _ -> (key, value))
+             fields)
+    | json -> json
+  in
+  let with_value = function
+    | `Assoc fields ->
+        `Assoc
+          (List.map
+             (fun (key, value) ->
+               match (key, value) with
+               | "documents", `List [ `Assoc document ] ->
+                   ( key,
+                     `List
+                       [
+                         `Assoc
+                           (List.map
+                              (fun (k, v) ->
+                                match (k, v) with
+                                | "nodes", `Assoc nodes ->
+                                    ( k,
+                                      `Assoc
+                                        (nodes
+                                        @ [
+                                            ( "inputValue",
+                                              obj
+                                                [
+                                                  ("index", `List [ int 2 ]);
+                                                  ("value", `List [ int 9 ]);
+                                                ] );
+                                          ]) )
+                                | _ -> (k, v))
+                              document);
+                       ] )
+               | _ -> (key, value))
+             fields)
+    | json -> json
+  in
+  let value dom =
+    Leash__Snapshot_source.rows ~ax:ax_page ~dom ~width:800. ~height:600. ~scroll_x:0.
+      ~scroll_y:0.
+    |> List.find (fun ((row : P.row), _) -> row.role = "file-input")
+    |> fun (row, _) -> row.P.value
+  in
+  Alcotest.(check (option string)) "pilot-h506 nothing attached" None (value dom_page);
+  Alcotest.(check (option string))
+    "pilot-h506 attached file named" (Some "report.txt")
+    (value (with_value (strings dom_page)))
+
 let upload
     ~(caps :
        < Ox_caps.Cap.env
@@ -1783,6 +1842,7 @@ let () =
       ( "actions",
         [
           test "hard-2gnf hard-o3za file inputs and upload" `Quick (upload ~caps);
+          test "pilot-h506 attached file shows as the value" `Quick attached_file;
           test "hard-v1gs hover" `Quick (hover ~caps);
           test "hard-b20d eval --index" `Quick (eval_index ~caps);
         ] );
