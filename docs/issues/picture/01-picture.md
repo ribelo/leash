@@ -51,12 +51,6 @@ As a maintainer, I want each command's dispatch and reply proved without a real 
 
 As an operator, I want proof that a picture-only control works before attempting authentication. When the live gate runs against a local canvas with a drawn button and no corresponding DOM action row, Leash shall operate it by screenshot and coordinates and independently verify the canvas page's resulting state; evidence shall record CSS/image alignment and the hit/post-action screenshots. ^pic-iomj
 
-### Wiser streamed-browser live gate — U11
-
-As an operator, I want Leash to operate the real streamed browser rather than just its surrounding page. When the headed live gate opens `https://wiser-staging.csaisandbox.csa.comscore.com`, Leash shall take control of Wiser's browser pane and sign in to Slack through the streamed picture, with the operator present for Okta. It shall independently verify the signed-in Slack view and record the installed build, actions, screenshot evidence and outcome as U11 in `docs/use-cases.md`, without recording credentials or claiming success when authentication is incomplete. ^pic-et67
-
-**Withdrawn 2026-10-05 by the operator:** testing on Wiser staging is out of scope. No U11 gate was run and none is recorded in `docs/use-cases.md`.
-
 ## Landing order
 
 1. ADR-0013 and AGENTS.md policy reversal (delivered separately).
@@ -65,7 +59,7 @@ As an operator, I want Leash to operate the real streamed browser rather than ju
 4. `snap --with-image` and row boxes with fake-browser tests.
 5. Bounded image-aware pilot acts and observations with fake-model tests.
 6. Bundled skill and `help browser`.
-7. Local canvas gate. (The headed Wiser/Slack U11 gate was withdrawn; see `pic-et67`.)
+7. Local canvas gate.
 
 One verified pushed commit per step. Only afterward resume L57F: U5, U10, U9, U7, U8, in that order and under their existing IDs.
 

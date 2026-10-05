@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 13
 ---
 
@@ -7,7 +7,17 @@ milestone: 13
 
 ## Status — 2026-10-05
 
-L57F is delivered: `pilot-z1nr`, `pilot-h506`, `pilot-gn4w`, `pilot-pw7x` and `pilot-sc9t` are implemented. U5, U10, U9, U7 and U8 pass live and are confirmed independently ([the use-case evidence](<../../use-cases.md>)). One story stays open:
+Completed. L57F delivered `pilot-z1nr`, `pilot-h506`, `pilot-gn4w`, `pilot-pw7x` and `pilot-sc9t`. Each case passed live on a fresh private headless profile and was confirmed independently ([results](<../../use-cases.md#results--2026-10-05-gate-findings-l57f>)):
+
+| Case | Stories | Result | Independent evidence |
+| --- | --- | --- | --- |
+| U5 | pilot-z1nr | done, 10 then 6 turns | [second reply](<acceptance/l57f-2026-10-05/u5-second.json>), [Google overview check](<acceptance/l57f-2026-10-05/u5-second-independent.txt>) |
+| U10 | pilot-z1nr | done, 5 turns; memory run 8 turns | [memory run](<acceptance/l57f-2026-10-05/u10-memory.json>), [fixture state](<acceptance/l57f-2026-10-05/u10-fixture-run-3.json>) |
+| U9 | pilot-h506 | done, 4 turns | [reply](<acceptance/l57f-2026-10-05/u9-pass.json>), [fixture](<acceptance/l57f-2026-10-05/u9-fixture.json>), [sha256 check](<acceptance/l57f-2026-10-05/u9-independent.txt>) |
+| U7 | pilot-gn4w, pilot-pw7x | done, 8 turns | [reply](<acceptance/l57f-2026-10-05/u7-pass.json>), [fixture, hash and leak check](<acceptance/l57f-2026-10-05/u7-independent.txt>) |
+| U8 | pilot-sc9t | done, 5 turns | [reply](<acceptance/l57f-2026-10-05/u8-pass.json>), [file](<acceptance/l57f-2026-10-05/u8-out.jsonl>), [page comparison](<acceptance/l57f-2026-10-05/u8-independent.txt>) |
+
+Recorded, outside the L57F sequence:
 
 - `pilot-exx7` — a replayed download leg stops when its requested file arrives.
 
