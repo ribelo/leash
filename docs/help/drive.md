@@ -26,7 +26,7 @@ Pass repeatable `--secret NAME=@FILE`, or `--secret NAME=-` for stdin. Files con
 
 Handoff asks the human through a notification and waits for resume, normally up to 300 seconds. On a headless browser the pilot's handoff ends the mission with error `headless` and its notifications are not sent (hand-tdkk). An unanswered handoff returns `handoff-expired`; `notify` alone is non-blocking. Read `unattended` for these events. Keep notifications enabled. Cancel or dismissal immediately ends the handoff and mission as `canceled-by-operator`, releases the human hold and retains the tab. Do not retry without a new operator instruction. Done resumes; delivery failures are warnings, not cancellation. The default notification does not expire on its own; the handoff deadline controls timeout (pilot-9u3q).
 
-Generated passwords are intended for `secrets_for_operator`, but the U7 gate found missing delivery and cleartext leakage into reply turns and durable traces (pilot-gn4w, pilot-pw7x). Treat such artifacts as sensitive; do not claim this path is safe or paste generated secrets into chat.
+A literal the pilot fills into a password field becomes a secret for the rest of the run. It is redacted from the reply and the trace like a `--secret`. If it is not one of the mission's secrets, it is handed to the operator in `secrets_for_operator` as `generated_password` (pilot-gn4w, pilot-pw7x). Typing into a focused field with `type` is not covered, because it names no row. Do not paste generated secrets into chat.
 
 ## Read the outcome, then verify it
 

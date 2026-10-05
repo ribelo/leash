@@ -1,0 +1,5 @@
+registrations=1 accounts=1
+email=operator@example.test confirmed=True keys=['confirmed', 'email', 'password_hash']
+delivered password verifies against the fixture hash: True
+mail: [('operator@example.test', 'Confirm your Northstar account')]
+searched 8 files/places; password found in: []

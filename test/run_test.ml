@@ -334,6 +334,95 @@ let action_refusal () =
       ("Send", "Pay and send a message", true);
     ]
 
+(* pilot-gn4w pilot-pw7x: a password the pilot invents and fills is handed to the operator
+   once, and never appears anywhere else in the reply or the steps it emits. *)
+let generated_password () =
+  let password = ok (P.Row_state.of_string "password") in
+  let row index name =
+    P.
+      {
+        index;
+        role = "textbox";
+        name;
+        value = None;
+        state = Some [ password ];
+        options = None;
+        box = None;
+      }
+  in
+  let observation = page "Register" in
+  let observation =
+    {
+      observation with
+      R.snapshot =
+        { snapshot with rows = [ row 1 "Password"; row 2 "Confirm password" ]; total = 2 };
+      rows = [ ("textbox", "Password"); ("textbox", "Confirm password") ];
+    }
+  in
+  let invented = "N0rthstar!H7qL_29vR" in
+  let fill index =
+    reply
+      (R.Act
+         (P.Fill
+            P.
+              {
+                tab;
+                snapshot = sid;
+                index;
+                text = invented;
+                snap = None;
+                match_ = None;
+                limit = None;
+              }))
+  in
+  let h, _, _ = harness [ fill 1; fill 2; finish ] in
+  let h = { h with R.observe = (fun ~image:_ () -> Ok observation) } in
+  let typed = ref [] and steps = ref [] in
+  let result =
+    ran
+      (R.loop ~handler:h
+         ~now:(fun () -> 0.)
+         ~installed:[]
+         ~on_planner_step:(fun step -> steps := step :: !steps)
+         ~planner_action:(fun command ->
+           (match command with P.Fill a -> typed := a.text :: !typed | _ -> ());
+           Ok
+             P.
+               {
+                 tab;
+                 url = snapshot.url;
+                 title = snapshot.title;
+                 snapshot = None;
+                 dialog = None;
+                 popups = [];
+                 hits = None;
+                 shots = None;
+                 via = None;
+               })
+         (params ~mission:"Register an account" ()))
+  in
+  Alcotest.(check (list string))
+    "the page gets the password" [ invented; invented ] !typed;
+  Alcotest.(check (list (pair string string)))
+    "pilot-gn4w handed to the operator once"
+    [ ("generated_password", invented) ]
+    result.secrets_for_operator;
+  let leaks text =
+    let n = String.length invented and m = String.length text in
+    let rec at i = i + n <= m && (String.sub text i n = invented || at (i + 1)) in
+    at 0
+  in
+  let reply_text =
+    Yojson.Safe.to_string
+      (P.yojson_of_run_result { result with secrets_for_operator = [] })
+  in
+  Alcotest.(check bool) "pilot-pw7x not in the reply" false (leaks reply_text);
+  Alcotest.(check bool)
+    "pilot-pw7x not in the emitted steps" false
+    (List.exists
+       (fun step -> leaks (Yojson.Safe.to_string (P.yojson_of_planner_step step)))
+       !steps)
+
 (* pilot-h506: the pilot uploads through the validated upload action, and only the files
    the mission names. *)
 let pilot_upload () =
@@ -866,5 +955,6 @@ let () =
             ("acts are remembered", act_memory ~caps);
             ("pilot-z1nr failed memory is not offered again", stale_memory);
             ("pilot-h506 pilot uploads only named files", pilot_upload);
+            ("pilot-gn4w pilot-pw7x generated password", generated_password);
           ] );
     ]

@@ -1,0 +1,37 @@
+{
+  "accounts": [
+    {
+      "email": "operator@example.test",
+      "confirmed": true,
+      "password_hash": "pbkdf2_sha256$100000$4038ea2ba4a00874fe0fe0872d1f34a4$536403b7e32885733fd8e6b79f1d24bcea39e514426d2bfb4db2fe58925656fb"
+    }
+  ],
+  "registrations": 1,
+  "mail": [
+    {
+      "id": "1",
+      "to": "operator@example.test",
+      "subject": "Confirm your Northstar account",
+      "confirmation_link": "/confirm?token=BJWy3zKBH4X5lQJRDL2lDiKJHm6Vhhd6"
+    }
+  ],
+  "uploads": [],
+  "portal": {
+    "logins": 0,
+    "opened_messages": [],
+    "messages": [
+      {
+        "id": "new",
+        "subject": "Your appointment is confirmed",
+        "body": "Your appointment is confirmed for Tuesday at 10:30. Please bring your reference number REF-2048.",
+        "read": false
+      },
+      {
+        "id": "old",
+        "subject": "Welcome to your member portal",
+        "body": "Welcome! You can find updates from our team in this inbox.",
+        "read": true
+      }
+    ]
+  }
+}

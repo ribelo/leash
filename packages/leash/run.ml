@@ -645,6 +645,21 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
                    | named -> "; it names exactly: " ^ String.concat ", " named))
           | None ->
           Option.map (fun intent -> "refused " ^ intent ^ ": mission does not name that action") intent in
+    (* pilot-pw7x pilot-gn4w: a literal the pilot fills into a password field is a secret
+       from here on, redacted from the reply and trace like a --secret, and as the pilot's
+       own invention it is handed to the operator (U7 typed one and returned none). *)
+    (match command with
+     | P.Fill a when refusal = None && a.text <> "" && not (List.mem_assoc a.text !private_values)
+         && not (List.exists (fun (_, value) -> value = a.text) !private_values) ->
+         (match List.find_opt (fun (r : P.row) -> r.index = a.index) page.snapshot.rows with
+          | Some r when List.exists (fun s -> P.Row_state.to_string s = "password")
+                (Option.value ~default:[] r.state) ->
+              let name = "generated_password" ^ (match !generated with [] -> "" | g -> "_" ^ string_of_int (List.length g + 1)) in
+              private_values := !private_values @ [ (name, a.text) ];
+              on_secrets !private_values;
+              generated := !generated @ [ (name, a.text) ]
+          | _ -> ())
+     | _ -> ());
     let text = match command with P.Fill a -> Some a.text | P.Type a -> Some a.text
       | P.Upload a -> Some (String.concat " " a.paths) | _ -> None in
     let at = now () in
@@ -732,9 +747,11 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
           turns := P.{candidates = offered; chosen = None; n = List.length !turns + 1; trigger = "pilot"; answer = "error"; steps = []; reason = Some (scrub error.P.message); usage = None} :: !turns;
           failed error
       | Ok reply ->
-          private_values := !private_values @ reply.secrets_for_operator;
+          let fresh = List.filter (fun (_, value) ->
+            not (List.exists (fun (_, known) -> known = value) !private_values)) reply.secrets_for_operator in
+          private_values := !private_values @ fresh;
           on_secrets !private_values;
-          generated := !generated @ reply.secrets_for_operator;
+          generated := !generated @ fresh;
           reasoning := reply.reasoning_summary;
           if !expectations = [] then expectations := reply.expect;
           let n = List.length !turns + 1 in

@@ -422,3 +422,19 @@ Run 1 recorded memory starting after the fills: "Click the button named Sign in"
 **Rerun.** Mission verbatim: "Upload /tmp/leash-l57f-u9/upload-sample.txt to the fixture upload service and tell me the resulting link". The run started at `/upload` on a fresh private profile. Result: `done` in 4 pilot turns (attach, attach again, click Upload, done), 4 calls, $0.0007693, 0 navigator steps. "Upload complete. Resulting link: http://127.0.0.1:38925/files/1" ([reply](<issues/pilot/acceptance/l57f-2026-10-05/u9-pass.json>)).
 
 **Independent check** ([fixture state](<issues/pilot/acceptance/l57f-2026-10-05/u9-fixture.json>), [download](<issues/pilot/acceptance/l57f-2026-10-05/u9-independent.txt>)): the fixture recorded exactly one upload (`len(uploads) == 1`), named `upload-sample.txt`, 48 bytes, link `/files/1`. Downloading the link gives sha256 `bb71eb83…215a`, the same as the source file. The second attach replaced the selection and did not submit anything. **U9 passes.**
+### U7 — rerun with the generated password delivered and redacted (pilot-gn4w, pilot-pw7x)
+
+**Diagnosis.** In L57 the pilot invented a password and typed it into both password fields. Redaction covered only `--secret` values and the pilot's own `secrets_for_operator`, and the pilot returned none. So the password reached the reply's turns and the trace, and was never handed over.
+
+**Fix.** A literal the pilot fills into a row marked `password` becomes a private value at that moment. It is redacted from every later step, turn, reply and trace, like a `--secret`. If it is not one of the mission's secrets, it is the pilot's invention, and it is handed over once in `secrets_for_operator` as `generated_password`. A second fill with the same value (the confirmation field) adds nothing. The notification channel named in pilot-gn4w is not used: a headless run sends none (hand-tdkk), so the reply is the delivery.
+
+**Rerun.** Mission verbatim, from `/register` on a fresh private profile. Result: `done` in 8 pilot turns, 8 calls, $0.001868025: "Registered and confirmed the Northstar account for operator@example.test." The reply's steps show the fills as `<redacted>` and `generated_password` ([reply, delivered value removed](<issues/pilot/acceptance/l57f-2026-10-05/u7-pass.json>)).
+
+**Independent check** ([text](<issues/pilot/acceptance/l57f-2026-10-05/u7-independent.txt>), [fixture state, digest removed](<issues/pilot/acceptance/l57f-2026-10-05/u7-fixture.json>)):
+
+- `registrations == 1`, with one account: `operator@example.test`, `confirmed: true`, holding only `email`, `confirmed` and `password_hash`.
+- One mail, "Confirm your Northstar account", to that address.
+- The delivered `generated_password` verifies against the fixture's PBKDF2 hash, so the operator receives the account's real password.
+- The password was searched for in 8 places: the reply without `secrets_for_operator`, the durable trace and all other state files, the fixture state, the service log and stderr. It was found in none of them.
+
+**U7 passes.**
