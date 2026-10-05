@@ -19,6 +19,7 @@ ADR-0016. The corpus shows playbooks do not pay. What remains must be only what 
 6. As a maintainer, I want GLOSSARY, milestones.md, ADR-0011/0014 marked superseded by ADR-0016, and the map updated, so that no document describes playbooks as present. ^bare-f978
 7. As a maintainer, I want the commit to report lines removed, and all four gates green, so that the cut is visible. ^bare-xjiw
 8. As the operator, I want the corpus re-run once on the cut build (JEV, images off and B, three styles, --parallel 4) with its table, and U1/U2 on my account, so that nothing regressed in the removal. ^bare-oxij
+9. As an agent, I want `leash script run TAB FILE [--arg K=V]...` to execute a JavaScript file on the tab's page (the same bounded, read-only contract scripts had: function body over `args`, result validated against a leading `/** returns: ... */` block when present, 8 MiB bound) and return its result, plus `--out FILE` to stream a list result as JSONL, so that bulk collection stays possible without a playbook. The file is the agent's, read at call time; nothing is installed or remembered. ^bare-m1vr
 
 ## Out of Scope
 
