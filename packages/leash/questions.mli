@@ -44,6 +44,9 @@ val planner_hint : string
 (** revert-apgf: the planner's text when JEV stopped or an expectation failed: a hint,
     handoff, notify or fail; never actions. *)
 
+val planner_hint_headless : string
+(** revert-r9ka: the stop text on a headless browser: hint, notify or fail; no handoff. *)
+
 val planner_answer : string
 (** revert-bqrq: the planner's text at the end of a mission that asks for an answer:
     result, evidence and done, or fail. *)

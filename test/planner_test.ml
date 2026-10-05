@@ -31,6 +31,7 @@ let request trigger =
       reason = "no control";
       mission = "Find the report";
       secret_names = [ "portal_password" ];
+      headless = false;
       site = Some "site.example";
       notes = Some "Reports are under Archive.";
       history = [ ("Find the report", "blocked: no control") ];
@@ -116,6 +117,23 @@ let shown () =
     "secret names only" "[\"portal_password\"]"
     (Yojson.Safe.to_string (field "secret_names"))
 
+(* revert-r9ka: on a headless browser handoff is neither offered nor accepted. *)
+let headless () =
+  let request = { (request R.Blocked) with R.headless = true } in
+  Alcotest.(check bool)
+    "revert-r9ka handoff refused" true
+    (Result.is_error (M.decode request {|{"answer":"handoff","reason":"captcha"}|}));
+  Alcotest.(check bool)
+    "revert-r9ka hint accepted" true
+    (Result.is_ok (M.decode request {|{"answer":"hint","goal":"Click Search"}|}));
+  Alcotest.(check bool)
+    "revert-r9ka the headless prompt offers no handoff" false
+    (let p = Leash__Questions.planner_hint_headless in
+     let rec has i =
+       i + 9 <= String.length p && (String.sub p i 9 = {|"handoff"|} || has (i + 1))
+     in
+     has 0)
+
 let () =
   Alcotest.run "planner consultations"
     [
@@ -124,5 +142,6 @@ let () =
           Alcotest.test_case "revert-apgf stop answers" `Quick stop_shapes;
           Alcotest.test_case "revert-bqrq final answer" `Quick final_shapes;
           Alcotest.test_case "what the planner is shown" `Quick shown;
+          Alcotest.test_case "revert-r9ka headless" `Quick headless;
         ] );
     ]

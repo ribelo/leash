@@ -97,6 +97,8 @@ type plan_request = {
   reason : string;
   mission : string;
   secret_names : string list;
+  headless : bool;
+      (* revert-r9ka: nobody can see the browser; handoff is neither offered nor accepted. *)
   site : string option;
   notes : string option;
   history : (string * string) list;
@@ -197,6 +199,7 @@ val loop :
   now:(unit -> float) ->
   installed:Playbook.loaded list ->
   ?planner:bool ->
+  ?headless:bool ->
   ?secrets:(string * string) list ->
   ?on_secrets:((string * string) list -> unit) ->
   ?on_book:(Playbook.loaded option -> unit) ->

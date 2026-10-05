@@ -135,6 +135,10 @@ let decode (request : Run.plan_request) content =
       | _, "hint" ->
           let* goal = string "goal" in
           Ok Run.{ answer = Hint goal; usage = None }
+      | _, "handoff" when request.headless ->
+          Error
+            "handoff is not available: the browser is headless; answer hint, notify or \
+             fail"
       | _, "handoff" ->
           let* reason = string "reason" in
           Ok Run.{ answer = Handoff reason; usage = None }
@@ -176,6 +180,7 @@ let create ~now ~client ~model ~reasoning ~logger () =
     let prompt =
       match request.Run.trigger with
       | Run.Final -> Questions.planner_answer
+      | _ when request.Run.headless -> Questions.planner_hint_headless
       | _ -> Questions.planner_hint
     in
     let messages =

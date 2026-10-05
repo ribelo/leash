@@ -98,6 +98,8 @@ type plan_request = {
   reason : string;
   mission : string;
   secret_names : string list;
+  headless : bool;
+      (* revert-r9ka: nobody can see the browser; handoff is neither offered nor accepted. *)
   site : string option;
   notes : string option;
   history : (string * string) list;
@@ -320,7 +322,7 @@ let failures (results : P.run_expectation list) =
    only consulted: on BLOCKED (or a stopped loop), when a procedure's expectation fails,
    and once at the end of a mission that asks for an answer. *)
 let loop ~handler ~now ~installed
-    ?(planner = true) ?(secrets = []) ?(on_secrets = fun _ -> ()) ?(on_book = fun _ -> ())
+    ?(planner = true) ?(headless = false) ?(secrets = []) ?(on_secrets = fun _ -> ()) ?(on_book = fun _ -> ())
     ?(on_record = fun _ -> Ok ()) ?(notify = fun _ -> Ok ())
     ?(on_arguments = fun _ -> ()) ?(pause_ms = fun _ -> ()) (args : args) =
   let calls = Hashtbl.create 8 and priced = ref 0 and reported_cost = ref 0. in
@@ -603,7 +605,7 @@ let loop ~handler ~now ~installed
   let consult trigger reason (page : observation) =
     let n = List.length !turns + 1 in
     let request = { trigger; reason = scrub reason; mission = scrub args.mission;
-      secret_names = List.map fst secrets; site = Option.map scrub !current_site;
+      secret_names = List.map fst secrets; headless; site = Option.map scrub !current_site;
       notes = Option.bind !current_book (fun (b : Playbook.loaded) -> b.playbook.notes);
       history = !history; url = page.url; title = page.title;
       text = (if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text);

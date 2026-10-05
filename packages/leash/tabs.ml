@@ -2990,7 +2990,8 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ ->
           | Error why -> Error (error "invalid-request" why)
           | Ok books ->
               let execute on_record =
-                Run.loop ~handler ~planner ~on_book ~on_record ~secrets:args.secrets
+                Run.loop ~handler ~planner ~headless:(headless t) ~on_book ~on_record
+                  ~secrets:args.secrets
                   ~on_secrets:(fun values -> secret_values := values)
                   ~on_arguments
                   ~notify:(fun message ->

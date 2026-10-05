@@ -1064,6 +1064,7 @@ let chat_timeout
                {
                  Leash.Run.trigger = Blocked;
                  secret_names = [];
+                 headless = false;
                  reason = "blocked";
                  mission = "collect";
                  site = None;
