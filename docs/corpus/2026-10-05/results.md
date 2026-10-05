@@ -1,6 +1,8 @@
 # Corpus run 2026-10-05
 
-## Conclusions
+**Invalid: load and defects.** This run cannot answer the questions it was built for (notes? procedures? instruction detail?). 223 cells ended on a Leash defect (handoff offered on a headless browser, revert-r9ka), 70 on timeouts from about 60-way parallelism, Clef cells on HTTP 529, and upload was 0/63 by construction (revert-31w3). The variant differences are inside that noise. Draw no conclusions from it; the numbers below are kept only as a record.
+
+## Conclusions (withdrawn)
 
 The loop is now JEV's (ADR-0015, L62): the decision model decides every step, and the planner (`openai/gpt-6-luna`) is only consulted. All cells ran on one build (e6920a1). The run covers 20 public missions × 3 styles × {none, notes, procedures} × {jev, clef, clef-flash} × {image off, B, C} (JEV off only), 1,260 cells, plus U1/U2 on the operator's Tauron account (18 cells, JEV). Earlier results, measured on the pilot loop, are discarded. Paired cells differ in that factor only.
 
