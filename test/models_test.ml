@@ -255,7 +255,7 @@ let rig
 
 (* ---------- The models service and its server ---------- *)
 
-let jev_model = "typesafe/jev-1.13-20260917"
+let decision_model = "typesafe/jev-1.13-20260917"
 let text_model = "inception/mercury-2.5"
 let key = "test-key"
 
@@ -265,7 +265,7 @@ let models_config ?(api_key = Some key)
     Config.default.models with
     api_key = Option.map Ox_observability.Redact.make api_key;
     systemone_endpoint = text_value endpoint;
-    jev_model = text_value jev_model;
+    decision_model = text_value decision_model;
     chat_base_url = text_value "https://openrouter.ai/api/v1";
     text_model = text_value text_model;
   }
@@ -383,7 +383,7 @@ let new_tab tabs =
   tab (result (raw tabs (P.New { url = Some "https://example.com/"; label = None })))
 
 let drive models tabs handle goal =
-  raw ~model:jev_model
+  raw ~model:decision_model
     ~decide:(fun ~deadline request -> Models.decide ~deadline models request)
     tabs
     (P.Drive
@@ -402,6 +402,133 @@ let drive models tabs handle goal =
 
 (* ---------- drive-y7v8 drive-xjh6 drive-4zlp drive-y37b drive-zml5 ---------- *)
 
+(* dmod-27vx dmod-m3q5 dmod-pjmy dmod-f4lf: a configured Clef. The start reads its
+   modalities from the listing and runs the tail probe; the fake serves any model id and
+   receives the image part a multimodal state carries. *)
+let clef_service
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  rig ~caps (fun env sw _tabs _fake logger _ ->
+      let clef = "cloudflare/clef" in
+      let server =
+        Server.serve ~net:env#net ~sw (fun request ->
+            if request.Server.target = "/api/v1/models/" ^ clef ^ "/endpoints" then
+              Server.ok
+                {|{"data":{"id":"cloudflare/clef","architecture":{"input_modalities":["text","image"]}}}|}
+            else
+              let body = Yojson.Safe.from_string request.Server.body in
+              match field "state" body with
+              | Some (`String _) ->
+                  Server.ok
+                    (Yojson.Safe.to_string
+                       (obj
+                          [
+                            ("model", str clef);
+                            ( "answers",
+                              obj
+                                [
+                                  ( "colour",
+                                    obj
+                                      [
+                                        ("type", str "choice");
+                                        ("choice", str "green");
+                                        ( "probabilities",
+                                          obj
+                                            [
+                                              ("green", `Float 1.);
+                                              ("red", `Float 0.);
+                                              ("unknown", `Float 0.);
+                                            ] );
+                                        ("confidence", `Float 1.);
+                                      ] );
+                                ] );
+                            ( "usage",
+                              obj
+                                [
+                                  ("input_tokens", `Int 3000);
+                                  ("output_tokens", `Int 0);
+                                  ("cost", `Float 0.0007);
+                                ] );
+                          ]))
+              | _ -> Server.ok (answer ~model:clef ~choice:"DONE" body))
+      in
+      let config =
+        {
+          (models_config ~endpoint:(Server.url server "/api/v1/systemone") ()) with
+          decision_model = text_value clef;
+          chat_base_url = text_value (Server.url server "/api/v1");
+        }
+      in
+      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      Alcotest.(check bool)
+        "dmod-m3q5 text-only until read" false
+        (Models.accepts_images models);
+      Models.start ~sw models;
+      let rec settle n =
+        if (Models.status models).decision_tail_read = None && n > 0 then (
+          Eio.Time.sleep env#clock 0.02;
+          settle (n - 1))
+      in
+      settle 250;
+      let status = Models.status models in
+      Alcotest.(check (list string))
+        "dmod-m3q5 modalities from the listing" [ "text"; "image" ]
+        status.decision_modalities;
+      Alcotest.(check bool) "dmod-m3q5 accepts images" true (Models.accepts_images models);
+      Alcotest.(check (option bool))
+        "dmod-pjmy the probe read the tail" (Some true) status.decision_tail_read;
+      Alcotest.(check string) "dmod-27vx the configured model" clef status.decision_model;
+      let snapshot =
+        P.
+          {
+            snapshot = Result.get_ok (Snapshot_id.of_string "s_test");
+            tab = Result.get_ok (Handle.of_string "t_test");
+            url = "https://example.com/";
+            title = "Canvas";
+            page_kind = None;
+            rows = [];
+            total = 0;
+            offset = 0;
+            truncated = false;
+            settled = true;
+            source = Ax;
+            image = None;
+            reason = None;
+            dialog = None;
+          }
+      in
+      let request =
+        Leash__Jev_request.make ~model:clef ~goal:"Press the drawn button" ~snapshot
+          ~text:"" ~recent:[] ~can_scroll_down:false ~can_scroll_up:false
+        |> fun r ->
+        Leash__Jev_request.with_image r
+          Leash__Jev_request.
+            { data_url = "data:image/png;base64,AAAA"; width = 2; height = 2; scale = 1. }
+      in
+      (match Models.decide models request with
+      | Ok decision ->
+          Alcotest.(check string)
+            "dmod-f4lf any model id answers" "done"
+            (P.Operation.to_string decision.operation)
+      | Error error -> Alcotest.fail error.P.message);
+      let posted =
+        List.filter
+          (fun (r : Server.request) -> r.method_ = "POST")
+          (Server.requests server)
+        |> List.rev |> List.hd
+      in
+      match field "state" (Yojson.Safe.from_string posted.Server.body) with
+      | Some (`List [ _; part ]) ->
+          Alcotest.(check string)
+            "dmod-f4lf the image part reached the server" "image_url" (text "type" part)
+      | _ -> Alcotest.fail "dmod-f4lf no image part in the posted state")
+
 (* A whole drive over the fake browser with the real client: observe, one System One call
    per step, the first step acted on, the second DONE, and the trace the reply carries. *)
 let drive_to_done
@@ -417,7 +544,7 @@ let drive_to_done
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
-          (scripted ~model:jev_model [ Answer "SCROLL_DOWN"; Answer "DONE" ])
+          (scripted ~model:decision_model [ Answer "SCROLL_DOWN"; Answer "DONE" ])
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
       let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
@@ -457,7 +584,8 @@ let drive_to_done
         "the content type" (Some "application/json")
         (Server.header "content-type" first_request);
       let body = Yojson.Safe.from_string first_request.Server.body in
-      Alcotest.(check string) "drive-e7oi the pinned model" jev_model (text "model" body);
+      Alcotest.(check string)
+        "drive-e7oi the pinned model" decision_model (text "model" body);
       let state = get "state" body in
       let page = get "page" state in
       Alcotest.(check string)
@@ -500,7 +628,8 @@ let drive_to_done
         "drive-e7oi status says configured" true
         (get "configured" reported = `Bool true);
       Alcotest.(check string)
-        "drive-e7oi status names the pinned model" jev_model (text "jev_model" reported);
+        "drive-e7oi status names the pinned model" decision_model
+        (text "decision_model" reported);
       Alcotest.(check string)
         "drive-yqxg status names the endpoint"
         (Server.url server "/api/v1/systemone")
@@ -557,7 +686,7 @@ let invalid_response_retry
   rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let calls = ref 0 in
-      let valid = scripted ~model:jev_model [ Answer "DONE" ] in
+      let valid = scripted ~model:decision_model [ Answer "DONE" ] in
       let server =
         Server.serve ~net:env#net ~sw (fun request ->
             incr calls;
@@ -582,7 +711,7 @@ let usage_is_logged
   rig ~caps (fun env sw tabs fake logger memory ->
       script_page fake;
       let server =
-        Server.serve ~net:env#net ~sw (scripted ~model:jev_model [ Answer "DONE" ])
+        Server.serve ~net:env#net ~sw (scripted ~model:decision_model [ Answer "DONE" ])
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
       let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
@@ -603,7 +732,7 @@ let usage_is_logged
         | None -> Alcotest.fail ("no " ^ name ^ " field")
       in
       Alcotest.(check string)
-        "drive-7tvn the model" jev_model
+        "drive-7tvn the model" decision_model
         (match field "model" with String model -> model | _ -> Alcotest.fail "model");
       Alcotest.(check int)
         "drive-7tvn input tokens" 10
@@ -630,7 +759,7 @@ let model_error
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
-          (scripted ~model:jev_model
+          (scripted ~model:decision_model
              [ Answer "SCROLL_DOWN"; Refused (500, "the provider fell over") ])
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
@@ -668,7 +797,7 @@ let model_mismatch
       script_page fake;
       let server =
         Server.serve ~net:env#net ~sw
-          (scripted ~model:jev_model ~reply_model:"someone/else" [ Answer "DONE" ])
+          (scripted ~model:decision_model ~reply_model:"someone/else" [ Answer "DONE" ])
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
       let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
@@ -683,7 +812,7 @@ let model_mismatch
         "drive-e7oi the substituted model" "model-mismatch" (detail_code error);
       Alcotest.(check bool)
         "drive-e7oi the message names both models" true
-        (contains error.message "someone/else" && contains error.message jev_model);
+        (contains error.message "someone/else" && contains error.message decision_model);
       Alcotest.(check int)
         "drive-e7oi a substitution is not retried" 1 (Server.connections server);
       Alcotest.(check int) "drive-e7oi no step completed" 0 (List.length steps))
@@ -702,7 +831,7 @@ let missing_key
   rig ~caps (fun env sw tabs fake logger _ ->
       script_page fake;
       let server =
-        Server.serve ~net:env#net ~sw (scripted ~model:jev_model [ Answer "DONE" ])
+        Server.serve ~net:env#net ~sw (scripted ~model:decision_model [ Answer "DONE" ])
       in
       let config =
         models_config ~api_key:None ~endpoint:(Server.url server "/api/v1/systemone") ()
@@ -770,8 +899,8 @@ tombstone_s = 3600
     "drive-yqxg the default chat base URL" "https://openrouter.ai/api/v1"
     (Config.Text.to_string defaults.models.chat_base_url);
   Alcotest.(check string)
-    "drive-e7oi the default JEV model" jev_model
-    (Config.Text.to_string defaults.models.jev_model);
+    "drive-e7oi the default JEV model" decision_model
+    (Config.Text.to_string defaults.models.decision_model);
   Alcotest.(check string)
     "the default text model" text_model
     (Config.Text.to_string defaults.models.text_model);
@@ -805,7 +934,7 @@ tombstone_s = 3600
 [models]
 systemone_endpoint = "https://api.typesafe.ai/v1/systemone"
 chat_base_url = "https://api.typesafe.ai/v1"
-jev_model = "jev-latest"
+decision_model = "jev-latest"
 |}
       )
   in
@@ -828,7 +957,7 @@ jev_model = "jev-latest"
         "drive-yqxg the reported endpoint" "https://api.typesafe.ai/v1/systemone"
         status.P.systemone_endpoint;
       Alcotest.(check string)
-        "drive-e7oi the reported model" "jev-latest" status.P.jev_model;
+        "drive-e7oi the reported model" "jev-latest" status.P.decision_model;
       Alcotest.(check string)
         "drive-yqxg the reported chat base" "https://api.typesafe.ai/v1"
         status.P.chat_base_url;
@@ -857,20 +986,20 @@ let provider_timeout
         Server.serve ~net:env#net ~sw (fun request ->
             Eio.Time.sleep env#clock 1.3;
             Server.ok
-              (answer ~model:jev_model ~choice:"DONE"
+              (answer ~model:decision_model ~choice:"DONE"
                  (Yojson.Safe.from_string request.Server.body)))
       in
       let config =
         {
           (models_config ~endpoint:(Server.url server "/systemone") ()) with
-          jev_timeout = seconds attempt;
+          decision_timeout = seconds attempt;
         }
       in
       let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
       let handle = new_tab tabs in
       let started = Eio.Time.now env#clock in
       let reply =
-        raw ~model:jev_model
+        raw ~model:decision_model
           ~decide:(fun ~deadline:_ request -> Models.decide ~deadline models request)
           tabs
           (P.Drive
@@ -1074,7 +1203,7 @@ let chat_timeout
           (models_config ()) with
           chat_base_url = text_value (Server.url server "");
           planner_endpoint = Some (text_value (Server.url server "/planner"));
-          jev_timeout = seconds 1;
+          decision_timeout = seconds 1;
           text_timeout = seconds (if kind = "text" then attempt else 1);
           planner_timeout = seconds (if kind = "planner" then attempt else 1);
         }
@@ -1216,6 +1345,31 @@ let text_correction_budget
       | _ -> Alcotest.fail "unexpected correction outcome");
       Alcotest.(check int) "daily-9ggi one bounded correction" 2 !calls)
 
+(* dmod-27vx: the decision model is one config line; the old key is gone; the
+   [decision] settings are bounded. *)
+let decision_config () =
+  let decoded json = Config.decode_all json in
+  (match
+     decoded (obj [ ("models", obj [ ("decision_model", str "cloudflare/clef-flash") ]) ])
+   with
+  | Ok config ->
+      Alcotest.(check string)
+        "dmod-27vx any Decisions model id" "cloudflare/clef-flash"
+        (Config.Text.to_string config.models.decision_model);
+      Alcotest.(check int)
+        "dmod-7w26 default bound" 3 config.decision.image_when_rows_below
+  | Error _ -> Alcotest.fail "dmod-27vx decision_model refused");
+  Alcotest.(check bool)
+    "dmod-27vx jev_model is a removed key" true
+    (Result.is_error (decoded (obj [ ("models", obj [ ("jev_model", str "x") ]) ])));
+  Alcotest.(check bool)
+    "dmod-7w26 bound checked" true
+    (Result.is_error
+       (decoded (obj [ ("decision", obj [ ("image_when_rows_below", `Int 999) ]) ])));
+  Alcotest.(check bool)
+    "dmod-mcgn look is a boolean" true
+    (Result.is_error (decoded (obj [ ("decision", obj [ ("look", str "yes") ]) ])))
+
 let timeout_config () =
   let json =
     obj
@@ -1223,7 +1377,7 @@ let timeout_config () =
         ( "models",
           obj
             [
-              ("jev_timeout", `Int 4);
+              ("decision_timeout", `Int 4);
               ("text_timeout", `Int 7);
               ("planner_timeout", `Int 90);
             ] );
@@ -1236,7 +1390,7 @@ let timeout_config () =
     "daily-9ggi independent budgets" [ 4; 7; 90 ]
     (List.map Config.Seconds.to_int
        [
-         config.models.jev_timeout;
+         config.models.decision_timeout;
          config.models.text_timeout;
          config.models.planner_timeout;
        ]);
@@ -1252,7 +1406,7 @@ let timeout_config () =
           Alcotest.(check bool)
             "daily-9ggi precise config pointer" true
             (List.exists (fun e -> e.Ox_app.Config.pointer = "/models/" ^ name) errors))
-    [ "jev_timeout"; "text_timeout"; "planner_timeout" ];
+    [ "decision_timeout"; "text_timeout"; "planner_timeout" ];
   Alcotest.(check bool)
     "daily-9ggi unknown models setting rejected" true
     (Result.is_error (Config.t_of_yojson (obj [ ("models", obj [ ("typo", `Int 1) ]) ])));
@@ -1291,6 +1445,9 @@ let () =
           Alcotest.test_case "map-op07 malformed JEV then valid" `Quick
             (invalid_response_retry ~caps);
           Alcotest.test_case "daily-9ggi model timeout config" `Quick timeout_config;
+          Alcotest.test_case "dmod-27vx dmod-7w26 decision config" `Quick decision_config;
+          Alcotest.test_case "dmod-27vx dmod-m3q5 dmod-pjmy dmod-f4lf Clef service" `Quick
+            (clef_service ~caps);
           Alcotest.test_case "daily-9ggi text correction shares deadline" `Quick
             (text_correction_budget ~caps ~deadline:(Ox.Duration.ms 400) ~succeeds:false);
           Alcotest.test_case "daily-9ggi text correction within budget succeeds" `Quick

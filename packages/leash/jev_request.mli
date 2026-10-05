@@ -131,6 +131,23 @@ val with_shown_url : request -> string -> request
 val without_actions : request -> (Protocol.Operation.t * int option) list -> request
 (** map-op12: mask exact operation/target pairs for an unchanged page. *)
 
+type image = { data_url : string; width : int; height : int; scale : float }
+(** dmod-7w26: a viewport screenshot for a model that accepts images: a PNG data URL, its
+    pixel size and the PNG-to-CSS scale. *)
+
+val png_data_url : bytes -> string
+(** [data:image/png;base64,...] for PNG bytes. *)
+
+val with_image : request -> image -> request
+(** dmod-7w26 dmod-4ky5: send the screenshot beside the state as an image part, and offer
+    CLICK_AT with its two point questions. *)
+
+val with_look : request -> bool -> request
+(** dmod-mcgn: offer LOOK on this step. *)
+
+val with_point_levels : request -> int -> request
+(** The bands per axis of a CLICK_AT point (at least 2). *)
+
 val with_scripts : request -> offered_script list -> request
 (** pbk-rai1: the scripts offered on this observation. *)
 
@@ -158,6 +175,9 @@ type decision = {
   operation_probabilities : (string * float) list;
   target_probabilities : (string * float) list;
   targets : (string * float) list;
+  point : Protocol.point option;
+      (** dmod-4ky5: the CSS viewport point of a [click_at], from the two axis answers;
+          [None] for every other operation. *)
 }
 (** What the drive acts on. [index] is the snapshot row for an operation that has a
     target, and [None] for [wait], the two scrolls, [done] and [blocked]; [option] is the

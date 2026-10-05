@@ -57,7 +57,7 @@ A running service reports version, generation, pid, headed, key present and
 skill, and never the key.
 
   $ cat > "$tmp/healthy.json" <<'JSON'
-  > {"version":"0.0.0","generation":7,"pid":4242,"headed":true,"chrome":"running","tabs":{"open":1,"cap":8},"uptime_s":3.0,"models":{"configured":true,"jev_model":"typesafe/jev","text_model":"helper","systemone_endpoint":"https://openrouter.ai/api/v1/systemone","chat_base_url":"https://openrouter.ai/api/v1"},"OPENROUTER_API_KEY":"sk-leash-status-secret"}
+  > {"version":"0.0.0","generation":7,"pid":4242,"headed":true,"chrome":"running","tabs":{"open":1,"cap":8},"uptime_s":3.0,"models":{"configured":true,"decision_model":"typesafe/jev","text_model":"helper","systemone_endpoint":"https://openrouter.ai/api/v1/systemone","chat_base_url":"https://openrouter.ai/api/v1"},"OPENROUTER_API_KEY":"sk-leash-status-secret"}
   > JSON
   $ rm -f "$tmp/ready"; ./daily_cli_fixture.exe serve-result "$tmp/control.sock" "$tmp/healthy.json" "$tmp/ready" & pid=$!
   $ while test ! -f "$tmp/ready"; do kill -0 "$pid" 2>/dev/null || exit 1; sleep 0.01; done

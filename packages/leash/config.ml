@@ -120,11 +120,11 @@ type control = { socket : Text.t [@json.default default_socket] } [@@deriving yo
 (* drive-yqxg: the two endpoints default to OpenRouter's, and TypeSafe's direct endpoint is
    accepted as-is because it serves the same contract; the two model ids are the pinned
    defaults the spec names, so a file that says nothing about models still decodes.
-   drive-e7oi: [jev_model] is what the System One client sends and what the reply's model
+   drive-e7oi: [decision_model] is what the System One client sends and what the reply's model
    is checked against. *)
 let default_systemone_endpoint = "https://openrouter.ai/api/v1/systemone"
 let default_chat_base_url = "https://openrouter.ai/api/v1"
-let default_jev_model = "typesafe/jev-1.13-20260917"
+let default_decision_model = "typesafe/jev-1.13-20260917"
 let default_text_model = "inception/mercury-2.5"
 
 (* pilot-ffqa: the pilot model remains independent of the labeler and systemone
@@ -134,20 +134,20 @@ let default_planner_model = "openai/gpt-6-luna"
 let default_planner_reasoning = "max"
 
 (* daily-9ggi: per-attempt provider budgets, independent of the mission deadline. *)
-let default_jev_timeout = 10
+let default_decision_timeout = 10
 let default_text_timeout = 10
 let default_planner_timeout = 60
 
 type models = {
   api_key : Redact.t option;
   systemone_endpoint : Text.t;
-  jev_model : Text.t;
+  decision_model : Text.t;
   chat_base_url : Text.t;
   text_model : Text.t;
   planner_model : Text.t;
   planner_reasoning : Text.t;
   planner_endpoint : Text.t option;
-  jev_timeout : Seconds.t;
+  decision_timeout : Seconds.t;
   text_timeout : Seconds.t;
   planner_timeout : Seconds.t;
   choice_confidence : Probability.t;
@@ -166,12 +166,12 @@ let yojson_of_models (value : models) =
     @ optional "planner_endpoint" Text.yojson_of_t value.planner_endpoint
     @ [
         ("systemone_endpoint", Text.yojson_of_t value.systemone_endpoint);
-        ("jev_model", Text.yojson_of_t value.jev_model);
+        ("decision_model", Text.yojson_of_t value.decision_model);
         ("chat_base_url", Text.yojson_of_t value.chat_base_url);
         ("text_model", Text.yojson_of_t value.text_model);
         ("planner_model", Text.yojson_of_t value.planner_model);
         ("planner_reasoning", Text.yojson_of_t value.planner_reasoning);
-        ("jev_timeout", Seconds.yojson_of_t value.jev_timeout);
+        ("decision_timeout", Seconds.yojson_of_t value.decision_timeout);
         ("text_timeout", Seconds.yojson_of_t value.text_timeout);
         ("planner_timeout", Seconds.yojson_of_t value.planner_timeout);
         ("choice_confidence", Probability.yojson_of_t value.choice_confidence);
@@ -194,7 +194,9 @@ let models_of_yojson = function
       let* systemone_endpoint =
         field "systemone_endpoint" Text.t_of_yojson default_systemone_endpoint
       in
-      let* jev_model = field "jev_model" Text.t_of_yojson default_jev_model in
+      let* decision_model =
+        field "decision_model" Text.t_of_yojson default_decision_model
+      in
       let* chat_base_url = field "chat_base_url" Text.t_of_yojson default_chat_base_url in
       let* text_model = field "text_model" Text.t_of_yojson default_text_model in
       let* planner_model = field "planner_model" Text.t_of_yojson default_planner_model in
@@ -202,7 +204,9 @@ let models_of_yojson = function
         field "planner_reasoning" Text.t_of_yojson default_planner_reasoning
       in
       let* planner_endpoint = field "planner_endpoint" (optional Text.t_of_yojson) None in
-      let* jev_timeout = field "jev_timeout" Seconds.t_of_yojson default_jev_timeout in
+      let* decision_timeout =
+        field "decision_timeout" Seconds.t_of_yojson default_decision_timeout
+      in
       let* text_timeout = field "text_timeout" Seconds.t_of_yojson default_text_timeout in
       let* planner_timeout =
         field "planner_timeout" Seconds.t_of_yojson default_planner_timeout
@@ -212,13 +216,13 @@ let models_of_yojson = function
         [
           "api_key";
           "systemone_endpoint";
-          "jev_model";
+          "decision_model";
           "chat_base_url";
           "text_model";
           "planner_model";
           "planner_reasoning";
           "planner_endpoint";
-          "jev_timeout";
+          "decision_timeout";
           "text_timeout";
           "planner_timeout";
           "choice_confidence";
@@ -231,13 +235,13 @@ let models_of_yojson = function
             {
               api_key;
               systemone_endpoint;
-              jev_model;
+              decision_model;
               chat_base_url;
               text_model;
               planner_model;
               planner_reasoning;
               planner_endpoint;
-              jev_timeout;
+              decision_timeout;
               text_timeout;
               planner_timeout;
               choice_confidence;
@@ -255,14 +259,14 @@ let default_models =
   {
     api_key = None;
     systemone_endpoint = default_systemone_endpoint;
-    jev_model = default_jev_model;
+    decision_model = default_decision_model;
     chat_base_url = default_chat_base_url;
     text_model = default_text_model;
     planner_model = default_planner_model;
     planner_reasoning = default_planner_reasoning;
     planner_endpoint = None;
     choice_confidence = 0.7;
-    jev_timeout = default_jev_timeout;
+    decision_timeout = default_decision_timeout;
     text_timeout = default_text_timeout;
     planner_timeout = default_planner_timeout;
   }
@@ -343,6 +347,19 @@ type pilot = { turns : int; [@json.default 12] deadline_s : int [@json.default 6
 
 let default_pilot = { turns = 12; deadline_s = 600 }
 
+(* dmod-7w26 dmod-mcgn dmod-4ky5: how a decision model that accepts images is shown the
+   page. [image_when_rows_below] sends the screenshot when the element table has fewer
+   actionable rows (mode B; 0 never); [look] offers LOOK (mode C); [point_levels] is how
+   many bands each axis of a CLICK_AT point is chosen from. A text-only model gets none. *)
+type decision = {
+  image_when_rows_below : int; [@json.default 3]
+  look : bool; [@json.default true]
+  point_levels : int; [@json.default 20]
+}
+[@@deriving yojson]
+
+let default_decision = { image_when_rows_below = 3; look = true; point_levels = 20 }
+
 let pilot_of_yojson json =
   Result.bind (pilot_of_yojson json) (fun pilot ->
       if pilot.turns < 1 || pilot.turns > 100 then Error "pilot.turns: expected 1..100"
@@ -376,6 +393,7 @@ type t = {
   skill : skill; [@json.default default_skill]
   traces : traces; [@json.default default_traces]
   pilot : pilot; [@json.default default_pilot]
+  decision : decision; [@json.default default_decision]
 }
 [@@deriving yojson]
 
@@ -393,6 +411,7 @@ let default : t =
     skill = default_skill;
     traces = default_traces;
     pilot = default_pilot;
+    decision = default_decision;
   }
 
 let toml_array values =
@@ -432,13 +451,13 @@ let default_toml =
 # [models]
 # api_key = "sk-or-..."       # prefer OPENROUTER_API_KEY in the environment
 # systemone_endpoint = %S
-# jev_model = %S
+# decision_model = %S
 # chat_base_url = %S
 # text_model = %S
 # planner_model = %S          # the fallback planner (Luna)
 # planner_reasoning = %S      # OpenRouter effort; "none" turns reasoning off
 # choice_confidence = 0.7     # review a playbook choice below this top probability
-# jev_timeout = %d           # seconds per attempt; caller deadline still bounds all retries
+# decision_timeout = %d           # seconds for the one attempt; the caller deadline bounds it
 # text_timeout = %d
 # planner_timeout = %d
 # planner_endpoint = "https://openrouter.ai/api/v1/chat/completions"
@@ -458,6 +477,11 @@ let default_toml =
 # turns = 12                 # 1..100
 # deadline_s = 600           # 30..3600
 #
+# [decision]                 # used only when the decision model accepts images
+# image_when_rows_below = 3  # 0..250; screenshot when fewer actionable rows (0 never)
+# look = true                # offer LOOK, at most one per two steps
+# point_levels = 20          # 2..100 bands per axis for CLICK_AT
+#
 # [handoff]
 # timeout_s = 300            # bounded human wait in seconds
 # focus_command = %s
@@ -472,9 +496,9 @@ let default_toml =
 # turns = 2                  # 1..10 planner challenge turns
 |}
     default_binary default_profile_dir default_workspace default_cap default_idle_s
-    default_tombstone_s default_socket default_systemone_endpoint default_jev_model
+    default_tombstone_s default_socket default_systemone_endpoint default_decision_model
     default_chat_base_url default_text_model default_planner_model
-    default_planner_reasoning default_jev_timeout default_text_timeout
+    default_planner_reasoning default_decision_timeout default_text_timeout
     default_planner_timeout
     (toml_array default_focus_command)
     (toml_array default_notify_command)
@@ -915,6 +939,7 @@ let collect json =
               "skill";
               "traces";
               "pilot";
+              "decision";
             ]
           fields
       in
@@ -974,14 +999,14 @@ let collect json =
                 [
                   "api_key";
                   "systemone_endpoint";
-                  "jev_model";
+                  "decision_model";
                   "chat_base_url";
                   "text_model";
                   "planner_model";
                   "planner_reasoning";
                   "planner_endpoint";
                   "choice_confidence";
-                  "jev_timeout";
+                  "decision_timeout";
                   "text_timeout";
                   "planner_timeout";
                 ] (fun section ->
@@ -989,7 +1014,7 @@ let collect json =
                 field_errors pointer "api_key" section (fun pointer json ->
                     decode_option pointer Redact.t_of_yojson json)
                 @ field_errors pointer "systemone_endpoint" section text
-                @ field_errors pointer "jev_model" section text
+                @ field_errors pointer "decision_model" section text
                 @ field_errors pointer "chat_base_url" section text
                 @ field_errors pointer "text_model" section text
                 @ field_errors pointer "planner_model" section text
@@ -1000,7 +1025,7 @@ let collect json =
                     (fun name ->
                       field_errors pointer name section (fun pointer json ->
                           decode_with pointer Seconds.t_of_yojson json))
-                    [ "jev_timeout"; "text_timeout"; "planner_timeout" ]
+                    [ "decision_timeout"; "text_timeout"; "planner_timeout" ]
                 @ field_errors pointer "choice_confidence" section (fun pointer json ->
                     decode_with pointer Probability.t_of_yojson json))
       in
@@ -1086,6 +1111,32 @@ let collect json =
                               ]))
                   [ ("turns", 1, 100); ("deadline_s", 30, 3600) ])
       in
+      let decision_errors =
+        let pointer = child "" "decision" in
+        match List.assoc_opt "decision" fields with
+        | None -> []
+        | Some json ->
+            collect_object pointer json
+              ~known:[ "image_when_rows_below"; "look"; "point_levels" ] (fun section ->
+                field_errors pointer "look" section (fun p j ->
+                    match j with
+                    | `Bool _ -> Ok ()
+                    | _ -> Error [ issue p "expected true or false" ])
+                @ List.concat_map
+                    (fun (key, minimum, maximum) ->
+                      field_errors pointer key section (fun p j ->
+                          match j with
+                          | `Int n when n >= minimum && n <= maximum -> Ok ()
+                          | _ ->
+                              Error
+                                [
+                                  issue p
+                                    (Printf.sprintf
+                                       "expected an integer between %d and %d" minimum
+                                       maximum);
+                                ]))
+                    [ ("image_when_rows_below", 0, 250); ("point_levels", 2, 100) ])
+      in
       let notify_errors =
         match List.assoc_opt "notify" fields with
         | None -> []
@@ -1121,7 +1172,7 @@ let collect json =
         errors =
           unknown @ chrome_errors @ tabs_errors @ expiry_errors @ control_errors
           @ otlp_errors @ models_errors @ handoff_errors @ skill_errors @ traces_errors
-          @ pilot_errors @ notify_errors @ challenges_errors;
+          @ pilot_errors @ decision_errors @ notify_errors @ challenges_errors;
         binary;
         profile_dir;
         socket;

@@ -36,6 +36,20 @@ type page_label = { kind : string; source : string; url : string }
 (** kind-ir9l: what the operator level shows JEV. [url] replaces the raw page URL in the
     playbook-less lane; [kind] and [source] are recorded on the operator state. *)
 
+type vision = {
+  picture : unit -> (Jev_request.image, Protocol.error) result;
+  image_when_rows_below : int;
+  look : bool;
+  point_levels : int;
+}
+(** dmod-7w26 dmod-mcgn dmod-4ky5: given only for a decision model that accepts images.
+    The viewport screenshot goes into the state when the element table has fewer than
+    [image_when_rows_below] actionable elements (mode B; 0 never) and on the step after a
+    LOOK; LOOK is offered when [look] holds, at most once per two predictions (mode C);
+    CLICK_AT is offered whenever a screenshot is in the state, its point chosen from
+    [point_levels] bands per axis. The drive's metrics name the model and count the image
+    parts sent (dmod-l44q). *)
+
 val run :
   ?stop_on_navigation:bool ->
   ?on_step:(Protocol.step -> unit) ->
@@ -48,6 +62,7 @@ val run :
   ?scripts:(observation -> Jev_request.offered_script list) ->
   ?run_script:(url:string -> string -> (Jev_request.script_effect, Protocol.error) result) ->
   ?label:(url:string -> title:string -> text:string -> page_label) ->
+  ?vision:vision ->
   handler:handler ->
   now:(unit -> float) ->
   model:string ->

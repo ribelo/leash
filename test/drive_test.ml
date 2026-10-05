@@ -67,6 +67,7 @@ let decision ?index name : J.decision =
     option = None;
     confidence = 1.;
     target_confidence = None;
+    point = None;
     operation_probabilities = [ (name, 1.) ];
     target_probabilities = [];
     targets = [];
@@ -576,6 +577,152 @@ let stale_error =
     | Ok code -> code
     | Error _ -> assert false)
     ~message:"changed"
+
+(* dmod-7w26 dmod-mcgn dmod-4ky5 dmod-l44q: a model that accepts images. With mode B off,
+   the first state has no picture; LOOK brings one to the next state, is not offered again
+   on that step, and returns two predictions later; CLICK_AT reaches the act with its
+   point; the metrics name the model and count the image parts. *)
+let vision_loop () =
+  let pictures = ref 0 and requests = ref [] and points = ref [] in
+  let vision =
+    D.
+      {
+        picture =
+          (fun () ->
+            incr pictures;
+            Ok
+              J.
+                {
+                  data_url = "data:image/png;base64,AAAA";
+                  width = 200;
+                  height = 100;
+                  scale = 1.;
+                });
+        image_when_rows_below = 0;
+        look = true;
+        point_levels = 10;
+      }
+  in
+  let has_image request =
+    match Yojson.Safe.Util.member "state" (J.body request) with
+    | `List _ -> true
+    | _ -> false
+  in
+  let offers key request =
+    match
+      Yojson.Safe.Util.(
+        J.body request |> member "questions" |> member "operation" |> member "criteria")
+    with
+    | `Assoc fields -> List.mem_assoc key fields
+    | _ -> false
+  in
+  let decide request =
+    requests := request :: !requests;
+    Ok
+      (match List.length !requests with
+      | 1 -> decision "look"
+      | 2 -> { (decision "click_at") with point = Some P.{ x = 50.; y = 25. } }
+      | _ -> decision "done")
+  in
+  let act _ (choice : J.decision) ~text:_ =
+    points := choice.point :: !points;
+    Ok (performed ())
+  in
+  let handler =
+    D.
+      {
+        observe = (fun () -> Ok (observation "Canvas"));
+        decide;
+        text_value = (fun _ -> Ok None);
+        act;
+      }
+  in
+  let result =
+    match
+      D.run ~vision ~handler
+        ~now:(fun () -> 0.)
+        ~model:"cloudflare/clef" ~args:(args ()) ~dry_run:false ()
+    with
+    | Ok result -> result
+    | Error error -> Alcotest.fail error.message
+  in
+  let first, second, third =
+    match List.rev !requests with
+    | [ a; b; c ] -> (a, b, c)
+    | _ -> Alcotest.fail "three predictions"
+  in
+  Alcotest.(check bool) "dmod-mcgn no picture before LOOK" false (has_image first);
+  Alcotest.(check bool) "dmod-mcgn LOOK offered" true (offers "LOOK" first);
+  Alcotest.(check bool)
+    "dmod-mcgn the next state carries the picture" true (has_image second);
+  Alcotest.(check bool)
+    "dmod-mcgn LOOK not offered on the next step" false (offers "LOOK" second);
+  Alcotest.(check bool)
+    "dmod-4ky5 CLICK_AT offered with the picture" true (offers "CLICK_AT" second);
+  Alcotest.(check bool)
+    "dmod-mcgn LOOK again two predictions later" true (offers "LOOK" third);
+  Alcotest.(check bool)
+    "dmod-4ky5 the act gets the point" true
+    (List.mem (Some P.{ x = 50.; y = 25. }) !points);
+  Alcotest.(check int) "dmod-l44q one picture taken" 1 !pictures;
+  Alcotest.(check int) "dmod-l44q image parts counted" 1 (metric result "image_parts");
+  check "dmod-l44q the model is named" "cloudflare/clef"
+    (match json_member "decision_model" (json_member "metrics" (state result)) with
+    | `String s -> s
+    | _ -> "");
+  check "done" "done" (status result)
+
+(* dmod-7w26: mode B — a page with fewer actionable elements than the bound is sent with
+   its picture; a text-only model (no vision) never is. *)
+let vision_mode_b () =
+  let seen = ref [] in
+  let decide request =
+    seen :=
+      (match Yojson.Safe.Util.member "state" (J.body request) with
+      | `List _ -> true
+      | _ -> false)
+      :: !seen;
+    Ok (decision "done")
+  in
+  let handler =
+    D.
+      {
+        observe = (fun () -> Ok (observation "Canvas"));
+        decide;
+        text_value = (fun _ -> Ok None);
+        act = (fun _ _ ~text:_ -> Ok (performed ()));
+      }
+  in
+  let vision =
+    D.
+      {
+        picture =
+          (fun () ->
+            Ok
+              J.
+                {
+                  data_url = "data:image/png;base64,AAAA";
+                  width = 2;
+                  height = 2;
+                  scale = 1.;
+                });
+        image_when_rows_below = 3;
+        look = false;
+        point_levels = 10;
+      }
+  in
+  let go vision =
+    seen := [];
+    match
+      D.run ?vision ~handler
+        ~now:(fun () -> 0.)
+        ~model:"m" ~args:(args ()) ~dry_run:false ()
+    with
+    | Ok _ -> List.hd !seen
+    | Error error -> Alcotest.fail error.P.message
+  in
+  Alcotest.(check bool) "dmod-7w26 few rows: picture sent" true (go (Some vision));
+  Alcotest.(check bool) "dmod-7w26 text-only model: never" false (go None)
 
 let fly_budgets () =
   let calls = ref 0 in
@@ -1373,6 +1520,8 @@ let () =
             ("map-yzqp action scoped search safety", scoped_action_risk);
             ("map-yzqp bounded pre-action safety evidence", bounded_pre_action_risk);
             ("fly-hc3l fly-fl7u fly-vzzw budgets", fly_budgets);
+            ("dmod-7w26 dmod-mcgn dmod-4ky5 dmod-l44q vision loop", vision_loop);
+            ("dmod-7w26 mode B and text-only models", vision_mode_b);
             ("fly-vnf1 bounded BLOCKED frontier rescue", fly_blocked_frontier);
             ("fly-g0uh unsupported partial evidence", fly_unsupported);
             ("fly-gysl fly-qr70 fly-9363 helper guard", fly_helper_guard);

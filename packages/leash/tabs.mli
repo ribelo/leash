@@ -37,6 +37,7 @@ val create :
   ?handoff_timeout_s:int ->
   ?challenge_attempt:bool ->
   ?challenge_turns:int ->
+  ?vision:(unit -> Config.decision option) ->
   ?idle:Ox.Duration.t ->
   'clock deps ->
   t

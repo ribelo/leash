@@ -684,10 +684,12 @@ let large_text_over_socket
                       Leash.Protocol.
                         {
                           configured = false;
-                          jev_model = "unconfigured";
+                          decision_model = "unconfigured";
                           text_model = "";
                           systemone_endpoint = "";
                           chat_base_url = "";
+                          decision_modalities = [];
+                          decision_tail_read = None;
                         });
                   fs = env#fs;
                   net = env#net;
@@ -754,10 +756,12 @@ let socket
                     Leash.Protocol.
                       {
                         configured = false;
-                        jev_model = "unconfigured";
+                        decision_model = "unconfigured";
                         text_model = "";
                         systemone_endpoint = "";
                         chat_base_url = "";
+                        decision_modalities = [];
+                        decision_tail_read = None;
                       });
                 fs = env#fs;
                 net = env#net;
@@ -809,10 +813,12 @@ let socket
                     Leash.Protocol.
                       {
                         configured = false;
-                        jev_model = "unconfigured";
+                        decision_model = "unconfigured";
                         text_model = "";
                         systemone_endpoint = "";
                         chat_base_url = "";
+                        decision_modalities = [];
+                        decision_tail_read = None;
                       });
                 fs = env#fs;
                 net = env#net;
@@ -846,10 +852,12 @@ let socket
                     Leash.Protocol.
                       {
                         configured = false;
-                        jev_model = "unconfigured";
+                        decision_model = "unconfigured";
                         text_model = "";
                         systemone_endpoint = "";
                         chat_base_url = "";
+                        decision_modalities = [];
+                        decision_tail_read = None;
                       });
                 fs = env#fs;
                 net = env#net;
@@ -910,10 +918,12 @@ let second_instance
                     Leash.Protocol.
                       {
                         configured = false;
-                        jev_model = "unconfigured";
+                        decision_model = "unconfigured";
                         text_model = "";
                         systemone_endpoint = "";
                         chat_base_url = "";
+                        decision_modalities = [];
+                        decision_tail_read = None;
                       });
                 fs = env#fs;
                 net = env#net;
@@ -1510,6 +1520,7 @@ let drive_dry_run
                   option = None;
                   confidence = 1.;
                   target_confidence = None;
+                  point = None;
                   operation_probabilities = [ ("click", 1.) ];
                   target_probabilities = [];
                   targets = [];
@@ -1706,6 +1717,7 @@ let refused_click_redecides
               option = None;
               confidence = 1.;
               target_confidence = None;
+              point = None;
               operation_probabilities = [ (P.Operation.to_string operation, 1.) ];
               target_probabilities = [];
               targets = [];
@@ -2381,6 +2393,7 @@ let decide_done ~deadline:_ (_ : Jev.request) =
         option = None;
         confidence = 1.;
         target_confidence = None;
+        point = None;
         operation_probabilities = [ ("done", 1.) ];
         target_probabilities = [];
         targets = [];
@@ -3243,10 +3256,12 @@ let listener_budget_reply
                       P.
                         {
                           configured = false;
-                          jev_model = "unconfigured";
+                          decision_model = "unconfigured";
                           text_model = "";
                           systemone_endpoint = "";
                           chat_base_url = "";
+                          decision_modalities = [];
+                          decision_tail_read = None;
                         });
                   fs = env#fs;
                   net = env#net;
@@ -3885,10 +3900,12 @@ let shared_handle_over_socket
                       P.
                         {
                           configured = false;
-                          jev_model = "unconfigured";
+                          decision_model = "unconfigured";
                           text_model = "";
                           systemone_endpoint = "";
                           chat_base_url = "";
+                          decision_modalities = [];
+                          decision_tail_read = None;
                         });
                   fs = env#fs;
                   net = env#net;
@@ -4101,6 +4118,7 @@ let pilot_leg_scope
                         option = None;
                         confidence = 1.;
                         target_confidence = None;
+                        point = None;
                         operation_probabilities = [ ("scroll_down", 1.) ];
                         target_probabilities = [];
                         targets = [];

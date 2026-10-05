@@ -264,6 +264,7 @@ let scripted_steps
               option = None;
               confidence = 1.;
               target_confidence = None;
+              point = None;
               operation_probabilities =
                 [ (String.uppercase_ascii op, 1.); ("NOT_AN_OPERATION", 0.) ];
               target_probabilities = [ ("1", 1.) ];

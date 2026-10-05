@@ -609,10 +609,16 @@ val yojson_of_tab_counts : tab_counts -> Yojson.Safe.t
 
 type models_status = {
   configured : bool;
-  jev_model : string;
+  decision_model : string;
   text_model : string;
   systemone_endpoint : string;
   chat_base_url : string;
+  decision_modalities : string list;
+      (* dmod-m3q5: the decision model's input modalities from OpenRouter, read once at
+         start; empty until read or when unreadable. *)
+  decision_tail_read : bool option; [@json.null]
+      (* dmod-pjmy: whether the start-up probe read the tail of a ~3K-token state; null
+         until probed or when the probe failed. *)
 }
 (** L19 drive-e7oi drive-yqxg: what [status] reports about the models section — whether an
     API key is present, the pinned JEV model, the text helper's model, and the two

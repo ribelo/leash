@@ -69,13 +69,13 @@ type control = { socket : Text.t }
 type models = {
   api_key : Redact.t option;
   systemone_endpoint : Text.t;
-  jev_model : Text.t;
+  decision_model : Text.t;
   chat_base_url : Text.t;
   text_model : Text.t;
   planner_model : Text.t;
   planner_reasoning : Text.t;
   planner_endpoint : Text.t option;
-  jev_timeout : Seconds.t;
+  decision_timeout : Seconds.t;
   text_timeout : Seconds.t;
   planner_timeout : Seconds.t;
       (** Per-attempt provider timeouts in seconds (10, 10, 60); the caller deadline
@@ -90,7 +90,7 @@ type models = {
     [systemone_endpoint] and [chat_base_url] default to OpenRouter's
     [https://openrouter.ai/api/v1/systemone] and [https://openrouter.ai/api/v1];
     TypeSafe's direct endpoint ([https://api.typesafe.ai/v1/systemone]) is accepted
-    unchanged because it serves the same contract, so either key works. [jev_model]
+    unchanged because it serves the same contract, so either key works. [decision_model]
     defaults to the pinned [typesafe/jev-1.13-20260917] — the model the reply is checked
     against — and [text_model] to the text helper's [inception/mercury-2.5].
 
@@ -130,6 +130,12 @@ type otlp = { endpoint : Text.t option; headers : otlp_header list }
     [[otlp.headers]] entries with [name] and [value]. *)
 
 type pilot = { turns : int; deadline_s : int }
+
+type decision = { image_when_rows_below : int; look : bool; point_levels : int }
+(** dmod-7w26 dmod-mcgn dmod-4ky5: how a multimodal decision model is shown the page. *)
+
+val default_decision : decision
+
 type traces = { enabled : bool; retention : Traces.Retention.t }
 
 val default_traces : traces
@@ -151,6 +157,7 @@ type t = {
   skill : skill;
   traces : traces;
   pilot : pilot;
+  decision : decision;
 }
 (** svc-x8rp: every section and every field has a default, so a file that names one
     setting — or a file that is only comments — decodes: it is a configuration in which

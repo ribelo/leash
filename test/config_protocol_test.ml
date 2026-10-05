@@ -499,7 +499,7 @@ let status_result () =
   Alcotest.(check (float 0.0)) "uptime" 12.5 result.uptime_s;
   Alcotest.(check (option string))
     "a dispatch without a models service" None
-    (Option.map (fun (models : P.models_status) -> models.jev_model) result.models);
+    (Option.map (fun (models : P.models_status) -> models.decision_model) result.models);
   Alcotest.(check string)
     "[@json.key \"open\"]" (Yojson.Safe.to_string json)
     (Yojson.Safe.to_string (P.yojson_of_status_result result));
@@ -514,10 +514,12 @@ let status_result () =
           assoc
             [
               ("configured", `Bool true);
-              ("jev_model", `String "typesafe/jev-1.13-20260917");
+              ("decision_model", `String "typesafe/jev-1.13-20260917");
               ("text_model", `String "inception/mercury-2.5");
               ("systemone_endpoint", `String "https://openrouter.ai/api/v1/systemone");
               ("chat_base_url", `String "https://openrouter.ai/api/v1");
+              ("decision_modalities", `List [ `String "text"; `String "image" ]);
+              ("decision_tail_read", `Bool false);
             ] );
         ("version", `String "0.0.0");
         ("pid", `Null);
@@ -530,7 +532,7 @@ let status_result () =
   | Some models ->
       Alcotest.(check bool) "drive-e7oi configured" true models.configured;
       Alcotest.(check string)
-        "drive-e7oi the pinned model" "typesafe/jev-1.13-20260917" models.jev_model;
+        "drive-e7oi the pinned model" "typesafe/jev-1.13-20260917" models.decision_model;
       Alcotest.(check string)
         "drive-yqxg the endpoint" "https://openrouter.ai/api/v1/systemone"
         models.systemone_endpoint
@@ -551,7 +553,7 @@ let status_result () =
               assoc
                 [
                   ("configured", `Bool false);
-                  ("jev_model", `String "jev");
+                  ("decision_model", `String "jev");
                   ("text_model", `String "helper");
                   ("systemone_endpoint", `String "https://openrouter.ai/api/v1/systemone");
                   ("chat_base_url", `String "https://openrouter.ai/api/v1");
@@ -710,7 +712,7 @@ let config_text ?(headless = false) ?window_size binary profile =
      tombstone_s = 3600\n\
      [models]\n\
      api_key = \"file-secret\"\n\
-     jev_model = \"jev\"\n\
+     decision_model = \"jev\"\n\
      text_model = \"helper\"\n"
     binary profile
     (if headless then "headless = true\n" else "")
@@ -1465,7 +1467,7 @@ let config_defaults () =
       "tombstone_s";
       "socket";
       "systemone_endpoint";
-      "jev_model";
+      "decision_model";
       "chat_base_url";
       "text_model";
       "focus_command";

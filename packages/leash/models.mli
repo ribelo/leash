@@ -14,11 +14,11 @@
     socket, and is bounded by its deadline. Nothing here probes the network at creation or
     for {!status}: a missing key is a refusal at the call, not a boot failure.
 
-    daily-9ggi: [models.jev_timeout], [models.text_timeout] and [models.planner_timeout]
-    bound individual provider attempts (seconds), not the mission. Ox retains its
-    two-attempt retry policy inside the caller deadline. Provider timeouts report
-    [model-timeout] with [detail.code = "timeout"] and [detail.model_kind] identifying
-    [jev], [text] or [planner]. *)
+    daily-9ggi: [models.decision_timeout], [models.text_timeout] and
+    [models.planner_timeout] bound individual provider attempts (seconds), not the
+    mission. Ox retains its two-attempt retry policy inside the caller deadline. Provider
+    timeouts report [model-timeout] with [detail.code = "timeout"] and [detail.model_kind]
+    identifying [jev], [text] or [planner]. *)
 
 type t
 
@@ -31,14 +31,14 @@ val create :
   t
 (** [create ~sw ~net ~clock ~logger models] is the models service: one TLS HTTP client on
     [sw] and, when [models.api_key] is present, the System One client pinned to
-    [models.jev_model] and pointed at [models.systemone_endpoint], plus the chat client of
-    the text helper step pointed at [models.chat_base_url] (L22) and the planner's chat
-    client, pointed at [models.planner_endpoint] when the operator set one and at the same
-    chat route otherwise (run-d99l). Without a key there is no client at all and {!decide}
-    refuses before anything is sent. The API key travels as a {!Ox_observability.Redact.t}
-    and only {!Ox_ai.Bearer.header} reveals it, on the request path; the chat client is
-    pure and synchronous, so it is built here beside the System One one and shares the
-    transport.
+    [models.decision_model] and pointed at [models.systemone_endpoint], plus the chat
+    client of the text helper step pointed at [models.chat_base_url] (L22) and the
+    planner's chat client, pointed at [models.planner_endpoint] when the operator set one
+    and at the same chat route otherwise (run-d99l). Without a key there is no client at
+    all and {!decide} refuses before anything is sent. The API key travels as a
+    {!Ox_observability.Redact.t} and only {!Ox_ai.Bearer.header} reveals it, on the
+    request path; the chat client is pure and synchronous, so it is built here beside the
+    System One one and shares the transport.
 
     Suspension: never suspends; behavior of the delegated helpers depends on Stdlib,
     Ox_http.Client.create, Ox_ai_chat, Ox_ai_systemone and local model-client constructor
@@ -55,6 +55,23 @@ val status : t -> Protocol.models_status
 (** What [leash status] reports: [configured] is whether an API key is present, and the
     model ids and endpoints are the configured ones. The key itself is not a field and is
     never read here. *)
+
+val start : sw:Eio.Switch.t -> t -> unit
+(** dmod-m3q5 dmod-pjmy: on its own fiber, read the decision model's input modalities from
+    OpenRouter's listing ([<chat_base_url>/models/<id>/endpoints]) and run the one tail
+    probe, logging both once. Returns at once; until it finishes the model is text-only.
+    The probe reports what its one call met: Workers AI caps some requests near 2.2K input
+    tokens and not others.
+
+    Suspension: never suspends; the forked fiber suspends on the listing request and the
+    probe call. Cancellation: not a cancellation point; releasing [sw] cancels the fiber.
+    Finalizers: none; each request closes its own socket. Locking: none; the two fields
+    are written once by that fiber. Cancellation safety: safe to re-run; a cancelled start
+    leaves the model text-only and the probe unknown. [Invalid_argument] if [sw] has
+    finished, from Eio.Fiber.fork. *)
+
+val accepts_images : t -> bool
+(** Whether the decision model's modalities include [image]. *)
 
 val decide :
   ?deadline:Ox.Duration.t ->

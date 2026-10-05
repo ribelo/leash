@@ -18,6 +18,7 @@ let decision ?(index = None) name =
       option = None;
       confidence = 1.;
       target_confidence = None;
+      point = None;
       operation_probabilities = [ (name, 1.) ];
       target_probabilities = [];
       targets = [];

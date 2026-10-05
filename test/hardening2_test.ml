@@ -1548,10 +1548,12 @@ let listen ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >)
             P.
               {
                 configured = false;
-                jev_model = "unconfigured";
+                decision_model = "unconfigured";
                 text_model = "";
                 systemone_endpoint = "";
                 chat_base_url = "";
+                decision_modalities = [];
+                decision_tail_read = None;
               });
         fs = env#fs;
         net = env#net;

@@ -1149,6 +1149,114 @@ let script_options () =
       Alcotest.(check (option string))
         "pbk-rai1 the chosen script" (Some "list-page") decision.J.script
 
+(* dmod-7w26 dmod-mcgn dmod-4ky5 dmod-as71: what a model that accepts images is sent, and
+   how its point answer becomes a CSS point. *)
+let image =
+  J.{ data_url = "data:image/png;base64,AAAA"; width = 1600; height = 1000; scale = 2. }
+
+let vision_request () =
+  let plain = make [ button 1 "Go" ] in
+  let body = J.body plain in
+  Alcotest.(check bool)
+    "dmod-7w26 no image: the state is the object" true
+    (match get "state" body with `Assoc _ -> true | _ -> false);
+  let keys request =
+    match get "operation" (get "questions" (J.body request)) |> get "criteria" with
+    | `Assoc fields -> List.map fst fields
+    | _ -> []
+  in
+  Alcotest.(check bool)
+    "no LOOK or CLICK_AT unoffered" false
+    (List.mem "LOOK" (keys plain) || List.mem "CLICK_AT" (keys plain));
+  let seen = J.with_point_levels (J.with_look (J.with_image plain image) true) 10 in
+  let body = J.body seen in
+  (match get "state" body with
+  | `List [ `Assoc _; part ] ->
+      check_json "dmod-7w26 the image part beside the state"
+        (obj
+           [
+             "type" => str "image_url"; "image_url" => obj [ "url" => str image.data_url ];
+           ])
+        part
+  | _ -> Alcotest.fail "dmod-7w26 the state is not [object; image]");
+  Alcotest.(check bool) "dmod-mcgn LOOK offered" true (List.mem "LOOK" (keys seen));
+  Alcotest.(check bool)
+    "dmod-4ky5 CLICK_AT offered with an image" true
+    (List.mem "CLICK_AT" (keys seen));
+  let questions = get "questions" body in
+  let x = get "click_at_x" questions in
+  Alcotest.(check string)
+    "dmod-4ky5 the point is a score question" "score"
+    (match get "type" x with `String s -> s | _ -> "");
+  check_json "dmod-4ky5 ten bands per axis"
+    (lst (List.map str (Q.point_levels ~axis:"width" 10)))
+    (get "criteria" x);
+  let score value =
+    obj
+      [
+        "type" => str "score";
+        "score" => num value;
+        "probabilities" => obj [];
+        "confidence" => num 0.5;
+      ]
+  in
+  let at =
+    keys seen
+    |> List.map (fun key ->
+        key
+        =>
+        if key = "CLICK_AT" then 0.9 else 0.1 /. float_of_int (List.length (keys seen) - 1))
+  in
+  let d =
+    decided "dmod-4ky5 click_at" seen
+      (answers
+         [
+           "operation" => choice ~confidence:0.9 "CLICK_AT" at;
+           "click_at_x" => score 7.;
+           "click_at_y" => score 2.;
+         ])
+  in
+  Alcotest.(check string)
+    "dmod-4ky5 operation" "click_at"
+    (P.Operation.to_string d.operation);
+  (match d.point with
+  | Some p ->
+      Alcotest.(check (float 1e-6)) "dmod-4ky5 x is the band centre in CSS" 600. p.x;
+      Alcotest.(check (float 1e-6)) "dmod-4ky5 y is the band centre in CSS" 125. p.y
+  | None -> Alcotest.fail "dmod-4ky5 no point");
+  refused "dmod-4ky5 a score outside the bands" seen
+    (answers
+       [
+         "operation" => choice ~confidence:0.9 "CLICK_AT" at;
+         "click_at_x" => score 10.;
+         "click_at_y" => score 2.;
+       ]);
+  refused "dmod-4ky5 CLICK_AT without an image" plain
+    (answers [ "operation" => choice ~confidence:0.9 "CLICK_AT" [ "CLICK_AT" => 1. ] ]);
+  let look =
+    keys seen
+    |> List.map (fun key ->
+        key
+        => if key = "LOOK" then 0.9 else 0.1 /. float_of_int (List.length (keys seen) - 1))
+  in
+  let d =
+    decided "dmod-mcgn look" seen
+      (answers [ "operation" => choice ~confidence:0.9 "LOOK" look ])
+  in
+  Alcotest.(check string)
+    "dmod-mcgn LOOK decides look" "look"
+    (P.Operation.to_string d.operation);
+  Alcotest.(check string)
+    "dmod-as71 LOOK text pinned"
+    "Look at a screenshot of the page before choosing; nothing is executed." Q.look_label;
+  Alcotest.(check string)
+    "dmod-as71 CLICK_AT text pinned"
+    "Click a point of the screenshot: a control drawn in the picture that has no element."
+    Q.click_at_label;
+  Alcotest.(check string)
+    "png data url" "data:image/png;base64,TWFu"
+    (J.png_data_url (Bytes.of_string "Man"))
+
 let () =
   Alcotest.run "jev_request"
     [
@@ -1162,6 +1270,8 @@ let () =
             controls;
           Alcotest.test_case "drive-zml5 the target criteria" `Quick target_criteria;
           Alcotest.test_case "drive-zml5 action cap" `Quick action_cap;
+          Alcotest.test_case "dmod-7w26 dmod-mcgn dmod-4ky5 dmod-as71 vision" `Quick
+            vision_request;
           Alcotest.test_case "drive-y37b the recent window" `Quick recent_window;
           Alcotest.test_case "drive-y37b drive-zml5 the instruction texts, verbatim"
             `Quick instruction_texts;

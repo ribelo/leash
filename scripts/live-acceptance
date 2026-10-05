@@ -32,7 +32,7 @@ cap = 8
 idle_s = 3600
 tombstone_s = 3600
 [models]
-jev_model = "not-used"
+decision_model = "not-used"
 text_model = "not-used"
 EOF
 browser_alive() {

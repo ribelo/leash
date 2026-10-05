@@ -242,7 +242,33 @@ let distinct_operations elements =
 
 (* ---------- The request ---------- *)
 
+(* dmod-7w26: the viewport screenshot a multimodal decision model is shown: a PNG data URL,
+   its pixel size and the PNG-to-CSS scale, so a chosen point maps back to CSS pixels. *)
+type image = { data_url : string; width : int; height : int; scale : float }
+
+let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+let png_data_url bytes =
+  let n = Bytes.length bytes in
+  let out = Buffer.create (((n + 2) / 3 * 4) + 22) in
+  Buffer.add_string out "data:image/png;base64,";
+  let byte i = if i < n then Char.code (Bytes.get bytes i) else 0 in
+  let rec go i =
+    if i < n then (
+      let b = (byte i lsl 16) lor (byte (i + 1) lsl 8) lor byte (i + 2) in
+      Buffer.add_char out alphabet.[(b lsr 18) land 63];
+      Buffer.add_char out alphabet.[(b lsr 12) land 63];
+      Buffer.add_char out (if i + 1 < n then alphabet.[(b lsr 6) land 63] else '=');
+      Buffer.add_char out (if i + 2 < n then alphabet.[b land 63] else '=');
+      go (i + 3))
+  in
+  go 0;
+  Buffer.contents out
+
 type request = {
+  image : image option;
+  look : bool;
+  point_levels : int;
   model : string;
   goal : string;
   snapshot : P.snapshot;
@@ -327,7 +353,19 @@ let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
     elements = elements snapshot;
     scripts = [];
     shown_url = None;
+    image = None;
+    look = false;
+    point_levels = 20;
   }
+
+(* dmod-7w26 dmod-4ky5: a screenshot in the state also offers CLICK_AT on it. *)
+let with_image request image = { request with image = Some image }
+
+(* dmod-mcgn: offer LOOK on this step. *)
+let with_look request look = { request with look }
+
+let with_point_levels request point_levels =
+  { request with point_levels = max 2 point_levels }
 
 (* map-op12: remove only exact operation/row pairs. Other operations on that
    row remain available; targetless scrolls are page controls. *)
@@ -461,17 +499,21 @@ let operation_criteria request =
     controls ~can_scroll_down:request.can_scroll_down ~can_scroll_up:request.can_scroll_up
   in
   let terminal = [ ("DONE", done_label); ("BLOCKED", blocked_label) ] in
+  let vision =
+    (if request.look then [ ("LOOK", Questions.look_label) ] else [])
+    @ if request.image <> None then [ ("CLICK_AT", Questions.click_at_label) ] else []
+  in
   let room =
     max 0
       (max_operation_options - List.length operations - List.length controls
-     - List.length terminal)
+     - List.length vision - List.length terminal)
   in
   let scripts =
     request.scripts
     |> List.filteri (fun i _ -> i < room)
     |> List.map (fun script -> (run_script_prefix ^ script.name, script.description))
   in
-  operations @ controls @ scripts @ terminal
+  operations @ controls @ vision @ scripts @ terminal
 
 let operation_keys request = List.map fst (operation_criteria request)
 
@@ -493,13 +535,16 @@ let operation_question request =
                ( "rules",
                  Some
                    (E.string
-                      (if
-                         List.exists
-                           (fun (key, _) ->
-                             String.starts_with ~prefix:run_script_prefix key)
-                           (operation_criteria request)
-                       then Questions.next_action ^ "\n" ^ run_script_rule
-                       else Questions.next_action)) );
+                      ((if
+                          List.exists
+                            (fun (key, _) ->
+                              String.starts_with ~prefix:run_script_prefix key)
+                            (operation_criteria request)
+                        then Questions.next_action ^ "\n" ^ run_script_rule
+                        else Questions.next_action)
+                      ^
+                      if request.image <> None then "\n" ^ Questions.click_at_rule else ""
+                      )) );
              ]) );
     ]
 
@@ -533,38 +578,84 @@ let target_question request operation =
 
 let target_key operation = P.Operation.to_string operation ^ "_target"
 
+(* dmod-4ky5: the Decisions API has no point question; a point is two score questions,
+   one per axis, over [point_levels] equal bands of the screenshot. *)
+let point_question request ~axis ~rules =
+  E.object_
+    [
+      ("type", Some (E.string "score"));
+      ( "criteria",
+        Some (E.array_map E.string (Questions.point_levels ~axis request.point_levels)) );
+      ( "instructions",
+        Some
+          (E.object_
+             [
+               ("goal", Some (E.string request.goal));
+               ("operation", Some (E.string "CLICK_AT"));
+               ("rules", Some (E.string rules));
+             ]) );
+    ]
+
 let questions request =
   E.object_
     (("operation", Some (operation_question request))
-    :: List.map
-         (fun operation ->
-           (target_key operation, Some (target_question request operation)))
-         (distinct_operations request.elements))
+     :: List.map
+          (fun operation ->
+            (target_key operation, Some (target_question request operation)))
+          (distinct_operations request.elements)
+    @
+    match request.image with
+    | None -> []
+    | Some _ ->
+        [
+          ( "click_at_x",
+            Some (point_question request ~axis:"width" ~rules:Questions.point_x) );
+          ( "click_at_y",
+            Some (point_question request ~axis:"height" ~rules:Questions.point_y) );
+        ])
 
 let body request =
+  (* dmod-7w26: an image travels beside the state object as a chat-style image part,
+     the one form Clef read in the 2026-10-05 probe. *)
+  let with_picture state =
+    match request.image with
+    | None -> state
+    | Some image ->
+        E.array
+          [
+            state;
+            E.object_
+              [
+                ("type", Some (E.string "image_url"));
+                ("image_url", Some (E.object_ [ ("url", Some (E.string image.data_url)) ]));
+              ];
+          ]
+  in
   E.object_
     [
       ("model", Some (E.string request.model));
       ( "state",
         Some
-          (E.object_
-             [
-               ("goal", Some (E.string request.goal));
-               ("can_scroll_down", Some (E.bool request.can_scroll_down));
-               ("can_scroll_up", Some (E.bool request.can_scroll_up));
-               ("coverage", Some request.coverage);
-               ( "page",
-                 Some
-                   (yojson_of_page
-                      {
-                        url = Option.value ~default:request.snapshot.url request.shown_url;
-                        title = request.snapshot.title;
-                        text = request.text;
-                      }) );
-               ("elements", Some (E.array_map element_json request.elements));
-               ( "recent_actions",
-                 Some (E.array_map yojson_of_recent_action (window request.recent)) );
-             ]) );
+          (with_picture
+          @@ E.object_
+               [
+                 ("goal", Some (E.string request.goal));
+                 ("can_scroll_down", Some (E.bool request.can_scroll_down));
+                 ("can_scroll_up", Some (E.bool request.can_scroll_up));
+                 ("coverage", Some request.coverage);
+                 ( "page",
+                   Some
+                     (yojson_of_page
+                        {
+                          url =
+                            Option.value ~default:request.snapshot.url request.shown_url;
+                          title = request.snapshot.title;
+                          text = request.text;
+                        }) );
+                 ("elements", Some (E.array_map element_json request.elements));
+                 ( "recent_actions",
+                   Some (E.array_map yojson_of_recent_action (window request.recent)) );
+               ]) );
       ("questions", Some (questions request));
     ]
 
@@ -580,6 +671,7 @@ type decision = {
   operation_probabilities : (string * float) list;
   target_probabilities : (string * float) list;
   targets : (string * float) list;
+  point : P.point option;
 }
 
 let member key = function `Assoc fields -> List.assoc_opt key fields | _ -> None
@@ -684,6 +776,7 @@ let decide request ~answers =
           option = None;
           confidence;
           target_confidence = None;
+          point = None;
           operation_probabilities;
           target_probabilities = [];
           targets = [];
@@ -700,6 +793,30 @@ let decide request ~answers =
         (fun (element : element) -> List.mem operation element.operations)
         request.elements
     in
+    (* dmod-4ky5: a score answer on one axis is the band's index; the point is the band's
+       centre on the screenshot, divided by its PNG-to-CSS scale. *)
+    let axis name extent =
+      match (member name answers, request.image) with
+      | Some answer, Some image -> (
+          match Option.map E.Of_json.float (member "score" answer) with
+          | Some (Ok score)
+            when Float.is_finite score && score >= 0.
+                 && score <= float_of_int (request.point_levels - 1) ->
+              Ok
+                ((score +. 0.5)
+                /. float_of_int request.point_levels
+                *. float_of_int (extent image)
+                /. image.scale)
+          | _ -> Error invalid)
+      | _ -> Error invalid
+    in
+    let* point =
+      if P.Operation.to_string operation <> "click_at" then Ok None
+      else
+        let* x = axis "click_at_x" (fun image -> image.width) in
+        let* y = axis "click_at_y" (fun image -> image.height) in
+        Ok (Some P.{ x; y })
+    in
     if candidates = [] then
       Ok
         {
@@ -712,6 +829,7 @@ let decide request ~answers =
           operation_probabilities;
           target_probabilities = [];
           targets = [];
+          point;
         }
     else
       let keys =
@@ -733,6 +851,7 @@ let decide request ~answers =
               option = Option.map (fun option_ -> option_.dom) option_;
               confidence;
               target_confidence = Some target_confidence;
+              point = None;
               operation_probabilities;
               target_probabilities;
               targets = targets ~operation candidates target_probabilities;

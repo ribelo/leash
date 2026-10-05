@@ -1577,8 +1577,18 @@ let program env (config : Leash.Config.t) sw =
     | Ok () -> Ok ()
     | Error message -> Error (`Service ("cannot create downloads directory: " ^ message))
   in
+  (* drive-e7oi drive-yqxg: the models service is one more resource in the service scope,
+     created before the listener that hands its Decide to every drive. Without a key it
+     still exists — status reports that — and a drive refuses at its first Decide. *)
+  let models =
+    Leash.Models.create ~sw ~net:base#net ~clock:base#clock ~logger:env.logger
+      config.models
+  in
   let tabs =
     Leash.Tabs.create ~sw ~download_dir
+      ~vision:(fun () ->
+        (* dmod-7w26 dmod-mcgn: images go only to a model that accepts them. *)
+        if Leash.Models.accepts_images models then Some config.decision else None)
       ~notify:
         (Leash.Desktop.notifier
            ~caps:(env.caps :> Leash.Desktop.caps)
@@ -1603,13 +1613,7 @@ let program env (config : Leash.Config.t) sw =
     Leash.Expiry.create ~sw ?interval:sweep_interval ~idle ~clock:base#mono_clock
       ~logger:env.logger tabs
   in
-  (* drive-e7oi drive-yqxg: the models service is one more resource in the service scope,
-     created before the listener that hands its Decide to every drive. Without a key it
-     still exists — status reports that — and a drive refuses at its first Decide. *)
-  let models =
-    Leash.Models.create ~sw ~net:base#net ~clock:base#clock ~logger:env.logger
-      config.models
-  in
+  Leash.Models.start ~sw models;
   Eio.Switch.on_release sw (fun () -> Leash.Tabs.stop tabs);
   let status_query = Ox_app.status_query [ (fun () -> Leash.Tabs.status tabs) ] in
   (* svc-o4wt: the listener owns the configured socket path; validation refused anything
@@ -1619,7 +1623,7 @@ let program env (config : Leash.Config.t) sw =
     Leash.Control.create ~pilot:config.pilot
       ~chrome_pid:(fun () -> (Leash.Chrome.status chrome).pid)
       ~models
-      ~model:(Leash.Config.Text.to_string config.models.jev_model)
+      ~model:(Leash.Config.Text.to_string config.models.decision_model)
         (* run-7blx: the run's three upper levels over the same one models service — the
            playbook question, the procedure question and the judgment score — and L31's
            planner stub inside them. *)

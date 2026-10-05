@@ -71,7 +71,7 @@ cap = 12
 idle_s = $3
 tombstone_s = 3600
 [models]
-jev_model = "not-used"
+decision_model = "not-used"
 text_model = "not-used"
 EOF
 }

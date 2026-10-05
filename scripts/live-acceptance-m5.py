@@ -144,7 +144,7 @@ def main():
     status = cli("status")
     models = status.get("models") or {}
     assert models.get("configured") is True, models
-    assert models.get("jev_model") == JEV_MODEL, models
+    assert models.get("decision_model") == JEV_MODEL, models
     assert models.get("text_model") == TEXT_MODEL, models
     assert models["systemone_endpoint"].endswith("/systemone"), models
     assert models["chat_base_url"].endswith("/api/v1"), models

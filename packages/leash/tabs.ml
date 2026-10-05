@@ -273,6 +273,9 @@ type t = {
   handoff_timeout_s : int;
   challenge_attempt : bool;
   challenge_turns : int;
+  vision : unit -> Config.decision option;
+      (** dmod-7w26: [Some] when the decision model accepts images, with how to show them.
+      *)
   logger : Ox_observability.Logger.t;
   download_dir : string option;
   downloads_by_guid : (string, string) Hashtbl.t;
@@ -2404,6 +2407,14 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
           Option.bind
             (List.find_opt (fun (row : P.row) -> row.index = index) page.snapshot.rows)
             (fun row -> Run.unsafe_action row.name)
+        else if op = "click_at" then
+          (* dmod-4ky5: a point inherits the guards of the rows under it. *)
+          match choice.point with
+          | Some at ->
+              List.find_map
+                (fun (row : P.row) -> Run.unsafe_action row.name)
+                (P.rows_at_point page.snapshot at)
+          | None -> None
         else None
       in
       match intent with
@@ -2415,10 +2426,21 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
       | _ -> Ok ()
     in
     let* () =
-      if op <> "click" then Ok ()
-      else
+      if op = "click" then
         Result.map_error (error "row-not-actionable")
           (P.check_consent_click page.snapshot ~index)
+      else if op = "click_at" then
+        match choice.point with
+        | Some at ->
+            List.fold_left
+              (fun checked (row : P.row) ->
+                let* () = checked in
+                Result.map_error (error "row-not-actionable")
+                  (P.check_consent_click page.snapshot ~index:row.index))
+              (Ok ())
+              (P.rows_at_point page.snapshot at)
+        | None -> Ok ()
+      else Ok ()
     in
     let started_act = now t in
     let outcome =
@@ -2446,6 +2468,14 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
                 match_ = None;
                 limit = None;
               }
+      | "click_at" -> (
+          (* dmod-4ky5: the decision model's point on the screenshot it was shown. *)
+          match choice.point with
+          | Some at ->
+              Actions.click_at ~cdp view P.{ tab = args.tab; at; shot = Some false }
+          | None ->
+              Error
+                (error "internal" "a click_at step reached the browser without a point"))
       | "scroll_down" -> Actions.operator_scroll ~cdp view ~down:true
       | "scroll_up" -> Actions.operator_scroll ~cdp view ~down:false
       | "wait" ->
@@ -2484,9 +2514,34 @@ let drive_locked ?(stop_on_navigation = false) ?mission ?(secrets = fun () -> []
   in
   (* fly-4mio: acquire already retries ten times at 20 ms. One Drive attempt,
      or the two loops would nest to a hundred observations. *)
+  (* dmod-7w26 dmod-mcgn dmod-4ky5: only a model that accepts images is shown any. *)
+  let vision =
+    Option.map
+      (fun (decision : Config.decision) ->
+        Drive.
+          {
+            picture =
+              (fun () ->
+                let* shot = capture_picture t ~session tab cdp in
+                let* png = picture_input t shot in
+                discard_picture t shot.path;
+                Ok
+                  Jev_request.
+                    {
+                      data_url = png_data_url png;
+                      width = shot.width;
+                      height = shot.height;
+                      scale = shot.scale;
+                    });
+            image_when_rows_below = decision.image_when_rows_below;
+            look = decision.look;
+            point_levels = decision.point_levels;
+          })
+      (t.vision ())
+  in
   Drive.run ~stop_on_navigation ~validate ~coverage ~usage:(usage meter)
     ~telemetry:(telemetry meter) ~observe_attempts:1 ?recent ?on_step ~scripts ?run_script
-    ?label
+    ?label ?vision
     ~handler:Drive.{ observe; decide; text_value; act }
     ~now:(fun () -> now t)
     ~model ~args
@@ -3416,7 +3471,7 @@ let inspect t json =
 
 let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
     ?(handoff_timeout_s = 300) ?(challenge_attempt = true) ?(challenge_turns = 2)
-    ?(idle = Ox.Duration.minutes 30) (deps : 'clock deps) =
+    ?(vision = fun () -> None) ?(idle = Ox.Duration.minutes 30) (deps : 'clock deps) =
   (* ^nactor-8z1n: the registry's bookkeeping is one actor's state, folded by [fold], for
      as long as the switch lives. A handler that raises fails the switch. *)
   let ledger =
@@ -3459,6 +3514,7 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
       handoff_timeout_s;
       challenge_attempt;
       challenge_turns;
+      vision;
       logger = deps.logger;
       download_dir;
       downloads_by_guid = Hashtbl.create 32;

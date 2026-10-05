@@ -161,6 +161,9 @@ type operation =
   | Wait [@json.name "wait"]
   | Done [@json.name "done"]
   | Blocked [@json.name "blocked"]
+  | Look [@json.name "look"]  (** dmod-mcgn: the decision model asked to see the page. *)
+  | Click_at [@json.name "click_at"]
+      (** dmod-4ky5: the decision model clicked a point of the screenshot. *)
 [@@deriving yojson]
 
 module Operation = struct
@@ -962,10 +965,16 @@ type tab_counts = { open_ : int; [@json.key "open"] cap : int } [@@deriving yojs
    print it, and the section is the configuration only — no probe, nothing at boot. *)
 type models_status = {
   configured : bool;
-  jev_model : string;
+  decision_model : string;
   text_model : string;
   systemone_endpoint : string;
   chat_base_url : string;
+  decision_modalities : string list; [@json.default []]
+      (* dmod-m3q5: the decision model's input modalities from OpenRouter, read once at
+         start; empty until read or when unreadable. *)
+  decision_tail_read : bool option; [@json.null]
+      (* dmod-pjmy: whether the start-up probe read the tail of a ~3K-token state; null
+         until probed or when the probe failed. *)
 }
 [@@deriving yojson]
 

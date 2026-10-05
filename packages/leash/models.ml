@@ -26,6 +26,11 @@ type t = {
       (** L32 run-d99l: the planner's chat client. Same key, same transport, and the same
           route as [chat] unless [models.planner_endpoint] names another one, so the
           fallback's model, endpoint and reasoning are all the operator's to change. *)
+  mutable modalities : string list;
+      (** dmod-m3q5: the decision model's input modalities, read once by {!start}; empty
+          until then or when the listing could not be read. *)
+  mutable tail_read : bool option;
+      (** dmod-pjmy: whether the start-up probe's tail was read; [None] until probed. *)
 }
 
 (* drive-yqxg: the chat route is the configured base URL plus the OpenAI-compatible path,
@@ -50,8 +55,8 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
         Ox_ai_systemone.Client.create ~http ~clock ~logger
           ~endpoint:(Config.Text.to_string config.systemone_endpoint)
           ~api_key
-          ~model:(Config.Text.to_string config.jev_model)
-          ~timeout:(Ox.Duration.seconds (Config.Seconds.to_int config.jev_timeout))
+          ~model:(Config.Text.to_string config.decision_model)
+          ~timeout:(Ox.Duration.seconds (Config.Seconds.to_int config.decision_timeout))
           ())
   in
   (* L22: the chat client is pure and synchronous — no socket, nothing to release — so it
@@ -79,6 +84,8 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
     systemone;
     chat;
     planner_chat;
+    modalities = [];
+    tail_read = None;
   }
 
 (* drive-e7oi: the model id is what the client sends and checks the reply against, and the
@@ -87,10 +94,12 @@ let status (t : t) : P.models_status =
   P.
     {
       configured = Option.is_some t.config.api_key;
-      jev_model = Config.Text.to_string t.config.jev_model;
+      decision_model = Config.Text.to_string t.config.decision_model;
       text_model = Config.Text.to_string t.config.text_model;
       systemone_endpoint = Config.Text.to_string t.config.systemone_endpoint;
       chat_base_url = Config.Text.to_string t.config.chat_base_url;
+      decision_modalities = t.modalities;
+      decision_tail_read = t.tail_read;
     }
 
 (* drive-kh2u drive-ls3c: every provider failure, System One's and the chat text
@@ -363,3 +372,100 @@ let levels (t : t) : Run.levels =
                 (Model_error.with_kind "planner")
                 (planner.Planner.plan ~deadline request));
     }
+
+let accepts_images t = List.mem "image" t.modalities
+
+let trimmed base =
+  let rec trim at = if at > 0 && base.[at - 1] = '/' then trim (at - 1) else at in
+  String.sub base 0 (trim (String.length base))
+
+(* dmod-m3q5: OpenRouter's per-model listing; its [architecture.input_modalities] is what
+   the model accepts. Read once; a failure leaves the model text-only. *)
+let read_modalities t =
+  match t.config.api_key with
+  | None -> Error "no API key"
+  | Some api_key -> (
+      let url =
+        trimmed (Config.Text.to_string t.config.chat_base_url)
+        ^ "/models/"
+        ^ Config.Text.to_string t.config.decision_model
+        ^ "/endpoints"
+      in
+      match
+        Ox_http.Client.request t.http ~method_:"GET" ~url
+          ~headers:(Ox_ai.Bearer.header ~api_key)
+          ~deadline:(Ox.Duration.seconds 15) ()
+      with
+      | Error _ -> Error "the model listing did not answer"
+      | Ok { status; body = `Read body; _ } when status = 200 -> (
+          match Yojson.Safe.from_string (Bytes.to_string body) with
+          | exception Yojson.Json_error why -> Error why
+          | json -> (
+              let open Yojson.Safe.Util in
+              match
+                json |> member "data" |> member "architecture"
+                |> member "input_modalities"
+              with
+              | `List items ->
+                  Ok (List.filter_map (function `String s -> Some s | _ -> None) items)
+              | _ -> Error "the listing has no input_modalities"))
+      | Ok { status; _ } -> Error (Printf.sprintf "the model listing answered %d" status))
+
+(* dmod-pjmy: one call whose answer depends on the state's last sentence, after about
+   3,000 tokens of filler; a model that reads only the first ~2K tokens cannot see it. *)
+let probe_tail ?(deadline = Ox.Duration.seconds 30) t =
+  match t.systemone with
+  | None -> Error "no API key"
+  | Some client -> (
+      let filler =
+        String.concat " "
+          (List.init 300 (fun i ->
+               Printf.sprintf "Line %d of the filler names no colour at all." (i + 1)))
+      in
+      let state = `String (filler ^ " " ^ Questions.probe_tail) in
+      let question =
+        Ox_ai_systemone.Codecs.Choice_question
+          Ox_ai_systemone.Types.
+            {
+              instructions = `String Questions.probe_question;
+              criteria =
+                List.map (fun (key, text) -> (key, `String text)) Questions.probe_criteria;
+            }
+      in
+      match
+        Ox_ai_systemone.Client.evaluate client ~deadline ~state
+          ~questions:[ ("colour", question) ]
+      with
+      | Error _ -> Error "the probe call failed"
+      | Ok response -> (
+          log_usage t.logger response;
+          match Ox_ai_systemone.Client.answer "colour" response with
+          | Some (Ox_ai_systemone.Codecs.Choice { choice; _ }) -> Ok (choice = "green")
+          | _ -> Error "the probe has no colour answer"))
+
+(* dmod-m3q5 dmod-pjmy: once per service, on its own fiber: the modalities, then the
+   probe, each logged once. Nothing waits on it; until it finishes the model is text-only. *)
+let start ~sw t =
+  Eio.Fiber.fork ~sw (fun () ->
+      (match read_modalities t with
+      | Ok modalities -> t.modalities <- modalities
+      | Error why ->
+          Ox_observability.Logger.warn t.logger
+            ("decision model modalities unknown: " ^ why));
+      (match probe_tail t with
+      | Ok read -> t.tail_read <- Some read
+      | Error why ->
+          Ox_observability.Logger.warn t.logger
+            ("decision model tail probe failed: " ^ why));
+      Ox_observability.Logger.info t.logger
+        ~fields:
+          [
+            ( "model",
+              Ox_observability.Logger.String
+                (Config.Text.to_string t.config.decision_model) );
+            ("modalities", Ox_observability.Logger.String (String.concat "," t.modalities));
+            ( "tail_read",
+              Ox_observability.Logger.String
+                (match t.tail_read with Some b -> string_of_bool b | None -> "unknown") );
+          ]
+        "decision model")

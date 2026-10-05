@@ -79,7 +79,7 @@ let params json = get "params" json
 
 (* ---------- The recorded page ---------- *)
 
-let jev_model = "typesafe/jev-1.13-20260917"
+let decision_model = "typesafe/jev-1.13-20260917"
 let text_model = "inception/mercury-2.5"
 let key = "test-key"
 
@@ -293,7 +293,7 @@ let answer ~choice ?label body =
   Yojson.Safe.to_string
     (obj
        [
-         ("model", str jev_model);
+         ("model", str decision_model);
          ("answers", obj answers);
          ( "usage",
            obj
@@ -363,7 +363,7 @@ let models_config ~systemone_endpoint ~chat_base_url : Config.models =
     Config.default.models with
     api_key = Some (Ox_observability.Redact.make key);
     systemone_endpoint = text_value systemone_endpoint;
-    jev_model = text_value jev_model;
+    decision_model = text_value decision_model;
     chat_base_url = text_value chat_base_url;
     text_model = text_value text_model;
   }
@@ -475,7 +475,7 @@ let helper_rig ?(on_usage = fun _ -> ()) ?(replies = [ chat_reply (`String "hell
 let raw ?models ?decide ?text_helper ?levels tabs command =
   let wire = P.encode_request { command } |> Yojson.Safe.to_string in
   let answer =
-    Leash.Control.handle ?model:(Some jev_model) ?decide ?text_helper ?levels
+    Leash.Control.handle ?model:(Some decision_model) ?decide ?text_helper ?levels
       ?models_status:(Option.map (fun models () -> Models.status models) models)
       tabs wire
   in

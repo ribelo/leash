@@ -50,3 +50,31 @@ val pilot : string
 val planner_retry : string -> string
 (** [planner_retry why] is the follow-up user message of a turn whose first reply was
     refused, naming the refusal so the second answer can correct it. *)
+
+(** dmod-as71: the multimodal additions of the decision-model family. Clef and Clef Flash
+    take JEV's texts above verbatim; these are what a model that accepts images is offered
+    on top. *)
+
+val look_label : string
+(** dmod-mcgn: the LOOK operation's criterion. *)
+
+val click_at_label : string
+(** dmod-4ky5: the CLICK_AT operation's criterion. *)
+
+val click_at_rule : string
+(** Appended to the operation rules when a screenshot is in the state. *)
+
+val point_x : string
+
+val point_y : string
+(** The two score questions that choose a CLICK_AT point, one per axis. *)
+
+val point_levels : axis:string -> int -> string list
+(** [point_levels ~axis n] is the [n] equal bands of one axis, in order. *)
+
+val probe_question : string
+val probe_criteria : (string * string) list
+
+val probe_tail : string
+(** dmod-pjmy: the start-up truncation probe's question, criteria and the state's last
+    sentence, which names green. *)

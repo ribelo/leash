@@ -73,9 +73,18 @@ let history (step : P.step) changed =
    budgets. A decision is consumed exactly once; stale input is not an action. *)
 type page_label = { kind : string; source : string; url : string }
 
+(* dmod-7w26 dmod-mcgn dmod-4ky5: how a decision model that accepts images is shown the
+   page; absent for a text-only model. *)
+type vision = {
+  picture : unit -> (J.image, P.error) result;
+  image_when_rows_below : int;
+  look : bool;
+  point_levels : int;
+}
+
 let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
     ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent:initial_recent
-    ~scripts ~run_script ~on_step ~label ~stop_on_navigation =
+    ~scripts ~run_script ~on_step ~label ~stop_on_navigation ~vision =
   (* pilot-x1f3: navigation returns a leg to the pilot, not a DOM change. *)
   let navigated (before : observation) (after : observation) =
     let url page = List.hd (String.split_on_char '#' page.snapshot.url) in
@@ -91,6 +100,9 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
   let observation_ms = ref 0 and prediction_ms = ref 0 and helper_ms = ref 0 and input_ms = ref 0 in
   let prediction_log = ref [] and text_log = ref [] and action_log = ref [] in
   let pending_text = ref None in
+  (* dmod-mcgn: LOOK is offered at most once per two predictions; the state after one
+     carries the screenshot. dmod-l44q: every image part sent is counted. *)
+  let last_look = ref (-10) and look_pending = ref false and image_parts = ref 0 in
   (* map-op12: target identity survives snapshot refresh/reindexing, but never a
      page change. A no-op masks only its operation, not every action on that row. *)
   let mask_page = ref None and masked = ref [] in
@@ -193,6 +205,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
       (member "omitted_elements" bounds) in
     let metrics = `Assoc [
       "actions", integer !actions; "predictions", integer !predictions;
+      "decision_model", string model; "image_parts", integer !image_parts;
       "text_calls", integer !text_calls; "observation_calls", metric "observation_calls" !observations;
       "observation_retries", metric "observation_retries" !observation_retries;
       "stale_decisions", integer !stale; "bootstrap_ms", metric "bootstrap_ms" 0;
@@ -291,17 +304,31 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
         else if page.snapshot.dialog <> None then
           finish ?reason:(Option.map dialog_reason page.snapshot.dialog) "error" steps page
         else
+          let image = match vision with
+            | None -> None
+            | Some v ->
+                let actionable = List.length (J.elements page.snapshot) in
+                if !look_pending || (v.image_when_rows_below > 0 && actionable < v.image_when_rows_below) then
+                  (match v.picture () with
+                   | Ok image -> incr image_parts; Some image
+                   | Error _ -> (None [@ox.allow "ox-discarded-result: without a screenshot the model decides on the element table"]))
+                else None in
+          look_pending := false;
           let request = J.make ~model ~goal:args.goal ~snapshot:page.snapshot ~text:page.text
             ~recent:(List.rev recent) ~can_scroll_down:page.can_scroll_down ~can_scroll_up:page.can_scroll_up
             |> fun request -> J.without_actions request (masks page)
             |> fun request -> J.with_scripts request (scripts page)
             |> fun request -> J.with_coverage request (coverage page)
-            |> fun request ->
+            |> fun request -> (
               match label with
               | None -> request
               | Some label ->
                   let shown = label ~url:page.snapshot.url ~title:page.snapshot.title ~text:page.text in
-                  if shown.url = page.snapshot.url then request else J.with_shown_url request shown.url in
+                  if shown.url = page.snapshot.url then request else J.with_shown_url request shown.url)
+            |> fun request -> (match image with Some image -> J.with_image request image | None -> request)
+            |> fun request -> (match vision with
+                | None -> request
+                | Some v -> J.with_point_levels (J.with_look request (v.look && !predictions - !last_look >= 2)) v.point_levels) in
           let at = now () in
           incr predictions;
           match measured prediction_ms (fun () -> decide t request) with
@@ -336,7 +363,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                 "usage", Option.value ~default:`Null (usage "operator");
                 "elapsed_ms", integer (ms (now () -. at)) ] :: !prediction_log;
               let choice = match rescue with None -> choice | Some operation ->
-                { choice with J.operation; index = None; option = None; target_confidence = None;
+                { choice with J.operation; index = None; option = None; target_confidence = None; point = None;
                   target_probabilities = []; targets = [] } in
               let op = choice.J.operation in
               let terminal =
@@ -353,6 +380,12 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
                 let step = record_step page page choice None steps in
                 update_prediction "dry-run; no input";
                 finish ~reason:"dry run: the proposed action was not dispatched" "blocked" (step :: steps) page
+              else if op = operation "look" then (
+                (* The counter already counts this prediction; record the index its request was built at. *)
+                last_look := !predictions - 1;
+                look_pending := true;
+                update_prediction "look; no input";
+                go page steps recent)
               else if Option.is_some choice.J.script then
               let name = Option.get choice.J.script in (
                   match run_script with
@@ -517,7 +550,7 @@ let loop (t : token) ~now ~model ~(args : P.drive_args) ~dry_run
 
 let run ?(stop_on_navigation = false) ?(on_step = fun (_ : P.step) -> ()) ?(validate = fun _ -> Ok ()) ?(coverage = fun _ -> `Assoc [])
     ?(usage = fun _ -> None) ?(telemetry = fun () -> `Assoc []) ?(observe_attempts = 10) ?(recent = [])
-    ?(scripts = fun _ -> []) ?run_script ?label
+    ?(scripts = fun _ -> []) ?run_script ?label ?vision
     ~(handler : handler) ~now ~model ~(args : P.drive_args) ~dry_run () =
   if Option.value ~default:60 args.P.max_steps < 1 ||
      Option.value ~default:120 args.deadline_s < 1 || observe_attempts < 1 || observe_attempts > 10 then
@@ -540,7 +573,7 @@ let run ?(stop_on_navigation = false) ?(on_step = fun (_ : P.step) -> ()) ?(vali
       text_value = (fun context -> Effect.perform (M.Text context));
       act = (fun page choice text -> Effect.perform (M.Act (page, choice, text)));
     } in
-    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~on_step ~label ~stop_on_navigation) ()
+    Effect.Deep.match_with (fun () -> loop token ~now ~model ~args ~dry_run ~validate ~coverage ~usage ~telemetry ~observe_attempts ~recent ~scripts ~run_script ~on_step ~label ~stop_on_navigation ~vision) ()
       { retc = Fun.id; exnc = raise;
         effc = (fun (type a) (eff : a Effect.t) -> match eff with
           | M.Observe -> Some (fun (k : (a, (P.drive_result, P.error) result) Effect.Deep.continuation) -> Effect.Deep.continue k (handler.observe ()))

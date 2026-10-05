@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 14
 ---
 
@@ -21,6 +21,19 @@ JEV is the only decision model Leash knows. Cloudflare's Clef (27B, multimodal) 
 8. As a maintainer, I want the fake Decisions server to serve any model id and to accept image parts, so that the seam covers multimodal requests. ^dmod-f4lf
 9. As a maintainer, I want the cost report to name the decision model and count image parts sent, so that the corpus can price the modes. ^dmod-l44q
 10. As a maintainer, I want the pilot's own model unchanged (the planner through chat), so that this row touches only the decision model. ^dmod-ibfy
+
+## Delivery — 2026-10-05
+
+- Probed live before building: OpenRouter's per-model listing (`/api/v1/models/{id}/endpoints`) gives `architecture.input_modalities`. JEV takes `["text"]`; Clef and Clef Flash take `["text","image"]`. Clef answers on the existing System One endpoint. It reads an image only as a chat-style `image_url` part beside the state object, and the API has no `point` question type (only noul, choice and score). So a CLICK_AT point is two `score` questions over equal bands, one per axis, never free text.
+- Live smoke on a private headless service with `decision_model = "cloudflare/clef"`: `status.models.decision_modalities = ["text","image"]`, `decision_tail_read = false`.
+- Truncation is per request, not a context limit. Clef's context is 66K. A bracketing probe the same day (state = N filler lines, then a sentence naming green) gave these results:
+  - Clef read the tail at 673, 1734 and 2574 billed input tokens. Twice, at 240 and at 600 filler lines, billing stopped at 2198 tokens and the tail was unread.
+  - Clef Flash failed once at 2198 tokens, but read 8454 tokens in full on another call.
+  - JEV read every size, up to 8631 tokens.
+
+  So Workers AI sometimes caps the text state near 2.2K tokens. A capped call is visible as `input_tokens` stopping at about 2198. One probe at start reports what that call met, not a fixed property of the model. The corpus truncation flag measures it per cell.
+- dmod-ibfy: the pilot's model and route are unchanged.
+- Model calls make one attempt: Ox master no longer replays a POST without consent (safe-o2b6). Ox landed opt-in consent on its `integrate/ox-safety-gate` branch (a068f73c), not on master, so Leash does not use it yet.
 
 ## Out of Scope
 

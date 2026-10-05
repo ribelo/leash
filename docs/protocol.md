@@ -191,9 +191,12 @@ Coverage      = "viewport" plus, in this order, only the flags that hold, joined
                 Examples: "viewport", "viewport+below",
                 "viewport+truncated+omitted+above+below".
                 page.coverage and bounds.coverage are that same string, not a sentence.
-OperatorMetrics = {actions, predictions, text_calls, observation_calls,
+OperatorMetrics = {actions, predictions, decision_model: string, image_parts: int,
+                   text_calls, observation_calls,
                    observation_retries, stale_decisions, bootstrap_ms, observation_ms,
                    prediction_ms, text_helper_ms, input_ms, settle_ms, elapsed_ms}
+                 decision_model names the model that decided; image_parts counts the
+                 screenshots sent to it (dmod-l44q)
 ```
 
 `page.text` is viewport text, at most 6000 characters, including visible titles, prices and records. `omitted_elements` counts action candidates beyond the 250 offered. This is the observation JEV used. It is not a normalized schema, not proof of exhaustive collection across pagination or offscreen content, and not a prepared script result. Prepared script payloads still bypass every model. `history` records executed input, including an uncertain mutation that must not be replayed. `predictions` includes discarded stale decisions. `usage` on a prediction or text call is the provider object, or null when that call reported none.
@@ -293,6 +296,10 @@ Step         = {n: int, snapshot: id, operation: Operation, index: int|null, pro
                 non_repeatable: bool, target?: {role, label}, text?: string, after: {url, title}, elapsed_ms: int}
                  non_repeatable defaults to false when decoding an older step
 Operation    = "click"|"type_text"|"select"|"scroll_up"|"scroll_down"|"wait"|"done"|"blocked"
+               |"look"|"click_at"
+                 look and click_at exist only for a decision model that accepts images:
+                 look executes nothing and puts the screenshot into the next state;
+                 click_at clicks a CSS point chosen on that screenshot (index is null)
 status (drive) = "done"|"blocked"|"step-cap"|"deadline"|"error"
                  The operator action cap is the mission max_steps (default 60); the
                  prediction cap is twice that. The operator uses the remaining mission
@@ -334,8 +341,13 @@ Usage       = {input_tokens: int, output_tokens: int, cost: float}
 status (run) = "done"|"blocked"|"failed"|"handoff"|"handoff-expired"|"canceled-by-operator"|"limit"|"deadline"|"error"
                max_steps defaults to 60; max_procedures defaults to 40; deadline_s defaults to 900;
                each must be positive when present. model_cost is number|null.
-Models       = {configured: bool, jev_model: string, text_model: string,
-                systemone_endpoint: string, chat_base_url: string}
+Models       = {configured: bool, decision_model: string, text_model: string,
+                systemone_endpoint: string, chat_base_url: string,
+                decision_modalities: string[], decision_tail_read: bool|null}
+                 decision_modalities is architecture.input_modalities from OpenRouter's
+                 listing, read once at start (empty until read or when unreadable);
+                 decision_tail_read is whether a start-up probe saw the last sentence of
+                 a ~3K-token state (null until probed); both logged once (dmod-m3q5 dmod-pjmy)
                  the models section as configured; configured is whether an API key is present,
                  and no field ever carries the key
 ```
@@ -426,7 +438,7 @@ Rules:
   when no API key is configured — the drive fails at its first decision and nothing is
   sent — and otherwise the provider failure's kind: `unavailable`, `timeout`,
   `authentication`, `invalid-response`, `input-too-large`, or `model-mismatch` when
-  the reply names another model than the configured `jev_model` (drive-e7oi).
+  the reply names another model than the configured `decision_model` (drive-e7oi).
 - A `type_text` step first asks the configured text helper: jev's `field_context` —
   the goal verbatim, the chosen row, the page's title and its text bounded at 6000 bytes
   on a character boundary, and the last six actions — as the user message of one `chat/completions` request

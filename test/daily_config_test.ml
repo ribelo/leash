@@ -213,7 +213,7 @@ let every_field_wrong_type () =
             [
               ("api_key", bad);
               ("systemone_endpoint", bad);
-              ("jev_model", bad);
+              ("decision_model", bad);
               ("chat_base_url", bad);
               ("text_model", bad);
               ("planner_model", bad);
@@ -241,7 +241,7 @@ let every_field_wrong_type () =
       "/otlp/headers";
       "/models/api_key";
       "/models/systemone_endpoint";
-      "/models/jev_model";
+      "/models/decision_model";
       "/models/chat_base_url";
       "/models/text_model";
       "/models/planner_model";

@@ -154,7 +154,7 @@ profile_dir = "$profile"
 workspace = "leash"
 headless = true
 [models]
-jev_model = "unit-acceptance"
+decision_model = "unit-acceptance"
 text_model = "unit-acceptance"
 [otlp]
 endpoint = "http://127.0.0.1:$collector_port"
