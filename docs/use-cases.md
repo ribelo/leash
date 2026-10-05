@@ -451,3 +451,25 @@ Run 1 recorded memory starting after the fills: "Click the button named Sign in"
 ### L57F summary
 
 U5, U10, U9, U7 and U8 pass on fresh private headless profiles, each confirmed independently of the reply (Google's own overview, fixture state, downloaded bytes, the PBKDF2 hash, the live category page). Commits: `ca2a649`, `957cff4` (U5), `19b17f5` (U10), `d2b0218` (U9), `024d4fe`, `ccfdf14` (U7), and this one (U8). `642b0b5` (hand-tdkk) came from the operator's direction during the sequence: a headless browser refuses handoff, and tests that need the operator present were removed. `pilot-exx7` stays recorded and open, outside this sequence.
+## Results — 2026-10-05, U1 and U2 on the installed build (`106fed1`)
+
+The operator rebuilt his system. The installed service reported commit `106fed1`, headed, learning `auto`. Missions verbatim, `--url https://moj.tauron.pl/`, credentials from `~/.config/leash/use-cases/tauron` through `--secret login` and `--secret password`.
+
+**First attempt refused.** Both missions failed with `invalid-request` before the browser was used. Two agent-made playbooks installed on 30 Sep and 1 Oct (`automationexercise.com`, `books.toscrape.com`) still carried the removed `pages[].description`, and one invalid installed playbook refuses every drive. That bug is filed as `pbk-zh9h`. With the operator's permission both playbooks were deleted, and the missions were run once each.
+
+| Case | Status | Pilot turns / navigator steps | Calls / cost | Result |
+| --- | --- | --- | --- | --- |
+| U1 | done | 5 / 0 | 5 / $0.0016455 | "Tauron shows 756,88 zł overdue by 3 days: 544,92 zł and 211,96 zł, both due 02.10.2026. It also lists 345,92 zł due 02.11.2026, which is not shown as overdue." |
+| U2 | `limit` | 12 / 2 | 14 / $0.008975565 | no result, no PDF |
+
+**U1 independent check** ([text](</tmp/leash-l57f-u12/u1-text.json>), [summary](</tmp/leash-l57f-u12/independent.txt>)): a fresh tab on `https://moj.tauron.pl/` reads "Najbliższa płatność | 756,88 zł | Po terminie: 3 dni | W tym: | 544,92 zł | Termin: 02.10.2026 | 211,96 zł | Termin: 02.10.2026 | 345,92 zł | Termin: 02.11.2026". The amounts and dates agree with the result. **U1 passes.**
+
+**U2 fails** ([reply](</tmp/leash-l57f-u12/u2.json>), [trace](</home/ribelo/.local/state/leash/traces/tauron.pl/2026-10-05T08:17:00.000936Z-limit.json>)):
+
+- The pilot opened Faktury, then ran one leg, "Open the latest invoice in the invoice history and download it as a PDF".
+- It then spent turns 4–12 in "Archiwum dokumentów", changing filters and filling a date of 01.01.2000, until the turn cap.
+- Independent check: no file arrived in `~/.local/share/leash/profile/downloads` after the run started.
+
+The cause is not diagnosed here. Per the instruction, U2 was run once and recorded. It passed twice in L57, on the private headed profile at `56ad7e7`.
+
+**Secrets.** Neither credential occurs in either reply, stderr or durable trace (6 files searched).
