@@ -2,6 +2,7 @@ _build/
 _opam/
 .scratch/
 !.scratch/research/
+.scratch/research/**/_build/
 result
 *.install
 _build_*/
