@@ -919,12 +919,124 @@ let config_invalid () =
       obj [ ("challenges", obj [ ("turns", `Int 11) ]) ];
     ]
 
+(* pic-7ozf pic-k4ij pic-cqcf: Control -> mission lock -> native CDP, with
+   actual private PNG bytes on an empty DOM table and no navigator leg. *)
+let picture_pilot
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  rig ~caps (fun _ _ tabs fake ->
+      Fake.on_method fake "DOM.getNodeForLocation" (fun _ ->
+          obj [ ("backendNodeId", `Int 700) ]);
+      Fake.on_method fake "DOM.describeNode" (fun _ ->
+          obj
+            [ ("node", obj [ ("nodeName", str "CANVAS"); ("backendNodeId", `Int 700) ]) ]);
+      Fake.on_method fake "Accessibility.getPartialAXTree" (fun _ ->
+          obj
+            [
+              ( "nodes",
+                `List
+                  [
+                    obj
+                      [
+                        ("role", obj [ ("value", str "application") ]);
+                        ("name", obj [ ("value", str "Stream host") ]);
+                      ];
+                  ] );
+            ]);
+      let plans = ref 0 in
+      let result =
+        run ~planner_actions:3 tabs
+          ~decide:(fun _ ->
+            Alcotest.fail "picture pilot must not execute a navigator leg")
+          ~plan:(fun (request : R.plan_request) ->
+            Alcotest.(check int)
+              "no useful DOM rows" 0
+              (List.length request.snapshot.rows);
+            (match request.image_input with
+            | Some bytes ->
+                eq "actual automatic PNG input" "\137PNG\r\n\026\n"
+                  (Bytes.sub_string bytes 0 8)
+            | None -> Alcotest.fail "automatic image missing on the streamed host");
+            let n = !plans in
+            incr plans;
+            match n with
+            | 0 -> reply R.Observe_image
+            | 1 ->
+                reply
+                  (R.Act
+                     (P.Click_at
+                        {
+                          tab = request.snapshot.tab;
+                          at = { x = 10.25; y = 11.75 };
+                          shot = None;
+                        }))
+            | 2 ->
+                reply
+                  (R.Act
+                     (P.Type
+                        { tab = request.snapshot.tab; text = "hello"; shot = Some true }))
+            | 3 ->
+                reply
+                  (R.Act
+                     (P.Drag
+                        {
+                          tab = request.snapshot.tab;
+                          from_ = { x = 20.5; y = 21.5 };
+                          to_ = { x = 25.25; y = 26.25 };
+                          shot = None;
+                        }))
+            | 4 -> reply (R.Done { result = "Canvas inspected"; evidence = [] })
+            | _ -> Alcotest.fail "unexpected repeat")
+      in
+      status "done" result;
+      Alcotest.(check int) "one observe, three acts, one done" 5 !plans;
+      let actions =
+        List.concat_map (fun (turn : P.planner_turn) -> turn.steps) result.planner_turns
+      in
+      Alcotest.(check int)
+        "native acts retain evidence under the mission lock" 3 (List.length actions);
+      List.iter
+        (fun (step : P.planner_step) ->
+          boolean "native PNG evidence" (Option.is_some step.shots))
+        actions;
+      let click = List.hd actions in
+      let hit = List.hd (Option.get click.hits) in
+      Alcotest.(check (option string))
+        "canvas host, not an invented drawn button" (Some "Stream host") hit.hit_label;
+      Alcotest.(check (float 0.)) "CSS point, not image pixels" 10.25 hit.at.x;
+      Alcotest.(check (float 0.)) "only hit sampling is floored" 10. hit.sampled_at.x;
+      let typed =
+        Fake.received fake
+        |> List.filter (fun r -> member "method" r = str "Input.insertText")
+      in
+      Alcotest.(check int) "focused type once" 1 (List.length typed);
+      eq "focused native insertion" "hello"
+        Yojson.Safe.Util.(List.hd typed |> member "params" |> member "text" |> to_string);
+      let mouse kind =
+        Fake.received fake
+        |> List.filter (fun r ->
+            member "method" r = str "Input.dispatchMouseEvent"
+            && member "type" (member "params" r) = str kind)
+        |> List.length
+      in
+      Alcotest.(check int)
+        "click and drag press once each, no act retry" 2 (mouse "mousePressed");
+      Alcotest.(check int) "click and drag release once each" 2 (mouse "mouseReleased"))
+
 let () =
   let caps = Ox_test.powerbox () in
   Alcotest.run "L55 unattended"
     [
       ( "protocol seam",
         [
+          Alcotest.test_case "pic-cqcf first-class empty-row picture pilot" `Quick
+            (picture_pilot ~caps);
           Alcotest.test_case "notif-7o8j notif-m37y notif-7pha notify survives failure"
             `Quick (fun () -> notify_then_done ~caps ());
           Alcotest.test_case "notif-oslv bounded handoff retains tab" `Quick

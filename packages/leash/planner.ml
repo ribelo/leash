@@ -106,61 +106,94 @@ let log_usage logger (completion : Ox_ai_chat.Codecs.completion) =
 
 (* pilot-ukoh: bounded page and leg memory, with secret names only. *)
 let pilot_request_json (request : Run.plan_request) =
+  let snapshot =
+    P.yojson_of_snapshot
+      {
+        request.snapshot with
+        rows = List.filteri (fun i _ -> i < 250) request.snapshot.rows;
+      }
+  in
+  let snapshot =
+    match snapshot with
+    | `Assoc fields ->
+        `Assoc
+          (List.map
+             (function
+               | "image", `Assoc image ->
+                   ("image", `Assoc (List.filter (fun (key, _) -> key <> "path") image))
+               | field -> field)
+             fields)
+    | json -> json
+  in
+  (* pic-k4ij: the measured scale states the PNG-to-CSS conversion; no HiDPI guess. *)
+  let picture =
+    match request.snapshot.image with
+    | None -> []
+    | Some image ->
+        [
+          ( "picture_coordinates",
+            `String
+              (Printf.sprintf
+                 "The attached PNG is %dx%d pixels of a %gx%g CSS viewport: x_css = \
+                  x_png / %g, y_css = y_png / %g. Points and row boxes use viewport CSS \
+                  pixels."
+                 image.width image.height image.viewport.width image.viewport.height
+                 image.scale image.scale) );
+        ]
+  in
   `Assoc
-    [
-      ("mission", `String request.mission);
-      ("secret_names", `List (List.map (fun name -> `String name) request.secret_names));
-      ( "arguments",
-        `Assoc (List.map (fun (name, value) -> (name, `String value)) request.arguments)
-      );
-      ( "page_kind",
-        match request.page_kind with Some kind -> `String kind | None -> `Null );
-      ("url", `String request.url);
-      ("title", `String request.title);
-      ("text", `String (bounded 6000 request.text));
-      ( "downloads",
-        `List
-          (List.map
-             (fun (name, mime, state) ->
-               `Assoc
-                 [
-                   ("file", `String name); ("mime", `String mime); ("state", `String state);
-                 ])
-             request.downloads) );
-      ( "snapshot",
-        P.yojson_of_snapshot
-          {
-            request.snapshot with
-            rows = List.filteri (fun i _ -> i < 250) request.snapshot.rows;
-          } );
-      ( "legs",
-        `List
-          (List.map
-             (fun (leg : Run.leg) ->
-               `Assoc
-                 [
-                   ("goal", `String leg.goal);
-                   ("outcome", `String leg.outcome);
-                   ("steps", `List (List.map P.yojson_of_step leg.steps));
-                 ])
-             request.legs) );
-      ( "candidates",
-        `List
-          (List.map
-             (fun ((proc : Playbook.procedure), source) ->
-               let fields =
-                 Yojson.Safe.Util.to_assoc (Playbook.yojson_of_procedure proc)
-               in
-               `Assoc
-                 (fields
-                 @ [
-                     ( "source",
-                       match source with
-                       | `Installed -> `String "installed"
-                       | `Draft revision -> `String revision );
-                   ]))
-             request.candidates) );
-    ]
+    ([
+       ("mission", `String request.mission);
+       ("secret_names", `List (List.map (fun name -> `String name) request.secret_names));
+       ( "arguments",
+         `Assoc (List.map (fun (name, value) -> (name, `String value)) request.arguments)
+       );
+       ( "page_kind",
+         match request.page_kind with Some kind -> `String kind | None -> `Null );
+       ("url", `String request.url);
+       ("title", `String request.title);
+       ("text", `String (bounded 6000 request.text));
+       ( "downloads",
+         `List
+           (List.map
+              (fun (name, mime, state) ->
+                `Assoc
+                  [
+                    ("file", `String name);
+                    ("mime", `String mime);
+                    ("state", `String state);
+                  ])
+              request.downloads) );
+       ("snapshot", snapshot);
+       ( "legs",
+         `List
+           (List.map
+              (fun (leg : Run.leg) ->
+                `Assoc
+                  [
+                    ("goal", `String leg.goal);
+                    ("outcome", `String leg.outcome);
+                    ("steps", `List (List.map P.yojson_of_step leg.steps));
+                  ])
+              request.legs) );
+       ( "candidates",
+         `List
+           (List.map
+              (fun ((proc : Playbook.procedure), source) ->
+                let fields =
+                  Yojson.Safe.Util.to_assoc (Playbook.yojson_of_procedure proc)
+                in
+                `Assoc
+                  (fields
+                  @ [
+                      ( "source",
+                        match source with
+                        | `Installed -> `String "installed"
+                        | `Draft revision -> `String revision );
+                    ]))
+              request.candidates) );
+     ]
+    @ picture)
 
 (* pilot-gt2h pilot-r94o: one shape; done cannot omit its result. *)
 let decode_pilot (request : Run.plan_request) content =
@@ -194,6 +227,7 @@ let decode_pilot (request : Run.plan_request) content =
         | "leg" -> [ "goal" ]
         | "read" -> [ "quote"; "note" ]
         | "act" -> [ "action" ]
+        | "observe" -> [ "image" ]
         | "notify" -> [ "message" ]
         | "done" -> [ "result"; "evidence" ]
         | "handoff" | "fail" -> [ "reason" ]
@@ -235,10 +269,14 @@ let decode_pilot (request : Run.plan_request) content =
         | "fail" ->
             let* reason = string "reason" in
             Ok (Run.Fail reason)
+        | "observe" ->
+            if List.assoc_opt "image" fields = Some (`Bool true) then Ok Run.Observe_image
+            else Error "observe requires image=true"
         | "notify" ->
             let* message = string "message" in
             Ok (Run.Notify message)
-        | _ -> Error "answer must be leg, read, act, handoff, notify, done or fail"
+        | _ ->
+            Error "answer must be leg, read, act, observe, handoff, notify, done or fail"
       in
       let* expect = strings "expect" in
       let* reasoning_summary =
@@ -289,11 +327,13 @@ let create ~now ~client ~model ~reasoning ~logger () =
         (Ox.Duration.of_seconds (max 0. (expires -. now ())))
     in
     let open Ox_ai_chat.Types in
+    (* pic-k4ij: the screenshot is a real image part of the Ox chat request. *)
+    let observation =
+      Text (Yojson.Safe.to_string (pilot_request_json request))
+      :: Option.to_list (Option.map image_png request.image_input)
+    in
     let messages =
-      [
-        { role = System; content = Questions.pilot };
-        { role = User; content = Yojson.Safe.to_string (pilot_request_json request) };
-      ]
+      [ text_message System Questions.pilot; { role = User; content = observation } ]
     in
     match ask ~deadline messages with
     | Error error -> Error error
@@ -301,9 +341,7 @@ let create ~now ~client ~model ~reasoning ~logger () =
         match decode_pilot request first.Ox_ai_chat.Codecs.content with
         | Ok reply -> Ok { reply with Run.usage = Some (usage_of first) }
         | Error why -> (
-            let retry =
-              messages @ [ { role = User; content = Questions.planner_retry why } ]
-            in
+            let retry = messages @ [ text_message User (Questions.planner_retry why) ] in
             let remaining = retry_deadline () in
             match
               if Ox.Duration.is_zero remaining then Error (Model_error.of_eta `Timeout)

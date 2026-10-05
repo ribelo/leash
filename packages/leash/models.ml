@@ -64,9 +64,11 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
   in
   let planner_chat =
     with_key (fun api_key ->
+        (* pic-k4ij: the request bound admits one 4 MiB PNG as a base64 image part. *)
         Ox_ai_chat.create ~http ~clock ~logger ~endpoint:(planner_endpoint config)
           ~api_key
           ~timeout:(Ox.Duration.seconds (Config.Seconds.to_int config.planner_timeout))
+          ~max_request_bytes:(8 * 1024 * 1024)
           ())
   in
   {

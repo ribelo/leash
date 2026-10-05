@@ -1560,6 +1560,29 @@ let capture_picture t ~session tab cdp =
   with Sys_error _ ->
     Error (error "internal" "could not create private picture evidence")
 
+(* pic-k4ij: only the owner reads its bounded, private PNG into the model request. *)
+let picture_input t (image : P.shot_result) =
+  let retained = ref false in
+  Fun.protect
+    ~finally:(fun () -> if not !retained then discard_picture t image.path)
+    (fun () ->
+      try
+        let input = Ox_caps.Cap_stdlib.open_in_bin ~caps:t.caps image.path in
+        let result =
+          Fun.protect
+            ~finally:(fun () -> close_in input)
+            (fun () ->
+              let length = in_channel_length input in
+              if length > 4 * 1024 * 1024 then
+                Error
+                  (error "model-unavailable" "picture exceeds the 4 MiB model image bound")
+              else Ok (Bytes.of_string (really_input_string input length)))
+        in
+        retained := Result.is_ok result;
+        result
+      with Sys_error _ | End_of_file | Fun.Finally_raised (Sys_error _) ->
+        Error (error "internal" "could not read private picture evidence"))
+
 let picture_box call backend =
   match call "DOM.getBoxModel" (obj [ ("backendNodeId", `Int backend) ]) with
   | Error (e : P.error)
@@ -1992,21 +2015,32 @@ let click t (args : P.click_args) =
 
 (* pic-ncu1: retain a private before image; --shot adds the settled after image.
    The existing action owner holds the tab lock through capture, input and evidence. *)
+let picture_action_locked ?(before = true) t tab cdp view ~shot action =
+  let images = ref [] and retained = ref false in
+  Fun.protect
+    ~finally:(fun () ->
+      if not !retained then
+        List.iter (fun (image : P.shot_result) -> discard_picture t image.path) !images)
+    (fun () ->
+      view.Actions.engage ();
+      let capture () =
+        let* image = capture_picture t ~session:view.session tab cdp in
+        images := !images @ [ image ];
+        Ok ()
+      in
+      let* () = if before then capture () else Ok () in
+      let* (result : P.action_result) = action cdp view in
+      let* () = if shot = Some true then capture () else Ok () in
+      let result =
+        { result with P.shots = (if !images = [] then None else Some !images) }
+      in
+      retained := true;
+      Ok result)
+
 let with_picture_action ?(before = true) t handle ~shot action =
   with_action t handle (fun cdp view ->
       let* tab = locate t ~access:Act handle in
-      view.Actions.engage ();
-      let capture () = capture_picture t ~session:view.session tab cdp in
-      let* images =
-        if before then Result.map (fun image -> [ image ]) (capture ()) else Ok []
-      in
-      let* result = action cdp view in
-      let* images =
-        match shot with
-        | Some true -> Result.map (fun image -> images @ [ image ]) (capture ())
-        | _ -> Ok images
-      in
-      Ok { result with P.shots = (if images = [] then None else Some images) })
+      picture_action_locked ~before t tab cdp view ~shot action)
 
 let click_at t (args : P.point_action_args) =
   with_picture_action t args.tab ~shot:args.shot (fun cdp view ->
@@ -2564,7 +2598,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
             trace_book := book;
             Option.iter (fun (snapshot, text) -> classify snapshot text) !trace_page
           in
-          let observe_once () =
+          let observe_once ?(image = false) () =
             let* snapshot =
               snap_locked t tab
                 P.
@@ -2573,8 +2607,13 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                     match_ = None;
                     limit = Some 250;
                     offset = None;
-                    with_image = None;
+                    with_image = Some image;
                   }
+            in
+            let* image_input =
+              match snapshot.P.image with
+              | None -> Ok None
+              | Some image -> Result.map Option.some (picture_input t image)
             in
             let* rendered =
               if snapshot.P.dialog <> None then
@@ -2610,10 +2649,11 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                           download.P.state ))
                       (List.rev tab.downloads);
                   snapshot;
+                  image_input;
                 }
           in
           (* pilot-x1f3: async tables must settle before the pilot sees them. *)
-          let observe () =
+          let observe ?(image = false) () =
             let latest = ref None in
             let read () =
               let* page = observe_once () in
@@ -2640,11 +2680,37 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                U2 on Tauron (build J) ended because a first read took longer than 3 s. *)
             let* first = read () in
             until := now t +. 3.;
-            Eio.Fiber.first
-              (fun () -> stable first)
-              (fun () ->
-                t.sleep 3.;
-                Ok (Option.value ~default:first !latest))
+            let* page =
+              Eio.Fiber.first
+                (fun () -> stable first)
+                (fun () ->
+                  t.sleep 3.;
+                  Ok (Option.value ~default:first !latest))
+            in
+            let useful =
+              List.exists
+                (fun (row : P.row) ->
+                  List.mem
+                    (String.lowercase_ascii row.role)
+                    [
+                      "button";
+                      "link";
+                      "textbox";
+                      "combobox";
+                      "checkbox";
+                      "radio";
+                      "slider";
+                      "spinbutton";
+                      "tab";
+                      "menuitem";
+                      "cell";
+                      "gridcell";
+                    ])
+                page.snapshot.rows
+            in
+            if page.dialog = None && (image || not useful) then
+              observe_once ~image:true ()
+            else Ok page
           in
           (* map-3qag: the run already holds the tab lock; use the same row
              revalidation, hit-test, input and settle path as public actions. *)
@@ -2652,6 +2718,15 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
             let view = action_view t ~session tab cdp in
             match command with
             | P.Click args -> Actions.click ~cdp view args
+            | P.Click_at args ->
+                picture_action_locked t tab cdp view ~shot:args.shot (fun cdp view ->
+                    Actions.click_at ~cdp view args)
+            | P.Drag args ->
+                picture_action_locked t tab cdp view ~shot:args.shot (fun cdp view ->
+                    Actions.drag ~cdp view args)
+            | P.Type args ->
+                picture_action_locked ~before:false t tab cdp view ~shot:args.shot
+                  (fun cdp view -> Actions.type_text ~cdp view args)
             | P.Fill args -> Actions.fill ~check_hit:true ~cdp view args
             | P.Press args -> Actions.press ~cdp view args
             | P.Select args -> Actions.select ~cdp view args
@@ -2793,7 +2868,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
           let handler : Run.handler =
             Run.
               {
-                observe;
+                observe = (fun ~image () -> observe ~image ());
                 navigate =
                   (fun url ->
                     let* _ = navigate_locked t ~tab url in

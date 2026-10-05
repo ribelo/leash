@@ -1204,6 +1204,8 @@ type planner_step = {
   after : after;
   elapsed_ms : int;
   error : string option;
+  hits : point_hit list option;
+  shots : shot_result list option;
 }
 [@@deriving yojson]
 
@@ -1402,7 +1404,8 @@ let command_name = function
   | Debug _ -> "debug"
   | Eval _ -> "eval"
   | Nav _ -> "nav"
-  | Click _ | Click_at _ -> "click"
+  | Click _ -> "click"
+  | Click_at _ -> "click_at"
   | Dblclick _ -> "dblclick"
   | Drag _ -> "drag"
   | Type _ -> "type"
@@ -1488,11 +1491,8 @@ let command_of_args ~cmd args =
   | "debug" -> with_args debug_args_of_yojson (fun args -> Debug args)
   | "eval" -> with_args eval_args_of_yojson (fun args -> Eval args)
   | "nav" -> with_args nav_args_of_yojson (fun args -> Nav args)
-  | "click" -> (
-      match args with
-      | `Assoc fields when List.mem_assoc "at" fields ->
-          with_args point_action_args_of_yojson (fun args -> Click_at args)
-      | _ -> with_args click_args_of_yojson (fun args -> Click args))
+  | "click" -> with_args click_args_of_yojson (fun args -> Click args)
+  | "click_at" -> with_args point_action_args_of_yojson (fun args -> Click_at args)
   | "dblclick" -> with_args point_action_args_of_yojson (fun args -> Dblclick args)
   | "drag" -> with_args drag_args_of_yojson (fun args -> Drag args)
   | "type" -> with_args type_args_of_yojson (fun args -> Type args)
@@ -1582,10 +1582,25 @@ let planner_action_of_yojson json =
   in
   Result.bind (decode_request json) (fun request ->
       match request.command with
-      | Click _ | Fill _ | Select _ | Press _ | Scroll _ | Nav _ -> Ok request.command
-      | _ -> Error "act accepts only click, fill, select, press, scroll and nav")
+      | Click _ | Click_at _ | Type _ | Drag _ | Fill _ | Select _ | Press _ | Scroll _
+      | Nav _ ->
+          Ok request.command
+      | _ ->
+          Error "act accepts only click, type, drag, fill, select, press, scroll and nav")
 
 let yojson_of_planner_action command = encode_request { command }
+
+(* pic-7ozf: known geometry informs existing policies, never converts an act to a row. *)
+let rows_at_point (page : snapshot) (point : point) =
+  List.filter
+    (fun (row : row) ->
+      match row.box with
+      | None -> false
+      | Some box ->
+          point.x >= box.x && point.y >= box.y
+          && point.x < box.x +. box.width
+          && point.y < box.y +. box.height)
+    page.rows
 
 let check_consent_click (page : snapshot) ~index =
   let label name =
@@ -1652,11 +1667,30 @@ let check_planner_action (page : snapshot) action =
   let same_tab tab check =
     if tab <> page.tab then Error "continue action names a different tab" else check ()
   in
+  let point (p : point) =
+    if Float.is_finite p.x && Float.is_finite p.y && p.x >= 0. && p.y >= 0. then Ok ()
+    else Error "pilot point must be finite non-negative viewport CSS"
+  in
+  let consent points =
+    List.fold_left
+      (fun checked at ->
+        Result.bind checked (fun () ->
+            Result.bind (point at) (fun () ->
+                List.fold_left
+                  (fun checked (r : row) ->
+                    Result.bind checked (fun () ->
+                        check_consent_click page ~index:r.index))
+                  (Ok ()) (rows_at_point page at))))
+      (Ok ()) points
+  in
   match action with
   | Click args ->
       same_tab args.tab (fun () ->
           Result.bind (row args.snapshot args.index) (fun () ->
               check_consent_click page ~index:args.index))
+  | Click_at args -> same_tab args.tab (fun () -> consent [ args.at ])
+  | Type args -> same_tab args.tab (fun () -> Ok ())
+  | Drag args -> same_tab args.tab (fun () -> consent [ args.from_; args.to_ ])
   | Fill args -> same_tab args.tab (fun () -> row args.snapshot args.index)
   | Select args -> same_tab args.tab (fun () -> row args.snapshot args.index)
   | Press args ->
@@ -1672,7 +1706,7 @@ let check_planner_action (page : snapshot) action =
           | Some index when not (named index) ->
               Error "continue scroll names no offered row"
           | _ -> Ok ())
-  | _ -> Error "pilot act accepts only click, select, fill, press and scroll"
+  | _ -> Error "pilot act accepts only click, type, drag, select, fill, press and scroll"
 
 (* pilot-02ij: redact values before any model, trace or diagnostic boundary. *)
 let redact_string secrets text =

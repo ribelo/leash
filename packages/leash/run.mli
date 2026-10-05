@@ -17,6 +17,8 @@ type observation = {
       (** Suggested name, MIME and state of each download of the tab, for the download
           checker (run-ykq4). *)
   snapshot : Protocol.snapshot;
+  image_input : bytes option;
+      (** pic-k4ij: private PNG bytes for actual model image input; never a text field. *)
 }
 (** What one observation of the page gives the loop: the same facts the checkers, the text
     helper and the last snapshot of a result need. *)
@@ -85,11 +87,12 @@ type plan_answer =
   | Leg of string
   | Read of { quote : string; note : string }
   | Act of Protocol.planner_action
+  | Observe_image
   | Notify of string
   | Done of { result : string; evidence : string list }
       (** map-op10: one-line result, verified against live-page expectations. *)
   | Handoff of string
-  | Fail of string  (** Exactly one of the seven pilot decisions (pilot-gt2h). *)
+  | Fail of string  (** Exactly one of the eight pilot decisions (pilot-gt2h). *)
 
 type plan_reply = {
   reasoning_summary : string option;
@@ -115,6 +118,7 @@ type plan_request = {
   recent : (string * string) list;
   arguments : (string * string) list;
   snapshot : Protocol.snapshot;
+  image_input : bytes option;
   planner_actions : int;
   page_kind : string option;
   title : string;
@@ -150,7 +154,7 @@ type levels = {
     {!Models.levels}; a scripted test passes its own record. *)
 
 type handler = {
-  observe : unit -> (observation, Protocol.error) result;
+  observe : image:bool -> unit -> (observation, Protocol.error) result;
   navigate : string -> (unit, Protocol.error) result;
       (** run-xh5d: the entry navigation of a playbook switch, through the same registry
           path the [nav] command uses. *)

@@ -56,12 +56,13 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
         downloads = [];
         dialog = None;
         snapshot;
+        image_input = None;
       }
   in
   let handler =
     R.
       {
-        observe = (fun () -> Ok (observe ()));
+        observe = (fun ~image:_ () -> Ok (observe ()));
         navigate =
           (fun target ->
             navigations := target :: !navigations;

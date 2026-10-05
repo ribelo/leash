@@ -166,9 +166,7 @@ let report_usage on_usage (completion : Ox_ai_chat.Codecs.completion) =
 let ask client ~now ~model ~logger ~on_usage ?(deadline = default_deadline) json =
   let started = now () in
   let open Ox_ai_chat.Types in
-  let messages =
-    [ { role = System; content = Questions.text_value }; { role = User; content = json } ]
-  in
+  let messages = [ text_message System Questions.text_value; text_message User json ] in
   let rec attempt retry messages deadline =
     Model_usage.start "text_helper";
     let answer, content =
@@ -195,13 +193,10 @@ let ask client ~now ~model ~logger ~on_usage ?(deadline = default_deadline) json
             | Some content ->
                 messages
                 @ [
-                    { role = Assistant; content };
-                    {
-                      role = User;
-                      content =
-                        "Reply with exactly {\"text\": string|null}, without Markdown \
-                         fences, extra members or prose.";
-                    };
+                    text_message Assistant content;
+                    text_message User
+                      "Reply with exactly {\"text\": string|null}, without Markdown \
+                       fences, extra members or prose.";
                   ]
           in
           attempt false messages

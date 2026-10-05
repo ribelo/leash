@@ -26,6 +26,7 @@ type observation = {
   rows : (string * string) list;
   downloads : (string * string * string) list;
   snapshot : P.snapshot;
+  image_input : bytes option;
 }
 
 type choice = {
@@ -85,7 +86,7 @@ type leg = { goal : string; outcome : string; steps : P.step list }
 
 type candidate = Playbook.procedure * [ `Installed | `Draft of string ]
 
-type plan_answer = Leg of string | Read of { quote : string; note : string } | Act of Protocol.planner_action | Notify of string | Done of { result : string; evidence : string list } | Handoff of string | Fail of string
+type plan_answer = Leg of string | Read of { quote : string; note : string } | Act of Protocol.planner_action | Observe_image | Notify of string | Done of { result : string; evidence : string list } | Handoff of string | Fail of string
 
 type plan_reply = {
   reasoning_summary : string option;
@@ -119,6 +120,7 @@ type plan_request = {
          first. *)
   arguments : (string * string) list;
   snapshot : Protocol.snapshot;
+  image_input : bytes option;
   planner_actions : int;
   page_kind : string option;
   title : string;
@@ -146,7 +148,7 @@ type levels = {
     judgment checkers ask, and the planner turn. *)
 
 type handler = {
-  observe : unit -> (observation, P.error) result;
+  observe : image:bool -> unit -> (observation, P.error) result;
   navigate : string -> (unit, P.error) result;
       (** run-xh5d: the entry navigation of a playbook switch. *)
   choose : question -> (choice, P.error) result;
@@ -324,6 +326,7 @@ let answer_name = function
   | Leg _ -> "leg"
   | Read _ -> "read"
   | Act _ -> "act"
+  | Observe_image -> "observe"
   | Notify _ -> "notify"
   | Done _ -> "done"
   | Handoff _ -> "handoff"
@@ -334,6 +337,7 @@ let pilot_choice_json answer =
     | Leg goal -> ["goal", `String goal]
     | Read {quote;note} -> ["quote", `String quote; "note", `String note]
     | Act command -> ["action", `Assoc ["cmd", `String (P.command_name command); "args", P.args_to_json command]]
+    | Observe_image -> ["image", `Bool true]
     | Notify message -> ["message", `String message]
     | Handoff reason | Fail reason -> ["reason", `String reason]
     | Done {result;evidence} -> ["result", `String result; "evidence", `List (List.map (fun value -> `String value) evidence)] in
@@ -368,13 +372,13 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
   let private_values = ref secrets in
   let scrub text = P.redact_string !private_values text in
   let json value = P.redact_json !private_values value in
-  let observe () =
-    let* (page : observation) = handler.observe () in
+  let observe ?(image=false) () =
+    let* (page : observation) = handler.observe ~image () in
     let* snapshot = match P.snapshot_of_yojson (json (P.yojson_of_snapshot page.snapshot)) with
       | Ok snapshot -> Ok snapshot
       | Error _ -> Error (internal (scrub "secret redaction invalidated page schema")) in
     Ok { url = scrub page.url; title = scrub page.title; text = scrub page.text;
-      snapshot; dialog=snapshot.dialog;
+      snapshot; image_input=page.image_input; dialog=snapshot.dialog;
       rows = List.map (fun (role, name) -> (scrub role, scrub name)) page.rows;
       downloads = List.map (fun (name, mime, state) -> (scrub name, scrub mime, scrub state)) page.downloads } in
   let turns = ref [] and procedures = ref [] and legs = ref [] in
@@ -605,20 +609,34 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
     let refusal = match P.check_planner_action page.snapshot command with
       | Error why -> Some why
       | Ok () ->
-          let row = Option.bind (command_row command) (fun index -> List.find_opt (fun (r : P.row) -> r.index = index) page.snapshot.rows) in
-          let intent = Option.bind row (fun row -> unsafe_action row.name) in
-          (match intent with Some intent when not (authorises args.mission intent) -> Some ("refused " ^ intent ^ ": mission does not name that action") | _ -> None) in
-    let text = match command with P.Fill a -> Some a.text | _ -> None in
+          let rows = match command with
+            | P.Click_at a -> P.rows_at_point page.snapshot a.at
+            | P.Drag a -> P.rows_at_point page.snapshot a.from_
+                @ P.rows_at_point page.snapshot a.to_
+            | _ -> Option.to_list (Option.bind (command_row command) (fun index ->
+                List.find_opt (fun (r : P.row) -> r.index = index) page.snapshot.rows)) in
+          let intent = List.find_opt (fun intent -> not (authorises args.mission intent))
+            (List.filter_map (fun (row : P.row) -> unsafe_action row.name) rows) in
+          Option.map (fun intent -> "refused " ^ intent ^ ": mission does not name that action") intent in
+    let text = match command with P.Fill a -> Some a.text | P.Type a -> Some a.text | _ -> None in
     let at = now () in
     let outcome = match refusal with
       | Some why -> Error (invalid why)
       | None -> let command = match command with
           | P.Fill a -> P.Fill { a with text = Option.value ~default:a.text (List.assoc_opt a.text !private_values) }
+          | P.Type a -> P.Type { a with text = Option.value ~default:a.text (List.assoc_opt a.text !private_values) }
           | action -> action in planner_action command in
     let step = P.{ non_repeatable = false; n = 1; command = name; target = None;
       text = Option.map scrub text;
-      after = {url = page.url; title = page.title}; elapsed_ms = ms (now () -. at);
-      error = (match outcome with Ok _ -> None | Error e -> Some (scrub e.message)) } in
+      after = (match outcome with Ok (result : P.action_result) -> {url = scrub result.P.url; title = scrub result.P.title}
+        | Error _ -> {url = page.url; title = page.title}); elapsed_ms = ms (now () -. at);
+      error = (match outcome with Ok _ -> None | Error e -> Some (scrub e.message));
+      hits = (match outcome with Ok result -> result.P.hits | Error _ -> None);
+      shots = (match outcome with Ok result -> result.P.shots | Error _ -> None) } in
+    let step = match P.planner_step_of_yojson (json (P.yojson_of_planner_step step)) with
+      | Ok safe -> safe
+      | Error _ -> {step with hits=None; shots=None; text=None;
+          error=Some "could not retain redacted pilot evidence"} in
     on_planner_step step;
     (* pilot-x1f3: the pilot's own actions are part of the history it is shown, in JEV's
        language, so it knows a field is already filled (U1 on Tauron, 2026-10-04: twelve
@@ -630,6 +648,9 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
       | None -> "the page" in
     let described = match command with
       | P.Click _ -> "Click " ^ named
+      | P.Click_at a -> Printf.sprintf "Click at CSS (%g, %g)" a.at.x a.at.y
+      | P.Drag a -> Printf.sprintf "Drag from CSS (%g, %g) to (%g, %g)" a.from_.x a.from_.y a.to_.x a.to_.y
+      | P.Type a -> Printf.sprintf "Type %s into the current focus" (scrub a.text)
       | P.Fill a -> Printf.sprintf "Type %s into %s" (scrub a.text) named
       | P.Select _ -> "Choose an option in " ^ named
       | P.Press a -> Printf.sprintf "Press %s on %s" a.key named
@@ -657,7 +678,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
         trigger = Blocked; reason = "pilot turn"; mission = scrub args.mission;
         site = Option.map scrub !current_site; playbook = None;
         recent = List.map (fun (leg : leg) -> scrub leg.goal, leg.outcome) !legs; arguments = List.map (fun (key,value) -> scrub key,scrub value) !known;
-        snapshot; planner_actions; page_kind = Option.map scrub kind; title = page.title; url = page.url;
+        snapshot; image_input=page.image_input; planner_actions; page_kind = Option.map scrub kind; title = page.title; url = page.url;
         text = if String.length page.text > 6000 then String.sub page.text 0 6000 else page.text;
         downloads = List.map (fun (name, mime, state) -> (scrub name, mime, state)) page.downloads } in
       let offered = List.map (fun ((proc : Playbook.procedure), source) ->
@@ -691,7 +712,7 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
               | Some summary, None -> Some summary
               | Some summary, Some reason when summary = reason -> Some summary
               | Some summary, Some reason -> Some (summary ^ "\n" ^ reason)); usage = reply.usage} :: !turns in
-          let next () = match observe () with Ok page -> turn page | Error error -> failed error in
+          let next ?(image=false) () = match observe ~image () with Ok page -> turn page | Error error -> failed error in
           if args.dry_run then (planned_choice := Some (json (pilot_choice_json reply.answer)); recorded [] reply.reasoning_summary; finish page "planned" ~reason:(answer_name reply.answer) ())
           else match reply.answer with
           | Done {result; evidence} ->
@@ -726,12 +747,15 @@ let loop ~handler ~now ~installed ?(page_kinds = Page_kind.session ())
           | Read {quote; note} ->
               let why = if contains ~needle:quote page.text && quote <> "" then None else Some "read quote is not on the current page" in
               let step = P.{non_repeatable = false; n = 1; command = "read"; target = None;
-                text = Some (scrub quote); after = {url=page.url; title=page.title}; elapsed_ms=0; error=why} in
+                text = Some (scrub quote); after = {url=page.url; title=page.title}; elapsed_ms=0; error=why; hits=None; shots=None} in
               on_planner_step step; recorded [step] (Some note); next ()
           | Notify message ->
               let outcome = notify (scrub message) in
               unattended := `Assoc ["kind",`String "notify";"message",`String (scrub message);"outcome",`String (if Result.is_ok outcome then "sent" else "failed")] :: !unattended;
               recorded [] (Some (match outcome with Ok () -> message | Error why -> why)); next ()
+          | Observe_image -> recorded [] None;
+              if now () >= deadline || List.length !turns >= args.max_plans then turn page
+              else next ~image:true ()
           | Act action -> let step = act page action in recorded [step] step.error; next ()
           | Leg goal ->
               recorded [] (Some goal);

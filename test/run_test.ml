@@ -32,6 +32,7 @@ let page text =
   R.
     {
       snapshot;
+      image_input = None;
       url = snapshot.url;
       title = snapshot.title;
       text;
@@ -88,7 +89,7 @@ let harness ?(text = "Fact 42") ?(statuses = [ "done" ]) answers =
   let handler =
     R.
       {
-        observe = (fun () -> Ok (page text));
+        observe = (fun ~image:_ () -> Ok (page text));
         navigate = (fun _ -> Ok ());
         choose = (fun _ -> Alcotest.fail "mission called JEV choice");
         text_value = (fun _ -> Ok None);
@@ -165,7 +166,7 @@ let bounded_context () =
     {
       h with
       R.observe =
-        (fun () ->
+        (fun ~image:_ () ->
           Ok
             {
               (page (String.make 9000 'x')) with
@@ -293,7 +294,7 @@ let action_refusal () =
             finish;
           ]
       in
-      let h = { h with R.observe = (fun () -> Ok observation) } in
+      let h = { h with R.observe = (fun ~image:_ () -> Ok observation) } in
       let dispatched = ref 0 in
       let result =
         ran
@@ -388,7 +389,7 @@ let act_memory
     {
       h with
       R.observe =
-        (fun () ->
+        (fun ~image:_ () ->
           Ok
             {
               (page "Invoices") with
@@ -474,7 +475,7 @@ let secret_dispatch () =
     {
       h with
       R.observe =
-        (fun () ->
+        (fun ~image:_ () ->
           Ok
             {
               (page "Ready") with
@@ -516,6 +517,100 @@ let secret_dispatch () =
     [ "Type PASS into the textbox named Password" ]
     (List.map (fun (leg : R.leg) -> leg.goal) history);
   Alcotest.(check string) "act outcome" "done" (List.hd history).outcome
+
+(* pic-7ozf pic-k4ij pic-cqcf: explicit observation is bounded; focused secrets
+   dispatch once and native evidence is redacted before the trace boundary. *)
+let picture_turns () =
+  let h, requests, _ =
+    harness
+      [
+        reply R.Observe_image;
+        reply (R.Act (P.Type { tab; text = "PASS"; shot = None }));
+        finish;
+      ]
+  in
+  let observed = ref [] and acts = ref 0 and evidence = ref [] in
+  let h =
+    {
+      h with
+      R.observe =
+        (fun ~image () ->
+          observed := image :: !observed;
+          Ok
+            {
+              (page "Ready") with
+              image_input = (if image then Some (Bytes.of_string "owned PNG") else None);
+            });
+    }
+  in
+  ignore
+    (ran
+       (R.loop ~handler:h
+          ~now:(fun () -> 0.)
+          ~installed:[]
+          ~secrets:[ ("PASS", "actual-password") ]
+          ~on_planner_step:(fun step ->
+            evidence := P.yojson_of_planner_step step :: !evidence)
+          ~planner_action:(fun command ->
+            incr acts;
+            (match command with
+            | P.Type a ->
+                Alcotest.(check string)
+                  "protected reference resolves only at dispatch" "actual-password" a.text
+            | _ -> Alcotest.fail "not focused type");
+            Ok
+              P.
+                {
+                  tab;
+                  url = snapshot.url;
+                  title = snapshot.title;
+                  snapshot = None;
+                  dialog = None;
+                  popups = [];
+                  via = None;
+                  shots = None;
+                  hits =
+                    Some
+                      [
+                        {
+                          at = { x = 1.; y = 2. };
+                          sampled_at = { x = 1.; y = 2. };
+                          element = "actual-password";
+                          hit_role = Some "textbox";
+                          hit_label = Some "actual-password";
+                        };
+                      ];
+                })
+          (params ())));
+  Alcotest.(check (list bool))
+    "explicit image observation flag" [ false; true; false ] (List.rev !observed);
+  Alcotest.(check int) "focused type executes once" 1 !acts;
+  Alcotest.(check bool)
+    "actual owned image reaches the next pilot turn" true
+    (List.exists
+       (fun (r : R.plan_request) -> r.image_input = Some (Bytes.of_string "owned PNG"))
+       !requests);
+  let wire = Yojson.Safe.to_string (`List !evidence) in
+  Alcotest.(check bool)
+    "native hit evidence has no protected value" false
+    (try
+       ignore (Str.search_forward (Str.regexp_string "actual-password") wire 0);
+       true
+     with Not_found -> false);
+  let h, _, _ = harness [ reply R.Observe_image ] in
+  let observed = ref [] in
+  let h =
+    {
+      h with
+      R.observe =
+        (fun ~image () ->
+          observed := image :: !observed;
+          Ok (page "Ready"));
+    }
+  in
+  ignore (ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ~turns:1 ())));
+  Alcotest.(check (list bool))
+    "no useless image after the final allowed turn" [ false ] !observed
 
 let leg_failure_visible () =
   let h, requests, _ = harness [ reply (R.Leg "Open account"); finish ] in
@@ -620,6 +715,7 @@ let () =
             ("dangerous action refusal", action_refusal);
             ("done result required", empty_result);
             ("secret dispatch", secret_dispatch);
+            ("pic-cqcf bounded image turns and protected focused type", picture_turns);
             ("failed leg context", leg_failure_visible);
             ("redaction fails closed", schema_redaction);
             ("dangerous leg refusal", dangerous_leg);

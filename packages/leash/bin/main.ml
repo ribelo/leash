@@ -497,7 +497,9 @@ let rec perform ~caps ~send ~base command fields positionals options =
         usage ~caps "--dy and --shot require --at; use --snap for row click evidence"
       else if point && picture = "scroll" && not (has "dy") then
         usage ~caps "scroll: --at requires --dy N"
-      else perform_wire ~caps ~send ~base command fields positionals options
+      else
+        let wire_command = if point && picture = "click" then "click_at" else command in
+        perform_wire ~caps ~send ~base wire_command fields positionals options
   | (("dblclick" | "drag") as picture), _ ->
       let has name =
         List.exists (function Some (key, _) -> key = name | None -> false) options

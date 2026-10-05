@@ -919,6 +919,8 @@ type planner_step = {
   after : after;
   elapsed_ms : int;
   error : string option;
+  hits : point_hit list option;
+  shots : shot_result list option;
 }
 
 val planner_step_of_yojson : Yojson.Safe.t -> (planner_step, string) result
@@ -1100,6 +1102,11 @@ type planner_action = command
 
 val planner_action_of_yojson : Yojson.Safe.t -> (planner_action, string) result
 val yojson_of_planner_action : planner_action -> Yojson.Safe.t
+
+val rows_at_point : snapshot -> point -> row list
+(** pic-7ozf: offered CSS boxes containing a point, for policy facts only, never row
+    conversion or authority. Suspension: none. Cancellation: no cancellation point.
+    Finalizers: none. Locking: none. *)
 
 val check_consent_click : snapshot -> index:int -> (unit, string) result
 (** map-op11: refuse all-consent buttons when a decline alternative is offered. *)

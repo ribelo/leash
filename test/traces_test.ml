@@ -413,6 +413,8 @@ let planner_steps () =
         after;
         elapsed_ms = 8;
         error = None;
+        hits = None;
+        shots = None;
       };
   T.planner_step c
     P.
@@ -425,6 +427,8 @@ let planner_steps () =
         after;
         elapsed_ms = 9;
         error = Some "stale-snapshot";
+        hits = None;
+        shots = None;
       };
   let trace =
     T.finish c ~now:1.

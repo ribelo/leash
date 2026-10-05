@@ -16,7 +16,7 @@ Wait for the mission's reply before acting or reading on its tab. Other tabs can
 
 ## Who decides
 
-The pilot reads the mission, bounded page text (6000 characters), viewport rows (250), previous actions/legs, downloads and procedure candidates. It can issue a navigation leg, quote page text, act on a current row, notify, hand off, finish or fail. A leg is one navigation goal in JEV's language; JEV's DONE/BLOCKED returns control to the pilot.
+The pilot reads the mission, bounded page text (6000 characters), viewport rows (250), previous actions/legs, downloads and procedure candidates. It can issue a navigation leg, quote page text, observe an image, act on a revalidated row or a viewport CSS point, type into the focused control, drag, notify, hand off, finish or fail. Empty or unhelpful rows automatically add a real PNG image input; `observe --image` explicitly requests one and consumes a bounded turn. Images retain measured viewport/scale metadata, not private filesystem paths. Coordinates do not require rows and never become row actions. A leg is one navigation goal in JEV's language; JEV's DONE/BLOCKED returns control to the pilot.
 
 Only pilot done completes the mission. It must carry `result` and `evidence`. Direct actions include click, select, fill, press and scroll; downloads are clicks. Text can describe controls below the viewport, so scrolling may be needed before acting on a row. Payment, checkout confirmation, sending and deletion require explicit authorization in the mission. Never retry an uncertain submission merely because the reply failed.
 

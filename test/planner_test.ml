@@ -40,6 +40,7 @@ let request =
       recent = [];
       arguments = [];
       snapshot;
+      image_input = None;
       planner_actions = 5;
       page_kind = None;
       title = "Page";
@@ -187,6 +188,96 @@ let candidate_request () =
     Yojson.Safe.Util.(
       wire |> member "candidates" |> index 1 |> member "source" |> to_string)
 
+(* pic-7ozf pic-k4ij pic-cqcf: native targets require no offered row. *)
+let picture_shapes () =
+  List.iter
+    (fun json -> ignore (ok (M.decode_pilot request json)))
+    [
+      {|{"answer":"observe","image":true}|};
+      {|{"answer":"act","action":{"cmd":"click_at","args":{"tab":"t_test","at":{"x":10.25,"y":20.5}}}}|};
+      {|{"answer":"act","action":{"cmd":"type","args":{"tab":"t_test","text":"PASS"}}}|};
+      {|{"answer":"act","action":{"cmd":"drag","args":{"tab":"t_test","from":{"x":10,"y":20},"to":{"x":30,"y":40}}}}|};
+    ];
+  List.iter
+    (fun json ->
+      Alcotest.(check bool)
+        "bounded picture shape" true
+        (Result.is_error (M.decode_pilot request json)))
+    [
+      {|{"answer":"observe","image":false}|};
+      {|{"answer":"observe","image":true,"action":{}}|};
+      {|{"answer":"act","action":{"cmd":"click_at","args":{"tab":"t_other","at":{"x":10,"y":20}}}}|};
+      {|{"answer":"act","action":{"cmd":"click_at","args":{"tab":"t_test","at":{"x":-1,"y":20}}}}|};
+      {|{"answer":"act","action":{"cmd":"dblclick","args":{"tab":"t_test","at":{"x":10,"y":20}}}}|};
+      {|{"answer":"act","action":{"cmd":"click","args":{"tab":"t_test","at":{"x":10,"y":20}}}}|};
+    ]
+
+let picture_consent () =
+  let button index name y : P.row =
+    {
+      index;
+      role = "button";
+      name;
+      value = None;
+      state = None;
+      options = None;
+      box = Some { x = 0.; y; width = 100.; height = 20. };
+    }
+  in
+  let page =
+    {
+      snapshot with
+      rows = [ button 1 "Accept all cookies" 0.; button 2 "Reject all" 30. ];
+      total = 2;
+    }
+  in
+  List.iter
+    (fun action ->
+      Alcotest.(check bool)
+        "known consent offer still declines" true
+        (Result.is_error (P.check_planner_action page action)))
+    [
+      P.Click_at { tab; at = { x = 10.; y = 10. }; shot = None };
+      P.Drag
+        { tab; from_ = { x = 10.; y = 10. }; to_ = { x = 11.; y = 11. }; shot = None };
+    ];
+  Alcotest.(check bool)
+    "coordinate action does not require a row" true
+    (Result.is_ok
+       (P.check_planner_action snapshot
+          (P.Click_at { tab; at = { x = 10.; y = 10. }; shot = None })))
+
+let picture_metadata () =
+  let image : P.shot_result =
+    {
+      path = "/private/pilot.png";
+      bytes = 3;
+      width = 800;
+      height = 600;
+      viewport = { width = 400.; height = 300. };
+      scale = 2.;
+      full_page = false;
+    }
+  in
+  let wire =
+    M.pilot_request_json
+      {
+        request with
+        snapshot = { snapshot with image = Some image };
+        image_input = Some (Bytes.of_string "xyz");
+      }
+  in
+  let image = Yojson.Safe.Util.(wire |> member "snapshot" |> member "image") in
+  Alcotest.(check bool)
+    "no filesystem path in model input" true
+    (Yojson.Safe.Util.member "path" image = `Null);
+  Alcotest.(check (float 0.))
+    "HiDPI scale retained" 2.
+    Yojson.Safe.Util.(image |> member "scale" |> to_float);
+  Alcotest.(check bool)
+    "owned bytes are not text metadata" true
+    (Yojson.Safe.Util.member "image_input" wire = `Null)
+
 let generated () =
   let reply =
     ok
@@ -234,6 +325,9 @@ let () =
             ("prompt under 300 words", prompt_size);
             ("select option by label", select_label);
             ("act scroll", act_scroll);
+            ("pic-cqcf bounded native picture shapes", picture_shapes);
+            ("pic-k4ij private image metadata", picture_metadata);
+            ("pic-7ozf coordinate consent facts, not row authority", picture_consent);
             ("generated secret", generated);
             ("bounded request", bounded);
             ("pilot-oijk candidate request", candidate_request);
