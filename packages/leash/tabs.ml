@@ -1208,7 +1208,18 @@ let announce t ~sw ~tab ~waiting ~reason ~warn ~clean =
             ~on_done:(fun () -> answer Resumed));
       `Stop_daemon)
 
-let handoff ?(secrets = []) t ~reason ~timeout_s handle =
+(* hand-tdkk: nobody can see a headless browser, so asking a human about it is refused
+   before anything reaches the desktop. *)
+let headless t = not (Chrome.status t.chrome).headed
+
+let refuse_headless () =
+  error "headless" "the browser is headless; no human can see the tab"
+
+let rec handoff ?(secrets = []) t ~reason ~timeout_s handle =
+  if headless t then Error (refuse_headless ())
+  else handoff_headed ~secrets t ~reason ~timeout_s handle
+
+and handoff_headed ~secrets t ~reason ~timeout_s handle =
   let clean text = P.redact_string secrets text in
   (* hand-lmd5: the deadline counts from the request, not from the moment the ledger's
      answer reaches this fiber. *)
@@ -3002,7 +3013,10 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
                   ~secrets:args.secrets
                   ~on_secrets:(fun values -> secret_values := values)
                   ~planner_action ~on_planner_step ~on_arguments ~planner_actions
-                  ~notify:t.notify ~challenge ~challenge_attempt:t.challenge_attempt
+                  ~notify:(fun message ->
+                    if headless t then Error (refuse_headless ()).P.message
+                    else t.notify message)
+                  ~challenge ~challenge_attempt:t.challenge_attempt
                   ~challenge_turns:t.challenge_turns
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)

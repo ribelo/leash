@@ -47,7 +47,7 @@ let rig
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) ?(attempt = true) ?(turns = 2) ?(text = "Page") ?(guard_count = ref 0)
-    ?(notify = fun _ -> Ok ()) ?notification f =
+    ?(notify = fun _ -> Ok ()) ?notification ?(headless = false) f =
   Eio_main.run (fun env ->
       Eio.Time.with_timeout_exn env#clock 10. (fun () ->
           Eio.Switch.run (fun sw ->
@@ -81,7 +81,7 @@ let rig
                 Chrome.create ~sw ~launch:(launch ~caps)
                   (Chrome.make ~binary:"/bin/sh"
                      ~profile_dir:"/tmp/leash-unattended-unused" ~workspace:"test"
-                     ~headless:true ())
+                     ~headless ())
                   {
                     Chrome.clock = env#clock;
                     mgr = env#process_mgr;
@@ -347,6 +347,44 @@ let notify_then_done
       eq "failure recorded, not raised" "failed"
         (Yojson.Safe.Util.to_string (member "outcome" event));
       boolean "no handoff on notify" (events result "handoff" = []))
+
+(* hand-tdkk: a headless pilot cannot reach a human: its notify never runs the command,
+   and its handoff ends the mission at once, with nobody waiting. *)
+let headless_pilot
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  let messages = ref [] and plans = ref 0 in
+  rig ~caps ~headless:true
+    ~notify:(fun s ->
+      messages := s :: !messages;
+      Ok ())
+    (fun _ _ tabs _ ->
+      let reply_ =
+        run_reply tabs
+          ~plan:(fun _ ->
+            incr plans;
+            reply
+              (if !plans = 1 then R.Notify "Order 12345 placed"
+               else R.Handoff "Login required"))
+          ~decide:(fun _ -> Ok (decision "blocked"))
+      in
+      Alcotest.(check (list string)) "hand-tdkk no notification sent" [] !messages;
+      (match reply_ with
+      | P.Failure e ->
+          eq "hand-tdkk handoff ends the mission" "headless"
+            (P.Error_code.to_string e.P.code)
+      | P.Success _ -> Alcotest.fail "hand-tdkk a headless handoff succeeded");
+      Alcotest.(check int) "hand-tdkk no further pilot turn" 2 !plans;
+      boolean "hand-tdkk nobody waits"
+        (List.for_all
+           (fun (tab : P.tab_listing) -> not tab.with_human)
+           (Tabs.list tabs).tabs))
 
 let expiry
     ~(caps :
@@ -1054,6 +1092,8 @@ let () =
             `Quick (fun () -> notify_then_done ~caps ());
           Alcotest.test_case "notif-oslv bounded handoff retains tab" `Quick
             (expiry ~caps);
+          Alcotest.test_case "hand-tdkk headless pilot reaches no human" `Quick
+            (headless_pilot ~caps);
           Alcotest.test_case "notif-himb notif-tdtz ordinary challenge action clears"
             `Quick (cleared ~caps);
           Alcotest.test_case "notif-p4yk two turns then captcha expiry" `Quick

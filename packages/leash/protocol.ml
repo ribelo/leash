@@ -307,6 +307,7 @@ type error_code =
   | No_dialog [@json.name "no-dialog"]
   | No_handoff [@json.name "no-handoff"]
   | Canceled_by_operator [@json.name "canceled-by-operator"]
+  | Headless [@json.name "headless"]
   | Url_refused [@json.name "url-refused"]
   | Tab_cap [@json.name "tab-cap"]
   | Timeout [@json.name "timeout"]
@@ -406,6 +407,10 @@ module Error_code = struct
     | Canceled_by_operator ->
         info 77 "the operator canceled or dismissed the handoff notification"
           "stop this mission; do not retry without a new instruction from the operator"
+    | Headless ->
+        info 69 "a handoff or notification asked for a human, but the browser is headless"
+          "nobody can see a headless browser: finish without the human or stop and \
+           report what is needed"
     | Url_refused ->
         info 64 "scheme is not http, https, or about:blank, or the URL has userinfo"
           "use an http or https URL with no userinfo, or about:blank"
@@ -517,6 +522,7 @@ module Error_code = struct
       No_dialog;
       No_handoff;
       Canceled_by_operator;
+      Headless;
       Url_refused;
       Tab_cap;
       Timeout;

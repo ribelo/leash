@@ -31,6 +31,7 @@ Logins, two-factor codes, captchas, and consequential confirmations need a human
 10. As an agent, I want a browser loss during handoff to end it with `tab-gone` `browser_lost`, so that I do not wait on a page that no longer exists. ^hand-yytf
 11. As a human, I want resuming a tab nobody is waiting on to fail with a clear error, so that a stale notification does not do something surprising. ^hand-szz7
 12. As an operator, I want the notification and focus mechanisms configurable and failures in them reported in the reply but not fatal to the handoff, so that a missing notify-send does not break the agent. ^hand-rg9h
+13. As an operator, I want a handoff or pilot notification on a headless browser refused with `headless` before anything reaches my desktop, so that I am never asked about a window I cannot see. ^hand-tdkk
 
 ## Implementation Decisions
 
@@ -54,6 +55,7 @@ A streamed viewer; handoff inside `drive`; a GUI.
 ## Further Notes
 
 - If notify-send actions prove unreliable under the user's notification daemon, the fallback is notification without action plus `leash resume`.
+- 2026-10-05 (hand-tdkk): a headless browser refuses handoff with `headless`, so the live gates below were removed (`scripts/live-acceptance-m4`, `.py`, `-m4-headed`, `-m6-headed`). Tests never need a human present; the handoff mechanics are covered by the unit tests over the fake browser.
 - L18 headless, 2026-09-27: `scripts/live-acceptance-m4` (+ `.py`) green on real
   headless Chrome through the real CLI/service — agent handoff blocked, human
   (`--owner human`) resume answered url/title, `--timeout-s 3` answered timeout

@@ -100,7 +100,7 @@ let rig
       let chrome =
         Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-test-profile"
-             ~workspace:"test" ~headless:true ())
+             ~workspace:"test" ~headless:false ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;

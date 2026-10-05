@@ -67,7 +67,7 @@ Packaging for anyone but this machine, CI, an HTTP adapter.
   `ExecStart` is `…/bin/leash serve`, and `docs/install.md`, `packaging/leash-unit.nix`
   and `scripts/unit-acceptance` were moved with it. A bare `leash` still starts the
   same program.
-- Historical L28 preparation (closed by L44 on 2026-10-01): `scripts/live-acceptance-m6-headed`, the one
+- Historical L28 preparation (closed by L44 on 2026-10-01; the script was removed 2026-10-05, hand-tdkk): `scripts/live-acceptance-m6-headed`, the one
   desktop pass the operator runs by hand: it prints the install steps from
   `docs/install.md`, checks the unit and `leash status`, records niri's placement of
   the `leash` window (rule present? which workspace? focused before/after a handoff),

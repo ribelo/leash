@@ -805,6 +805,7 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `dialog-open` | 65 | a dialog blocks page reads and actions; answer it first | answer it with `leash dialog TAB accept` or `leash dialog TAB dismiss`, then retry | [errors](help/errors.md) |
 | `no-dialog` | 64 | dialog was asked with nothing to answer | nothing is open; `leash snap TAB` and call dialog only when a dialog is shown | [errors](help/errors.md) |
 | `canceled-by-operator` | 77 | the operator canceled or dismissed the handoff notification | stop this mission; do not retry without a new instruction from the operator | [errors](help/errors.md) |
+| `headless` | 69 | a handoff or notification asked for a human, but the browser is headless | nobody can see a headless browser: finish without the human or stop and report what is needed | [errors](help/errors.md) |
 | `no-handoff` | 64 | resume on a tab nobody is waiting on | nobody is waiting; `leash handoff TAB REASON` starts one, and only then does `leash resume TAB` finish it | [errors](help/errors.md) |
 | `url-refused` | 64 | scheme is not http, https, or about:blank, or the URL has userinfo | use an http or https URL with no userinfo, or about:blank | [errors](help/errors.md) |
 | `tab-cap` | 75 | no capacity for a new tab | close a tab with `leash close TAB`, then retry `leash new` | [errors](help/errors.md) |

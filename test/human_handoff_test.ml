@@ -158,7 +158,7 @@ let rig
        ; Ox_caps.Cap.fs_write
        ; Ox_caps.Cap.random
        ; .. >) ?(focus = default_focus) ?(notify = default_notify) ?(scripts = [])
-    ?(real = false) f =
+    ?(real = false) ?(headless = false) f =
   Ox_test.run (fun env sw ->
       let process = Ox_test.Process.make ~clock:env#clock (blocked :: scripts) in
       let current = ref None in
@@ -182,7 +182,7 @@ let rig
       let chrome =
         Chrome.create ~sw ~launch:(launch ~caps)
           (Chrome.make ~binary:"/bin/sh" ~profile_dir:"/tmp/leash-human-profile"
-             ~workspace:"test" ~headless:true ())
+             ~workspace:"test" ~headless ())
           {
             Chrome.clock = env#clock;
             mgr = env#process_mgr;
@@ -749,6 +749,28 @@ let notification_first_action_wins
             "pilot-9u3q ledger survives competing outcomes" 0 (with_human_count tabs)))
     [ ("cancel\ndone\ncancel\n", true); ("done\ncancel\n", false) ]
 
+(* hand-tdkk: on a headless browser a handoff is refused at once with [headless]; no
+   focus or notification command runs and the tab never waits on a human. *)
+let headless_refuses
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  rig ~caps ~headless:true (fun ~env:_ ~sw:_ ~tabs ~fake:_ ~process ~log:_ ->
+      let h = handle_new tabs in
+      check_code "hand-tdkk refused" "headless"
+        (request tabs "alice"
+           (P.Handoff { tab = h; reason = "solve it"; timeout_s = Some 60 }));
+      settle ();
+      Alcotest.(check int)
+        "hand-tdkk no desktop command" 0
+        (List.length (commands process));
+      Alcotest.(check int) "hand-tdkk nobody waits" 0 (with_human_count tabs))
+
 let test name case = Alcotest.test_case name `Quick case
 
 let () =
@@ -780,4 +802,6 @@ let () =
           test "hand-rg9h" reply_shapes;
         ] );
       ("cleanup", [ test "hand-04rb hand-phof hand-lmd5" (the_notifier_is_stopped ~caps) ]);
+      ( "headless",
+        [ test "hand-tdkk headless refuses a handoff" (headless_refuses ~caps) ] );
     ]

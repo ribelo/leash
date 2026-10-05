@@ -198,7 +198,7 @@ Conditional branching in playbooks; parallel tabs in one run; playbook sharing o
   - Allegro headless home answered **403 in Chrome Navigation Timing**, corroborated
     by curl **403**; a preceding exploratory run timed out in the model after four
     JEV and one text-helper calls (~$0.0001256). No evasion; the headed-operator
-    instructions are in `scripts/live-acceptance-m6-headed`. For the confirmed 403
+    instructions were in `scripts/live-acceptance-m6-headed` (removed 2026-10-05, hand-tdkk). For the confirmed 403
     navigation, JEV=0, planner=0, steps=0, cost=$0.
   - Cross-site mission: public Mozilla PDF.js `tracemonkey.pdf` on github.com, then
     example.com in the same tab. **Done** in 5.7 s, 7 JEV calls (7,792 input/632
