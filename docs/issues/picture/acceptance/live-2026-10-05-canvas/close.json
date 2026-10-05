@@ -1,0 +1,11 @@
+{
+  "command": [
+    "close",
+    "[redacted]"
+  ],
+  "exit_code": 0,
+  "reply": {
+    "closed": true
+  },
+  "raw": null
+}

@@ -1,0 +1,14 @@
+{
+  "gate": "pic-iomj",
+  "git_head": "06bffcdc19c66ed4a2e80291faa080d2010d94f0",
+  "binary_sha256": "fb84bc9d8edaa466a16b262362a6b4a1c8b8f4f3acbb5c1897a96c62e612aa19",
+  "headless": true,
+  "private_xdg": true,
+  "button_css": {
+    "x": 218,
+    "y": 250,
+    "w": 180,
+    "h": 64
+  },
+  "model_key_source": "secret-env ai --"
+}

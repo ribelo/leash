@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# L58/pic-iomj: the pilot clicks a button drawn only on a canvas, in private headless Chrome.
+# Build first (nix develop -c dune build @install).
+# Usage: secret-env ai -- scripts/live-acceptance-l58 EVIDENCE_DIR
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+exec python3 "$repo/scripts/live-acceptance-l58.py" "$@"

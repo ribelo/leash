@@ -1,0 +1,38 @@
+{
+  "command": [
+    "snap",
+    "[redacted]",
+    "--with-image"
+  ],
+  "exit_code": 0,
+  "reply": {
+    "snapshot": "[redacted capability]",
+    "tab": "[redacted capability]",
+    "url": "http://127.0.0.1:43755/",
+    "title": "Canvas launch test",
+    "page_kind": {
+      "name": "home",
+      "source": "inferred"
+    },
+    "rows": [],
+    "total": 0,
+    "offset": 0,
+    "truncated": false,
+    "settled": true,
+    "source": "ax",
+    "image": {
+      "path": "/tmp/leash-picture-8abd81.png",
+      "bytes": 22412,
+      "width": 1366,
+      "height": 813,
+      "viewport": {
+        "width": 1366.0,
+        "height": 813.0
+      },
+      "scale": 1.0,
+      "full_page": false
+    },
+    "dialog": null
+  },
+  "raw": null
+}

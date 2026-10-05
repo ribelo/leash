@@ -1,0 +1,48 @@
+{
+  "answers": [
+    "act",
+    "done"
+  ],
+  "click_at": [
+    {
+      "hits": [
+        {
+          "at": {
+            "x": 308.0,
+            "y": 282.0
+          },
+          "sampled_at": {
+            "x": 308.0,
+            "y": 282.0
+          },
+          "element": "canvas",
+          "role": "Canvas"
+        }
+      ],
+      "shots": [
+        {
+          "width": 1366,
+          "height": 813,
+          "viewport": {
+            "width": 1366.0,
+            "height": 813.0
+          },
+          "scale": 1.0
+        }
+      ],
+      "pngs": [
+        "click-1-0.png"
+      ],
+      "error": null
+    }
+  ],
+  "status": "done",
+  "result": "The canvas shows Launched.",
+  "evidence": [
+    "Canvas at http://127.0.0.1:43755/ displays “Launched”."
+  ],
+  "model_calls": 2,
+  "model_cost": 0.0009719749999999999,
+  "pilot_turns": 2,
+  "navigator_steps": 0
+}

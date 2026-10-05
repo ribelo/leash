@@ -1,0 +1,13 @@
+[chrome]
+binary = "/etc/profiles/per-user/ribelo/bin/google-chrome-stable"
+profile_dir = "<PRIVATE_ROOT>/profile"
+workspace = "test"
+headless = true
+[models]
+planner_model = "openai/gpt-6-luna"
+planner_reasoning = "max"
+[learning]
+mode = "off"
+[handoff]
+focus_command = []
+notify_command = []

@@ -1,0 +1,44 @@
+{
+  "gate": "pic-iomj",
+  "passed": true,
+  "checks": [
+    {
+      "passed": true,
+      "check": "Private Chrome runs headless over the pipe"
+    },
+    {
+      "passed": true,
+      "check": "No DOM action row names the drawn button"
+    },
+    {
+      "passed": true,
+      "check": "Snapshot PNG width equals CSS viewport width times the reported scale"
+    },
+    {
+      "passed": true,
+      "check": "Drive ended done (exit 0, status done)"
+    },
+    {
+      "passed": true,
+      "check": "The pilot acted with click_at"
+    },
+    {
+      "passed": true,
+      "check": "The canvas recorded exactly one click, inside the drawn button (1 clicks, 1 inside)"
+    },
+    {
+      "passed": true,
+      "check": "The page's own state is launched"
+    },
+    {
+      "passed": true,
+      "check": "Every click_at retained hit evidence without error"
+    },
+    {
+      "passed": true,
+      "check": "No private Chrome process survived the service"
+    }
+  ],
+  "failures": [],
+  "service_exit": 0
+}

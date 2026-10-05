@@ -1,0 +1,141 @@
+{
+  "command": [
+    "drive",
+    "This is a harmless local test page. A button labelled Launch is drawn on the canvas; it is a picture, not a page control. Click the drawn Launch button exactly once and finish when the canvas shows Launched. Do not click anything else and never repeat an uncertain click.",
+    "--tab",
+    "[redacted]",
+    "--deadline-s",
+    "240",
+    "--max-steps",
+    "15"
+  ],
+  "exit_code": 0,
+  "reply": {
+    "result": "The canvas shows Launched.",
+    "evidence": [
+      "Canvas at http://127.0.0.1:43755/ displays “Launched”."
+    ],
+    "pilot_turns": 2,
+    "navigator_steps": 0,
+    "secrets_for_operator": [],
+    "unattended": [],
+    "playbook_choices": [],
+    "status": "done",
+    "answer": "The canvas shows Launched.",
+    "site": "127.0.0.1",
+    "procedures": [],
+    "mission_expectations": [],
+    "planner_turns": [
+      {
+        "candidates": [],
+        "n": 1,
+        "trigger": "pilot",
+        "answer": "act",
+        "steps": [
+          {
+            "non_repeatable": false,
+            "n": 1,
+            "command": "click_at",
+            "after": {
+              "url": "http://127.0.0.1:43755/",
+              "title": "Canvas launch test"
+            },
+            "elapsed_ms": 36,
+            "hits": [
+              {
+                "at": {
+                  "x": 308.0,
+                  "y": 282.0
+                },
+                "sampled_at": {
+                  "x": 308.0,
+                  "y": 282.0
+                },
+                "element": "canvas",
+                "role": "Canvas"
+              }
+            ],
+            "shots": [
+              {
+                "path": "/tmp/leash-picture-8b135a.png",
+                "bytes": 22412,
+                "width": 1366,
+                "height": 813,
+                "viewport": {
+                  "width": 1366.0,
+                  "height": 813.0
+                },
+                "scale": 1.0,
+                "full_page": false
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "input_tokens": 2093,
+          "output_tokens": 530,
+          "cost": 0.00052655
+        }
+      },
+      {
+        "candidates": [],
+        "n": 2,
+        "trigger": "pilot",
+        "answer": "done",
+        "steps": [],
+        "usage": {
+          "input_tokens": 2116,
+          "output_tokens": 362,
+          "cost": 0.000445425
+        }
+      }
+    ],
+    "proposals": [],
+    "installed": [],
+    "collected": 0,
+    "data": {
+      "count": 0,
+      "first": [],
+      "model_calls_by_kind": {
+        "planner": 2
+      },
+      "reported_cost": 0.0009719749999999999,
+      "cost_unreported": 0
+    },
+    "model_calls": 2,
+    "model_cost": 0.0009719749999999999,
+    "operator_steps": [],
+    "output_kinds": [],
+    "final": {
+      "snapshot": "[redacted capability]",
+      "tab": "[redacted capability]",
+      "url": "http://127.0.0.1:43755/",
+      "title": "Canvas launch test",
+      "page_kind": {
+        "name": "home",
+        "source": "inferred"
+      },
+      "rows": [],
+      "total": 0,
+      "offset": 0,
+      "truncated": false,
+      "settled": true,
+      "source": "ax",
+      "image": {
+        "path": "/tmp/leash-picture-a8f8c5.png",
+        "bytes": 23336,
+        "width": 1366,
+        "height": 813,
+        "viewport": {
+          "width": 1366.0,
+          "height": 813.0
+        },
+        "scale": 1.0,
+        "full_page": false
+      },
+      "dialog": null
+    },
+    "trace_path": "<PRIVATE_ROOT>/state/leash/traces/127.0.0.1/2026-10-05T06:20:16.619227Z-done.json"
+  },
+  "raw": null
+}

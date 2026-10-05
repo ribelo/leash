@@ -1,0 +1,56 @@
+{
+  "answers": [
+    "act",
+    "act",
+    "done"
+  ],
+  "click_at": [
+    {
+      "hits": null,
+      "shots": [],
+      "pngs": [],
+      "error": "screenshot produced no frame within 5s; headed Chrome on a hidden Wayland workspace may have no compositor frame even when the page is responsive"
+    },
+    {
+      "hits": [
+        {
+          "at": {
+            "x": 623.0,
+            "y": 458.0
+          },
+          "sampled_at": {
+            "x": 623.0,
+            "y": 458.0
+          },
+          "element": "canvas",
+          "role": "Canvas"
+        }
+      ],
+      "shots": [
+        {
+          "width": 1366,
+          "height": 813,
+          "viewport": {
+            "width": 1366.0,
+            "height": 813.0
+          },
+          "scale": 1.0
+        }
+      ],
+      "pngs": [
+        "click-2-0.png"
+      ],
+      "error": null
+    }
+  ],
+  "status": "done",
+  "result": "Clicked the drawn Launch button once; the canvas now shows Launched.",
+  "evidence": [
+    "http://127.0.0.1:34157/",
+    "Canvas displays “Launched”."
+  ],
+  "model_calls": 3,
+  "model_cost": 0.0012115250000000002,
+  "pilot_turns": 3,
+  "navigator_steps": 0
+}

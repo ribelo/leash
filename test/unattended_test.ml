@@ -1027,7 +1027,20 @@ let picture_pilot
       in
       Alcotest.(check int)
         "click and drag press once each, no act retry" 2 (mouse "mousePressed");
-      Alcotest.(check int) "click and drag release once each" 2 (mouse "mouseReleased"))
+      Alcotest.(check int) "click and drag release once each" 2 (mouse "mouseReleased");
+      (* pic-iomj: a background headless tab yields no screencast frame without focus
+         emulation; the live canvas gate's first pilot click_at timed out on exactly that. *)
+      let unfocused_captures, _ =
+        List.fold_left
+          (fun (unfocused, focused) r ->
+            match member "method" r with
+            | `String "Emulation.setFocusEmulationEnabled" ->
+                (unfocused, member "enabled" (member "params" r) = `Bool true)
+            | `String "Page.startScreencast" when not focused -> (unfocused + 1, focused)
+            | _ -> (unfocused, focused))
+          (0, false) (Fake.received fake)
+      in
+      Alcotest.(check int) "every capture runs under focus emulation" 0 unfocused_captures)
 
 let () =
   let caps = Ox_test.powerbox () in

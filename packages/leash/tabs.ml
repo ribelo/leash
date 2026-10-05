@@ -2716,17 +2716,22 @@ let run ?(on_page = fun ~url:_ ~kind:_ ~pattern:_ -> ()) ?on_step
              revalidation, hit-test, input and settle path as public actions. *)
           let planner_action command =
             let view = action_view t ~session tab cdp in
+            (* pic-iomj: like the public path, a picture act engages focus emulation; a
+               background headless tab otherwise yields no screencast frame. *)
+            let picture ?before ~shot action =
+              with_focus t tab (fun engage ->
+                  picture_action_locked ?before t tab cdp { view with Actions.engage }
+                    ~shot action)
+            in
             match command with
             | P.Click args -> Actions.click ~cdp view args
             | P.Click_at args ->
-                picture_action_locked t tab cdp view ~shot:args.shot (fun cdp view ->
-                    Actions.click_at ~cdp view args)
+                picture ~shot:args.shot (fun cdp view -> Actions.click_at ~cdp view args)
             | P.Drag args ->
-                picture_action_locked t tab cdp view ~shot:args.shot (fun cdp view ->
-                    Actions.drag ~cdp view args)
+                picture ~shot:args.shot (fun cdp view -> Actions.drag ~cdp view args)
             | P.Type args ->
-                picture_action_locked ~before:false t tab cdp view ~shot:args.shot
-                  (fun cdp view -> Actions.type_text ~cdp view args)
+                picture ~before:false ~shot:args.shot (fun cdp view ->
+                    Actions.type_text ~cdp view args)
             | P.Fill args -> Actions.fill ~check_hit:true ~cdp view args
             | P.Press args -> Actions.press ~cdp view args
             | P.Select args -> Actions.select ~cdp view args

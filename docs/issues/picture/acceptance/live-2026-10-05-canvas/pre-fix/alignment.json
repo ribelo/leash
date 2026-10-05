@@ -1,0 +1,24 @@
+{
+  "image": {
+    "width": 1366,
+    "height": 813,
+    "viewport": {
+      "width": 1366.0,
+      "height": 813.0
+    },
+    "scale": 1.0
+  },
+  "button_css": {
+    "x": 533,
+    "y": 426,
+    "w": 180,
+    "h": 64
+  },
+  "button_png": {
+    "x": 533.0,
+    "y": 426.0,
+    "w": 180.0,
+    "h": 64.0
+  },
+  "png": "before.png"
+}

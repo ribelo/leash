@@ -1,0 +1,21 @@
+{
+  "command": [
+    "eval",
+    "[redacted]",
+    "return {state: window.__state, hits: window.__hits}"
+  ],
+  "exit_code": 0,
+  "reply": {
+    "value": {
+      "state": "launched",
+      "hits": [
+        {
+          "x": 308,
+          "y": 282,
+          "inside": true
+        }
+      ]
+    }
+  },
+  "raw": null
+}
