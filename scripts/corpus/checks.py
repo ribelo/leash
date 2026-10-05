@@ -81,6 +81,7 @@ def start_fixture(mission, ctx):
             ctx.secret_files[name] = p
         f.base = ""
         f.downloads_before = set(downloads(ctx))
+        f.started = time.time()
     ctx.fixture = f
     return f
 
@@ -253,8 +254,25 @@ def check(mission, reply, ctx):
             ok = bool(amounts) and norm(amounts[0].replace(" zł", "")) in text
             return ok, f"page (fresh tab, low-level text) shows {amounts[:3]}"
         if kind == "tauron_pdf":
-            new = [n for n in downloads(ctx) if n not in f.downloads_before and n.lower().endswith(".pdf")]
-            return bool(new), f"new PDF(s): {new[:2]}"
+            # revert-3scf: a PDF written during this cell (by file time, so a re-download
+            # under an existing name counts), exactly one invoice, and that invoice the
+            # newest one the account page lists (read in a fresh tab, low-level).
+            d = ctx.svc.root / "data/leash/profile/downloads"
+            new = sorted(p.name for p in d.glob("*.pdf") if p.stat().st_mtime >= f.started) if d.is_dir() else []
+            def number(name):
+                m = re.search(r"_(\d{4})_(\d{2})", name)
+                return (m.group(2), m.group(1)) if m else None
+            invoices = sorted({number(n) for n in new if number(n)})
+            st = ctx.svc.cli("new", "https://moj.tauron.pl/")
+            tab = (st or {}).get("tab")
+            time.sleep(8)
+            page = (ctx.svc.cli("text", tab) or {}).get("text", "") if tab else ""
+            if tab:
+                ctx.svc.cli("close", tab)
+            listed = sorted({(y, n) for n, y in re.findall(r"E/TM2/\w+/(\d{4})/(\d{2})", page)})
+            newest = listed[-1] if listed else None
+            ok = len(invoices) == 1 and (newest is None or invoices[0] == newest)
+            return ok, f"new PDF(s): {new[:3]}; invoices {invoices}; newest listed {newest or 'not on the page'}"
     except Exception as e:  # the truth could not be read: the cell cannot pass
         return False, f"check failed: {e}"
     return False, f"unknown check {kind}"

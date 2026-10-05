@@ -137,7 +137,7 @@ let default_planner_reasoning = "max"
 (* daily-9ggi: per-attempt provider budgets, independent of the mission deadline. *)
 let default_decision_timeout = 10
 let default_text_timeout = 10
-let default_planner_timeout = 60
+let default_planner_timeout = 180
 
 type models = {
   api_key : Redact.t option;

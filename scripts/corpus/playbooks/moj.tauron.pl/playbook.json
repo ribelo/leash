@@ -2,7 +2,7 @@
  "site": "moj.tauron.pl",
  "entry": "https://moj.tauron.pl/",
  "description": "Tauron customer account: payments and invoices.",
- "notes": "Login happens on logowanie.tauron.pl with the login and password secrets. After login the home page shows 'Najbliższa płatność' with the amount, 'Po terminie: N dni' when overdue, and each item's 'Termin' date. Invoices are under 'Faktury i płatności' (Faktury); each invoice row has a PDF download. Download only the newest one.",
+ "notes": "Login happens on logowanie.tauron.pl with the login and password secrets. After login the home page shows 'Najbliższa płatność' with the amount, 'Po terminie: N dni' when overdue, and each item's 'Termin' date. Invoices (Faktury) are listed newest first by issue date; expand the list with 'Rozwiń'. The latest invoice is the first row: open it and download its PDF once. Do not filter by date range. A finished download appears in the tab's downloads; do not click it again.",
  "pages": [
   {
    "name": "home",
