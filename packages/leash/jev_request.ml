@@ -355,7 +355,7 @@ let make ~model ~goal ~snapshot ~text ~recent ~can_scroll_down ~can_scroll_up =
     shown_url = None;
     image = None;
     look = false;
-    point_levels = 20;
+    point_levels = 10;
   }
 
 (* dmod-7w26 dmod-4ky5: a screenshot in the state also offers CLICK_AT on it. *)

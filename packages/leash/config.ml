@@ -350,13 +350,15 @@ let default_traces = { enabled = true; retention = Traces.Retention.default }
 type decision = {
   image_when_rows_below : int; [@json.default 3]
   look : bool; [@json.default false]
-  point_levels : int; [@json.default 20]
+  point_levels : int; [@json.default 10]
 }
 [@@deriving yojson]
 
 (* corp-ex9w: LOOK is off by default; the 2026-10-05 corpus measured no gain from it
    (Clef 120/180 with LOOK against 118/180 without). *)
-let default_decision = { image_when_rows_below = 3; look = false; point_levels = 20 }
+(* revert-ook4: Clef's Decisions API takes at most 10 score criteria (HTTP 422 "List should
+   have at most 10 items"); every model that sees images is Clef, so 10 is the bound. *)
+let default_decision = { image_when_rows_below = 3; look = false; point_levels = 10 }
 
 type skill = { roots : Text.t list [@json.default []] } [@@deriving yojson]
 
@@ -465,7 +467,7 @@ let default_toml =
 # [decision]                 # used only when the decision model accepts images
 # image_when_rows_below = 3  # 0..250; screenshot when fewer actionable rows (0 never)
 # look = false               # offer LOOK, at most one per two steps (no measured gain)
-# point_levels = 20          # 2..100 bands per axis for CLICK_AT
+# point_levels = 10          # 2..10 bands per axis for CLICK_AT
 #
 # [handoff]
 # timeout_s = 300            # bounded human wait in seconds
@@ -1098,7 +1100,7 @@ let collect json =
                                        "expected an integer between %d and %d" minimum
                                        maximum);
                                 ]))
-                    [ ("image_when_rows_below", 0, 250); ("point_levels", 2, 100) ])
+                    [ ("image_when_rows_below", 0, 250); ("point_levels", 2, 10) ])
       in
       let notify_errors =
         match List.assoc_opt "notify" fields with

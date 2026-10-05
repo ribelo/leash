@@ -26,6 +26,8 @@ ADR-0012 made the planner own the mission. The operator never decided that; the 
 
 11. As the operator, I want a Clef-family decision model never asked a choice question with a single option, so that a page with one textbox or one link does not end the mission with HTTP 422. Workers AI refuses a choice under two options ("questions: Dictionary should have at least 2 items"); JEV accepts one. The first corpus run on the reverted loop ended 35 of 60 Clef cells this way. ^revert-v1hm
 
+12. As the operator, I want CLICK_AT asked over at most 10 bands per axis, so that a Clef model given a screenshot is not refused. Clef's Decisions API takes at most 10 score criteria (HTTP 422); the default was 20, which ended 22 of the canvas cells. ^revert-ook4
+
 ## Out of Scope
 
 Anything new.
