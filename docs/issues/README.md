@@ -193,6 +193,14 @@ L53's compile-from-traces failed three honest rounds; the cause was the loop's s
 | L57C | **Notification cancellation** (`pilot/01-pilot.md`). Cancel/dismiss immediately returns canceled-by-operator, stops the pilot and preserves the durable outcome; notifications stay enabled. Regression and isolated real-notify-send checks pass. | pilot-9u3q | L57 | [x] |
 | L58 | **Operate the picture** ([picture](<picture/01-picture.md>), ADR-0013). First-class CSS-coordinate click/dblclick/scroll/drag and focused type; hit/post-action screenshot evidence; aligned shot metadata and snap images with row boxes; bounded image-aware pilot; skill and help browser; fake-browser tests, live canvas. **Before L57F.** | pic-egvj, pic-f2hy, pic-33hm, pic-ncu1, pic-7nv6, pic-7ozf, pic-k4ij, pic-1jrz, pic-cqcf, pic-iomj | L44, L56, ADR-0013 | [x] |
 
+## Milestone 14 — written, not learned; measured, not argued (ADR-0014)
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L59 | **Cut learning** (`cut-learning/01-cut-learning.md`). Leg memory, gates, repair, proposals, `[learning]`, inferred kinds removed; `notes` added; procedures and scripts unchanged; docs and tests follow. | cut-6mvl, cut-0oal, cut-tsk4, cut-yk93, cut-sqlp, cut-ncyj, cut-kifp, cut-xd4h | — | [ ] |
+| L60 | **Decision model** (`decision-model/01-decision-model.md`). Configured model id (JEV, Clef, Clef Flash); modalities from OpenRouter; screenshot when rows are useless (B) and LOOK as an operation (C); point targets for multimodal; truncation probe; fake server; cost names the model. | dmod-27vx, dmod-m3q5, dmod-7w26, dmod-mcgn, dmod-4ky5, dmod-pjmy, dmod-as71, dmod-f4lf, dmod-l44q, dmod-ibfy | L59 | [ ] |
+| L61 | **Corpus** (`corpus/01-corpus.md`). Twenty public missions × three styles × {none, notes, procedures} × {jev, clef, clef-flash} × {image off, B, C}; one command, one table under docs/corpus; U2 first; defaults and skill set by the table; 'drive first' in the skill. | corp-667a, corp-v36x, corp-o5zb, corp-c596, corp-5p13, corp-zeh2, corp-337k, corp-fplj, corp-ex9w, corp-a7md, corp-duu0, corp-nzkf | L60 | [ ] |
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
