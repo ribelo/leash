@@ -1,0 +1,21 @@
+{
+ "id": "u8-books-travel-jsonl",
+ "site": "books.toscrape.com",
+ "url": "https://books.toscrape.com/",
+ "out": true,
+ "tags": [
+  "public",
+  "U8",
+  "books",
+  "collect"
+ ],
+ "styles": {
+  "loose": "Collect every title and price in category Travel to a JSONL file",
+  "goal": "Collect every book title and price in the Travel category to a JSONL file. Result: how many records were written.",
+  "steps": "1. Open the Travel category. 2. Read every book's title and price on it. 3. Return them as records. Result: how many records were written."
+ },
+ "check": {
+  "kind": "books_jsonl",
+  "source": "https://books.toscrape.com/catalogue/category/books/travel_2/index.html"
+ }
+}

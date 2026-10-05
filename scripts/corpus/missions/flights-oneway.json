@@ -1,0 +1,19 @@
+{
+ "id": "flights-oneway",
+ "site": "www.google.com",
+ "url": "https://www.google.com/travel/flights",
+ "tags": [
+  "public",
+  "flights"
+ ],
+ "styles": {
+  "loose": "What is the cheapest one-way flight from Warsaw to Lisbon on Google Flights",
+  "goal": "Find the cheapest one-way flight from Warsaw to Lisbon on Google Flights. Result: its price in PLN.",
+  "steps": "1. Choose One way. 2. Set Warsaw to Lisbon. 3. Look at the cheapest one-way price over the coming weeks. Result: that price in PLN."
+ },
+ "check": {
+  "kind": "regex_on_source",
+  "source": "https://www.google.com/travel/flights/flights-from-warsaw-to-lisbon.html?curr=PLN&hl=en",
+  "pattern": "cheapest one-way flight from Warsaw to Lisbon is currently (PLN\\W?[\\d,]+)"
+ }
+}

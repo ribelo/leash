@@ -336,6 +336,111 @@ let action_refusal () =
       ("Send", "Pay and send a message", true);
     ]
 
+(* pilot-l7a5 pilot-nmq5: a read and an upload are in the history the next turn sees. *)
+let reads_and_uploads_in_history () =
+  let h, requests, _ =
+    harness ~text:"Fact 42"
+      [
+        reply (R.Read { quote = "Fact 42"; note = "the answer" });
+        reply
+          (R.Act
+             (P.Upload P.{ tab; snapshot = sid; index = 1; paths = [ "/tmp/report.txt" ] }));
+        finish;
+      ]
+  in
+  let row =
+    P.
+      {
+        index = 1;
+        role = "file-input";
+        name = "File";
+        value = None;
+        state = None;
+        options = None;
+        box = None;
+      }
+  in
+  let h =
+    {
+      h with
+      R.observe =
+        (fun ~image:_ () ->
+          Ok
+            {
+              (page "Fact 42") with
+              R.snapshot = { snapshot with rows = [ row ]; total = 1 };
+            });
+    }
+  in
+  let _result =
+    ran
+      (R.loop ~handler:h
+         ~now:(fun () -> 0.)
+         ~installed:[]
+         ~planner_action:(fun _ ->
+           Ok
+             P.
+               {
+                 tab;
+                 url = snapshot.url;
+                 title = snapshot.title;
+                 snapshot = None;
+                 dialog = None;
+                 popups = [];
+                 hits = None;
+                 shots = None;
+                 via = None;
+               })
+         (params ~mission:"Upload /tmp/report.txt and read the fact" ()))
+  in
+  let last = List.hd !requests in
+  let goals = List.map (fun (l : R.leg) -> l.goal) last.R.legs in
+  Alcotest.(check bool)
+    "pilot-l7a5 the read is in the history" true
+    (List.mem "Read: Fact 42" goals);
+  Alcotest.(check bool)
+    "pilot-nmq5 the upload names file and row" true
+    (List.mem "Attach /tmp/report.txt to the file-input named File" goals)
+
+(* dmod-l44q: the run's data totals the image parts and decision-call input tokens of
+   every leg. *)
+let leg_accounting () =
+  let h, _, _ =
+    harness ~statuses:[ "done"; "done" ] [ reply (R.Leg "a"); reply (R.Leg "b"); finish ]
+  in
+  let state parts tokens =
+    `Assoc
+      [
+        ("metrics", `Assoc [ ("image_parts", `Int parts) ]);
+        ( "predictions",
+          `List
+            (List.map
+               (fun n -> `Assoc [ ("usage", `Assoc [ ("input_tokens", `Int n) ]) ])
+               tokens) );
+      ]
+  in
+  let legs = ref [ state 1 [ 900; 2198 ]; state 2 [ 1500 ] ] in
+  let h =
+    {
+      h with
+      R.step =
+        (fun _ ->
+          match !legs with
+          | s :: rest ->
+              legs := rest;
+              Ok { (drive "done") with P.operator_state = Some s }
+          | [] -> Alcotest.fail "no more legs");
+    }
+  in
+  let result = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
+  let data key = Yojson.Safe.Util.member key result.data in
+  Alcotest.(check string)
+    "dmod-l44q image parts summed" "3"
+    (Yojson.Safe.to_string (data "image_parts"));
+  Alcotest.(check string)
+    "dmod-l44q decision input tokens kept" "[900,2198,1500]"
+    (Yojson.Safe.to_string (data "decision_input_tokens"))
+
 (* pilot-sc9t: records the pilot returns with done go to --out as pilot-record lines,
    and only when every value is text the mission read. *)
 let pilot_records () =
@@ -884,5 +989,8 @@ let () =
             ("pilot-h506 pilot uploads only named files", pilot_upload);
             ("pilot-gn4w pilot-pw7x generated password", generated_password);
             ("pilot-sc9t pilot records reach --out", pilot_records);
+            ("dmod-l44q leg accounting", leg_accounting);
+            ( "pilot-l7a5 pilot-nmq5 reads and uploads in history",
+              reads_and_uploads_in_history );
           ] );
     ]

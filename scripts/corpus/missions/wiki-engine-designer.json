@@ -1,0 +1,21 @@
+{
+ "id": "wiki-engine-designer",
+ "site": "en.wikipedia.org",
+ "url": "https://en.wikipedia.org/",
+ "tags": [
+  "public",
+  "wiki",
+  "navigate"
+ ],
+ "styles": {
+  "loose": "Who designed the Analytical Engine, per Wikipedia",
+  "goal": "Open the Wikipedia article on the Analytical Engine. Result: who designed it.",
+  "steps": "1. Search Wikipedia for Analytical Engine. 2. Open the article. 3. Read who designed it. Result: that person."
+ },
+ "check": {
+  "kind": "contains",
+  "truth": "Charles Babbage",
+  "source": "wikipedia",
+  "page": "Analytical_engine"
+ }
+}

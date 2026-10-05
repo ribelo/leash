@@ -353,12 +353,14 @@ let default_pilot = { turns = 12; deadline_s = 600 }
    many bands each axis of a CLICK_AT point is chosen from. A text-only model gets none. *)
 type decision = {
   image_when_rows_below : int; [@json.default 3]
-  look : bool; [@json.default true]
+  look : bool; [@json.default false]
   point_levels : int; [@json.default 20]
 }
 [@@deriving yojson]
 
-let default_decision = { image_when_rows_below = 3; look = true; point_levels = 20 }
+(* corp-ex9w: LOOK is off by default; the 2026-10-05 corpus measured no gain from it
+   (Clef 120/180 with LOOK against 118/180 without). *)
+let default_decision = { image_when_rows_below = 3; look = false; point_levels = 20 }
 
 let pilot_of_yojson json =
   Result.bind (pilot_of_yojson json) (fun pilot ->
@@ -479,7 +481,7 @@ let default_toml =
 #
 # [decision]                 # used only when the decision model accepts images
 # image_when_rows_below = 3  # 0..250; screenshot when fewer actionable rows (0 never)
-# look = true                # offer LOOK, at most one per two steps
+# look = false               # offer LOOK, at most one per two steps (no measured gain)
 # point_levels = 20          # 2..100 bands per axis for CLICK_AT
 #
 # [handoff]

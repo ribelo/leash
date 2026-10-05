@@ -1,0 +1,19 @@
+{
+ "id": "maps-eiffel-postcode",
+ "site": "www.google.com",
+ "url": "https://www.google.com/maps",
+ "tags": [
+  "public",
+  "maps"
+ ],
+ "styles": {
+  "loose": "What is the postal code of the Eiffel Tower on Google Maps",
+  "goal": "Look up the Eiffel Tower on Google Maps. Result: the postal code in its address.",
+  "steps": "1. Search Google Maps for the Eiffel Tower. 2. Open the place. 3. Read its address. Result: the postal code."
+ },
+ "check": {
+  "kind": "wikidata",
+  "entity": "Q243",
+  "property": "P281"
+ }
+}

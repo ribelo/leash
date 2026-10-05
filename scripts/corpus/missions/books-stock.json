@@ -1,0 +1,20 @@
+{
+ "id": "books-stock",
+ "site": "books.toscrape.com",
+ "url": "https://books.toscrape.com/",
+ "tags": [
+  "public",
+  "books",
+  "read"
+ ],
+ "styles": {
+  "loose": "Is Sharp Objects in stock, and how many copies",
+  "goal": "Find the book 'Sharp Objects'. Result: whether it is in stock and how many copies are available.",
+  "steps": "1. Find 'Sharp Objects'. 2. Open it. 3. Read its availability. Result: in stock or not, and the number available."
+ },
+ "check": {
+  "kind": "regex_on_source",
+  "source": "https://books.toscrape.com/catalogue/sharp-objects_997/index.html",
+  "pattern": "In stock \\((\\d+) available\\)"
+ }
+}

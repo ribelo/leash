@@ -1,0 +1,24 @@
+{
+ "id": "ae-polo-brand",
+ "site": "automationexercise.com",
+ "url": "https://automationexercise.com/products",
+ "tags": [
+  "public",
+  "shop",
+  "navigate"
+ ],
+ "styles": {
+  "loose": "Which products does the shop list under the brand Polo",
+  "goal": "Open the brand Polo. Result: the product names listed under it.",
+  "steps": "1. In Brands, open Polo. 2. Read the product names. Result: those names."
+ },
+ "check": {
+  "kind": "contains",
+  "truth": "Blue Top",
+  "all": [
+   "Blue Top",
+   "Fancy Green Top"
+  ],
+  "source": "https://automationexercise.com/brand_products/Polo"
+ }
+}

@@ -1,0 +1,20 @@
+{
+ "id": "books-poetry-count",
+ "site": "books.toscrape.com",
+ "url": "https://books.toscrape.com/",
+ "tags": [
+  "public",
+  "books",
+  "read"
+ ],
+ "styles": {
+  "loose": "How many books are in the Poetry category",
+  "goal": "Open the Poetry category. Result: how many books it has.",
+  "steps": "1. Open the Poetry category. 2. Read the number of results. Result: that number."
+ },
+ "check": {
+  "kind": "regex_on_source",
+  "source": "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
+  "pattern": "<strong>(\\d+)</strong> results"
+ }
+}

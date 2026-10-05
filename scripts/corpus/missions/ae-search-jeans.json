@@ -1,0 +1,25 @@
+{
+ "id": "ae-search-jeans",
+ "site": "automationexercise.com",
+ "url": "https://automationexercise.com/products",
+ "tags": [
+  "public",
+  "shop",
+  "navigate"
+ ],
+ "styles": {
+  "loose": "Search the shop for jeans and list the product names",
+  "goal": "Search the products for 'jeans'. Result: the names of the products found.",
+  "steps": "1. Type jeans into the product search. 2. Submit the search. 3. Read the product names. Result: those names."
+ },
+ "check": {
+  "kind": "contains",
+  "truth": "Soft Stretch Jeans",
+  "all": [
+   "Soft Stretch Jeans",
+   "Regular Fit Straight Jeans",
+   "Grunt Blue Slim Fit Jeans"
+  ],
+  "source": "https://automationexercise.com/products?search=jeans"
+ }
+}

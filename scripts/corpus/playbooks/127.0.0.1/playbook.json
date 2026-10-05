@@ -1,0 +1,30 @@
+{
+ "site": "127.0.0.1",
+ "entry": "http://127.0.0.1/",
+ "description": "Local fixtures: registration and mailbox, file upload, member portal, canvas page.",
+ "notes": "Local test pages. /register: an email field, two password fields and Register; the confirmation mail arrives in Mailbox, where its link confirms the account. /upload: a file input, then the Upload button once; the next page shows the resulting link. /portal: a login form (username, password), then an inbox listing messages; unread ones are new. A canvas page draws its controls as pixels: use the picture.",
+ "pages": [
+  {
+   "name": "portal-login",
+   "url_pattern": null,
+   "text_marker": "Sign in to your member portal"
+  }
+ ],
+ "procedures": [
+  {
+   "slug": "portal-login",
+   "description": "Log in to the member portal with the secrets portal_user and portal_password.",
+   "steps": [
+    {
+     "goal": "Type portal_user into the textbox named Username."
+    },
+    {
+     "goal": "Type portal_password into the textbox named Password and click Sign in."
+    }
+   ],
+   "expect": [
+    "the page shows Inbox"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,20 @@
+{
+ "id": "ae-blue-top-price",
+ "site": "automationexercise.com",
+ "url": "https://automationexercise.com/",
+ "tags": [
+  "public",
+  "shop",
+  "read"
+ ],
+ "styles": {
+  "loose": "What is the price of the Blue Top on automationexercise",
+  "goal": "Find the product Blue Top. Result: its price.",
+  "steps": "1. Open Products. 2. Find Blue Top. 3. Open its details. Result: its price."
+ },
+ "check": {
+  "kind": "regex_on_source",
+  "source": "https://automationexercise.com/product_details/1",
+  "pattern": "(Rs\\. \\d+)"
+ }
+}

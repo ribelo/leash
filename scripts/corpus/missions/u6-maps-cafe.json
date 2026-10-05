@@ -1,0 +1,19 @@
+{
+ "id": "u6-maps-cafe",
+ "site": "www.google.com",
+ "url": "https://www.google.com/maps",
+ "tags": [
+  "public",
+  "U6",
+  "maps"
+ ],
+ "styles": {
+  "loose": "Find a cafe near the Eiffel Tower with rating over 4 and give me its name and address",
+  "goal": "Find a cafe near the Eiffel Tower in Paris rated above 4 on Google Maps. Result: its name, rating and address.",
+  "steps": "1. Search Google Maps for cafes near the Eiffel Tower. 2. Pick one whose rating is above 4. 3. Open it. Result: its name, rating and address."
+ },
+ "check": {
+  "kind": "maps_place",
+  "source": "https://www.google.com/maps/search/cafe+near+Eiffel+Tower"
+ }
+}

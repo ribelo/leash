@@ -1,0 +1,292 @@
+#!/usr/bin/env python3
+"""The Leash corpus: missions as files, one command, one table (L61, ADR-0014).
+
+    secret-env ai -- scripts/corpus/corpus list
+    secret-env ai -- scripts/corpus/corpus run [--models jev,clef,clef-flash]
+        [--styles loose,goal,steps] [--knowledge none,notes,procedures]
+        [--image off,b,c] [--missions ID,...] [--tags TAG,...] [--parallel 4]
+        [--deadline 300] [--out docs/corpus/DATE] [--leash PATH]
+
+Each (model, image, knowledge) group runs on its own private headless service with a
+temporary XDG root; every mission x style is one cell with its own deadline. A cell
+passes only by its independent check (checks.py), never by the reply's own status.
+Image modes b and c apply to a model that accepts images; a text-only model runs off
+only. Missions tagged account:* run only when their credentials exist (corp-o5zb).
+Output: results.json and results.md under --out (corp-5p13). No OCaml (corp-duu0).
+"""
+import argparse, concurrent.futures, datetime, json, os, pathlib, shutil, signal
+import subprocess, sys, tempfile, threading, time
+
+HERE = pathlib.Path(__file__).resolve().parent
+REPO = HERE.parent.parent
+sys.path.insert(0, str(HERE))
+import checks  # noqa: E402
+
+MODELS = {
+    "jev": ("typesafe/jev-1.13-20260917", False),
+    "clef": ("cloudflare/clef", True),
+    "clef-flash": ("cloudflare/clef-flash", True),
+}
+TAURON = pathlib.Path.home() / ".config/leash/use-cases/tauron"
+
+
+def load_missions():
+    return [json.loads(p.read_text()) for p in sorted((HERE / "missions").glob("*.json"))]
+
+
+def available(mission):
+    tags = mission.get("tags", [])
+    if "account:tauron" in tags:
+        return TAURON.is_file()
+    return True
+
+
+def playbook_variant(site, knowledge, into):
+    """corp-zeh2: the site's hand-written playbook, cut to the knowledge variant."""
+    src = HERE / "playbooks" / site
+    if knowledge == "none" or not (src / "playbook.json").is_file():
+        return False
+    book = json.loads((src / "playbook.json").read_text())
+    dest = into / site
+    dest.mkdir(parents=True, exist_ok=True)
+    if knowledge == "notes":
+        if not book.get("notes"):
+            return False
+        book = {k: book[k] for k in ("site", "entry", "description", "pages", "notes") if k in book}
+        book["procedures"] = []
+    else:
+        book.pop("notes", None)
+        if not book.get("procedures"):
+            return False
+        if (src / "scripts").is_dir():
+            shutil.copytree(src / "scripts", dest / "scripts", dirs_exist_ok=True)
+    (dest / "playbook.json").write_text(json.dumps(book, indent=1))
+    return True
+
+
+class Service:
+    def __init__(self, leash, model_id, image, knowledge, sites, root):
+        self.leash, self.root = leash, root
+        for d in ("config/leash/playbooks", "data", "state", "runtime", "cache"):
+            (root / d).mkdir(parents=True, exist_ok=True)
+        os.chmod(root, 0o700)
+        os.chmod(root / "runtime", 0o700)
+        self.knowledge_sites = [s for s in sites if playbook_variant(s, knowledge, root / "config/leash/playbooks")]
+        (root / "config/leash/config.toml").write_text(
+            "[chrome]\nheadless = true\n"
+            f"[models]\ndecision_model = \"{model_id}\"\n"
+            "[decision]\n"
+            f"image_when_rows_below = {3 if image == 'b' else 0}\n"
+            f"look = {'true' if image == 'c' else 'false'}\n")
+        self.env = dict(os.environ, XDG_CONFIG_HOME=str(root / "config"), XDG_DATA_HOME=str(root / "data"),
+                        XDG_STATE_HOME=str(root / "state"), XDG_RUNTIME_DIR=str(root / "runtime"),
+                        XDG_CACHE_HOME=str(root / "cache"))
+        self.log = open(root / "serve.log", "w")
+        self.proc = subprocess.Popen([leash, "serve"], env=self.env, stdout=self.log, stderr=subprocess.STDOUT)
+        for _ in range(120):
+            time.sleep(0.5)
+            st = self.cli("status")
+            if st and st.get("chrome") == "running":
+                self.status = st
+                break
+        else:
+            raise RuntimeError("service did not start: " + str(root / "serve.log"))
+        for _ in range(60):  # the start-up modalities read and tail probe (dmod-m3q5 dmod-pjmy)
+            st = self.cli("status") or {}
+            if (st.get("models") or {}).get("decision_tail_read") is not None:
+                break
+            time.sleep(1)
+        self.status = self.cli("status")
+
+    def cli(self, *args, timeout=60):
+        try:
+            p = subprocess.run([self.leash, *map(str, args)], env=self.env, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return None
+        try:
+            return json.loads(p.stdout) if p.stdout.strip() else json.loads(p.stderr)
+        except json.JSONDecodeError:
+            return None
+
+    def stop(self):
+        self.proc.send_signal(signal.SIGTERM)
+        try:
+            self.proc.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+        self.log.close()
+
+
+MODELS_IMAGE = {model_id: image for model_id, image in MODELS.values()}
+
+
+def run_cell(svc, mission, style, deadline, work):
+    """One mission in one style: fixture up, drive, independent check, fixture down."""
+    ctx = checks.Context(work, svc)
+    try:
+        fixture = checks.start_fixture(mission, ctx)
+        base = fixture.base if fixture else ""
+        text = mission["styles"][style].format(base=base, **ctx.vars)
+        url = mission.get("url", "").format(base=base)
+        args = ["drive", text, "--deadline-s", str(deadline)]
+        if url:
+            args += ["--url", url]
+        if mission.get("out"):
+            ctx.out = work / "out.jsonl"
+            args += ["--out", ctx.out]
+        for name, path in ctx.secret_files.items():
+            args += ["--secret", f"{name}=@{path}"]
+        started = time.time()
+        p = subprocess.run([svc.leash, *map(str, args)], env=svc.env, capture_output=True, text=True,
+                           timeout=deadline + 120)
+        wall = time.time() - started
+        reply = None
+        for stream in (p.stdout, p.stderr):
+            try:
+                reply = json.loads(stream)
+                break
+            except json.JSONDecodeError:
+                continue
+        reply = reply or {}
+        ok, note = checks.check(mission, reply, ctx)
+        return reply, ok, note, wall
+    finally:
+        checks.stop_fixture(ctx)
+
+
+def row(mission, style, knowledge, model, image, reply, ok, note, wall):
+    detail = reply.get("detail") or {}
+    src = reply if "pilot_turns" in reply else detail
+    data = src.get("data") or {}
+    tokens = data.get("decision_input_tokens") or []
+    model_id, multimodal = MODELS[model]
+    truncated = None if not multimodal else any(2150 <= n <= 2250 for n in tokens)
+    return {
+        "mission": mission["id"], "style": style, "knowledge": knowledge, "model": model, "image": image,
+        "pass": bool(ok), "status": reply.get("status") or (reply.get("code") and "error:" + reply["code"]),
+        "pilot_turns": src.get("pilot_turns"), "navigator_steps": src.get("navigator_steps"),
+        "calls": src.get("model_calls"), "cost": src.get("model_cost"), "wall_s": round(wall, 1),
+        "image_parts": data.get("image_parts", 0), "decision_calls": len(tokens),
+        "truncated": truncated, "note": note,
+        "result": (reply.get("result") or "")[:300],
+    }
+
+
+def table(rows):
+    head = "| mission | style | knowledge | model | image | pass | status | pilot turns | navigator steps | calls | cost $ | wall s | image parts | truncated | note |\n" \
+           "| --- | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n"
+    def cell(v):
+        if v is None:
+            return "-"
+        if isinstance(v, bool):
+            return "yes" if v else "no"
+        if isinstance(v, float):
+            return f"{v:.6f}".rstrip("0").rstrip(".")
+        return str(v).replace("|", "/").replace("\n", " ")[:160]
+    keys = ["mission", "style", "knowledge", "model", "image", "pass", "status", "pilot_turns", "navigator_steps",
+            "calls", "cost", "wall_s", "image_parts", "truncated", "note"]
+    return head + "".join("| " + " | ".join(cell(r[k]) for k in keys) + " |\n" for r in rows)
+
+
+def summary(rows):
+    """Pass rate and mean cost per factor level, for the conclusions."""
+    out = ["| factor | level | cells | passed | pass rate | mean cost $ | mean pilot turns |", "| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
+    for factor in ("model", "image", "style", "knowledge"):
+        for level in sorted({r[factor] for r in rows}):
+            rs = [r for r in rows if r[factor] == level]
+            passed = sum(r["pass"] for r in rs)
+            costs = [r["cost"] for r in rs if isinstance(r["cost"], (int, float))]
+            turns = [r["pilot_turns"] for r in rs if isinstance(r["pilot_turns"], int)]
+            out.append(f"| {factor} | {level} | {len(rs)} | {passed} | {passed / len(rs):.0%} | "
+                       f"{(sum(costs) / len(costs)) if costs else 0:.5f} | {(sum(turns) / len(turns)) if turns else 0:.1f} |")
+    return "\n".join(out) + "\n"
+
+
+def write(out, rows, args, statuses):
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "results.json").write_text(json.dumps({"args": vars(args), "services": statuses, "cells": rows}, indent=1))
+    md = out / "results.md"
+    conclusions = ""
+    if md.is_file():
+        text = md.read_text()
+        if "## Conclusions" in text:
+            conclusions = text[text.index("## Conclusions"):text.index("## Summary")] if "## Summary" in text else ""
+    md.write_text(f"# Corpus run {out.name}\n\n" + (conclusions or "## Conclusions\n\n(to be written from the numbers below)\n\n")
+                  + "## Summary\n\n" + summary(rows) + "\n## Cells\n\n" + table(rows))
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("list")
+    r = sub.add_parser("run")
+    r.add_argument("--models", default="jev,clef,clef-flash")
+    r.add_argument("--styles", default="loose,goal,steps")
+    r.add_argument("--knowledge", default="none,notes,procedures")
+    r.add_argument("--image", default="off,b,c")
+    r.add_argument("--missions", default="")
+    r.add_argument("--tags", default="")
+    r.add_argument("--parallel", type=int, default=4)
+    r.add_argument("--deadline", type=int, default=300)
+    r.add_argument("--out", default=str(REPO / "docs/corpus" / datetime.date.today().isoformat()))
+    r.add_argument("--leash", default=str(REPO / "_build/default/packages/leash/bin/main.exe"))
+    args = ap.parse_args()
+    missions = load_missions()
+    if args.cmd == "list":
+        for m in missions:
+            print(f"{m['id']:36} {m['site']:24} {','.join(m.get('tags', [])):30} {'available' if available(m) else 'skipped'}")
+        return
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        sys.exit("OPENROUTER_API_KEY is not set; run under secret-env ai --")
+    pick = [m for m in missions if available(m)
+            and (not args.missions or m["id"] in args.missions.split(","))
+            and (not args.tags or set(args.tags.split(",")) & set(m.get("tags", [])))]
+    sites = sorted({m["site"] for m in pick})
+    rows, statuses = [], []
+    out = pathlib.Path(args.out)
+    if (out / "results.json").is_file():
+        rows = json.loads((out / "results.json").read_text())["cells"]
+    done = {(c["mission"], c["style"], c["knowledge"], c["model"], c["image"]) for c in rows}
+    lock = threading.Lock()
+    scratch = pathlib.Path(tempfile.mkdtemp(prefix="leash-corpus-"))
+    for model in args.models.split(","):
+        model_id, multimodal = MODELS[model]
+        for image in args.image.split(","):
+            if image != "off" and not multimodal:
+                continue
+            for knowledge in args.knowledge.split(","):
+                cells = [(m, s) for m in pick for s in args.styles.split(",")
+                         if (m["id"], s, knowledge, model, image) not in done
+                         and (knowledge == "none" or (HERE / "playbooks" / m["site"] / "playbook.json").is_file())]
+                if not cells:
+                    continue
+                root = scratch / f"{model}-{image}-{knowledge}"
+                svc = Service(args.leash, model_id, image, knowledge, sites, root)
+                statuses.append({"group": root.name, "models": (svc.status or {}).get("models"), "knowledge_sites": svc.knowledge_sites})
+                print(f"== {root.name}: {len(cells)} cells; modalities {((svc.status or {}).get('models') or {}).get('decision_modalities')}", flush=True)
+                try:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as pool:
+                        futures = {}
+                        for i, (m, s) in enumerate(cells):
+                            work = root / "cells" / f"{m['id']}-{s}"
+                            work.mkdir(parents=True, exist_ok=True)
+                            futures[pool.submit(run_cell, svc, m, s, args.deadline, work)] = (m, s)
+                        for f in concurrent.futures.as_completed(futures):
+                            m, s = futures[f]
+                            try:
+                                reply, ok, note, wall = f.result()
+                            except Exception as e:  # a harness failure is a failed cell, recorded
+                                reply, ok, note, wall = {}, False, f"harness: {e}", 0.0
+                            r = row(m, s, knowledge, model, image, reply, ok, note, wall)
+                            with lock:
+                                rows.append(r)
+                                write(out, rows, args, statuses)
+                            print(f"   {'PASS' if ok else 'fail'} {m['id']} {s}: {note[:100]}", flush=True)
+                finally:
+                    svc.stop()
+    write(out, rows, args, statuses)
+    print(f"wrote {out / 'results.md'}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,20 @@
+{
+ "id": "books-mystery-page2",
+ "site": "books.toscrape.com",
+ "url": "https://books.toscrape.com/",
+ "tags": [
+  "public",
+  "books",
+  "navigate"
+ ],
+ "styles": {
+  "loose": "What is the first book on page 2 of the Mystery category",
+  "goal": "Open page 2 of the Mystery category. Result: the title of its first book.",
+  "steps": "1. Open the Mystery category. 2. Go to the next page. 3. Read the first book's title. Result: that title."
+ },
+ "check": {
+  "kind": "contains",
+  "truth": "The Mysterious Affair at Styles",
+  "source": "https://books.toscrape.com/catalogue/category/books/mystery_3/page-2.html"
+ }
+}

@@ -9,6 +9,10 @@ Use Leash to inspect, debug, or drive pages in its managed Chrome. It is not the
 
 This skill is guidance, not permission. Stay inside the user's request.
 
+## Drive first
+
+For any browser task with a describable outcome, run `leash drive` first, written as a goal with its result: what to achieve, then `Result:` and what to return. Example: `leash drive "Open the Poetry category on books.toscrape.com. Result: how many books it has."` In the 2026-10-05 corpus that style passed 76% of cells, against 69% for numbered steps and 57% for a loose request, and it was the cheapest. Use the low-level commands (`snap`, `text`, `click`, …) to inspect, to verify a result independently, and for what drive reports it cannot do. For a site you drive again, a playbook's `notes` help more than procedures (304/420 against 254/420 passed).
+
 ## Run a mission
 
 Read [the mission reference](references/drive.md) before driving an outcome: it covers result/limits, credentials, independent verification and known gate failures. Use `leash drive MISSION` with optional playbooks; use manual commands for inspection. Retain a tab with `--tab HANDLE` when you need post-run verification; otherwise drive normally closes its own tab.

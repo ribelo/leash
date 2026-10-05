@@ -1,0 +1,25 @@
+{
+ "id": "u10-portal-new-message",
+ "site": "127.0.0.1",
+ "url": "{base}/portal",
+ "fixture": "fixtures",
+ "secrets": [
+  "portal_user",
+  "portal_password"
+ ],
+ "tags": [
+  "public",
+  "U10",
+  "fixture"
+ ],
+ "styles": {
+  "loose": "Is there a new message in my fixture portal inbox, and what does it say",
+  "goal": "Log in to the fixture portal and read the new message in the inbox. Result: the message text, or no new messages.",
+  "steps": "1. Log in with portal_user and portal_password. 2. Open the inbox. 3. Open the unread message. Result: its text."
+ },
+ "check": {
+  "kind": "fixture_message",
+  "message": "new",
+  "phrase": "REF-2048"
+ }
+}

@@ -547,6 +547,48 @@ let challenge_case
       boolean "pilot decisions recorded" (result.pilot_turns > 0);
       if not attempt then Alcotest.(check int) "disabled never reaches JEV" 0 !jev)
 
+(* pilot-izn0: a pilot row act runs under focus emulation, as public actions do; a
+   background tab drops input otherwise. *)
+let row_act_focus
+    ~(caps :
+       < Ox_caps.Cap.env
+       ; Ox_caps.Cap.exec
+       ; Ox_caps.Cap.fork
+       ; Ox_caps.Cap.fs_read
+       ; Ox_caps.Cap.fs_write
+       ; Ox_caps.Cap.random
+       ; .. >) () =
+  let plans = ref 0 in
+  rig ~caps (fun _ _ tabs fake ->
+      set_ax fake "Continue";
+      let result =
+        run tabs
+          ~plan:(fun request ->
+            incr plans;
+            if !plans = 1 then reply (click request)
+            else reply (R.Done { result = "Clicked"; evidence = []; records = [] }))
+          ~decide:(fun _ -> Ok (decision "done"))
+      in
+      status "done" result;
+      let unfocused, _ =
+        List.fold_left
+          (fun (unfocused, focused) r ->
+            match member "method" r with
+            | `String "Emulation.setFocusEmulationEnabled" ->
+                (unfocused, member "enabled" (member "params" r) = `Bool true)
+            | `String "Input.dispatchMouseEvent" when not focused ->
+                (unfocused + 1, focused)
+            | _ -> (unfocused, focused))
+          (0, false) (Fake.received fake)
+      in
+      Alcotest.(check bool)
+        "pilot-izn0 the click was dispatched" true
+        (List.exists
+           (fun r -> member "method" r = str "Input.dispatchMouseEvent")
+           (Fake.received fake));
+      Alcotest.(check int)
+        "pilot-izn0 every pilot row input under focus emulation" 0 unfocused)
+
 let forbidden_challenge_actions
     ~(caps :
        < Ox_caps.Cap.env
@@ -1092,6 +1134,8 @@ let () =
         [
           Alcotest.test_case "pic-cqcf first-class empty-row picture pilot" `Quick
             (picture_pilot ~caps);
+          Alcotest.test_case "pilot-izn0 pilot row acts engage focus" `Quick
+            (row_act_focus ~caps);
           Alcotest.test_case "notif-7o8j notif-m37y notif-7pha notify survives failure"
             `Quick (fun () -> notify_then_done ~caps ());
           Alcotest.test_case "notif-oslv bounded handoff retains tab" `Quick

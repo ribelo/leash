@@ -8,3 +8,5 @@ result
 _build_*/
 # OCaml 5 runtime-events ring files (<pid>.events) left by instrumented test runs.
 /*.events
+# Python bytecode the corpus runner writes when it imports checks.py
+__pycache__/

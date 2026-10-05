@@ -1,0 +1,20 @@
+{
+ "id": "books-price",
+ "site": "books.toscrape.com",
+ "url": "https://books.toscrape.com/",
+ "tags": [
+  "public",
+  "books",
+  "read"
+ ],
+ "styles": {
+  "loose": "How much does A Light in the Attic cost",
+  "goal": "Find the book 'A Light in the Attic'. Result: its price.",
+  "steps": "1. Find 'A Light in the Attic' in the catalogue. 2. Open it. Result: its price."
+ },
+ "check": {
+  "kind": "contains",
+  "truth": "£51.77",
+  "source": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
+ }
+}

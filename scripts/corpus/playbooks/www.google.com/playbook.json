@@ -1,0 +1,60 @@
+{
+ "site": "www.google.com",
+ "entry": "https://www.google.com/",
+ "description": "Google Flights and Google Maps.",
+ "notes": "A consent page may come first: choose Reject all. Google Flights: set origin and destination in the 'Where from?' and 'Where to?' comboboxes and pick the matching suggestion; the Departure field opens a calendar whose days show prices; 'Round trip' can be switched to 'One way'. Google Maps: the search box takes a place or 'cafe near X'; results list name, rating and address; opening a result shows its address.",
+ "pages": [
+  {
+   "name": "flights",
+   "url_pattern": "https://www.google.com/travel/flights*",
+   "text_marker": null
+  },
+  {
+   "name": "maps",
+   "url_pattern": "https://www.google.com/maps*",
+   "text_marker": null
+  }
+ ],
+ "procedures": [
+  {
+   "slug": "flights-route",
+   "description": "On Google Flights, set a route from an origin to a destination.",
+   "args": {
+    "origin": {
+     "from": "mission"
+    },
+    "destination": {
+     "from": "mission"
+    }
+   },
+   "steps": [
+    {
+     "goal": "Type {origin} into the combobox named Where from? and choose the matching suggestion."
+    },
+    {
+     "goal": "Type {destination} into the combobox named Where to? and choose the matching suggestion."
+    }
+   ],
+   "expect": [
+    "the page is flights"
+   ]
+  },
+  {
+   "slug": "maps-search",
+   "description": "Search Google Maps for a place or a kind of place.",
+   "args": {
+    "query": {
+     "from": "mission"
+    }
+   },
+   "steps": [
+    {
+     "goal": "Type {query} into the Google Maps search box and submit it."
+    }
+   ],
+   "expect": [
+    "the page is maps"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,19 @@
+{
+ "id": "u9-upload",
+ "site": "127.0.0.1",
+ "url": "{base}/upload",
+ "fixture": "fixtures",
+ "tags": [
+  "public",
+  "U9",
+  "fixture"
+ ],
+ "styles": {
+  "loose": "Upload {file} to the fixture upload service and tell me the resulting link",
+  "goal": "Upload {file} to the fixture upload service once. Result: the resulting link.",
+  "steps": "1. Attach {file} to the file input. 2. Click Upload once. 3. Read the link on the result page. Result: the link."
+ },
+ "check": {
+  "kind": "fixture_upload"
+ }
+}

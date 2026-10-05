@@ -1,0 +1,22 @@
+{
+ "id": "u1-tauron-overdue",
+ "site": "moj.tauron.pl",
+ "url": "https://moj.tauron.pl/",
+ "fixture": "tauron",
+ "secrets": [
+  "login",
+  "password"
+ ],
+ "tags": [
+  "account:tauron",
+  "U1"
+ ],
+ "styles": {
+  "loose": "Check whether I owe anything on Tauron and tell me what is overdue",
+  "goal": "Log in to Tauron and read what is overdue. Result: the overdue amounts and due dates, or nothing overdue.",
+  "steps": "1. Log in with login and password. 2. Read the next-payment summary. Result: overdue amounts with due dates, or nothing overdue."
+ },
+ "check": {
+  "kind": "tauron_overdue"
+ }
+}

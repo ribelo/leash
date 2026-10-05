@@ -388,6 +388,23 @@ let loop ~handler ~now ~installed
   (* pilot-sc9t: the page text and row names this mission read, against which every value
      of a pilot record is checked, and how many records the pilot wrote. *)
   let observed = ref [] and pilot_records = ref 0 in
+  (* dmod-l44q: over every leg, the screenshots sent to the decision model and each of its
+     calls' input tokens, so a run's cost names what the navigator was shown. *)
+  let image_parts = ref 0 and decision_tokens = ref [] in
+  let absorb = function
+    | Some (`Assoc state) ->
+        let field key = function `Assoc fields -> List.assoc_opt key fields | _ -> None in
+        (match Option.bind (List.assoc_opt "metrics" state) (field "image_parts") with
+         | Some (`Int n) -> image_parts := !image_parts + n
+         | _ -> ());
+        (match List.assoc_opt "predictions" state with
+         | Some (`List predictions) ->
+             List.iter (fun prediction ->
+               match Option.bind (field "usage" prediction) (field "input_tokens") with
+               | Some (`Int n) -> decision_tokens := !decision_tokens @ [ n ]
+               | _ -> ()) predictions
+         | _ -> ())
+    | _ -> () in
   let script_calls = ref [] in
   let reasoning = ref None and current_book = ref None and planned_choice = ref None in
   let remaining () = max 1 (int_of_float (deadline -. now ())) in
@@ -409,6 +426,8 @@ let loop ~handler ~now ~installed
       collected = List.length !records;
       data = `Assoc (["count", `Int (List.length !records); "first", `List (List.rev !records)]
         @ (match !planned_choice with None -> [] | Some choice -> ["pilot_choice", choice])
+        @ ["image_parts", `Int !image_parts;
+           "decision_input_tokens", `List (List.map (fun n -> `Int n) !decision_tokens)]
         @ usage_fields);
       model_calls = call_count; model_cost; operator_steps = List.rev !operator_steps;
       operator_state = !operator_state; output_kinds = (if List.length !records > !pilot_records then ["script-record"] else [])
@@ -463,6 +482,7 @@ let loop ~handler ~now ~installed
         total_steps := !total_steps + List.length drive.P.steps;
         operator_steps := List.rev_append drive.steps !operator_steps;
         operator_state := drive.operator_state;
+        absorb drive.operator_state;
         let outcome = P.Drive_status.to_string drive.status in
         legs := !legs @ [{ goal; outcome; steps = drive.steps }];
         let entry = P.{ revision = None; slug = goal; site = Option.value ~default:"" !current_site;
@@ -675,6 +695,9 @@ let loop ~handler ~now ~installed
       | P.Fill a -> Printf.sprintf "Type %s into %s" (scrub a.text) named
       | P.Select _ -> "Choose an option in " ^ named
       | P.Press a -> Printf.sprintf "Press %s on %s" a.key named
+      (* pilot-nmq5: the history says which file went into which row, so the pilot sees
+         the attach is done (the corpus u9 cell re-attached twelve times). *)
+      | P.Upload a -> Printf.sprintf "Attach %s to %s" (String.concat ", " (List.map scrub a.paths)) named
       | _ -> name in
     legs := !legs @ [ { goal = described;
       outcome = (match step.error with None -> "done" | Some why -> "refused: " ^ why);
@@ -784,7 +807,12 @@ let loop ~handler ~now ~installed
               let why = if contains ~needle:quote page.text && quote <> "" then None else Some "read quote is not on the current page" in
               let step = P.{non_repeatable = false; n = 1; command = "read"; target = None;
                 text = Some (scrub quote); after = {url=page.url; title=page.title}; elapsed_ms=0; error=why; hits=None; shots=None} in
-              on_planner_step step; recorded [step] (Some note); next ()
+              on_planner_step step; recorded [step] (Some note);
+              (* pilot-l7a5: a read enters the history like an act, so the pilot sees it
+                 already read the answer (the corpus books-price cell read twelve times). *)
+              legs := !legs @ [ { goal = "Read: " ^ scrub quote;
+                outcome = (match why with None -> "done" | Some why -> "refused: " ^ why); steps = [] } ];
+              next ()
           | Notify message ->
               let outcome = notify (scrub message) in
               unattended := `Assoc ["kind",`String "notify";"message",`String (scrub message);"outcome",`String (if Result.is_ok outcome then "sent" else "failed")] :: !unattended;

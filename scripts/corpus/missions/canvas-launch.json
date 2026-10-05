@@ -1,0 +1,19 @@
+{
+ "id": "canvas-launch",
+ "site": "127.0.0.1",
+ "url": "{base}/",
+ "fixture": "canvas",
+ "tags": [
+  "public",
+  "canvas",
+  "picture"
+ ],
+ "styles": {
+  "loose": "Press the Launch button on this page",
+  "goal": "Click the Launch button drawn on the canvas exactly once. Result: what the canvas shows afterwards.",
+  "steps": "1. Find the Launch button drawn on the canvas (it is a picture, not a page control). 2. Click it once. 3. Check the canvas shows Launched. Result: what it shows."
+ },
+ "check": {
+  "kind": "canvas"
+ }
+}

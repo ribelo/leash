@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: completed
 milestone: 14
 ---
 
@@ -23,6 +23,16 @@ Every question left — which decision model, whether to send screenshots, how a
 10. As an agent, I want the skill rewritten to say first: for any browser task with a describable outcome, run `leash drive` with the style the corpus found best; use low-level commands for inspection and for what drive reports it cannot do, so that agents reach for drive first. ^corp-a7md
 11. As a maintainer, I want the corpus runner to be a shell/Python script in the repo with no new OCaml, so that it costs nothing to change. ^corp-duu0
 12. As a maintainer, I want a corpus cell that fails by a Leash defect (not a model's choice) to be filed as a story with its ID, so that the corpus feeds hardening. ^corp-nzkf
+
+## Delivery — 2026-10-05
+
+- **Layout:** the runner is `scripts/corpus/corpus`. `scripts/corpus/` is the directory the spec names for missions and playbooks, so it cannot also be the command. Missions are `scripts/corpus/missions/<id>.json` (22: 20 public, U1/U2 tagged `account:tauron`). Checks are `scripts/corpus/checks.py`. Playbooks are `scripts/corpus/playbooks/<site>/`: one per site, holding notes, procedures and scripts, cut by the runner into the `notes` and `procedures` variants.
+- **Parallelism:** each (model, image, knowledge) group runs on its own private headless service. Groups ran as parallel processes (15 × 4 cells) on one frozen build.
+- **Checks:** the truth comes from plain HTTP fetches (books, automationexercise, Wikipedia, the Google Flights overview), Wikidata, the fixtures' state files, or the canvas page's own click log. u6-maps-cafe and the Tauron missions read a fresh tab with the low-level `new`/`text` commands, never `drive`, because those pages render only in a browser.
+- **U2 (corp-337k):** asked to run the U2 cell, the operator answered that he runs nothing. Consistent with the earlier U1/U2 gates, the agent ran the 9 U2 cells on his account, one at a time (3/9 passed).
+- **Defects found and fixed before the full run (corp-nzkf):** pilot-izn0 (pilot acts without focus emulation lost fills in background tabs), pilot-l7a5 (reads missing from the history), pilot-nmq5 (uploads named without file or row). dmod-l44q was completed: the run's data totals image parts and decision input tokens over all legs.
+- **Defects filed from the run:** pilot-jx20, pilot-1gv0, pilot-6ddo.
+- **Results:** [the table and its five conclusions](<../../corpus/2026-10-05/results.md>). Defaults: LOOK off; JEV and B=3 unchanged. The skill now starts with "Drive first", in goal style.
 
 ## Out of Scope
 

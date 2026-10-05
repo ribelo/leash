@@ -1,0 +1,24 @@
+{
+ "id": "portal-welcome",
+ "site": "127.0.0.1",
+ "url": "{base}/portal",
+ "fixture": "fixtures",
+ "secrets": [
+  "portal_user",
+  "portal_password"
+ ],
+ "tags": [
+  "public",
+  "fixture"
+ ],
+ "styles": {
+  "loose": "What does the welcome message in my fixture portal say",
+  "goal": "Log in to the fixture portal and open the welcome message. Result: its text.",
+  "steps": "1. Log in with portal_user and portal_password. 2. Open the inbox. 3. Open the message titled Welcome. Result: its text."
+ },
+ "check": {
+  "kind": "fixture_message",
+  "message": "old",
+  "phrase": "updates from our team"
+ }
+}

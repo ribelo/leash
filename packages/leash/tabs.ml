@@ -2790,13 +2790,14 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
           (* map-3qag: the run already holds the tab lock; use the same row
              revalidation, hit-test, input and settle path as public actions. *)
           let planner_action command =
-            let view = action_view t ~session tab cdp in
-            (* pic-iomj: like the public path, a picture act engages focus emulation; a
-               background headless tab otherwise yields no screencast frame. *)
+            (* pilot-izn0: like the public path, every pilot act engages focus emulation; a
+               background tab drops input otherwise (the corpus ran six missions at once and
+               the portal login lost its fills). pic-iomj: a picture act needs it for its
+               screencast frame too. *)
+            with_focus t tab @@ fun engage ->
+            let view = { (action_view t ~session tab cdp) with Actions.engage } in
             let picture ?before ~shot action =
-              with_focus t tab (fun engage ->
-                  picture_action_locked ?before t tab cdp { view with Actions.engage }
-                    ~shot action)
+              picture_action_locked ?before t tab cdp view ~shot action
             in
             match command with
             | P.Click args -> Actions.click ~cdp view args

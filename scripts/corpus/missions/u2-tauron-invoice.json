@@ -1,0 +1,22 @@
+{
+ "id": "u2-tauron-invoice",
+ "site": "moj.tauron.pl",
+ "url": "https://moj.tauron.pl/",
+ "fixture": "tauron",
+ "secrets": [
+  "login",
+  "password"
+ ],
+ "tags": [
+  "account:tauron",
+  "U2"
+ ],
+ "styles": {
+  "loose": "Download my latest Tauron invoice as PDF",
+  "goal": "Log in to Tauron and download the latest invoice as a PDF. Result: the downloaded file's path and the invoice number and date.",
+  "steps": "1. Log in with login and password. 2. Open Faktury (invoices). 3. Download the newest invoice as PDF, once. Result: the file path, invoice number and date."
+ },
+ "check": {
+  "kind": "tauron_pdf"
+ }
+}

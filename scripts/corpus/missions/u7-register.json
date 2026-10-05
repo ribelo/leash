@@ -1,0 +1,20 @@
+{
+ "id": "u7-register",
+ "site": "127.0.0.1",
+ "url": "{base}/register",
+ "fixture": "fixtures",
+ "tags": [
+  "public",
+  "U7",
+  "fixture"
+ ],
+ "styles": {
+  "loose": "Register an account on the fixture site with the email operator@example.test and confirm it from the mailbox",
+  "goal": "Register an account on the fixture site with the email operator@example.test and confirm it from the fixture mailbox. Result: the account's login.",
+  "steps": "1. Fill the registration form with operator@example.test and a new password. 2. Submit it. 3. Open the fixture mailbox. 4. Open the confirmation link. Result: the account's login."
+ },
+ "check": {
+  "kind": "fixture_register",
+  "email": "operator@example.test"
+ }
+}

@@ -1,0 +1,20 @@
+{
+ "id": "u5-flights-roundtrip",
+ "site": "www.google.com",
+ "url": "https://www.google.com/travel/flights",
+ "tags": [
+  "public",
+  "U5",
+  "flights"
+ ],
+ "styles": {
+  "loose": "Find the cheapest flight from Warsaw to Lisbon next month and tell me its price and dates",
+  "goal": "Find the cheapest round-trip flight from Warsaw to Lisbon next month. Result: the price in PLN and the travel dates.",
+  "steps": "1. Set the origin to Warsaw and the destination to Lisbon. 2. Look at next month's prices (calendar or price graph). 3. Pick the cheapest round trip. Result: its price in PLN and its dates."
+ },
+ "check": {
+  "kind": "regex_on_source",
+  "source": "https://www.google.com/travel/flights/flights-from-warsaw-to-lisbon.html?curr=PLN&hl=en",
+  "pattern": "cheapest round-trip flight from Warsaw to Lisbon is currently (PLN\\W?[\\d,]+)"
+ }
+}
