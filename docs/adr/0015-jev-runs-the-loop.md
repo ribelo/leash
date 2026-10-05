@@ -1,0 +1,7 @@
+# JEV runs the loop; a bigger model is optional and never owns the mission
+
+ADR-0012 is withdrawn. It was written by the coordinating agent, not decided by the operator, and it inverted his design: it made the planner (Luna) own every mission and reduced JEV to a sub-step. The corpus of 2026-10-05 showed the consequence — JEV was consulted in 12% of cells; the model comparison could not move the results because the model under comparison was barely running.
+
+The operator's design, from the start and restated on 2026-10-05: **`drive` is JEV's loop**, as in jev-ultrafast — one decision-model call per step picks the operation and the target; the text helper writes field values; playbooks give it procedures and scripts to choose from. **A larger model is optional**: it is consulted when JEV says BLOCKED, when an expectation fails, and — if the mission asks for an answer — once at the end, to read the result from the final page and to judge done. It never owns the mission, never chooses steps, and is off when not configured. Luna is only the name of the model currently configured for that role; any model may fill it.
+
+What stays from the pilot work: coordinate actions (ADR-0013); `--secret`; `result`/`evidence` on the drive reply — produced by the end-of-mission judgment, not by a mission owner; the corpus (ADR-0014), which is the instrument that caught the inversion. What goes: the pilot loop, legs, the pilot's own actions, the pilot prompt, `[pilot]` config, and every document that says the planner drives.

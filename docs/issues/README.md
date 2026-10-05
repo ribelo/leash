@@ -201,6 +201,14 @@ L53's compile-from-traces failed three honest rounds; the cause was the loop's s
 | L60 | **Decision model** (`decision-model/01-decision-model.md`). Configured model id (JEV, Clef, Clef Flash); modalities from OpenRouter; screenshot when rows are useless (B) and LOOK as an operation (C); point targets for multimodal; truncation probe; fake server; cost names the model. | dmod-27vx, dmod-m3q5, dmod-7w26, dmod-mcgn, dmod-4ky5, dmod-pjmy, dmod-as71, dmod-f4lf, dmod-l44q, dmod-ibfy | L59 | [x] |
 | L61 | **Corpus** (`corpus/01-corpus.md`). Twenty public missions × three styles × {none, notes, procedures} × {jev, clef, clef-flash} × {image off, B, C}; one command, one table under docs/corpus; U2 first; defaults and skill set by the table; 'drive first' in the skill. | corp-667a, corp-v36x, corp-o5zb, corp-c596, corp-5p13, corp-zeh2, corp-337k, corp-fplj, corp-ex9w, corp-a7md, corp-duu0, corp-nzkf | L60 | [x] |
 
+## Milestone 15 — revert the pilot (ADR-0015)
+
+ADR-0012 was the coordinator's inversion of the operator's design, not his decision. JEV runs the loop; the larger model is optional, a fallback and an end judge.
+
+| # | Slice | Stories | Depends on | Done |
+| --- | --- | --- | --- | --- |
+| L62 | **JEV runs the loop again** (`revert-pilot/01-revert-pilot.md`). Pilot loop removed; drive.ml is drive; planner only on BLOCKED, failed expectation, and end judgment; result/evidence kept; corpus re-run; U1/U2 re-run. | revert-eft1, revert-o3fh, revert-24kr, revert-bqrq, revert-apgf, revert-k63o, revert-wrcc, revert-3zp1, revert-kmr3, revert-tjwo | L61 | [ ] |
+
 ## Later milestones
 
 After milestone 6: the drive-spec follow-ups (tab title after navigation is in L24), an inspector handler for `drive` (pause at `Decide` for a human, jev's "Choose next"), and iframes, each as its own spec when wanted.
