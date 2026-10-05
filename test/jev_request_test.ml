@@ -1257,6 +1257,56 @@ let vision_request () =
     "png data url" "data:image/png;base64,TWFu"
     (J.png_data_url (Bytes.of_string "Man"))
 
+(* revert-v1hm: for the Clef family a one-candidate target question is not asked (Clef
+   refuses a choice under two options); the decoder takes the candidate. JEV is asked. *)
+let single_target_clef () =
+  let rows = [ textbox 1 "Search Wikipedia"; button 2 "Search"; button 3 "Donate" ] in
+  let clef =
+    J.make ~model:"cloudflare/clef" ~goal ~snapshot:(snapshot rows) ~text:"" ~recent:[]
+      ~can_scroll_down:false ~can_scroll_up:false
+  in
+  let questions request =
+    match member "questions" (J.body request) with
+    | Some (`Assoc q) -> List.map fst q
+    | _ -> []
+  in
+  Alcotest.(check bool)
+    "revert-v1hm Clef: no one-option type_text question" false
+    (List.mem "type_text_target" (questions clef));
+  Alcotest.(check bool)
+    "revert-v1hm Clef: the two-option click question stays" true
+    (List.mem "click_target" (questions clef));
+  Alcotest.(check bool)
+    "revert-v1hm JEV is still asked" true
+    (List.mem "type_text_target" (questions (make rows)));
+  let offered =
+    match Option.bind (member "questions" (J.body clef)) (member "operation") with
+    | Some q -> (
+        match member "criteria" q with Some (`Assoc c) -> List.map fst c | _ -> [])
+    | None -> []
+  in
+  let answers =
+    obj
+      [
+        "operation"
+        => obj
+             [
+               "choice" => str "TYPE_TEXT";
+               "probabilities"
+               => obj
+                    (List.map
+                       (fun k -> k => num (if k = "TYPE_TEXT" then 1. else 0.))
+                       offered);
+               "confidence" => num 1.;
+             ];
+      ]
+  in
+  match J.decide clef ~answers with
+  | Error why -> Alcotest.fail why
+  | Ok decision ->
+      Alcotest.(check (option int))
+        "revert-v1hm the sole candidate" (Some 1) decision.J.index
+
 let () =
   Alcotest.run "jev_request"
     [
@@ -1265,6 +1315,8 @@ let () =
           Alcotest.test_case "fly-iodm fly-crcc fly-eoqg fly-spgh bounded state" `Quick
             fly_request_bounds;
           Alcotest.test_case "drive-y37b drive-zml5 the document" `Quick body_document;
+          Alcotest.test_case "revert-v1hm one-candidate target for Clef" `Quick
+            single_target_clef;
           Alcotest.test_case "drive-y37b the element table" `Quick elements_table;
           Alcotest.test_case "drive-zml5 the operation criteria and controls" `Quick
             controls;

@@ -22,6 +22,10 @@ ADR-0012 made the planner own the mission. The operator never decided that; the 
 9. As the operator, I want U1 and U2 run on the reverted build on my Tauron account and recorded, so that the daily case still works. ^revert-kmr3
 10. As a maintainer, I want the commit to report lines removed, so that the revert is visible as a removal. ^revert-tjwo
 
+## Found while re-running the corpus
+
+11. As the operator, I want a Clef-family decision model never asked a choice question with a single option, so that a page with one textbox or one link does not end the mission with HTTP 422. Workers AI refuses a choice under two options ("questions: Dictionary should have at least 2 items"); JEV accepts one. The first corpus run on the reverted loop ended 35 of 60 Clef cells this way. ^revert-v1hm
+
 ## Out of Scope
 
 Anything new.

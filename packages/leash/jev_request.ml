@@ -596,12 +596,30 @@ let point_question request ~axis ~rules =
              ]) );
     ]
 
+(* revert-v1hm: Clef's Decisions API (Workers AI) refuses a choice question under two
+   options (HTTP 422, "questions: Dictionary should have at least 2 items"); JEV accepts
+   one. For the Clef family a one-candidate target question is not asked, and the decoder
+   takes the candidate. *)
+let single_target request operation =
+  if not (String.starts_with ~prefix:"cloudflare/" request.model) then None
+  else
+    match
+      List.concat_map
+        (fun (element : element) ->
+          if List.mem operation element.operations then target_keys operation element
+          else [])
+        request.elements
+    with
+    | [ key ] -> Some key
+    | _ -> None
+
 let questions request =
   E.object_
     (("operation", Some (operation_question request))
-     :: List.map
+     :: List.filter_map
           (fun operation ->
-            (target_key operation, Some (target_question request operation)))
+            if single_target request operation <> None then None
+            else Some (target_key operation, Some (target_question request operation)))
           (distinct_operations request.elements)
     @
     match request.image with
@@ -836,9 +854,11 @@ let decide request ~answers =
         List.concat_map (fun element -> target_keys operation element) candidates
       in
       let* target_key, target_probabilities, target_confidence =
-        match member (target_key operation) answers with
-        | Some answer -> validated ~keys answer
-        | None -> Error invalid
+        match (member (target_key operation) answers, keys) with
+        | Some answer, _ -> validated ~keys answer
+        | None, [ only ] when single_target request operation <> None ->
+            Ok (only, [ (only, 1.) ], 1.)
+        | None, _ -> Error invalid
       in
       match chosen operation candidates target_key with
       | None -> Error invalid
