@@ -1,5 +1,5 @@
 ---
-status: completed
+status: ready-for-agent
 milestone: 10
 ---
 
@@ -37,6 +37,7 @@ A script is a **tool JEV can choose**: at the operator level, the scripts applic
 12. As a maintainer, I want L39's live gate re-run on the rewritten example (three categories, one of 8+ pages, plus a mission that names no procedure and relies on JEV choosing `run_script:list-page`), with JEV call counts, cost and the procedure trace recorded in this spec, so that the claim 'JEV can drive a playbook and choose scripts' has evidence. ^pbk-eyya
 13. As a maintainer, I want the missions reference updated for `run_script`, `pages`, arg sources and the loader rules, so that the skill matches the format. ^pbk-wbhf
 14. As a maintainer, I want the previous format's fields (`returns` at playbook top level, undeclared args, script-only procedures) rejected with a message naming the new form, not silently accepted, so that no shim lives on (compatibility before 1.0). ^pbk-i0zl
+15. As the operator, I want an installed playbook that no longer validates to be skipped with a warning naming it, not to refuse every drive, so that one stale playbook for an unrelated site does not block my missions. On 2026-10-05 the installed build refused U1 and U2 on Tauron with `invalid-request` because `automationexercise.com` and `books.toscrape.com` (installed 30 Sep and 1 Oct) still carry the removed `pages[].description`. ^pbk-zh9h
 
 ## Implementation Decisions
 
