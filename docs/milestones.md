@@ -1,6 +1,6 @@
 # Milestones
 
-The spine of the plan. Each milestone is one spec under `docs/issues/`; each spec lists the Ox tickets it depends on. We are at milestone 14: playbooks are written, not learned, and every open question is decided by a corpus run (ADR-0014; rows L59–L61 in `docs/issues/README.md`). Milestones 7–13 are recorded in that file.
+The spine of the plan. Each milestone is one spec under `docs/issues/`; each spec lists the Ox tickets it depends on. We are at milestone 15: JEV runs the loop again and the planner is only consulted (ADR-0015, which withdraws ADR-0012; row L62 in `docs/issues/README.md`). Playbooks are written, not learned (ADR-0014). Milestones 7–14 are recorded in that file.
 
 **Ox branch (ADR-0008):** Leash builds on `ox`, not v1. The Ox ticket names below refer to v1 tickets that are superseded for Leash; the same capabilities are pulled into ox from Leash's story IDs when milestone 1 starts. `docs/ox-delivery-map.md` carries the details.
 

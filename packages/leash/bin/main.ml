@@ -1010,8 +1010,8 @@ let playbook_command ~caps ~send ~base ~run_owned =
            `Pre
              "A playbook is a directory that describes one site: pages, procedures, and \
               scripts.\n\
-              The operator writes it. A model never does. The pilot can select it when a \
-              mission fits.\n\
+              The operator writes it. A model never does. JEV is offered its procedures \
+              and scripts on its site.\n\
               Format, example, and every loader refusal: leash help playbooks";
          ]
        ~examples:[ "leash playbook list"; "leash playbook check ./my-playbook" ])
@@ -1453,44 +1453,39 @@ let commands ~caps ~send ~base ~run_owned =
                asserts the goal.\n\
                Lanes, options, and how to read a trace: leash help drive";
             `S "ROUTING";
-            `P "The pilot owns the mission. Each navigation leg has at most 15 steps.";
             `P
-              "The pilot receives the mission, bounded page text and rows, prior legs, \
-               and learning candidates. A leg is one navigation goal in JEV's language. \
-               Leg DONE/BLOCKED returns to the pilot; only pilot done completes.";
+              "JEV runs the mission: one decision-model call per step over the element \
+               table, the text helper for field values, the site playbook's procedures \
+               and scripts offered as operations.";
+            `P
+              "The optional planner ([models] planner_model) is only consulted: when JEV \
+               answers BLOCKED, when an expectation fails, and once at the end of a \
+               mission that asks for an answer, to fill result and evidence.";
             `P
               "--out JSONL is tagged. script-record, source playbook, is a validated \
-               script record. pilot-record, source pilot, is a flat record the pilot \
-               returned with done, every value text the mission read. operator-state, \
-               source operator, is one terminal bounded page observation, not a record \
-               list. The Travel example writes operator-state. output_kinds names the \
-               kinds in the reply. A successful reply is not proof the mission \
-               succeeded. model_cost is null when any call is unpriced; \
-               data.reported_cost is the known subtotal.";
+               script record. operator-state, source operator, is one terminal bounded \
+               page observation, not a record list. The Travel example writes \
+               operator-state. output_kinds names the kinds in the reply. A successful \
+               reply is not proof the mission succeeded. model_cost is null when any \
+               call is unpriced; data.reported_cost is the known subtotal.";
           ]
-        "drive"
-        "Drive MISSION with the pilot, using short navigation legs and direct row \
-         actions."
+        "drive" "Drive MISSION with JEV's loop over the page."
         [ pos "mission" "MISSION" ]
         ([
            opt_list "secret" Strings "NAME=@FILE|NAME=-"
-             "Read a secret from a file or stdin. Only its name reaches the pilot.";
+             "Read a secret from a file or stdin. Only its name reaches a model.";
            opt "tab" Str "TAB"
              "Reuse TAB instead of opening one. Does not replace a populated page.";
            opt "url" Str "URL"
              "Explicit http(s) start (start_url). Not a model navigation target.";
            opt "max_steps" Int "N"
-             "Navigation-leg cap (default and maximum 15). Must be positive.";
-           opt "max_procedures" Int "N"
-             "Compatibility option; mission decisions use pilot.max_turns.";
+             "JEV's step cap for the mission (default 60). Must be positive.";
+           opt "max_procedures" Int "N" "Procedure cap (default 40).";
            opt "out" Str "FILE"
              "Append tagged JSONL: script-record from a playbook, operator-state from \
               the operator.";
-           opt "deadline_s" Int "S"
-             "Seconds for the whole mission (default pilot.deadline_s = 600).";
-           opt "dry_run" Bool ""
-             "Return the first pilot decision and reasoning summary without executing \
-              actions.";
+           opt "deadline_s" Int "S" "Seconds for the whole mission (default 600).";
+           opt "dry_run" Bool "" "Return JEV's first decision without executing it.";
            opt_list "expect" Strings "SENTENCE"
              "Mission expectation the DONE guard verifies (repeatable).";
          ]
@@ -1620,7 +1615,8 @@ let program env (config : Leash.Config.t) sw =
      that is not a real absolute path, so the variable is resolved by now. *)
   let socket = Leash.Config.Text.to_string config.control.socket in
   let* _control =
-    Leash.Control.create ~pilot:config.pilot
+    Leash.Control.create
+      ~planner:(Option.is_some config.models.planner_model)
       ~chrome_pid:(fun () -> (Leash.Chrome.status chrome).pid)
       ~models
       ~model:(Leash.Config.Text.to_string config.models.decision_model)

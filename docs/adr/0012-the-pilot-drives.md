@@ -1,5 +1,7 @@
 # The pilot drives: Luna holds the mission, JEV is the navigator
 
+**Withdrawn by ADR-0015 (2026-10-05):** the coordinating agent wrote this ADR; the operator never decided that the planner owns a mission. JEV runs the loop; the planner is optional and only consulted.
+
 **Amended by ADR-0014 (2026-10-05):** playbooks are written by hand, not learned; leg memory, the replay and agreement gates, repair, `proposed/`, `[learning]` and inferred page kinds are removed.
 
 The operator's statement of 2026-10-03: "JEV was meant to be the navigator, only and exclusively; all reasoning goes to the model. I want to send Leash and get the result I need, where the result is usually an action — download the invoice, check whether I owe anything — ad hoc, without writing a script first." Three learning rounds and the Flights evidence (five missions reached the prices, none returned an answer) show what was wrong: `drive` was JEV's loop with the planner as a fallback on `BLOCKED`. JEV cannot know a task is done — it can only see that a page looks right — so missions with an answer, a quantifier ("the cheapest", "every"), or an action with a result ("download it") ended `done` with nothing. Measured: JEV finishes navigation tasks 89/92 on Google, exactly as jev-ultrafast's demo does; the demo never asks for an answer, we do.

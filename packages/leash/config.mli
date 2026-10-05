@@ -72,7 +72,8 @@ type models = {
   decision_model : Text.t;
   chat_base_url : Text.t;
   text_model : Text.t;
-  planner_model : Text.t;
+  planner_model : Text.t option;
+      (** revert-24kr: optional; absent means the planner is never called. *)
   planner_reasoning : Text.t;
   planner_endpoint : Text.t option;
   decision_timeout : Seconds.t;
@@ -129,8 +130,6 @@ type otlp = { endpoint : Text.t option; headers : otlp_header list }
 (** svc-f4op: no endpoint means no exporter. [headers] defaults to []. TOML uses
     [[otlp.headers]] entries with [name] and [value]. *)
 
-type pilot = { turns : int; deadline_s : int }
-
 type decision = { image_when_rows_below : int; look : bool; point_levels : int }
 (** dmod-7w26 dmod-mcgn dmod-4ky5: how a multimodal decision model is shown the page. *)
 
@@ -156,7 +155,6 @@ type t = {
   challenges : challenges;
   skill : skill;
   traces : traces;
-  pilot : pilot;
   decision : decision;
 }
 (** svc-x8rp: every section and every field has a default, so a file that names one

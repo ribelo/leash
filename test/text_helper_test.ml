@@ -487,57 +487,8 @@ let new_tab tabs =
   tab (result (raw tabs (P.New { url = Some "https://example.com/"; label = None })))
 
 let drive ?levels models tabs handle goal =
-  let supplied = Option.value ~default:(Models.levels models) levels in
-  let plans = ref 0 in
-  let levels =
-    {
-      supplied with
-      Leash.Run.plan =
-        (fun ~deadline request ->
-          incr plans;
-          if !plans = 1 then
-            Ok
-              Leash.Run.
-                {
-                  answer = Leg goal;
-                  expect = [];
-                  reasoning_summary = None;
-                  secrets_for_operator = [];
-                  usage = None;
-                }
-          else
-            match List.rev request.legs with
-            | leg :: _ when leg.outcome <> "done" -> (
-                match levels with
-                | Some _ -> supplied.plan ~deadline request
-                | None ->
-                    Ok
-                      Leash.Run.
-                        {
-                          answer = Fail "Navigation leg failed";
-                          expect = [];
-                          reasoning_summary = None;
-                          secrets_for_operator = [];
-                          usage = None;
-                        })
-            | _ ->
-                Ok
-                  Leash.Run.
-                    {
-                      answer =
-                        Done
-                          {
-                            result = "Navigation leg completed";
-                            evidence = [];
-                            records = [];
-                          };
-                      expect = [];
-                      reasoning_summary = None;
-                      secrets_for_operator = [];
-                      usage = None;
-                    });
-    }
-  in
+  (* revert-eft1: drive is JEV's loop; no planner is configured here. *)
+  let levels = Option.value ~default:(Models.levels models) levels in
   raw ~levels ~models
     ~decide:(fun ~deadline request -> Models.decide ~deadline models request)
     ~text_helper:(fun () -> Models.text_helper models)
@@ -707,20 +658,15 @@ let null_is_blocked
             (fun ~deadline:_ _request ->
               Ok
                 Leash.Run.
-                  {
-                    answer = Fail "required field value is missing";
-                    expect = [];
-                    reasoning_summary = None;
-                    secrets_for_operator = [];
-                    usage = None;
-                  });
+                  { answer = Fail "required field value is missing"; usage = None });
         }
       in
       let reply = result (drive ~levels models tabs handle goal) in
       Alcotest.(check string)
-        "pilot fails after blocked leg" "failed" (text "status" reply);
+        "revert-24kr a blocked loop without a planner ends blocked" "blocked"
+        (text "status" reply);
       Alcotest.(check (option string))
-        "drive-ls3c the field is named" (Some "required field value is missing")
+        "drive-ls3c the field is named" (Some "no value for field \"Search terms\"")
         (match field "reason" reply with
         | Some (`String reason) -> Some reason
         | _ -> None);
@@ -782,7 +728,7 @@ let bound
       (* the same drive, one byte over *)
       let reply = result (drive models tabs handle goal) in
       Alcotest.(check string)
-        "pilot fails after overlong helper" "failed" (text "status" reply);
+        "revert-eft1 an overlong value ends error" "error" (text "status" reply);
       let operator = get "operator_state" reply in
       let error =
         match P.error_of_yojson (get "error" operator) with
@@ -877,7 +823,8 @@ let chat_failure
       let handle = new_tab tabs in
       let reply = result (drive models tabs handle goal) in
       Alcotest.(check string)
-        "pilot failure retains operator error evidence" "failed" (text "status" reply);
+        "revert-eft1 a helper failure ends error with its evidence" "error"
+        (text "status" reply);
       let operator = get "operator_state" reply in
       let error =
         match P.error_of_yojson (get "error" operator) with

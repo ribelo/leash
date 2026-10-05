@@ -143,10 +143,8 @@ val drive :
 val run :
   ?on_page:(url:string -> kind:string option -> unit) ->
   ?on_step:(Protocol.step -> unit) ->
-  ?on_planner_step:(Protocol.planner_step -> unit) ->
   ?on_arguments:((string * string) list -> unit) ->
-  ?planner_actions:int ->
-  ?pilot:Config.pilot ->
+  ?planner:bool ->
   ?levels:Run.levels ->
   ?model:string ->
   ?decide:

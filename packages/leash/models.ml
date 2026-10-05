@@ -359,12 +359,15 @@ let levels (t : t) : Run.levels =
       score = (fun ~deadline ~sentence ~state -> score ~deadline t ~sentence ~state);
       plan =
         (fun ~deadline request ->
-          match t.planner_chat with
-          | None -> Error missing_key
-          | Some client ->
+          match (t.planner_chat, t.config.planner_model) with
+          | None, _ -> Error missing_key
+          | _, None ->
+              Error
+                (Model_error.unavailable ~code:"no-planner"
+                   "no [models] planner_model is configured; the planner is never called")
+          | Some client, Some model ->
               let planner =
-                Planner.create ~client ~now:t.now
-                  ~model:(Config.Text.to_string t.config.planner_model)
+                Planner.create ~client ~now:t.now ~model:(Config.Text.to_string model)
                   ~reasoning:(Config.Text.to_string t.config.planner_reasoning)
                   ~logger:t.logger ()
               in

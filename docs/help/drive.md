@@ -1,4 +1,4 @@
-# Drive: missions with the pilot
+# Drive: JEV runs the mission
 
 ## State the result and limits
 
@@ -16,44 +16,45 @@ Wait for the mission's reply before acting or reading on its tab. Other tabs can
 
 ## Who decides
 
-The pilot reads the mission, bounded page text (6000 characters), viewport rows (250), previous actions/legs, downloads and procedure candidates. It can issue a navigation leg, quote page text, observe an image, act on a revalidated row or a viewport CSS point, type into the focused control, drag, notify, hand off, finish or fail. Empty or unhelpful rows automatically add a real PNG image input; `observe --image` explicitly requests one and consumes a bounded turn. Images retain measured viewport/scale metadata, not private filesystem paths. Coordinates do not require rows and never become row actions. A leg is one navigation goal in JEV's language; JEV's DONE/BLOCKED returns control to the pilot.
+JEV runs the mission (ADR-0015): one decision-model call per step picks the operation and its target over the page's element table; the text helper writes field values; the site playbook's procedures and scripts are offered to it as operations. The stall rule, the step cap (`--max-steps`, default 60) and the deadline bound it.
 
-The navigator's decision model is `[models] decision_model`: any Decisions-API model id (default `typesafe/jev-1.13-20260917`; `cloudflare/clef` and `cloudflare/clef-flash` speak the same contract). The pilot's model does not change. When the model's OpenRouter listing says it accepts images, `[decision]` controls what it is shown. The screenshot goes into the state when the page offers fewer than `image_when_rows_below` actionable elements (default 3; 0 never). The model may choose LOOK when `look = true` (default false; the 2026-10-05 corpus measured no gain), at most once per two steps, and the next state carries the screenshot. With a screenshot in the state it may choose CLICK_AT, whose point is two score answers over `point_levels` bands per axis (default 20); a point gets the same safety and consent checks as the rows under it. `leash status` shows `models.decision_modalities` and `decision_tail_read`, the result of a start-up probe of whether the model reads the end of a long state. Drive metrics name the `decision_model` and count `image_parts`.
+The planner is optional: `[models] planner_model`; absent means it is never called. It is only consulted, never acts: when JEV answers BLOCKED or its loop stops (it answers a short hint JEV is given as its next goal, or handoff, notify or fail); when a procedure's or the mission's expectation fails; and once at the end of a mission that asks for an answer, to read `result` and `evidence` from the final page and judge whether the mission is done. The playbook's `notes` are shown to the planner.
 
-Only pilot done completes the mission. It must carry `result` and `evidence`. Direct actions include click, select, fill, press and scroll; downloads are clicks. Text can describe controls below the viewport, so scrolling may be needed before acting on a row. Payment, checkout confirmation, sending and deletion require explicit authorization in the mission. Never retry an uncertain submission merely because the reply failed.
+The decision model is `[models] decision_model`: any Decisions-API model id (default `typesafe/jev-1.13-20260917`; `cloudflare/clef` and `cloudflare/clef-flash` speak the same contract). When the model's OpenRouter listing says it accepts images, `[decision]` controls what it is shown. The screenshot goes into the state when the page offers fewer than `image_when_rows_below` actionable elements (default 3; 0 never). The model may choose LOOK when `look = true` (default false), at most once per two steps, and the next state carries the screenshot. With a screenshot in the state it may choose CLICK_AT, whose point is two score answers over `point_levels` bands per axis (default 20); a point gets the same safety and consent checks as the rows under it. `leash status` shows `models.decision_modalities` and `decision_tail_read`. Drive metrics name the `decision_model` and count `image_parts`.
+
+Payment, checkout confirmation, sending and deletion require explicit authorization in the mission. Never retry an uncertain submission merely because the reply failed.
 
 ## Credentials and human handoff
 
-Pass repeatable `--secret NAME=@FILE`, or `--secret NAME=-` for stdin. Files contain the value, not a NAME=value assignment. Only the names reach the pilot; dispatch resolves them when filling. `--secret NAME=VALUE` is not accepted. A credential deliberately written into the mission is accepted, but then it is model input rather than a protected secret reference.
+Pass repeatable `--secret NAME=@FILE`, or `--secret NAME=-` for stdin. Files contain the value, not a NAME=value assignment. Only the names reach a model; the text helper answers with a name and Leash types the value. `--secret NAME=VALUE` is not accepted. A credential deliberately written into the mission is accepted, but then it is model input rather than a protected secret reference.
 
-Handoff asks the human through a notification and waits for resume, normally up to 300 seconds. On a headless browser the pilot's handoff ends the mission with error `headless` and its notifications are not sent (hand-tdkk). An unanswered handoff returns `handoff-expired`; `notify` alone is non-blocking. Read `unattended` for these events. Keep notifications enabled. Cancel or dismissal immediately ends the handoff and mission as `canceled-by-operator`, releases the human hold and retains the tab. Do not retry without a new operator instruction. Done resumes; delivery failures are warnings, not cancellation. The default notification does not expire on its own; the handoff deadline controls timeout (pilot-9u3q).
+Handoff asks the human through a notification and waits for resume, normally up to 300 seconds. On a headless browser a handoff ends the mission with error `headless` and its notifications are not sent (hand-tdkk). An unanswered handoff returns `handoff-expired`; `notify` alone is non-blocking. Read `unattended` for these events. Keep notifications enabled. Cancel or dismissal immediately ends the handoff and mission as `canceled-by-operator`, releases the human hold and retains the tab. Do not retry without a new operator instruction. Done resumes; delivery failures are warnings, not cancellation. The default notification does not expire on its own; the handoff deadline controls timeout (pilot-9u3q).
 
-A literal the pilot fills into a password field becomes a secret for the rest of the run. It is redacted from the reply and the trace like a `--secret`. If it is not one of the mission's secrets, it is handed to the operator in `secrets_for_operator` as `generated_password` (pilot-gn4w, pilot-pw7x). Typing into a focused field with `type` is not covered, because it names no row. Do not paste generated secrets into chat.
 
 ## Read the outcome, then verify it
 
 Exit 0 means the service answered, not that the mission succeeded. Save the full reply privately and inspect:
 
-- `status`: done, planned (dry-run), failed, limit, deadline, handoff-expired, canceled-by-operator or error.
-- `result`: the answer or action outcome, including identifiers. `evidence`: the pilot's supporting URLs, facts or download paths—not independent proof.
-- `pilot_turns`, `navigator_steps` and `model_calls`: reasoning and navigation work.
+- `status`: done, planned (dry-run), failed, blocked, limit, deadline, handoff-expired, canceled-by-operator or error.
+- `result` and `evidence`: the planner's answer from the final page, when a planner is configured and the mission asks for one; null otherwise. Not independent proof.
+- `navigator_steps` and `model_calls`: the work done.
 - `model_cost`: total only when all calls are priced; otherwise null. `data.reported_cost` is the known subtotal and `data.cost_unreported` counts missing prices.
-- `planner_turns` and `procedures`: decisions, offered/chosen candidates, attempted legs and refusals. `mission_expectations` records explicit completion checks.
+- `planner_turns` and `procedures`: each planner consultation (why and what it answered) and each procedure JEV ran. `mission_expectations` records explicit completion checks.
 - `final`, `trace_path` and `unattended`: last observation, durable record and human-facing events.
 
 Verify the requested outcome separately: reread account amounts, inspect the completed download and its contents, check the actual uploaded link, or compare every requested record with the source. A reported result with an empty requested output file is a failure.
 
-`--out FILE` appends tagged JSONL records: `script-record` lines from validated procedure scripts, and `pilot-record` lines the pilot returns with `done` (pilot-sc9t). A pilot record's values must be text the mission read, and they are written only when the done is accepted. The file never holds the pilot's result text. The pilot uploads with the validated `upload` action, and only files whose absolute paths the mission names verbatim (pilot-h506).
+`--out FILE` appends tagged JSONL `script-record` lines from validated procedure scripts. The file never holds the result text.
 
 ## Limits and preview
 
-`--deadline-s` bounds the whole mission (default `pilot.deadline_s = 600`); `pilot.turns` defaults to 12, and `--max-steps` bounds each navigator leg (maximum 15). `--max-procedures` is a retained compatibility option, not the pilot-turn control. Pilot reasoning defaults to max. These are execution bounds, not output-token budgets.
+`--deadline-s` bounds the whole mission (default 600); `--max-steps` bounds JEV's steps (default 60); the planner is consulted at most 6 times. These are execution bounds, not output-token budgets.
 
-`--dry-run` returns the first decision and reasoning summary without executing it or writing records. It still makes billable model calls and can allocate a tab. Add repeatable `--expect SENTENCE` for explicit live-page completion checks; see `leash help expectations`.
+`--dry-run` returns JEV's first decision without executing it or writing records. It still makes billable model calls and can allocate a tab. Add repeatable `--expect SENTENCE` for explicit live-page completion checks; see `leash help expectations`.
 
 ## Hand-written playbooks
 
-The procedures of the site's installed playbook are candidates for the pilot, never mandatory routes. A procedure that failed in a mission is not offered again in it. The playbook's `notes`, when present, are shown to the pilot on every turn on that site. The pilot writes nothing into playbooks (ADR-0014). Read `leash help playbooks` for the format.
+The procedures and scripts of the site's installed playbook are offered to JEV as operations, never mandatory routes. A procedure that failed in a mission is not offered again in it. The playbook's `notes` are shown to the planner. Nothing writes into playbooks (ADR-0014). Read `leash help playbooks` for the format.
 
 ## Durable traces
 

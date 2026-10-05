@@ -1,12 +1,8 @@
-(** Versioned mission-pilot turns (pilot-ukoh pilot-gt2h pilot-r94o). The pilot is called
-    from the first mission turn, using bounded page evidence, prior navigation legs and
-    candidate procedures. It owns done/fail, not JEV. Strict JSON decoding permits one of
-    eight answer shapes. A correction call shares the original deadline and never echoes a
-    raw rejected reply. *)
-
-val pilot_prompt : string
-(** pilot-02ij: the pilot's whole system prompt — answers, shapes and refusals, under 300
-    words. *)
+(** revert-24kr revert-apgf revert-bqrq (ADR-0015): the optional planner. It is consulted,
+    never acting: on BLOCKED or a failed expectation it answers a hint JEV is given as its
+    goal, or handoff, notify or fail; at the end of a mission that asks for an answer it
+    gives result, evidence and whether the mission is done. Strict JSON decoding; one
+    correction call shares the original deadline and never echoes a raw rejected reply. *)
 
 type t = {
   plan :
@@ -30,8 +26,11 @@ type t = {
     callbacks propagate; provider, decoding and size failures are returned as typed
     errors. *)
 
-val pilot_request_json : Run.plan_request -> Yojson.Safe.t
-val decode_pilot : Run.plan_request -> string -> (Run.plan_reply, string) result
+val request_json : Run.plan_request -> Yojson.Safe.t
+(** The bounded page, mission, JEV's history and secret names the planner is shown. *)
+
+val decode : Run.plan_request -> string -> (Run.plan_reply, string) result
+(** One reply: [hint]/[handoff]/[notify]/[fail] for a stop, [done]/[fail] at the end. *)
 
 val create :
   now:(unit -> float) ->
@@ -42,12 +41,11 @@ val create :
   unit ->
   t
 (** [create ~client ~model ~reasoning ~logger ()] is the planner over one chat client, for
-    the configured [model] (run-d99l). A turn's observation is one text part, followed by
-    the screenshot as an Ox PNG image part when the request carries one (pic-k4ij).
-    [reasoning] is the configured effort; the word ["none"] (also ["off"] or ["disabled"])
-    turns OpenRouter's reasoning off instead. Cheap and synchronous: it opens no socket
-    and registers no finalizer. Every answered call is logged at info with the model and
-    the tokens it cost — a turn asked twice logs both calls, because both were paid for.
+    the configured [model] (run-d99l). A consultation is one text part. [reasoning] is the
+    configured effort; the word ["none"] (also ["off"] or ["disabled"]) turns OpenRouter's
+    reasoning off instead. Cheap and synchronous: it opens no socket and registers no
+    finalizer. Every answered call is logged at info with the model and the tokens it cost
+    — a turn asked twice logs both calls, because both were paid for.
 
     Suspension: never suspends during local construction; reasoning normalization is
     delegated to Stdlib.String.lowercase_ascii; injected callbacks are retained for

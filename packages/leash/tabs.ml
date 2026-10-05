@@ -2584,9 +2584,8 @@ let no_levels : Run.levels =
                "no model client is configured for the run's planner"));
     }
 
-let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _ -> ())
-    ?(on_arguments = fun _ -> ()) ?(planner_actions = 5) ?pilot ?(levels = no_levels)
-    ?(model = "unconfigured")
+let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_arguments = fun _ -> ())
+    ?(planner = false) ?(levels = no_levels) ?(model = "unconfigured")
     ?(decide =
       fun ~deadline:_ _ ->
         Error
@@ -2626,16 +2625,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
               on_step
           in
           let run_args = Run.of_args args in
-          let run_args =
-            match pilot with
-            | None -> run_args
-            | Some (pilot : Config.pilot) ->
-                {
-                  run_args with
-                  max_plans = pilot.turns;
-                  deadline_s = Option.value ~default:pilot.deadline_s args.deadline_s;
-                }
-          in
           let budget = float_of_int run_args.Run.deadline_s in
           let remaining () =
             Ox.Duration.ms
@@ -2673,7 +2662,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
             trace_book := book;
             Option.iter (fun (snapshot, text) -> classify snapshot text) !trace_page
           in
-          let observe_once ?(image = false) () =
+          let observe_once () =
             let* snapshot =
               snap_locked t tab
                 P.
@@ -2682,13 +2671,8 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
                     match_ = None;
                     limit = Some 250;
                     offset = None;
-                    with_image = Some image;
+                    with_image = None;
                   }
-            in
-            let* image_input =
-              match snapshot.P.image with
-              | None -> Ok None
-              | Some image -> Result.map Option.some (picture_input t image)
             in
             let* rendered =
               if snapshot.P.dialog <> None then
@@ -2724,11 +2708,10 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
                           download.P.state ))
                       (List.rev tab.downloads);
                   snapshot;
-                  image_input;
                 }
           in
-          (* pilot-x1f3: async tables must settle before the pilot sees them. *)
-          let observe ?(image = false) () =
+          (* pilot-x1f3: async tables must settle before they are judged. *)
+          let observe () =
             let latest = ref None in
             let read () =
               let* page = observe_once () in
@@ -2762,80 +2745,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
                   t.sleep 3.;
                   Ok (Option.value ~default:first !latest))
             in
-            let useful =
-              List.exists
-                (fun (row : P.row) ->
-                  List.mem
-                    (String.lowercase_ascii row.role)
-                    [
-                      "button";
-                      "link";
-                      "textbox";
-                      "combobox";
-                      "checkbox";
-                      "radio";
-                      "slider";
-                      "spinbutton";
-                      "tab";
-                      "menuitem";
-                      "cell";
-                      "gridcell";
-                    ])
-                page.snapshot.rows
-            in
-            if page.dialog = None && (image || not useful) then
-              observe_once ~image:true ()
-            else Ok page
-          in
-          (* map-3qag: the run already holds the tab lock; use the same row
-             revalidation, hit-test, input and settle path as public actions. *)
-          let planner_action command =
-            (* pilot-izn0: like the public path, every pilot act engages focus emulation; a
-               background tab drops input otherwise (the corpus ran six missions at once and
-               the portal login lost its fills). pic-iomj: a picture act needs it for its
-               screencast frame too. *)
-            with_focus t tab @@ fun engage ->
-            let view = { (action_view t ~session tab cdp) with Actions.engage } in
-            let picture ?before ~shot action =
-              picture_action_locked ?before t tab cdp view ~shot action
-            in
-            match command with
-            | P.Click args -> Actions.click ~cdp view args
-            | P.Click_at args ->
-                picture ~shot:args.shot (fun cdp view -> Actions.click_at ~cdp view args)
-            | P.Drag args ->
-                picture ~shot:args.shot (fun cdp view -> Actions.drag ~cdp view args)
-            | P.Type args ->
-                picture ~before:false ~shot:args.shot (fun cdp view ->
-                    Actions.type_text ~cdp view args)
-            | P.Fill args -> Actions.fill ~check_hit:true ~cdp view args
-            | P.Press args -> Actions.press ~cdp view args
-            | P.Select args -> Actions.select ~cdp view args
-            | P.Upload args -> Actions.upload ~caps:t.caps ~cdp view args
-            | P.Scroll ({ index = None; _ } as args) ->
-                (* pilot-x1f3: a page scroll takes the navigator's path, which checks where
-                   the wheel landed. The pilot's act scroll timed out after 30 s on Tauron
-                   (U2, builds H, I and K) waiting for the wheel ack; both wheels now bound
-                   that wait (Actions). *)
-                Actions.operator_scroll ~cdp view
-                  ~down:(P.Direction.to_string args.direction = "down")
-            | P.Scroll args -> Actions.scroll ~cdp view args
-            | P.Nav args ->
-                let* _ = navigate_locked t ~tab args.url in
-                Ok
-                  P.
-                    {
-                      tab = handle;
-                      url = tab.url;
-                      title = tab.title;
-                      snapshot = None;
-                      dialog = tab.dialog;
-                      popups = [];
-                      hits = None;
-                      shots = None;
-                      via = None;
-                    }
-            | _ -> Error (error "invalid-request" "unsupported planner action")
+            Ok page
           in
           (* run-xflk run-vbys run-xqh8: the checkers first and the JEV score only where no
              checker applies. The score is one model call per unchanged page — the bounded
@@ -2950,7 +2860,7 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
           let handler : Run.handler =
             Run.
               {
-                observe = (fun ~image () -> observe ~image ());
+                observe;
                 navigate =
                   (fun url ->
                     let* _ = navigate_locked t ~tab url in
@@ -2962,6 +2872,22 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
                     (match meter with
                     | Some meter -> clear_usage meter "text_helper"
                     | None -> ());
+                    (* --secret in JEV's loop: the helper learns the names; Leash types the
+                       value when it answers with one. *)
+                    let context =
+                      match !secret_values with
+                      | [] -> context
+                      | secrets ->
+                          {
+                            context with
+                            Text_helper.goal =
+                              context.Text_helper.goal
+                              ^ "\n\
+                                 Secrets available by name (answer with the name and \
+                                 Leash types the secret): "
+                              ^ String.concat ", " (List.map fst secrets);
+                          }
+                    in
                     (text_helper ()).Text_helper.complete ~deadline:(remaining ())
                       (Text_helper.redact !secret_values context));
                 step =
@@ -2987,9 +2913,6 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
                         });
                 verify;
                 plan = (fun request -> levels.Run.plan ~deadline:(remaining ()) request);
-                (* run-m0r8: a planner-written procedure that ran and passed its
-                   expectations is written to XDG state here; the playbook the operator
-                   authored is never written by a run, only by [playbook accept]. *)
                 hand_off =
                   (fun ~reason ->
                     (* notif-oslv: resume must acquire the lock while the run waits. *)
@@ -3058,18 +2981,13 @@ let run ?(on_page = fun ~url:_ ~kind:_ -> ()) ?on_step ?(on_planner_step = fun _
           with
           | Error why -> Error (error "invalid-request" why)
           | Ok books ->
-              let challenge (_observation : Run.observation) =
-                Reading.challenge_signal tab.reading
-              in
               let execute on_record =
-                Run.loop ~handler ~on_book ~on_record ~secrets:args.secrets
+                Run.loop ~handler ~planner ~on_book ~on_record ~secrets:args.secrets
                   ~on_secrets:(fun values -> secret_values := values)
-                  ~planner_action ~on_planner_step ~on_arguments ~planner_actions
+                  ~on_arguments
                   ~notify:(fun message ->
                     if headless t then Error (refuse_headless ()).P.message
                     else t.notify message)
-                  ~challenge ~challenge_attempt:t.challenge_attempt
-                  ~challenge_turns:t.challenge_turns
                   ~pause_ms:(fun ms -> t.sleep (float_of_int ms /. 1000.))
                   ~now:(fun () -> now t)
                   ~installed:books run_args

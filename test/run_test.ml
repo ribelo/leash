@@ -1,6 +1,5 @@
-(* pilot-ukoh pilot-eu1c pilot-x1f3 pilot-8csf pilot-gt2h pilot-s954
-   pilot-rdjv pilot-02ij pilot-e4sh pilot-a4ua pilot-oijk pilot-3egp:
-   the mission pilot over scripted handlers, with no browser or model. *)
+(* revert-eft1 revert-24kr revert-apgf revert-bqrq revert-o3fh: drive is JEV's loop, the
+   planner only consulted, over scripted handlers with no browser or model. *)
 module R = Leash.Run
 module P = Leash.Protocol
 
@@ -32,7 +31,6 @@ let page text =
   R.
     {
       snapshot;
-      image_input = None;
       url = snapshot.url;
       title = snapshot.title;
       text;
@@ -41,882 +39,205 @@ let page text =
       dialog = None;
     }
 
-let drive status =
+let drive ?reason status =
   P.
     {
       status = ok (Drive_status.of_string status);
       steps = [];
       final = snapshot;
       operator_state = None;
-      reason = None;
+      reason;
     }
 
-let reply answer =
-  R.
-    {
-      answer;
-      expect = [];
-      usage = None;
-      reasoning_summary = Some "pilot decision";
-      secrets_for_operator = [];
-    }
-
-let params ?(dry_run = false) ?(turns = 12) ?(mission = "Find a fact") () =
+let params ?(mission = "Open the reports page") ?(expect = []) () =
   R.
     {
       mission;
-      max_steps = 15;
+      max_steps = 60;
       start_url = None;
       max_procedures = 40;
       deadline_s = 600;
-      dry_run;
-      max_plans = turns;
-      expect = [];
+      dry_run = false;
+      max_plans = 3;
+      expect;
     }
 
-let harness ?(text = "Fact 42") ?(statuses = [ "done" ]) answers =
-  let answers = ref answers
-  and requests = ref []
+let tab_info =
+  P.
+    {
+      tab;
+      url = snapshot.url;
+      title = snapshot.title;
+      page_kind = None;
+      origin = ok (Origin.of_string "agent");
+      label = None;
+      age_s = 0;
+      idle_s = 0;
+      closes_in_s = Some 1800;
+      with_human = false;
+      generation = 1;
+      dialog = None;
+      loaded = None;
+      reason = None;
+    }
+
+(* Each JEV run pops a drive result; each planner call pops an answer. *)
+let harness ?(text = "Fact 42") ?(on_step = fun _ -> ()) drives answers =
+  let drives = ref drives
+  and answers = ref answers
   and goals = ref []
-  and statuses = ref statuses in
+  and asked = ref [] in
   let pop values =
     match !values with
     | [] -> Alcotest.fail "unexpected callback"
-    | value :: rest ->
+    | v :: rest ->
         values := rest;
-        value
+        v
   in
   let handler =
     R.
       {
-        observe = (fun ~image:_ () -> Ok (page text));
+        observe = (fun () -> Ok (page text));
         navigate = (fun _ -> Ok ());
-        choose = (fun _ -> Alcotest.fail "mission called JEV choice");
+        choose = (fun _ -> Alcotest.fail "no choice level");
         text_value = (fun _ -> Ok None);
         step =
           (fun request ->
-            goals := request :: !goals;
-            Ok (drive (pop statuses)));
+            goals := request.R.goal :: !goals;
+            on_step request;
+            Ok (pop drives));
         verify = (fun ~pages:_ ~checks:_ ~timeout_s:_ -> Ok ([], page text));
         plan =
           (fun request ->
-            requests := request :: !requests;
-            Ok (pop answers));
-        hand_off =
-          (fun ~reason:_ ->
-            Ok
-              P.
-                {
-                  tab;
-                  url = snapshot.url;
-                  title = snapshot.title;
-                  page_kind = None;
-                  origin = ok (Origin.of_string "agent");
-                  label = None;
-                  age_s = 0;
-                  idle_s = 0;
-                  closes_in_s = Some 1800;
-                  with_human = false;
-                  generation = 1;
-                  dialog = None;
-                  loaded = None;
-                  reason = None;
-                });
+            asked := request :: !asked;
+            Ok R.{ answer = pop answers; usage = None });
+        hand_off = (fun ~reason:_ -> Ok tab_info);
         script = (fun _ ~args:_ -> Alcotest.fail "unexpected script");
       }
   in
-  (handler, requests, goals)
+  (handler, goals, asked)
 
-let finish = reply (R.Done { result = "42"; evidence = [ "Fact 42" ]; records = [] })
+let status expected (r : P.run_result) =
+  Alcotest.(check string) "status" expected (P.Run_status.to_string r.status)
 
-let legs_return () =
-  List.iter
-    (fun status ->
-      let h, requests, goals =
-        harness ~statuses:[ status ] [ reply (R.Leg "Open account"); finish ]
-      in
-      let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
-      Alcotest.(check string)
-        "mission done only by pilot" "done"
-        (P.Run_status.to_string r.status);
-      Alcotest.(check int) "two pilot turns" 2 r.pilot_turns;
-      Alcotest.(check int) "one local goal" 1 (List.length !goals);
-      Alcotest.(check int) "local cap" 15 (List.hd !goals).max_steps;
-      let previous = (List.hd !requests).R.legs in
-      Alcotest.(check string) "previous outcome" status (List.hd previous).outcome)
-    [ "done"; "blocked" ]
-
-let bounded_context () =
-  let h, requests, _ = harness ~text:(String.make 9000 'x') [ finish ] in
-  let row =
-    P.
-      {
-        index = 1;
-        role = "button";
-        name = "Open";
-        value = None;
-        state = None;
-        options = None;
-        box = None;
-      }
-  in
-  let rows = List.init 300 (fun i -> { row with P.index = i + 1 }) in
-  let h =
-    {
-      h with
-      R.observe =
-        (fun ~image:_ () ->
-          Ok
-            {
-              (page (String.make 9000 'x')) with
-              R.snapshot = { snapshot with rows; total = 300 };
-            });
-    }
-  in
-  ignore (ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())));
-  Alcotest.(check int) "rows bound" 250 (List.length (List.hd !requests).snapshot.rows);
-  Alcotest.(check int) "page text bound" 6000 (String.length (List.hd !requests).text)
-
-let dry_run () =
-  let h, _, goals = harness [ reply (R.Leg "Open account") ] in
-  let h =
-    { h with R.navigate = (fun _ -> Alcotest.fail "dry run navigated initial URL") }
-  in
-  let args =
-    { (params ~dry_run:true ()) with R.start_url = Some "https://site.example/" }
-  in
-  let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] args) in
-  Alcotest.(check string)
-    "first choice is visible" "Open account"
-    (Yojson.Safe.Util.to_string
-       (Yojson.Safe.Util.member "goal" (Yojson.Safe.Util.member "pilot_choice" r.data)));
-  Alcotest.(check int) "no leg dispatched" 0 (List.length !goals);
-  Alcotest.(check string) "decision" "leg" (Option.get r.reason);
-  Alcotest.(check string)
-    "reasoning summary" "pilot decision"
-    (Option.get r.reasoning_summary)
-
-let turn_limit () =
-  let h, _, _ = harness [ reply (R.Notify "Still reading") ] in
-  let r =
-    ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ~turns:1 ()))
-  in
-  Alcotest.(check string) "pilot cap" "limit" (P.Run_status.to_string r.status)
-
-let secrets () =
-  let generated = "generated-password" and supplied = "supplied-password" in
-  let first =
-    {
-      finish with
-      R.secrets_for_operator = [ ("NEW", generated) ];
-      answer = R.Notify generated;
-    }
-  in
-  let last =
-    reply
-      (R.Done { result = supplied ^ generated; evidence = [ supplied ]; records = [] })
-  in
-  let h, requests, _ = harness ~text:supplied [ first; last ] in
-  let r =
-    ran
-      (R.loop ~handler:h
-         ~now:(fun () -> 0.)
-         ~installed:[]
-         ~secrets:[ ("PASS", supplied) ]
-         (params ()))
-  in
-  let contains needle text =
-    try
-      ignore (Str.search_forward (Str.regexp_string needle) text 0);
-      true
-    with Not_found -> false
-  in
-  List.iter
-    (fun request ->
-      Alcotest.(check bool)
-        "secret excluded from request" false
-        (contains supplied request.R.text))
-    !requests;
-  let public =
-    { r with P.secrets_for_operator = [] }
-    |> P.yojson_of_run_result |> Yojson.Safe.to_string
-  in
-  Alcotest.(check bool)
-    "supplied secret excluded from reply" false (contains supplied public);
-  Alcotest.(check bool)
-    "generated secret excluded from public reply" false (contains generated public);
-  Alcotest.(check string)
-    "generated only in operator field" generated
-    (List.assoc "NEW" r.secrets_for_operator)
-
-let handoff_returns () =
-  let h, _, _ = harness [ reply (R.Handoff "Login"); finish ] in
+(* revert-eft1 revert-24kr: JEV's DONE ends a navigation mission; no planner is asked. *)
+let jev_runs () =
+  let h, goals, asked = harness [ drive "done" ] [] in
   let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
-  Alcotest.(check int) "pilot resumes" 2 r.pilot_turns
+  status "done" r;
+  Alcotest.(check (list string))
+    "revert-eft1 JEV gets the mission as its goal" [ "Open the reports page" ] !goals;
+  Alcotest.(check int) "revert-24kr no planner call" 0 (List.length !asked)
 
-(* pilot-a4ua: row actions stay bounded and dangerous intents need a positive mission. *)
-let action_refusal () =
-  List.iter
-    (fun (name, mission, allowed) ->
-      let row =
-        P.
-          {
-            index = 1;
-            role = "button";
-            name;
-            value = None;
-            state = None;
-            options = None;
-            box = None;
-          }
-      in
-      let observation = page "Ready" in
-      let observation =
-        {
-          observation with
-          R.snapshot = { snapshot with rows = [ row ]; total = 1 };
-          rows = [ ("button", name) ];
-        }
-      in
-      let h, _, _ =
-        harness
-          [
-            reply
-              (R.Act
-                 (P.Click
-                    P.
-                      {
-                        tab;
-                        snapshot = sid;
-                        index = 1;
-                        snap = None;
-                        match_ = None;
-                        limit = None;
-                      }));
-            finish;
-          ]
-      in
-      let h = { h with R.observe = (fun ~image:_ () -> Ok observation) } in
-      let dispatched = ref 0 in
-      let result =
-        ran
-          (R.loop ~handler:h
-             ~now:(fun () -> 0.)
-             ~installed:[]
-             ~planner_action:(fun _ ->
-               incr dispatched;
-               Ok
-                 P.
-                   {
-                     tab;
-                     url = snapshot.url;
-                     title = snapshot.title;
-                     snapshot = None;
-                     dialog = None;
-                     popups = [];
-                     hits = None;
-                     shots = None;
-                     via = None;
-                   })
-             (params ~mission ()))
-      in
-      Alcotest.(check int)
-        "only named positive intent dispatches"
-        (if allowed then 1 else 0)
-        !dispatched;
-      let turn = List.hd result.planner_turns in
-      Alcotest.(check bool)
-        "refusal is visible" (not allowed)
-        (turn.reason <> Some "pilot decision"))
-    [
-      ("Pay", "Inspect account", false);
-      ("Delete account", "Inspect account", false);
-      ("Send", "Do not send the message", false);
-      ("Pay", "Pay and send a message", true);
-      ("Send", "Pay and send a message", true);
-    ]
+(* revert-24kr: without a planner, BLOCKED ends blocked and nothing is asked. *)
+let no_planner () =
+  let h, _, asked = harness [ drive ~reason:"no control" "blocked" ] [] in
+  let r =
+    ran (R.loop ~handler:h ~planner:false ~now:(fun () -> 0.) ~installed:[] (params ()))
+  in
+  status "blocked" r;
+  Alcotest.(check int) "revert-24kr never called" 0 (List.length !asked)
 
-(* pilot-l7a5 pilot-nmq5: a read and an upload are in the history the next turn sees. *)
-let reads_and_uploads_in_history () =
-  let h, requests, _ =
-    harness ~text:"Fact 42"
-      [
-        reply (R.Read { quote = "Fact 42"; note = "the answer" });
-        reply
-          (R.Act
-             (P.Upload P.{ tab; snapshot = sid; index = 1; paths = [ "/tmp/report.txt" ] }));
-        finish;
-      ]
+(* revert-apgf: on BLOCKED the planner's hint becomes JEV's goal; it never acts. *)
+let blocked_hint () =
+  let h, goals, asked =
+    harness
+      [ drive ~reason:"no control" "blocked"; drive "done" ]
+      [ R.Hint "Click the link named Reports" ]
   in
-  let row =
-    P.
-      {
-        index = 1;
-        role = "file-input";
-        name = "File";
-        value = None;
-        state = None;
-        options = None;
-        box = None;
-      }
-  in
-  let h =
-    {
-      h with
-      R.observe =
-        (fun ~image:_ () ->
-          Ok
-            {
-              (page "Fact 42") with
-              R.snapshot = { snapshot with rows = [ row ]; total = 1 };
-            });
-    }
-  in
-  let _result =
-    ran
-      (R.loop ~handler:h
-         ~now:(fun () -> 0.)
-         ~installed:[]
-         ~planner_action:(fun _ ->
-           Ok
-             P.
-               {
-                 tab;
-                 url = snapshot.url;
-                 title = snapshot.title;
-                 snapshot = None;
-                 dialog = None;
-                 popups = [];
-                 hits = None;
-                 shots = None;
-                 via = None;
-               })
-         (params ~mission:"Upload /tmp/report.txt and read the fact" ()))
-  in
-  let last = List.hd !requests in
-  let goals = List.map (fun (l : R.leg) -> l.goal) last.R.legs in
+  let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
+  status "done" r;
+  Alcotest.(check int) "revert-apgf one consultation" 1 (List.length !asked);
+  Alcotest.(check string)
+    "revert-apgf asked because blocked" "blocked"
+    R.(
+      match (List.hd !asked).trigger with
+      | Blocked -> "blocked"
+      | Expectation -> "expectation"
+      | Final -> "final");
   Alcotest.(check bool)
-    "pilot-l7a5 the read is in the history" true
-    (List.mem "Read: Fact 42" goals);
-  Alcotest.(check bool)
-    "pilot-nmq5 the upload names file and row" true
-    (List.mem "Attach /tmp/report.txt to the file-input named File" goals)
+    "revert-apgf the hint is JEV's next goal" true
+    (match !goals with
+    | second :: _ -> String.ends_with ~suffix:"Next: Click the link named Reports" second
+    | [] -> false);
+  Alcotest.(check (list string))
+    "revert-apgf the consultation is recorded" [ "hint" ]
+    (List.map (fun (t : P.planner_turn) -> t.answer) r.planner_turns)
 
-(* dmod-l44q: the run's data totals the image parts and decision-call input tokens of
-   every leg. *)
-let leg_accounting () =
+(* revert-apgf: fail ends the mission; the consultation cap ends a loop of hints. *)
+let planner_endings () =
+  let h, _, _ = harness [ drive "blocked" ] [ R.Fail "the site has no reports" ] in
+  status "failed" (ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())));
+  let h, _, asked =
+    harness
+      (List.init 4 (fun _ -> drive "blocked"))
+      (List.init 3 (fun _ -> R.Hint "try again"))
+  in
+  status "limit" (ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())));
+  Alcotest.(check int) "bounded by max_plans" 3 (List.length !asked)
+
+(* revert-bqrq: a mission that asks for an answer gets one planner call at the end, over
+   the final page, for result and evidence and the done judgment. *)
+let end_answer () =
+  let mission = "How many books are in the Poetry category?" in
+  let h, _, asked =
+    harness
+      [ drive "done" ]
+      [ R.Answer { result = "19"; evidence = [ "19 results" ]; done_ = true } ]
+  in
+  let r =
+    ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ~mission ()))
+  in
+  status "done" r;
+  Alcotest.(check (option string)) "revert-bqrq result" (Some "19") r.result;
+  Alcotest.(check (list string)) "revert-bqrq evidence" [ "19 results" ] r.evidence;
+  Alcotest.(check bool)
+    "revert-bqrq asked once, at the end" true
+    (match !asked with
+    | [ q ] -> q.R.trigger = R.Final && q.text = "Fact 42"
+    | _ -> false);
   let h, _, _ =
-    harness ~statuses:[ "done"; "done" ] [ reply (R.Leg "a"); reply (R.Leg "b"); finish ]
-  in
-  let state parts tokens =
-    `Assoc
-      [
-        ("metrics", `Assoc [ ("image_parts", `Int parts) ]);
-        ( "predictions",
-          `List
-            (List.map
-               (fun n -> `Assoc [ ("usage", `Assoc [ ("input_tokens", `Int n) ]) ])
-               tokens) );
-      ]
-  in
-  let legs = ref [ state 1 [ 900; 2198 ]; state 2 [ 1500 ] ] in
-  let h =
-    {
-      h with
-      R.step =
-        (fun _ ->
-          match !legs with
-          | s :: rest ->
-              legs := rest;
-              Ok { (drive "done") with P.operator_state = Some s }
-          | [] -> Alcotest.fail "no more legs");
-    }
-  in
-  let result = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
-  let data key = Yojson.Safe.Util.member key result.data in
-  Alcotest.(check string)
-    "dmod-l44q image parts summed" "3"
-    (Yojson.Safe.to_string (data "image_parts"));
-  Alcotest.(check string)
-    "dmod-l44q decision input tokens kept" "[900,2198,1500]"
-    (Yojson.Safe.to_string (data "decision_input_tokens"))
-
-(* pilot-sc9t: records the pilot returns with done go to --out as pilot-record lines,
-   and only when every value is text the mission read. *)
-let pilot_records () =
-  let done_with value =
-    reply
-      (R.Done
-         {
-           result = "Collected";
-           evidence = [ "Fact 42" ];
-           records = [ [ ("fact", value) ] ];
-         })
-  in
-  let h, _, _ = harness ~text:"Fact 42" [ done_with "Fact 99"; done_with "Fact 42" ] in
-  let written = ref [] in
-  let result =
-    ran
-      (R.loop ~handler:h
-         ~now:(fun () -> 0.)
-         ~installed:[]
-         ~on_record:(fun line ->
-           written := Yojson.Safe.to_string line :: !written;
-           Ok ())
-         (params ~mission:"Collect the fact to a JSONL file" ()))
-  in
-  Alcotest.(check string) "pilot-sc9t done" "done" (P.Run_status.to_string result.status);
-  Alcotest.(check (list string))
-    "pilot-sc9t only the observed record is written"
-    [ {|{"kind":"pilot-record","source":"pilot","record":{"fact":"Fact 42"}}|} ]
-    !written;
-  Alcotest.(check (list string))
-    "pilot-sc9t output kind" [ "pilot-record" ] result.output_kinds;
-  Alcotest.(check int) "pilot-sc9t invented record cost a turn" 2 result.pilot_turns
-
-(* pilot-gn4w pilot-pw7x: a password the pilot invents and fills is handed to the operator
-   once, and never appears anywhere else in the reply or the steps it emits. *)
-let generated_password () =
-  let password = ok (P.Row_state.of_string "password") in
-  let row index name =
-    P.
-      {
-        index;
-        role = "textbox";
-        name;
-        value = None;
-        state = Some [ password ];
-        options = None;
-        box = None;
-      }
-  in
-  let observation = page "Register" in
-  let observation =
-    {
-      observation with
-      R.snapshot =
-        { snapshot with rows = [ row 1 "Password"; row 2 "Confirm password" ]; total = 2 };
-      rows = [ ("textbox", "Password"); ("textbox", "Confirm password") ];
-    }
-  in
-  let invented = "N0rthstar!H7qL_29vR" in
-  let fill index =
-    reply
-      (R.Act
-         (P.Fill
-            P.
-              {
-                tab;
-                snapshot = sid;
-                index;
-                text = invented;
-                snap = None;
-                match_ = None;
-                limit = None;
-              }))
-  in
-  let h, _, _ = harness [ fill 1; fill 2; finish ] in
-  let h = { h with R.observe = (fun ~image:_ () -> Ok observation) } in
-  let typed = ref [] and steps = ref [] in
-  let result =
-    ran
-      (R.loop ~handler:h
-         ~now:(fun () -> 0.)
-         ~installed:[]
-         ~on_planner_step:(fun step -> steps := step :: !steps)
-         ~planner_action:(fun command ->
-           (match command with P.Fill a -> typed := a.text :: !typed | _ -> ());
-           Ok
-             P.
-               {
-                 tab;
-                 url = snapshot.url;
-                 title = snapshot.title;
-                 snapshot = None;
-                 dialog = None;
-                 popups = [];
-                 hits = None;
-                 shots = None;
-                 via = None;
-               })
-         (params ~mission:"Register an account" ()))
-  in
-  Alcotest.(check (list string))
-    "the page gets the password" [ invented; invented ] !typed;
-  Alcotest.(check (list (pair string string)))
-    "pilot-gn4w handed to the operator once"
-    [ ("generated_password", invented) ]
-    result.secrets_for_operator;
-  let leaks text =
-    let n = String.length invented and m = String.length text in
-    let rec at i = i + n <= m && (String.sub text i n = invented || at (i + 1)) in
-    at 0
-  in
-  let reply_text =
-    Yojson.Safe.to_string
-      (P.yojson_of_run_result { result with secrets_for_operator = [] })
-  in
-  Alcotest.(check bool) "pilot-pw7x not in the reply" false (leaks reply_text);
-  Alcotest.(check bool)
-    "pilot-pw7x not in the emitted steps" false
-    (List.exists
-       (fun step -> leaks (Yojson.Safe.to_string (P.yojson_of_planner_step step)))
-       !steps)
-
-(* pilot-h506: the pilot uploads through the validated upload action, and only the files
-   the mission names. *)
-let pilot_upload () =
-  List.iter
-    (fun (paths, allowed) ->
-      let row =
-        P.
-          {
-            index = 1;
-            role = "file-input";
-            name = "File";
-            value = None;
-            state = None;
-            options = None;
-            box = None;
-          }
-      in
-      let observation = page "Upload a file" in
-      let observation =
-        {
-          observation with
-          R.snapshot = { snapshot with rows = [ row ]; total = 1 };
-          rows = [ ("file-input", "File") ];
-        }
-      in
-      let h, _, _ =
-        harness
-          [ reply (R.Act (P.Upload P.{ tab; snapshot = sid; index = 1; paths })); finish ]
-      in
-      let h = { h with R.observe = (fun ~image:_ () -> Ok observation) } in
-      let dispatched = ref [] in
-      let result =
-        ran
-          (R.loop ~handler:h
-             ~now:(fun () -> 0.)
-             ~installed:[]
-             ~planner_action:(fun command ->
-               dispatched := P.command_name command :: !dispatched;
-               Ok
-                 P.
-                   {
-                     tab;
-                     url = snapshot.url;
-                     title = snapshot.title;
-                     snapshot = None;
-                     dialog = None;
-                     popups = [];
-                     hits = None;
-                     shots = None;
-                     via = None;
-                   })
-             (params ~mission:"Upload /tmp/report.txt and tell me the link" ()))
-      in
-      Alcotest.(check (list string))
-        "pilot-h506 only named files upload"
-        (if allowed then [ "upload" ] else [])
-        !dispatched;
-      let turn = List.hd result.planner_turns in
-      Alcotest.(check bool)
-        "pilot-h506 refusal is visible" (not allowed)
-        (turn.reason <> Some "pilot decision");
-      if not allowed then
-        Alcotest.(check bool)
-          "pilot-h506 refusal quotes the named path" true
-          (match turn.reason with
-          | Some why ->
-              let needle = "it names exactly: /tmp/report.txt" in
-              let n = String.length needle and m = String.length why in
-              let rec at i = i + n <= m && (String.sub why i n = needle || at (i + 1)) in
-              at 0
-          | None -> false))
-    [
-      ([ "/tmp/report.txt" ], true);
-      ([ "/home/ribelo/.ssh/id_ed25519" ], false);
-      ([ "/tmp/report.txt"; "/tmp/other.txt" ], false);
-    ]
-
-let empty_result () =
-  let h, _, _ = harness [ reply (R.Done { result = ""; evidence = []; records = [] }) ] in
-  let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
-  Alcotest.(check string) "empty done refused" "failed" (P.Run_status.to_string r.status)
-
-let secret_dispatch () =
-  let h, requests, _ =
     harness
-      [
-        reply
-          (R.Act
-             (P.Fill
-                P.
-                  {
-                    tab;
-                    snapshot = sid;
-                    index = 1;
-                    text = "PASS";
-                    snap = None;
-                    match_ = None;
-                    limit = None;
-                  }));
-        finish;
-      ]
+      [ drive "done" ]
+      [ R.Answer { result = "unknown"; evidence = []; done_ = false } ]
   in
-  let row =
-    P.
-      {
-        index = 1;
-        role = "textbox";
-        name = "Password";
-        value = None;
-        state = None;
-        options = None;
-        box = None;
-      }
+  status "failed"
+    (ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ~mission ())));
+  let h, _, asked = harness [ drive "done" ] [] in
+  let r =
+    ran
+      (R.loop ~handler:h ~planner:false
+         ~now:(fun () -> 0.)
+         ~installed:[] (params ~mission ()))
   in
-  let h =
-    {
-      h with
-      R.observe =
-        (fun ~image:_ () ->
-          Ok
-            {
-              (page "Ready") with
-              R.snapshot = { snapshot with rows = [ row ]; total = 1 };
-            });
-    }
-  in
-  let sent = ref None in
-  ignore
-    (ran
-       (R.loop ~handler:h
-          ~now:(fun () -> 0.)
-          ~installed:[]
-          ~secrets:[ ("PASS", "actual-password") ]
-          ~planner_action:(fun command ->
-            (match command with
-            | P.Fill a -> sent := Some a.text
-            | _ -> Alcotest.fail "not Fill");
-            Ok
-              P.
-                {
-                  tab;
-                  url = snapshot.url;
-                  title = snapshot.title;
-                  snapshot = None;
-                  dialog = None;
-                  popups = [];
-                  hits = None;
-                  shots = None;
-                  via = None;
-                })
-          (params ())));
-  Alcotest.(check (option string))
-    "dispatch resolves secret name" (Some "actual-password") !sent;
-  (* pilot-x1f3: the pilot sees its own act in the next turn's history, by secret name. *)
-  let history = (List.hd !requests).R.legs in
-  Alcotest.(check (list string))
-    "act is in the history"
-    [ "Type PASS into the textbox named Password" ]
-    (List.map (fun (leg : R.leg) -> leg.goal) history);
-  Alcotest.(check string) "act outcome" "done" (List.hd history).outcome
+  status "done" r;
+  Alcotest.(check (option string)) "revert-bqrq no planner, no result" None r.result;
+  Alcotest.(check int) "not asked" 0 (List.length !asked)
 
-(* pic-7ozf pic-k4ij pic-cqcf: explicit observation is bounded; focused secrets
-   dispatch once and native evidence is redacted before the trace boundary. *)
-let picture_turns () =
-  let h, requests, _ =
-    harness
-      [
-        reply R.Observe_image;
-        reply (R.Act (P.Type { tab; text = "PASS"; shot = None }));
-        finish;
-      ]
-  in
-  let observed = ref [] and acts = ref 0 and evidence = ref [] in
-  let h =
-    {
-      h with
-      R.observe =
-        (fun ~image () ->
-          observed := image :: !observed;
-          Ok
-            {
-              (page "Ready") with
-              image_input = (if image then Some (Bytes.of_string "owned PNG") else None);
-            });
-    }
-  in
-  ignore
-    (ran
-       (R.loop ~handler:h
-          ~now:(fun () -> 0.)
-          ~installed:[]
-          ~secrets:[ ("PASS", "actual-password") ]
-          ~on_planner_step:(fun step ->
-            evidence := P.yojson_of_planner_step step :: !evidence)
-          ~planner_action:(fun command ->
-            incr acts;
-            (match command with
-            | P.Type a ->
-                Alcotest.(check string)
-                  "protected reference resolves only at dispatch" "actual-password" a.text
-            | _ -> Alcotest.fail "not focused type");
-            Ok
-              P.
-                {
-                  tab;
-                  url = snapshot.url;
-                  title = snapshot.title;
-                  snapshot = None;
-                  dialog = None;
-                  popups = [];
-                  via = None;
-                  shots = None;
-                  hits =
-                    Some
-                      [
-                        {
-                          at = { x = 1.; y = 2. };
-                          sampled_at = { x = 1.; y = 2. };
-                          element = "actual-password";
-                          hit_role = Some "textbox";
-                          hit_label = Some "actual-password";
-                        };
-                      ];
-                })
-          (params ())));
-  Alcotest.(check (list bool))
-    "explicit image observation flag" [ false; true; false ] (List.rev !observed);
-  Alcotest.(check int) "focused type executes once" 1 !acts;
-  Alcotest.(check bool)
-    "actual owned image reaches the next pilot turn" true
-    (List.exists
-       (fun (r : R.plan_request) -> r.image_input = Some (Bytes.of_string "owned PNG"))
-       !requests);
-  let wire = Yojson.Safe.to_string (`List !evidence) in
-  Alcotest.(check bool)
-    "native hit evidence has no protected value" false
-    (try
-       ignore (Str.search_forward (Str.regexp_string "actual-password") wire 0);
-       true
-     with Not_found -> false);
-  let h, _, _ = harness [ reply R.Observe_image ] in
-  let observed = ref [] in
-  let h =
-    {
-      h with
-      R.observe =
-        (fun ~image () ->
-          observed := image :: !observed;
-          Ok (page "Ready"));
-    }
-  in
-  ignore (ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ~turns:1 ())));
-  Alcotest.(check (list bool))
-    "no useless image after the final allowed turn" [ false ] !observed
-
-let leg_failure_visible () =
-  let h, requests, _ = harness [ reply (R.Leg "Open account"); finish ] in
-  let h =
-    {
-      h with
-      R.step =
-        (fun _ ->
-          Error
-            (P.make_error
-               (ok (P.Error_code.of_string "internal"))
-               ~message:"navigator failed"));
-    }
-  in
-  let result = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
-  Alcotest.(check (option string))
-    "navigator failure is durable" (Some "navigator failed")
-    (List.hd result.procedures).reason;
-  Alcotest.(check string)
-    "failed navigator returns to pilot" "failed"
-    (List.hd (List.hd !requests).R.legs).outcome
-
-let dangerous_leg () =
-  let h, requests, goals = harness [ reply (R.Leg "Confirm payment"); finish ] in
-  let result = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
-  Alcotest.(check (option string))
-    "refusal is durable" (Some "refused payment: mission does not name that action")
-    (List.hd result.procedures).reason;
-  Alcotest.(check int) "unsafe leg never dispatches" 0 (List.length !goals);
-  Alcotest.(check string)
-    "unsafe leg is audited" "refused" (List.hd (List.hd !requests).R.legs).outcome
-
-(* pilot-x1f3: a twice-refused pilot reply costs one turn, not the mission. *)
-let refused_reply_costs_a_turn () =
-  let h, requests, _ = harness [ finish ] in
-  let first = ref true in
-  let h =
-    {
-      h with
-      R.plan =
-        (fun request ->
-          if !first then (
-            first := false;
-            Error
-              (P.make_error
-                 ~detail:(`Assoc [ ("code", `String "invalid-response") ])
-                 (ok (P.Error_code.of_string "model-unavailable"))
-                 ~message:"act refused"))
-          else h.R.plan request);
-    }
-  in
-  let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[] (params ())) in
-  Alcotest.(check string) "mission still done" "done" (P.Run_status.to_string r.status);
-  Alcotest.(check string)
-    "refusal is in the next history" "refused: act refused"
-    (List.hd (List.hd !requests).R.legs).outcome
-
-(* pilot-gt2h: whole words; navigation that names a section is not an action (U1, Tauron). *)
-let unsafe_words () =
-  List.iter
-    (fun (text, expected) ->
-      Alcotest.(check (option string)) text expected (R.unsafe_action text))
-    [
-      ("Open the section showing invoices, payments, or outstanding balances", None);
-      ("Open Messages", None);
-      ("Show deleted items", None);
-      ("Confirm payment", Some "payment");
-      ("Click the button named Pay now", Some "payment");
-      ("Kupuję i płacę", Some "payment");
-      ("Place order", Some "payment");
-      ("Delete this address", Some "deletion");
-      ("Usuń konto", Some "deletion");
-      ("Send message", Some "messaging");
-      ("Wyślij", Some "messaging");
-    ]
-
-(* pilot-z1nr: a remembered procedure that failed in this mission is not offered or run
-   again; U5 selected the same stale consent-first procedure on all twelve turns. *)
-let stale_memory () =
+(* revert-eft1: the site playbook's procedures are offered to JEV as operations; one that
+   fails its expectation is a stop the planner sees (revert-24kr). *)
+let procedures_as_operations () =
   let proc =
     Leash.Playbook.
       {
-        slug = "legs-stale";
-        description = "Find a fact";
+        slug = "open-reports";
+        description = "Open the reports page";
         args = None;
-        steps = [ Goal { goal = "Click the button named Reject all"; hint = None } ];
-        expect = [];
+        steps = [ Goal { goal = "Click the link named Reports"; hint = None } ];
+        expect = [ "the page shows Quarterly" ];
         repeat = None;
       }
   in
   let book =
     Leash.Playbook.
       {
-        file = "playbook.json";
+        file = "<test>";
         dir = None;
         playbook =
           {
             site = "site.example";
             entry = "https://site.example/";
-            description = "Pilot memory";
+            description = "Reports";
             pages = [];
             procedures = [ proc ];
             shapes = None;
@@ -927,70 +248,63 @@ let stale_memory () =
         scripts = [];
       }
   in
-  let h, requests, goals =
-    harness ~statuses:[ "blocked" ]
-      [ reply (R.Leg "legs-stale"); reply (R.Leg "legs-stale"); finish ]
+  let offered = ref [] and outer = ref true in
+  let on_step (request : R.step_request) =
+    if !outer then (
+      outer := false;
+      offered :=
+        List.map
+          (fun (s : Leash__Jev_request.offered_script) -> s.name)
+          (request.script_offers ~url:"https://site.example/" ~text:"");
+      ignore
+        (request.on_script ~url:"https://site.example/" "procedure:open-reports"
+          : (Leash__Jev_request.script_effect, P.error) result)
+      [@ox.allow
+        "ox-discarded-result: the procedure's failure is read from the run below"])
   in
-  let result =
-    ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[ book ] (params ()))
+  let h, _, asked =
+    harness ~text:"Reports" ~on_step
+      [ drive "done"; drive "done" ]
+      [ R.Fail "reports are gone" ]
   in
-  Alcotest.(check string)
-    "mission still done" "done"
-    (P.Run_status.to_string result.status);
-  Alcotest.(check int) "the stale procedure ran once" 1 (List.length !goals);
-  let offered (request : R.plan_request) =
-    List.map (fun (p : Leash.Playbook.procedure) -> p.slug) request.candidates
+  let h =
+    {
+      h with
+      R.verify =
+        (fun ~pages:_ ~checks:_ ~timeout_s:_ ->
+          Ok
+            ( [
+                P.
+                  {
+                    sentence = "the page shows Quarterly";
+                    checker = "page_shows";
+                    passed = false;
+                    score = None;
+                  };
+              ],
+              page "Reports" ));
+    }
   in
-  match List.rev !requests with
-  | first :: second :: third :: _ ->
-      Alcotest.(check (list string))
-        "offered before failing" [ "legs-stale" ] (offered first);
-      Alcotest.(check (list string)) "not offered after failing" [] (offered second);
-      Alcotest.(check (list string)) "still not offered" [] (offered third);
-      Alcotest.(check string)
-        "naming it again is refused in the history" "refused"
-        (String.sub (List.hd (List.rev third.R.legs)).outcome 0 7)
-  | _ -> Alcotest.fail "expected three pilot turns"
-
-let schema_redaction () =
-  let h, _, _ = harness [ finish ] in
+  let r = ran (R.loop ~handler:h ~now:(fun () -> 0.) ~installed:[ book ] (params ())) in
+  Alcotest.(check (list string))
+    "revert-eft1 procedure offered" [ "procedure:open-reports" ] !offered;
   Alcotest.(check bool)
-    "redaction that changes typed keys fails closed" true
-    (Result.is_error
-       (R.loop ~handler:h
-          ~now:(fun () -> 0.)
-          ~installed:[]
-          ~secrets:[ ("PASS", "title") ]
-          (params ())))
+    "revert-24kr failed expectation consulted" true
+    (match !asked with q :: _ -> q.R.trigger = R.Expectation | [] -> false);
+  status "failed" r
 
 let () =
-  Alcotest.run "mission pilot"
+  Alcotest.run "drive: JEV runs the loop"
     [
-      ( "pilot",
+      ( "loop",
         List.map
-          (fun (name, test) -> Alcotest.test_case name `Quick test)
+          (fun (name, f) -> Alcotest.test_case name `Quick f)
           [
-            ("leg DONE/BLOCKED return", legs_return);
-            ("bounded context", bounded_context);
-            ("dry run", dry_run);
-            ("turn cap", turn_limit);
-            ("secrets", secrets);
-            ("handoff resumes", handoff_returns);
-            ("dangerous action refusal", action_refusal);
-            ("done result required", empty_result);
-            ("secret dispatch", secret_dispatch);
-            ("pic-cqcf bounded image turns and protected focused type", picture_turns);
-            ("failed leg context", leg_failure_visible);
-            ("redaction fails closed", schema_redaction);
-            ("dangerous leg refusal", dangerous_leg);
-            ("refusal words are whole words", unsafe_words);
-            ("refused reply costs a turn", refused_reply_costs_a_turn);
-            ("failed playbook procedure is not offered again", stale_memory);
-            ("pilot-h506 pilot uploads only named files", pilot_upload);
-            ("pilot-gn4w pilot-pw7x generated password", generated_password);
-            ("pilot-sc9t pilot records reach --out", pilot_records);
-            ("dmod-l44q leg accounting", leg_accounting);
-            ( "pilot-l7a5 pilot-nmq5 reads and uploads in history",
-              reads_and_uploads_in_history );
+            ("revert-eft1 revert-24kr JEV runs the mission", jev_runs);
+            ("revert-24kr no planner, never called", no_planner);
+            ("revert-apgf BLOCKED hint becomes JEV's goal", blocked_hint);
+            ("revert-apgf fail and the consultation cap", planner_endings);
+            ("revert-bqrq end answer and done judgment", end_answer);
+            ("revert-eft1 procedures offered as operations", procedures_as_operations);
           ] );
     ]

@@ -39,7 +39,7 @@ Help is offline and short first contact is not the full manual.
   all 40 error codes, exit classes, meanings and hints are discoverable
   $ leash playbook --help=plain >playbook-help 2>err; test ! -s err
   $ grep -q 'A playbook is a directory that describes one site: pages, procedures, and scripts.' playbook-help
-  $ grep -q 'The operator writes it. A model never does. The pilot can select it when a mission fits.' playbook-help
+  $ grep -q 'The operator writes it. A model never does. JEV is offered its procedures and scripts on its site.' playbook-help
   $ grep -q 'Format, example, and every loader refusal: leash help playbooks' playbook-help
   $ leash drive --help=plain >drive-help 2>err; test ! -s err
   $ grep -q 'Drive runs one mission on one tab until done, blocked, a cap, a deadline, or an error.' drive-help

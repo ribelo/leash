@@ -26,6 +26,7 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
   (* fly-xger: a blank tab with no URL is missing-start, not a playbook question.
      These controls start on an open page so the playbook switch is what navigates. *)
   let url = ref "https://start.example/" and page = ref 0 and asked = ref 0 in
+  let outer = ref true and procedure_outcome = ref None in
   let navigations = ref [] and streamed = ref [] and questions = ref [] in
   let observe () =
     let snapshot =
@@ -56,13 +57,12 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
         downloads = [];
         dialog = None;
         snapshot;
-        image_input = None;
       }
   in
   let handler =
     R.
       {
-        observe = (fun ~image:_ () -> Ok (observe ()));
+        observe = (fun () -> Ok (observe ()));
         navigate =
           (fun target ->
             navigations := target :: !navigations;
@@ -72,10 +72,17 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
         choose = (fun _ -> Alcotest.fail "pilot must not choose playbooks through JEV");
         text_value = (fun _ -> assert false);
         step =
-          (fun _ ->
-            navigations := next_url :: !navigations;
-            url := next_url;
-            incr page;
+          (fun request ->
+            (* revert-eft1: the outer drive is JEV's, which chooses the offered
+               procedure; the procedure's goal steps are inner drives. *)
+            if !outer then (
+              outer := false;
+              procedure_outcome :=
+                Some (request.R.on_script ~url:!url "procedure:collect"))
+            else (
+              navigations := next_url :: !navigations;
+              url := next_url;
+              incr page);
             Ok
               {
                 status = ok (P.Drive_status.of_string "done");
@@ -99,14 +106,12 @@ let run ?(duplicate = false) ?(book = book) ?(empty = false)
             Ok
               {
                 answer =
-                  (if !asked = 1 then Leg "collect"
-                   else if malformed_done || rejected then Fail "collection failed"
-                   else
-                     Done { result = "Collected catalogue"; evidence = []; records = [] });
-                expect = [];
+                  (match request.R.trigger with
+                  | R.Final when not (malformed_done || rejected) ->
+                      Answer
+                        { result = "Collected catalogue"; evidence = []; done_ = true }
+                  | _ -> Fail "collection failed");
                 usage = None;
-                reasoning_summary = None;
-                secrets_for_operator = [];
               });
         hand_off = (fun ~reason:_ -> assert false);
         script =
@@ -184,9 +189,7 @@ let native_repeat () =
     "candidate expectations are audited" 2
     (List.length (List.hd result.procedures).expectations);
   Alcotest.(check int) "no JEV playbook decision" 0 (List.length result.playbook_choices);
-  let first = List.hd questions in
-  Alcotest.(check bool)
-    "an open tab is not reported as a blank start" false (first.legs <> [])
+  ignore (questions : R.plan_request list)
 
 let duplicate_records () =
   let result, _, streamed, _ = run ~duplicate:true () in
@@ -232,17 +235,15 @@ let one_shot () =
   in
   List.iter
     (fun empty ->
-      let result, _, _, questions = run ~book ~empty () in
+      let result, _, _, _ = run ~book ~empty () in
       Alcotest.(check string)
         "one-shot finishes" "done"
         (P.Run_status.to_string result.status);
-      Alcotest.(check int)
-        "one candidate leg" 1
-        (List.length (List.hd (List.rev questions)).legs);
-      let last = List.hd (List.rev questions) in
       Alcotest.(check bool)
         "completion visible even for zero records" true
-        (match last.legs with [ leg ] -> leg.outcome = "done" | _ -> false))
+        (List.exists
+           (fun (p : P.run_procedure) -> p.slug = "collect" && p.outcome = "done")
+           result.procedures))
     [ false; true ]
 
 let () =

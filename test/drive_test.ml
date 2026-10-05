@@ -1120,61 +1120,6 @@ let scoped_action_risk () =
    wording cannot opt into acceptance. Planner and operator share this predicate. *)
 let real_run_actions () = Yojson.Safe.from_file "fixtures/map-run-actions.json"
 
-let consent_guard () =
-  let real_accept =
-    real_run_actions ()
-    |> Yojson.Safe.Util.member "consent_label"
-    |> Yojson.Safe.Util.to_string
-  in
-  let button index name =
-    P.
-      {
-        index;
-        role = "button";
-        name;
-        value = None;
-        state = None;
-        options = None;
-        box = None;
-      }
-  in
-  List.iter
-    (fun (accept, reject) ->
-      let page = { (snapshot ()) with P.rows = [ button 1 accept; button 2 reject ] } in
-      Alcotest.(check bool)
-        "map-op11 accept-all refused" true
-        (Result.is_error (P.check_consent_click page ~index:1));
-      Alcotest.(check bool)
-        "map-op11 reject-all allowed" true
-        (Result.is_ok (P.check_consent_click page ~index:2));
-      let click =
-        P.Click
-          P.
-            {
-              tab = handle;
-              snapshot = id;
-              index = 1;
-              snap = None;
-              match_ = None;
-              limit = None;
-            }
-      in
-      Alcotest.(check bool)
-        "map-op11 planner cannot bypass" true
-        (Result.is_error (P.check_planner_action page click));
-      Alcotest.(check bool)
-        "map-op11 page without alternative unaffected" true
-        (Result.is_ok
-           (P.check_consent_click { page with rows = [ button 1 accept ] } ~index:1)))
-    [
-      (real_accept, "Reject all");
-      ("Zaakceptuj wszystko", "Odrzuć wszystko");
-      ("Agree to all", "Necessary only");
-      ("Allow all", "Decline all");
-    ]
-
-(* map-op11: a dispatch refusal survives refresh as JEV context, with decline
-   still offered and acceptance masked. This is the guard/drive seam. *)
 let consent_dispatch () =
   let button index name =
     P.
@@ -1531,7 +1476,6 @@ let () =
             ("kind-ir9l trace-qe8c shown request real reply", semantic_request_real_reply);
             ("done", done_path);
             ("daily-9ggi blocked reasons", blocked_reasons);
-            ("map-op11 consent default decline", consent_guard);
             ("map-op11 consent refusal context", consent_dispatch);
             ("map-op12 unchanged action request masks", unchanged_action_mask);
             ( "map-op12 live M1 menu oscillation",

@@ -143,11 +143,7 @@ let fresh_agent_guidance () =
           "sampled field values";
           "must contain at least one goal";
         ] );
-      ( "drive",
-        [
-          "Only pilot done completes the mission";
-          "installed playbook are candidates for the pilot";
-        ] );
+      ("drive", [ "JEV runs the mission"; "offered to JEV as operations" ]);
       ("errors", [ "leash help playbooks"; "engine error" ]);
     ];
   (* hdoc-vqj7: the first authoring JSON fence is a loadable navigation book. *)

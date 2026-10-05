@@ -127,10 +127,11 @@ let default_chat_base_url = "https://openrouter.ai/api/v1"
 let default_decision_model = "typesafe/jev-1.13-20260917"
 let default_text_model = "inception/mercury-2.5"
 
-(* pilot-ffqa: the pilot model remains independent of the labeler and systemone
+(* pilot-ffqa: the planner model remains independent of the labeler and systemone
    predictor. Reasoning defaults to "max"; planner_endpoint still permits an
    operator-selected OpenAI-compatible endpoint. *)
-let default_planner_model = "openai/gpt-6-luna"
+(* revert-24kr: the planner is optional; absent means it is never called. *)
+let default_planner_model : string option = None
 let default_planner_reasoning = "max"
 
 (* daily-9ggi: per-attempt provider budgets, independent of the mission deadline. *)
@@ -144,7 +145,7 @@ type models = {
   decision_model : Text.t;
   chat_base_url : Text.t;
   text_model : Text.t;
-  planner_model : Text.t;
+  planner_model : Text.t option;
   planner_reasoning : Text.t;
   planner_endpoint : Text.t option;
   decision_timeout : Seconds.t;
@@ -164,12 +165,12 @@ let yojson_of_models (value : models) =
   `Assoc
     (optional "api_key" Redact.yojson_of_t value.api_key
     @ optional "planner_endpoint" Text.yojson_of_t value.planner_endpoint
+    @ optional "planner_model" Text.yojson_of_t value.planner_model
     @ [
         ("systemone_endpoint", Text.yojson_of_t value.systemone_endpoint);
         ("decision_model", Text.yojson_of_t value.decision_model);
         ("chat_base_url", Text.yojson_of_t value.chat_base_url);
         ("text_model", Text.yojson_of_t value.text_model);
-        ("planner_model", Text.yojson_of_t value.planner_model);
         ("planner_reasoning", Text.yojson_of_t value.planner_reasoning);
         ("decision_timeout", Seconds.yojson_of_t value.decision_timeout);
         ("text_timeout", Seconds.yojson_of_t value.text_timeout);
@@ -199,7 +200,7 @@ let models_of_yojson = function
       in
       let* chat_base_url = field "chat_base_url" Text.t_of_yojson default_chat_base_url in
       let* text_model = field "text_model" Text.t_of_yojson default_text_model in
-      let* planner_model = field "planner_model" Text.t_of_yojson default_planner_model in
+      let* planner_model = field "planner_model" (optional Text.t_of_yojson) None in
       let* planner_reasoning =
         field "planner_reasoning" Text.t_of_yojson default_planner_reasoning
       in
@@ -342,11 +343,6 @@ type traces = {
 
 let default_traces = { enabled = true; retention = Traces.Retention.default }
 
-type pilot = { turns : int; [@json.default 12] deadline_s : int [@json.default 600] }
-[@@deriving yojson]
-
-let default_pilot = { turns = 12; deadline_s = 600 }
-
 (* dmod-7w26 dmod-mcgn dmod-4ky5: how a decision model that accepts images is shown the
    page. [image_when_rows_below] sends the screenshot when the element table has fewer
    actionable rows (mode B; 0 never); [look] offers LOOK (mode C); [point_levels] is how
@@ -361,13 +357,6 @@ type decision = {
 (* corp-ex9w: LOOK is off by default; the 2026-10-05 corpus measured no gain from it
    (Clef 120/180 with LOOK against 118/180 without). *)
 let default_decision = { image_when_rows_below = 3; look = false; point_levels = 20 }
-
-let pilot_of_yojson json =
-  Result.bind (pilot_of_yojson json) (fun pilot ->
-      if pilot.turns < 1 || pilot.turns > 100 then Error "pilot.turns: expected 1..100"
-      else if pilot.deadline_s < 30 || pilot.deadline_s > 3600 then
-        Error "pilot.deadline_s: expected 30..3600"
-      else Ok pilot)
 
 type skill = { roots : Text.t list [@json.default []] } [@@deriving yojson]
 
@@ -394,7 +383,6 @@ type t = {
   challenges : challenges; [@json.default default_challenges]
   skill : skill; [@json.default default_skill]
   traces : traces; [@json.default default_traces]
-  pilot : pilot; [@json.default default_pilot]
   decision : decision; [@json.default default_decision]
 }
 [@@deriving yojson]
@@ -412,7 +400,6 @@ let default : t =
     challenges = default_challenges;
     skill = default_skill;
     traces = default_traces;
-    pilot = default_pilot;
     decision = default_decision;
   }
 
@@ -456,7 +443,7 @@ let default_toml =
 # decision_model = %S
 # chat_base_url = %S
 # text_model = %S
-# planner_model = %S          # the fallback planner (Luna)
+# planner_model = "openai/gpt-6-luna"  # optional; asked only on BLOCKED, failed expectations and for a final answer
 # planner_reasoning = %S      # OpenRouter effort; "none" turns reasoning off
 # choice_confidence = 0.7     # review a playbook choice below this top probability
 # decision_timeout = %d           # seconds for the one attempt; the caller deadline bounds it
@@ -474,10 +461,6 @@ let default_toml =
 # [traces.retention]
 # count = 20                  # per site, 1..10000
 # days = 30                   # 1..3650; all traces obey retention
-#
-# [pilot]
-# turns = 12                 # 1..100
-# deadline_s = 600           # 30..3600
 #
 # [decision]                 # used only when the decision model accepts images
 # image_when_rows_below = 3  # 0..250; screenshot when fewer actionable rows (0 never)
@@ -499,9 +482,8 @@ let default_toml =
 |}
     default_binary default_profile_dir default_workspace default_cap default_idle_s
     default_tombstone_s default_socket default_systemone_endpoint default_decision_model
-    default_chat_base_url default_text_model default_planner_model
-    default_planner_reasoning default_decision_timeout default_text_timeout
-    default_planner_timeout
+    default_chat_base_url default_text_model default_planner_reasoning
+    default_decision_timeout default_text_timeout default_planner_timeout
     (toml_array default_focus_command)
     (toml_array default_notify_command)
 
@@ -940,7 +922,6 @@ let collect json =
               "challenges";
               "skill";
               "traces";
-              "pilot";
               "decision";
             ]
           fields
@@ -1093,26 +1074,6 @@ let collect json =
                         in
                         if errors = [] then Ok Traces.Retention.default else Error errors))
       in
-      let pilot_errors =
-        let pointer = child "" "pilot" in
-        match List.assoc_opt "pilot" fields with
-        | None -> []
-        | Some json ->
-            collect_object pointer json ~known:[ "turns"; "deadline_s" ] (fun section ->
-                List.concat_map
-                  (fun (key, minimum, maximum) ->
-                    field_errors pointer key section (fun p j ->
-                        match j with
-                        | `Int n when n >= minimum && n <= maximum -> Ok ()
-                        | _ ->
-                            Error
-                              [
-                                issue p
-                                  (Printf.sprintf "expected an integer between %d and %d"
-                                     minimum maximum);
-                              ]))
-                  [ ("turns", 1, 100); ("deadline_s", 30, 3600) ])
-      in
       let decision_errors =
         let pointer = child "" "decision" in
         match List.assoc_opt "decision" fields with
@@ -1174,7 +1135,7 @@ let collect json =
         errors =
           unknown @ chrome_errors @ tabs_errors @ expiry_errors @ control_errors
           @ otlp_errors @ models_errors @ handoff_errors @ skill_errors @ traces_errors
-          @ pilot_errors @ decision_errors @ notify_errors @ challenges_errors;
+          @ decision_errors @ notify_errors @ challenges_errors;
         binary;
         profile_dir;
         socket;

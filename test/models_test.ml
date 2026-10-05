@@ -335,36 +335,12 @@ let scripted ~model ?reply_model steps =
 (* ---------- The control seam ---------- *)
 
 let raw ?models ?decide ?model tabs command =
-  let planned = ref false in
   let levels =
     Leash.Run.
       {
         choose = (fun ~deadline:_ _ -> Alcotest.fail "unexpected JEV choice");
         score = (fun ~deadline:_ ~sentence:_ ~state:_ -> Ok 1.);
-        plan =
-          (fun ~deadline:_ request ->
-            let answer =
-              if not !planned then (
-                planned := true;
-                Leash.Run.Leg request.mission)
-              else if
-                List.for_all
-                  (fun (leg : Leash.Run.leg) -> leg.outcome = "done")
-                  request.legs
-              then
-                Leash.Run.Done
-                  { result = "Navigation completed"; evidence = []; records = [] }
-              else Leash.Run.Fail "Navigation leg failed"
-            in
-            Ok
-              Leash.Run.
-                {
-                  answer;
-                  expect = [];
-                  reasoning_summary = None;
-                  secrets_for_operator = [];
-                  usage = None;
-                });
+        plan = (fun ~deadline:_ _ -> Alcotest.fail "no planner is configured");
       }
   in
   let wire = P.encode_request { command } |> Yojson.Safe.to_string in
@@ -769,7 +745,8 @@ let model_error
         evidence (drive models tabs handle "Open the Wikipedia article")
       in
       Alcotest.(check string)
-        "pilot fails after operator error" "failed" (text "status" json);
+        "revert-eft1 a decision-model error ends the mission error" "error"
+        (text "status" json);
       check_code "drive-kh2u model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-kh2u the provider's kind" "unavailable" (detail_code error);
@@ -806,7 +783,8 @@ let model_mismatch
         evidence (drive models tabs handle "Open the Wikipedia article")
       in
       Alcotest.(check string)
-        "pilot fails after operator error" "failed" (text "status" json);
+        "revert-eft1 a decision-model error ends the mission error" "error"
+        (text "status" json);
       check_code "drive-e7oi model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-e7oi the substituted model" "model-mismatch" (detail_code error);
@@ -854,7 +832,8 @@ let missing_key
         evidence (drive models tabs handle "Open the Wikipedia article")
       in
       Alcotest.(check string)
-        "pilot fails after operator error" "failed" (text "status" json);
+        "revert-eft1 a decision-model error ends the mission error" "error"
+        (text "status" json);
       check_code "drive-kh2u model-unavailable" "model-unavailable" error;
       Alcotest.(check string)
         "drive-kh2u the reason is the missing key" "missing-key" (detail_code error);
@@ -1020,7 +999,8 @@ let provider_timeout
       else begin
         let json, error, _steps = evidence reply in
         Alcotest.(check string)
-          "pilot fails after operator error" "failed" (text "status" json);
+          "revert-eft1 a decision-model error ends the mission error" "error"
+          (text "status" json);
         check_code "daily-6pde retryable provider timeout" "model-timeout" error;
         Alcotest.(check string) "daily-9ggi timeout kind" "timeout" (detail_code error);
         Alcotest.(check string)
@@ -1036,152 +1016,6 @@ let provider_timeout
            not give, so a timed-out attempt is the only one. *)
         Alcotest.(check int) "daily-9ggi bounded attempts" 1 (Server.connections server)
       end)
-
-(* pic-k4ij pic-cqcf: real image parts, padding, correction and no token cap. *)
-let pilot_image_wire
-    ~(caps :
-       < Ox_caps.Cap.env
-       ; Ox_caps.Cap.exec
-       ; Ox_caps.Cap.fork
-       ; Ox_caps.Cap.fs_read
-       ; Ox_caps.Cap.fs_write
-       ; Ox_caps.Cap.random
-       ; .. >) () =
-  rig ~caps (fun env sw _ _ logger _ ->
-      let calls = ref 0 in
-      let server =
-        Server.serve ~net:env#net ~sw (fun _ ->
-            incr calls;
-            let content =
-              if !calls = 1 then "not JSON"
-              else {|{"answer":"done","result":"picture read","evidence":[]}|}
-            in
-            Server.ok
-              (Yojson.Safe.to_string
-                 (obj
-                    [
-                      ("id", str "picture");
-                      ("model", str text_model);
-                      ( "choices",
-                        `List
-                          [
-                            obj
-                              [
-                                ("index", `Int 0);
-                                ("finish_reason", str "stop");
-                                ( "message",
-                                  obj
-                                    [
-                                      ("role", str "assistant"); ("content", str content);
-                                    ] );
-                              ];
-                          ] );
-                      ( "usage",
-                        obj
-                          [
-                            ("prompt_tokens", `Int 1);
-                            ("completion_tokens", `Int 1);
-                            ("total_tokens", `Int 2);
-                            ("cost", `Float 0.001);
-                          ] );
-                    ])))
-      in
-      let config =
-        {
-          (models_config ()) with
-          planner_endpoint = Some (text_value (Server.url server "/planner"));
-        }
-      in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
-      let snapshot : P.snapshot =
-        {
-          snapshot = Result.get_ok (P.Snapshot_id.of_string "s_test");
-          tab = Result.get_ok (P.Handle.of_string "t_test");
-          url = "https://example.com";
-          title = "Canvas";
-          page_kind = None;
-          rows = [];
-          total = 0;
-          offset = 0;
-          truncated = false;
-          settled = true;
-          source = Ax;
-          image =
-            Some
-              {
-                path = "/private/leash-picture.png";
-                bytes = 8;
-                width = 1600;
-                height = 1200;
-                viewport = { width = 800.; height = 600. };
-                scale = 2.;
-                full_page = false;
-              };
-          reason = None;
-          dialog = None;
-        }
-      in
-      List.iter
-        (fun (bytes, encoded) ->
-          let before = !calls in
-          ignore
-            (Result.get_ok
-               ((Models.levels models).plan ~deadline:(Ox.Duration.seconds 2)
-                  {
-                    Leash.Run.trigger = Blocked;
-                    legs = [];
-                    candidates = [];
-                    secret_names = [];
-                    reason = "picture";
-                    mission = "Read the canvas";
-                    site = None;
-                    playbook = None;
-                    recent = [];
-                    arguments = [];
-                    page_kind = None;
-                    notes = None;
-                    title = snapshot.title;
-                    url = snapshot.url;
-                    text = "";
-                    downloads = [];
-                    planner_actions = 5;
-                    snapshot;
-                    image_input = Some (Bytes.of_string bytes);
-                  }));
-          let requests =
-            Server.requests server |> List.filteri (fun i _ -> i >= before)
-          in
-          List.iter
-            (fun (request : Server.request) ->
-              let body = Yojson.Safe.from_string request.Server.body in
-              Alcotest.(check bool)
-                "no output-token cap" true
-                (field "max_tokens" body = None && field "max_output_tokens" body = None);
-              let messages = list (get "messages" body) in
-              let parts = list (get "content" (List.nth messages 1)) in
-              let observation = Yojson.Safe.from_string (text "text" (List.hd parts)) in
-              Alcotest.(check bool)
-                "measured PNG-to-CSS conversion is explicit" true
-                (contains (text "picture_coordinates" observation) "x_css = x_png / 2");
-              Alcotest.(check bool)
-                "private picture path withheld" false
-                (contains request.Server.body "/private/leash-picture.png");
-              Alcotest.(check int) "mixed text plus image" 2 (List.length parts);
-              Alcotest.(check string)
-                "real image content part" "image_url"
-                (text "type" (List.nth parts 1));
-              Alcotest.(check string)
-                "PNG data URL and padding"
-                ("data:image/png;base64," ^ encoded)
-                (text "url" (get "image_url" (List.nth parts 1))))
-            requests)
-        [
-          ("x", "eA==");
-          ("xy", "eHk=");
-          ("xyz", "eHl6");
-          ("\137PNG\r\n\026\n", "iVBORw0KGgo=");
-        ];
-      Alcotest.(check int) "one formatting correction, same image input" 5 !calls)
 
 let chat_timeout
     ~(caps :
@@ -1203,6 +1037,7 @@ let chat_timeout
           (models_config ()) with
           chat_base_url = text_value (Server.url server "");
           planner_endpoint = Some (text_value (Server.url server "/planner"));
+          planner_model = Some (text_value "openai/gpt-6-luna");
           decision_timeout = seconds 1;
           text_timeout = seconds (if kind = "text" then attempt else 1);
           planner_timeout = seconds (if kind = "planner" then attempt else 1);
@@ -1228,23 +1063,15 @@ let chat_timeout
             ((Models.levels models).plan ~deadline
                {
                  Leash.Run.trigger = Blocked;
-                 legs = [];
-                 candidates = [];
                  secret_names = [];
                  reason = "blocked";
                  mission = "collect";
                  site = None;
-                 playbook = None;
-                 recent = [];
-                 arguments = [];
-                 page_kind = None;
                  notes = None;
+                 history = [];
                  title = "Books";
                  url = "https://example.com";
                  text = "Books";
-                 downloads = [];
-                 planner_actions = 5;
-                 image_input = None;
                  snapshot =
                    Leash.Protocol.
                      {
@@ -1456,8 +1283,6 @@ let () =
             (chat_timeout ~caps ~kind:"text" ~attempt:1 ~expected:"timeout");
           Alcotest.test_case "daily-9ggi text uses own budget" `Quick
             (chat_timeout ~caps ~kind:"text" ~attempt:3 ~expected:"authentication");
-          Alcotest.test_case "pic-k4ij real image parts and correction" `Quick
-            (pilot_image_wire ~caps);
           Alcotest.test_case "daily-9ggi planner attempt timeout" `Quick
             (chat_timeout ~caps ~kind:"planner" ~attempt:1 ~expected:"timeout");
           Alcotest.test_case "daily-9ggi planner uses own budget" `Quick

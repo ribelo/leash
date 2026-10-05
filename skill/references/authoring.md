@@ -1,6 +1,6 @@
 # Authoring a playbook
 
-Write one when a site will be driven again, or when a mission needs validated records rather than the operator's bounded page state. Prefer `leash drive` for goals. Playbooks are written by hand; the pilot writes nothing into them (ADR-0014).
+Write one when a site will be driven again, or when a mission needs validated records rather than the operator's bounded page state. Prefer `leash drive` for goals. Playbooks are written by hand; nothing writes into them (ADR-0014).
 
 The format, the worked example, and every loader refusal are in `leash help playbooks`. Checker sentences are in `leash help expectations`. Scripts are in `leash help scripts`.
 
@@ -26,7 +26,7 @@ The format, the worked example, and every loader refusal are in `leash help play
 
 ## Composing a task
 
-One procedure per stage (`search-product`, `open-product`, `add-to-cart`), each containing a goal. The pilot selects offered candidates by slug, verifies their steps, and regains control after each leg. Only pilot done completes the mission. A standalone, unreferenced procedure must contain at least one goal even if it has navigate steps; a goal-free helper is allowed only when another procedure names it in `use` or `repeat.next`. The minimal playbook below navigates directly, then has a goal that observes the cart without submitting anything. `until` still runs only after an action: this confirmation goal is not a skip-if-already-true guard. Every procedure except a `repeat.next` helper stays a choice. The pilot chooses from the slug and `description`, so say when it applies: "From a product page: add it to the cart." A whole-task procedure (a goal, then `use:` each stage) works too, and wins the choice only if its description says it is the whole task.
+One procedure per stage (`search-product`, `open-product`, `add-to-cart`), each containing a goal. JEV is offered each procedure as an operation on its site; a procedure's failed expectation is a stop the planner is consulted on. JEV's DONE completes the mission. A standalone, unreferenced procedure must contain at least one goal even if it has navigate steps; a goal-free helper is allowed only when another procedure names it in `use` or `repeat.next`. The minimal playbook below navigates directly, then has a goal that observes the cart without submitting anything. `until` still runs only after an action: this confirmation goal is not a skip-if-already-true guard. Every procedure except a `repeat.next` helper stays a choice. JEV chooses from the slug and `description`, so say when it applies: "From a product page: add it to the cart." A whole-task procedure (a goal, then `use:` each stage) works too, and wins the choice only if its description says it is the whole task.
 
 ## Minimal navigation
 

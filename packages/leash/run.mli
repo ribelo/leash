@@ -1,8 +1,9 @@
-(** Mission pilot (pilot-ukoh pilot-eu1c pilot-rdjv). The pilot receives bounded page
-    evidence and candidate procedures each turn. It may run one navigation leg, read, act
-    on one snapshot row, notify, hand off, done or fail. A leg has at most 15 operator
-    steps; DONE/BLOCKED returns to the pilot. Only pilot done completes the mission. All
-    effects use handlers, so tests and dry-run need no browser or model service. *)
+(** revert-eft1 (ADR-0015): [drive MISSION] is JEV's loop. The decision model decides
+    every step over the element table ({!Drive}); the site playbook's procedures and
+    scripts are offered to it as operations. The planner is optional and only consulted:
+    when JEV answers BLOCKED or its loop stops, when an expectation fails, and once at the
+    end of a mission that asks for an answer. All effects use handlers, so tests and
+    dry-run need no browser or model service. *)
 
 type observation = {
   url : string;
@@ -17,8 +18,6 @@ type observation = {
       (** Suggested name, MIME and state of each download of the tab, for the download
           checker (run-ykq4). *)
   snapshot : Protocol.snapshot;
-  image_input : bytes option;
-      (** pic-k4ij: private PNG bytes for actual model image input; never a text field. *)
 }
 (** What one observation of the page gives the loop: the same facts the checkers, the text
     helper and the last snapshot of a result need. *)
@@ -74,76 +73,41 @@ type script_outcome =
 
 type plan_trigger =
   | Blocked
-  | Failed
-  | Arguments
-  | Challenge
-      (** Legacy context labels retained for scripted callers. Mission pilot requests do
-          not wait for a JEV trigger. *)
-
-type leg = { goal : string; outcome : string; steps : Protocol.step list }
+  | Expectation
+  | Final
+      (** revert-24kr: JEV answered BLOCKED or its loop stopped; a procedure's or the
+          mission's expectation failed; or the mission asks for an answer at its end. *)
 
 type candidate = Playbook.procedure
-(** A procedure of the site's hand-written playbook, offered to the pilot as a leg. *)
+(** A procedure of the site's hand-written playbook, offered to JEV as an operation. *)
 
 type plan_answer =
-  | Leg of string
-  | Read of { quote : string; note : string }
-  | Act of Protocol.planner_action
-  | Observe_image
-  | Notify of string
-  | Done of {
-      result : string;
-      evidence : string list;
-      records : (string * string) list list;
-    }
-      (** map-op10: one-line result, verified against live-page expectations. pilot-sc9t:
-          [records] are flat text records for [--out], each value text the mission read;
-          they are written as [pilot-record] lines when done is accepted. *)
+  | Hint of string
   | Handoff of string
-  | Fail of string  (** Exactly one of the eight pilot decisions (pilot-gt2h). *)
+  | Notify of string
+  | Fail of string
+  | Answer of { result : string; evidence : string list; done_ : bool }
+      (** revert-apgf revert-bqrq: a hint becomes JEV's goal for its next steps; the
+          planner never acts. [Answer] is the end-of-mission judgment. *)
 
-type plan_reply = {
-  reasoning_summary : string option;
-  secrets_for_operator : (string * string) list;
-  answer : plan_answer;
-  expect : string list;
-  usage : Protocol.run_usage option;
-}
-(** One planner turn's answer with what came beside it (run-rq6i run-2tt3 run-obtt):
-    [expect] is the mission's own expectations the planner attached on its first turn —
-    the sentences DONE is then verified against, when the caller stated none — and [usage]
-    is what the turn cost, carried into the run's trace. *)
+type plan_reply = { answer : plan_answer; usage : Protocol.run_usage option }
 
 type plan_request = {
-  legs : leg list;
-  candidates : candidate list;
-  secret_names : string list;
   trigger : plan_trigger;
   reason : string;
   mission : string;
+  secret_names : string list;
   site : string option;
-  playbook : Playbook.t option;
-  recent : (string * string) list;
-  arguments : (string * string) list;
-  snapshot : Protocol.snapshot;
-  image_input : bytes option;
-  planner_actions : int;
-  page_kind : string option;
   notes : string option;
-      (* cut-yk93: the site playbook's notes, on every turn on that site. *)
-  title : string;
+  history : (string * string) list;
+      (** JEV's drives so far: the goal it was given and how it ended, oldest first. *)
   url : string;
+  title : string;
   text : string;
-  downloads : (string * string * string) list;
-      (** pilot-x1f3: this tab's downloads as (path or suggested name, mime, state), so
-          the pilot knows a file already arrived (U2 on Tauron downloaded one PDF seven
-          times). *)
+  snapshot : Protocol.snapshot;
 }
-(** What a planner turn is asked from (run-rq6i, L32): the mission, the point JEV stopped
-    and why, the current playbook in its own schema — which is what a new procedure has to
-    fit — the trace so far, the arguments already known, and the observed page: its kind,
-    title and URL plus its visible text, bounded by the planner. This is the one level
-    page text reaches; the two choice levels never see it (run-pvmc). *)
+(** What the planner is asked from: why it is asked, the mission, JEV's history, and the
+    current page (bounded text and element table). *)
 
 val trigger_name : plan_trigger -> string
 (** run-xqh8: the trigger as the trace and the planner's request name it — ["blocked"],
@@ -164,7 +128,7 @@ type levels = {
     {!Models.levels}; a scripted test passes its own record. *)
 
 type handler = {
-  observe : image:bool -> unit -> (observation, Protocol.error) result;
+  observe : unit -> (observation, Protocol.error) result;
   navigate : string -> (unit, Protocol.error) result;
       (** run-xh5d: the entry navigation of a playbook switch, through the same registry
           path the [nav] command uses. *)
@@ -232,28 +196,23 @@ val loop :
   handler:handler ->
   now:(unit -> float) ->
   installed:Playbook.loaded list ->
+  ?planner:bool ->
   ?secrets:(string * string) list ->
   ?on_secrets:((string * string) list -> unit) ->
   ?on_book:(Playbook.loaded option -> unit) ->
   ?on_record:(Yojson.Safe.t -> (unit, Protocol.error) result) ->
   ?notify:(string -> (unit, string) result) ->
-  ?challenge:(observation -> string option) ->
-  ?challenge_attempt:bool ->
-  ?challenge_turns:int ->
-  ?planner_actions:int ->
-  ?planner_action:
-    (Protocol.planner_action -> (Protocol.action_result, Protocol.error) result) ->
-  ?on_planner_step:(Protocol.planner_step -> unit) ->
   ?on_arguments:((string * string) list -> unit) ->
   ?pause_ms:(int -> unit) ->
   args ->
   (Protocol.run_result, Protocol.error) result
-(** [loop ~handler ~now ~installed args] runs the mission.
+(** [loop ~handler ~now ~installed args] runs the mission as JEV's loop (revert-eft1).
+    [planner] says whether a planner model is configured; without one it is never asked, a
+    BLOCKED loop ends [blocked], and [result] stays null.
 
-    Every ending is a result, never a refusal: [done] when DONE was verified, [blocked] or
-    [failed] when the planner answered [Fail] or its turn cap was reached (run-obtt),
-    [handoff] when it asked for the human, [limit] at the procedure cap, [deadline] at the
-    run's deadline, and [error] when a dialog is open on the page (run-klp9). A protocol
-    error is what the run cannot start with — the arguments, or a mission expectation the
-    playbook cannot resolve — or a model or browser failure, which carries the trace it
-    had completed in [detail.procedures] (run-xqh8). *)
+    Endings: [done] when JEV reported DONE, the mission's expectations held and, for a
+    mission that asks for an answer, the planner judged it done with a result; [failed]
+    when the planner judged it not done or answered fail; [blocked] when JEV stopped and
+    no planner helped; [limit] at the consultation cap; [deadline]; [handoff-expired] and
+    [canceled-by-operator] after a handoff; [planned] for a dry run; [error] otherwise. A
+    model or browser failure is a protocol error carrying the trace in [detail]. *)

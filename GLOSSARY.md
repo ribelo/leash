@@ -120,11 +120,13 @@ JEV's answer to a target question (which row to click, which row to type into) a
 The small OpenRouter language model that writes the text for a `type_text` step. Its output must parse as a small JSON object before it is typed.
 
 **Planner**:
-The language model above JEV that `run` asks only where JEV stops — a `BLOCKED` answer, a procedure that failed its expectations twice, an argument the text helper cannot fill — at most three turns per run. Luna by default; it answers with a procedure to run now, a handoff for the human, or a failure with its reason.
+The optional larger model (`[models] planner_model`; absent means never called) that `drive` consults and that never acts (ADR-0015): when JEV answers `BLOCKED` (a hint JEV gets as its next goal, a handoff, a notification or a failure), when an expectation fails, and once at the end of a mission that asks for an answer, for `result`, `evidence` and whether it is done.
 _Avoid_: the planner for the outer agent; that is the caller of `leash`
 
 **Notes**:
-A playbook's optional top-level free text about its site — where things are, how login works — at most 2,000 characters, shown to the pilot on every turn on that site (ADR-0014).
+A playbook's optional top-level free text about its site — where things are, how login works — at most 2,000 characters, shown to the planner when it is consulted on that site (ADR-0014).
+
+**Pilot**, **leg**: _Retired_ with ADR-0012 (withdrawn by ADR-0015). There is no mission owner above JEV and no leg; JEV runs the mission.
 
 **Playbook**:
 A directory, `$XDG_CONFIG_HOME/leash/playbooks/<name>/playbook.json` plus the files beside it, that describes one site: its page kinds and its procedures, each a list of human-language steps and expectations, and its scripts. Written by the operator or the coordinating agent, never by a model or a run (ADR-0014).

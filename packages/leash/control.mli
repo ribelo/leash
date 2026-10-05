@@ -16,8 +16,7 @@ type ('clock, 'net) deps = {
 }
 
 val create :
-  ?pilot:Config.pilot ->
-  ?planner_actions:int ->
+  ?planner:bool ->
   ?traces:Traces.t ->
   ?model:string ->
   ?models:Models.t ->
@@ -69,10 +68,7 @@ val policy : Ox_ipc.Listener.policy
     that long waits on many tabs never queue anyone else. *)
 
 val budget :
-  ?pilot:Config.pilot ->
-  ?handoff_timeout_s:int ->
-  (Protocol.request, string) result ->
-  Ox.Duration.t option
+  ?handoff_timeout_s:int -> (Protocol.request, string) result -> Ox.Duration.t option
 (** The handler budget per decoded command. [new] with a url and [nav] outlast the
     registry's 30-second load wait (chrome-qnul, chrome-1yn9); a [handoff] outlasts its
     own deadline, {!Tabs.handoff_timeout}, plus a margin, so the listener never cancels
@@ -92,8 +88,7 @@ val report :
     is consulted only while Chrome is running; a relaunch reports [pid: null]. *)
 
 val dispatch :
-  ?pilot:Config.pilot ->
-  ?planner_actions:int ->
+  ?planner:bool ->
   ?traces:Traces.t ->
   ?logger:Ox_observability.Logger.t ->
   ?model:string ->
@@ -114,8 +109,7 @@ val dispatch :
 val decode : string -> (Protocol.request, string) result
 
 val handle :
-  ?pilot:Config.pilot ->
-  ?planner_actions:int ->
+  ?planner:bool ->
   ?traces:Traces.t ->
   ?model:string ->
   ?models:Models.t ->

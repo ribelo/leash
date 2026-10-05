@@ -49,9 +49,9 @@ let report ?models_status ?chrome_pid tabs =
     key_present = (match models with Some models -> models.configured | None -> false);
   }
 
-let dispatch ?pilot ?(planner_actions = 5) ?traces ?logger ?(model = "unconfigured")
-    ?models ?levels ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs
-    (request : P.request) =
+let dispatch ?(planner = false) ?traces ?logger ?(model = "unconfigured") ?models ?levels
+    ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs (request : P.request)
+    =
   let meter = Tabs.meter () in
   let decide, text_helper =
     match models with
@@ -134,9 +134,6 @@ let dispatch ?pilot ?(planner_actions = 5) ?traces ?logger ?(model = "unconfigur
         Option.iter (fun c -> Traces.arguments c values) capture
       in
       let on_step step = Option.iter (fun c -> Traces.step c step) capture in
-      let on_planner_step step =
-        Option.iter (fun c -> Traces.planner_step c step) capture
-      in
       let keep outcome =
         match (traces, capture) with
         | Some store, Some capture ->
@@ -204,9 +201,8 @@ let dispatch ?pilot ?(planner_actions = 5) ?traces ?logger ?(model = "unconfigur
               in
               let outcome =
                 try
-                  Tabs.run ?pilot ~planner_actions ~on_page ~on_step ~on_planner_step
-                    ~on_arguments ~meter ?levels ~model ?decide ?text_helper ?installed
-                    tabs ~tab args
+                  Tabs.run ~planner ~on_page ~on_step ~on_arguments ~meter ?levels ~model
+                    ?decide ?text_helper ?installed tabs ~tab args
                 with exn ->
                   cleanup ();
                   raise exn
@@ -244,15 +240,15 @@ let with_command ?logger (request : P.request) f =
         logger;
       f ())
 
-let handle ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?models ?levels
-    ?decide ?text_helper ?installed ?models_status ?chrome_pid ?logger tabs line =
+let handle ?(planner = false) ?traces ?(model = "unconfigured") ?models ?levels ?decide
+    ?text_helper ?installed ?models_status ?chrome_pid ?logger tabs line =
   let reply =
     match decode line with
     | Error why -> invalid why
     | Ok request ->
         with_command ?logger request (fun () ->
-            dispatch ?pilot ~planner_actions ?traces ?logger ~model ?models ?levels
-              ?decide ?text_helper ?installed ?models_status ?chrome_pid tabs request)
+            dispatch ~planner ?traces ?logger ~model ?models ?levels ?decide ?text_helper
+              ?installed ?models_status ?chrome_pid tabs request)
   in
   Yojson.Safe.to_string (P.encode_reply reply)
 
@@ -279,8 +275,7 @@ let cdp_budget = Ox.Duration.seconds 35
    and the focus command (hand-rg9h), plus the reply's own egress. *)
 let handoff_margin = Ox.Duration.seconds 20
 
-let budget ?(pilot = Config.default.pilot) ?(handoff_timeout_s = 300)
-    (request : (P.request, string) result) =
+let budget ?(handoff_timeout_s = 300) (request : (P.request, string) result) =
   let seconds n = Ox.Duration.seconds n in
   match request with
   | Error _ -> Some (seconds 1)
@@ -304,8 +299,7 @@ let budget ?(pilot = Config.default.pilot) ?(handoff_timeout_s = 300)
          cancels a run at the instant it is due to answer. *)
       Some
         (seconds
-           (max 1 (Option.value ~default:pilot.deadline_s args.deadline_s)
-           + handoff_timeout_s + 75))
+           (max 1 (Option.value ~default:600 args.deadline_s) + handoff_timeout_s + 75))
   | Ok { command = P.Snap args; _ } when args.with_image = Some true -> Some cdp_budget
   | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _ | P.Playbook_test _; _ } ->
       (* A script may await a fetch; the CDP call's own deadline is 30 s. *)
@@ -393,8 +387,8 @@ let on_peer_error logger error =
 (* svc-o4wt: the socket is the configured path, not a name this module derives — a test or
    a second instance relocates it. The listener verifies the directory it sits in (0700,
    owned by the caller) and refuses a second instance on the same path. *)
-let create ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?models ?levels
-    ?decide ?text_helper ?installed ?chrome_pid ~sw ~path deps =
+let create ?(planner = false) ?traces ?(model = "unconfigured") ?models ?levels ?decide
+    ?text_helper ?installed ?chrome_pid ~sw ~path deps =
   let decode line =
     Ok (match decode line with Ok request -> Ok request | Error why -> Error why)
   in
@@ -403,9 +397,9 @@ let create ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?mode
       match request with
       | Ok request ->
           with_command ~logger:deps.logger request (fun () ->
-              dispatch ?pilot ~planner_actions ?traces ~logger:deps.logger ~model ?models
-                ?levels ?decide ?text_helper ?installed ~models_status:deps.models_status
-                ?chrome_pid deps.tabs request)
+              dispatch ~planner ?traces ~logger:deps.logger ~model ?models ?levels ?decide
+                ?text_helper ?installed ~models_status:deps.models_status ?chrome_pid
+                deps.tabs request)
       | Error why -> invalid why
     in
     Ok reply
@@ -414,7 +408,7 @@ let create ?pilot ?(planner_actions = 5) ?traces ?(model = "unconfigured") ?mode
     Ox_ipc.Listener.run ~caps:deps.caps ~sw ~fs:deps.fs ~net:deps.net ~clock:deps.clock
       ~path ~policy ~decode
       ~encode:(fun reply -> Yojson.Safe.to_string (P.encode_reply reply))
-      ~budget:(budget ?pilot ~handoff_timeout_s:(Tabs.handoff_timeout_s deps.tabs))
+      ~budget:(budget ~handoff_timeout_s:(Tabs.handoff_timeout_s deps.tabs))
       ~on_budget_exceeded:budget_exceeded ~handler
       ~on_peer_error:(on_peer_error deps.logger) ()
   with

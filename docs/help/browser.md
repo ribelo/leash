@@ -24,4 +24,4 @@ Pointer replies retain a before PNG and native hit evidence; `--shot` requests a
 
 ## Image-aware missions
 
-The pilot receives real PNG image parts automatically when no useful rows are available, and can explicitly request `observe --image`. Observation consumes a bounded turn but sends no input. Measured viewport/scale remains in its text facts; private image paths do not. Pilot actions include `click_at`, focused `type` and `drag` under existing deadlines, action limits, protected secrets, dialog and consequential-action policies. The CLI spelling remains `click --at`. JEV navigation legs are unchanged.
+A decision model that accepts images gets the screenshot in its state when the page offers few actionable rows, and may choose CLICK_AT (see `leash help drive`, `[decision]`). Coordinate actions for an agent are `click --at`, focused `type` and `drag`, under the existing deadlines, protected secrets, dialog and consequential-action policies.

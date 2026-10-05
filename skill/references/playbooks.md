@@ -16,7 +16,7 @@ Install by copying the directory. `leash playbook list` lists validated installe
 
 `shapes` is an object of shape name (a lowercase slug) to a shape. A shape is `string`, `number`, `boolean`, `url`, an object of field to shape, or a one-element array for a list. A field name ending in `?` is optional. Nesting is at most eight deep. See `leash help scripts`.
 
-`notes` is optional free text about the site for the pilot: where things are, how login works. It is at most 2,000 characters and is shown to the pilot on every turn on that site (cut-yk93). It is not shown to JEV.
+`notes` is optional free text about the site: where things are, how login works. It is at most 2,000 characters and is shown to the planner whenever it is consulted on that site (cut-yk93). It is not shown to JEV.
 
 `scripts` is an object of script name (a lowercase slug) to a declaration: exactly one of `file` or `source`, a one-sentence `description`, optional `pages`, optional `args`, optional `returns` naming a shape. `max_bytes` and `origin` are removed fields. Every script result is bounded by one global limit, 8 MiB. `file` is relative to the playbook directory, ends in `.js`, has no `..`, and is not absolute. See `leash help scripts`.
 
@@ -308,6 +308,6 @@ returns must be a record or a list of records
 
 The two lines with long runs of spaces are exact. A symlink that resolves outside the playbook directory is the "resolves outside" message. A unix error on a script file is `file PATH: ` plus the system message.
 
-## Pilot limits
+## Planner
 
-`[pilot] turns = 12` (1..100) and `deadline_s = 600` (30..3600) bound a mission. The pilot uses `models.planner_reasoning = "max"` by default.
+The planner is optional (`[models] planner_model`). It is consulted at most 6 times per mission, only when JEV stops, an expectation fails, or a mission that asks for an answer ends (ADR-0015).
