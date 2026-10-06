@@ -213,7 +213,7 @@ ADR-0012 was the coordinator's inversion of the operator's design, not his decis
 
 | # | Slice | Stories | Depends on | Done |
 | --- | --- | --- | --- | --- |
-| L63 | **No playbooks** (`no-playbooks/01-no-playbooks.md`). Playbooks, procedures, scripts, notes, page kinds, upper decision levels, help topics removed; traces and corpus kept; skill says goal+result and drive first; corpus re-run; U1/U2. | bare-b71j, bare-u8ot, bare-um71, bare-vepy, bare-so5y, bare-f978, bare-xjiw, bare-oxij | L62 | [ ] |
+| L63 | **No playbooks** (`no-playbooks/01-no-playbooks.md`). Playbooks, procedures, scripts, notes, page kinds, upper decision levels, help topics removed; traces and corpus kept; skill says goal+result and drive first; corpus re-run; U1/U2. | bare-b71j, bare-u8ot, bare-um71, bare-vepy, bare-so5y, bare-f978, bare-xjiw, bare-oxij | L62 | [x] |
 
 ## Later milestones
 
