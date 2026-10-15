@@ -129,8 +129,14 @@ let page_commands handle : (string * P.command) list =
     ("text", P.Text { tab = handle; index = None; max_chars = None });
     ( "eval",
       P.Eval
-        { tab = handle; expression = "1"; argument = None; index = None; snapshot = None }
-    );
+        {
+          tab = handle;
+          expression = "1";
+          argument = None;
+          index = None;
+          snapshot = None;
+          timeout_ms = None;
+        } );
     ("shot", P.Shot { tab = handle; path = "/tmp/leash-capability.png"; full_page = None });
     ("debug", P.Debug { tab = handle; limit = None; clear = None });
     ( "wait",

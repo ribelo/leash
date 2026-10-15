@@ -38,7 +38,8 @@
   ref_drive.md
   ref_errors.md
   ref_traces.md
-  ref_browser.md)
+  ref_browser.md
+  ref_eval.md)
  (deps
   gen_skill_data.exe
   gen_error_topic.exe
@@ -46,18 +47,26 @@
   ../../../docs/help/handles.md
   ../../../docs/help/drive.md
   ../../../docs/help/traces.md
-  ../../../docs/help/browser.md)
+  ../../../docs/help/browser.md
+  ../../../docs/help/eval.md)
  (action
   (run
    bash
    -c
-   "set -eu; rm -rf skill-tree help-tree; mkdir -p skill-tree/references help-tree; cp \"$1\" skill-tree/SKILL.md; cp \"$2\" skill-tree/references/handles.md; cp \"$2\" help-tree/handles.md; cp \"$2\" ref_handles.md; cp \"$3\" skill-tree/references/drive.md; cp \"$3\" help-tree/drive.md; cp \"$3\" ref_drive.md; cp \"$4\" skill-tree/references/traces.md; cp \"$4\" help-tree/traces.md; cp \"$4\" ref_traces.md; cp \"$5\" skill-tree/references/browser.md; cp \"$5\" help-tree/browser.md; cp \"$5\" ref_browser.md; ./gen_error_topic.exe > skill-tree/references/errors.md; cp skill-tree/references/errors.md help-tree/errors.md; cp skill-tree/references/errors.md ref_errors.md; ./gen_skill_data.exe skill-tree > leash_skill_data.ml; ./gen_skill_data.exe help-tree topics > leash_help_data.ml"
+   "set -eu; rm -rf skill-tree help-tree; mkdir -p skill-tree/references help-tree; cp \"$1\" skill-tree/SKILL.md; cp \"$2\" skill-tree/references/handles.md; cp \"$2\" help-tree/handles.md; cp \"$2\" ref_handles.md; cp \"$3\" skill-tree/references/drive.md; cp \"$3\" help-tree/drive.md; cp \"$3\" ref_drive.md; cp \"$4\" skill-tree/references/traces.md; cp \"$4\" help-tree/traces.md; cp \"$4\" ref_traces.md; cp \"$5\" skill-tree/references/browser.md; cp \"$5\" help-tree/browser.md; cp \"$5\" ref_browser.md; cp \"$6\" skill-tree/references/eval.md; cp \"$6\" help-tree/eval.md; cp \"$6\" ref_eval.md; ./gen_error_topic.exe > skill-tree/references/errors.md; cp skill-tree/references/errors.md help-tree/errors.md; cp skill-tree/references/errors.md ref_errors.md; ./gen_skill_data.exe skill-tree > leash_skill_data.ml; ./gen_skill_data.exe help-tree topics > leash_help_data.ml"
    --
    %{dep:../../../skill/SKILL.md}
    %{dep:../../../docs/help/handles.md}
    %{dep:../../../docs/help/drive.md}
    %{dep:../../../docs/help/traces.md}
-   %{dep:../../../docs/help/browser.md})))
+   %{dep:../../../docs/help/browser.md}
+   %{dep:../../../docs/help/eval.md})))
+
+(rule
+ (alias runtest)
+ (deps ref_eval.md)
+ (action
+  (diff ../../../skill/references/eval.md ref_eval.md)))
 
 (rule
  (alias runtest)

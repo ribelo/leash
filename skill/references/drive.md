@@ -2,7 +2,7 @@
 
 ## Drive first, with a goal and its result
 
-For any task with a describable outcome, run `leash drive MISSION` first. Write the mission as a goal with its result: what to achieve, then what to return, for example `…; result: the invoice's path and number`. In the 2026-10-06 corpus that form passed 82% of cells, against 74% for a loose request and 71% for numbered steps. Name concrete values and limits: which account, which month, which file, whether to stop before purchase. Use the low-level commands (`snap`, `text`, `click`, `script run`, …) to inspect, to verify a result independently, and for what drive reports it cannot do.
+For any task with a describable outcome, run `leash drive MISSION` first. Write the mission as a goal with its result: what to achieve, then what to return, for example `…; result: the invoice's path and number`. In the 2026-10-06 corpus that form passed 82% of cells, against 74% for a loose request and 71% for numbered steps. Name concrete values and limits: which account, which month, which file, whether to stop before purchase. Use the low-level commands (`snap`, `text`, `click`, `eval`, …) to inspect, to verify a result independently, and for what drive reports it cannot do.
 
 ```sh
 leash drive 'Check whether I owe anything on Tauron; result: each overdue amount with its due date' --url https://moj.tauron.pl/ --secret login=@/private/login --secret password=@/private/password > reply.json
@@ -42,7 +42,7 @@ Exit 0 means the service answered, not that the mission succeeded. Save the full
 
 Verify the requested outcome separately: reread account amounts, inspect the completed download and its contents, check the actual uploaded link, or compare every requested record with the source.
 
-`--out FILE` appends tagged JSONL: `planner-record` lines the planner returned with done, and the terminal `operator-state` line. The file never holds the result text. For bulk collection from one page, a script of your own is often simpler: `leash script run TAB FILE --out FILE`.
+`--out FILE` appends tagged JSONL: `planner-record` lines the planner returned with done, and the terminal `operator-state` line. The file never holds the result text. For bulk collection, your own JavaScript is often simpler: `leash eval TAB --file FILE` (see `leash help eval`).
 
 ## Limits and preview
 

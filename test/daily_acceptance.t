@@ -18,12 +18,12 @@ Return alias. The root help no longer suggests an Allegro purchase.
   $ root_help=$(leash --help=plain); case "$root_help" in *Allegro*|*allegro*) exit 1;; *) printf 'purchase example absent\n';; esac
   purchase example absent
 
-Status, ordinary tab clients, and the script-run exchange route
+Status, ordinary tab clients, and the eval --file exchange route (evl-gign)
 all distinguish the same unreachable service states.
 
-  $ printf '%s\n' '/** returns: {"title":"string"} */' 'return {title: document.title};' > "$tmp/probe.js"
+  $ printf '%s\n' 'return {title: document.title};' > "$tmp/probe.js"
   $ client() { expected="$1"; shift; LEASH_INSTALL_FIXTURE="$tmp/service.fixture" leash "$@" --socket "$tmp/missing.sock" >out 2>err; code=$?; ./daily_cli_fixture.exe inspect "$expected" "$code" out err >/dev/null; }
-  $ routes() { client "$1" status && client "$1" list && client "$1" net t_9xk && client "$1" script run t_9xk "$tmp/probe.js" && printf '%s: all four client routes\n' "$1"; }
+  $ routes() { client "$1" status && client "$1" list && client "$1" net t_9xk && client "$1" eval t_9xk --file "$tmp/probe.js" && printf '%s: all four client routes\n' "$1"; }
   $ printf 'load=not-found\nactive=inactive\nsub=dead\nbinary=absent\n' > "$tmp/service.fixture"; routes not-installed
   not-installed: all four client routes
   $ printf 'load=not-found\nactive=inactive\nsub=dead\nbinary=present\n' > "$tmp/service.fixture"; routes not-installed

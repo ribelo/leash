@@ -71,7 +71,7 @@ let portable ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) () =
   in
   List.iter
     (fun name -> if not (List.mem name names) then failf "missing embedded topic %s" name)
-    [ "handles"; "drive"; "errors"; "traces" ];
+    [ "handles"; "drive"; "errors"; "traces"; "eval" ];
   let errors = List.assoc "errors.md" Leash_cli_support.Leash_help_data.topics in
   if errors <> Leash.Protocol.Error_code.topic_markdown then
     failf "embedded errors.md drifted from Protocol.Error_code";
@@ -118,12 +118,15 @@ let fresh_agent_guidance () =
           "refused click can scroll";
         ] );
       ("drive", [ "JEV runs the mission"; "a goal with its result"; "Drive first" ]);
-      ("errors", [ "engine error" ]);
+      ("errors", [ "engine error"; "script-timeout" ]);
+      (* evl-agmn: the eval topic names its file inputs, bounds and timeout. *)
+      ( "eval",
+        [ "--file PATH"; "--argument-file"; "--timeout-ms"; "8 MiB"; "script-timeout" ] );
     ];
   List.iter
     (fun (_, contents) ->
-      if contains contents "playbook" then
-        failf "ADR-0016 a topic still mentions playbooks")
+      if contains contents "playbook" || contains contents "script run" then
+        failf "ADR-0016 ADR-0017 a topic still mentions playbooks or script run")
     Leash_cli_support.Leash_help_data.topics
 
 let () =

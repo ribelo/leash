@@ -14,6 +14,9 @@ type page_state = { loader : string; guard : (string * int) option }
 
 type browser = {
   call : string -> Yojson.Safe.t -> (Yojson.Safe.t, Protocol.error) result;
+  call_within :
+    Ox.Duration.t -> string -> Yojson.Safe.t -> (Yojson.Safe.t, Protocol.error) result;
+      (** [call] with the caller's deadline instead of the default 30 s (evl-iskk). *)
   capture : full_page:bool -> (Yojson.Safe.t, Protocol.error) result;
   now : unit -> float;
   sleep : float -> unit;
@@ -67,6 +70,9 @@ val storage :
   browser -> Protocol.storage_args -> (Protocol.storage_result, Protocol.error) result
 (** hard-ufb7: read-only, for the page's security origin. *)
 
+val max_timeout_ms : int
+(** The longest an eval may run: ten minutes (evl-iskk). *)
+
 val max_wait_ms : int
 (** One hour (hard-sr9v). *)
 
@@ -74,7 +80,15 @@ val wait :
   browser -> Protocol.wait_args -> (Protocol.action_result, Protocol.error) result
 
 val text : browser -> Protocol.text_args -> (Protocol.text_result, Protocol.error) result
+
 val eval : browser -> Protocol.eval_args -> (Protocol.eval_result, Protocol.error) result
+(** evl-gign evl-iskk evl-i702 evl-p515: the agent's function body, called on the page's
+    global object with [argument] (and the row's element with [index]), its promise
+    awaited. The body is at most 1 MiB, the argument and the result 8 MiB each
+    ([too-large]). The call is bounded by [timeout_ms] (default 30000, at most 600000); a
+    body still running at that bound while the page answers is [script-timeout], a page
+    that no longer answers is [renderer-unresponsive]. A body that threw is
+    [script-failed]. *)
 
 val shot :
   caps:< Ox_caps.Cap.fs_write ; .. > ->
@@ -100,19 +114,3 @@ val shot :
 
 val dialog :
   browser -> Protocol.dialog_args -> (Protocol.action_result, Protocol.error) result
-
-type script_ran = { value : Yojson.Safe.t; records : int; bytes : int; elapsed_ms : int }
-
-val script :
-  browser ->
-  Script.t ->
-  args:(string * string) list ->
-  (script_ran, Protocol.error) result
-(** extr-8o1h extr-vgir extr-k40c scr-run: run a script the agent brought in the tab's
-    page through [Runtime.callFunctionOn] with [awaitPromise] and [returnByValue], as the
-    body of an async function of [args]; a script may [fetch] the site's own endpoints.
-
-    A script that threw or that the browser could not return is [script-failed]; a result
-    over {!Script.max_bytes} is [too-large]; a result that does not fit its declared
-    [returns] is [script-invalid] with the path of the first mismatch; a dialog the script
-    opened is [dialog-open]. Arguments over 64 KiB are [too-large]. *)

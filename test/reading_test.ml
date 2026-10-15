@@ -24,10 +24,15 @@ let ok = function
   | Ok x -> x
   | Error e -> Alcotest.failf "%s: %s" (P.Error_code.to_string e.P.code) e.message
 
-let browser ?(reply = fun _ _ -> obj []) ?(row = fun _ -> None) ?(dialog = fun () -> None)
-    ?(clock = ref 0.) () : R.browser =
+let browser ?(reply = fun _ _ -> obj []) ?within ?(row = fun _ -> None)
+    ?(dialog = fun () -> None) ?(clock = ref 0.) () : R.browser =
   {
     call = (fun name args -> Ok (reply name args));
+    call_within =
+      (fun deadline name args ->
+        match within with
+        | Some within -> within deadline name args
+        | None -> Ok (reply name args));
     capture =
       (fun ~full_page ->
         Ok
@@ -66,32 +71,97 @@ let stub name _ =
 
 (* tab-a33o tab-gjo0: [eval] races its call against the tab's acknowledgement, so it
    runs where Eio does. *)
+let eval_arg ?timeout_ms expression argument =
+  P.{ tab = handle; expression; argument; index = None; snapshot = None; timeout_ms }
+
+(* evl-p515: the body is bounded at 1 MiB, the argument and the result at 8 MiB each; a
+   value over the old 64 KiB bound passes. *)
 let eval_bounds () =
   Ox_test.run (fun _env _sw ->
+      let mib = 1_048_576 in
       let b = browser ~reply:stub () in
-      let arg expression argument =
-        P.{ tab = handle; expression; argument; index = None; snapshot = None }
-      in
       Alcotest.(check string)
-        "expression bound" "too-large"
-        (code (R.eval b (arg (String.make 65_537 'x') None)));
+        "evl-p515 body bound" "too-large"
+        (code (R.eval b (eval_arg (String.make (mib + 1) 'x') None)));
       Alcotest.(check string)
-        "argument bound" "too-large"
-        (code (R.eval b (arg "return argument" (Some (str (String.make 65_537 'x'))))));
-      let evaluated = ok (R.eval b (arg "return argument" (Some (str "hi")))) in
-      Alcotest.(check bool) "evaluated" true (evaluated.P.value = str "ok");
-      let large _ _ =
-        obj [ ("result", obj [ ("value", str (String.make 65_537 'x')) ]) ]
-      in
-      Alcotest.(check string)
-        "result bound" "too-large"
+        "evl-p515 argument bound" "too-large"
         (code
-           (R.eval
-              (browser
-                 ~reply:(fun n a ->
-                   if n = "Runtime.evaluate" then stub n a else large n a)
-                 ())
-              (arg "return 1" None))))
+           (R.eval b
+              (eval_arg "return argument" (Some (str (String.make (8 * mib) 'x'))))));
+      let evaluated =
+        ok (R.eval b (eval_arg "return argument" (Some (str (String.make 65_537 'x')))))
+      in
+      Alcotest.(check bool)
+        "evl-p515 argument over 64 KiB" true
+        (evaluated.P.value = str "ok");
+      let answering text _ _ = obj [ ("result", obj [ ("value", str text) ]) ] in
+      let with_result text =
+        browser
+          ~reply:(fun n a ->
+            if n = "Runtime.evaluate" then stub n a else answering text n a)
+          ()
+      in
+      let big =
+        ok (R.eval (with_result (String.make (2 * mib) 'x')) (eval_arg "return 1" None))
+      in
+      Alcotest.(check bool)
+        "evl-p515 a 2 MiB result" true
+        (big.P.value = str (String.make (2 * mib) 'x'));
+      Alcotest.(check string)
+        "evl-p515 result bound" "too-large"
+        (code
+           (R.eval (with_result (String.make (8 * mib) 'x')) (eval_arg "return 1" None))))
+
+(* evl-iskk evl-i702: the caller's timeout is the call's deadline. A call that runs out of it
+   while the page still answers a probe is script-timeout; when the probe fails too, the
+   renderer is hung and renderer-unresponsive stands. *)
+let eval_timeout () =
+  Ox_test.run (fun _env _sw ->
+      let deadlines = ref [] in
+      let unresponsive =
+        P.make_error
+          (match P.Error_code.of_string "renderer-unresponsive" with
+          | Ok code -> code
+          | Error why -> Alcotest.fail why)
+          ~message:"browser operation timed out"
+      in
+      let rig ~probe_answers =
+        browser ~reply:stub
+          ~within:(fun deadline name args ->
+            deadlines := (name, Ox.Duration.to_ms deadline) :: !deadlines;
+            match name with
+            | "Runtime.callFunctionOn" -> Error unresponsive
+            | _ when probe_answers -> Ok (stub name args)
+            | _ -> Error unresponsive)
+          ()
+      in
+      Alcotest.(check string)
+        "evl-iskk timeout below range" "invalid-request"
+        (code (R.eval (rig ~probe_answers:true) (eval_arg ~timeout_ms:0 "return 1" None)));
+      Alcotest.(check string)
+        "evl-iskk timeout above range" "invalid-request"
+        (code
+           (R.eval (rig ~probe_answers:true)
+              (eval_arg ~timeout_ms:600_001 "return 1" None)));
+      deadlines := [];
+      Alcotest.(check string)
+        "evl-i702 a running body is script-timeout" "script-timeout"
+        (code
+           (R.eval (rig ~probe_answers:true)
+              (eval_arg ~timeout_ms:120_000 "return 1" None)));
+      Alcotest.(check bool)
+        "evl-iskk the call carries the caller's deadline" true
+        (List.mem ("Runtime.callFunctionOn", 120_000) !deadlines);
+      deadlines := [];
+      Alcotest.(check string)
+        "evl-i702 the default bound also answers script-timeout" "script-timeout"
+        (code (R.eval (rig ~probe_answers:true) (eval_arg "return 1" None)));
+      Alcotest.(check bool)
+        "evl-iskk the default deadline is 30 s" true
+        (List.mem ("Runtime.callFunctionOn", 30_000) !deadlines);
+      Alcotest.(check string)
+        "evl-i702 a hung renderer stays renderer-unresponsive" "renderer-unresponsive"
+        (code (R.eval (rig ~probe_answers:false) (eval_arg "return 1" None))))
 
 let text_and_wait () =
   let clock = ref 0. in
@@ -531,7 +601,16 @@ let eval_diagnostics
         | P.Failure e -> Alcotest.fail e.message
       in
       let evaluate expression =
-        send (P.Eval { tab; expression; argument = None; index = None; snapshot = None })
+        send
+          (P.Eval
+             {
+               tab;
+               expression;
+               argument = None;
+               index = None;
+               snapshot = None;
+               timeout_ms = None;
+             })
       in
       let refused expected = function
         | P.Success _ -> Alcotest.fail "hdoc-vqj7 eval unexpectedly succeeded"
@@ -641,6 +720,7 @@ let eval_settlement
                       argument = None;
                       index = None;
                       snapshot = None;
+                      timeout_ms = None;
                     })));
       wait_for_call ();
       Fake.emit fake ~method_:"Target.targetCreated"
@@ -681,6 +761,7 @@ let eval_settlement
                       argument = None;
                       index = None;
                       snapshot = None;
+                      timeout_ms = None;
                     })));
       wait_for_call ();
       Fake.emit fake ~method_:"Target.targetDestroyed"
@@ -742,6 +823,7 @@ let modal_reads
                 argument = None;
                 index = None;
                 snapshot = None;
+                timeout_ms = None;
               } );
           ("shot", "Page.startScreencast", P.Shot { tab; path; full_page = None });
         ]
@@ -1026,6 +1108,7 @@ let () =
       ( "operations",
         [
           Alcotest.test_case "eval limits" `Quick eval_bounds;
+          Alcotest.test_case "eval timeout" `Quick eval_timeout;
           Alcotest.test_case "hdoc-vqj7 eval diagnostics and promise" `Quick
             (eval_diagnostics ~caps);
           Alcotest.test_case "text and AND wait" `Quick (fun () ->

@@ -84,7 +84,7 @@ Observation:
 | `text` | `{tab, index?: int, max_chars?: int}` | `{url, title, text, truncated}` | [errors](help/errors.md) |
 | `shot` | `{tab, path, full_page?: bool}` | `{path, bytes}` | [errors](help/errors.md) |
 | `debug` | `{tab, limit?: int, clear?: bool}` | `{entries: DebugEntry[]}` | [errors](help/errors.md) |
-| `eval` | `{tab, expression, argument?, index?, snapshot?}` | `{value}` | [errors](help/errors.md) |
+| `eval` | `{tab, expression, argument?, index?, snapshot?, timeout_ms?}` | `{value}` | [errors](help/errors.md) |
 | `net` | `{tab, match?, limit?, type?}` | `{requests: NetEntry[]}` | [errors](help/errors.md) |
 | `net_body` | `{tab, id}` | `{id, body, base64, bytes, truncated}` | [errors](help/errors.md) |
 | `net_request` | `{tab, id}` | `{id, method, url, headers, post_data?, base64, truncated}` | [errors](help/errors.md) |
@@ -134,12 +134,6 @@ Answer the dialog before another command on that tab; an handle-initiated close
 automatically accepts its own `beforeunload` dialog. When a handler exhausts its
 listener budget, its socket still returns `timeout` with `detail.command` and
 `detail.budget_ms` instead of closing without a reply.
-
-Scripts (ADR-0016, scr-run): the agent's own JavaScript, run once on a tab's page. The CLI reads FILE and sends its name and text; nothing is installed.
-
-| cmd | args | result |
-| --- | --- | --- |
-| `script_run` | `{tab, name, source, args?: {name: string}, out?: string}` | `{script, value, records, bytes, elapsed_ms}` | [errors](help/errors.md) |
 
 Human handoff:
 
@@ -407,14 +401,8 @@ Rules:
   (result, evidence, records) or `fail`, decoded fail-closed with one correction call. When JEV
   reports DONE on a mission that asks for an answer, the planner is asked once over the final page and
   answers or takes over. Only the mission deadline bounds it. `planner_turns` records each turn.
-- `script_run` runs the agent's script once on the tab's page: the body of an async function of
-  `args` (an object of strings), called on the page's global object with `Runtime.callFunctionOn`,
-  `returnByValue` and `awaitPromise`; it may `await fetch(...)` the site's own endpoints. Its result
-  is bounded at 8 MiB (`too-large`) and, when the file opens with a `/** returns: SHAPE */` block, validated
-  fail-closed against that shape (`script-invalid`, naming the first bad path). A script that threw is
-  `script-failed`. With `out`, a list result is appended to the file as JSONL. Nothing is installed.
-- **What reaches the page's JavaScript engine.** Only Leash's own fixed expressions, the expression an
-  agent writes into `eval`, and the file an agent passes to `script run`. No model output is ever any of them.
+- **What reaches the page's JavaScript engine.** Only Leash's own fixed expressions and the body an
+  agent gives `eval` (inline or with `--file`). No model output is ever either of them.
 - `dry_run: true` asks JEV once and reports its decision without acting.
 - The endings are `done`, `blocked` (JEV stopped and no planner is configured), `failed` (the
   planner failed the mission), `handoff-expired`, `canceled-by-operator`, `deadline` and `error`.
@@ -499,12 +487,22 @@ Rules:
   httpOnly ones included with their flags. `storage` reads `DOMStorage.getDOMStorageItems` for the page's
   security origin (an opaque origin such as about:blank is `invalid-request`); `items` is an object of key to
   value, at most 1000 items and 1 MiB (`truncated`). Nothing writes.
-- **Concurrency** (hard-b1na). The listener admits 64 concurrent requests, not ox_ipc's default 16, and replies of
-  up to 8 MiB (a 1 MiB body, escaped). Ten agents may run at once — five blocked in hour-long `wait`s on five
+- **Concurrency** (hard-b1na). The listener admits 64 concurrent requests, not ox_ipc's default 16, and request lines of
+  up to 9 MiB and replies of up to 8 MiB plus 64 KiB (an eval's 1 MiB body and 8 MiB argument or result). Ten agents may run at once — five blocked in hour-long `wait`s on five
   tabs while five act — with nobody queued: a wait holds a connection and a fiber and takes no tab lock. `net`,
   `net_body`, `net_request`, `cookies`, `storage`, `debug` and `dialog` take none either; the actions,
   `eval`, `text`, `shot`, `snap` and `drive` serialize per tab.
-- `eval` runs the expression as a function body in the page with `argument` bound; expression, argument, and result are each bounded to 64 KiB.
+- `eval` (ADR-0017; evl-gign evl-iskk evl-i702 evl-p515) is the one way to run the agent's own JavaScript.
+  The expression is a function body called on the page's global object with `Runtime.callFunctionOn`,
+  `returnByValue` and `awaitPromise`, `argument` bound; it may `await fetch(...)` the site's own endpoints
+  with the page's cookies. The body is at most 1 MiB, the argument and the result 8 MiB each (`too-large`).
+  The CLI takes the body inline or from `--file PATH` and the argument from `--argument JSON` or
+  `--argument-file PATH`; it reads the files and sends their text. `timeout_ms` (default 30000, 1..600000)
+  is the deadline of the function call; the listener budget is that plus 40 s. A call that runs out of it is
+  probed with a trivial evaluation (2 s): when the page answers, the reply is `script-timeout` with
+  `detail.timeout_ms` (the page may still be running the body); when it does not, `renderer-unresponsive`.
+  A body that threw, rejected or did not compile is `script-failed`. A client that disconnects cancels the
+  handler and frees the tab lock; the page's own promise cannot be stopped.
 - `shot` writes a PNG to `path`, which must be an absolute path the service can write; the reply carries no image data.
 - `snap` `match` filters rows by case-insensitive substring over role, name, and value; `limit` defaults to 120, `offset` pages; `truncated` is truthful. `settled:true` requires a stable document and at least one interactive AX row, or no possible interactive content in a cheap DOM selector count. Otherwise it retakes twice, then reports `settled:false` with `reason:"ax-tree-empty"` for unpopulated AX, `"document-changing"` for mutations, or `"dialog-open"` for a dialog. An empty AX tree with interactive DOM content falls back to at most 250 visible tag/ARIA-derived rows marked `source:"dom"`; normal rows have `source:"ax"`. Both use the same snapshot IDs and indices. DOM actions revalidate the original backend element identity, never a selector. These snapshots remain usable even when unsettled (field-lp65, field-jkx6).
 - Non-password input values come from the live DOM property captured by DOMSnapshot, so the next snapshot reflects a fill that took effect, including React-controlled fields (field-cct4).
@@ -567,7 +565,7 @@ Wire shapes stay in the sections above. Each field's meaning is the linked topic
 | `url`, `title`, `loaded`, `dialog`, `popups`, `opener_url`, `state` (popup) | [handles](help/handles.md) for origin; this file for the wire object | [errors](help/errors.md) |
 | `snapshot`, `rows`, `index`, `role`, `name`, `value`, `options`, `match`, `limit`, `offset`, `truncated`, `settled`, `source` | this file; acting on a row needs the handle in [handles](help/handles.md) | [errors](help/errors.md) |
 | `mission`, `start_url`, `max_steps`, `deadline_s`, `dry_run`, `out`, `status`, `planner_turns`, `operator_state`, `operator_steps`, `output_kinds`, `collected`, `model_cost`, `final`, `Step`, `Operation` | [drive](help/drive.md) | [errors](help/errors.md) |
-| `script`, `name`, `source`, `args`, `value`, `records` | this file (script_run) | [errors](help/errors.md) |
+| `expression`, `argument`, `timeout_ms`, `value` | [eval](help/eval.md) | [errors](help/errors.md) |
 
 ## Error codes
 
@@ -615,9 +613,9 @@ Exit status is the class below, not 1. `leash help errors` prints this table. Th
 | `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds | [errors](help/errors.md) |
 | `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry | [errors](help/errors.md) |
 | `model-timeout` | 75 | a model call exceeded its per-call deadline | the model provider timed out; retry, or raise models.<kind>_timeout | [errors](help/errors.md) |
-| `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry | [errors](help/errors.md) |
-| `script-failed` | 65 | an eval expression or script threw, rejected, or could not be compiled; message carries the engine error | read message; fix the expression, script, or page; a script is the body of an async function of args |
-| `script-invalid` | 65 | a script's result does not fit its returns block; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |
+| `too-large` | 65 | an eval body (1 MiB), argument or result (8 MiB each), or fill text (64 KiB) is over its bound | shrink the text, body, argument, or files under the bound and retry | [errors](help/errors.md) |
+| `script-failed` | 65 | an eval body threw, rejected, or could not be compiled; message carries the engine error | read message; fix the body or the page; the body is a function body with argument bound | [errors](help/errors.md) |
+| `script-timeout` | 75 | an eval body was still running at its --timeout-ms while the page kept answering; detail.timeout_ms is the bound | raise --timeout-ms (at most 600000), or make the body finish sooner; the page may still be running it, so check its state before you run it again | [errors](help/errors.md) |
 | `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message | [errors](help/errors.md) |
 | `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket | [errors](help/errors.md) |
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` | [errors](help/errors.md) |

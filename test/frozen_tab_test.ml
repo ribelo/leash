@@ -111,7 +111,15 @@ let new_tab tabs =
   info.tab
 
 let eval tab =
-  P.Eval { tab; expression = "1 + 1"; argument = None; index = None; snapshot = None }
+  P.Eval
+    {
+      tab;
+      expression = "1 + 1";
+      argument = None;
+      index = None;
+      snapshot = None;
+      timeout_ms = None;
+    }
 
 let wait_until label pred =
   let rec loop n =

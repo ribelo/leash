@@ -19,8 +19,7 @@ Help is offline and short first contact is not the full manual.
   $ test "$(grep -c '^[ ]*discover[ ]' help)" -eq 0
   $ ./daily_cli_fixture.exe top-help help; test ! -s err
   top-level help groups tabs, observe, act, network/debug, missions, service and skill
-  $ for cmd in new downloads list take close status snap text shot debug eval nav click fill press select scroll wait upload hover check uncheck net cookies storage dialog handoff resume drive script traces serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
-  $ for cmd in run; do leash script "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
+  $ for cmd in new downloads list take close status snap text shot debug eval nav click fill press select scroll wait upload hover check uncheck net cookies storage dialog handoff resume drive traces serve config skill help; do leash "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in list show prune; do leash traces "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in install show; do leash skill "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done
   $ for cmd in init check; do leash config "$cmd" --help=plain >help 2>err && ./daily_cli_fixture.exe check-help help && ./daily_cli_fixture.exe option-docs help && test ! -s err || exit 1; done

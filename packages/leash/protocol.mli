@@ -442,9 +442,11 @@ type eval_args = {
   argument : Yojson.Safe.t option;
   index : int option;
   snapshot : Snapshot_id.t option;
+  timeout_ms : int option;
 }
 (** hard-b20d: [index] and [snapshot] come together — the expression is then called with
-    the row's element as its second parameter, [(argument, element)]. *)
+    the row's element as its second parameter, [(argument, element)]. evl-iskk:
+    [timeout_ms] bounds the call, 1..600000, default 30000. *)
 
 type nav_args = { tab : Handle.t; url : string }
 
@@ -547,17 +549,6 @@ type hover_args = {
 }
 
 type storage_args = { tab : Handle.t; area : Storage_area.t }
-
-type script_run_args = {
-  tab : Handle.t;
-  name : string;
-  source : string;
-  args : Yojson.Safe.t option;
-  out : string option;
-}
-(** scr-run: [leash script run TAB FILE]: the file's name and text, run once on the tab's
-    page; [args] are the --arg strings as an object; with [out], a list result is appended
-    to that file as JSONL, one item per line. *)
 
 type drive_args = {
   tab : Handle.t;
@@ -744,19 +735,6 @@ val yojson_of_net_body_result : net_body_result -> Yojson.Safe.t
 val yojson_of_net_request_result : net_request_result -> Yojson.Safe.t
 val yojson_of_cookies_result : cookies_result -> Yojson.Safe.t
 val yojson_of_storage_result : storage_result -> Yojson.Safe.t
-
-type script_result = {
-  script : string;
-  value : Yojson.Safe.t;
-  records : int;
-  bytes : int;
-  elapsed_ms : int;
-}
-(** scr-run: a script's result, validated against its returns block when it has one, with
-    its size and time. *)
-
-val script_result_of_yojson : Yojson.Safe.t -> (script_result, string) result
-val yojson_of_script_result : script_result -> Yojson.Safe.t
 
 type handoff_result = {
   resumed : bool;
@@ -946,7 +924,6 @@ type command =
   | Uncheck of click_args
   | Cookies of tab_args
   | Storage of storage_args
-  | Script_run of script_run_args
       (** The decoded command: one constructor per row of [docs/protocol.md]'s command
           tables, carrying that command's derived argument record. *)
 

@@ -404,6 +404,7 @@ let recovery_details
              argument = None;
              index = Some 1;
              snapshot = Some first;
+             timeout_ms = None;
            });
       let index =
         match get "rows" json with

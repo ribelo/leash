@@ -85,7 +85,6 @@ let dispatch ?(planner = false) ?traces ?logger ?(model = "unconfigured") ?model
   | P.Net_request args -> lift P.yojson_of_net_request_result (Tabs.net_request tabs args)
   | P.Cookies args -> lift P.yojson_of_cookies_result (Tabs.cookies tabs args)
   | P.Storage args -> lift P.yojson_of_storage_result (Tabs.storage tabs args)
-  | P.Script_run args -> lift P.yojson_of_script_result (Tabs.script_run tabs args)
   | P.Upload args -> lift P.yojson_of_action_result (Tabs.upload tabs args)
   | P.Hover args -> lift P.yojson_of_action_result (Tabs.hover tabs args)
   | P.Check args -> lift P.yojson_of_action_result (Tabs.check tabs args)
@@ -294,9 +293,15 @@ let budget ?(handoff_timeout_s = 300) (request : (P.request, string) result) =
         (seconds
            (max 1 (Option.value ~default:600 args.deadline_s) + handoff_timeout_s + 75))
   | Ok { command = P.Snap args; _ } when args.with_image = Some true -> Some cdp_budget
-  | Ok { command = P.Shot _ | P.Eval _ | P.Text _ | P.Dialog _ | P.Script_run _; _ } ->
-      (* A script may await a fetch; the CDP call's own deadline is 30 s. *)
-      Some (seconds 35)
+  | Ok { command = P.Eval args; _ } ->
+      (* evl-iskk: an eval runs as long as its caller allows, plus the remote-object call,
+         the two-second renderer probe after an overrun (evl-i702) and the reply. *)
+      Some
+        (Ox.Duration.ms
+           (max 1
+              (min Reading.max_timeout_ms (Option.value ~default:30_000 args.timeout_ms))
+           + 40_000))
+  | Ok { command = P.Shot _ | P.Text _ | P.Dialog _; _ } -> Some (seconds 35)
   | Ok { command = P.Nav _; _ } -> Some load_budget
   | Ok { command = P.New args; _ } when Tabs.waits_for_load args.url -> Some load_budget
   | Ok
@@ -346,8 +351,10 @@ let policy : Ox_ipc.Listener.policy =
   {
     default_policy with
     peers = 64;
-    max_line_bytes = 1_048_576;
-    max_reply_bytes = 8_388_608;
+    (* evl-p515: an eval request carries a body of up to 1 MiB and an argument of up to
+       8 MiB; its reply a result of up to 8 MiB. Each has room for its JSON envelope. *)
+    max_line_bytes = 9_502_720;
+    max_reply_bytes = 8_454_144;
   }
 
 (* A peer the listener turns away is a log line, never a silent close: from the

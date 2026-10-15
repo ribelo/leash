@@ -253,9 +253,3 @@ val idleness : t -> idleness list
 
 val sweep : t -> decide:(idleness -> sweep_step) -> (Protocol.Handle.t * sweep_step) list
 val stop : t -> unit
-
-val script_run :
-  t -> Protocol.script_run_args -> (Protocol.script_result, Protocol.error) result
-(** scr-run (ADR-0016): run the agent's script once on the tab's page as the body of an
-    async function of [args], read-only, its result bounded and validated against its
-    leading returns block when it has one. A bad returns block is [script-invalid]. *)

@@ -32,9 +32,9 @@ action.
 | `browser-unavailable` | 69 | Chrome is restarting | Chrome is restarting; retry `leash status` in a few seconds |
 | `model-unavailable` | 69 | System One or the text helper failed, or no API key is configured; detail.code is missing-key, unavailable, timeout, authentication, invalid-response, input-too-large, model-mismatch, or text-helper-unavailable | read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry |
 | `model-timeout` | 75 | a model call exceeded its per-call deadline | the model provider timed out; retry, or raise models.<kind>_timeout |
-| `too-large` | 65 | expression, argument, result, fill text, or a script result is over its bound | shrink the text, expression, argument, or files under the bound and retry |
-| `script-failed` | 65 | an eval expression or script threw, rejected, or could not be compiled; message carries the engine error | read message; fix the expression, script, or page; a script is the body of an async function of args |
-| `script-invalid` | 65 | a script's result does not fit its returns block; message is the first mismatch | the result missed its returns shape; message is the first bad path, so fix the script or the returns |
+| `too-large` | 65 | an eval body (1 MiB), argument or result (8 MiB each), or fill text (64 KiB) is over its bound | shrink the text, body, argument, or files under the bound and retry |
+| `script-failed` | 65 | an eval body threw, rejected, or could not be compiled; message carries the engine error | read message; fix the body or the page; the body is a function body with argument bound |
+| `script-timeout` | 75 | an eval body was still running at its --timeout-ms while the page kept answering; detail.timeout_ms is the bound | raise --timeout-ms (at most 600000), or make the body finish sooner; the page may still be running it, so check its state before you run it again |
 | `internal` | 70 | a defect; the message carries no page content | a defect, not a page failure; retry once, then report the message |
 | `service-unreachable` | 69 | the CLI could not connect to the control socket | `systemctl --user start leash`, or pass --socket |
 | `not-installed` | 69 | no leash.service unit is installed | Leash is not installed; rebuild NixOS so leash.service exists, then `systemctl --user start leash` |

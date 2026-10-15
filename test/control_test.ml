@@ -1937,6 +1937,7 @@ let journal_redaction
                 argument = Some (str api_key);
                 index = None;
                 snapshot = None;
+                timeout_ms = None;
               };
             Nav { tab = missing; url };
             Net

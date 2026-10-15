@@ -5,6 +5,8 @@ type page_state = { loader : string; guard : (string * int) option }
 
 type browser = {
   call : string -> Yojson.Safe.t -> (Yojson.Safe.t, Protocol.error) result;
+  call_within :
+    Ox.Duration.t -> string -> Yojson.Safe.t -> (Yojson.Safe.t, Protocol.error) result;
   capture : full_page:bool -> (Yojson.Safe.t, Protocol.error) result;
   now : unit -> float;
   sleep : float -> unit;
@@ -50,9 +52,12 @@ let dialog_open dialog =
 let check_dialog browser =
   match browser.dialog () with Some dialog -> Error (dialog_open dialog) | None -> Ok ()
 
-let page_call browser meth params =
+let page_call ?deadline browser meth params =
   let* () = check_dialog browser in
-  match browser.call meth params with
+  let call =
+    match deadline with None -> browser.call | Some within -> browser.call_within within
+  in
+  match call meth params with
   | Error e -> (
       match browser.dialog () with
       | Some dialog -> Error (dialog_open dialog)
@@ -78,9 +83,9 @@ let remote_object browser =
   | Some id -> Ok id
   | None -> Error (internal "browser omitted global object")
 
-let call_function_with browser ~object_id ~body ~arguments =
+let call_function_with ?deadline browser ~object_id ~body ~arguments =
   let* reply =
-    page_call browser "Runtime.callFunctionOn"
+    page_call ?deadline browser "Runtime.callFunctionOn"
       (obj
          [
            ("objectId", str object_id);
@@ -114,7 +119,11 @@ let call_function browser ~object_id ~body ~argument =
    popup is gone (docs/cdp-shapes.md, L10) -- so it settles the way a trusted input does: a
    new target with this tab as its opener ends the wait with a null value, and this tab's
    own death ends it with [tab-gone] (own-teh1). Nothing is re-issued. *)
-let evaluated ?(call = call_function_with) browser ~object_id ~body ~arguments =
+let evaluated
+    ?(call =
+      fun browser ~object_id ~body ~arguments ->
+        call_function_with browser ~object_id ~body ~arguments) browser ~object_id ~body
+    ~arguments =
   match
     Dialog_race.first browser.dialog_race (fun () ->
         Dispatch.first (browser.acknowledge ()) (fun () ->
@@ -130,7 +139,14 @@ let evaluated ?(call = call_function_with) browser ~object_id ~body ~arguments =
   | `Value (`Acknowledged (Dispatch.Gone error)) -> Error error
   | `Value (`Reply result) -> result
 
-let cap = 65_536
+(* evl-p515: the body is at most 1 MiB; its argument and its result are at most 8 MiB
+   each. The control listener and the CLI size their lines for these bounds. *)
+let body_cap = 1_048_576
+let value_cap = 8 * 1_048_576
+
+(* evl-iskk: the caller bounds the call; 30 s unless it says otherwise, ten minutes at most. *)
+let default_timeout_ms = 30_000
+let max_timeout_ms = 600_000
 
 let row_object browser index =
   match browser.row index with
@@ -147,16 +163,37 @@ let row_object browser index =
           | Some id -> Ok id
           | None -> Error (stale browser)))
 
+(* evl-i702: the call ran out of its deadline. A body that is still awaiting leaves the
+   renderer free, so a trivial evaluation still answers: that is [script-timeout]. Only when
+   that probe fails too is the renderer hung, and the original [renderer-unresponsive]
+   stands. *)
+let overrun browser ~timeout_ms (failure : P.error) =
+  match
+    browser.call_within (Ox.Duration.seconds 2) "Runtime.evaluate"
+      (obj [ ("expression", str "1"); ("returnByValue", `Bool true) ])
+  with
+  | Ok _ ->
+      P.make_error
+        (enum P.Error_code.of_string "script-timeout")
+        ~message:(Printf.sprintf "the eval body was still running after %d ms" timeout_ms)
+        ~detail:(`Assoc [ ("timeout_ms", `Int timeout_ms) ])
+  | Error _ -> failure
+
 (* hard-b20d: with a row, the caller's function is called as (argument, element) — the
    element is the row's node, resolved from the snapshot's backend id, so no selector is
    ever written. The snapshot must be the tab's current one: a row of an older table may
-   name another element now. *)
+   name another element now. evl-gign: this is the one way to run the agent's own
+   JavaScript; a body may [await fetch(...)] the site's endpoints with the page's cookies. *)
 let eval browser (args : P.eval_args) =
   let* () = check_dialog browser in
-  if String.length args.expression > cap then Error (too_large "expression")
+  let timeout_ms = Option.value ~default:default_timeout_ms args.timeout_ms in
+  if timeout_ms < 1 || timeout_ms > max_timeout_ms then
+    Error (invalid "eval timeout_ms must be between 1 and 600000")
+  else if String.length args.expression > body_cap then Error (too_large "expression")
   else
     let argument = Option.value ~default:`Null args.argument in
-    if String.length (Ox_json.to_string argument) > cap then Error (too_large "argument")
+    if String.length (Ox_json.to_string argument) > value_cap then
+      Error (too_large "argument")
     else
       let* element =
         match (args.index, args.snapshot) with
@@ -169,96 +206,29 @@ let eval browser (args : P.eval_args) =
         | _ -> Error (invalid "eval takes --index and --snapshot together")
       in
       let* object_id = remote_object browser in
+      let call = call_function_with ~deadline:(Ox.Duration.ms timeout_ms) in
+      let run ~body ~arguments =
+        match evaluated ~call browser ~object_id ~body ~arguments with
+        | Error failure
+          when P.Error_code.to_string failure.P.code = "renderer-unresponsive" ->
+            Error (overrun browser ~timeout_ms failure)
+        | result -> result
+      in
       let* value =
         match element with
         | None ->
-            evaluated browser ~object_id
+            run
               ~body:("function(argument) {\n" ^ args.expression ^ "\n}")
               ~arguments:[ obj [ ("value", argument) ] ]
         | Some element ->
-            evaluated browser ~object_id
+            run
               ~body:("function(argument, element) {\n" ^ args.expression ^ "\n}")
               ~arguments:
                 [ obj [ ("value", argument) ]; obj [ ("objectId", str element) ] ]
       in
-      if String.length (Ox_json.to_string value) > cap then Error (too_large "result")
+      if String.length (Ox_json.to_string value) > value_cap then
+        Error (too_large "result")
       else Ok P.{ value }
-
-(* extr-8o1h extr-vgir extr-k40c scr-run: running a script the agent brought to [leash script
-   run]. The text is called as the body of an async function of [args] on the page's global
-   object, [returnByValue] and [awaitPromise], so a script may [await fetch(...)] the site's
-   own endpoints with the page's cookies and origin. The result is bounded by
-   {!Script.max_bytes} and, when the script declares one, validated against its [returns]. *)
-let script_failed message = error "script-failed" message
-
-let bounded_message text =
-  let text = String.trim text in
-  if String.length text <= 500 then text else String.sub text 0 500 ^ "..."
-
-(* The exception a script threw, as its author wants to read it: the description a
-   thrown [Error] carries (name, message, stack head), else the plain text. *)
-let thrown reply =
-  let details = nested [ "exceptionDetails" ] (fun x -> Ok x) reply in
-  Option.map
-    (fun details ->
-      match nested [ "exception"; "description" ] D.string details with
-      | Some description -> description
-      | None ->
-          Option.value ~default:"the script threw" (nested [ "text" ] D.string details))
-    details
-
-let call_script browser ~object_id ~body ~arguments =
-  match
-    page_call browser "Runtime.callFunctionOn"
-      (obj
-         [
-           ("objectId", str object_id);
-           ("functionDeclaration", str body);
-           ("arguments", `List arguments);
-           ("returnByValue", `Bool true);
-           ("awaitPromise", `Bool true);
-         ])
-  with
-  | Error e when e.P.message = "browser refused Runtime.callFunctionOn" ->
-      Error
-        (script_failed
-           "the browser refused the script or could not return its result by value")
-  | Error e -> Error e
-  | Ok reply -> (
-      match thrown reply with
-      | Some description -> Error (script_failed (bounded_message description))
-      | None -> ( match remote_value reply with Some x -> Ok x | None -> Ok `Null))
-
-type script_ran = { value : Yojson.Safe.t; records : int; bytes : int; elapsed_ms : int }
-
-let script_args_cap = 65_536
-
-let script browser (script : Script.t) ~args =
-  let arguments = `Assoc (List.map (fun (name, value) -> (name, `String value)) args) in
-  if String.length (Ox_json.to_string arguments) > script_args_cap then
-    Error (too_large "script arguments")
-  else
-    let started = browser.now () in
-    let* object_id = remote_object browser in
-    let* value =
-      evaluated ~call:call_script browser ~object_id
-        ~body:("async function(args) {\n" ^ script.Script.code ^ "\n}")
-        ~arguments:[ obj [ ("value", arguments) ] ]
-    in
-    let elapsed_ms = int_of_float ((browser.now () -. started) *. 1000.) in
-    let bytes = String.length (Ox_json.to_string value) in
-    if bytes > Script.max_bytes then
-      Error
-        (error "too-large"
-           (Printf.sprintf "the script's result is %d bytes, over its bound of %d" bytes
-              Script.max_bytes))
-    else
-      match
-        Option.map (fun shape -> Shape.validate shape value) script.Script.returns
-      with
-      | Some (Error why) -> Error (error "script-invalid" why)
-      | Some (Ok ()) | None ->
-          Ok { value; records = Shape.records value; bytes; elapsed_ms }
 
 let truncate_chars max_chars text =
   let length = String.length text in

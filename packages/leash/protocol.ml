@@ -322,7 +322,7 @@ type error_code =
   | Model_timeout [@json.name "model-timeout"]
   | Too_large [@json.name "too-large"]
   | Script_failed [@json.name "script-failed"]
-  | Script_invalid [@json.name "script-invalid"]
+  | Script_timeout [@json.name "script-timeout"]
   | Internal [@json.name "internal"]
   | Service_unreachable [@json.name "service-unreachable"]
   | Not_installed [@json.name "not-installed"]
@@ -447,20 +447,21 @@ module Error_code = struct
           "read detail.code; set OPENROUTER_API_KEY or fix the model config, then retry"
     | Too_large ->
         info 65
-          "expression, argument, result, fill text, or a script result is over its bound"
-          "shrink the text, expression, argument, or files under the bound and retry"
+          "an eval body (1 MiB), argument or result (8 MiB each), or fill text (64 KiB) \
+           is over its bound"
+          "shrink the text, body, argument, or files under the bound and retry"
     | Script_failed ->
         info 65
-          "an eval expression or script threw, rejected, or could not be compiled; \
-           message carries the engine error"
-          "read message; fix the expression, script, or page; a script is the body of an \
-           async function of args"
-    | Script_invalid ->
-        info 65
-          "a script's result does not fit its returns block; message is the first \
-           mismatch"
-          "the result missed its returns shape; message is the first bad path, so fix \
-           the script or the returns"
+          "an eval body threw, rejected, or could not be compiled; message carries the \
+           engine error"
+          "read message; fix the body or the page; the body is a function body with \
+           argument bound"
+    | Script_timeout ->
+        info 75
+          "an eval body was still running at its --timeout-ms while the page kept \
+           answering; detail.timeout_ms is the bound"
+          "raise --timeout-ms (at most 600000), or make the body finish sooner; the page \
+           may still be running it, so check its state before you run it again"
     | Internal ->
         info 70 "a defect; the message carries no page content"
           "a defect, not a page failure; retry once, then report the message"
@@ -531,7 +532,7 @@ module Error_code = struct
       Model_timeout;
       Too_large;
       Script_failed;
-      Script_invalid;
+      Script_timeout;
       Internal;
       Service_unreachable;
       Not_installed;
@@ -787,6 +788,7 @@ type eval_args = {
   argument : Yojson.Safe.t option;
   index : int option;
   snapshot : Snapshot_id.t option;
+  timeout_ms : int option; [@json.default None]
 }
 [@@deriving yojson]
 
@@ -1048,27 +1050,6 @@ type storage_result = {
 }
 [@@deriving yojson]
 
-(* scr-run: [leash script run TAB FILE]. The client sends the file's name and text; the
-   service runs it once on the tab's page. [args] are the --arg strings. *)
-type script_run_args = {
-  tab : Handle.t;
-  name : string;
-  source : string;
-  args : Yojson.Safe.t option; [@json.default None]
-  out : string option; [@json.default None]
-}
-[@@deriving yojson]
-
-(* scr-run: the script's validated result with its size and time. *)
-type script_result = {
-  script : string;
-  value : Yojson.Safe.t;
-  records : int;
-  bytes : int;
-  elapsed_ms : int;
-}
-[@@deriving yojson]
-
 (* hand-rg9h: [warnings] is [key?] — the human-facing steps a handoff ran and could not
    complete, omitted when there was nothing to report. *)
 type handoff_result = {
@@ -1286,7 +1267,6 @@ type command =
   | Uncheck of click_args
   | Cookies of tab_args
   | Storage of storage_args
-  | Script_run of script_run_args
 
 let command_name = function
   | New _ -> "new"
@@ -1324,7 +1304,6 @@ let command_name = function
   | Uncheck _ -> "uncheck"
   | Cookies _ -> "cookies"
   | Storage _ -> "storage"
-  | Script_run _ -> "script_run"
 
 let args_to_json = function
   | New args -> yojson_of_new_args args
@@ -1360,7 +1339,6 @@ let args_to_json = function
   | Check args | Uncheck args -> yojson_of_click_args args
   | Cookies args -> yojson_of_tab_args args
   | Storage args -> yojson_of_storage_args args
-  | Script_run args -> yojson_of_script_run_args args
 
 let command_of_args ~cmd args =
   let with_args decoder build = with_path "args" (Result.map build (decoder args)) in
@@ -1413,7 +1391,6 @@ let command_of_args ~cmd args =
   | "uncheck" -> with_args click_args_of_yojson (fun args -> Uncheck args)
   | "cookies" -> with_args tab_args_of_yojson (fun args -> Cookies args)
   | "storage" -> with_args storage_args_of_yojson (fun args -> Storage args)
-  | "script_run" -> with_args script_run_args_of_yojson (fun args -> Script_run args)
   | other ->
       Error
         (Printf.sprintf "cmd: unknown command %s" (Yojson.Safe.to_string (`String other)))

@@ -47,7 +47,8 @@ let send ?timeout_s ~base path request =
         let socket = Eio.Net.connect ~sw base#net (`Unix path) in
         let data = Yojson.Safe.to_string request ^ "\n" in
         Eio.Flow.copy_string data socket;
-        let reader = Eio.Buf_read.of_flow ~max_size:8_388_608 socket in
+        (* evl-p515: room for an 8 MiB eval result and its envelope. *)
+        let reader = Eio.Buf_read.of_flow ~max_size:8_519_680 socket in
         Eio.Buf_read.line reader)
   in
   match timeout_s with
@@ -380,22 +381,29 @@ let drive_request_options options =
    at the service's 64 KiB bound; the value is not printed here. *)
 let fill_limit = 65_536
 
-let read_bounded ic =
-  let limit = fill_limit + 1 in
-  let buf = Bytes.create limit in
-  let rec read_all off =
-    if off = limit then off
-    else
-      let n = In_channel.input ic buf off (limit - off) in
-      if n = 0 then off else read_all (off + n)
-  in
-  let n = read_all 0 in
-  if n > fill_limit then Error `Too_large else Ok (Bytes.sub_string buf 0 n)
+(* evl-p515: the service's eval bounds — the body and the argument file. *)
+let eval_body_limit = 1_048_576
+let eval_value_limit = 8 * 1_048_576
 
-let read_fill_file ~caps path =
+let read_bounded ?(limit = fill_limit) ic =
+  let buf = Buffer.create (min (limit + 1) 65_536) in
+  let chunk = Bytes.create 65_536 in
+  let rec read_all () =
+    if Buffer.length buf > limit then ()
+    else
+      let n = In_channel.input ic chunk 0 (min 65_536 (limit + 1 - Buffer.length buf)) in
+      if n = 0 then ()
+      else (
+        Buffer.add_subbytes buf chunk 0 n;
+        read_all ())
+  in
+  read_all ();
+  if Buffer.length buf > limit then Error `Too_large else Ok (Buffer.contents buf)
+
+let read_fill_file ?limit ~caps path =
   if not (Sys.file_exists path) then Error (`Missing path)
   else
-    try Cap_stdlib.In_channel.with_open_bin ~caps path read_bounded with
+    try Cap_stdlib.In_channel.with_open_bin ~caps path (read_bounded ?limit) with
     | Eio.Cancel.Cancelled _ as exn -> raise exn
     | Unix.Unix_error ((Unix.EACCES | Unix.EPERM | Unix.EROFS), _, _) -> Error `Denied
     | Eio.Io (Eio.Fs.E (Eio.Fs.Permission_denied _), _) -> Error `Denied
@@ -411,17 +419,66 @@ let rec perform ~caps ~send ~base command fields positionals options =
   | "net", [ _; _ ] -> usage ~caps "net takes body ID or request ID after the tab"
   | "net", _ :: _ :: _ :: _ ->
       usage ~caps "net takes a tab, and optionally body or request with an ID"
-  (* scr-run: the client reads FILE and sends its name and text. *)
-  | "script_run", [ tab; file ] -> (
-      match
-        try Ok (Cap_stdlib.In_channel.with_open_bin ~caps file In_channel.input_all)
-        with Sys_error why -> Error why
-      with
-      | Error why -> usage ~caps ("script run: cannot read " ^ file ^ ": " ^ why)
-      | Ok source ->
-          perform_wire ~caps ~send ~base command [ "tab"; "name"; "source" ]
-            [ tab; Filename.basename file; source ]
-            options)
+  (* evl-gign evl-p515: the body is EXPRESSION or the text of --file (1 MiB); the argument
+     is --argument or the text of --argument-file (8 MiB). The client reads the files and
+     sends their text; nothing is installed. *)
+  | "eval", tab :: rest -> (
+      let path key =
+        List.find_map
+          (function
+            | Some (name, `String value) when name = key -> Some value | _ -> None)
+          options
+      in
+      let options =
+        List.filter
+          (function Some (("file" | "argument_file"), _) -> false | _ -> true)
+          options
+      in
+      let inline_argument =
+        List.exists (function Some ("argument", _) -> true | _ -> false) options
+      in
+      let read what ~limit file =
+        match read_fill_file ~limit ~caps file with
+        | Ok text -> Ok text
+        | Error `Too_large ->
+            Error
+              (report ~caps "too-large"
+                 (Printf.sprintf "eval %s is over %d bytes" what limit))
+        | Error `Denied ->
+            Error
+              (report ~caps "permission-denied"
+                 ("permission denied while reading " ^ file))
+        | Error (`Missing path) -> Error (usage ~caps ("eval: cannot read " ^ path))
+      in
+      let body =
+        match (rest, path "file") with
+        | _ :: _, Some _ ->
+            Error (usage ~caps "eval: give EXPRESSION or --file, not both")
+        | [], None ->
+            Error
+              (usage ~caps
+                 "eval: EXPRESSION is missing; give TAB EXPRESSION or TAB --file PATH")
+        | expression :: _, None -> Ok expression
+        | [], Some file -> read "body" ~limit:eval_body_limit file
+      in
+      let argument () =
+        match path "argument_file" with
+        | None -> Ok None
+        | Some _ when inline_argument ->
+            Error (usage ~caps "eval: give --argument or --argument-file, not both")
+        | Some file ->
+            Result.map
+              (fun text -> Some (Some ("argument", str text)))
+              (read "argument" ~limit:eval_value_limit file)
+      in
+      match body with
+      | Error status -> status
+      | Ok body -> (
+          match argument () with
+          | Error status -> status
+          | Ok argument ->
+              perform_wire ~caps ~send ~base command [ "tab"; "expression" ] [ tab; body ]
+                (Option.to_list argument @ options)))
   (* hard-o3za: the files are the trailing positionals. *)
   | "upload", tab :: snapshot :: index :: (_ :: _ as paths) ->
       perform_wire ~caps ~send ~base command
@@ -707,16 +764,7 @@ and perform_wire ~caps ~send ~base command fields positionals options =
    protocol's order — TAB, SNAPSHOT, INDEX — and lists exactly the options it takes, so
    `leash <command> --help` shows the whole call. The four shared options go on every
    command; --table only on the two that render one. *)
-type option_kind =
-  | Str
-  | Int
-  | Float
-  | Finite_float
-  | Bool
-  | Json
-  | Strings
-  | Pairs
-  | Point
+type option_kind = Str | Int | Float | Finite_float | Bool | Json | Strings | Point
 
 (* [Strings] is the repeated mission-expectation option [leash run] will carry
    (run-4j1v), declared here so the command lands as one table entry once the Door's name
@@ -796,16 +844,6 @@ let option_term { name; kind; docv; doc } =
       Term.(
         const (Option.map (fun point -> (name, P.yojson_of_point point)))
         $ Arg.(value & opt (some css_point) None & arg_info))
-  | Pairs ->
-      (* extr-mp5z: --arg K=V, repeated, is the wire's `args` object of strings. *)
-      Term.(
-        const (fun pairs ->
-            if pairs = [] then None
-            else
-              Some
-                ( "args",
-                  `Assoc (List.map (fun (key, value) -> (key, `String value)) pairs) ))
-        $ Arg.(value & opt_all (pair ~sep:'=' string string) [] & arg_info))
   | Strings ->
       Term.(
         const (fun values ->
@@ -884,37 +922,6 @@ let command ~caps ~send ~base ~run_owned ?wire ?docs ?(man = []) name doc positi
                   | Some spec -> usage_missing ~caps name positionals spec
                   | None -> perform ~caps ~send ~base wire fields args opts)))
       $ positional_term positionals $ collected)
-
-(* scr-run (ADR-0016): the agent's own JavaScript, run once on a tab's page. *)
-let script_command ~caps ~send ~base ~run_owned =
-  let run =
-    command ~caps ~send ~base ~run_owned ~wire:"script_run" "run"
-      "Run a JavaScript file once on a tab's page and print its result."
-      [ pos "tab" "TAB"; pos "name" "FILE" ]
-      ([
-         opt_list "arg" Pairs "K=V"
-           "A string argument for the script, in args (repeatable).";
-         opt "out" Str "FILE" "Append a list result to FILE as JSONL, one item per line.";
-       ]
-      @ shared_options)
-      [
-        "leash script run t_9xk ./titles.js --out titles.jsonl";
-        "leash script run t_9xk ./search.js --arg q=gpu --arg max=2000";
-      ]
-  in
-  Cmd.group
-    (Cli_help.command_info "script" ~doc:"Run the agent's own JavaScript on a tab."
-       ~man:
-         [
-           `S "DESCRIPTION";
-           `Pre
-             "FILE is the body of an async function of args, run read-only on the tab's \
-              page; it may await fetch on the site's own endpoints. A leading /** \
-              returns: SHAPE */ block validates the result. Results are bounded to 8 \
-              MiB. Nothing is installed or remembered.";
-         ]
-       ~examples:[ "leash script run t_9xk ./titles.js --out titles.jsonl" ])
-    [ run ]
 
 (* field-swvb: the same filters as snap, applied to the snapshot taken after the action. *)
 let snap_opts =
@@ -1136,18 +1143,26 @@ let commands ~caps ~send ~base ~run_owned =
         ],
         [ "leash debug t_9xk --limit 10" ] );
       ( "eval",
-        "Evaluate EXPRESSION as a function body in the page; a returned promise is \
-         awaited. Use return (async () => { ... })() for await, not top-level await.",
-        [ pos "tab" "TAB"; pos "expression" "EXPRESSION" ],
+        "Run your JavaScript in the page: EXPRESSION or --file is a function body with \
+         argument bound; a returned promise is awaited. Use return (async () => { ... \
+         })() for await, not top-level await. See leash help eval.",
+        [ pos "tab" "TAB"; pos_opt "expression" "EXPRESSION" ],
         [
-          opt "argument" Json "JSON" "JSON value bound to argument in the expression.";
+          opt "file" Str "PATH" "Read the function body from PATH (at most 1 MiB).";
+          opt "argument" Json "JSON" "JSON value bound to argument (at most 8 MiB).";
+          opt "argument_file" Str "PATH"
+            "Read the JSON argument from PATH instead (at most 8 MiB).";
+          opt "timeout_ms" Int "MS"
+            "Bound the call in milliseconds (default 30000, max 600000); an overrun is \
+             script-timeout.";
           opt "index" Int "N"
-            "Call the expression as (argument, element), element being the row at index \
-             N.";
+            "Call the body as (argument, element), element being the row at index N.";
           opt "snapshot" Str "SNAPSHOT" "The snapshot --index names (required with it).";
         ],
         [
           "leash eval t_9xk 'return document.title'";
+          "leash eval t_9xk --file ./read.js --argument '{\"page\":2}' --timeout-ms \
+           300000";
           "leash eval t_9xk 'return element.getBoundingClientRect().width' --snapshot \
            s_3 --index 7";
         ] );
@@ -1394,7 +1409,6 @@ let commands ~caps ~send ~base ~run_owned =
            invoice number' --url https://moj.tauron.pl/ --secret login=@/private/login \
            --secret password=@/private/password";
         ];
-      script_command ~caps ~send ~base ~run_owned;
       traces_command ~caps ~run_owned;
     ]
 
@@ -1799,6 +1813,7 @@ let help_body name =
 let help_description = function
   | "handles" -> "Setup, tab handles, sharing, expiry, and human handoff."
   | "browser" -> "Rows, aligned PNG/CSS pictures, native points and focused type."
+  | "eval" -> "Run your own JavaScript in a page: bodies, arguments, bounds, timeouts."
   | "drive" -> "Writing a mission, results, the planner's takeover, and traces."
   | "traces" ->
       "Read and prune durable drive traces without a service, model, or browser."

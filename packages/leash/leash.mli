@@ -13,10 +13,8 @@ module Text_helper : module type of Text_helper
 module Protocol : module type of Protocol
 module Traces : module type of Traces
 module Web_url : module type of Web_url
-module Script : module type of Script
 module Run : module type of Run
 module Planner : module type of Planner
 module Tabs : module type of Tabs
 module Expiry : module type of Expiry
 module Control : module type of Control
-module Shape : module type of Shape

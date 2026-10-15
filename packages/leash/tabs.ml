@@ -701,8 +701,8 @@ let diagnose tab (failure : P.error) =
              ]);
     }
 
-let session_call cdp tab session meth params =
-  cdp_call ~session cdp meth params |> Result.map_error (diagnose tab)
+let session_call ?deadline cdp tab session meth params =
+  cdp_call ?deadline ~session cdp meth params |> Result.map_error (diagnose tab)
 
 let ready t =
   match Chrome.connection t.chrome with
@@ -1493,12 +1493,13 @@ let page_guard call =
 let reading_browser t ~session tab cdp : Reading.browser =
   (* daily-6pde daily-9ggi: subscribe before each read so a dialog opening during
      a withheld CDP call wins over the command deadline. Answering it bypasses the guard. *)
-  let call meth params =
-    if meth = "Page.handleJavaScriptDialog" then session_call cdp tab session meth params
+  let call_within ?deadline meth params =
+    if meth = "Page.handleJavaScriptDialog" then
+      session_call ?deadline cdp tab session meth params
     else
       match
         Dialog_race.first (dialog_race tab) (fun () ->
-            session_call cdp tab session meth params)
+            session_call ?deadline cdp tab session meth params)
       with
       | `Value result -> result
       | `Dialog dialog ->
@@ -1508,8 +1509,10 @@ let reading_browser t ~session tab cdp : Reading.browser =
                ~message:"a dialog blocks page reads; answer it first"
                ~detail:(P.yojson_of_dialog dialog))
   in
+  let call meth params = call_within meth params in
   {
     call;
+    call_within = (fun deadline meth params -> call_within ~deadline meth params);
     capture =
       (fun ~full_page ->
         match
@@ -1846,6 +1849,10 @@ let with_reading t ~access handle f =
                 (fun meth params ->
                   if meth <> "Page.handleJavaScriptDialog" then engage ();
                   browser.call meth params);
+              call_within =
+                (fun deadline meth params ->
+                  if meth <> "Page.handleJavaScriptDialog" then engage ();
+                  browser.call_within deadline meth params);
             }))
 
 let read_text t (args : P.text_args) =
@@ -2858,64 +2865,6 @@ let run ?(on_page = fun ~url:_ -> ()) ?on_step ?(planner = false) ?(levels = no_
                 with Sys_error why -> Error (error "invalid-request" why))
           in
           Ok result)
-
-let script_arguments = function
-  | None -> Ok []
-  | Some (`Assoc fields) ->
-      let rec go acc = function
-        | [] -> Ok (List.rev acc)
-        | (name, `String value) :: rest -> go ((name, value) :: acc) rest
-        | (name, _) :: _ ->
-            Error
-              (error "invalid-request"
-                 (Printf.sprintf "argument %s must be a string" name))
-      in
-      go [] fields
-  | Some _ -> Error (error "invalid-request" "args must be an object of strings")
-
-(* scr-run (ADR-0016): [leash script run TAB FILE]. The agent's script runs once on the
-   tab's page through {!Reading.script}: the body of an async function of [args], bounded,
-   validated against its returns block when it has one. Nothing is installed. *)
-let script_run t (args : P.script_run_args) =
-  let* script =
-    Result.map_error (error "script-invalid")
-      (Script.of_source ~name:args.name args.source)
-  in
-  let* arguments = script_arguments args.args in
-  with_reading t ~access:Act args.tab (fun _ browser ->
-      let* ran = Reading.script browser script ~args:arguments in
-      let* () =
-        match args.out with
-        | None -> Ok ()
-        | Some path -> (
-            let items =
-              match ran.Reading.value with `List items -> items | value -> [ value ]
-            in
-            try
-              let channel =
-                Ox_caps.Cap_stdlib.open_out_gen ~caps:t.caps [ Open_append; Open_creat ]
-                  0o600 path
-              in
-              Fun.protect
-                ~finally:(fun () -> close_out channel)
-                (fun () ->
-                  List.iter
-                    (fun item ->
-                      output_string channel (Yojson.Safe.to_string item);
-                      output_char channel '\n')
-                    items;
-                  Ok ())
-            with Sys_error why -> Error (error "invalid-request" why))
-      in
-      Ok
-        P.
-          {
-            script = args.name;
-            value = ran.Reading.value;
-            records = ran.Reading.records;
-            bytes = ran.Reading.bytes;
-            elapsed_ms = ran.Reading.elapsed_ms;
-          })
 
 let report t : P.status_result =
   let chrome = Chrome.status t.chrome in

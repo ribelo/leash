@@ -1256,6 +1256,7 @@ let eval_index
                argument = Some (str "arg");
                index;
                snapshot;
+               timeout_ms = None;
              })
       in
       let reply = result (eval ()) in
@@ -1298,6 +1299,7 @@ let eval_index
                   argument = None;
                   index = None;
                   snapshot = None;
+                  timeout_ms = None;
                 }))
       in
       Alcotest.(check string) "hard-b20d plain eval" "called" (text "value" plain);
@@ -1480,6 +1482,7 @@ let tab_lock
                    argument = None;
                    index = None;
                    snapshot = None;
+                   timeout_ms = None;
                  }))
       in
       eventually "the eval is in flight" (fun () ->
@@ -1502,6 +1505,7 @@ let tab_lock
                    argument = None;
                    index = None;
                    snapshot = None;
+                   timeout_ms = None;
                  }))
       in
       for _ = 1 to 50 do
