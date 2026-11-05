@@ -22,6 +22,9 @@ type caps =
 type 'clock deps = {
   chrome : Chrome.t;
   clock : 'clock Eio.Time.clock;
+  mono_clock : Eio.Time.Mono.ty Eio.Resource.t;
+      (** Every elapsed budget, sleep and timeout of the registry (safe-p9cw); [clock]
+          only stamps debug-log entries. *)
   logger : Ox_observability.Logger.t;
   desktop : Desktop.t;
       (** The human-facing steps {!handoff} runs (hand-04rb hand-phof). *)

@@ -70,6 +70,7 @@ let rig
           {
             Leash.Tabs.chrome;
             clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             logger;
             desktop = Leash.Desktop.disabled;
             caps :> Leash.Tabs.caps;
@@ -131,13 +132,13 @@ let wait_until label pred =
   in
   loop 2000
 
-let advance_until clock label cell =
+let advance_until env label cell =
   let rec loop n =
     match !cell with
     | Some value -> value
     | None ->
         if n = 0 then Alcotest.fail label;
-        Ox_test.advance clock (Ox.Duration.seconds 1);
+        Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 1);
         for _ = 1 to 30 do
           Eio.Fiber.yield ()
         done;
@@ -223,7 +224,7 @@ let frozen_renderer
         "field-zr9n other tab unaffected before deadline" true
         (get "value" (result (request tabs (eval other))) = `Int 42);
       let diagnosis =
-        failure (advance_until env#clock "field-cde7 deadline did not settle" cell)
+        failure (advance_until env "field-cde7 deadline did not settle" cell)
       in
       Alcotest.(check string)
         "field-cde7 diagnosis" "renderer-unresponsive"
@@ -268,7 +269,7 @@ let frozen_renderer
             Some (request tabs (P.Nav { tab = frozen; url = "https://example.com/" })));
       wait_until "field-cde7 navigate not dispatched" (fun () ->
           seen fake "field-session-1" "Page.navigate");
-      let e = failure (advance_until env#clock "field-cde7 navigate deadline" cell) in
+      let e = failure (advance_until env "field-cde7 navigate deadline" cell) in
       Alcotest.(check string)
         "field-cde7 session navigate is not a load timeout" "renderer-unresponsive"
         (P.Error_code.to_string e.code))
@@ -296,7 +297,7 @@ let browser_timeout
       Eio.Fiber.fork ~sw (fun () ->
           cell := Some (request tabs (P.New { url = None; label = None })));
       wait_until "field-cde7 create not dispatched" (fun () -> creates () > before);
-      let e = failure (advance_until env#clock "field-cde7 browser deadline" cell) in
+      let e = failure (advance_until env "field-cde7 browser deadline" cell) in
       Alcotest.(check string)
         "field-cde7 browser remains timeout" "timeout"
         (P.Error_code.to_string e.code))
@@ -344,7 +345,7 @@ let load_timeout_retains_handle
       Alcotest.(check bool)
         "hand-x3hi field-m5jw list omits handle and loaded" true
         (get "tab" registered = `Null && get "loaded" registered = `Null);
-      let created = result (advance_until env#clock "field-m5jw load deadline" cell) in
+      let created = result (advance_until env "field-m5jw load deadline" cell) in
       let handle = (ok (P.tab_info_of_yojson created)).tab in
       Alcotest.(check bool)
         "field-m5jw unfinished load is successful" true

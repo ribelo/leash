@@ -115,6 +115,7 @@ let rig
           {
             Leash.Tabs.chrome;
             clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             logger;
             desktop = Leash.Desktop.disabled;
             caps :> Leash.Tabs.caps;
@@ -438,7 +439,7 @@ let load_timeout
           | None ->
               if n = 0 then Alcotest.fail (what ^ " did not time out")
               else (
-                Ox_test.advance env#clock (Ox.Duration.seconds 1);
+                Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 1);
                 Eio.Fiber.yield ();
                 await (n - 1))
         in
@@ -1415,7 +1416,7 @@ let with_ticking_clock ?(tick_ms = 1) ?(ticks = 500_000) env sw f =
       let rec tick n =
         if n = 0 || !stop then ()
         else (
-          Ox_test.advance env#clock (Ox.Duration.ms tick_ms);
+          Leash_test_support.Mock_time.advance env (Ox.Duration.ms tick_ms);
           tick (n - 1))
       in
       tick ticks);
@@ -2452,8 +2453,8 @@ let listener_budget_reply
                   |> List.exists (fun call ->
                       field "method" call = Some (str "Target.closeTarget"))
                 then (
-                  Ox_test.advance env#clock (Ox.Duration.seconds 2);
-                  Ox_test.advance env#clock (Ox.Duration.seconds 2))
+                  Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 2);
+                  Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 2))
                 else (
                   Eio.Fiber.yield ();
                   wait (n - 1))
@@ -2669,7 +2670,7 @@ let shared_handle_over_socket
             "hand-0wo8 second client stays behind the tab lock" (before + 1)
             (evaluations ());
           Alcotest.(check bool) "hand-0wo8 no early reply" true (!second = None);
-          Ox_test.advance env#clock (Ox.Duration.seconds 40);
+          Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 40);
           await "socket clients did not settle" (fun () ->
               !first <> None && !second <> None);
           check_code "hand-0wo8 first client timeout" "timeout" (Option.get !first);

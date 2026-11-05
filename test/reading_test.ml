@@ -442,6 +442,7 @@ let rig
           {
             Leash.Tabs.chrome;
             clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             logger;
             desktop = Leash.Desktop.disabled;
             caps :> Leash.Tabs.caps;
@@ -1037,7 +1038,7 @@ let screencast_shot
           Fake.on_method fake "Page.startScreencast" (fun _ -> obj []);
           let check_timeout full_page =
             let before = List.length (Fake.received fake) in
-            let start = Eio.Time.now env#clock in
+            let start = Leash_test_support.Mock_time.mono_seconds env#mono_clock in
             let reply, () =
               Eio.Fiber.pair
                 (fun () -> shot full_page)
@@ -1053,7 +1054,7 @@ let screencast_shot
                       wait (n - 1))
                   in
                   wait 1000;
-                  Ox_test.advance env#clock (Ox.Duration.seconds 5))
+                  Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 5))
             in
             (match reply with
             | P.Success _ -> Alcotest.fail "missing frame succeeded"
@@ -1067,7 +1068,9 @@ let screencast_shot
                    Wayland workspace may have no compositor frame even when the page is \
                    responsive"
                   e.message);
-            let elapsed = Eio.Time.now env#clock -. start in
+            let elapsed =
+              Leash_test_support.Mock_time.mono_seconds env#mono_clock -. start
+            in
             Alcotest.(check bool)
               "five-second capture budget" true
               (elapsed >= 5. && elapsed < 8.);

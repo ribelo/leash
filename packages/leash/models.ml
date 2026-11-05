@@ -47,7 +47,7 @@ let planner_endpoint (config : Config.models) =
   | Some endpoint -> Config.Text.to_string endpoint
   | None -> chat_endpoint config
 
-let create ~sw ~net ~clock ~logger (config : Config.models) =
+let create ~sw ~net ~clock ~mono_clock ~logger (config : Config.models) =
   let http = Ox_http.Client.create ~sw ~net ~clock ~tls:(Ox_http.Client.tls ()) () in
   let with_key f = Option.map f config.api_key in
   let systemone =
@@ -77,7 +77,10 @@ let create ~sw ~net ~clock ~logger (config : Config.models) =
           ())
   in
   {
-    now = (fun () -> Eio.Time.now clock);
+    (* safe-p9cw: deadlines are elapsed time, on the monotonic clock. *)
+    now =
+      (fun () ->
+        Int64.to_float (Mtime.to_uint64_ns (Eio.Time.Mono.now mono_clock)) /. 1e9);
     config;
     logger;
     http;

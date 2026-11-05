@@ -50,7 +50,8 @@ let request tabs _client command =
   | Ok x -> x
   | Error e -> Alcotest.fail e
 
-let advance env seconds = Ox_test.advance env#clock (Ox.Duration.seconds seconds)
+let advance env seconds =
+  Leash_test_support.Mock_time.advance env (Ox.Duration.seconds seconds)
 
 let rec until n what check =
   if n = 0 then Alcotest.fail what
@@ -115,6 +116,7 @@ let rig
           {
             Tabs.chrome;
             clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             logger;
             desktop = Leash.Desktop.disabled;
             caps :> Leash.Tabs.caps;

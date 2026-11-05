@@ -105,6 +105,7 @@ let rig
           {
             Leash.Tabs.chrome;
             clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             logger;
             desktop = Leash.Desktop.disabled;
             caps :> Leash.Tabs.caps;
@@ -757,7 +758,7 @@ let pump env cell =
         if n = 0 then Alcotest.fail "the request never replied"
         else (
           Eio.Fiber.yield ();
-          Ox_test.advance env#clock (Ox.Duration.ms 300);
+          Leash_test_support.Mock_time.advance env (Ox.Duration.ms 300);
           loop (n - 1))
   in
   loop 5_000
@@ -765,7 +766,7 @@ let pump env cell =
 let quiet env cell rounds =
   for _ = 1 to rounds do
     Eio.Fiber.yield ();
-    Ox_test.advance env#clock (Ox.Duration.ms 300)
+    Leash_test_support.Mock_time.advance env (Ox.Duration.ms 300)
   done;
   Alcotest.(check bool) "still waiting" true (!cell = None)
 
@@ -864,7 +865,7 @@ let long_wait
         for _ = 1 to 12 do
           Eio.Fiber.yield ()
         done;
-        Ox_test.advance env#clock (Ox.Duration.seconds 60)
+        Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 60)
       done;
       let info = List.hd (list "tabs" (P.yojson_of_list_result (Leash.Tabs.list tabs))) in
       (match !hour with
@@ -1781,7 +1782,7 @@ let many_waiters
           let settled = polls () in
           for _ = 1 to 8 do
             Eio.Fiber.yield ();
-            Ox_test.advance env#clock (Ox.Duration.ms 300)
+            Leash_test_support.Mock_time.advance env (Ox.Duration.ms 300)
           done;
           Alcotest.(check int)
             "hard-sr9v a disconnect cancels the wait" settled (polls ())))

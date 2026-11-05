@@ -148,6 +148,7 @@ let rig
                   {
                     Leash.Tabs.chrome;
                     clock = env#clock;
+                    mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
                     logger;
                     desktop = Leash.Desktop.disabled;
                     caps :> Leash.Tabs.caps;
@@ -377,7 +378,7 @@ let scroll_and_wait
             (int_field "x" params < 800 && int_field "y" params < 600);
           y := !y + int_field "deltaY" params;
           `Assoc []);
-      let started = Eio.Time.now env#clock in
+      let started = Leash_test_support.Mock_time.mono_seconds env#mono_clock in
       match
         drive tabs
           [
@@ -391,7 +392,7 @@ let scroll_and_wait
             (P.Drive_status.to_string result.status);
           Alcotest.(check bool)
             "fly-2pn7 WAIT sleeps at least 100ms" true
-            (Eio.Time.now env#clock -. started >= 0.1);
+            (Leash_test_support.Mock_time.mono_seconds env#mono_clock -. started >= 0.1);
           let wheels =
             Fake.received fake
             |> List.filter_map (fun request ->
@@ -427,7 +428,7 @@ let unacked_wheel
             (payload ~text:"Visible page" ~truncated:false ~omitted:0 ~y:0 ~height:2000
                ~viewport:400));
       Fake.withhold fake "Input.dispatchMouseEvent" (fun _ -> true);
-      let started = Eio.Time.now env#clock in
+      let started = Leash_test_support.Mock_time.mono_seconds env#mono_clock in
       match drive tabs [ decision "scroll_down"; decision "done" ] with
       | Error e -> Alcotest.fail e.P.message
       | Ok result ->
@@ -436,7 +437,7 @@ let unacked_wheel
             (P.Drive_status.to_string result.status);
           Alcotest.(check bool)
             "pilot-x1f3 bounded well under the call deadline" true
-            (Eio.Time.now env#clock -. started < 5.))
+            (Leash_test_support.Mock_time.mono_seconds env#mono_clock -. started < 5.))
 
 let retry_exhaustion
     ~(caps :
@@ -450,7 +451,7 @@ let retry_exhaustion
   rig ~caps (fun env _ tabs fake ->
       let fake = fake () in
       script fake (fun () -> evaluated `Null);
-      let started = Eio.Time.now env#clock in
+      let started = Leash_test_support.Mock_time.mono_seconds env#mono_clock in
       (* This case asserts retry count and elapsed time, not the terminal reply. *)
       let _bounded_drive_reply =
         drive tabs []
@@ -461,7 +462,7 @@ let retry_exhaustion
         (List.length (operator_reads fake));
       Alcotest.(check bool)
         "fly-4mio nine bounded retry sleeps" true
-        (Eio.Time.now env#clock -. started >= 0.18))
+        (Leash_test_support.Mock_time.mono_seconds env#mono_clock -. started >= 0.18))
 
 let replace_field key value = function
   | `Assoc fields -> `Assoc ((key, value) :: List.remove_assoc key fields)

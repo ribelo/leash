@@ -39,7 +39,7 @@ let prepare ~clock ~cdp ~on_target =
               ()))
         !target)
     (fun () ->
-      Ox.Timeout.timeout ~clock (Ox.Duration.seconds 5) (fun () ->
+      Ox.Timeout.timeout_mono ~clock (Ox.Duration.seconds 5) (fun () ->
           let* created =
             call cdp "Target.createTarget"
               (obj [ ("url", str "chrome://downloads/"); ("background", `Bool true) ])
@@ -70,7 +70,7 @@ let prepare ~clock ~cdp ~on_target =
             match Option.bind (member "result" json) (member "value") with
             | Some (`Bool true) -> Ok ()
             | _ ->
-                Eio.Time.sleep clock 0.01;
+                Eio.Time.Mono.sleep clock 0.01;
                 loaded ()
           in
           loaded ()))

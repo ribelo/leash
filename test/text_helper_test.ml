@@ -423,6 +423,7 @@ let rig
               {
                 Leash.Tabs.chrome;
                 clock = env#clock;
+                mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
                 logger;
                 desktop = Leash.Desktop.disabled;
                 caps :> Leash.Tabs.caps;
@@ -531,7 +532,10 @@ let secret_by_name
           ~systemone_endpoint:(Chat.url systemone "/api/v1/systemone")
           ~chat_base_url:(Chat.url chat "")
       in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let handle = new_tab tabs in
       let reply =
         result
@@ -584,7 +588,10 @@ let fills
           ~systemone_endpoint:(Chat.url systemone "/api/v1/systemone")
           ~chat_base_url:(Chat.url chat "")
       in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let handle = new_tab tabs in
       let reply = result (drive models tabs handle goal) in
       Alcotest.(check string) "drive-ls3c done" "done" (text "status" reply);
@@ -692,7 +699,7 @@ let null_is_blocked
       in
       let chat = chat_server ~sw ~net:env#net [ chat_reply `Null ] in
       let models =
-        Models.create ~sw ~net:env#net ~clock:env#clock ~logger
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
           (models_config
              ~systemone_endpoint:(Chat.url systemone "/api/v1/systemone")
              ~chat_base_url:(Chat.url chat ""))
@@ -758,7 +765,7 @@ let bound
           ]
       in
       let models =
-        Models.create ~sw ~net:env#net ~clock:env#clock ~logger
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
           (models_config
              ~systemone_endpoint:(Chat.url systemone "/api/v1/systemone")
              ~chat_base_url:(Chat.url chat ""))
@@ -812,7 +819,7 @@ let reuse
       in
       let chat = chat_server ~sw ~net:env#net [ chat_reply (`String "alice") ] in
       let models =
-        Models.create ~sw ~net:env#net ~clock:env#clock ~logger
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
           (models_config
              ~systemone_endpoint:(Chat.url systemone "/api/v1/systemone")
              ~chat_base_url:(Chat.url chat ""))
@@ -861,7 +868,7 @@ let chat_failure
         chat_server ~sw ~net:env#net [ Chat.failure 500 "the provider fell over" ]
       in
       let models =
-        Models.create ~sw ~net:env#net ~clock:env#clock ~logger
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
           (models_config
              ~systemone_endpoint:(Chat.url systemone "/api/v1/systemone")
              ~chat_base_url:(Chat.url chat ""))

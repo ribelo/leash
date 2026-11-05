@@ -236,6 +236,7 @@ let rig
               {
                 Leash.Tabs.chrome;
                 clock = env#clock;
+                mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
                 logger;
                 desktop = Leash.Desktop.disabled;
                 caps :> Leash.Tabs.caps;
@@ -434,7 +435,10 @@ let clef_service
           chat_base_url = text_value (Server.url server "/api/v1");
         }
       in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       Alcotest.(check bool)
         "dmod-m3q5 text-only until read" false
         (Models.accepts_images models);
@@ -515,7 +519,10 @@ let drive_to_done
           (scripted ~model:decision_model [ Answer "SCROLL_DOWN"; Answer "DONE" ])
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let handle = new_tab tabs in
       let reply = result (drive models tabs handle "Open the Wikipedia article") in
       Alcotest.(check string) "drive-y7v8 done" "done" (text "status" reply);
@@ -661,7 +668,10 @@ let invalid_response_retry
             if !calls = 1 then Server.ok "{}" else valid request)
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let reply = result (drive models tabs (new_tab tabs) "Inspect this page") in
       Alcotest.(check string)
         "map-op07 invalid JEV reply recovers" "done" (text "status" reply);
@@ -682,7 +692,10 @@ let usage_is_logged
         Server.serve ~net:env#net ~sw (scripted ~model:decision_model [ Answer "DONE" ])
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let handle = new_tab tabs in
       let reply = result (drive models tabs handle "Open the Wikipedia article") in
       Alcotest.(check string) "drive-y7v8 done" "done" (text "status" reply);
@@ -731,7 +744,10 @@ let model_error
              [ Answer "SCROLL_DOWN"; Refused (500, "the provider fell over") ])
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let handle = new_tab tabs in
       let json, error, steps =
         evidence (drive models tabs handle "Open the Wikipedia article")
@@ -769,7 +785,10 @@ let model_mismatch
           (scripted ~model:decision_model ~reply_model:"someone/else" [ Answer "DONE" ])
       in
       let config = models_config ~endpoint:(Server.url server "/api/v1/systemone") () in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let handle = new_tab tabs in
       let json, error, steps =
         evidence (drive models tabs handle "Open the Wikipedia article")
@@ -806,7 +825,10 @@ let missing_key
       let config =
         models_config ~api_key:None ~endpoint:(Server.url server "/api/v1/systemone") ()
       in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let status = result (raw ~models tabs P.Status) in
       let reported = get "models" status in
       Alcotest.(check bool)
@@ -921,7 +943,10 @@ decision_model = "jev-latest"
       let config =
         { typesafe.models with api_key = Some (Ox_observability.Redact.make key) }
       in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let status = Models.status models in
       Alcotest.(check bool) "drive-yqxg configured" true status.P.configured;
       Alcotest.(check string)
@@ -966,9 +991,12 @@ let provider_timeout
           decision_timeout = seconds attempt;
         }
       in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let handle = new_tab tabs in
-      let started = Eio.Time.now env#clock in
+      let started = Leash_test_support.Mock_time.mono_seconds env#mono_clock in
       let reply =
         raw ~model:decision_model
           ~decide:(fun ~deadline:_ request -> Models.decide ~deadline models request)
@@ -1001,7 +1029,8 @@ let provider_timeout
           (contains error.hint "API_KEY");
         Alcotest.(check bool)
           "daily-9ggi total deadline bounds retries" true
-          (Eio.Time.now env#clock -. started < Ox.Duration.to_seconds_float deadline +. 1.);
+          (Leash_test_support.Mock_time.mono_seconds env#mono_clock -. started
+          < Ox.Duration.to_seconds_float deadline +. 1.);
         (* Ox safe-o2b6: a POST is never replayed without consent the model clients do
            not give, so a timed-out attempt is the only one. *)
         Alcotest.(check int) "daily-9ggi bounded attempts" 1 (Server.connections server)
@@ -1033,7 +1062,10 @@ let chat_timeout
           planner_timeout = seconds (if kind = "planner" then attempt else 1);
         }
       in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let deadline = Ox.Duration.seconds 5 in
       let reply =
         if kind = "text" then
@@ -1144,7 +1176,10 @@ let text_correction_budget
       let config =
         { (models_config ()) with chat_base_url = text_value (Server.url server "") }
       in
-      let models = Models.create ~sw ~net:env#net ~clock:env#clock ~logger config in
+      let models =
+        Models.create ~sw ~net:env#net ~clock:env#clock ~mono_clock:env#mono_clock ~logger
+          config
+      in
       let reply =
         (Models.text_helper models).complete ~deadline
           {

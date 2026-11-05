@@ -1,7 +1,7 @@
 (** Initialize Chrome's persisted download history before replacing its delegate. *)
 
 val prepare :
-  clock:_ Eio.Time.clock ->
+  clock:_ Eio.Time.Mono.t ->
   cdp:Cdp.t ->
   on_target:(string -> unit) ->
   (unit, [ `Timeout | `Bootstrap of string ]) result

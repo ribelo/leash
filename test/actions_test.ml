@@ -116,6 +116,7 @@ let rig
           {
             Leash.Tabs.chrome;
             clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             logger;
             desktop = Leash.Desktop.disabled;
             caps :> Leash.Tabs.caps;
@@ -2089,7 +2090,7 @@ let slow_reply_settles
                       limit = None;
                     })));
       wait_for_press fake;
-      Ox_test.advance env#clock (Ox.Duration.seconds 3);
+      Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 3);
       ignore (result (await ~sw "tab-1lhx the slow reply" cell));
       Alcotest.(check (list string))
         "tab-1lhx the slow reply is not a second dispatch"
@@ -2152,7 +2153,7 @@ let silent_page_unavailable
         | None ->
             if n = 0 then Alcotest.fail "tab-0ohq the silent click never replied"
             else (
-              Ox_test.advance env#clock (Ox.Duration.seconds 1);
+              Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 1);
               (* The probes between two bounds are round trips through the fake; yielding
                  once per virtual second would expire their deadlines before their answers
                  are read. *)
@@ -2258,7 +2259,7 @@ let self_closing_click_probe
         | None ->
             if n = 0 then Alcotest.fail "own-teh1 the self-closing click never replied"
             else (
-              Ox_test.advance env#clock (Ox.Duration.seconds 1);
+              Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 1);
               for _ = 1 to 20 do
                 Eio.Fiber.yield ()
               done;
@@ -2409,7 +2410,8 @@ let popup_readiness
         | Some reply -> result reply
         | None ->
             if n = 0 then Alcotest.fail "field-drpx popup reply did not settle";
-            if not dialog then Ox_test.advance env#clock (Ox.Duration.ms 20);
+            if not dialog then
+              Leash_test_support.Mock_time.advance env (Ox.Duration.ms 20);
             for _ = 1 to 20 do
               Eio.Fiber.yield ()
             done;
@@ -2690,7 +2692,7 @@ let tick env sw f =
       let rec loop n =
         if n = 0 || !stop then ()
         else (
-          Ox_test.advance env#clock (Ox.Duration.ms 100);
+          Leash_test_support.Mock_time.advance env (Ox.Duration.ms 100);
           loop (n - 1))
       in
       loop 5_000);
@@ -2847,7 +2849,7 @@ let quiet_click
       script_page fake ();
       let handle = new_tab tabs in
       let id = snapshot_id (snap tabs handle) in
-      let started = Eio.Time.now env#clock in
+      let started = Leash_test_support.Mock_time.mono_seconds env#mono_clock in
       let cell = ref None in
       Eio.Fiber.fork ~sw (fun () ->
           cell :=
@@ -2864,7 +2866,7 @@ let quiet_click
             wait (n - 1)
       in
       let reply = result (wait 2_000) in
-      let elapsed = Eio.Time.now env#clock -. started in
+      let elapsed = Leash_test_support.Mock_time.mono_seconds env#mono_clock -. started in
       Alcotest.(check bool)
         "a quiet click does not wait the 1.5 s bound" true (elapsed < 0.2);
       Alcotest.(check bool)

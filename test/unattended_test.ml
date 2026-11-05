@@ -96,6 +96,7 @@ let rig
                   {
                     Tabs.chrome;
                     clock = env#clock;
+                    mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
                     logger;
                     desktop =
                       (match notification with

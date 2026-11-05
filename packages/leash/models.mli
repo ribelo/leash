@@ -26,19 +26,22 @@ val create :
   sw:Eio.Switch.t ->
   net:_ Eio.Net.t ->
   clock:_ Eio.Time.clock ->
+  mono_clock:_ Eio.Time.Mono.t ->
   logger:Ox_observability.Logger.t ->
   Config.models ->
   t
-(** [create ~sw ~net ~clock ~logger models] is the models service: one TLS HTTP client on
-    [sw] and, when [models.api_key] is present, the System One client pinned to
-    [models.decision_model] and pointed at [models.systemone_endpoint], plus the chat
-    client of the text helper step pointed at [models.chat_base_url] (L22) and the
-    planner's chat client, pointed at [models.planner_endpoint] when the operator set one
-    and at the same chat route otherwise (run-d99l). Without a key there is no client at
-    all and {!decide} refuses before anything is sent. The API key travels as a
-    {!Ox_observability.Redact.t} and only {!Ox_ai.Bearer.header} reveals it, on the
-    request path; the chat client is pure and synchronous, so it is built here beside the
-    System One one and shares the transport.
+(** [create ~sw ~net ~clock ~mono_clock ~logger models] is the models service; [clock]
+    goes to Ox's HTTP and model clients, [mono_clock] measures the drive's model
+    deadlines. It is one TLS HTTP client on [sw] and, when [models.api_key] is present,
+    the System One client pinned to [models.decision_model] and pointed at
+    [models.systemone_endpoint], plus the chat client of the text helper step pointed at
+    [models.chat_base_url] (L22) and the planner's chat client, pointed at
+    [models.planner_endpoint] when the operator set one and at the same chat route
+    otherwise (run-d99l). Without a key there is no client at all and {!decide} refuses
+    before anything is sent. The API key travels as a {!Ox_observability.Redact.t} and
+    only {!Ox_ai.Bearer.header} reveals it, on the request path; the chat client is pure
+    and synchronous, so it is built here beside the System One one and shares the
+    transport.
 
     Suspension: never suspends; behavior of the delegated helpers depends on Stdlib,
     Ox_http.Client.create, Ox_ai_chat, Ox_ai_systemone and local model-client constructor

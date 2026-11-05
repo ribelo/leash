@@ -53,7 +53,8 @@ let send ?timeout_s ~base path request =
   in
   match timeout_s with
   | None -> run ()
-  | Some seconds -> Eio.Time.with_timeout_exn base#clock seconds run
+  | Some seconds ->
+      Eio.Time.Timeout.run_exn (Eio.Time.Timeout.seconds base#mono_clock seconds) run
 
 let field key = function
   | `Assoc fields -> ( match List.assoc_opt key fields with Some x -> x | None -> `Null)
@@ -1492,8 +1493,8 @@ let program env (config : Leash.Config.t) sw =
      created before the listener that hands its Decide to every drive. Without a key it
      still exists — status reports that — and a drive refuses at its first Decide. *)
   let models =
-    Leash.Models.create ~sw ~net:base#net ~clock:base#clock ~logger:env.logger
-      config.models
+    Leash.Models.create ~sw ~net:base#net ~clock:base#clock ~mono_clock:base#mono_clock
+      ~logger:env.logger config.models
   in
   let tabs =
     Leash.Tabs.create ~sw ~download_dir
@@ -1513,6 +1514,7 @@ let program env (config : Leash.Config.t) sw =
       {
         Leash.Tabs.chrome;
         clock = base#clock;
+        mono_clock = base#mono_clock;
         logger = env.logger;
         desktop;
         caps = (env.caps :> Leash.Tabs.caps);

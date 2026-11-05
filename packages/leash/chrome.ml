@@ -384,7 +384,12 @@ let create ~sw ?launch config (deps : 'clock deps) =
         Ok ()
     | None -> (
         (if ctx.incarnation > 1 then
-           let now_ms = int_of_float (Eio.Time.now deps.clock *. 1000.) in
+           let now_ms =
+             Int64.to_int
+               (Int64.div
+                  (Mtime.to_uint64_ns (Eio.Time.Mono.now deps.mono_clock))
+                  1_000_000L)
+           in
            match restart_delay config.backoff ~now_ms (ctx.incarnation - 1) with
            | Some delay -> pause ctx delay
            | None -> ());

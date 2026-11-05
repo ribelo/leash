@@ -9,3 +9,6 @@ let advance env duration =
   | Some later -> Eio_mock.Clock.Mono.set_time mono later
   | None -> invalid_arg "Mock_time.advance: monotonic time overflow");
   Ox_test.advance env#clock duration
+
+let mono_seconds clock =
+  Int64.to_float (Mtime.to_uint64_ns (Eio.Time.Mono.now clock)) /. 1e9

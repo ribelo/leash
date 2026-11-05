@@ -10,6 +10,7 @@ type caps =
 type 'clock deps = {
   chrome : Chrome.t;
   clock : 'clock Eio.Time.clock;
+  mono_clock : Eio.Time.Mono.ty Eio.Resource.t;
   logger : Ox_observability.Logger.t;
   desktop : Desktop.t;
   caps : caps;
@@ -263,6 +264,8 @@ type t = {
       (** ^ncaps-4tjy: handles from the system's randomness; screenshots and [run --out]
           written, uploads read, the XDG directories looked up. *)
   now : unit -> float;
+      (** Monotonic seconds: elapsed time only, never a timestamp (safe-p9cw). *)
+  wall_now : unit -> float;  (** Wall seconds, for debug-log timestamps only. *)
   sleep : float -> unit;
   capture_timeout :
     (unit -> (Yojson.Safe.t, P.error) result) -> (Yojson.Safe.t, P.error) result;
@@ -296,6 +299,9 @@ type t = {
 }
 
 let now t = t.now ()
+
+let mono_seconds clock =
+  Int64.to_float (Mtime.to_uint64_ns (Eio.Time.Mono.now clock)) /. 1e9
 
 (* The ledger as of now, without a message (^nactor-l87k). *)
 let snapshot t = Ox.Actor.state t.ledger
@@ -2996,7 +3002,7 @@ let inspect t json =
       iter_tabs t (fun (tab : tab) ->
           if tab.session = Some session then (
             Screenshot.observe tab.screenshot json;
-            Reading.observe tab.reading ~at:(now t) json)));
+            Reading.observe tab.reading ~at:(t.wall_now ()) json)));
   (match (text "method" json, member "params" json) with
   | Some method_, Some params -> download_event t json method_ params
   | _ -> ());
@@ -3140,26 +3146,28 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
     {
       chrome = deps.chrome;
       caps = deps.caps;
-      now = (fun () -> Eio.Time.now deps.clock);
-      sleep = (fun seconds -> Eio.Time.sleep deps.clock seconds);
+      now = (fun () -> mono_seconds deps.mono_clock);
+      wall_now = (fun () -> Eio.Time.now deps.clock);
+      sleep = (fun seconds -> Eio.Time.Mono.sleep deps.mono_clock seconds);
       capture_timeout =
         (fun f ->
           match
-            Ox.Timeout.timeout ~clock:deps.clock (Ox.Duration.seconds 5) (fun () ->
-                Ok (f ()))
+            Ox.Timeout.timeout_mono ~clock:deps.mono_clock (Ox.Duration.seconds 5)
+              (fun () -> Ok (f ()))
           with
           | Ok result -> result
           | Error `Timeout -> Error (Screenshot.timeout_error ()));
       await_load =
         (fun promise ->
-          Ox.Timeout.timeout ~clock:deps.clock (Ox.Duration.seconds 30) (fun () ->
+          Ox.Timeout.timeout_mono ~clock:deps.mono_clock (Ox.Duration.seconds 30)
+            (fun () ->
               Eio.Promise.await promise;
               Ok ()));
       (* hand-lmd5: the handoff deadline, measured by the service clock and cancelled —
          not raced — when it runs out, so the restore of {!handoff} still runs. *)
       await_handoff =
         (fun timeout promise ->
-          Ox.Timeout.timeout ~clock:deps.clock timeout (fun () ->
+          Ox.Timeout.timeout_mono ~clock:deps.mono_clock timeout (fun () ->
               Eio.Promise.await promise;
               Ok ()));
       desktop = deps.desktop;
@@ -3176,7 +3184,7 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
       (* own-vhqo: the two expiry durations are config; the ADR's defaults stand in when a
          caller does not name them, which is what a test registry gets. *)
       idle = Ox.Duration.to_seconds_float idle;
-      started = Eio.Time.now deps.clock;
+      started = mono_seconds deps.mono_clock;
       ledger;
       stopping = false;
     }
@@ -3230,7 +3238,7 @@ let create ~sw ~cap ~tombstone_s ?download_dir ?(notify = fun _ -> Ok ())
                 Option.iter
                   (fun download_dir ->
                     (match
-                       Download_setup.prepare ~clock:deps.clock ~cdp
+                       Download_setup.prepare ~clock:deps.mono_clock ~cdp
                          ~on_target:(fun target -> setup_target := Some target)
                      with
                     | Ok () -> ()

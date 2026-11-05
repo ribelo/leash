@@ -18,7 +18,8 @@ let rig f =
       let prepare ~on_target =
         let result = ref None in
         Eio.Fiber.fork ~sw (fun () ->
-            result := Some (Leash.Download_setup.prepare ~clock:env#clock ~cdp ~on_target));
+            result :=
+              Some (Leash.Download_setup.prepare ~clock:env#mono_clock ~cdp ~on_target));
         let rec await rounds =
           match !result with
           | Some result -> result
@@ -27,12 +28,12 @@ let rig f =
               for _ = 1 to 100 do
                 Eio.Fiber.yield ()
               done;
-              Ox_test.advance env#clock (Ox.Duration.ms 20);
+              Leash_test_support.Mock_time.advance env (Ox.Duration.ms 20);
               await (rounds - 1)
         in
         await 300
       in
-      f env#clock fake prepare)
+      f env#mono_clock fake prepare)
 
 let closed fake =
   List.exists
@@ -72,10 +73,12 @@ let failure_closes () =
 let bounded_wait () =
   rig (fun clock fake prepare ->
       Fake.withhold fake "Runtime.evaluate" (fun _ -> true);
-      let start = Eio.Time.now clock in
+      let start = Leash_test_support.Mock_time.mono_seconds clock in
       let result = prepare ~on_target:ignore in
       Alcotest.(check bool) "daily-c4cl never hangs startup" true (Result.is_error result);
-      Alcotest.(check bool) "five-second budget" true (Eio.Time.now clock -. start < 6.);
+      Alcotest.(check bool)
+        "five-second budget" true
+        (Leash_test_support.Mock_time.mono_seconds clock -. start < 6.);
       Alcotest.(check bool) "timeout closes target" true (closed fake))
 
 let () =

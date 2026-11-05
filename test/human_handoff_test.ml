@@ -202,7 +202,14 @@ let rig
       in
       let tabs =
         Tabs.create ~sw ~cap:128 ~tombstone_s:3600
-          { Tabs.chrome; clock = env#clock; logger; desktop; caps :> Leash.Tabs.caps }
+          {
+            Tabs.chrome;
+            clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
+            logger;
+            desktop;
+            caps :> Leash.Tabs.caps;
+          }
       in
       let rec ready n =
         if n = 0 then Alcotest.fail "no Chrome"

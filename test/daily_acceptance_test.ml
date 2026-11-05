@@ -93,6 +93,7 @@ let rig
           {
             Leash.Tabs.chrome;
             clock = env#clock;
+            mono_clock = (env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t);
             logger;
             desktop = Leash.Desktop.disabled;
             caps :> Leash.Tabs.caps;
@@ -126,7 +127,7 @@ let timed env sw f =
     | Some value -> value
     | None when n = 0 -> Alcotest.fail "daily-c4cl bounded action exceeded budget"
     | None ->
-        Ox_test.advance env#clock (Ox.Duration.ms 20);
+        Leash_test_support.Mock_time.advance env (Ox.Duration.ms 20);
         Eio.Fiber.yield ();
         loop (n - 1)
   in
