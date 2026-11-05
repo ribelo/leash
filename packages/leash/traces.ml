@@ -286,7 +286,13 @@ let write t (trace : P.drive_trace) =
                 [ Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY; Unix.O_CLOEXEC ]
                 0o600
             in
-            let ch = Unix.out_channel_of_descr fd in
+            let ch =
+              match Unix.out_channel_of_descr fd with
+              | ch -> ch
+              | exception exn ->
+                  (try Unix.close fd with Unix.Unix_error _ -> ());
+                  raise exn
+            in
             Fun.protect
               ~finally:(fun () ->
                 close_out_noerr ch;

@@ -761,7 +761,7 @@ let socket
           let fd =
             Ox_caps.Cap_unix.openfile ~caps path [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
           in
-          Unix.close fd;
+          Fun.protect ~finally:(fun () -> Unix.close fd) Fun.id;
           let create ~(caps : < Ox_caps.Cap.fs_write ; Ox_caps.Cap.network ; .. >) () =
             Leash.Control.create ~sw ~path:(socket runtime)
               {
@@ -2973,7 +2973,7 @@ let durable_drive_traces
               [ Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY ]
               0o600
           in
-          Unix.close fd;
+          Fun.protect ~finally:(fun () -> Unix.close fd) Fun.id;
           let failed = Leash.Traces.create ~caps ~root:bad_root () in
           let reply =
             invoke ~traces:failed (run_wire ~tab:h "write failure preserves success")

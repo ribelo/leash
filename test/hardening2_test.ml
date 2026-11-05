@@ -983,8 +983,7 @@ let temp_file
     ?(size = 5) () =
   let path = Ox_caps.Cap_stdlib.Filename.temp_file ~caps "leash-upload-" ".bin" in
   let fd = Ox_caps.Cap_unix.openfile ~caps path [ Unix.O_WRONLY ] 0o600 in
-  Unix.ftruncate fd size;
-  Unix.close fd;
+  Fun.protect ~finally:(fun () -> Unix.close fd) (fun () -> Unix.ftruncate fd size);
   path
 
 let row_named rows role =

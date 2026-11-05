@@ -243,9 +243,12 @@ let run
       ok ~caps "Target.createTarget answered over the pipe";
       let after = call "Target.getTargets" (`Assoc []) in
       note ~caps "  Target.getTargets -> %s" (Yojson.Safe.to_string after);
-      let stop_started = Ox_caps.Cap_unix.gettimeofday ~caps () in
+      let mono = Eio.Stdenv.mono_clock env in
+      let stop_started = Eio.Time.Mono.now mono in
       Chrome.stop chrome;
-      let elapsed = Ox_caps.Cap_unix.gettimeofday ~caps () -. stop_started in
+      let elapsed =
+        Mtime.Span.to_float_ns (Mtime.span stop_started (Eio.Time.Mono.now mono)) /. 1e9
+      in
       if elapsed < grace then
         ok ~caps "stopped in %.2fs, inside the %.0fs grace (SIGTERM)" elapsed grace
       else

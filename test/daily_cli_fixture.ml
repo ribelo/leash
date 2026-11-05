@@ -136,7 +136,13 @@ let help_topics ~(caps : < Ox_caps.Cap.fs_read ; Ox_caps.Cap.stdout ; .. >) path
 let run_leash ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; .. >) args =
   let cmd = Filename.quote_command "leash" args in
   let channel = Ox_caps.Cap_unix.open_process_in ~caps cmd in
-  let text = In_channel.input_all channel in
+  let text =
+    match In_channel.input_all channel with
+    | text -> text
+    | exception exn ->
+        ignore (Unix.close_process_in channel);
+        raise exn
+  in
   match Unix.close_process_in channel with
   | Unix.WEXITED 0 -> text
   | Unix.WEXITED code ->

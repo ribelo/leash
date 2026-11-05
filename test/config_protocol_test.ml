@@ -939,20 +939,24 @@ let config_check_cli
             [ Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY ]
             0o600
         in
-        let stderr =
-          Ox_caps.Cap_unix.openfile ~caps error
-            [ Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY ]
-            0o600
-        in
         let pid =
-          Ox_caps.Cap_unix.create_process_env ~caps executable
-            [| executable; "config"; "check"; "--config"; config_file |]
-            (Ox_caps.Cap_unix.environment ~caps ())
-            (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
-            stdout stderr
+          Fun.protect
+            ~finally:(fun () -> Unix.close stdout)
+            (fun () ->
+              let stderr =
+                Ox_caps.Cap_unix.openfile ~caps error
+                  [ Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY ]
+                  0o600
+              in
+              Fun.protect
+                ~finally:(fun () -> Unix.close stderr)
+                (fun () ->
+                  Ox_caps.Cap_unix.create_process_env ~caps executable
+                    [| executable; "config"; "check"; "--config"; config_file |]
+                    (Ox_caps.Cap_unix.environment ~caps ())
+                    (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
+                    stdout stderr))
         in
-        Unix.close stdout;
-        Unix.close stderr;
         let _, status = Unix.waitpid [] pid in
         let contents ~(caps : < Ox_caps.Cap.fs_read ; .. >) file =
           let channel = Ox_caps.Cap_stdlib.open_in ~caps file in
@@ -1257,28 +1261,32 @@ let run_cli
   with_tree ~caps (fun root ->
       let stdout = Filename.concat root "stdout"
       and stderr = Filename.concat root "stderr" in
-      let out =
-        Ox_caps.Cap_unix.openfile ~caps stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
-      in
-      let err =
-        Ox_caps.Cap_unix.openfile ~caps stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
-      in
       let keys = List.map (fun (key, _) -> key ^ "=") env in
       let inherited =
         Array.to_list (Ox_caps.Cap_unix.environment ~caps ())
         |> List.filter (fun item ->
             not (List.exists (fun key -> String.starts_with ~prefix:key item) keys))
       in
-      let pid =
-        Ox_caps.Cap_unix.create_process_env ~caps binary
-          (Array.of_list (binary :: argv))
-          (Array.of_list
-             (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
-          (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
-          out err
+      let out =
+        Ox_caps.Cap_unix.openfile ~caps stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
       in
-      Unix.close out;
-      Unix.close err;
+      let pid =
+        Fun.protect
+          ~finally:(fun () -> Unix.close out)
+          (fun () ->
+            let err =
+              Ox_caps.Cap_unix.openfile ~caps stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
+            in
+            Fun.protect
+              ~finally:(fun () -> Unix.close err)
+              (fun () ->
+                Ox_caps.Cap_unix.create_process_env ~caps binary
+                  (Array.of_list (binary :: argv))
+                  (Array.of_list
+                     (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
+                  (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
+                  out err))
+      in
       let _, status = Unix.waitpid [] pid in
       (status, file_contents ~caps stdout, file_contents ~caps stderr))
 
@@ -1297,28 +1305,32 @@ let run_cli_at
   with_tree ~caps (fun root ->
       let stdout = Filename.concat root "stdout"
       and stderr = Filename.concat root "stderr" in
-      let out =
-        Ox_caps.Cap_unix.openfile ~caps stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
-      in
-      let err =
-        Ox_caps.Cap_unix.openfile ~caps stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
-      in
       let keys = List.map (fun (key, _) -> key ^ "=") env in
       let inherited =
         Array.to_list (Ox_caps.Cap_unix.environment ~caps ())
         |> List.filter (fun item ->
             not (List.exists (fun key -> String.starts_with ~prefix:key item) keys))
       in
-      let pid =
-        Ox_caps.Cap_unix.create_process_env ~caps binary
-          (Array.of_list (binary :: argv))
-          (Array.of_list
-             (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
-          (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
-          out err
+      let out =
+        Ox_caps.Cap_unix.openfile ~caps stdout [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
       in
-      Unix.close out;
-      Unix.close err;
+      let pid =
+        Fun.protect
+          ~finally:(fun () -> Unix.close out)
+          (fun () ->
+            let err =
+              Ox_caps.Cap_unix.openfile ~caps stderr [ Unix.O_CREAT; Unix.O_WRONLY ] 0o600
+            in
+            Fun.protect
+              ~finally:(fun () -> Unix.close err)
+              (fun () ->
+                Ox_caps.Cap_unix.create_process_env ~caps binary
+                  (Array.of_list (binary :: argv))
+                  (Array.of_list
+                     (List.map (fun (key, value) -> key ^ "=" ^ value) env @ inherited))
+                  (Unix.descr_of_in_channel (Ox_caps.Cap_stdlib.stdin ~caps))
+                  out err))
+      in
       let ready, _, _ = Unix.select [ listener ] [] [] 5. in
       if ready = [] then Alcotest.fail "the CLI did not connect";
       let peer, _ = Unix.accept listener in
@@ -1686,9 +1698,14 @@ let socket_config_cli
       close_out out;
       let listen ~(caps : < Ox_caps.Cap.network ; .. >) path =
         let listener = Ox_caps.Cap_unix.socket ~caps Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-        Unix.bind listener (Unix.ADDR_UNIX path);
-        Unix.listen listener 1;
-        listener
+        match
+          Unix.bind listener (Unix.ADDR_UNIX path);
+          Unix.listen listener 1
+        with
+        | () -> listener
+        | exception exn ->
+            Unix.close listener;
+            raise exn
       in
       let configured_listener = listen ~caps configured in
       let override_listener = listen ~caps override in

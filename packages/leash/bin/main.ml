@@ -226,23 +226,35 @@ let leash_binary_present ~caps =
         (fun dir -> dir <> "" && Sys.file_exists (Filename.concat dir "leash"))
         (String.split_on_char ':' path)
 
+(* Three short properties; 64 KiB is far above what systemctl prints for them. *)
+let systemctl_show_limit = 64 * 1024
+
 let systemctl_show base =
   try
-    Ok
-      (Eio.Process.parse_out base#process_mgr Eio.Buf_read.take_all
-         [
-           "systemctl";
-           "--user";
-           "show";
-           "leash.service";
-           "-p";
-           "LoadState";
-           "-p";
-           "ActiveState";
-           "-p";
-           "SubState";
-           "--no-pager";
-         ])
+    Eio.Switch.run (fun sw ->
+        let output, sink = Eio.Process.pipe ~sw base#process_mgr in
+        let child =
+          Eio.Process.spawn ~sw base#process_mgr ~stdout:sink
+            [
+              "systemctl";
+              "--user";
+              "show";
+              "leash.service";
+              "-p";
+              "LoadState";
+              "-p";
+              "ActiveState";
+              "-p";
+              "SubState";
+              "--no-pager";
+            ]
+        in
+        Eio.Flow.close sink;
+        let text =
+          Eio.Buf_read.parse_exn ~max_size:systemctl_show_limit Eio.Buf_read.take_all
+            output
+        in
+        match Eio.Process.await child with `Exited 0 -> Ok text | _ -> Error ())
   with
   | Eio.Cancel.Cancelled _ as exn -> raise exn
   | _ -> Error ()

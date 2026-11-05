@@ -12,9 +12,13 @@ val advance :
 (** [advance env duration] moves the mock monotonic clock forward by [duration], then the
     mock wall clock through {!Ox_test.advance}, which yields so due sleepers run.
 
-    Suspension: may suspend at the yield inside Ox_test.advance. Cancellation: propagates
-    Eio.Cancel.Cancelled from that yield. Finalizers: none. Locking: none. Cancellation
-    safety: unsafe because progress is lost; both clock updates are committed before the
-    yield.
+    Suspension: may suspend at the yield inside Ox_test.advance; the environment's object
+    method dispatch and delegated Eio.Time.Mono, Eio_mock.Clock.Mono, Mtime, Mtime.Span,
+    Ox.Duration, Ox_test and Stdlib.Int64 operations retain their own behaviour.
+    Cancellation: propagates Eio.Cancel.Cancelled from that yield; the environment's
+    object method dispatch and delegated Eio.Time.Mono, Eio_mock.Clock.Mono, Mtime,
+    Mtime.Span, Ox.Duration, Ox_test and Stdlib.Int64 operations retain their own
+    behaviour. Finalizers: none. Locking: none. Cancellation safety: unsafe because
+    progress is lost; both clock updates are committed before the yield.
 
     @raise Invalid_argument if the monotonic time would overflow. *)

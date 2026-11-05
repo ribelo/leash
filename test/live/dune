@@ -9,5 +9,6 @@
   eio
   eio_main
   eio.unix
+  mtime
   unix
   yojson))
