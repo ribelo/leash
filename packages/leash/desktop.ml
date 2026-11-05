@@ -152,7 +152,7 @@ let chrome_window = function
 let create ~(caps : caps) ~clock ~mgr commands =
   let run_bounded argv ~on_line =
     match
-      Ox.Timeout.timeout ~clock step_timeout (fun () ->
+      Ox.Timeout.timeout_mono ~clock step_timeout (fun () ->
           Eio.Switch.run (fun sw ->
               run_command ~grace:retirement_grace ~caps ~clock ~mgr ~sw ~argv ~on_line)
           |> Result.map_error (fun message -> `Failed message))
@@ -230,7 +230,7 @@ let notifier ~(caps : caps) ~clock ~mgr ~command =
   if command = [] then Ok ()
   else
     match
-      Ox.Timeout.timeout ~clock step_timeout (fun () ->
+      Ox.Timeout.timeout_mono ~clock step_timeout (fun () ->
           Eio.Switch.run (fun sw ->
               run_command ~grace:Ox.Duration.zero ~caps ~clock ~mgr ~sw
                 ~argv:(List.map (render [ ("message", message) ]) command)

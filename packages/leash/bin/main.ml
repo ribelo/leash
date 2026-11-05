@@ -1462,7 +1462,7 @@ let program env (config : Leash.Config.t) sw =
   let desktop =
     Leash.Desktop.create
       ~caps:(env.caps :> Leash.Desktop.caps)
-      ~clock:base#clock ~mgr:base#process_mgr
+      ~clock:base#mono_clock ~mgr:base#process_mgr
       {
         Leash.Desktop.focus_command = config.handoff.focus_command;
         notify_command = config.handoff.notify_command;
@@ -1491,7 +1491,7 @@ let program env (config : Leash.Config.t) sw =
       ~notify:
         (Leash.Desktop.notifier
            ~caps:(env.caps :> Leash.Desktop.caps)
-           ~clock:base#clock ~mgr:base#process_mgr ~command:config.notify.command)
+           ~clock:base#mono_clock ~mgr:base#process_mgr ~command:config.notify.command)
       ~handoff_timeout_s:config.handoff.timeout_s
       ~challenge_attempt:config.challenges.attempt
       ~challenge_turns:config.challenges.turns
@@ -1595,7 +1595,7 @@ let telemetry ~sw env config =
   | None -> { Ox_app.reporters = []; span_ids = None }
   | Some endpoint ->
       Leash.Telemetry.create ~caps:env.Ox_app.Env.caps ~sw ~net:env.Ox_app.Env.base#net
-        ~clock:env.Ox_app.Env.base#clock
+        ~clock:env.Ox_app.Env.base#clock ~mono_clock:env.Ox_app.Env.base#mono_clock
         ~endpoint:(Leash.Config.Text.to_string endpoint)
         ~headers:
           (List.map

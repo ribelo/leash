@@ -50,7 +50,7 @@ let next_event ?(step = Ox.Duration.ms 100) ?(budget = 500) env chrome =
     | None when remaining <= 0 ->
         Alcotest.fail "no lifecycle event within the test's virtual budget"
     | None ->
-        Ox_test.advance env#clock step;
+        Leash_test_support.Mock_time.advance env step;
         Eio.Fiber.yield ();
         loop (remaining - 1)
   in
@@ -134,8 +134,9 @@ let pipe_launch
   Ox_test.run (fun env sw ->
       let fake = Ox_test.Process.make [ Block_until_signal ] in
       match
-        Chrome.launch_pipe ~caps ~sw ~clock:env#clock ~mgr:(Ox_test.Process.mgr fake)
-          (config ())
+        Chrome.launch_pipe ~caps ~sw
+          ~clock:(env#mono_clock :> Eio.Time.Mono.ty Eio.Resource.t)
+          ~mgr:(Ox_test.Process.mgr fake) (config ())
       with
       | Error _ -> Alcotest.fail "the pipe launch failed"
       | Ok (_child, transport) ->

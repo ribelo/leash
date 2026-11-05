@@ -83,9 +83,9 @@ type 'clock deps = {
   caps : caps;
 }
 
-type 'clock launch =
+type launch =
   sw:Eio.Switch.t ->
-  clock:'clock Eio.Time.clock ->
+  clock:Eio.Time.Mono.ty Eio.Resource.t ->
   mgr:Eio_unix.Process.mgr_ty Eio.Resource.t ->
   config ->
   (Ox_process.Child.t * Cdp.transport, spawn_error) result
@@ -338,7 +338,7 @@ let restart_delay backoff ~now_ms n =
   go (Ox.Schedule.start (schedule backoff)) 1
 
 let create ~sw ?launch config (deps : 'clock deps) =
-  let launch : 'clock launch =
+  let launch : launch =
     match launch with Some launch -> launch | None -> launch_pipe ~caps:deps.caps
   in
   let stop_signal, resolve_stop = Eio.Promise.create () in
@@ -372,7 +372,7 @@ let create ~sw ?launch config (deps : 'clock deps) =
   let abandon cause = if state.abandoned = None then state.abandoned <- Some cause in
   let pause (ctx : failure Ox.Supervisor.context) delay =
     Eio.Fiber.first
-      (fun () -> Eio.Time.sleep deps.clock (Ox.Duration.to_seconds_float delay))
+      (fun () -> Eio.Time.Mono.sleep deps.mono_clock (Ox.Duration.to_seconds_float delay))
       (fun () -> Eio.Promise.await ctx.stop_requested)
   in
   let start_generation (ctx : failure Ox.Supervisor.context) =
@@ -391,7 +391,7 @@ let create ~sw ?launch config (deps : 'clock deps) =
         if Eio.Promise.is_resolved ctx.stop_requested then Ok ()
         else
           let child_sw = Ox.Scope.switch ctx.scope in
-          match launch ~sw:child_sw ~clock:deps.clock ~mgr:deps.mgr config with
+          match launch ~sw:child_sw ~clock:deps.mono_clock ~mgr:deps.mgr config with
           | exception (Eio.Cancel.Cancelled _ as ex) -> raise ex
           | exception ex ->
               let bt = Printexc.get_raw_backtrace () in

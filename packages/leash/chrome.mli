@@ -100,9 +100,9 @@ type 'clock deps = {
   caps : caps;  (** The Door's powerbox narrowed to {!caps} (^ncaps-4tjy). *)
 }
 
-type 'clock launch =
+type launch =
   sw:Eio.Switch.t ->
-  clock:'clock Eio.Time.clock ->
+  clock:Eio.Time.Mono.ty Eio.Resource.t ->
   mgr:Eio_unix.Process.mgr_ty Eio.Resource.t ->
   config ->
   (Ox_process.Child.t * Cdp.transport, spawn_error) result
@@ -110,8 +110,7 @@ type 'clock launch =
     supervisor releases when the generation ends. *)
 
 val launch_pipe :
-  caps:< Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write ; .. > ->
-  'clock launch
+  caps:< Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write ; .. > -> launch
 (** The real one, given the capabilities spawning needs; {!create} passes [deps.caps]. two
     pipes, the child ends on descriptors 3 and 4, the parent ends as the transport. The
     parent closes its copies of the child ends right after the spawn, so the browser's
@@ -127,7 +126,7 @@ val launch_pipe :
 
 type t
 
-val create : sw:Eio.Switch.t -> ?launch:'clock launch -> config -> 'clock deps -> t
+val create : sw:Eio.Switch.t -> ?launch:launch -> config -> 'clock deps -> t
 (** Starts the supervisor and its two supervisor fibers on [sw]. The first spawn is
     asynchronous, so {!connection} answers [`Browser_unavailable] until the first
     [Started]. Spawn failures arrive as [Gave_up]; [Eio.Cancel.Cancelled] can escape

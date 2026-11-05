@@ -3,6 +3,7 @@ val create :
   sw:Eio.Switch.t ->
   net:_ Eio.Net.t ->
   clock:_ Eio.Time.clock ->
+  mono_clock:_ Eio.Time.Mono.t ->
   endpoint:string ->
   headers:(string * string) list ->
   Ox_app.telemetry

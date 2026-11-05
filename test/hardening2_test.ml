@@ -73,7 +73,7 @@ let rig
       let launch
           ~(caps : < Ox_caps.Cap.exec ; Ox_caps.Cap.fork ; Ox_caps.Cap.fs_write ; .. >)
           ~sw ~clock ~mgr:_ config =
-        let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep clock) () in
+        let fake, client = Fake.create ~sw ~sleep:(Eio.Time.sleep env#clock) () in
         current := Some fake;
         match
           Ox_process.Child.spawn ~caps ~sw ~clock ~mgr:(Ox_test.Process.mgr mgr)

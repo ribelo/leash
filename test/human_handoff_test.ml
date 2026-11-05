@@ -81,7 +81,9 @@ let handle_new tabs =
 
 let reply = function None -> Alcotest.fail "no reply" | Some reply -> reply
 let answered cell = match !cell with Some _ -> true | None -> false
-let advance env seconds = Ox_test.advance env#clock (Ox.Duration.seconds seconds)
+
+let advance env seconds =
+  Leash_test_support.Mock_time.advance env (Ox.Duration.seconds seconds)
 
 let rec until n what check =
   if check () then ()
@@ -194,7 +196,7 @@ let rig
       let desktop =
         Desktop.create
           ~caps:(caps :> Desktop.caps)
-          ~clock:env#clock
+          ~clock:env#mono_clock
           ~mgr:(if real then env#process_mgr else Ox_test.Process.mgr process)
           { Desktop.focus_command = focus; notify_command = notify }
       in

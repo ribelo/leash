@@ -2184,7 +2184,7 @@ let optional_otlp ~(caps : < Ox_caps.Cap.random ; .. >) () =
   Ox_test.run (fun env sw ->
       let telemetry =
         Leash.Telemetry.create ~caps ~sw ~net:env#net ~clock:env#clock
-          ~endpoint:"http://127.0.0.1:4318" ~headers:[]
+          ~mono_clock:env#mono_clock ~endpoint:"http://127.0.0.1:4318" ~headers:[]
       in
       Alcotest.(check int) "enabled reporter" 1 (List.length telemetry.Ox_app.reporters);
       let id = Option.get telemetry.Ox_app.span_ids () in

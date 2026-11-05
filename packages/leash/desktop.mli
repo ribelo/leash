@@ -29,11 +29,7 @@ type caps = < Ox_caps.Cap.fork ; Ox_caps.Cap.exec ; Ox_caps.Cap.fs_write >
 (** The two commands are programs the desktop steps start (^ncaps-4tjy). *)
 
 val create :
-  caps:caps ->
-  clock:'clock Eio.Time.clock ->
-  mgr:'mgr Eio_unix.Process.mgr ->
-  commands ->
-  t
+  caps:caps -> clock:_ Eio.Time.Mono.t -> mgr:'mgr Eio_unix.Process.mgr -> commands -> t
 (** One command's whole life, over {!Ox_process.Child} with a five-second retirement
     grace: spawned on [sw], its stdout lines handed to the step that asked for it, [Ok]
     for a zero exit and [Error reason] for anything else. A command stopped because [sw]
@@ -80,7 +76,7 @@ val notify :
 
 val notifier :
   caps:caps ->
-  clock:'clock Eio.Time.clock ->
+  clock:_ Eio.Time.Mono.t ->
   mgr:'mgr Eio_unix.Process.mgr ->
   command:string list ->
   string ->
@@ -89,9 +85,9 @@ val notifier :
     [{message}] substituted as one argv element; [] disables it.
 
     Suspension: may suspend for the bounded command when applying the returned notifier;
-    bounded command callback invocation is delegated to Ox.Timeout.timeout. Cancellation:
-    propagates after scoped process retirement; bounded command callback invocation is
-    delegated to Ox.Timeout.timeout. Finalizers: each invocation owns a child switch and
-    its managed process. Locking: none; notifications are independent commands.
-    Cancellation safety: unsafe because progress is lost; delivery may precede
+    bounded command callback invocation is delegated to Ox.Timeout.timeout_mono.
+    Cancellation: propagates after scoped process retirement; bounded command callback
+    invocation is delegated to Ox.Timeout.timeout_mono. Finalizers: each invocation owns a
+    child switch and its managed process. Locking: none; notifications are independent
+    commands. Cancellation safety: unsafe because progress is lost; delivery may precede
     cancellation, so repeating can duplicate the notification. *)

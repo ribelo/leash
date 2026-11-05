@@ -103,7 +103,7 @@ let rig
                       | Some _ ->
                           Desktop.create
                             ~caps:(caps :> Desktop.caps)
-                            ~clock:env#clock ~mgr:(Ox_test.Process.mgr process)
+                            ~clock:env#mono_clock ~mgr:(Ox_test.Process.mgr process)
                             { Desktop.focus_command = []; notify_command = [ "sh" ] });
                     caps :> Tabs.caps;
                   }
@@ -340,14 +340,14 @@ let command_failure
       let notify =
         Desktop.notifier
           ~caps:(caps :> Desktop.caps)
-          ~clock:env#clock ~mgr:(Ox_test.Process.mgr process)
+          ~clock:env#mono_clock ~mgr:(Ox_test.Process.mgr process)
           ~command:[ "/no/such/leash-notification-command"; "{message}" ]
       in
       boolean "missing executable returns failure" (Result.is_error (notify "test"));
       let disabled =
         Desktop.notifier
           ~caps:(caps :> Desktop.caps)
-          ~clock:env#clock ~mgr:(Ox_test.Process.mgr process) ~command:[]
+          ~clock:env#mono_clock ~mgr:(Ox_test.Process.mgr process) ~command:[]
       in
       boolean "disabled notification succeeds" (disabled "test" = Ok ()))
 
@@ -358,7 +358,7 @@ let notifier_bound
       let notify =
         Desktop.notifier
           ~caps:(caps :> Desktop.caps)
-          ~clock:env#clock ~mgr:(Ox_test.Process.mgr process)
+          ~clock:env#mono_clock ~mgr:(Ox_test.Process.mgr process)
           ~command:[ "/bin/sh"; "{message}" ]
       in
       let answer = ref None in
@@ -375,7 +375,7 @@ let notifier_bound
       Alcotest.(check (list string))
         "message is exactly one argv element" [ "/bin/sh"; message ]
         (List.hd (Ox_test.Process.spawns process)).argv;
-      Ox_test.advance env#clock (Ox.Duration.seconds 5);
+      Leash_test_support.Mock_time.advance env (Ox.Duration.seconds 5);
       let rec finished n =
         match !answer with
         | Some answer -> answer
