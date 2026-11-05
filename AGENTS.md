@@ -11,7 +11,7 @@ You are the only agent working in this repository. Each session starts with no m
 - Never end a session with uncommitted changes. If something is unfinished, commit it with a message that says what is unfinished and why, or record it in `docs/issues`.
 - Uncommitted changes you find at the start of a session came from an earlier session of yours that did not land its work. Read the diff, verify it, then commit or finish it.
 - When subagents implement slices, the coordinating session reviews each result and commits it before starting dependent work.
-- Push only when the user asks.
+- Push `master` to `origin` after each commit (the operator's rule for his private repositories, 2026-11-02).
 
 ## Compatibility before 1.0
 

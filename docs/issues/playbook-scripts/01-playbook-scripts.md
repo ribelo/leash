@@ -1,9 +1,13 @@
 ---
-status: ready-for-agent
+status: superseded
 milestone: 10
 ---
 
 # Scripts are JEV's tools; playbooks are procedures, not scripts
+
+## Retired by ADR-0016 (L63) and ADR-0017 (L64)
+
+Delivered as L46, then removed: [ADR-0016](<../../adr/0016-no-playbooks.md>) retired playbooks, procedures, scripts and page kinds, and [ADR-0017](<../../adr/0017-eval-is-the-one-script-command.md>) made `eval` the one script command. No story here is ready for implementation; the `status:` line said `ready-for-agent` by mistake.
 
 ## Problem Statement
 
