@@ -2,8 +2,7 @@
 
     Ox_test.advance moves only the mock wall clock; since ADR-0018 every elapsed budget,
     sleep and timeout of Leash runs on the monotonic clock, so a test that lets time pass
-    must move both. Remove this module when Ox_test offers a monotonic
-    advance. *)
+    must move both. Remove this module when Ox_test offers a monotonic advance. *)
 
 val advance :
   < clock : Eio_mock.Clock.t ; mono_clock : Eio_mock.Clock.Mono.t ; .. > ->
